@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import android.util.Log
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
@@ -700,7 +699,9 @@ class PlatformRepo @Inject constructor(
         // previously, we would look up the asset lock transaction, but we don't need to do that
         val watch = Stopwatch.createStarted()
         log.info("loading BlockchainIdentity: starting...")
-        val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authenticationGroupExtension!!)
+        val authExt = authenticationGroupExtension
+            ?: throw IllegalStateException("AuthenticationGroupExtension is not initialised")
+        val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authExt)
         log.info("loading BlockchainIdentity: {}", watch)
         if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
