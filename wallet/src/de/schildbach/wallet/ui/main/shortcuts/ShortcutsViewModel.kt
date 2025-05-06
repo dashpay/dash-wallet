@@ -100,7 +100,7 @@ class ShortcutsViewModel @Inject constructor(
     }
 
     fun replaceShortcut(oldIndex: Int, new: ShortcutOption) {
-        if (oldIndex < 0) {
+        if (oldIndex !in shortcuts.indices) {
             return
         }
 

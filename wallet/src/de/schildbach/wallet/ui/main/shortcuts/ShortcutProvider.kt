@@ -17,18 +17,17 @@
 package de.schildbach.wallet.ui.main.shortcuts
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.data.WalletUIConfig
-import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -40,9 +39,7 @@ class ShortcutProvider @Inject constructor(
         private const val MINIMUM_SHORTCUTS = 4
     }
 
-    private val scope = CoroutineScope(
-        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-    )
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     private val _customShortcuts = MutableStateFlow<List<ShortcutOption>>(emptyList())
     val customShortcuts: StateFlow<List<ShortcutOption>> = _customShortcuts.asStateFlow()
@@ -57,10 +54,10 @@ class ShortcutProvider @Inject constructor(
 
                 if (finalShortcuts.size < MINIMUM_SHORTCUTS) {
                     val allShortcuts = ShortcutOption.entries
-                    finalShortcuts.add(
-                        index = 0, // Most likely short 1 item due to removal from the start of the list
-                        allShortcuts.first { it != ShortcutOption.SECURE_NOW && it !in finalShortcuts }
-                    )
+                    allShortcuts
+                        .firstOrNull { it != ShortcutOption.SECURE_NOW && it !in finalShortcuts }
+                        // Most likely short 1 item due to removal from the start of the list
+                        ?.let { finalShortcuts.add(0, it) }
                     setCustomShortcuts(finalShortcuts.map { it.id }.toIntArray()) // This will trigger another pass
                 } else {
                     _customShortcuts.value = finalShortcuts

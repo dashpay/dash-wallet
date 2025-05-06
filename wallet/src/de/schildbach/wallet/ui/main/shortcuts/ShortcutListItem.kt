@@ -47,7 +47,7 @@ fun ShortcutListItem(
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(MyTheme.Colors.backgroundSecondary)
             .clickable { onClick(shortcutOption) }
             .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically

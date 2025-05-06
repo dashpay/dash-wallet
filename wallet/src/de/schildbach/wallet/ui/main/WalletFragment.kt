@@ -23,6 +23,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -271,6 +272,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun initShortcutActions() {
+        binding.shortcutsPane.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+
         binding.shortcutsPane.setContent {
             ShortcutsPane(
                 shortcuts = shortcutViewModel.shortcuts,
