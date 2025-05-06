@@ -39,6 +39,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -75,7 +76,7 @@ fun TransactionMetadataSettingsScreen(
     val lastSaveDate by viewModel.lastSaveDate.collectAsState()
     val futureSaveDate by viewModel.futureSaveDate.collectAsState()
     val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishLiveData by viewModel.publishOperationLiveData(lastSaveWorkId ?: "").asFlow().collectAsState(Resource.canceled<WorkInfo>())
+    val publishLiveData by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled<WorkInfo>())
 
     Scaffold(
         topBar = {
@@ -303,9 +304,7 @@ fun TransactionMetadataScreenPreview() {
         override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
         override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
-        override fun publishOperationLiveData(workId: String) = liveData {
-            emit(Resource.canceled<WorkInfo>())
-        }
+        override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>  = MutableStateFlow(Resource.canceled<WorkInfo>())
     }
     TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
 }

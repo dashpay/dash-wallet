@@ -209,7 +209,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
             transactionMetadataSettingsViewModel.loadLastWorkId()
         }
         transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
-            transactionMetadataSettingsViewModel.publishOperationLiveData(workId).observe(viewLifecycleOwner) {
+            transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
                 val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
                 setTransactionMetadataText(progress != 100 && progress != -1, progress)
             }
