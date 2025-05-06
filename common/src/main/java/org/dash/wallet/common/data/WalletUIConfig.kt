@@ -65,6 +65,7 @@ open class WalletUIConfig @Inject constructor(
         val EXCHANGE_CURRENCY_DETECTED = booleanPreferencesKey("exchange_currency_detected")
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
         val LAST_MIXED_BALANCE = longPreferencesKey("last_mixed_balance")
+        val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
     }
 
     suspend fun getExchangeCurrencyCode(): String {

@@ -228,9 +228,6 @@ class MainViewModel @Inject constructor(
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
 
-    val isPassphraseVerified: Boolean
-        get() = !config.remindBackupSeed
-
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
 
     // CoinJoin
@@ -345,11 +342,15 @@ class MainViewModel @Inject constructor(
 
         // we need the total wallet balance for mixing progress,
         walletData.observeTotalBalance()
-            .onEach(_totalBalance::postValue)
+            .onEach {
+                _totalBalance.value = it
+            }
             .launchIn(viewModelScope)
 
         walletData.observeMixedBalance()
-            .onEach(_mixedBalance::postValue)
+            .onEach {
+                _mixedBalance.value = it
+            }
             .launchIn(viewModelScope)
 
         walletData.observeMostRecentTransaction()

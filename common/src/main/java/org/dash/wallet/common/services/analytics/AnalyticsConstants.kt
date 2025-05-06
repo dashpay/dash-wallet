@@ -126,6 +126,7 @@ object AnalyticsConstants {
         const val SHORTCUT_SCAN_TO_PAY = "shortcut_scan_to_pay"
         const val SHORTCUT_SEND_TO_ADDRESS = "shortcut_send_to_address"
         const val SHORTCUT_RECEIVE = "shortcut_receive"
+        const val SHORTCUT_SEND = "shortcut_send"
         const val SHORTCUT_BUY_AND_SELL = "shortcut_buy_and_sell_dash"
         const val SHORTCUT_EXPLORE = "shortcut_explore"
         const val HIDE_BALANCE = "home_hide_balance"

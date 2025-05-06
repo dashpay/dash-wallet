@@ -14,13 +14,13 @@
         android:layout_marginTop="8dp"
         tools:background="@color/light_gray" />
 
-    <ImageButton
-        android:id="@+id/collapse_button"
-        android:layout_marginTop="18dp"
-        style="@style/DialogCloseButton" />
-
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
+
+    <ImageButton
+        android:id="@+id/collapse_button"
+        android:layout_marginTop="18dp"
+        style="@style/DialogCloseButton" />
 </FrameLayout>
