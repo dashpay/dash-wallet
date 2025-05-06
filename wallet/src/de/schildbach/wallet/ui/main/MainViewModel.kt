@@ -76,6 +76,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -213,10 +214,6 @@ class MainViewModel @Inject constructor(
     private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
-    private val _mostRecentTransaction = MutableLiveData<Transaction>()
-    val mostRecentTransaction: LiveData<Transaction>
-        get() = _mostRecentTransaction
-
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
@@ -353,11 +350,6 @@ class MainViewModel @Inject constructor(
 
         walletData.observeMixedBalance()
             .onEach(_mixedBalance::postValue)
-            .launchIn(viewModelScope)
-
-        walletData.observeMostRecentTransaction()
-            .onEach(_mostRecentTransaction::postValue)
-            .onEach { metadataReminder() }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -934,6 +926,8 @@ class MainViewModel @Inject constructor(
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
+
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction()
 
     fun metadataReminder() {
         viewModelScope.launch {

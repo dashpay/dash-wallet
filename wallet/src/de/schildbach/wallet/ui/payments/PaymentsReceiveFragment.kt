@@ -26,11 +26,14 @@ import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.viewBinding
@@ -61,6 +64,7 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
     private val args by navArgs<PaymentsReceiveFragmentArgs>()
     @Inject lateinit var walletDataProvider: WalletDataProvider
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.fromQuickReceive = args.fromQuickReceive
@@ -77,8 +81,6 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
             viewModel.logEvent(AnalyticsConstants.SendReceive.SHARE)
         }
 
-        binding.receiveInfo.setInfo(walletDataProvider.freshReceiveAddress(), null)
-
         binding.importPrivateKeyBtn.isVisible = args.showImportPrivateKey
         binding.importPrivateKeyBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY)
@@ -94,6 +96,12 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
 
         viewModel.dashPayProfile.observe(viewLifecycleOwner) {
             binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
+        }
+
+        lifecycleScope.launch {
+            // get current address is much faster, because the wallet doesn't need to be saved
+            val freshAddress = viewModel.getCurrentAddress()
+            binding.receiveInfo.setInfo(freshAddress, null)
         }
     }
 }

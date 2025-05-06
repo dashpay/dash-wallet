@@ -194,6 +194,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
             !viewModel.everythingPlausible() ||
+            viewModel.dryRunSuccessful.value != true ||
             viewModel.isBlockchainReplaying.value ?: false
 
         enterAmountFragment?.setViewDetails(

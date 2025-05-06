@@ -160,10 +160,9 @@ class PlatformSynchronizationService @Inject constructor(
     private val onContactsUpdatedListeners = arrayListOf<OnContactsUpdated>()
     private val onPreBlockContactListeners = arrayListOf<OnPreBlockProgressListener>()
     private var lastPreBlockStage: PreBlockStage = PreBlockStage.None
-
-    private val syncScope = CoroutineScope(
-        Executors.newFixedThreadPool(5).asCoroutineDispatcher()
-    )
+    // TODO: cancel these on shutdown?
+    private val syncJob = SupervisorJob()
+    private val syncScope = CoroutineScope(Dispatchers.IO + syncJob)
 
     override fun init() {
         syncScope.launch { platformRepo.init() }

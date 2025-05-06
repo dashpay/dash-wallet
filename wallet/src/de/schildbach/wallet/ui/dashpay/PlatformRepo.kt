@@ -115,8 +115,31 @@ class PlatformRepo @Inject constructor(
     val hasIdentity: Boolean
         get() = this::blockchainIdentity.isInitialized
 
+    suspend fun hasIdentity(): Boolean = this::blockchainIdentity.isInitialized ||
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID) != null
+
+    suspend fun hasUsername(): Boolean = (this::blockchainIdentity.isInitialized && blockchainIdentity.currentUsername != null) ||
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME) != null
+
+    suspend fun getIdentity(): String {
+        return if (this::blockchainIdentity.isInitialized) {
+            blockchainIdentity.uniqueIdString
+        } else {
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)!!
+        }
+    }
+
+    suspend fun getUsername(): String? {
+        return if (this::blockchainIdentity.isInitialized) {
+            blockchainIdentity.currentUsername
+        } else {
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+        }
+    }
+
     val authenticationGroupExtension: AuthenticationGroupExtension?
-        get() = walletApplication.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
+        get() = walletApplication.authenticationGroupExtension
+    //getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
 
 
     private val dashPayProfileDao = appDatabase.dashPayProfileDao()
@@ -353,14 +376,14 @@ class PlatformRepo @Inject constructor(
      * @return
      */
     suspend fun searchContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Resource<List<UsernameSearchResult>> {
-        if (!hasIdentity) {
+        if (!hasIdentity()) {
             return Resource.success(emptyList())
         }
 
         return try {
             val userIdList = HashSet<String>()
 
-            val userId = blockchainIdentity.uniqueIdString
+            val userId = getIdentity()
 
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userId)
             val toContactMap = HashMap<String, DashPayContactRequest>()
@@ -676,31 +699,25 @@ class PlatformRepo @Inject constructor(
     }
 
     fun initBlockchainIdentity(blockchainIdentityData: BlockchainIdentityData, wallet: Wallet): BlockchainIdentity {
-        val creditFundingTransaction = blockchainIdentityData.findAssetLockTransaction(wallet)
-        val blockchainIdentity = if (creditFundingTransaction != null) {
-            // the blockchain is synced past the point when the credit funding tx was found
-            BlockchainIdentity(
-                platform.platform,
-                creditFundingTransaction,
-                wallet,
-                authenticationGroupExtension!!,
-                blockchainIdentityData.identity
-            )
-        } else {
-            // the blockchain is not synced
-            val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authenticationGroupExtension!!)
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
-                blockchainIdentity.apply {
-                    uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
-                    identity = blockchainIdentityData.identity
-                }
-            } else {
-                return blockchainIdentity
+        // previously, we would look up the asset lock transaction, but we don't need to do that
+        val watch = Stopwatch.createStarted()
+        log.info("loading BlockchainIdentity: starting...")
+        val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authenticationGroupExtension!!)
+        log.info("loading BlockchainIdentity: {}", watch)
+        if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
+            blockchainIdentity.apply {
+                uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+                identity = blockchainIdentityData.identity
             }
-            blockchainIdentity
+            log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}: {}", watch)
+        } else {
+            log.info("loading identity: {}", watch)
+            return blockchainIdentity
         }
+
         // TODO: needs to check against Platform to see if values exist.  Check after
         // Syncing complete
+        log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}")
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
@@ -719,6 +736,7 @@ class PlatformRepo @Inject constructor(
             }
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
+            log.info("loading identity: {}", watch)
         }
     }
 
@@ -839,18 +857,19 @@ class PlatformRepo @Inject constructor(
     suspend fun recoverDashPayProfile(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             if (platform.hasApp("dashpay")) {
-                val username = blockchainIdentity.currentUsername!!
-                // recovery will only get the information and place it in the database
-                val profile = blockchainIdentity.getProfile()
+                getUsername()?.let { username ->
+                    // recovery will only get the information and place it in the database
+                    val profile = blockchainIdentity.getProfile()
 
 
-                // blockchainIdentity doesn't yet keep track of the profile, so we will load it
-                // into the database directly
-                val dashPayProfile = if (profile != null)
-                    DashPayProfile.fromDocument(profile, username)
-                else
-                    DashPayProfile(blockchainIdentity.uniqueIdString, blockchainIdentity.currentUsername!!)
-                updateDashPayProfile(dashPayProfile)
+                    // blockchainIdentity doesn't yet keep track of the profile, so we will load it
+                    // into the database directly
+                    val dashPayProfile = if (profile != null)
+                        DashPayProfile.fromDocument(profile, username)
+                    else
+                        DashPayProfile(blockchainIdentity.uniqueIdString, username)
+                    updateDashPayProfile(dashPayProfile)
+                }
             }
         }
     }

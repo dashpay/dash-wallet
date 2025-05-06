@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 import android.graphics.Bitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -157,9 +158,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                             if (!giftCard.cardNumber.isNullOrEmpty()) {
                                 cancelTicker()
                                 updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
-                                if (!giftCard.barcodeUrl.isNullOrEmpty()) {
-                                    saveBarcode(giftCard.barcodeUrl)
-                                }
+                                log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
+                                saveBarcode(giftCard.cardNumber)
                             } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
                                 _uiState.update {
@@ -233,25 +233,16 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    private fun saveBarcode(barcodeUrl: String) {
+    private fun saveBarcode(giftCardNumber: String) {
         applicationScope.launch {
             try {
-                val result = Constants.HTTP_CLIENT.get(barcodeUrl)
-                require(result.isSuccessful && result.body != null) { "call is not successful" }
-                val bitmap = result.body!!.decodeBitmap()
-                val decodeResult = Qr.scanBarcode(bitmap)
-
-                if (decodeResult != null) {
-                    metadataProvider.updateGiftCardBarcode(
-                        transactionId,
-                        decodeResult.first.replace(" ", ""),
-                        decodeResult.second
-                    )
-                } else {
-                    log.error("ScanBarcode returned null: $barcodeUrl")
-                }
+                metadataProvider.updateGiftCardBarcode(
+                    transactionId,
+                    giftCardNumber.replace(" ", "").replace("-", ""),
+                    BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
+                )
             } catch (ex: Exception) {
-                log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
+                log.error("Failed to save barcode for $giftCardNumber", ex)
             }
         }
     }
