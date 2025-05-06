@@ -50,11 +50,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain

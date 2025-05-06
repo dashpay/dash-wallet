@@ -18,7 +18,6 @@
 package de.schildbach.wallet.util.viewModels
 
 import android.os.Looper
-import android.telephony.TelephonyManager
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
 import androidx.lifecycle.MutableLiveData
 import androidx.work.WorkManager
@@ -73,7 +72,6 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.RateRetrievalState
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.junit.Before
 import org.junit.Ignore
 import org.junit.Rule
