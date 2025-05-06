@@ -23,7 +23,11 @@ import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.R
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class ExtraActionDialog(
     @LayoutRes private val layout: Int = R.layout.dialog_extra_action
@@ -90,6 +94,36 @@ class ExtraActionDialog(
         onResultListener = onResult
         onExtraMessageListener = onExtraMessageAction
         show(activity.supportFragmentManager, "extra_action_dialog")
+    }
+
+    suspend fun showAsync(activity: FragmentActivity, onResult: (Boolean?) -> Unit, onExtraMessageAction: () -> Unit) {
+        if (!activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            return
+        }
+
+        suspendCancellableCoroutine { coroutine ->
+            val onResultClick: (Boolean?) -> Unit = { result ->
+                if (coroutine.isActive) {
+                    onResult.invoke(result)
+                    coroutine.resume(Unit)
+                }
+            }
+
+            val onExtraMessageActionClick: () -> Unit = {
+                if (coroutine.isActive) {
+                    onExtraMessageAction.invoke()
+                    coroutine.resume(Unit)
+                }
+            }
+
+            try {
+                show(activity, onResultClick, onExtraMessageActionClick)
+            } catch (ex: Exception) {
+                if (coroutine.isActive) {
+                    coroutine.resumeWithException(ex)
+                }
+            }
+        }
     }
 
     private fun onExtraMessageAction() {
