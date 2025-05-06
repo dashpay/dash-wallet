@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -34,6 +35,7 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.util.observe
 import java.util.concurrent.TimeUnit
 
 @AndroidEntryPoint
@@ -79,8 +81,8 @@ class SaveMetadataAndResetDialogFragment : DialogFragment() {
         lifecycleScope.launch {
             val workId = viewModel.saveToNetworkNow()
             var started = false
-            viewModel.publishOperationLiveData(workId).observe(viewLifecycleOwner) { workInfo ->
-                Log.i("stuff", workInfo?.toString() ?: "")
+            viewModel.observePublishOperation(workId).observe(viewLifecycleOwner) { workInfo ->
+                Log.i("stuff", workInfo.toString() ?: "")
                 when (workInfo.status) {
                     Status.LOADING -> {
                         if (!started) {
@@ -161,9 +163,7 @@ fun ExampleScreen() {
         override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
         override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
-        override fun publishOperationLiveData(workId: String) = liveData {
-            emit(Resource.loading<WorkInfo>())
-        }
+        override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = MutableStateFlow(Resource.loading<WorkInfo>())
     }
     if (showDialog.value) {
         ResetWalletDialog(

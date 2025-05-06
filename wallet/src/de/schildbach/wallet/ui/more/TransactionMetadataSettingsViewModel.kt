@@ -34,6 +34,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -74,7 +75,7 @@ interface TransactionMetadataSettingsPreviewViewModel {
     val lastSaveWorkId: StateFlow<String?>
     val lastSaveDate: StateFlow<Long>
     val futureSaveDate: StateFlow<Long>
-    fun publishOperationLiveData(workId: String): LiveData<Resource<WorkInfo>>
+    fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>
 }
 
 @ExperimentalCoroutinesApi
@@ -236,7 +237,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         return nextId
     }
 
-    override fun publishOperationLiveData(workId: String) = PublishTransactionMetadataOperation.operationStatus(
+    override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = PublishTransactionMetadataOperation.operationStatusFlow(
         walletApplication,
         workId,
         analyticsService
