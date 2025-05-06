@@ -197,7 +197,7 @@ class MainViewModelTest {
     }
 
     private val biometricHelper = mockk<BiometricHelper>()
-    private val telephonyManager = mockk<DeviceInfoProvider>()
+    private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()
     private val coinJoinService = mockk<CoinJoinService>()
 
@@ -277,7 +277,7 @@ class MainViewModelTest {
                 transactionMetadataMock,
                 blockchainStateMock,
                 biometricHelper,
-                telephonyManager,
+                deviceInfoProvider,
                 invitationsDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
@@ -315,7 +315,7 @@ class MainViewModelTest {
                 transactionMetadataMock,
                 blockchainStateMock,
                 biometricHelper,
-                telephonyManager,
+                deviceInfoProvider,
                 invitationsDaoMock,
                 userAgentDaoMock,
                 dashPayProfileDaoMock,
