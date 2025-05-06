@@ -109,7 +109,7 @@ class PlatformRepo @Inject constructor(
     lateinit var blockchainIdentity: BlockchainIdentity
         private set
 
-    val hasIdentity: Boolean
+    val hasBlockchainIdentity: Boolean
         get() = this::blockchainIdentity.isInitialized
 
     suspend fun hasIdentity(): Boolean = this::blockchainIdentity.isInitialized ||
@@ -118,11 +118,14 @@ class PlatformRepo @Inject constructor(
     suspend fun hasUsername(): Boolean = (this::blockchainIdentity.isInitialized && blockchainIdentity.currentUsername != null) ||
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME) != null
 
+    @Throws(IllegalStateException::class)
     suspend fun getIdentity(): String {
         return if (this::blockchainIdentity.isInitialized) {
             blockchainIdentity.uniqueIdString
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)!!
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
+                ?: throw IllegalStateException("IdentityId not found")
         }
     }
 
