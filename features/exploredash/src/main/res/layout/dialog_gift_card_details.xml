@@ -145,13 +145,26 @@
                         tools:background="@color/gray_50">
 
                         <TextView
+                            android:id="@+id/barcode_placeholder_text"
                             style="@style/Caption"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:gravity="center"
                             android:textAlignment="gravity"
                             android:layout_margin="20dp"
                             android:text="@string/barcode_placeholder"/>
+
+                        <TextView
+                            android:id="@+id/barcode_loading_error"
+                            style="@style/Overline.Red"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/gift_card_barcode_failed"
+                            android:gravity="center"
+                            android:textAlignment="gravity"
+                            android:visibility="gone"
+                            android:layout_margin="20dp"
+                            tools:visibility="gone" />
                     </FrameLayout>
 
                     <ImageView
@@ -165,20 +178,6 @@
                         tools:src="@drawable/ic_dash_pay"
                         tools:visibility="gone" />
                 </FrameLayout>
-
-                <TextView
-                    android:id="@+id/barcode_loading_error"
-                    style="@style/Overline.Red"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginEnd="15dp"
-                    android:text="@string/gift_card_barcode_failed"
-                    android:visibility="gone"
-                    app:layout_constraintBottom_toTopOf="@+id/original_purchase_label"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    tools:visibility="gone" />
 
                 <androidx.appcompat.widget.AppCompatTextView
                     android:id="@+id/original_purchase_label"
