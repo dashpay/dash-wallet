@@ -94,9 +94,8 @@ class CTXSpendRepository @Inject constructor(
         )
     }
 
-    override suspend fun getMerchant(merchantId: String) = safeApiCall {
+    override suspend fun getMerchant(merchantId: String) =
         api.getMerchant(merchantId)
-    }
 
     override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
         api.getGiftCard(txid)
@@ -117,6 +116,6 @@ interface CTXSpendRepositoryInt {
         merchantId: String
     ): ResponseResource<GiftCardResponse?>
 
-    suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>
+    suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
 }

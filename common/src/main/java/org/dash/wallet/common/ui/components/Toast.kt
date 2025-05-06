@@ -83,6 +83,7 @@ fun Toast(
                 Text(
                     text = text,
                     style = MyTheme.Body2Regular,
+                    color = Color.White,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(start = 8.dp, end = 8.dp)
@@ -100,6 +101,7 @@ fun Toast(
                 Text(
                     text = actionText,
                     style = MyTheme.OverlineSemibold,
+                    color = Color.White,
                     textAlign = TextAlign.End
                 )
             }
