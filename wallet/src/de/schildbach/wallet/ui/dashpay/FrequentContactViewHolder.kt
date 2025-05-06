@@ -37,7 +37,7 @@ class FrequentContactViewHolder(val binding: FrequentContactItemBinding, val ite
             ProfilePictureDisplay.display(binding.avatar, dashPayProfile)
 
             itemClickListener?.let { l ->
-                this.setOnClickListener {
+                setOnClickListener {
                     l.onItemClicked(it, usernameSearchResult)
                 }
             }

@@ -405,7 +405,7 @@
     <string name="show_clipboard">Show content in the clipboard</string>
     <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
     <string name="not_dash_address">Not a valid Dash Address or URL request</string>
-    <string name="send_to_address">Send to address</string>
+    <string name="send_to_address">Send to Address</string>
 
     <!-- Battery Optimization-->
     <string name="battery_optimization_title">Battery optimization</string>

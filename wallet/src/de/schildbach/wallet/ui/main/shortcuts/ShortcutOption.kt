@@ -20,6 +20,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
 
+// Sorted by display priority. Do not change IDs if moving options around
 enum class ShortcutOption(
     val id: Int,
     @DrawableRes val iconResId: Int,
@@ -68,12 +69,12 @@ enum class ShortcutOption(
     WHERE_TO_SPEND(
         8,
         R.drawable.ic_where_to_spend,
-        R.string.where_to_spend_title
+        R.string.explore_where_to_spend
     ),
     ATMS(
         9,
         R.drawable.ic_shortcut_atm,
-        R.string.atm_map_title
+        R.string.explore_atms
     ),
     STAKING(
         10,
@@ -83,17 +84,17 @@ enum class ShortcutOption(
     TOPPER(
         11,
         R.drawable.logo_topper,
-        R.string.topper_title
+        R.string.topper
     ),
     UPHOLD(
         12,
         R.drawable.ic_uphold,
-        R.string.uphold_title
+        R.string.uphold_account
     ),
     COINBASE(
         13,
         R.drawable.ic_coinbase,
-        R.string.coinbase_title
+        R.string.coinbase
     );
 
     companion object  {

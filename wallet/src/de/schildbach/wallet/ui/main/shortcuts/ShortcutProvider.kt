@@ -69,6 +69,7 @@ class ShortcutProvider @Inject constructor(
             .launchIn(scope)
     }
 
+    // Default logic before the user customizes shortcuts
     fun getFilteredShortcuts(
         isPassphraseVerified: Boolean = true,
         userHasBalance: Boolean = true,
