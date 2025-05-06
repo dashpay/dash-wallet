@@ -137,7 +137,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
-            binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance) {
+            binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance && !viewModel.blockContinue) {
                 viewModel.amount.value?.isPositive ?: false
             } else {
                 canContinue

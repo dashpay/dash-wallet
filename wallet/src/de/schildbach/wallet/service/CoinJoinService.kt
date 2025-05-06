@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -184,6 +185,7 @@ class CoinJoinMixingService @Inject constructor(
     // https://stackoverflow.com/questions/55421710/how-to-suspend-kotlin-coroutine-until-notified
     private val updateMutex = Mutex(locked = false)
     private val updateMixingStateMutex = Mutex(locked = false)
+    private val updateBalanceMutex = Mutex(locked = false)
     private var exception: Throwable? = null
 
     private var timeChangeReceiverRegistered = false
@@ -281,44 +283,66 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        CoinJoinClientOptions.setAmount(balance)
-        val walletEx = walletDataProvider.wallet as WalletEx
-        org.bitcoinj.core.Context.propagate(walletEx.context)
-        val anonBalance = walletEx.getAnonymizableBalance(false, false)
+        updateBalanceMutex.lock()
+        try {
+            CoinJoinClientOptions.setAmount(balance)
+            val walletEx = walletDataProvider.wallet as WalletEx
+            org.bitcoinj.core.Context.propagate(walletEx.context)
+            val anonBalance = walletEx.getAnonymizableBalance(false, false)
 
-        // IMPORTANT: walletEx.denominatedBalance in the log.info is needed, otherwise the second call will return an incorrect value.
-        log.info("coinjoin: anonymizable balance {}, denominatedBalance: {}", anonBalance.toFriendlyString(), walletEx.denominatedBalance.toFriendlyString())
-        val hasPartiallyMixedCoins = (walletEx.denominatedBalance - walletEx.coinJoinBalance).isGreaterThan(Coin.ZERO)
-        val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
+            // IMPORTANT: walletEx.denominatedBalance in the log.info is needed, otherwise the second call will return an incorrect value.
+            val watch1 = Stopwatch.createStarted()
+            // log.info("timing: denominatedBalance: start")
+            log.info(
+                "coinjoin: anonymizable balance {}, denominatedBalance: {}",
+                anonBalance.toFriendlyString(),
+                walletEx.denominatedBalance.toFriendlyString()
+            )
+            log.info("timing: denominatedBalance $watch1")
+            val watch2 = Stopwatch.createStarted()
+            // log.info("timing: denominatedBalance: start")
+            val denominatedBalance = walletEx.denominatedBalance
+            log.info("timing: denominatedBalance $watch2")
+            // log.info("timing: coinJoinBalance: start")
+            val coinJoinBalance = walletDataProvider.observeMixedBalance().first() //walletEx.coinJoinBalance
+            log.info("timing: coinJoinBalance $watch2")
+            val hasPartiallyMixedCoins = (denominatedBalance - coinJoinBalance).isGreaterThan(Coin.ZERO)
 
-        val canDenominate = if (this::clientManager.isInitialized) {
-            clientManager.doAutomaticDenominating(false, true)
-        } else {
-            // if the client manager is not running, just say canDenominate is true
-            // The first round of execution will determine if mixing can happen
-            // log.info("coinjoin: client manager is not running, canDemoninate=true")
-            true
+            val hasAnonymizableBalance = anonBalance.isGreaterThan(CoinJoin.getSmallestDenomination())
+
+            val canDenominate = if (this::clientManager.isInitialized) {
+                clientManager.doAutomaticDenominating(false, true)
+            } else {
+                // if the client manager is not running, just say canDenominate is true
+                // The first round of execution will determine if mixing can happen
+                // log.info("coinjoin: client manager is not running, canDemoninate=true")
+                true
+            }
+
+            val hasBalanceLeftToMix = when {
+                hasPartiallyMixedCoins -> true
+                hasAnonymizableBalance || canDenominate -> true
+                else -> false
+            }
+
+            log.info(
+                "coinjoin: can mix balance: $hasBalanceLeftToMix = balance: (${
+                    anonBalance.isGreaterThan(
+                        CoinJoin.getSmallestDenomination()
+                    )
+                } && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
+            )
+            updateState(
+                config.getMode(),
+                getCurrentTimeSkew(),
+                hasBalanceLeftToMix,
+                networkStatus,
+                blockchainState,
+                blockchainStateProvider.getBlockChain()
+            )
+        } finally {
+            updateBalanceMutex.unlock()
         }
-
-        val hasBalanceLeftToMix = when {
-            hasPartiallyMixedCoins -> true
-            hasAnonymizableBalance || canDenominate-> true
-            else -> false
-        }
-
-        log.info(
-            "coinjoin: can mix balance: $hasBalanceLeftToMix = balance: (${anonBalance.isGreaterThan(
-                CoinJoin.getSmallestDenomination()
-            )} && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
-        )
-        updateState(
-            config.getMode(),
-            getCurrentTimeSkew(),
-            hasBalanceLeftToMix,
-            networkStatus,
-            blockchainState,
-            blockchainStateProvider.getBlockChain()
-        )
     }
 
     private suspend fun updateState(
@@ -366,7 +390,7 @@ class CoinJoinMixingService @Inject constructor(
                     }
                 }
             }
-            updateProgress()
+            updateProgressFromCache()
             updateIsMixing()
         } finally {
             updateMutex.unlock()
@@ -695,12 +719,25 @@ class CoinJoinMixingService @Inject constructor(
 
     override suspend fun getMixingProgress(): Double {
         val wallet = walletDataProvider.wallet as? WalletEx
-        return wallet?.let { it.coinJoin.mixingProgress * 100.0 } ?: 0.0
+        val watch = Stopwatch.createStarted()
+        val process =  wallet?.let { it.coinJoin.mixingProgress * 100.0 } ?: 0.0
+        log.info("timing: getMixingProgress: $watch")
+        return process
+    }
+
+    private suspend fun updateProgressFromCache() {
+        val progress = config.getMixingProgress()
+        if (progress == null) {
+            updateProgress()
+        } else {
+            _progressFlow.emit(progress)
+        }
     }
 
     private suspend fun updateProgress() {
         val progress = getMixingProgress()
         _progressFlow.emit(progress)
+        config.setMixingProgress(progress)
     }
 
     private fun updateActiveSessions(change: Int) {

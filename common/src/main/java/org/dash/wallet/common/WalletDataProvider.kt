@@ -37,8 +37,9 @@ interface WalletDataProvider {
     val transactionBag: TransactionBag
 
     val networkParameters: NetworkParameters
-
+    val authenticationGroupExtension: AuthenticationGroupExtension?
     fun freshReceiveAddress(): Address
+    fun currentReceiveAddress(): Address
 
     fun getWalletBalance(): Coin
 
