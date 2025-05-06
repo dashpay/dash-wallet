@@ -16,10 +16,19 @@
  */
 package de.schildbach.wallet.ui.main.shortcuts
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.data.WalletUIConfig
+import java.util.concurrent.Executors
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,20 +36,37 @@ import javax.inject.Singleton
 class ShortcutProvider @Inject constructor(
     private val config: WalletUIConfig
 ) {
-    val customShortcuts = config.observe(WalletUIConfig.CUSTOMIZED_SHORTCUTS)
-        .filterNotNull()
-        .distinctUntilChanged()
-        .map { shortcutSet -> parseCustomShortcuts(shortcutSet) }
-
-    fun getAllShortcuts(): List<ShortcutOption> {
-        return ShortcutOption.entries
+    companion object {
+        private const val MINIMUM_SHORTCUTS = 4
     }
-    
-    private fun parseCustomShortcuts(shortcutString: String): List<ShortcutOption> {
-        return shortcutString.split(",").mapNotNull { idStr -> 
-            val id = idStr.toIntOrNull() ?: return@mapNotNull null
-            ShortcutOption.entries.find { it.id == id }
-        }
+
+    private val scope = CoroutineScope(
+        Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+    )
+
+    private val _customShortcuts = MutableStateFlow<List<ShortcutOption>>(emptyList())
+    val customShortcuts: StateFlow<List<ShortcutOption>> = _customShortcuts.asStateFlow()
+
+    init {
+        config.observe(WalletUIConfig.CUSTOMIZED_SHORTCUTS)
+            .filterNotNull()
+            .distinctUntilChanged()
+            .map { shortcutSet -> parseCustomShortcuts(shortcutSet) }
+            .onEach { shortcuts ->
+                var finalShortcuts = shortcuts.toMutableList()
+
+                if (finalShortcuts.size < MINIMUM_SHORTCUTS) {
+                    val allShortcuts = ShortcutOption.entries
+                    finalShortcuts.add(
+                        index = 0, // Most likely short 1 item due to removal from the start of the list
+                        allShortcuts.first { it != ShortcutOption.SECURE_NOW && it !in finalShortcuts }
+                    )
+                    setCustomShortcuts(finalShortcuts.map { it.id }.toIntArray()) // This will trigger another pass
+                } else {
+                    _customShortcuts.value = finalShortcuts
+                }
+            }
+            .launchIn(scope)
     }
 
     fun getFilteredShortcuts(
@@ -48,10 +74,11 @@ class ShortcutProvider @Inject constructor(
         userHasBalance: Boolean = true,
         userHasContacts: Boolean = false
     ): List<ShortcutOption> {
-        val shortcuts = getAllShortcuts().filter { shortcut ->
+        val shortcuts = ShortcutOption.entries.filter { shortcut ->
             when (shortcut) {
                 ShortcutOption.SECURE_NOW -> !isPassphraseVerified
                 ShortcutOption.SCAN_QR -> userHasBalance
+                ShortcutOption.SEND -> !userHasBalance && isPassphraseVerified
                 ShortcutOption.BUY_SELL -> !userHasBalance
                 ShortcutOption.SEND_TO_ADDRESS -> userHasBalance
                 ShortcutOption.SEND_TO_CONTACT -> userHasBalance && userHasContacts
@@ -65,5 +92,12 @@ class ShortcutProvider @Inject constructor(
     suspend fun setCustomShortcuts(shortcutIds: IntArray) {
         val shortcutString = shortcutIds.joinToString(",") { it.toString() }
         config.set(WalletUIConfig.CUSTOMIZED_SHORTCUTS, shortcutString)
+    }
+
+    private fun parseCustomShortcuts(shortcutString: String): List<ShortcutOption> {
+        return shortcutString.split(",").mapNotNull { idStr ->
+            val id = idStr.toIntOrNull() ?: return@mapNotNull null
+            ShortcutOption.fromId(id)
+        }
     }
 } 

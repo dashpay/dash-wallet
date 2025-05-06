@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.main.shortcuts
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -45,19 +44,10 @@ class ShortcutsViewModel @Inject constructor(
     private val topperClient: TopperClient,
     private val coinBaseRepository: CoinBaseRepositoryInt
 ): ViewModel() {
-    private var hasCustomShortcuts = false
     private val maxShortcuts = if (deviceInfo.isSmallScreen) 3 else 4
-
-    private var _isPassphraseVerified = true
-    var isPassphraseVerified: Boolean
-        get() = _isPassphraseVerified
-        set(value) {
-            _isPassphraseVerified = value
-            
-            if (!hasCustomShortcuts) {
-                shortcuts = getPresetShortcuts().take(maxShortcuts)
-            }
-        }
+    private var isPassphraseVerified = true
+    private val hasCustomShortcuts: Boolean
+        get() = shortcutProvider.customShortcuts.value.isNotEmpty()
 
     private var _userHasBalance = true
     var userHasBalance: Boolean
@@ -89,10 +79,7 @@ class ShortcutsViewModel @Inject constructor(
     init {
         shortcutProvider.customShortcuts
             .filterNot { it.isEmpty() }
-            .onEach {
-                hasCustomShortcuts = true
-                shortcuts = it.take(maxShortcuts)
-            }
+            .onEach { shortcuts = it.take(maxShortcuts) }
             .launchIn(viewModelScope)
     }
 
@@ -102,19 +89,46 @@ class ShortcutsViewModel @Inject constructor(
 
     fun refreshIsPassphraseVerified() {
         isPassphraseVerified = !config.remindBackupSeed
+
+        if (isPassphraseVerified && shortcuts.contains(ShortcutOption.SECURE_NOW)) {
+            if (hasCustomShortcuts) {
+                removeSecureNowShortcut()
+            } else {
+                shortcuts = getPresetShortcuts().take(maxShortcuts)
+            }
+        }
     }
 
     fun replaceShortcut(oldIndex: Int, new: ShortcutOption) {
+        if (oldIndex < 0) {
+            return
+        }
+
         val currentShortcuts = shortcuts.toMutableList()
-        
-        if (oldIndex != -1) {
-            currentShortcuts[oldIndex] = new
-            val shortcutIds = currentShortcuts.map { it.id }
-                .take(maxShortcuts)
-                .toIntArray()
-            viewModelScope.launch {
-                shortcutProvider.setCustomShortcuts(shortcutIds)
-            }
+
+        if (currentShortcuts[oldIndex] == ShortcutOption.SECURE_NOW) {
+            // Don't allow replacing SECURE_NOW shortcut
+            return
+        }
+
+        currentShortcuts[oldIndex] = new
+        val shortcutIds = currentShortcuts.map { it.id }
+            .take(maxShortcuts)
+            .toIntArray()
+        viewModelScope.launch {
+            shortcutProvider.setCustomShortcuts(shortcutIds)
+        }
+    }
+
+    private fun removeSecureNowShortcut() {
+        val currentShortcuts = shortcuts.toMutableList()
+        val index = currentShortcuts.indexOf(ShortcutOption.SECURE_NOW)
+        currentShortcuts.removeAt(index)
+        val shortcutIds = currentShortcuts.map { it.id }
+            .take(maxShortcuts)
+            .toIntArray()
+        viewModelScope.launch {
+            shortcutProvider.setCustomShortcuts(shortcutIds)
         }
     }
 

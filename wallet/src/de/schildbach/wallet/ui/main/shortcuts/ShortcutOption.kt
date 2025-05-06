@@ -40,35 +40,35 @@ enum class ShortcutOption(
         R.drawable.ic_transaction_received,
         R.string.shortcut_receive
     ),
-    SEND_TO_ADDRESS(
+    SEND(
         3,
+        R.drawable.ic_transaction_sent,
+        R.string.shortcut_send
+    ),
+    SCAN_QR(
+        4,
+        R.drawable.ic_qr,
+        R.string.shortcut_scan_to_pay
+    ),
+    SEND_TO_ADDRESS(
+        5,
         R.drawable.ic_send_to_address,
         R.string.send_to_address
     ),
     SEND_TO_CONTACT(
-        4,
+        6,
         R.drawable.ic_contact,
         R.string.shortcut_pay_to_contact
     ),
     BUY_SELL(
-        5,
+        7,
         R.drawable.ic_shortcut_buy_sell_dash,
         R.string.shortcut_buy_sell
     ),
-    SCAN_QR(
-        6,
-        R.drawable.ic_qr,
-        R.string.shortcut_scan_to_pay
-    ),
     WHERE_TO_SPEND(
-        7,
+        8,
         R.drawable.ic_where_to_spend,
         R.string.where_to_spend_title
-    ),
-    SEND(
-        8,
-        R.drawable.ic_transaction_sent,
-        R.string.shortcut_send
     ),
     ATMS(
         9,
@@ -96,7 +96,9 @@ enum class ShortcutOption(
         R.string.coinbase_title
     );
 
-    fun fromId(id: Int): ShortcutOption {
-        return entries.first { it.id == id }
+    companion object  {
+        fun fromId(id: Int): ShortcutOption {
+            return entries.first { it.id == id }
+        }
     }
 }

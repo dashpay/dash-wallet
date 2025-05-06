@@ -465,6 +465,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private fun onShortcutLongTap(shortcut: ShortcutOption, index: Int) {
+        if (shortcut == ShortcutOption.SECURE_NOW) {
+            return
+        }
+
         ComposeBottomSheet(R.style.SecondaryBackground, forceExpand = true) { dialog ->
             ShortcutsList(shortcutViewModel.getAllShortcutOptions(shortcut)) { newShortcut ->
                 shortcutViewModel.replaceShortcut(index, newShortcut)
