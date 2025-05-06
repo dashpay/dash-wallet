@@ -75,10 +75,12 @@ public final class Constants {
         String[] supportedAbis = Build.SUPPORTED_ABIS;
         boolean is32Bit = true;
 
-        for (String abi : supportedAbis) {
-            if (abi.equals("arm64-v8a") || abi.equals("x86_64")) {
-                is32Bit = false;
-                break;
+        if (supportedAbis != null) {
+            for (String abi : supportedAbis) {
+                if (abi.equals("arm64-v8a") || abi.equals("x86_64")) {
+                    is32Bit = false;
+                    break;
+                }
             }
         }
 

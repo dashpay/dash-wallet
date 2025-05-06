@@ -34,11 +34,16 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.data.UsernameSortOrderBy
+import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.DashPayContactRequest
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.platform.PlatformService
@@ -54,6 +59,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.*
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PeerGroup
+import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
@@ -75,6 +81,7 @@ import org.junit.Test
 import org.junit.rules.TestRule
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
+import java.math.BigInteger
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MainCoroutineRule(
@@ -90,6 +97,24 @@ class MainCoroutineRule(
 }
 
 class MainViewModelTest {
+    private val identityId = Sha256Hash.ZERO_HASH.toStringBase58()
+    private val anotherIdentityId = Sha256Hash.wrap(BigInteger.ONE).toStringBase58()
+    private val contactRequest = DashPayContactRequest(
+        anotherIdentityId,
+        identityId,
+        0,
+        ByteArray(32),
+        0,
+        0,
+        0L,
+        null,
+        null
+    )
+    private val profile = DashPayProfile(
+        anotherIdentityId,
+        "another-user-1"
+    )
+
     private val configMock = mockk<Configuration>()
     private val exchangeRatesMock = mockk<ExchangeRatesProvider>()
     private val walletApp = mockk<WalletApplication> {
@@ -102,6 +127,7 @@ class MainViewModelTest {
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
         every { observeBase() } returns MutableStateFlow(mockIdentityData)
+        every { observe(BlockchainIdentityConfig.IDENTITY_ID) } returns MutableStateFlow(identityId)
     }
     private val dashPayProfileDaoMock = mockk<DashPayProfileDao> {
         every { observeByUserId(any()) } returns MutableStateFlow(null)
@@ -109,6 +135,10 @@ class MainViewModelTest {
     private val invitationsDaoMock = mockk<InvitationsDao> {
         coEvery { loadAll() } returns listOf()
     }
+    private val userAgentDaoMock = mockk<UserAlertDao> {
+        every { observe(any()) } returns flow { }
+    }
+
     private val appDatabaseMock = mockk<AppDatabase> {
         every { dashPayProfileDao() } returns dashPayProfileDaoMock
         every { dashPayContactRequestDao() } returns mockk()
@@ -128,16 +158,23 @@ class MainViewModelTest {
 
     private val walletDataMock = mockk<WalletDataProvider> {
         every { wallet } returns null
+        every { observeWalletReset() } returns MutableStateFlow(Unit)
+        every { observeMixedBalance() } returns MutableStateFlow(Coin.FIFTY_COINS)
     }
 
     private val blockchainStateMock = mockk<BlockchainStateProvider> {
-        every { getMasternodeAPY() } returns 5.9
+        //every { getMasternodeAPY() } returns 5.9
     }
 
     private val transactionMetadataMock = mockk<TransactionMetadataProvider> {
         every { observePresentableMetadata() } returns MutableStateFlow(mapOf())
     }
-    private val dashPayContactRequestDao = mockk<DashPayContactRequestDao>()
+    private val dashPayContactRequestDao = mockk<DashPayContactRequestDao>() {
+        coEvery { loadFromOthers(identityId) } returns listOf(
+
+        )
+        every { observeReceivedRequestsCount(identityId) } returns MutableStateFlow(1)
+    }
     private val mockDashPayConfig = mockk<DashPayConfig> {
         every { observe<Long>(any()) } returns MutableStateFlow(0L)
         coEvery { areNotificationsDisabled() } returns false
@@ -148,17 +185,23 @@ class MainViewModelTest {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
-    private val userAgentDaoMock = mockk<UserAlertDao> {
-        every { observe(any()) } returns flow { }
+    private val platformRepo = mockk<PlatformRepo>() {
+        every { observeContacts("", UsernameSortOrderBy.LAST_ACTIVITY, false) } returns MutableStateFlow(
+            listOf(
+                UsernameSearchResult(
+                    "username",
+                    profile,
+                    null,
+                    contactRequest
+                )
+            )
+        )
     }
 
-    private val platformRepo = mockk<PlatformRepo>()
-
     private val biometricHelper = mockk<BiometricHelper>()
-    private val telephonyManager = mockk<TelephonyManager>()
+    private val telephonyManager = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()
     private val coinJoinService = mockk<CoinJoinService>()
-    private val crowdNodeApi = mockk<CrowdNodeApi>()
 
     @get:Rule
     var rule: TestRule = InstantTaskExecutorRule()
@@ -243,8 +286,7 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 coinJoinConfig,
-                coinJoinService,
-                crowdNodeApi
+                coinJoinService
             )
         )
 
@@ -282,8 +324,7 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 coinJoinConfig,
-                coinJoinService,
-                crowdNodeApi
+                coinJoinService
             )
         )
 
