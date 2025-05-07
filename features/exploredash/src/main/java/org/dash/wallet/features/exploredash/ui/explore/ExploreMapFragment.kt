@@ -38,6 +38,8 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -141,15 +143,17 @@ class ExploreMapFragment : SupportMapFragment() {
             }
         }
 
-        viewModel.selectedRadiusOption.observe(viewLifecycleOwner) {
-            googleMap?.let { map ->
-                if ((this.view?.measuredHeight ?: 0) > 0) {
-                    val mapCenter = map.projection.visibleRegion.latLngBounds.center
-                    val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
-                    map.animateCamera(radiusBounds)
+        viewModel.appliedFilters
+            .distinctUntilChangedBy { it.radius }
+            .observe(viewLifecycleOwner) {
+                googleMap?.let { map ->
+                    if ((this.view?.measuredHeight ?: 0) > 0) {
+                        val mapCenter = map.projection.visibleRegion.latLngBounds.center
+                        val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
+                        map.animateCamera(radiusBounds)
+                    }
                 }
             }
-        }
     }
 
     private fun showSelectedMarker(state: ScreenState) {
