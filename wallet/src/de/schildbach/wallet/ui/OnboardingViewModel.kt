@@ -54,10 +54,10 @@ class OnboardingViewModel @Inject constructor(
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    fun createNewWallet(onboardingInvite: InvitationLinkData?) {
+    fun createNewWallet(onboardingInvite: InvitationLinkData?, seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         walletApplication.initEnvironmentIfNeeded()
-        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
+        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
         log.info("successfully created new wallet")
         walletApplication.setWallet(wallet)
         configuration.armBackupSeedReminder()
