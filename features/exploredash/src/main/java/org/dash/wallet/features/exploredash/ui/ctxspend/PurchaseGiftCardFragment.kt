@@ -77,6 +77,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
+
         setPaymentHeader()
 
         exploreViewModel.selectedItem.value?.let { merchant ->
@@ -150,6 +151,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             viewModel.resetSelectedDenomination()
         }
     }
+
     private fun setupEnterAmountFragment() {
         val fragment = EnterAmountFragment.newInstance(
             dashToFiat = false,
@@ -168,10 +170,12 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             .add(R.id.enter_amount_fragment_placeholder, fragment)
             .commitNow()
         enterAmountFragment = fragment
+
         binding.enterAmountFragmentPlaceholder.isVisible = true
         binding.composeContainer.isVisible = false
         binding.fixedDenomText.isVisible = false
     }
+
     private fun setupMerchantDenominations() {
         binding.enterAmountFragmentPlaceholder.isVisible = false
         binding.composeContainer.isVisible = true
@@ -204,6 +208,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         if (viewModel.giftCardMerchant.fixedDenomination) {
             return
         }
+
         val purchaseAmount = enterAmountViewModel.amount.value
         purchaseAmount?.let {
             if (!viewModel.withinLimits(purchaseAmount)) {
