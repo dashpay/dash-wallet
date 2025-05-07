@@ -116,6 +116,7 @@
     <string-array name="sort_by_options_names">
         <item>Naam</item>
         <item>Afstand</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">

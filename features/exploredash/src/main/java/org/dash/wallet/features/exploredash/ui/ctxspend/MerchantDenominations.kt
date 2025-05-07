@@ -112,7 +112,6 @@ fun MerchantDenominations(
 fun MerchantDenominationsPreview() {
     val denominations = listOf(5, 10, 15, 20, 50, 75, 100, 200)
     val currency = Currency.getInstance("USD")
-
     MerchantDenominations(
         modifier = Modifier.padding(20.dp).width(300.dp),
         denominations = denominations,

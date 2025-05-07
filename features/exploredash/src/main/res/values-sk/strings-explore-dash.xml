@@ -120,6 +120,7 @@
     <string-array name="sort_by_options_names">
         <item>Meno</item>
         <item>Vzdialenosť</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">

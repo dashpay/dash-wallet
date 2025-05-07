@@ -121,6 +121,7 @@
     <string-array name="sort_by_options_names">
         <item>Imię</item>
         <item>Dystans</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">
