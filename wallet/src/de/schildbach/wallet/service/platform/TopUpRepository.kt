@@ -282,6 +282,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
+            log.info("adding credit funding transaction listener for ${cftx.txId}")
             cftx.getConfidence(Constants.CONTEXT).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
@@ -308,8 +309,9 @@ class TopUpRepositoryImpl @Inject constructor(
                                 continuation.resumeWith(Result.success(true))
                             }
                         }
-                        // If this transaction has been seen by more than 1 peer, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
+                            // If this transaction has been seen by more than 1 peer,
+                            // then it has been sent successfully.  However,
                             // being seen by other peers is no longer sufficient proof
                         }
                         // If this transaction was rejected, then it was not sent successfully
