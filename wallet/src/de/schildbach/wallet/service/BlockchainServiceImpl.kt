@@ -1051,7 +1051,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (!blockChainFileExists) {
                 log.info("blockchain does not exist, resetting wallet")
                 propagateContext()
-                wallet!!.reset()
+                wallet?.reset()
                 resetMNLists(false)
                 resetMNListsOnPeerGroupStart = true
             }
