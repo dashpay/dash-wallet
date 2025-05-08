@@ -46,6 +46,8 @@ import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
+import androidx.core.net.toUri
+import androidx.core.view.marginTop
 
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
@@ -75,12 +77,11 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         if (item is Merchant) {
             isAtm = false
             bindMerchantDetails(item)
+            refreshEmailVisibility()
         } else if (item is Atm) {
             isAtm = true
             bindAtmDetails(item)
         }
-
-        refreshEmailVisibility()
     }
 
     fun setOnSendDashClicked(listener: (Boolean) -> Unit) {
@@ -263,6 +264,10 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             itemType.isVisible = false
             showAllBtn.isVisible = false
             backButton.isVisible = false
+            buySellContainer.isVisible = true
+//            buySellContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+//                top = resources.getDimensionPixelSize(R.dimen.atm_manufacturer_vertical_margin)
+//            }
 
             sellBtn.setOnClickListener { onSendDashClicked?.invoke(false) }
             buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
@@ -299,25 +304,26 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     }
 
     private fun openMaps(item: SearchResult) {
-        val uri =
-            if (!item.googleMaps.isNullOrBlank()) {
-                item.googleMaps
-            } else {
-                context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
-            }
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+        }
 
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
-        context.startActivity(intent)
+        uri?.let {
+            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
+            context.startActivity(intent)
+        }
     }
 
     private fun dialPhone(phone: String) {
-        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel: $phone"))
+        val intent = Intent(Intent.ACTION_DIAL, "tel: $phone".toUri())
         context.startActivity(intent)
     }
 
     private fun openWebsite(website: String) {
         val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(fixedUrl))
+        val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
         context.startActivity(intent)
     }
 
