@@ -47,7 +47,15 @@ class CTXSpendException(
 
     init {
         val type = object : TypeToken<Map<String, Any>>() {}.type
-        errorMap = Gson().fromJson(errorBody, type)
+        errorMap = try {
+            if (errorBody != null) {
+                Gson().fromJson(errorBody, type) ?: emptyMap()
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            emptyMap()
+        }
     }
 
     val isLimitError
