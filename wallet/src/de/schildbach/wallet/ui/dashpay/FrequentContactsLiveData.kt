@@ -45,7 +45,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             when (contactRequests.status) {
                 Status.SUCCESS -> {
-                    if (!platformRepo.hasIdentity) {
+                    if (!platformRepo.hasBlockchainIdentity) {
                         return@launch
                     }
 

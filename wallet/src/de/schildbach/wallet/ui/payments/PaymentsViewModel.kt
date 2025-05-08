@@ -27,8 +27,8 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
@@ -52,13 +52,17 @@ class PaymentsViewModel @Inject constructor(
     val dashPayProfile = _dashPayProfile.asLiveData()
 
     suspend fun getCurrentAddress() = withContext(Dispatchers.IO) {
-        Context.propagate(walletDataProvider.wallet!!.context)
-        walletDataProvider.currentReceiveAddress()
+        walletDataProvider.wallet?.let {
+            Context.propagate(it.context)
+            walletDataProvider.currentReceiveAddress()
+        } ?: error("Wallet not yet initialised")
     }
 
     suspend fun getFreshAddress() = withContext(Dispatchers.IO) {
-        Context.propagate(walletDataProvider.wallet!!.context)
-        walletDataProvider.freshReceiveAddress()
+        walletDataProvider.wallet?.let {
+            Context.propagate(it.context)
+            walletDataProvider.freshReceiveAddress()
+        } ?: error("Wallet not yet initialised")
     }
     init {
         identityConfig.observeBase()
@@ -66,7 +70,7 @@ class PaymentsViewModel @Inject constructor(
                 if (identity.userId != null && identity.creationComplete) {
                     platformRepo.observeProfileByUserId(identity.userId)
                 } else {
-                    flowOf()
+                    emptyFlow()
                 }
             }
             .onEach {
