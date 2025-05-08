@@ -26,6 +26,7 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
 import io.grpc.Status
@@ -601,6 +602,8 @@ class CreateIdentityService : LifecycleService() {
             }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
+
+        topUpRepository.clearInvitation()
 
         finishRegistration(blockchainIdentity, encryptionKey)
 

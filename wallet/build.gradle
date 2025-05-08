@@ -213,7 +213,7 @@ android {
         targetSdkVersion 34
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11020002
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.0-rc1"
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.2.0-rinv"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

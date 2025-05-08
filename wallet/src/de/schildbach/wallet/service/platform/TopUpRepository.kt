@@ -56,6 +56,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineScope
@@ -114,6 +115,7 @@ interface TopUpRepository {
     // invitation related methods
     suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
+        fundingAddress: Address,
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction
@@ -131,11 +133,19 @@ interface TopUpRepository {
     suspend fun checkInvites(encryptionKey: KeyParameter)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
+    /**
+     * validates an invite
+     *
+     * @return Returns true if it is valid, false if the invite has been used.
+     *
+     * @throws Exception if the invite is invalid
+     */
     fun validateInvitation(invite: InvitationLinkData): Boolean
     fun close()
 
     fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction
     fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean
+    suspend fun clearInvitation()
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -145,7 +155,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val topUpsDao: TopUpsDao,
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
-    private val coinJoinConfig: CoinJoinConfig
+    private val coinJoinConfig: CoinJoinConfig,
+    private val dashPayConfig: DashPayConfig
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -233,6 +244,11 @@ class TopUpRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun clearInvitation() {
+        dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
+        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
+    }
+
     //
     // Step 2 is to obtain the credit funding transaction for invites
     //
@@ -266,6 +282,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
+            log.info("adding credit funding transaction listener for ${cftx.txId}")
             cftx.getConfidence(Constants.CONTEXT).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
@@ -292,8 +309,9 @@ class TopUpRepositoryImpl @Inject constructor(
                                 continuation.resumeWith(Result.success(true))
                             }
                         }
-                        // If this transaction has been seen by more than 1 peer, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.SEEN_PEERS -> {
+                            // If this transaction has been seen by more than 1 peer,
+                            // then it has been sent successfully.  However,
                             // being seen by other peers is no longer sufficient proof
                         }
                         // If this transaction was rejected, then it was not sent successfully
@@ -409,6 +427,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun createInviteFundingTransaction(
         blockchainIdentity: BlockchainIdentity,
+        fundingAddress: Address,
         keyParameter: KeyParameter?,
         topupAmount: Coin
     ): AssetLockTransaction {
@@ -418,10 +437,7 @@ class TopUpRepositoryImpl @Inject constructor(
         log.info("createInviteFundingTransactionAsync prop context")
         val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
         val emptyWallet = balance == topupAmount && balance <= (topupAmount + Transaction.MIN_NONDUST_OUTPUT)
-        val fundingAddress = Address.fromKey(
-            Constants.NETWORK_PARAMETERS,
-            authExtension.currentKey(AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING)
-        )
+
         val cftx = blockchainIdentity.createInviteFundingTransaction(
             topupAmount,
             keyParameter,
@@ -431,7 +447,8 @@ class TopUpRepositoryImpl @Inject constructor(
         )
         val invitation = Invitation(
             fundingAddress.toBase58(),
-            cftx.identityId.toStringBase58(), cftx.txId,
+            cftx.identityId.toStringBase58(),
+            cftx.txId,
             System.currentTimeMillis()
         )
         // update database
@@ -542,6 +559,8 @@ class TopUpRepositoryImpl @Inject constructor(
                         fundingAddress.toBase58(),
                         assetLockTx.identityId.toStringBase58(),
                         assetLockTx.txId,
+                        assetLockTx.updateTime.time,
+                        "",
                         assetLockTx.updateTime.time
                     )
                     updateInvitation(invitation)
@@ -626,7 +645,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     private fun getAssetLockTransaction(txId: String): ByteArray? {
         for (attempt in 0..10) {
-            val txByteArray = platform.client.getTransaction(txId.toString())
+            val txByteArray = platform.client.getTransaction(txId)
             if (txByteArray != null) {
                 return txByteArray
             }
@@ -647,7 +666,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
         val stopWatch = Stopwatch.createStarted()
         var tx = getAssetLockTransaction(invite.cftx)
-        log.info("validateInvitation: obtaining transaction info took $stopWatch")
+        log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
         // TODO: remove when iOS uses big endian
         if (tx == null) {
             tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())

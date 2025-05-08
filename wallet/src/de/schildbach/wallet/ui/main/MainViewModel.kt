@@ -23,6 +23,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.common.base.Stopwatch
@@ -66,6 +67,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -74,6 +76,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -266,22 +269,33 @@ class MainViewModel @Inject constructor(
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
-    var pendingInvite: InvitationLinkData? = null
 
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailable.asLiveData()) {
             value = combineLatestData()
         }
-        addSource(_isBlockchainSynced) {
-            value = combineLatestData()
-        }
+//        addSource(_isBlockchainSynced) {
+//            value = combineLatestData()
+//        }
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(_totalBalance) {
-            value = combineLatestData()
-        }
+//        addSource(_totalBalance) {
+//            value = combineLatestData()
+//        }
     }
+
+    val isAbleToCreateIdentityFlow: StateFlow<Boolean> = combine(
+        isPlatformAvailable,
+        blockchainIdentity.asFlow()
+    ) { isPlatformAvailable, identity ->
+        combineLatestData()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
 
     val isAbleToCreateIdentity: Boolean
         get() = isAbleToCreateIdentityLiveData.value ?: false
@@ -914,16 +928,14 @@ class MainViewModel @Inject constructor(
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
-            val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
                 (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
             log.info(
-                "platform available: {}; isSynced: {}: no identity creation is progress: {}",
+                "platform available: {}; no identity creation is progress: {}",
                 isPlatformAvailable,
-                isSynced,
                 noIdentityCreatedOrInProgress
             )
-            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
+            return /*isSynced &&*/ isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }
 

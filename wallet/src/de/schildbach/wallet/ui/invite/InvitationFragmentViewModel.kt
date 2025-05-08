@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Context
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -91,6 +92,7 @@ open class InvitationFragmentViewModel @Inject constructor(
     suspend fun sendInviteTransaction(value: Coin): String {
         // ensure that the fundingAddress hasn't been used
         withContext(Dispatchers.IO) {
+            Context.propagate(walletData.wallet!!.context)
             var currentInvitation: Invitation?
             do {
                 currentInvitation = invitationDao.loadByFundingAddress(fundingAddress)

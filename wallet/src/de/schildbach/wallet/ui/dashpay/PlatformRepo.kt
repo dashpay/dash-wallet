@@ -516,7 +516,7 @@ class PlatformRepo @Inject constructor(
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
-        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
     }
 
 

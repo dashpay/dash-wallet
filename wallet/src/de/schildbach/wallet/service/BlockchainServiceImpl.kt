@@ -356,8 +356,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     val authExtension =
                         wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                     val cftx = authExtension.getAssetLockTransaction(tx)
-                    val blockChainHeadTime = blockChain!!.chainHead.header.time.time
-                    topUpRepository.handleSentAssetLockTransaction(cftx, blockChainHeadTime)
+                    topUpRepository.handleSentAssetLockTransaction(cftx, tx.updateTime.time)
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }
@@ -1052,7 +1051,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (!blockChainFileExists) {
                 log.info("blockchain does not exist, resetting wallet")
                 propagateContext()
-                wallet!!.reset()
+                wallet?.reset()
                 resetMNLists(false)
                 resetMNListsOnPeerGroupStart = true
             }
@@ -1347,6 +1346,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                     //Clear the blockchain identity
                     application.clearDatabases(false)
+                    resetBlockchainState()
                 }
                 closeStream(mnlistinfoBootStrapStream)
                 closeStream(qrinfoBootStrapStream)
@@ -1358,6 +1358,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
+    }
+
+    private fun resetBlockchainState() {
+        syncPercentage = 0
     }
 
     override fun onTrimMemory(level: Int) {

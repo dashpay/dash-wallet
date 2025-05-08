@@ -64,6 +64,8 @@ open class DashPayConfig @Inject constructor(
         val TOPUP_COUNTER = intPreferencesKey("topup_counter")
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
+        val INVITATION_LINK = stringPreferencesKey("invitation_link")
+        val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

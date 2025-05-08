@@ -22,7 +22,6 @@ import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
@@ -56,10 +55,8 @@ class OnboardingViewModel @Inject constructor(
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
-//    var onboardingInvite: InvitationLinkData? = null
-//    val isUsingInvite: Boolean
-//        get() = onboardingInvite != null
-    fun createNewWallet(onboardingInvite: InvitationLinkData?) {
+
+    fun createNewWallet() {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
@@ -69,14 +66,8 @@ class OnboardingViewModel @Inject constructor(
                 walletApplication.setWallet(wallet)
                 configuration.armBackupSeedReminder()
             }
-            if (onboardingInvite != null) {
-                analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
-                startActivityAction.call(
-                    AcceptInviteActivity.createIntent(walletApplication, onboardingInvite!!, true)
-                )
-            } else {
-                finishCreateNewWalletAction.call(Unit)
-            }
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
+            finishCreateNewWalletAction.call(Unit)
         }
     }
 

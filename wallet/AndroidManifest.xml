@@ -306,11 +306,6 @@
             android:theme="@style/My.Theme.ChildActivity" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.WelcomeActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Theme" />
-
-        <activity
             android:name="org.dash.wallet.integrations.uphold.ui.UpholdTransferActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
@@ -322,12 +317,6 @@
 
         <activity
             android:name="de.schildbach.wallet.ui.CreateUsernameActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:windowSoftInputMode="stateHidden|adjustResize" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.invite.AcceptInviteActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity"
             android:windowSoftInputMode="stateHidden|adjustResize" />
@@ -346,11 +335,6 @@
             android:name="de.schildbach.wallet.ui.dashpay.CropImageActivity"
             android:screenOrientation="portrait"
             android:theme="@style/My.Theme.ChildActivity" />
-
-        <activity
-            android:name="de.schildbach.wallet.ui.invite.OnboardFromInviteActivity"
-            android:theme="@style/My.Theme.ChildActivity"
-            android:screenOrientation="portrait" />
 
         <activity
             android:name="de.schildbach.wallet.ui.coinjoin.CoinJoinActivity"

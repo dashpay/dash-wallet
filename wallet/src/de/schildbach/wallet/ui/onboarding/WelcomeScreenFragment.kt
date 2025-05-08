@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui
+package de.schildbach.wallet.ui.onboarding
 
 import android.os.Bundle
 import android.view.View
@@ -32,21 +32,17 @@ class WelcomeScreenFragment : Fragment(R.layout.fragment_welcome) {
 
     companion object {
         private const val ARG_TITLE = "title"
-        private const val ARG_SUBTITLE = "subtitle"
         private const val ARG_IMAGE = "image"
 
         fun newInstance(
             @StringRes title: Int,
-            @StringRes subTitle: Int,
             @DrawableRes image: Int
         ): WelcomeScreenFragment {
             val fragment = WelcomeScreenFragment()
 
             val args = Bundle()
             args.putInt(ARG_TITLE, title)
-            args.putInt(ARG_SUBTITLE, subTitle)
             args.putInt(ARG_IMAGE, image)
-
             fragment.arguments = args
 
             return fragment
@@ -59,7 +55,6 @@ class WelcomeScreenFragment : Fragment(R.layout.fragment_welcome) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.title.text = getString(requireArguments().getInt(ARG_TITLE))
-        binding.subtitle.text = getString(requireArguments().getInt(ARG_SUBTITLE))
-        binding.screenshot.setImageResource(requireArguments().getInt(ARG_IMAGE))
+        binding.welcomeImage.setImageResource(requireArguments().getInt(ARG_IMAGE))
     }
 }

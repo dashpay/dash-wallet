@@ -26,6 +26,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
@@ -100,6 +101,7 @@ class SendInviteWorker @AssistedInject constructor(
                 }
                 topUpRepository.createInviteFundingTransaction(
                     blockchainIdentity,
+                    Address.fromBase58(wallet.params, fundingAddress),
                     encryptionKey,
                     Coin.valueOf(value)
                 )
