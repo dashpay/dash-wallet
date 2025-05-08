@@ -48,7 +48,6 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -124,7 +123,10 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                                     ex
                                 )
 
-                                val chooser = Intent.createChooser(intent, getString(R.string.report_issue_dialog_mail_intent_chooser))
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
                                 launcher.launch(chooser)
                             }
                         }

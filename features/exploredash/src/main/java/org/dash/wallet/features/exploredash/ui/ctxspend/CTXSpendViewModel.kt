@@ -133,7 +133,11 @@ class CTXSpendViewModel @Inject constructor(
 //                cryptoCurrency = Constants.DASH_CURRENCY
 //            )
 
-            val response: ResponseResource<GiftCardResponse> = ResponseResource.Failure(Exception("nothing"), true, 400, """
+            val response: ResponseResource<GiftCardResponse> = ResponseResource.Failure(
+                Exception("nothing"),
+                true,
+                400,
+                """
         {
           "fields": {
             "fiatAmount": [
@@ -142,7 +146,8 @@ class CTXSpendViewModel @Inject constructor(
             "message": "Bad request"
           }
         }
-    """)
+    """
+            )
 
             when (response) {
                 is ResponseResource.Success -> {
@@ -156,7 +161,7 @@ class CTXSpendViewModel @Inject constructor(
                         response.errorBody
                     )
                 }
-                //else -> {}
+                // else -> {}
             }
         }
         throw CTXSpendException("purchaseGiftCard error")
