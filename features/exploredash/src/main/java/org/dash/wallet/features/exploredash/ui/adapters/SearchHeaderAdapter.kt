@@ -21,10 +21,18 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
@@ -32,7 +40,7 @@ import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 
 class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     private lateinit var binding: SearchHeaderViewBinding
-    private var currentFilterOption = 0
+    private var currentFilterOption by mutableIntStateOf(0)
 
     private var onFilterOptionChosen: ((FilterMode) -> Unit)? = null
     private var onSearchQueryChanged: ((String) -> Unit)? = null
@@ -114,25 +122,34 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                 }
             )
             .map { SegmentedOption(it) }
-        binding.filterOptions.provideOptions(options)
-        binding.filterOptions.setSelectedIndex(currentFilterOption)
-        binding.filterOptions.setOnOptionPickedListener { _, index ->
-            onFilterOptionChosen?.invoke(
-                if (topic == ExploreTopic.Merchants) {
-                    when (index) {
-                        0 -> FilterMode.Online
-                        1 -> FilterMode.Nearby
-                        else -> FilterMode.All
+
+        binding.filterOptions.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.filterOptions.setContent {
+            SegmentedPicker(
+                options,
+                modifier = Modifier.height(36.dp),
+                selectedIndex = currentFilterOption
+            ) { option, index ->
+                currentFilterOption = index
+                onFilterOptionChosen?.invoke(
+                    if (topic == ExploreTopic.Merchants) {
+                        when (index) {
+                            0 -> FilterMode.Online
+                            1 -> FilterMode.Nearby
+                            else -> FilterMode.All
+                        }
+                    } else {
+                        when (index) {
+                            1 -> FilterMode.Buy
+                            2 -> FilterMode.Sell
+                            3 -> FilterMode.BuySell
+                            else -> FilterMode.All
+                        }
                     }
-                } else {
-                    when (index) {
-                        1 -> FilterMode.Buy
-                        2 -> FilterMode.Sell
-                        3 -> FilterMode.BuySell
-                        else -> FilterMode.All
-                    }
-                }
-            )
+                )
+            }
         }
 
         binding.search.doOnTextChanged { text, _, _, _ ->
@@ -178,10 +195,6 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         }
 
         currentFilterOption = index
-
-        if (::binding.isInitialized) {
-            binding.filterOptions.setSelectedIndex(index)
-        }
     }
 
     fun clearSearchQuery() {
