@@ -20,7 +20,6 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View.OnClickListener
@@ -28,6 +27,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.core.view.updateLayoutParams
@@ -46,8 +46,6 @@ import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
-import androidx.core.net.toUri
-import androidx.core.view.marginTop
 
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
     private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
