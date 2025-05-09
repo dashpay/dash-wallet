@@ -5,6 +5,7 @@ plugins {
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
@@ -34,6 +35,7 @@ android {
     }
     buildFeatures {
         viewBinding true
+        compose true
     }
     testOptions {
         animationsDisabled = true
@@ -75,6 +77,11 @@ dependencies {
     implementation 'me.grantland:autofittextview:0.2.1'
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
 
     // Logging
     implementation "org.slf4j:slf4j-api:$slf4jVersion"

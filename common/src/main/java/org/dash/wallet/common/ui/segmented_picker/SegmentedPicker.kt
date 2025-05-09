@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2025 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,6 +38,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
@@ -50,11 +51,26 @@ data class SegmentedOption(
     @DrawableRes val icon: Int? = null
 )
 
+enum class PickerDisplayMode {
+    Horizontal,
+    Vertical
+}
+
+data class SegmentedPickerStyle(
+    val displayMode: PickerDisplayMode = PickerDisplayMode.Horizontal,
+    val backgroundColor: Color = MyTheme.Colors.gray400.copy(alpha = 0.1f),
+    val thumbColor: Color = MyTheme.Colors.backgroundSecondary,
+    val cornerRadius: Float = 12f,
+    val textStyle: TextStyle = MyTheme.CaptionMedium,
+    val shadowElevation: Int = 2
+)
+
 @Composable
 fun SegmentedPicker(
     options: List<SegmentedOption>,
     modifier: Modifier = Modifier,
     selectedIndex: Int = 0,
+    style: SegmentedPickerStyle = SegmentedPickerStyle(),
     onOptionSelected: (SegmentedOption, Int) -> Unit = { _, _ -> },
 ) {
     if (options.isEmpty()) return
@@ -69,26 +85,33 @@ fun SegmentedPicker(
     val layoutDirection = LocalLayoutDirection.current
 
     var containerWidth by remember { mutableIntStateOf(0) }
+    var containerHeight by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(MyTheme.Colors.gray400.copy(alpha = 0.1f))
+            .clip(RoundedCornerShape(style.cornerRadius.dp))
+            .background(style.backgroundColor)
             .padding(1.dp)
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width
+                containerHeight = coordinates.size.height
             }
     ) {
-        val itemWidth = remember(options.size, containerWidth) {
-            if (options.isNotEmpty() && containerWidth > 0) 1f / options.size else 1f
+        val isHorizontal = style.displayMode == PickerDisplayMode.Horizontal
+        
+        // Calculate dimensions based on orientation
+        val containerSize = if (isHorizontal) containerWidth else containerHeight
+        val itemSize = remember(options.size, containerSize) {
+            if (options.isNotEmpty() && containerSize > 0) 1f / options.size else 1f
         }
-        val optionWidthPx = if (containerWidth > 0) containerWidth * itemWidth else 0f
-        val positionPx = optionWidthPx * internalSelectedIndex
-        val positionDp = with(density) { positionPx.toDp() }
+        val optionSizePx = if (containerSize > 0) containerSize * itemSize else 0f
+        val positionPx = optionSizePx * internalSelectedIndex
 
-        val targetPosition = if (layoutDirection == LayoutDirection.Rtl) {
-            // For RTL, calculate position from the right side
-            with(density) { (containerWidth - optionWidthPx - positionPx).toDp() }
+        // Calculate animation position
+        val positionDp = with(density) { positionPx.toDp() }
+        val targetPosition = if (isHorizontal && layoutDirection == LayoutDirection.Rtl) {
+            // For RTL horizontal mode, calculate position from the right side
+            with(density) { (containerWidth - optionSizePx - positionPx).toDp() }
         } else {
             positionDp
         }
@@ -109,82 +132,138 @@ fun SegmentedPicker(
                 }
             }
         )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            options.forEachIndexed { index, option ->
-                if (index < options.size - 1) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .width(0.6.dp)
-                            .padding(vertical = 12.dp)
-                            .background(MyTheme.Colors.divider)
-                            .align(Alignment.CenterVertically)
-                    )
+        
+        // Draw dividers between options
+        if (isHorizontal) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                options.forEachIndexed { index, _ ->
+                    if (index < options.size - 1) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(0.6.dp)
+                                .padding(vertical = 12.dp)
+                                .background(MyTheme.Colors.divider)
+                                .align(Alignment.CenterVertically)
+                        )
+                    }
                 }
             }
         }
 
-        if (containerWidth > 0) {
+        // Draw the animated selection indicator
+        if (containerSize > 0) {
             Surface(
-                shape = RoundedCornerShape(10.dp),
-                color = MyTheme.Colors.backgroundSecondary,
-                shadowElevation = 2.dp,
+                shape = RoundedCornerShape((style.cornerRadius - 2).dp),
+                color = style.thumbColor,
+                shadowElevation = style.shadowElevation.dp,
                 modifier = Modifier
-                    .width(with(density) { optionWidthPx.toDp() })
-                    .fillMaxHeight()
-                    .offset(x = animatedPosition)
+                    .then(
+                        if (isHorizontal) {
+                            Modifier
+                                .width(with(density) { optionSizePx.toDp() })
+                                .fillMaxHeight()
+                                .offset(x = animatedPosition)
+                        } else {
+                            Modifier
+                                .height(with(density) { optionSizePx.toDp() })
+                                .fillMaxWidth()
+                                .offset(y = animatedPosition)
+                        }
+                    )
             ) { }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            options.forEachIndexed { index, option ->
-                val isSelected = index == internalSelectedIndex
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clickable(indication = null, interactionSource = remember { MutableInteractionSource() }) {
+        // Draw the options
+        if (isHorizontal) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                options.forEachIndexed { index, option ->
+                    OptionContent(
+                        option = option,
+                        isSelected = index == internalSelectedIndex,
+                        textStyle = style.textStyle,
+                        onSelect = {
                             isInitialPosition = false
                             internalSelectedIndex = index
                             onOptionSelected(option, index)
                         },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                        modifier = Modifier.fillMaxHeight()
-                    ) {
-                        option.icon?.let {
-                            Icon(
-                                painter = painterResource(id = it),
-                                contentDescription = null,
-                                tint = if (isSelected) Color.Unspecified else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
-                                modifier = Modifier.padding(end = 6.dp)
-                            )
-                        }
-
-                        Text(
-                            text = option.title,
-                            color = if (isSelected) MyTheme.Colors.textPrimary else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
-                            style = MyTheme.OverlineMedium,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier.fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                options.forEachIndexed { index, option ->
+                    OptionContent(
+                        option = option,
+                        isSelected = index == internalSelectedIndex,
+                        textStyle = style.textStyle,
+                        onSelect = {
+                            isInitialPosition = false
+                            internalSelectedIndex = index
+                            onOptionSelected(option, index)
+                        },
+                        modifier = Modifier.weight(1f),
+                        isHorizontal = false
+                    )
                 }
             }
         }
     }
 }
 
+@Composable
+private fun OptionContent(
+    option: SegmentedOption,
+    isSelected: Boolean,
+    textStyle: TextStyle,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+    isHorizontal: Boolean = true
+) {
+    Box(
+        modifier = modifier
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onSelect
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
+            modifier = Modifier.then(
+                if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth()
+            )
+        ) {
+            option.icon?.let {
+                Icon(
+                    painter = painterResource(id = it),
+                    contentDescription = null,
+                    tint = if (isSelected) Color.Unspecified else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            }
+
+            Text(
+                text = option.title,
+                color = if (isSelected) MyTheme.Colors.textPrimary else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
+                style = textStyle,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
 
 @Preview(showBackground = true)
 @Composable
@@ -247,6 +326,31 @@ fun SegmentedPickerPreview() {
                     selectedTwoOptionIndex = index
                 },
                 modifier = Modifier.fillMaxWidth().height(38.dp)
+            )
+            
+            Spacer(modifier = Modifier.height(20.dp))
+            
+            Text(
+                text = "Vertical Picker",
+                style = MyTheme.OverlineMedium,
+                modifier = Modifier.padding(vertical = 8.dp)
+            )
+
+            val customStyle = SegmentedPickerStyle(
+                displayMode = PickerDisplayMode.Vertical,
+                backgroundColor = MyTheme.Colors.gray400.copy(alpha = 0.15f),
+                thumbColor = MyTheme.Colors.dashBlue,
+                cornerRadius = 16f
+            )
+            
+            SegmentedPicker(
+                options = options,
+                selectedIndex = selectedIndex,
+                style = customStyle,
+                onOptionSelected = { _, index ->
+                    selectedIndex = index
+                },
+                modifier = Modifier.width(120.dp).height(120.dp)
             )
         }
     }

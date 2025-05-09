@@ -30,11 +30,19 @@ object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
     val InterFont = FontFamily(Font(R.font.inter))
 
-    val Body2Regular = TextStyle(
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
+    val Micro = TextStyle(
+        fontSize = 10.sp,
+        lineHeight = 16.sp,
         fontFamily = InterFont,
-        fontWeight = FontWeight(400)
+        fontWeight = FontWeight(500),
+        textAlign = TextAlign.Center,
+    )
+
+    val CaptionMedium = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(500)
     )
 
     val OverlineSemibold = TextStyle(
@@ -51,6 +59,13 @@ object MyTheme {
         fontFamily = InterFont,
         fontWeight = FontWeight(500),
         textAlign = TextAlign.Center
+    )
+
+    val Body2Regular = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(400)
     )
 
     val SubtitleSemibold = TextStyle(
