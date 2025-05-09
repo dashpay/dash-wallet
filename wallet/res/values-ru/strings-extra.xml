@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Скан.</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Отправить</string>
+    <string name="shortcut_send">Отправить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Отправить человеку в списке контактов</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -450,7 +450,7 @@
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
     <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
-    <string name="masternode_key_type_total">ключи</string>
+    <string name="masternode_key_type_total">%d ключей</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>
     <string name="masternode_key_address">Адрес</string>

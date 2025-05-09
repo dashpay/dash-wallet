@@ -8,7 +8,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Scanează</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Trimite</string>
+    <string name="shortcut_send">Trimite</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importă Cheia Privată</string>
     <!-- Lock Screen: Text above the PIN Entry area -->

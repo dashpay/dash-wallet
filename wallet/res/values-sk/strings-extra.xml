@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Skenovať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Poslať</string>
+    <string name="shortcut_send">Poslať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Poslať kontaktu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

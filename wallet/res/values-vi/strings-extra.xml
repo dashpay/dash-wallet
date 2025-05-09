@@ -25,7 +25,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Quét</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Gửi</string>
+    <string name="shortcut_send">Gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

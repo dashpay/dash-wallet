@@ -127,10 +127,10 @@
             </com.google.android.material.appbar.CollapsingToolbarLayout>
         </com.google.android.material.appbar.AppBarLayout>
 
-        <de.schildbach.wallet.ui.widget.ShortcutsPane
+        <androidx.compose.ui.platform.ComposeView
             android:id="@+id/shortcuts_pane"
             android:layout_width="match_parent"
-            android:layout_height="92dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:paddingHorizontal="2dp"

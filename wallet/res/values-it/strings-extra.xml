@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Scansiona</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Invia</string>
+    <string name="shortcut_send">Invia</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Invia al Contatto</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

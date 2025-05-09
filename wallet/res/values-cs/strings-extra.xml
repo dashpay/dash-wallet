@@ -29,7 +29,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Skenovat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Poslat</string>
+    <string name="shortcut_send">Poslat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Odeslat kontaktu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

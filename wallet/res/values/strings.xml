@@ -420,4 +420,7 @@
     <string name="credits_profile_change_message">Update profile information</string>
 
     <string name="block_explorer_selection_title">Select block explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Select option</string>
 </resources>
