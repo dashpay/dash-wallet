@@ -31,6 +31,7 @@ import de.schildbach.wallet_test.databinding.HeaderBalanceFragmentBinding
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.observe
 
 class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -66,7 +67,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         }
 
         viewModel.showTapToHideHint.observe(viewLifecycleOwner) { showHint ->
-            binding.hideBalanceHintText.isVisible = showHint ?: true
+            binding.hideBalanceHintText.isVisible = showHint != false
         }
     }
 

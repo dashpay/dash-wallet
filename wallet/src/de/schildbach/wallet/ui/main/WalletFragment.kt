@@ -23,7 +23,14 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -31,7 +38,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
-import androidx.navigation.NavOptions.*
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
@@ -80,7 +86,9 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.schildbach.wallet.data.ServiceType
+import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.util.openCustomTab
 
 @AndroidEntryPoint
@@ -151,6 +159,29 @@ class WalletFragment : Fragment(R.layout.home_content) {
         binding.dashpayUserAvatar.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+        }
+
+        binding.infoPanel.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+
+        binding.infoPanel.setContent {
+            val showShortcutInfoPanel by viewModel.showShortcutInfo.collectAsStateWithLifecycle(false)
+
+            if (showShortcutInfoPanel) {
+                InfoPanel(
+                    stringResource(R.string.customize_shortcuts),
+                    stringResource(R.string.customize_shortcuts_description),
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    leftIconRes = R.drawable.ic_shortcuts,
+                    actionIconRes = R.drawable.ic_popup_close
+                ) {
+                    viewModel.hideShortcutInfo()
+                }
+            }
         }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
@@ -436,7 +467,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 findNavController().navigate(
                     R.id.exploreFragment,
                     bundleOf(),
-                    Builder()
+                    NavOptions.Builder()
                         .setEnterAnim(R.anim.slide_in_bottom)
                         .build()
                 )
