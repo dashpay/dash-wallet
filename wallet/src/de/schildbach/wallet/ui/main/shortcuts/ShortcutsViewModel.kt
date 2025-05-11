@@ -72,6 +72,7 @@ class ShortcutsViewModel @Inject constructor(
         }
 
     var shortcuts by mutableStateOf(getPresetShortcuts().take(maxShortcuts))
+    var showShortcutInfo by mutableStateOf(false)
 
     val isCoinbaseAuthenticated: Boolean
         get() = coinBaseRepository.isAuthenticated
@@ -81,6 +82,23 @@ class ShortcutsViewModel @Inject constructor(
             .filterNot { it.isEmpty() }
             .onEach { shortcuts = it.take(maxShortcuts) }
             .launchIn(viewModelScope)
+
+        // Check if need to show the shortcut info panel
+        viewModelScope.launch {
+            val isHidden = walletUIConfig.get(WalletUIConfig.IS_SHORTCUT_INFO_HIDDEN)
+            showShortcutInfo = if (config.wasUpgraded()) {
+                // If upgraded, show immediately if not already hidden
+                isHidden != true
+            } else if (isHidden == null) {
+                // New install and the first time opening the app - don't show
+                // Update IS_SHORTCUT_INFO_HIDDEN to detect non-first launch next time
+                walletUIConfig.set(WalletUIConfig.IS_SHORTCUT_INFO_HIDDEN, false)
+                false
+            } else {
+                // New install, not the first time opening the app, show if not hidden
+                !isHidden
+            }
+        }
     }
 
     fun getAllShortcutOptions(replacingShortcut: ShortcutOption): List<ShortcutOption> {
@@ -117,6 +135,13 @@ class ShortcutsViewModel @Inject constructor(
             .toIntArray()
         viewModelScope.launch {
             shortcutProvider.setCustomShortcuts(shortcutIds)
+        }
+    }
+
+    fun hideShortcutInfo() {
+        viewModelScope.launch {
+            showShortcutInfo = false
+            walletUIConfig.set(WalletUIConfig.IS_SHORTCUT_INFO_HIDDEN, true)
         }
     }
 

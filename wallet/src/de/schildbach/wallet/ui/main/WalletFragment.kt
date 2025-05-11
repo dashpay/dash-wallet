@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.app.Activity
-import androidx.fragment.app.activityViewModels
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
@@ -27,15 +26,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.ui.Modifier
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.viewModels
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
@@ -44,25 +43,27 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
-import de.schildbach.wallet.ui.*
+import de.schildbach.wallet.ui.EditProfileActivity
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
 import de.schildbach.wallet.ui.dashpay.utils.display
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutOption
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsList
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsPane
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
-import de.schildbach.wallet.ui.main.shortcuts.ShortcutOption
-import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
-import de.schildbach.wallet.ui.main.shortcuts.ShortcutsList
-import de.schildbach.wallet.ui.main.shortcuts.ShortcutsPane
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -77,19 +78,16 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
-import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import de.schildbach.wallet.data.ServiceType
-import org.dash.wallet.common.ui.components.InfoPanel
-import org.dash.wallet.common.util.openCustomTab
 
 @AndroidEntryPoint
 class WalletFragment : Fragment(R.layout.home_content) {
@@ -99,7 +97,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private val viewModel: MainViewModel by activityViewModels()
-    private val shortcutViewModel: ShortcutsViewModel by viewModels()
+    private val shortcutViewModel: ShortcutsViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
     private lateinit var mixingBinding: MixingStatusPaneBinding
     @Inject lateinit var configuration: Configuration
@@ -166,9 +164,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         )
 
         binding.infoPanel.setContent {
-            val showShortcutInfoPanel by viewModel.showShortcutInfo.collectAsStateWithLifecycle(false)
-
-            if (showShortcutInfoPanel) {
+            if (shortcutViewModel.showShortcutInfo) {
                 InfoPanel(
                     stringResource(R.string.customize_shortcuts),
                     stringResource(R.string.customize_shortcuts_description),
@@ -179,7 +175,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     leftIconRes = R.drawable.ic_shortcuts,
                     actionIconRes = R.drawable.ic_popup_close
                 ) {
-                    viewModel.hideShortcutInfo()
+                    shortcutViewModel.hideShortcutInfo()
                 }
             }
         }
@@ -511,6 +507,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 dialog.dismiss()
             }
         }.show(requireActivity())
+
+        shortcutViewModel.hideShortcutInfo() // Assume user is aware of this feature already
     }
 
     private fun handleStakingNavigation() {

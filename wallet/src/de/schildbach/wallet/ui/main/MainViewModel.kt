@@ -67,6 +67,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -253,9 +254,6 @@ class MainViewModel @Inject constructor(
 
     val mixedBalanceString: String
         get() = decimalFormat.format(mixedBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
-
-    val showShortcutInfo: Flow<Boolean>
-        get() = walletUIConfig.observe(WalletUIConfig.IS_SHORTCUT_INFO_HIDDEN).map { it != true }
 
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
@@ -502,12 +500,6 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             currencyCode?.let { walletUIConfig.set(WalletUIConfig.SELECTED_CURRENCY, it) }
             walletUIConfig.set(WalletUIConfig.EXCHANGE_CURRENCY_DETECTED, true)
-        }
-    }
-
-    fun hideShortcutInfo() {
-        viewModelScope.launch {
-            walletUIConfig.set(WalletUIConfig.IS_SHORTCUT_INFO_HIDDEN, true)
         }
     }
 
