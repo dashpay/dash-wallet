@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.main.shortcuts
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -79,6 +80,7 @@ class ShortcutsViewModel @Inject constructor(
 
     init {
         shortcutProvider.customShortcuts
+            .onEach { Log.i("SHORTCUTS", "size: ${it.size}") }
             .filterNot { it.isEmpty() }
             .onEach { shortcuts = it.take(maxShortcuts) }
             .launchIn(viewModelScope)
