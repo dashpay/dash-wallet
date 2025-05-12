@@ -23,6 +23,9 @@ import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.View
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -30,7 +33,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -40,6 +47,14 @@ import org.dash.wallet.integrations.coinbase.R
 import org.dash.wallet.integrations.coinbase.databinding.EnterAmountToTransferFragmentBinding
 import org.dash.wallet.integrations.coinbase.viewmodels.EnterAmountToTransferViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 
 @AndroidEntryPoint
 class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer_fragment) {
@@ -52,22 +67,51 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     private val viewModel by coinbaseViewModels<EnterAmountToTransferViewModel>()
     private val binding by viewBinding(EnterAmountToTransferFragmentBinding::bind)
     private var exchangeRate: ExchangeRate? = null
+    private var pickedCurrencyIndex by mutableIntStateOf(0)
+    private var currencyOptions by mutableStateOf(listOf<SegmentedOption>())
+    private val pickedCurrencyOption: String
+        get() = if (currencyOptions.size > pickedCurrencyIndex) {
+            currencyOptions[pickedCurrencyIndex].title
+        } else {
+            ""
+        }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         viewModel.isFiatSelected = false
         viewModel.isMaxAmountSelected = false
-        binding.currencyOptions.apply {
-            pickedOptionIndex = 0
-            provideOptions(listOf(Constants.DASH_CURRENCY, viewModel.localCurrencyCode))
-        }
+        pickedCurrencyIndex = 0
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         formatTransferredAmount(CoinbaseConstants.VALUE_ZERO)
 
-        binding.currencyOptions.setOnOptionPickedListener { value, index ->
-            viewModel.isFiatSelected = index == 1
-            val cleanedValue = viewModel.formatInput
-            formatTransferredAmount(cleanedValue)
+        binding.currencyOptions.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        currencyOptions = listOf(
+            SegmentedOption(Constants.DASH_CURRENCY),
+            SegmentedOption(viewModel.localCurrencyCode)
+        )
+        binding.currencyOptions.setContent {
+            SegmentedPicker(
+                currencyOptions,
+                modifier = Modifier
+                    .height(48.dp)
+                    .width(40.dp),
+                selectedIndex = pickedCurrencyIndex,
+                style = SegmentedPickerStyle(
+                    displayMode = PickerDisplayMode.Vertical,
+                    cornerRadius = 8f,
+                    backgroundColor = Color.Transparent,
+                    thumbColor = MyTheme.Colors.primary5,
+                    textStyle = MyTheme.Micro,
+                    shadowElevation = 0
+                )
+            ) { _, index ->
+                pickedCurrencyIndex = index
+                viewModel.isFiatSelected = index == 1
+                val cleanedValue = viewModel.formatInput
+                formatTransferredAmount(cleanedValue)
+            }
         }
 
         binding.transferBtn.setOnClickListener {
@@ -103,9 +147,9 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
     }
 
     private fun formatTransferredAmount(value: String) {
-        val text = viewModel.applyNewValue(value, binding.currencyOptions.pickedOption)
+        val text = viewModel.applyNewValue(value, pickedCurrencyOption)
         val spannableString = SpannableString(text).apply {
-            if (binding.currencyOptions.pickedOptionIndex == 0) {
+            if (pickedCurrencyIndex == 0) {
                 spanAmount(this, viewModel.formattedValue.length, text.length)
             } else {
                 if (viewModel.fiatAmount?.isCurrencyFirst() == true && text.length - viewModel.fiatBalance.length > 0) {
@@ -146,14 +190,14 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         private fun refreshValue() {
             value.clear()
-            val inputValue = if (binding.currencyOptions.pickedOptionIndex == 1) {
+            val inputValue = if (pickedCurrencyIndex == 1) {
                 val localCurrencySymbol =
                     GenericUtils.getLocalCurrencySymbol(viewModel.localCurrencyCode)
                 binding.inputAmount.text.split(" ")
                     .first { it != localCurrencySymbol }
             } else {
                 binding.inputAmount.text.split(" ")
-                    .first { it != binding.currencyOptions.pickedOption }
+                    .first { it != pickedCurrencyOption }
             }
             if (inputValue != CoinbaseConstants.VALUE_ZERO) {
                 value.append(inputValue)
@@ -182,7 +226,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
             if (isFraction) {
                 val lengthOfDecimalPart = formattedValue.length - formattedValue.indexOf(viewModel.decimalSeparator)
-                val decimalsThreshold = if (binding.currencyOptions.pickedOptionIndex == 1) 2 else 8
+                val decimalsThreshold = if (pickedCurrencyIndex == 1) 2 else 8
 
                 if (lengthOfDecimalPart > decimalsThreshold) {
                     return

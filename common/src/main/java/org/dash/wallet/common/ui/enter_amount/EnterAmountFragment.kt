@@ -19,6 +19,16 @@ package org.dash.wallet.common.ui.enter_amount
 
 import android.os.Bundle
 import android.view.View
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -33,7 +43,12 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.FragmentEnterAmountBinding
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
+import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -84,6 +99,11 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     private val viewModel: EnterAmountViewModel by activityViewModels()
     @Inject lateinit var authManager: AuthenticationManager
     private val decimalSeparator = DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
+    private var pickedCurrencyOption by mutableIntStateOf(0)
+    private var currencyOptions by mutableStateOf(
+        listOf(SegmentedOption(Constants.USD_CURRENCY), SegmentedOption(Constants.DASH_CURRENCY))
+    )
+
     var maxSelected: Boolean = false
         private set
     var didAuthorize: Boolean = false
@@ -129,7 +149,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         viewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
             binding.amountView.exchangeRate = if (rate != null) {
-                binding.currencyOptions.provideOptions(listOf(rate.currencyCode, Constants.DASH_CURRENCY))
+                currencyOptions = listOf(SegmentedOption(rate.currencyCode), SegmentedOption(Constants.DASH_CURRENCY))
                 ExchangeRate(Coin.COIN, rate.fiat)
             } else {
                 null
@@ -138,7 +158,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         viewModel.canContinue.observe(viewLifecycleOwner) { canContinue ->
             binding.continueBtn.isEnabled = if (!didAuthorize && requirePinForBalance && !viewModel.blockContinue) {
-                viewModel.amount.value?.isPositive ?: false
+                viewModel.amount.value?.isPositive == true
             } else {
                 canContinue
             }
@@ -180,11 +200,28 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
     }
 
     private fun setupAmountView(dashToFiat: Boolean) {
-        val currencyOptions = listOf(Constants.USD_CURRENCY, Constants.DASH_CURRENCY)
-        binding.currencyOptions.pickedOptionIndex = if (dashToFiat) 1 else 0
-        binding.currencyOptions.provideOptions(currencyOptions)
-        binding.currencyOptions.setOnOptionPickedListener { currency, _ ->
-            binding.amountView.dashToFiat = currency == Constants.DASH_CURRENCY
+        pickedCurrencyOption = if (dashToFiat) 1 else 0
+        binding.currencyOptions.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.currencyOptions.setContent {
+            SegmentedPicker(
+                currencyOptions,
+                modifier = Modifier
+                    .height(48.dp)
+                    .width(40.dp),
+                selectedIndex = pickedCurrencyOption,
+                style = SegmentedPickerStyle(
+                    displayMode = PickerDisplayMode.Vertical,
+                    cornerRadius = 8f,
+                    backgroundColor = Color.Transparent,
+                    thumbColor = MyTheme.Colors.primary5,
+                    textStyle = MyTheme.Micro,
+                    shadowElevation = 0
+                )
+            ) { currency, _ ->
+                binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
+            }
         }
 
         binding.maxButton.setOnClickListener {
@@ -201,7 +238,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
 
         binding.amountView.setOnDashToFiatChanged { isDashToFiat ->
-            binding.currencyOptions.pickedOptionIndex = if (isDashToFiat) 1 else 0
+            pickedCurrencyOption = if (isDashToFiat) 1 else 0
             viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
         }
 
@@ -254,7 +291,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
                 try {
                     binding.amountView.input = value.toString()
-                } catch (ex: Exception) {
+                } catch (_: Exception) {
                     value.deleteCharAt(value.length - 1)
                     binding.amountView.input = value.toString()
                 }

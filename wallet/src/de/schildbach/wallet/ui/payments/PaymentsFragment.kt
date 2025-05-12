@@ -20,6 +20,13 @@ import android.content.Context
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AccelerateInterpolator
+import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
@@ -35,6 +42,8 @@ import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
+import androidx.core.content.edit
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
 
 @AndroidEntryPoint
 class PaymentsFragment : Fragment(R.layout.fragment_payments) {
@@ -49,6 +58,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
     }
 
     private val binding by viewBinding(FragmentPaymentsBinding::bind)
+    private var selectedTab by mutableIntStateOf(0)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -64,15 +74,24 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             findNavController().popBackStack()
         }
 
-        binding.tabs.provideOptions(
-            listOf(
-                SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
-                SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
-            )
+        val options = listOf(
+            SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
+            SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
         )
 
-        binding.tabs.setOnOptionPickedListener { _, index ->
-            binding.pager.currentItem = index
+        val binding = this.binding
+        binding.tabs.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.tabs.setContent {
+            SegmentedPicker(
+                options,
+                modifier = Modifier.height(32.dp),
+                selectedIndex = selectedTab
+            ) { option, index ->
+                selectedTab = index
+                binding.pager.currentItem = index
+            }
         }
 
         val adapter = object : FragmentStateAdapter(this) {
@@ -92,11 +111,11 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         binding.pager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
                 super.onPageSelected(position)
-                binding.tabs.setSelectedIndex(position, true)
+                selectedTab = position
 
                 if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
                     val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
-                    preferences.edit().putInt(PREFS_RECENT_TAB, position).apply()
+                    preferences.edit { putInt(PREFS_RECENT_TAB, position) }
                 }
             }
         })
@@ -112,7 +131,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             preferences.getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)
         }
 
-        binding.tabs.setSelectedIndex(activeTab, false)
+        selectedTab = activeTab
         binding.pager.setCurrentItem(activeTab, false)
     }
 }
