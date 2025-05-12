@@ -263,9 +263,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             showAllBtn.isVisible = false
             backButton.isVisible = false
             buySellContainer.isVisible = true
-//            buySellContainer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-//                top = resources.getDimensionPixelSize(R.dimen.atm_manufacturer_vertical_margin)
-//            }
 
             sellBtn.setOnClickListener { onSendDashClicked?.invoke(false) }
             buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
