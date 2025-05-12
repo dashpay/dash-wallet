@@ -257,7 +257,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
                     startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
                 } else {
-                    MixDashFirstDialogFragment().show(this@MainActivity)
+                    MixDashFirstDialogFragment().show(this@MainActivity) {
+                        startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
+                    }
                 }
             }
         }

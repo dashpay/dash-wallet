@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
-import android.util.Log
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
@@ -50,11 +49,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
-import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
@@ -112,7 +109,7 @@ class PlatformRepo @Inject constructor(
     lateinit var blockchainIdentity: BlockchainIdentity
         private set
 
-    val hasIdentity: Boolean
+    val hasBlockchainIdentity: Boolean
         get() = this::blockchainIdentity.isInitialized
 
     suspend fun hasIdentity(): Boolean = this::blockchainIdentity.isInitialized ||
@@ -121,11 +118,14 @@ class PlatformRepo @Inject constructor(
     suspend fun hasUsername(): Boolean = (this::blockchainIdentity.isInitialized && blockchainIdentity.currentUsername != null) ||
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME) != null
 
+    @Throws(IllegalStateException::class)
     suspend fun getIdentity(): String {
         return if (this::blockchainIdentity.isInitialized) {
             blockchainIdentity.uniqueIdString
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)!!
+            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
+                ?: throw IllegalStateException("IdentityId not found")
         }
     }
 
@@ -702,7 +702,9 @@ class PlatformRepo @Inject constructor(
         // previously, we would look up the asset lock transaction, but we don't need to do that
         val watch = Stopwatch.createStarted()
         log.info("loading BlockchainIdentity: starting...")
-        val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authenticationGroupExtension!!)
+        val authExt = authenticationGroupExtension
+            ?: throw IllegalStateException("AuthenticationGroupExtension is not initialised")
+        val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authExt)
         log.info("loading BlockchainIdentity: {}", watch)
         if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
