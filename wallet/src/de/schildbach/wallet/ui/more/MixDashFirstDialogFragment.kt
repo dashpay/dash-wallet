@@ -43,7 +43,7 @@ class MixDashFirstDialogFragment : OffsetDialogFragment(R.layout.dialog_mix_dash
         super.onViewCreated(view, savedInstanceState)
 
         binding.skipButton.setOnClickListener {
-            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+            onConfirm?.invoke()
             viewModel.setMixDashShown()
             dismiss()
         }
