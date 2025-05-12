@@ -631,7 +631,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.debug("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name + " " + peerGroup!!.syncStage.name)
                 if (peerGroup != null && peerGroup!!.syncStage == PeerGroup.SyncStage.PREBLOCKS) {
                     syncPercentage = (startPreBlockPercent + increment).toInt()
-                    log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup!!.syncStage.name)
+                    log.info("PreBlockDownload: " + syncPercentage + "%..." + stage.name)
                     postOrPostDelayed()
                 }
                 lastPreBlockStage = stage
