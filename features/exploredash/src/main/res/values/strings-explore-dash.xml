@@ -228,6 +228,7 @@
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
+    <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>
     <string name="gift_card_rejected">The payment has been rejected.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
@@ -237,6 +238,7 @@
     <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">Terms &amp; conditions</string>
     <string name="barcode_placeholder">As soon as your code is generated, it will be displayed here.</string>
+    <string name="gift_card_contact_ctx">Contact CTX Support</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Create account</string>

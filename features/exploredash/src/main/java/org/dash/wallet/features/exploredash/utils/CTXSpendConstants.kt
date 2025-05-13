@@ -22,4 +22,5 @@ object CTXSpendConstants {
     @JvmField var CLIENT_ID = "dcg_android"
     const val DEFAULT_DISCOUNT: Int = 0 // 0%
     const val DEFAULT_DISCOUNT_AS_DOUBLE: Double = 0.0 // 0%
+    const val REPORT_EMAIL = "support@ctx.com"
 }
