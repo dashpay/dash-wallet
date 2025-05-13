@@ -23,7 +23,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -36,6 +35,7 @@ class ShortcutProvider @Inject constructor(
     private val config: WalletUIConfig
 ) {
     companion object {
+        // Normally, there should be at least 4 custom shortcuts saved
         private const val MINIMUM_SHORTCUTS = 4
     }
 
@@ -46,10 +46,15 @@ class ShortcutProvider @Inject constructor(
 
     init {
         config.observe(WalletUIConfig.CUSTOMIZED_SHORTCUTS)
-            .filterNotNull()
             .distinctUntilChanged()
-            .map { shortcutSet -> parseCustomShortcuts(shortcutSet) }
+            .map { shortcutSet -> if (shortcutSet == null) null else parseCustomShortcuts(shortcutSet) }
             .onEach { shortcuts ->
+                if (shortcuts == null) {
+                    // DataStore was cleared out, probably due to a reset
+                    _customShortcuts.value = emptyList()
+                    return@onEach
+                }
+
                 var finalShortcuts = shortcuts.toMutableList()
 
                 if (finalShortcuts.size < MINIMUM_SHORTCUTS) {

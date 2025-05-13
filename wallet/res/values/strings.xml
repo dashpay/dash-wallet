@@ -423,4 +423,6 @@
 
     <!-- Shortcuts -->
     <string name="select_option">Select option</string>
+    <string name="customize_shortcuts">Customize shortcut bar</string>
+    <string name="customize_shortcuts_description">Hold any button above to replace it with the function you need</string>
 </resources>

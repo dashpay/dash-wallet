@@ -27,6 +27,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.content.edit
 
 @Singleton
 // Intended for the UI settings which affect what the user sees on the screen.
@@ -66,6 +67,7 @@ open class WalletUIConfig @Inject constructor(
         val LAST_TOTAL_BALANCE = longPreferencesKey("last_total_balance")
         val LAST_MIXED_BALANCE = longPreferencesKey("last_mixed_balance")
         val CUSTOMIZED_SHORTCUTS = stringPreferencesKey("customized_shortcuts")
+        val IS_SHORTCUT_INFO_HIDDEN = booleanPreferencesKey("is_shortcut_info_hidden")
     }
 
     suspend fun getExchangeCurrencyCode(): String {
@@ -112,7 +114,7 @@ class ExchangeCurrencyMigration(
                 } else {
                     otherName
                 }
-                sharedPreferences.edit().putString(WalletUIConfig.SELECTED_CURRENCY.name, fixedValue).apply()
+                sharedPreferences.edit { putString(WalletUIConfig.SELECTED_CURRENCY.name, fixedValue) }
             }
             // The database might have obsolete currencies as well
             exchangeRates.cleanupObsoleteCurrencies()
