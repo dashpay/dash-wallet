@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin 抵押输入</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoin 混币</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin 创建面额</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">使用CoinJoin合并尘埃交易</string>
     <string name="network_monitor_activity_title">网络监视器</string>
     <string name="network_monitor_peer_list_title">网络节点</string>
     <string name="network_monitor_block_list_title">区块</string>
@@ -415,4 +416,5 @@
     <string name="battery_optimization_dialog_button_change">打开设置</string>
     <string name="credits_profile_change_message">更新资料信息</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">选择区块浏览器</string>
+</resources>

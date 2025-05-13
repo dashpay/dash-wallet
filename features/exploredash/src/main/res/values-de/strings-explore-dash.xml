@@ -86,7 +86,6 @@
     <string name="explore_filtered_by">Gefiltert nach:</string>
     <string name="explore_pay_gift_card">Mit Gutscheinkarte bezahlen</string>
     <string name="explore_sort_by">Sortieren nach</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>In der Nähe</item>
@@ -117,7 +116,7 @@
     <string-array name="sort_by_options_names">
         <item>Name</item>
         <item>Entfernung</item>
-        <item>Discount</item>
+        <item>Rabatt</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -202,7 +201,6 @@
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
     <string name="gift_card_barcode_failed">Der Strichcode konnte nicht geladen werden.</string>
     <string name="gift_card_tx_title">Geschenkkarte · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Verifizierungscode eingeben</string>
     <string name="verification_check_email">Kontrolliere deine E-Mail und deinen Verifizierungscode</string>
