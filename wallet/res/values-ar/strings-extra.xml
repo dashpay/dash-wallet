@@ -30,7 +30,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">مسح</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">إرسال</string>
+    <string name="shortcut_send">إرسال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">شراء &amp; بيع</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

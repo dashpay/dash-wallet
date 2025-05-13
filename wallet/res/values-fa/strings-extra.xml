@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">اسکن</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">ارسال</string>
+    <string name="shortcut_send">ارسال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">ارسال برای مخاطب</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

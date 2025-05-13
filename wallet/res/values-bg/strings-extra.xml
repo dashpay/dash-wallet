@@ -24,7 +24,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Сканирай</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Изпрати</string>
+    <string name="shortcut_send">Изпрати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Получаване</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

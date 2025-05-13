@@ -80,7 +80,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             }
             binding.shareButton.setOnClickListener {
                 onShareClicked?.invoke()
-                handleShare(paymentRequestUri)
+                address?.let { handleShare(it.toBase58()) }
             }
 
             refresh()

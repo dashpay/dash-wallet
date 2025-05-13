@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Σάρωση</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Αποστολή</string>
+    <string name="shortcut_send">Αποστολή</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Στείλτε στην επαφή</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

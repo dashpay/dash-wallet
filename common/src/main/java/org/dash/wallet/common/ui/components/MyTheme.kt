@@ -45,6 +45,14 @@ object MyTheme {
         fontWeight = FontWeight(500)
     )
 
+    val Overline = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight(500),
+        textAlign = TextAlign.Center
+    )
+
     val OverlineSemibold = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
