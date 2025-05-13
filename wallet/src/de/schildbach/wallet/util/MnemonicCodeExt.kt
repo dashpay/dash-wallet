@@ -60,8 +60,8 @@ class MnemonicCodeExt(wordstream: InputStream, wordListDigest: String?) : Mnemon
 
     @Throws(MnemonicException::class)
     fun check(context: Context, words: List<String>) {
-        if (words.size != 12) {
-            throw MnemonicException.MnemonicLengthException("Word list size must be 12")
+        if (words.size != 12 && words.size != 24) {
+            throw MnemonicException.MnemonicLengthException("Word list size must be 12 or 24")
         }
         try {
             check(words)
