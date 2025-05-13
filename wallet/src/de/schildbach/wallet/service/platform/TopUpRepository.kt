@@ -91,6 +91,7 @@ class TopUpRepositoryImpl @Inject constructor(
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
+        private const val MIN_DUST_FACTOR = 10L
     }
 
     private val platform = platformRepo.platform
@@ -109,7 +110,7 @@ class TopUpRepositoryImpl @Inject constructor(
             Constants.DASH_PAY_FEE
         }
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
+        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR))
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
             keyParameter,
