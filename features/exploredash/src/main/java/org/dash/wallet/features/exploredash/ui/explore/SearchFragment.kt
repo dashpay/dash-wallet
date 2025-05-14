@@ -229,6 +229,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             }
         }
+
+        // ask user to login if their CTX refresh token has expired
+        lifecycleScope.launch {
+            if (ctxSpendViewModel.isUserSignedInCTXSpend()) {
+                val merchantId = viewModel.getRandomCTXMerchant()
+                merchantId?.let {
+                    if (!ctxSpendViewModel.checkToken(merchantId)) {
+                        showLoginDialog()
+                    }
+                }
+            }
+        }
     }
 
     private fun showError(binding: FragmentSearchBinding) {
