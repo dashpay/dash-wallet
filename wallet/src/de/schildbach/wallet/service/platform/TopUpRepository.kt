@@ -45,6 +45,7 @@ import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
+import kotlinx.coroutines.flow.first
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 
 /**
@@ -52,7 +53,7 @@ import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
  * an identity and by [TopupIdentityWorker] to topup an identity
  */
 interface TopUpRepository {
-    fun createAssetLockTransaction(
+    suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
         keyParameter: KeyParameter?,
@@ -97,7 +98,7 @@ class TopUpRepositoryImpl @Inject constructor(
     private val platform = platformRepo.platform
     private val authExtension by lazy { walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension }
 
-    override fun createAssetLockTransaction(
+    override suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
         keyParameter: KeyParameter?,
@@ -109,7 +110,7 @@ class TopUpRepositoryImpl @Inject constructor(
         } else {
             Constants.DASH_PAY_FEE
         }
-        val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
+        val balance = walletDataProvider.observeSpendableBalance().first()
         val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR))
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
