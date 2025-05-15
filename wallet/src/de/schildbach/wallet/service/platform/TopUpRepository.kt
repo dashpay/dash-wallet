@@ -104,14 +104,15 @@ class TopUpRepositoryImpl @Inject constructor(
         keyParameter: KeyParameter?,
         useCoinJoin: Boolean
     ) {
-        Context.propagate(walletDataProvider.wallet!!.context)
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
             Constants.DASH_PAY_FEE
         }
         val balance = walletDataProvider.observeSpendableBalance().first()
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR))
+        val emptyWallet = balance == fee ||
+                (balance >= fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR)))
+        Context.propagate(walletDataProvider.wallet!!.context)
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
             keyParameter,
