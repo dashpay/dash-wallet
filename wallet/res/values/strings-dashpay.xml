@@ -52,9 +52,12 @@
     <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
     <string name="invitation_username_already_found_title">Username already found</string>
     <string name="invitation_username_already_found_message">You cannot claim this invite since you already have a Dash username</string>
+    <string name="invitation_username_already_found_voting_title">Username already requested</string>
+    <string name="invitation_username_already_found_voting_message">You cannot claim this invite since you have already requested a Dash username</string>
     <string name="invitation_onboarding_has_began_error_title">Onboarding Error</string>
+    <string name="invitation_error_title">Invitation Error</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is in process, please claim your invite after you have created your wallet.</string>
-    <string name="invitation_accept_invite_has_began_error">DashPay is currencly processing an invite.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay is currently processing an invite.</string>
     <string name="invitation_accept_title_1">Get your Username</string>
     <string name="invitation_accept_title_2">Add your Friends &amp; Family</string>
     <string name="invitation_accept_message_2">Invite your family, find your friends by searching their usernames</string>
@@ -211,6 +214,8 @@
 
     <string name="join_dashpay_subtitle">Create Username, add your friends…</string>
     <string name="join_dashpay_more_subtitle">Create your Username, find your friends and add them to your contacts</string>
+    <string name="join_dashpay_more_subtitle_two">Create a username and say goodbye to numerical addresses</string>
+    <string name="join_dashpay_wait">Wait until syncing is finished to create a username</string>
     <string name="join">Join</string>
 
     <string name="more_suggestions">More Suggestions</string>
@@ -485,4 +490,6 @@
     <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
     <string name="username_types_title">What are contested and non-contested usernames?</string>
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
+    <string name="accept_invitation_hide">Hide</string>
+    <string name="accept_invitation_create">Create</string>
 </resources>

@@ -123,8 +123,7 @@ class CreateUsernameActivity : LockScreenActivity() {
             dashPayViewModel.createUsernameArgs = CreateUsernameArgs(
                 actions = action,
                 userName = username,
-                invite = invite,
-                fromOnboardng = fromOnboardng
+                invite = invite
             )
 
             if (requestUserNameViewModel.isUserNameRequested() &&

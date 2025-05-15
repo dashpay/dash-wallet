@@ -131,7 +131,7 @@ class RequestUserNameViewModel @Inject constructor(
     private val _isInviteMixed = MutableStateFlow(false)
     val isInviteMixed: StateFlow<Boolean>
         get() = _isInviteMixed
-    var invitationNextStep: (() -> Unit)? = null
+
     fun setCreateUsernameArgs(createUsernameArgs: CreateUsernameArgs?) {
         createUsernameArgs?.let {
             this.createUsernameArgs = it
@@ -262,12 +262,7 @@ class RequestUserNameViewModel @Inject constructor(
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
         val isUsingInvite = isUsingInvite()
-        val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
         when {
-            fromOnboarding -> {
-                // postpone username creation till later
-                walletApplication.configuration.onboardingInviteUsername = requestedUserName
-            }
             isUsingInvite && reuseTransaction -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(

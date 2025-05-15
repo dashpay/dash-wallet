@@ -42,6 +42,8 @@ open class BaseProfileViewModel(
     val hasIdentity: Boolean
         get() = _blockchainIdentity.value?.creationComplete ?: false
 
+    val inVotingPeriod: Boolean
+        get() = _blockchainIdentity.value?.votingInProgress ?: false
     init {
         // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
         // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username

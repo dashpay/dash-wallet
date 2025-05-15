@@ -31,7 +31,6 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.MainActivity
-import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.PackageInfoProvider
@@ -554,11 +553,7 @@ class SetPinActivity : InteractionAwareActivity() {
             logSuccess(path)
         }
 
-        if (onboardingInvite) {
-            startActivity(OnboardFromInviteActivity.createIntent(this, OnboardFromInviteActivity.Mode.STEP_3, verifySeedActivityIntent))
-        } else {
-            startActivity(verifySeedActivityIntent)
-        }
+        startActivity(verifySeedActivityIntent)
         finishAffinity()
     }
 

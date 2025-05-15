@@ -3,49 +3,33 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_height="340dp"
     android:background="@android:color/transparent"
-    tools:background="@drawable/splash_activity_background">
-
-    <TextView
-        android:id="@+id/subtitle"
-        style="@style/Body1.Medium.White"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="26dp"
-        android:layout_marginLeft="26dp"
-        android:layout_marginEnd="26dp"
-        android:layout_marginRight="26dp"
-        android:gravity="center"
-        android:textAlignment="gravity"
-        android:textSize="@dimen/welcome_screen_subtitle_size"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:text="An intuitive and familiar experience across all your devices" />
+    tools:background="@color/dash_blue">
 
     <TextView
         android:id="@+id/title"
-        style="@style/Headline3.White"
+        style="@style/Headline4.White"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/welcome_screen_title_margin_top"
         android:textSize="@dimen/welcome_screen_title_size"
-        app:layout_constraintBottom_toTopOf="@id/subtitle"
+        android:textAlignment="center"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:text="New Experience" />
+        tools:text="Send and receive Dash via usernames" />
 
     <ImageView
-        android:id="@+id/screenshot"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:id="@+id/welcome_image"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/welcome_screenshot_vertical_margin"
         android:layout_marginBottom="@dimen/welcome_screenshot_vertical_margin"
-        android:src="@drawable/welcome_screenshot_1"
-        app:layout_constraintBottom_toTopOf="@id/title"
+        android:src="@drawable/welcome_image_1"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -22,6 +22,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -170,7 +171,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.updateProfileNetworkError.cancelNetworkError.setOnClickListener { dismissProfileError() }
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
-        binding.joinDashpayBtn.setOnClickListener {
+        binding.joinDashpayContainer.setOnClickListener {
             lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
@@ -199,6 +200,18 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             } else {
                 startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
             }
+        }
+
+        mainActivityViewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
+            binding.joinDashpayWait.isVisible = !isSynced
+            binding.joinDashpayIcon.setColorFilter(
+                if (isSynced) {
+                    ContextCompat.getColor(requireContext(), R.color.dash_blue)
+                } else {
+                    ContextCompat.getColor(requireContext(), R.color.gray)
+                }
+            )
+            binding.joinDashpayContainer.isEnabled = isSynced
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
@@ -282,6 +295,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     }
                     else -> error("${it.usernameRequested} is not valid")
                 }
+            } else if (it.creationState >= BlockchainIdentityData.CreationState.VOTING) {
+                binding.joinDashpayContainer.visibility = View.GONE
+                binding.requestedUsernameContainer.visibility = View.GONE
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE

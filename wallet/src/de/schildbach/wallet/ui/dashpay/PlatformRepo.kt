@@ -98,7 +98,6 @@ class PlatformRepo @Inject constructor(
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
     }
 
-    var onIdentityResolved: ((Identity?) -> Unit)? = {}
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
 
     lateinit var blockchainIdentity: BlockchainIdentity
@@ -516,7 +515,7 @@ class PlatformRepo @Inject constructor(
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
         val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
-        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
     }
 
 

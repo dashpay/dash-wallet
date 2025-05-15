@@ -23,11 +23,31 @@ import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
+import java.util.concurrent.TimeUnit
+
+enum class InvitationValidationState {
+    /** there is no invitation present */
+    NONE,
+    /** the invitation is valid and can be used */
+    VALID,
+    /** this user already has an identity */
+    ALREADY_HAS_IDENTITY,
+    /** this user already has an identity and is requesting a username */
+    ALREADY_HAS_REQUESTED_USERNAME,
+    /** this invitation has already been claimed */
+    ALREADY_CLAIMED,
+    /** this invitation is not valid (malformed) */
+    INVALID,
+    /** the blockchain has not been synced, cannot check invite validity */
+    NOT_SYNCED
+}
 
 @Parcelize
 data class InvitationLinkData(
     val link: Uri,
-    var isValid: Boolean?
+    val isValid: Boolean? = null,
+    val validationState: InvitationValidationState? = null,
+    val validationTimestamp: Long? = null
 ) : Parcelable {
 
     companion object {
@@ -40,6 +60,7 @@ data class InvitationLinkData(
         private const val PARAM_PRIVATE_KEY = "pk"
         private const val PARAM_IS_LOCK = "islock"
         private const val PARAM_IS_LOCK_2 = "is-lock"
+        private val VALIDATION_EXPIRED = TimeUnit.MINUTES.toMillis(1)
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
@@ -99,9 +120,7 @@ data class InvitationLinkData(
         (link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!).lowercase()
     }
 
-//    val isValid: Boolean
-//        get() = validation == true
-
+    @Deprecated("use link")
     fun getUri(): Uri = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
         .appendQueryParameter(PARAM_USER, user)
         .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
@@ -110,4 +129,11 @@ data class InvitationLinkData(
         .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey)
         .appendQueryParameter(PARAM_IS_LOCK, instantSendLock)
         .build()
+
+    val expired: Boolean
+        get() = validationTimestamp?.let { it < System.currentTimeMillis() - VALIDATION_EXPIRED } ?: true
+
+    fun validate(validationState: InvitationValidationState): InvitationLinkData {
+        return copy(validationState = validationState, validationTimestamp = System.currentTimeMillis())
+    }
 }

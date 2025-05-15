@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Create a New Wallet</string>
-    <string name="onboarding_recover_wallet">Restore Wallet From Recovery Phrase</string>
-    <string name="onboarding_restore_wallet">Restore Wallet From File</string>
+    <string name="onboarding_create_wallet">Create new wallet</string>
+    <string name="onboarding_recover_wallet">Restore wallet</string>
+    <string name="onboarding_restore_wallet">Restore wallet from file</string>
     <string name="onboarding_load_wallet_error">Unable to load wallet!</string>
 
     <string name="set_pin_create_new_wallet">Create a New Wallet</string>
@@ -341,13 +341,9 @@
 
     <string name="skip">skip</string>
     <string name="get_started">Get Started</string>
-    <string name="welcome_screen_title_1_new_install">Welcome</string>
-    <string name="welcome_screen_title_1_upgrade">We Upgraded</string>
-    <string name="welcome_screen_subtitle_1">An intuitive and familiar experience across all your devices</string>
-    <string name="welcome_screen_title_2">Pay with Ease</string>
-    <string name="welcome_screen_subtitle_2">Pay and get paid instantly with easy to use payment flows</string>
-    <string name="welcome_screen_title_3">More Control</string>
-    <string name="welcome_screen_subtitle_3">Have complete control and customize your wallet based on your needs</string>
+    <string name="welcome_screen_title_1">Send and receive Dash via usernames</string>
+    <string name="welcome_screen_title_2">Spend Dash at thousands of stores</string>
+    <string name="welcome_screen_title_3">Safest way to store your Dash</string>
 
     <string-array name="history_filter">
         <item>All</item>

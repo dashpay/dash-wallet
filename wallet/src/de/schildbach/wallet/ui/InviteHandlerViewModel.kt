@@ -17,21 +17,25 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.livedata.Resource
-import de.schildbach.wallet.service.BlockchainStateDataProvider
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.PeerGroup.SyncStage
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.slf4j.LoggerFactory
@@ -42,60 +46,95 @@ class InviteHandlerViewModel @Inject constructor(
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao,
     private val blockchainStateProvider: BlockchainStateProvider,
-    private val topUpRepository: TopUpRepository
+    private val topUpRepository: TopUpRepository,
+    private val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandlerViewModel::class.java)
     }
 
-    private val _inviteData = MutableLiveData<Resource<InvitationLinkData>>()
-    val inviteData: LiveData<Resource<InvitationLinkData>>
-        get() = _inviteData
-    val invite: InvitationLinkData?
-        get() = _inviteData.value?.data
-    val isUsingInvite: Boolean
-        get() = invite != null
+    private val _invitation = MutableStateFlow<InvitationLinkData?>(null)
+    val invitation: StateFlow<InvitationLinkData?> = _invitation.asStateFlow()
 
-    fun handleInvite(intent: Intent) {
-        _inviteData.value = Resource.loading()
-        FirebaseDynamicLinks.getInstance().getDynamicLink(intent).addOnSuccessListener {
-            val link = it?.link
-            if (link != null && InvitationLinkData.isValid(link)) {
-                log.info("received invite $link")
-                val invite = InvitationLinkData(link, false)
-                handleInvite(invite)
-            } else {
-                log.info("invalid invite ignored")
+//    private val _validationState = MutableStateFlow(InvitationValidationState.NONE)
+//    val validationState: StateFlow<InvitationValidationState?> = _validationState.asStateFlow()
+
+    var fromOnboarding = false
+
+    val isUsingInvite: Boolean
+        get() = _invitation.value != null
+
+    init {
+        dashPayConfig.observe(DashPayConfig.INVITATION_LINK)
+            .onEach {
+                _invitation.value = if (!it.isNullOrEmpty()) {
+                    InvitationLinkData(it.toUri())
+                } else {
+                    null
+                }
             }
+            .launchIn(viewModelScope)
+
+        dashPayConfig.observe(DashPayConfig.INVITATION_FROM_ONBOARDING)
+            .onEach {
+                fromOnboarding = it ?: false
+            }
+            .launchIn(viewModelScope)
+    }
+
+    suspend fun handleInvite(intent: Intent): InvitationLinkData? = withContext(Dispatchers.IO) {
+        val pendingResult = FirebaseDynamicLinks.getInstance().getDynamicLink(intent).await()
+        val link = pendingResult?.link
+        if (link != null && InvitationLinkData.isValid(link)) {
+            log.info("received invite $link")
+            InvitationLinkData(link)
+        } else {
+            log.info("invalid invite ignored")
+            null
         }
     }
 
-     fun handleInvite(invite: InvitationLinkData) {
-        // TODO: remove this if block when Invite functionality is restored
-        if (!Constants.SUPPORTS_INVITES) {
-            log.info("invite ignored since they are currently disabled with Constants.SUPPORTS_INVITES = false")
-            return
-        }
-        _inviteData.value = Resource.loading()
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
+    suspend fun setInvitationLink(invitation: InvitationLinkData, fromOnboarding: Boolean) {
+        dashPayConfig.set(DashPayConfig.INVITATION_LINK, invitation.link.toString())
+        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, fromOnboarding)
+    }
+
+    suspend fun clearInvitation() {
+        dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
+        dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
+    }
+
+    suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
+        _invitation.value?.let { invite ->
+            var updatedInvitation = invite.copy()
+            if (hasIdentity || inVotingPeriod) {
+                // we have an identity, don't check the validity
+                updatedInvitation = updatedInvitation.validate(
+                    if (inVotingPeriod) {
+                        InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME
+                    } else {
+                        InvitationValidationState.ALREADY_HAS_IDENTITY
+                    }
+                )
+            } else try {
                 if (blockchainStateProvider.getSyncStage() == SyncStage.BLOCKS) {
-                    invite.isValid = topUpRepository.validateInvitation(invite)
-                } else {
-                    // assume the invite is valid if not synced
-                    invite.isValid = true
+                    updatedInvitation = updatedInvitation.copy(isValid = topUpRepository.validateInvitation(invite))
                 }
 
-                if (hasIdentity) {
-                    // we have an identity, so cancel this invite
-                    _inviteData.postValue(Resource.canceled(invite))
-                } else {
-                    _inviteData.postValue(Resource.success(invite))
+                when {
+                    updatedInvitation.isValid == null -> updatedInvitation = updatedInvitation.validate(InvitationValidationState.NOT_SYNCED)
+                    updatedInvitation.isValid!! ->  updatedInvitation = updatedInvitation.validate(InvitationValidationState.VALID)
+                    else -> {
+                        log.info("${invite.isValid} invite already claimed?")
+                         updatedInvitation = updatedInvitation.validate(InvitationValidationState.ALREADY_CLAIMED)
+                    }
                 }
             } catch (e: Exception) {
                 log.info("error validating invite:", e)
-                _inviteData.postValue(Resource.error(e, invite))
+                updatedInvitation = updatedInvitation.validate(InvitationValidationState.INVALID)
             }
-        }
+            _invitation.value = updatedInvitation
+            updatedInvitation.validationState
+        } ?: InvitationValidationState.NONE
     }
 }

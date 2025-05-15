@@ -21,14 +21,20 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.viewModels
-import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
@@ -38,12 +44,16 @@ import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.invite.InviteHandler
+import de.schildbach.wallet.ui.onboarding.WelcomePagerAdapter
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.ButtonLarge
+import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
@@ -115,6 +125,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
     @Inject
     lateinit var pinRetryController: PinRetryController
 
+    private val onPageChanged = object : ViewPager2.OnPageChangeCallback() {
+
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //viewModel.onboardingInvite = intent.getParcelableExtra(EXTRA_INVITE)
@@ -122,7 +136,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
-            hideSlogan()
+            // hideSlogan()
             binding.closeApp.setOnClickListener {
                 finish()
             }
@@ -170,61 +184,85 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
         }
 
+        // Welcome Page View
+        binding.viewpager.adapter = WelcomePagerAdapter(this)
+        binding.pageIndicator.setViewPager2(binding.viewpager)
+
+
+        binding.viewpager.registerOnPageChangeCallback(onPageChanged)
+
         // during an upgrade, for some reason the previous screen is still in the recent app list
         // this will find it and close it
         if (intent.extras?.getBoolean(EXTRA_UPGRADE) == true) {
             removePreviousTask(this)
         }
         val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
-        log.info("handling invite: ${invite?.link}")
-        if (invite != null) {
-            val inviteHandler = InviteHandler(this, viewModel.analytics)
-            inviteHandlerViewModel.inviteData.observe(this) {
-                inviteHandler.handle(it, false) {
-                    //viewModel.onboardingInvite = invite
+        lifecycleScope.launch {
+            invite?.let {
+                log.info("saving invite for later: ${invite?.link}")
+                inviteHandlerViewModel.setInvitationLink(it, true)
+            }
+        }
+
+        binding.composeContainer.setContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp, 10.dp, 20.dp, 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ButtonLarge(
+                    onClick = { createNewWallet() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.whiteWithBlueText(),
+                    R.string.onboarding_create_wallet
+                )
+                ButtonLarge(
+                    onClick = { recoverWalletFromSeedPhrase() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.white10WithWhiteText(),
+                    R.string.onboarding_recover_wallet
+                )
+                if (BuildConfig.DEBUG) {
+                    ButtonLarge(
+                        onClick = { restoreWallet() },
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        colors = ButtonStyles.white10WithWhiteText(),
+                        R.string.onboarding_restore_wallet
+                    )
                 }
             }
-            inviteHandlerViewModel.handleInvite(invite)
         }
-        updateView()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding.viewpager.unregisterOnPageChangeCallback(onPageChanged)
     }
 
     override fun onNewIntent(intent: Intent?) {
         super.onNewIntent(intent)
         val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
-        if (invite != null && inviteHandlerViewModel.invite != null) {
+        if (invite != null && inviteHandlerViewModel.invitation.value != null) {
             // TODO: wrong message
             log.info("handling invite: already processing invite")
-            InviteHandler(this, viewModel.analytics).showInviteWhileProcessingInviteInProgressDialog()
+            InviteHandler(this, viewModel.analytics).showInviteWhileOnboardingInProgressDialog()
         } else if (invite != null) {
-            log.info("handling invite: ${invite.link}")
-            val inviteHandler = InviteHandler(this, viewModel.analytics)
-            inviteHandlerViewModel.inviteData.observe(this) {
-                inviteHandler.handle(it, false) {
-                    updateView()
-                }
+            log.info("saving invite for later: ${invite.link}")
+            lifecycleScope.launch {
+                inviteHandlerViewModel.setInvitationLink(invite, true)
             }
-            inviteHandlerViewModel.handleInvite(invite)
         }
-    }
-
-    private fun updateView() {
-        binding.restoreWallet.isVisible = !inviteHandlerViewModel.isUsingInvite || BuildConfig.DEBUG
     }
 
     // This is due to a wallet being created in an invalid way
     // such that the wallet is not encrypted
     private fun unencryptedFlow() {
         log.info("the wallet is not encrypted -- the wallet will be upgraded")
-        if (config.v7TutorialCompleted) {
-            upgradeUnencryptedWallet()
-        } else {
-            startActivityForResult(
-                Intent(this, WelcomeActivity::class.java),
-                UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE
-            )
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
+        upgradeUnencryptedWallet()
     }
 
     private fun upgradeUnencryptedWallet() {
@@ -243,15 +281,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun regularFlow() {
-        if (config.v7TutorialCompleted) {
-            upgradeOrStartMainActivity()
-        } else {
-            startActivityForResult(
-                Intent(this, WelcomeActivity::class.java),
-                REGULAR_FLOW_TUTORIAL_REQUEST_CODE
-            )
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
+        upgradeOrStartMainActivity()
     }
 
     private fun upgradeOrStartMainActivity() {
@@ -273,28 +303,25 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun onboarding() {
         initView()
         initViewModel()
-        showButtonsDelayed()
-        if (!config.v7TutorialCompleted) {
-            startActivity(Intent(this, WelcomeActivity::class.java))
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
+        //showButtonsDelayed()
+    }
+
+    private fun createNewWallet() {
+        viewModel.createNewWallet()
+    }
+
+    private fun recoverWalletFromSeedPhrase() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
+        walletApplication.initEnvironmentIfNeeded()
+        startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
+    }
+
+    private fun restoreWallet() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
+        restoreWalletFromFile()
     }
 
     private fun initView() {
-        binding.createNewWallet.setOnClickListener {
-            viewModel.createNewWallet(inviteHandlerViewModel.invite)
-        }
-        binding.recoveryWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
-            walletApplication.initEnvironmentIfNeeded()
-            startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
-        }
-        // hide restore wallet from file if an invite is being used
-        // remove this line after backup file recovery supports invites
-        binding.restoreWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
-            restoreWalletFromFile()
-        }
         viewModel.startActivityAction.observe(this) {
             startActivityForResult(it, SET_PIN_REQUEST_CODE)
         }
@@ -334,18 +361,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 SET_PIN_REQUEST_CODE
             )
         }
-    }
-
-    private fun showButtonsDelayed() {
-        binding.buttons.postDelayed({
-            hideSlogan()
-            binding.buttons.isVisible = true
-        }, 1000)
-    }
-
-    private fun hideSlogan() {
-        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
-        sloganDrawable.mutate().alpha = 0
     }
 
     private fun getStatusBarHeightPx(): Int {

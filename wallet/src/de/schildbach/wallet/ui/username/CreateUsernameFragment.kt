@@ -28,7 +28,6 @@ import de.schildbach.wallet.ui.SetPinActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.PlatformPaymentConfirmDialog
-import de.schildbach.wallet.ui.invite.OnboardFromInviteActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentCreateUsernameBinding
 import kotlinx.android.parcel.Parcelize
@@ -54,8 +53,7 @@ enum class CreateUsernameActions {
 data class CreateUsernameArgs(
     val actions: CreateUsernameActions? = null,
     val userName: String? = null,
-    val invite: InvitationLinkData? = null,
-    val fromOnboardng: Boolean = false,
+    val invite: InvitationLinkData? = null
 ) : Parcelable
 
 @AndroidEntryPoint
@@ -238,26 +236,16 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             requireActivity().startService(CreateIdentityService.createIntentFromInviteForNewUsername(requireContext(), username))
             requireActivity().finish()
         } else {
-            val fromOnboarding = createUsernameArgs?.fromOnboardng ?: false
-            if (fromOnboarding) {
-                walletApplication.configuration.onboardingInviteUsername = username
-                val goNextIntent = SetPinActivity.createIntent(requireActivity().application, R.string.set_pin_create_new_wallet, false, null, onboardingInvite = true)
-                startActivity(OnboardFromInviteActivity.createIntent(requireContext(), OnboardFromInviteActivity.Mode.STEP_2, goNextIntent))
-                requireActivity().finish()
-                return
-            } else {
-                dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
-                    if (it?.creationStateErrorMessage != null && !reuseTransaction) {
-                        requireActivity().finish()
-                    } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
-                        completeUsername = it.username ?: ""
-                        showCompleteState()
-                    }
+            dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
+                if (it?.creationStateErrorMessage != null && !reuseTransaction) {
+                    requireActivity().finish()
+                } else if (it?.creationState == BlockchainIdentityData.CreationState.DONE) {
+                    completeUsername = it.username ?: ""
+                    showCompleteState()
                 }
-                showProcessingState()
-                createUsernameArgs?.invite?.let {
-                    requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
-                }
+            }
+            createUsernameArgs?.invite?.let {
+                requireActivity().startService(CreateIdentityService.createIntentFromInvite(requireContext(), username, it))
             }
         }
         showProcessingState()
