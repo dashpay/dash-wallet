@@ -98,7 +98,6 @@ class PlatformRepo @Inject constructor(
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
     }
 
-    var onIdentityResolved: ((Identity?) -> Unit)? = {}
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
 
     lateinit var blockchainIdentity: BlockchainIdentity

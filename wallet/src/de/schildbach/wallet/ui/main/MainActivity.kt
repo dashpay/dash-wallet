@@ -217,9 +217,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             }
         }
 
-        viewModel.platformRepo.onIdentityResolved = { identity ->
-            // TODO: do we need this?
-        }
         viewModel.showCreateUsernameEvent.observe(this) {
             lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
@@ -545,7 +542,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.platformRepo.onIdentityResolved = null
         unregisterReceiver(timeChangeReceiver)
     }
 

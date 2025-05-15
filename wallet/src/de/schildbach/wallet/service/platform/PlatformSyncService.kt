@@ -1269,7 +1269,6 @@ class PlatformSynchronizationService @Inject constructor(
                 log.info("preBlockDownload: checking for existing associated identity")
 
                 val identity = platformRepo.getIdentityFromPublicKeyId()
-                platformRepo.onIdentityResolved?.invoke(identity)
 
                 if (identity != null) {
                     log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
