@@ -182,6 +182,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Заставні дані CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Змішування CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Створення номіналів</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Об\'єднання дрібних часток через CoinJoin</string>
     <string name="network_monitor_activity_title">Мережевий монітор</string>
     <string name="network_monitor_peer_list_title">Вузли</string>
     <string name="network_monitor_block_list_title">Блоки</string>
@@ -419,4 +420,5 @@
     <string name="battery_optimization_dialog_button_change">Відкрити налаштування</string>
     <string name="credits_profile_change_message">Оновіть інформацію профілю</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Виберіть оглядач блоків</string>
+</resources>

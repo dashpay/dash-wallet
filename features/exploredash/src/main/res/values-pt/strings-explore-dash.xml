@@ -88,7 +88,6 @@
     <string name="explore_filtered_by">Filtrado por:</string>
     <string name="explore_pay_gift_card">Pagar com cartão presente</string>
     <string name="explore_sort_by">Ordenar por</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Próximo</item>
@@ -119,7 +118,7 @@
     <string-array name="sort_by_options_names">
         <item>Nome</item>
         <item>Distância</item>
-        <item>Discount</item>
+        <item>Desconto</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -206,7 +205,6 @@
     <string name="send_coins_error_msg">Erro ao enviar Dash!</string>
     <string name="gift_card_barcode_failed">Falha ao carregar o código de barras</string>
     <string name="gift_card_tx_title">Cartão-presente · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Digite o código de verificação</string>
     <string name="verification_check_email">Verifique seu email e insira o código de verificação</string>

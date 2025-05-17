@@ -413,6 +413,7 @@
     <string name="coinjoin_start">开始混币</string>
     <string name="coinjoin_stop">停止混币</string>
     <string name="coinjoin_mixing">混币</string>
+    <string name="coinjoin_mixing_finishing">混币收尾</string>
     <string name="coinjoin_paused">混币暂停</string>
     <string name="coinjoin_not_started">尚未开始</string>
     <string name="coinjoin_progress_balance">%2$s中的%1$s</string>

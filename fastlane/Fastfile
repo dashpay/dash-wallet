@@ -173,7 +173,7 @@ platform :android do
     project_id = "dash-wallet-firebase"
     key_file = "#{ENV['PWD']}/.deploy/gc-storage-service-account.json"
     bucket_name = "dash-wallet-firebase.appspot.com"
-    file_name = "explore/explore-v2.db"
+    file_name = "explore/explore-v3.db"
     if flavor == "prod" || flavor.nil?
       puts "Downloading the production database"
     else

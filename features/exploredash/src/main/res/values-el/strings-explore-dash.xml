@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">Φιλτράρεται από:</string>
     <string name="explore_pay_gift_card">Πληρώστε με δωροκάρτα</string>
     <string name="explore_sort_by">Ταξινόμηση κατά</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Κοντινή τοποθεσία</item>
@@ -116,7 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>Όνομα</item>
         <item>Απόσταση</item>
-        <item>Discount</item>
+        <item>Έκπτωση</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -201,7 +200,6 @@
     <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
     <string name="gift_card_barcode_failed">Απέτυχε η φόρτωση του barcode</string>
     <string name="gift_card_tx_title">Δωροκάρτα · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Πληκτρολογήστε τον κωδικό επαλήθευσης</string>
     <string name="verification_check_email">Ελέγξτε το email σας και πληκτρολογήστε τον κωδικό επαλήθευσης</string>

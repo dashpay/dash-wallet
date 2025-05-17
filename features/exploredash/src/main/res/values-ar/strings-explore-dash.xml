@@ -93,7 +93,6 @@
     <string name="explore_filtered_by">تمت تصفيتها بواسطة:</string>
     <string name="explore_pay_gift_card">ادفع ببطاقة الهدايا</string>
     <string name="explore_sort_by">ترتيب حسب</string>
-
     <string-array name="merchants_filter_options">
         <item>عبر الانترنت</item>
         <item>قريب</item>

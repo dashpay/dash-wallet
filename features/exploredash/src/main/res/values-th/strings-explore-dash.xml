@@ -83,7 +83,6 @@
     <string name="explore_filtered_by">กรองโดย:</string>
     <string name="explore_pay_gift_card">จ่ายด้วยบัตรของขวัญ</string>
     <string name="explore_sort_by">เรียงลำดับตาม</string>
-
     <string-array name="merchants_filter_options">
         <item>ออนไลน์</item>
         <item>ใกล้เคียง</item>

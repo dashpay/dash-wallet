@@ -59,6 +59,7 @@
     <string name="explore_back_to_nearest">返回到最近的位置</string>
     <string name="explore_select_location">选择位置</string>
     <string name="explore_pay_with_dash">用Dash支付</string>
+    <string name="explore_pay_with_dash_save">保存 %.2f%%</string>
     <string name="explore_buy_gift_card">购买礼品卡</string>
     <string name="explore_buy_dash">购买Dash</string>
     <string name="explore_sell_dash">出售Dash</string>
@@ -83,7 +84,6 @@
     <string name="explore_filtered_by">筛选条件:</string>
     <string name="explore_pay_gift_card">使用礼品卡付款</string>
     <string name="explore_sort_by">排序方式</string>
-
     <string-array name="merchants_filter_options">
         <item>线上</item>
         <item>附近的</item>
@@ -114,7 +114,7 @@
     <string-array name="sort_by_options_names">
         <item>名称</item>
         <item>距离</item>
-        <item>Discount</item>
+        <item>折扣</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -197,12 +197,13 @@
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
     <string name="gift_card_barcode_failed">条形码加载失败</string>
     <string name="gift_card_tx_title">礼品卡 · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">输入验证码</string>
     <string name="verification_check_email">检查您的电子邮箱并输入验证码</string>
     <string name="buy_gift_card">使用您的 DashSpend 账户购买礼品卡</string>
+    <string name="dashspend_create_account">创建账户或登录现有账户</string>
     <string name="create_new_account">创建新账户</string>
+    <string name="login">登录</string>
     <string name="password">密码</string>
     <string name="logged_in_as">已登录为 %s</string>
     <string name="log_out">退出</string>
@@ -217,9 +218,16 @@
     <string name="gift_card_unknown_error">由于某些原因, 我们无法购买礼品卡. 请通过 txid %s与客服联系.</string>
     <string name="gift_card_rejected">付款已被拒绝. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
     <string name="gift_card_redeem_url_not_supported">已向提供兑换链接的商家进行付款, 但目前尚不受支持. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
+    <string name="dashspend_terms_conditions">接受条款和条件</string>
     <string name="accept_terms_conditions">我接受 DashSpend 条款和条件</string>
     <string name="tap_link_to_proceed">要在 DashSpend 创建账户, 您必须点击下面的链接才能继续</string>
     <string name="accept_to_proceed">要在 DashSpend 创建账户, 您必须接受 DashSpend 条款和条件</string>
+    <string name="view_terms_conditions">条款和条件</string>
+    <string name="barcode_placeholder">一旦生成代码, 它将显示在此处.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">创建账户</string>
+    <string name="log_in_to_ctxspend_account">登录您的账户</string>
     <string name="log_in_to_ctxspend_account_desc">您的电子邮箱仅用于发送一次性密码.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 账户购买礼品卡</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">创建 DashSpend 账户或登录现有账户</string>

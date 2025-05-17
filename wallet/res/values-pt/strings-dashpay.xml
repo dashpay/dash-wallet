@@ -413,6 +413,7 @@ Dash</b></string>
     <string name="coinjoin_start">Iniciar mistura</string>
     <string name="coinjoin_stop">Parar mistura</string>
     <string name="coinjoin_mixing">Misturando</string>
+    <string name="coinjoin_mixing_finishing">Finalizando Mistura</string>
     <string name="coinjoin_paused">Mistura Pausada</string>
     <string name="coinjoin_not_started">Não iniciado</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>

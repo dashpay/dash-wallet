@@ -98,7 +98,7 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
             binding.receiveInfo.setProfile(it?.username, it?.displayName, it?.avatarUrl, it?.avatarHash)
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             // get current address is much faster, because the wallet doesn't need to be saved
             val freshAddress = viewModel.getCurrentAddress()
             binding.receiveInfo.setInfo(freshAddress, null)
