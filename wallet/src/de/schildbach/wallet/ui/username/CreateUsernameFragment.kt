@@ -12,6 +12,7 @@ import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.TextView
+import androidx.activity.addCallback
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -101,6 +102,14 @@ class CreateUsernameFragment : Fragment(R.layout.fragment_create_username), Text
             }
         }
         binding.processingIdentityDismissBtn.setOnClickListener { requireActivity().finish() }
+
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            if (binding.registrationContent.visibility == View.VISIBLE) {
+                binding.registerBtn.performClick()
+            } else {
+                requireActivity().finish()
+            }
+        }
 
         initViewModel()
         walletApplication = requireActivity().application as WalletApplication
