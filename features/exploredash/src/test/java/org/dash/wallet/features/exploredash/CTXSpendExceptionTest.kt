@@ -46,4 +46,13 @@ class CTXSpendExceptionTest {
         assertEquals(null, exception.errorCode)
         assertFalse(exception.isLimitError)
     }
+
+    @Test
+    fun malformedJsonErrorTest() {
+        val malformedErrorBody = "{ this is not valid json }"
+        val exception = CTXSpendException("response error", 400, malformedErrorBody)
+        assertEquals(400, exception.errorCode)
+        // Verify that parsing errors don't cause the app to consider this a limit error
+        assertFalse(exception.isLimitError)
+    }
 }
