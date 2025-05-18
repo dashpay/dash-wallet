@@ -126,27 +126,11 @@ class CTXSpendViewModel @Inject constructor(
         giftCardMerchant.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
 
-//            val response = repository.purchaseGiftCard(
-//                merchantId = it,
-//                fiatAmount = amountValue.toBigDecimal().toDouble().toString(),
-//                fiatCurrency = "USD",
-//                cryptoCurrency = Constants.DASH_CURRENCY
-//            )
-
-            val response: ResponseResource<GiftCardResponse> = ResponseResource.Failure(
-                Exception("nothing"),
-                true,
-                400,
-                """
-        {
-          "fields": {
-            "fiatAmount": [
-              "above threshold"
-            ],
-            "message": "Bad request"
-          }
-        }
-    """
+            val response = repository.purchaseGiftCard(
+                merchantId = it,
+                fiatAmount = amountValue.toBigDecimal().toDouble().toString(),
+                fiatCurrency = "USD",
+                cryptoCurrency = Constants.DASH_CURRENCY
             )
 
             when (response) {

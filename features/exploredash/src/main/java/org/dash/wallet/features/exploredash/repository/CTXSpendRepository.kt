@@ -58,9 +58,11 @@ class CTXSpendException(
         }
     }
 
-    val isLimitError
-        get() = errorCode == 400 &&
-            ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull() == "above threshold"
+    val isLimitError: Boolean
+        get() {
+            val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
+            return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
+        }
 }
 
 class CTXSpendRepository @Inject constructor(
