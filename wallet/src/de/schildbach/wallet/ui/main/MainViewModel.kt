@@ -274,8 +274,7 @@ class MainViewModel @Inject constructor(
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCountData = NotificationCountLiveData(platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -924,5 +923,5 @@ class MainViewModel @Inject constructor(
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
 
-    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction()
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
 }
