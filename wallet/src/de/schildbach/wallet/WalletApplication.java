@@ -173,7 +173,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
-    private AuthenticationGroupExtension authenticationGroupExtension;
+    private volatile AuthenticationGroupExtension authenticationGroupExtension;
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
 

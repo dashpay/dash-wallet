@@ -65,6 +65,7 @@
     <string name="explore_back_to_nearest">Повернутися до найближчої точки</string>
     <string name="explore_select_location">Вибрати локацію</string>
     <string name="explore_pay_with_dash">Сплатити за допомогою Dash</string>
+    <string name="explore_pay_with_dash_save">Зберегти %.2f%%</string>
     <string name="explore_buy_gift_card">Купити подарункову карту</string>
     <string name="explore_buy_dash">Купити Dash</string>
     <string name="explore_sell_dash">Продати Dash</string>
@@ -89,7 +90,6 @@
     <string name="explore_filtered_by">Відфільтровано за:</string>
     <string name="explore_pay_gift_card">Оплатити подарунковою карткою</string>
     <string name="explore_sort_by">Сортувати зв</string>
-
     <string-array name="merchants_filter_options">
         <item>Інтернет-магазин</item>
         <item>Поруч</item>
@@ -120,7 +120,7 @@
     <string-array name="sort_by_options_names">
         <item>Назва</item>
         <item>Відстань</item>
-        <item>Discount</item>
+        <item>Знижка</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -209,12 +209,13 @@
     <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
     <string name="gift_card_barcode_failed">Не вдалося завантажити штрих-код</string>
     <string name="gift_card_tx_title">Подарункова картка · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Введіть код підтвердження</string>
     <string name="verification_check_email">Перевірте свою електронну пошту та введіть код підтвердження</string>
     <string name="buy_gift_card">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
+    <string name="dashspend_create_account">Створити аккаунт або увійти в існуючий</string>
     <string name="create_new_account">Створити новий обліковий запис</string>
+    <string name="login">Вхід</string>
     <string name="password">Пароль</string>
     <string name="logged_in_as">Ви увійшли як %s</string>
     <string name="log_out">Вийти</string>
@@ -229,9 +230,16 @@
     <string name="gift_card_unknown_error">Чомусь ми не змогли купити подарункову картку. Будь ласка зв\'яжіться зі службою піддтримки з txid %s.</string>
     <string name="gift_card_rejected">Платіж відхилено. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
     <string name="gift_card_redeem_url_not_supported">Платіж було здійснено для продавця, який надає URL-адресу активації, але наразі це не підтримується. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
+    <string name="dashspend_terms_conditions">Прийняти положення та умови</string>
     <string name="accept_terms_conditions">Я приймаю правила та умови використання DashSpend</string>
     <string name="tap_link_to_proceed">Натисніть на посилання нижче щоб продовжити створення облікового запису на DashSpend</string>
     <string name="accept_to_proceed">Прийміть правила та умови DashSpend, щоб створити обліковий запис DashSpend</string>
+    <string name="view_terms_conditions">Терміни і умови</string>
+    <string name="barcode_placeholder">Щойно ваш код буде згенеровано, він відобразиться тут.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Створити аккаунт</string>
+    <string name="log_in_to_ctxspend_account">Увійти в свій аккаунт</string>
     <string name="log_in_to_ctxspend_account_desc">Ваша електронна адреса використовується лише для надсилання одноразового пароля.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Створіть обліковий запис на DashSpend або увійдіть у вже існуючий</string>

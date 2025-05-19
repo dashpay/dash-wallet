@@ -32,19 +32,18 @@ import de.schildbach.wallet.payments.MaxOutputAmountCoinJoinCoinSelector
 import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -104,13 +103,9 @@ class SendCoinsViewModel @Inject constructor(
     val maxOutputAmount: LiveData<Coin>
         get() = _maxOutputAmount
 
+    private val _currentAmount = MutableStateFlow(Coin.ZERO)
     var currentAmount: Coin = Coin.ZERO
-        set(value) {
-            field = value
-            viewModelScope.launch(Dispatchers.IO) {
-                executeDryrun(value)
-            }
-        }
+        private set
 
     var dryrunSendRequest: SendRequest? = null
         private set
@@ -168,6 +163,19 @@ class SendCoinsViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach(_maxOutputAmount::postValue)
             .launchIn(viewModelScope)
+
+        _currentAmount
+            .debounce(150)
+            .onEach { amount ->
+                withContext(Dispatchers.IO) {
+                    executeDryrun(amount)
+                }
+            }
+            .launchIn(viewModelScope)
+
+        _currentAmount.onEach { amount ->
+            currentAmount = amount
+        }.launchIn(viewModelScope)
 
         walletApplication.startBlockchainService(false)
     }
@@ -381,6 +389,10 @@ class SendCoinsViewModel @Inject constructor(
                 dryRunKey
             )
         }
+    }
+
+    fun setAmount(amount: Coin) {
+        _currentAmount.value = amount
     }
 
     private fun executeDryrun(amount: Coin) {

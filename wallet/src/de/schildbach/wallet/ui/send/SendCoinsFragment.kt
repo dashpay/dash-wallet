@@ -100,7 +100,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
             }
             // currentAmount requires viewModel.initPaymentIntent be executed first
-            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
+            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it) }
         }
 
         if (savedInstanceState == null) {

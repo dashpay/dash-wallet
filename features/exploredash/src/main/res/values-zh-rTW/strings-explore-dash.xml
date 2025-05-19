@@ -83,7 +83,6 @@
     <string name="explore_filtered_by">篩選條件:</string>
     <string name="explore_pay_gift_card">使用禮品卡付款</string>
     <string name="explore_sort_by">排序方式</string>
-
     <string-array name="merchants_filter_options">
         <item>在線的</item>
         <item>附近的</item>
@@ -114,7 +113,7 @@
     <string-array name="sort_by_options_names">
         <item>名稱</item>
         <item>距離</item>
-        <item>Discount</item>
+        <item>折扣</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -197,7 +196,6 @@
     <string name="send_coins_error_msg">付款出現問題!</string>
     <string name="gift_card_barcode_failed">條碼載入失敗</string>
     <string name="gift_card_tx_title">禮物卡 · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">輸入驗證碼</string>
     <string name="verification_check_email">檢查您的電子郵件並輸入驗證碼</string>

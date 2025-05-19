@@ -128,7 +128,7 @@ class CTXSpendViewModel @Inject constructor(
 
             val response = repository.purchaseGiftCard(
                 merchantId = it,
-                fiatAmount = amountValue.toBigDecimal().toDouble().toString(),
+                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                 fiatCurrency = "USD",
                 cryptoCurrency = Constants.DASH_CURRENCY
             )
