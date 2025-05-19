@@ -272,4 +272,14 @@ class CTXSpendViewModel @Inject constructor(
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
     }
+
+    suspend fun needToCheckRefreshToken() = repository.needToCheckRefreshToken()
+
+    suspend fun checkToken(): Boolean {
+        return try {
+            repository.refreshToken()
+        } catch (ex: Exception) {
+            false
+        }
+    }
 }
