@@ -63,7 +63,7 @@ class TokenAuthenticator @Inject constructor(
         }
     }
 
-    private suspend fun getUpdatedToken(): ResponseResource<RefreshTokenResponse?> {
+    suspend fun getUpdatedToken(): ResponseResource<RefreshTokenResponse?> {
         val refreshToken = config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN) ?: ""
         return safeApiCall { tokenApi.refreshToken(RefreshTokenRequest(refreshToken = refreshToken)) }
     }

@@ -26,9 +26,11 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class CTXSpendException(message: String) : Exception(message) {
@@ -41,9 +43,12 @@ class CTXSpendException(message: String) : Exception(message) {
 
 class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
-    private val config: CTXSpendConfig
+    private val config: CTXSpendConfig,
+    private val tokenAuthenticator: TokenAuthenticator
 ) : CTXSpendRepositoryInt {
-
+    companion object {
+        private val ONE_DAY = TimeUnit.DAYS.toMillis(1)
+    }
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun login(email: String): ResponseResource<Boolean> = safeApiCall {
@@ -100,6 +105,31 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
         api.getGiftCard(txid)
     }
+
+    override suspend fun refreshToken(): Boolean {
+        return when (val tokenResponse = tokenAuthenticator.getUpdatedToken()) {
+            is ResponseResource.Success -> {
+                tokenResponse.value?.let {
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                    config.set(CTXSpendConfig.PREFS_KEY_REFRESH_DATE, System.currentTimeMillis())
+                    true
+                } ?: false
+            }
+
+            else -> {
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                config.set(CTXSpendConfig.PREFS_KEY_REFRESH_DATE, 0)
+                false
+            }
+        }
+    }
+
+    override suspend fun needToCheckRefreshToken(): Boolean {
+        val timeSinceLastRefresh = System.currentTimeMillis() - (config.get(CTXSpendConfig.PREFS_KEY_REFRESH_DATE) ?: 0)
+        return isUserSignedIn() && timeSinceLastRefresh > ONE_DAY
+    }
 }
 
 interface CTXSpendRepositoryInt {
@@ -118,4 +148,6 @@ interface CTXSpendRepositoryInt {
 
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
+    suspend fun refreshToken(): Boolean
+    suspend fun needToCheckRefreshToken(): Boolean
 }

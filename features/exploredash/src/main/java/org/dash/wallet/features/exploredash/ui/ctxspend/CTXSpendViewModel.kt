@@ -275,10 +275,11 @@ class CTXSpendViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
-    suspend fun checkToken(merchantId: String): Boolean {
+    suspend fun needToCheckRefreshToken() = repository.needToCheckRefreshToken()
+
+    suspend fun checkToken(): Boolean {
         return try {
-            getMerchant(merchantId)
-            false // TODO: should return true, but mock failure
+            repository.refreshToken()
         } catch (ex: Exception) {
             false
         }
