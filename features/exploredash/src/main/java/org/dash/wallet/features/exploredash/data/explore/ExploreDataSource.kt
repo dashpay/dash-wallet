@@ -81,9 +81,6 @@ interface ExploreDataSource {
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
-
-    /** obtains a random merchant from the given source */
-    suspend fun getRandomMerchant(source: String): String?
 }
 
 open class MerchantAtmDataSource @Inject constructor(
@@ -512,6 +509,4 @@ open class MerchantAtmDataSource @Inject constructor(
         val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
         return "\"$escapedQuotes*\""
     }
-
-    override suspend fun getRandomMerchant(source: String) = merchantDao.getRandomMerchant(source)
 }

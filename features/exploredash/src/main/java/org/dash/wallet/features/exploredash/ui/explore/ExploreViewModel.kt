@@ -836,8 +836,4 @@ class ExploreViewModel @Inject constructor(
     fun logEvent(event: String) {
         analyticsService.logEvent(event, mapOf())
     }
-
-    suspend fun getRandomCTXMerchant(): String? = withContext(Dispatchers.IO) {
-        exploreData.getRandomMerchant("CTXSpend")
-    }
 }

@@ -489,7 +489,4 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount(): Int
-
-    @Query("SELECT merchantId FROM merchant WHERE source IS :source LIMIT 1")
-    suspend fun getRandomMerchant(source: String): String?
 }
