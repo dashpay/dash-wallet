@@ -88,7 +88,6 @@
     <string name="explore_filtered_by">Filtré par :</string>
     <string name="explore_pay_gift_card">Payer avec une carte-cadeau</string>
     <string name="explore_sort_by">Trier par</string>
-
     <string-array name="merchants_filter_options">
         <item>En ligne</item>
         <item>À proximité</item>
@@ -119,6 +118,7 @@
     <string-array name="sort_by_options_names">
         <item>Nom</item>
         <item>Distance</item>
+        <item>Réduction</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -205,7 +205,6 @@
     <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
     <string name="gift_card_barcode_failed">Erreur de lecture du code-barres</string>
     <string name="gift_card_tx_title">Carte-cadeau · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Entrez le code de vérification</string>
     <string name="verification_check_email">Consultez votre e-mail et entrez le code de vérification</string>

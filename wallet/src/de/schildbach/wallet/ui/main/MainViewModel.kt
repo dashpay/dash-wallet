@@ -79,6 +79,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -215,10 +216,6 @@ class MainViewModel @Inject constructor(
     private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
-    private val _mostRecentTransaction = MutableLiveData<Transaction>()
-    val mostRecentTransaction: LiveData<Transaction>
-        get() = _mostRecentTransaction
-
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
@@ -282,8 +279,7 @@ class MainViewModel @Inject constructor(
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCountData = NotificationCountLiveData(platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -359,10 +355,6 @@ class MainViewModel @Inject constructor(
             .onEach {
                 _mixedBalance.value = it
             }
-            .launchIn(viewModelScope)
-
-        walletData.observeMostRecentTransaction()
-            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -938,4 +930,6 @@ class MainViewModel @Inject constructor(
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
+
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
 }

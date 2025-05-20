@@ -60,10 +60,12 @@ class StakingActivity : LockScreenActivity() {
         super.onCreate(savedInstanceState)
 
         binding = ActivityStakingBinding.inflate(layoutInflater)
-        lifecycleScope.launch { navController = setNavigationGraph() }
+        lifecycleScope.launch {
+            navController = setNavigationGraph()
+            viewModel.observeOnlineAccountStatus().observe(this@StakingActivity, ::handleOnlineAccountStatus)
+        }
 
         viewModel.navigationCallback.observe(this, ::handleNavigationRequest)
-        viewModel.observeOnlineAccountStatus().observe(this, ::handleOnlineAccountStatus)
         viewModel.observeCrowdNodeError().observe(this, ::handleCrowdNodeError)
 
         val intent = Intent(this, StakingActivity::class.java)

@@ -49,6 +49,7 @@ data class Merchant(
     var merchantId: String? = null,
     var redeemType: String? = "",
     var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
+    var denominationsType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
     @Ignore var physicalAmount: Int = 0,

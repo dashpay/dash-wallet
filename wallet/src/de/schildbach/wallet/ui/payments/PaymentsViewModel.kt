@@ -19,25 +19,65 @@ package de.schildbach.wallet.ui.payments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Context
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
+@ExperimentalCoroutinesApi
 @HiltViewModel
 class PaymentsViewModel @Inject constructor(
     platformRepo: PlatformRepo,
+    identityConfig: BlockchainIdentityConfig,
+    private val walletDataProvider: WalletDataProvider,
     private val analytics: AnalyticsService
 ): ViewModel() {
     var fromQuickReceive: Boolean = false
 
-    val dashPayProfile = if (platformRepo.hasIdentity && platformRepo.blockchainIdentity.currentUsername != null) {
-        platformRepo.observeProfileByUserId(platformRepo.blockchainIdentity.uniqueIdString)
-    } else {
-        flowOf()
-    }.asLiveData()
+    private val _dashPayProfile = MutableStateFlow<DashPayProfile?>(null)
+    val dashPayProfile = _dashPayProfile.asLiveData()
+
+    suspend fun getCurrentAddress() = withContext(Dispatchers.IO) {
+        walletDataProvider.wallet?.let {
+            Context.propagate(it.context)
+            walletDataProvider.currentReceiveAddress()
+        } ?: error("Wallet not yet initialised")
+    }
+
+    suspend fun getFreshAddress() = withContext(Dispatchers.IO) {
+        walletDataProvider.wallet?.let {
+            Context.propagate(it.context)
+            walletDataProvider.freshReceiveAddress()
+        } ?: error("Wallet not yet initialised")
+    }
+    init {
+        identityConfig.observeBase()
+            .flatMapLatest { identity ->
+                if (identity.userId != null && identity.creationComplete) {
+                    platformRepo.observeProfileByUserId(identity.userId)
+                } else {
+                    emptyFlow()
+                }
+            }
+            .onEach {
+                _dashPayProfile.value = it
+            }
+            .launchIn(viewModelScope)
+    }
 
     fun logSpecifyAmount() {
         if (fromQuickReceive) {

@@ -90,7 +90,6 @@
     <string name="explore_filtered_by">Od filtrowane pod względem:</string>
     <string name="explore_pay_gift_card">Płać za pomocą karty podarunkowej</string>
     <string name="explore_sort_by">Sortuj według</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>W pobliżu</item>
@@ -121,6 +120,7 @@
     <string-array name="sort_by_options_names">
         <item>Imię</item>
         <item>Dystans</item>
+        <item>Zniżka</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -209,7 +209,6 @@
     <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
     <string name="gift_card_barcode_failed">Nie udało się załadować kodu kreskowego</string>
     <string name="gift_card_tx_title">Karta podarunkowa · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Wprowadź kod weryfikacyjny</string>
     <string name="verification_check_email">Sprawdź swoją pocztę e-mail i wprowadź kod weryfikacyjny</string>

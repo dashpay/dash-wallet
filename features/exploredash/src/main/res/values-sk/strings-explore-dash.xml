@@ -89,7 +89,6 @@
     <string name="explore_filtered_by">Filtrované podľa:</string>
     <string name="explore_pay_gift_card">Plaťte darčekovou kartou</string>
     <string name="explore_sort_by">Zoradiť podľa</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>V blízkosti</item>
@@ -120,6 +119,7 @@
     <string-array name="sort_by_options_names">
         <item>Meno</item>
         <item>Vzdialenosť</item>
+        <item>Zľava</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -208,7 +208,6 @@
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
     <string name="gift_card_barcode_failed">Čiarový kód sa nepodarilo načítať</string>
     <string name="gift_card_tx_title">Darčeková karta %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Zadajte overovací kód</string>
     <string name="verification_check_email">Skontrolujte svoj e-mail a zadajte overovací kód</string>

@@ -19,12 +19,12 @@ package de.schildbach.wallet.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.doublePreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import de.schildbach.wallet.service.CoinJoinMode
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -45,6 +45,7 @@ open class CoinJoinConfig @Inject constructor(
         val COINJOIN_MULTISESSION = booleanPreferencesKey("coinjoin_multisession")
         val COINJOIN_AMOUNT = longPreferencesKey("coinjoin_amount")
         val FIRST_TIME_INFO_SHOWN = booleanPreferencesKey("first_time_info_shown")
+        val LAST_MIXING_PROGRESS = doublePreferencesKey("last_mixing_progress")
     }
 
     fun observeMode(): Flow<CoinJoinMode> {
@@ -57,5 +58,13 @@ open class CoinJoinConfig @Inject constructor(
 
     suspend fun setMode(mode: CoinJoinMode) {
         set(COINJOIN_MODE, mode.toString())
+    }
+
+    suspend fun getMixingProgress(): Double? {
+        return get(LAST_MIXING_PROGRESS)
+    }
+
+    suspend fun setMixingProgress(progress: Double) {
+        set(LAST_MIXING_PROGRESS, progress)
     }
 }

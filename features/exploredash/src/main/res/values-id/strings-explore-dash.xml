@@ -83,7 +83,6 @@
     <string name="explore_filtered_by">Difilter oleh:</string>
     <string name="explore_pay_gift_card">Bayar dengan kartu hadiah</string>
     <string name="explore_sort_by">Urutkan dengan</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Terdekat</item>
@@ -114,6 +113,7 @@
     <string-array name="sort_by_options_names">
         <item>Nama</item>
         <item>Jarak</item>
+        <item>Diskon</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -196,7 +196,6 @@
     <string name="send_coins_error_msg">Gagal mengirim koin!</string>
     <string name="gift_card_barcode_failed">Gagal memuat barcode</string>
     <string name="gift_card_tx_title">Kartu hadiah · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Masukkan Kode verifikasi</string>
     <string name="verification_check_email">Periksa email anda dan masukkan kode verifikasi</string>

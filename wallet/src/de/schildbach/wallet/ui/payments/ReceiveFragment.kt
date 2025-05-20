@@ -28,6 +28,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentReceiveBinding
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -64,7 +65,8 @@ class ReceiveFragment : Fragment(R.layout.fragment_receive) {
                 }
             )
         }
-
+        enterAmountViewModel.setMaxAmount(Coin.ZERO)
+        enterAmountViewModel.setMinAmount(Coin.ZERO)
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             val dashAmount = it.first
             val fiatAmount = it.second

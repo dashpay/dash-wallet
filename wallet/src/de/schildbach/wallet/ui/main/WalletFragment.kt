@@ -183,21 +183,23 @@ class WalletFragment : Fragment(R.layout.home_content) {
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
-        viewModel.mostRecentTransaction.observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
-            log.info("most recent transaction: {}", mostRecentTransaction.txId)
 
-            if ((requireActivity() as? LockScreenActivity)?.lockScreenDisplayed != true &&
-                !configuration.hasDisplayedTaxCategoryExplainer &&
-                WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
-            ) {
-                val dialogFragment: TaxCategoryExplainerDialogFragment =
-                    TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
-                dialogFragment.show(requireActivity()) {
-                    val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
-                        TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
-                    transactionDetailsDialogFragment.show(requireActivity())
+        if (!configuration.hasDisplayedTaxCategoryExplainer) {
+            viewModel.observeMostRecentTransaction().observe(viewLifecycleOwner) { mostRecentTransaction: Transaction ->
+                log.info("most recent transaction: {}", mostRecentTransaction.txId)
+
+                if ((requireActivity() as? LockScreenActivity)?.lockScreenDisplayed != true &&
+                    WalletUtils.getTransactionDate(mostRecentTransaction).time >= configuration.taxCategoryInstallTime
+                ) {
+                    val dialogFragment: TaxCategoryExplainerDialogFragment =
+                        TaxCategoryExplainerDialogFragment.newInstance(mostRecentTransaction.txId)
+                    dialogFragment.show(requireActivity()) {
+                        val transactionDetailsDialogFragment: TransactionDetailsDialogFragment =
+                            TransactionDetailsDialogFragment.newInstance(mostRecentTransaction.txId)
+                        transactionDetailsDialogFragment.show(requireActivity())
+                    }
+                    configuration.setHasDisplayedTaxCategoryExplainer()
                 }
-                configuration.setHasDisplayedTaxCategoryExplainer()
             }
         }
 

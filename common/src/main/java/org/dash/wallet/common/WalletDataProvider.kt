@@ -18,27 +18,32 @@
 package org.dash.wallet.common
 
 import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.*
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.core.Transaction
+import org.bitcoinj.core.TransactionBag
+import org.bitcoinj.core.TransactionOutPoint
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.filters.TransactionFilter
-import kotlin.jvm.Throws
 
 interface WalletDataProvider {
-    // The wallet is in here temporary. In the feature modules, use transactionBag instead.
+    @Deprecated("The wallet is in here temporary and will be moved to a separate holder, limited to the the wallet module. In feature modules, use transactionBag instead.")
     val wallet: Wallet?
 
     val transactionBag: TransactionBag
 
     val networkParameters: NetworkParameters
-
+    val authenticationGroupExtension: AuthenticationGroupExtension?
     fun freshReceiveAddress(): Address
+    fun currentReceiveAddress(): Address
 
     fun getWalletBalance(): Coin
 
@@ -78,4 +83,5 @@ interface WalletDataProvider {
     fun observeMostRecentTransaction(): Flow<Transaction>
     fun observeMixedBalance(): Flow<Coin>
     fun observeTotalBalance(): Flow<Coin>
+    fun lockOutput(outPoint: TransactionOutPoint): Boolean
 }

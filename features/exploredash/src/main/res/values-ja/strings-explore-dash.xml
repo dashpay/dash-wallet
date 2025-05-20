@@ -83,7 +83,6 @@
     <string name="explore_filtered_by">でフィルターをかける</string>
     <string name="explore_pay_gift_card">ギフトカード支払い</string>
     <string name="explore_sort_by">で並び替え</string>
-
     <string-array name="merchants_filter_options">
         <item>オンライン</item>
         <item>周辺環境</item>
@@ -114,6 +113,7 @@
     <string-array name="sort_by_options_names">
         <item>名前</item>
         <item>距離</item>
+        <item>割引</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -196,7 +196,6 @@
     <string name="send_coins_error_msg">送金に問題が発生しました！</string>
     <string name="gift_card_barcode_failed">バーコードのロードに失敗しました</string>
     <string name="gift_card_tx_title">ギフトカード · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">認証コードを入力</string>
     <string name="verification_check_email">メールを確認して認証コードを入力する</string>
