@@ -36,7 +36,7 @@ object MyTheme {
     val Micro = TextStyle(
         fontSize = 10.sp,
         lineHeight = 16.sp,
-        fontFamily = InterFont,
+        fontFamily = interRegular,
         fontWeight = FontWeight(500),
         textAlign = TextAlign.Center,
     )
@@ -44,7 +44,7 @@ object MyTheme {
     val CaptionMedium = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
-        fontFamily = InterFont,
+        fontFamily = interMedium,
         fontWeight = FontWeight(500)
     )
 
@@ -74,7 +74,7 @@ object MyTheme {
     val OverlineMedium = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        fontFamily = InterFont,
+        fontFamily = interMedium,
         fontWeight = FontWeight(500),
         textAlign = TextAlign.Center
     )
@@ -82,7 +82,7 @@ object MyTheme {
     val Body2Regular = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        fontFamily = InterFont,
+        fontFamily = interRegular,
         fontWeight = FontWeight(400)
     )
 
