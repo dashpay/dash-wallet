@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CoroutineScope
@@ -24,12 +23,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class NotificationCountLiveData(
-    walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
     platformSyncService: PlatformSyncService,
     private val dashPayConfig: DashPayConfig,
     private val scope: CoroutineScope
-) : ContactsBasedLiveData<Int>(walletApplication, platformSyncService) {
+) : ContactsBasedLiveData<Int>(platformSyncService) {
 
     override fun onContactsUpdated() {
         scope.launch(Dispatchers.IO) {
