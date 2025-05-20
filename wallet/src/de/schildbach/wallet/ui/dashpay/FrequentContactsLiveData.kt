@@ -26,6 +26,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.slf4j.LoggerFactory
 import java.util.*
 
 class FrequentContactsLiveData(
@@ -38,6 +39,7 @@ class FrequentContactsLiveData(
     companion object {
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
+        private val log = LoggerFactory.getLogger(FrequentContactsLiveData::class.java)
     }
 
     override fun onContactsUpdated() {

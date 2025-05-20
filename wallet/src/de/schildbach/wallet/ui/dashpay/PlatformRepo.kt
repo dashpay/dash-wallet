@@ -41,6 +41,9 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.ui.dashpay.FrequentContactsLiveData.Companion.TIMESPAN
+import de.schildbach.wallet.ui.dashpay.FrequentContactsLiveData.Companion.TOP_CONTACT_COUNT
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
@@ -90,7 +93,8 @@ class PlatformRepo @Inject constructor(
     val blockchainIdentityDataStorage: BlockchainIdentityConfig,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
-    val coinJoinConfig: CoinJoinConfig
+    val coinJoinConfig: CoinJoinConfig,
+    val dashPayConfig: DashPayConfig
 ) {
 
     @EntryPoint
@@ -472,6 +476,77 @@ class PlatformRepo @Inject constructor(
                 }
             }
             .distinctUntilChanged()
+    }
+
+    suspend fun updateFrequentContacts() {
+        val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
+        val frequentContacts = when (contactRequests.status) {
+            Status.SUCCESS -> {
+                if (!hasBlockchainIdentity) {
+                    return
+                }
+
+                val threeMonthsAgo = Date().time - TIMESPAN
+
+                val results = getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)
+
+                if (results.size < TOP_CONTACT_COUNT) {
+                    val moreResults = getTopContacts(contactRequests.data, results, blockchainIdentity, threeMonthsAgo, false)
+                    results.addAll(moreResults)
+                }
+
+                results
+            }
+            else -> listOf<UsernameSearchResult>()
+        }
+        dashPayConfig.set(DashPayConfig.FREQUENT_CONTACTS, frequentContacts.map { it.getIdentity() }.toSet())
+    }
+
+    private fun getTopContacts(items: List<UsernameSearchResult>,
+                               ignore: List<UsernameSearchResult>,
+                               blockchainIdentity: BlockchainIdentity,
+                               threeMonthsAgo: Long,
+                               sent: Boolean
+    ): ArrayList<UsernameSearchResult> {
+        val wholeWatch = Stopwatch.createStarted()
+        val results = arrayListOf<UsernameSearchResult>()
+        val contactScores = hashMapOf<String, Int>()
+        val contactIds = arrayListOf<String>()
+        // only include fully established contacts
+        val contacts = items.filter { it.requestSent && it.requestReceived }
+
+        contacts.forEach {
+            val watch = Stopwatch.createStarted()
+            val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userIdentifier, it.fromContactRequest!!.accountReference)
+            var count = 0
+
+            for (tx in transactions) {
+                val txValue = tx.getValue(walletApplication.wallet)
+                if ((sent && txValue.isNegative) || (!sent && txValue.isPositive)) {
+                    if (tx.updateTime.time > threeMonthsAgo) {
+                        count++
+                    }
+                }
+            }
+            contactScores[it.fromContactRequest!!.userId] = count
+            contactIds.add(it.fromContactRequest!!.userId)
+            log.info("contact: {}", watch)
+        }
+
+        // determine users with top TOP_CONTACT_COUNT non-zero scores
+        // if ignore has some items, then find TOP_CONTACT_COUNT - ignore.size
+        contactIds.sortByDescending { contactScores[it] }
+        var count = 0
+        for (id in contactIds) {
+            if (contactScores[id] != 0 && ignore.find { it.fromContactRequest!!.userId == id } == null) {
+                results.add(items.find { it.fromContactRequest!!.userId == id }!!)
+                count++
+                if (count == TOP_CONTACT_COUNT - ignore.size)
+                    break
+            }
+        }
+        log.info("frequent processing: {}", wholeWatch)
+        return results
     }
 
     private fun getFromProfiles(

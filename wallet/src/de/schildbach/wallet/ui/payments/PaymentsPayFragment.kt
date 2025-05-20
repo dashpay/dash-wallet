@@ -124,7 +124,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
             val visibility = if (it == null) View.GONE else View.VISIBLE
             binding.contactsPane.visibility = visibility
         }
-
+        binding.frequentContactsRv.visibility = View.GONE
         dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner) {
             if (Status.SUCCESS == it.status) {
                 if (it.data.isNullOrEmpty()) {
