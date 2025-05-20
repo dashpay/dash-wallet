@@ -16,7 +16,7 @@
         android:layout_height="35dp"
         android:layout_gravity="center_horizontal"
         android:scaleType="fitCenter"
-        app:srcCompat="@drawable/ic_shortcut_receive"
+        android:src="@drawable/ic_transaction_received"
         tools:ignore="ContentDescription" />
 
     <TextView

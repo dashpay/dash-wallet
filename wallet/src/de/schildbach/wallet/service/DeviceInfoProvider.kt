@@ -1,14 +1,20 @@
 package de.schildbach.wallet.service
 
+import android.content.res.Resources
 import android.telephony.TelephonyManager
+import android.util.DisplayMetrics
 import org.slf4j.LoggerFactory
 
 class DeviceInfoProvider(
+    private val resources: Resources,
     private val telephonyManager: TelephonyManager
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(DeviceInfoProvider::class.java)
     }
+
+    val isSmallScreen: Boolean
+        get() = resources.displayMetrics.densityDpi <= DisplayMetrics.DENSITY_MEDIUM
 
     /**
      * Get ISO 3166-1 alpha-2 country code for this device (or null if not available)

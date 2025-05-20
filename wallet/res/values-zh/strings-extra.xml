@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">扫描</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">发送</string>
+    <string name="shortcut_send">发送</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">发送给联系人</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
