@@ -295,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
     <string name="report_issue_dialog_generating_report">Generating report</string>
     <string name="report_transaction_history_export">Export</string>

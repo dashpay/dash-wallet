@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.ctxspend
 
+import android.content.Intent
 import androidx.lifecycle.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -51,6 +52,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -137,8 +139,13 @@ class CTXSpendViewModel @Inject constructor(
                 }
                 is ResponseResource.Failure -> {
                     log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
-                    throw CTXSpendException("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
+                    throw CTXSpendException(
+                        "purchaseGiftCard error ${response.errorCode}: ${response.errorBody}",
+                        response.errorCode,
+                        response.errorBody
+                    )
                 }
+                // else -> {}
             }
         }
         throw CTXSpendException("purchaseGiftCard error")
@@ -271,5 +278,45 @@ class CTXSpendViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
+    }
+
+    fun createEmailIntent(
+        subject: String,
+        ex: CTXSpendException
+    ) = Intent(Intent.ACTION_SEND).apply {
+        setType("message/rfc822")
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(CTXSpendConstants.REPORT_EMAIL))
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, createReportEmail(ex))
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    }
+
+    fun createReportEmail(ex: CTXSpendException): String {
+        val report = StringBuilder()
+        report.append("CTX Issue Report").append("\n")
+        if (this::giftCardMerchant.isInitialized) {
+            report.append("Merchant details").append("\n")
+                .append("name: ").append(giftCardMerchant.name).append("\n")
+                .append("id: ").append(giftCardMerchant.merchantId).append("\n")
+                .append("min: ").append(giftCardMerchant.minCardPurchase).append("\n")
+                .append("max: ").append(giftCardMerchant.maxCardPurchase).append("\n")
+                .append("discount: ").append(giftCardMerchant.savingsFraction).append("\n")
+                .append("denominations type: ").append(giftCardMerchant.denominationsType).append("\n")
+                .append("denominations: ").append(giftCardMerchant.denominations).append("\n")
+                .append("\n")
+        } else {
+            report.append("No merchant selected").append("\n")
+        }
+        report.append("\n")
+        report.append("Purchase Details").append("\n")
+        report.append("amount: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
+        report.append("\n")
+        ex.errorCode?.let {
+            report.append("code: ").append(it).append("\n")
+        }
+        ex.errorBody?.let {
+            report.append("body:\n").append(it).append("\n")
+        }
+        return report.toString()
     }
 }
