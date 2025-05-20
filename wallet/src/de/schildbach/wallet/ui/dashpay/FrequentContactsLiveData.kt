@@ -16,6 +16,7 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.text.format.DateUtils
+import com.google.common.base.Stopwatch
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -26,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.dashj.platform.dashpay.BlockchainIdentity
+import org.slf4j.LoggerFactory
 import java.util.*
 
 class FrequentContactsLiveData(walletApplication: WalletApplication, val platformRepo: PlatformRepo, platformSyncService: PlatformSyncService, val scope: CoroutineScope)
@@ -34,6 +36,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
     companion object {
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
         const val TOP_CONTACT_COUNT = 4
+        private val log = LoggerFactory.getLogger(FrequentContactsLiveData::class.java)
     }
 
     override fun onContactsUpdated() {
@@ -72,6 +75,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
                                threeMonthsAgo: Long,
                                sent: Boolean
     ): ArrayList<UsernameSearchResult> {
+        val wholeWatch = Stopwatch.createStarted()
         val results = arrayListOf<UsernameSearchResult>()
         val contactScores = hashMapOf<String, Int>()
         val contactIds = arrayListOf<String>()
@@ -79,6 +83,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
         val contacts = items.filter { it.requestSent && it.requestReceived }
 
         contacts.forEach {
+            val watch = Stopwatch.createStarted()
             val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userIdentifier, it.fromContactRequest!!.accountReference)
             var count = 0
 
@@ -92,6 +97,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
             }
             contactScores[it.fromContactRequest!!.userId] = count
             contactIds.add(it.fromContactRequest!!.userId)
+            log.info("contact: {}", watch)
         }
 
         // determine users with top TOP_CONTACT_COUNT non-zero scores
@@ -106,6 +112,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
                     break
             }
         }
+        log.info("frequent processing: {}", wholeWatch)
         return results
     }
 }
