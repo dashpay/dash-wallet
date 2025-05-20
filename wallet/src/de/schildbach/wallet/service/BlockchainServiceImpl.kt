@@ -340,6 +340,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 }
                 handleMetadata(tx)
+                handleContactPayments(tx)
                 updateAppWidget()
             }
 
@@ -1463,6 +1464,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun percentageSync(): Int {
         return syncPercentage
+    }
+
+    private fun handleContactPayments(tx: Transaction) {
+        serviceScope.launch {
+
+        }
     }
 
     private fun updateAppWidget() {

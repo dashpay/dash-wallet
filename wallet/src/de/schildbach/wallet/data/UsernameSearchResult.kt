@@ -66,4 +66,14 @@ data class UsernameSearchResult(val username: String,
         REQUEST_RECEIVED,
         CONTACT_ESTABLISHED
     }
+
+    fun getIdentity(): String {
+        return if (toContactRequest != null) {
+            toContactRequest!!.toUserId
+        } else if (fromContactRequest != null) {
+            fromContactRequest!!.userId
+        } else {
+            throw IllegalStateException("cannot get the identity")
+        }
+    }
 }
