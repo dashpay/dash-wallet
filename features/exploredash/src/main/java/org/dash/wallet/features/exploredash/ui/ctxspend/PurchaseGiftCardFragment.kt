@@ -205,6 +205,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun showCardPurchaseLimits() {
+        if (view == null || !isAdded) {
+            return
+        }
+
         if (viewModel.giftCardMerchant.fixedDenomination) {
             return
         }
@@ -231,6 +235,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun setDiscountHint() {
+        if (view == null || !isAdded) {
+            return
+        }
+
         val merchant = viewModel.giftCardMerchant
         val savingsFraction = merchant.savingsFraction
 
@@ -273,6 +281,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun showBalanceError(show: Boolean) {
+        if (view == null || !isAdded) {
+            return
+        }
+
         if (show) {
             binding.discountValue.text = getString(R.string.insufficient_money_msg)
             binding.discountValue.setTextColor(resources.getColor(R.color.error_red, null))
