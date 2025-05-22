@@ -119,7 +119,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             PurchaseGiftCardConfirmDialog().show(requireActivity())
         }
 
-        enterAmountViewModel.amount.observe(viewLifecycleOwner) {
+        enterAmountViewModel.fiatAmount.observe(viewLifecycleOwner) {
             if (!viewModel.giftCardMerchant.fixedDenomination) {
                 showCardPurchaseLimits()
                 viewModel.setGiftCardPaymentValue(it)
@@ -205,13 +205,17 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun showCardPurchaseLimits() {
+        if (view == null || !isAdded) {
+            return
+        }
+
         if (viewModel.giftCardMerchant.fixedDenomination) {
             return
         }
 
-        val purchaseAmount = enterAmountViewModel.amount.value
-        purchaseAmount?.let {
-            if (!viewModel.withinLimits(purchaseAmount)) {
+        val amountFiat = enterAmountViewModel.fiatAmount.value
+        amountFiat?.let {
+            if (!viewModel.withinLimits(amountFiat)) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
@@ -221,7 +225,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 binding.discountValue.isVisible = false
                 return
             }
-            showBalanceError(purchaseAmount.isGreaterThan(viewModel.balance.value))
+            val amountDash = enterAmountViewModel.amount.value
+            showBalanceError(amountDash?.isGreaterThan(viewModel.balance.value) == true)
         }
 
         binding.minValue.isVisible = false
@@ -230,6 +235,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun setDiscountHint() {
+        if (view == null || !isAdded) {
+            return
+        }
+
         val merchant = viewModel.giftCardMerchant
         val savingsFraction = merchant.savingsFraction
 
@@ -272,6 +281,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun showBalanceError(show: Boolean) {
+        if (view == null || !isAdded) {
+            return
+        }
+
         if (show) {
             binding.discountValue.text = getString(R.string.insufficient_money_msg)
             binding.discountValue.setTextColor(resources.getColor(R.color.error_red, null))

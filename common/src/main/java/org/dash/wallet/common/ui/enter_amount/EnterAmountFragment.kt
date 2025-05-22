@@ -242,8 +242,9 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
             viewModel._dashToFiatDirection.value = binding.amountView.dashToFiat
         }
 
-        binding.amountView.setOnAmountChanged {
-            viewModel._amount.value = it
+        binding.amountView.setOnAmountChanged { dash, fiat ->
+            viewModel._amount.value = dash
+            fiat?.let { viewModel._fiatAmount.value = it }
         }
     }
 

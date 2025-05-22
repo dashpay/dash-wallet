@@ -51,7 +51,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
     private var onCurrencyToggleClicked: (() -> Unit)? = null
     private var onDashToFiatChanged: ((Boolean) -> Unit)? = null
-    private var onAmountChanged: ((Coin) -> Unit)? = null
+    private var onAmountChanged: ((Coin, Fiat?) -> Unit)? = null
 
     private var currencySymbol = "$"
     private var isCurrencySymbolFirst = true
@@ -70,7 +70,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var dashAmount: Coin = Coin.ZERO
         private set(value) {
             field = value
-            onAmountChanged?.invoke(value)
+            onAmountChanged?.invoke(value, fiatAmount)
         }
 
     var exchangeRate: ExchangeRate? = null
@@ -148,7 +148,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         onDashToFiatChanged = listener
     }
 
-    fun setOnAmountChanged(listener: (Coin) -> Unit) {
+    fun setOnAmountChanged(listener: (Coin, Fiat?) -> Unit) {
         onAmountChanged = listener
     }
 
@@ -166,11 +166,10 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
         binding.inputAmount.text = formatInputWithCurrency()
         val rate = exchangeRate
         val pair = parseAmounts(input, rate)
+        pair.second?.let { fiatAmount = it }
         dashAmount = pair.first
 
         if (pair.second != null) {
-            fiatAmount = pair.second!!
-
             binding.resultAmount.text = if (dashToFiat) {
                 fiatAmount.toFormattedString()
             } else {

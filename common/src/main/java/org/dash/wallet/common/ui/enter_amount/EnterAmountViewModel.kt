@@ -66,6 +66,10 @@ class EnterAmountViewModel @Inject constructor(
     val amount: LiveData<Coin>
         get() = _amount
 
+    internal val _fiatAmount = MutableLiveData<Fiat>()
+    val fiatAmount: LiveData<Fiat>
+        get() = _fiatAmount
+
     private val _callerBlocksContinue = MutableLiveData(false)
     var blockContinue: Boolean
         get() = _callerBlocksContinue.value ?: false
