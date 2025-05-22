@@ -132,6 +132,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     private fun showCardPurchaseLimits() {
         val purchaseAmount = enterAmountViewModel.amount.value
+        val purchaseFiat = enterAmountViewModel.fiatAmount.value
         purchaseAmount?.let {
             val balance = viewModel.balanceWithDiscount
             balance ?.let {
@@ -140,8 +141,12 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                     return
                 }
             }
-            if (purchaseAmount.isLessThan(viewModel.minCardPurchaseCoin) ||
-                purchaseAmount.isGreaterThan(viewModel.maxCardPurchaseCoin)
+            val fiat = purchaseFiat ?: run {
+                val rate = enterAmountViewModel.selectedExchangeRate.value
+                rate?.let { ExchangeRate(it.fiat).coinToFiat(purchaseAmount) }
+            }
+            if (fiat != null && (fiat.isLessThan(viewModel.minCardPurchaseFiat) ||
+                fiat.isGreaterThan(viewModel.maxCardPurchaseFiat))
             ) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
@@ -166,13 +171,15 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         if (savingsFraction != DEFAULT_DISCOUNT_AS_DOUBLE) {
             val purchaseAmount = enterAmountViewModel.amount.value
+            val purchaseFiat = enterAmountViewModel.fiatAmount.value
             if (purchaseAmount != null && purchaseAmount != Coin.ZERO) {
                 val rate = enterAmountViewModel.selectedExchangeRate.value
                 val myRate = ExchangeRate(rate!!.fiat)
+                val fiatValue = purchaseFiat ?: myRate.coinToFiat(purchaseAmount)
                 binding.discountValue.text =
                     getString(
                         R.string.purchase_gift_card_discount_hint,
-                        myRate.coinToFiat(purchaseAmount).toFormattedString(),
+                        fiatValue.toFormattedString(),
                         viewModel.getDiscountedAmount(
                             purchaseAmount,
                             savingsFraction
