@@ -112,7 +112,6 @@ class CTXSpendRepository @Inject constructor(
                 tokenResponse.value?.let {
                     config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
                     config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
-                    config.set(CTXSpendConfig.PREFS_KEY_REFRESH_DATE, System.currentTimeMillis())
                     true
                 } ?: false
             }
@@ -120,15 +119,9 @@ class CTXSpendRepository @Inject constructor(
             else -> {
                 config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
                 config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
-                config.set(CTXSpendConfig.PREFS_KEY_REFRESH_DATE, 0)
                 false
             }
         }
-    }
-
-    override suspend fun needToCheckRefreshToken(): Boolean {
-        val timeSinceLastRefresh = System.currentTimeMillis() - (config.get(CTXSpendConfig.PREFS_KEY_REFRESH_DATE) ?: 0)
-        return isUserSignedIn() && timeSinceLastRefresh > ONE_DAY
     }
 }
 
@@ -149,5 +142,4 @@ interface CTXSpendRepositoryInt {
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
     suspend fun refreshToken(): Boolean
-    suspend fun needToCheckRefreshToken(): Boolean
 }

@@ -37,7 +37,6 @@ class CTXSpendConfig @Inject constructor(
 
         val PREFS_KEY_ACCESS_TOKEN = stringPreferencesKey("last_ctx_spend_access_token")
         val PREFS_KEY_REFRESH_TOKEN = stringPreferencesKey("last_ctx_spend_refresh_token")
-        val PREFS_KEY_REFRESH_DATE = longPreferencesKey("last_ctx_spend_refresh_token_date")
         val PREFS_KEY_CTX_PAY_EMAIL = stringPreferencesKey("ctx_spend_email")
         val PREFS_DEVICE_UUID = stringPreferencesKey("device_uuid")
     }

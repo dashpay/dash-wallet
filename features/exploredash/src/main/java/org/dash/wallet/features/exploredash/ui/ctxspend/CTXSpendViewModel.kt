@@ -273,8 +273,6 @@ class CTXSpendViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
-    suspend fun needToCheckRefreshToken() = repository.needToCheckRefreshToken()
-
     suspend fun checkToken(): Boolean {
         return try {
             repository.refreshToken()

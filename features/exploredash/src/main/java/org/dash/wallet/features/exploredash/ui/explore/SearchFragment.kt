@@ -235,17 +235,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (ctxSpendViewModel.needToCheckRefreshToken()) {
-                    if (!ctxSpendViewModel.checkToken()) {
-                        AdaptiveDialog.create(
-                            null,
-                            getString(R.string.token_expired_title),
-                            getString(R.string.token_expired_message),
-                            getString(R.string.button_okay)
-                        ).show(requireActivity()) {
-                            if (isAdded) {
-                                showLoginDialog()
-                            }
+                if (!ctxSpendViewModel.checkToken()) {
+                    AdaptiveDialog.create(
+                        null,
+                        getString(R.string.token_expired_title),
+                        getString(R.string.token_expired_message),
+                        getString(R.string.button_okay)
+                    ).show(requireActivity()) {
+                        if (isAdded) {
+                            showLoginDialog()
                         }
                     }
                 }
