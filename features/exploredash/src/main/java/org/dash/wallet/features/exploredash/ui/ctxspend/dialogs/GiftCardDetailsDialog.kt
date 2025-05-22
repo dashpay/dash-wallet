@@ -145,6 +145,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             } else {
                 binding.purchaseCardBarcode.isVisible = false
                 binding.barcodePlaceholder.isVisible = true
+                binding.barcodePlaceholderText.isVisible = true
                 binding.barcodeLoadingError.isVisible = false
             }
 
@@ -216,7 +217,6 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 }
 
                 if (bitmap != null) {
-                    binding.barcodeLoadingError.isVisible = false
                     binding.barcodePlaceholder.isVisible = false
                     binding.purchaseCardBarcode.isVisible = true
 
@@ -229,7 +229,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                     showBarcode(bitmap)
                 } else {
                     binding.purchaseCardBarcode.isVisible = false
-                    binding.barcodePlaceholder.isVisible = false
+                    binding.barcodePlaceholder.isVisible = true
+                    binding.barcodePlaceholderText.isVisible = false
                     binding.barcodeLoadingError.isVisible = true
                 }
             }
@@ -245,8 +246,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                     setMaxBrightness(true)
                 },
                 onError = { _, _ ->
-                    binding.barcodePlaceholder.isVisible = false
                     binding.purchaseCardBarcode.isVisible = false
+                    binding.barcodePlaceholder.isVisible = true
+                    binding.barcodePlaceholderText.isVisible = false
                     binding.barcodeLoadingError.isVisible = true
                     setMaxBrightness(false)
                 }

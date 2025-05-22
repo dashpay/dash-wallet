@@ -69,56 +69,8 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
             android:orientation="vertical"
-            android:paddingHorizontal="15dp">
-
-            <TextView
-                android:id="@+id/payment_methods_label"
-                style="@style/Caption.SemiBold.Secondary"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="15dp"
-                android:text="@string/explore_payment_method" />
-
-            <androidx.cardview.widget.CardView
-                android:id="@+id/payment_methods"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:layout_marginBottom="26dp"
-                app:cardBackgroundColor="@color/background_secondary"
-                app:cardCornerRadius="10dp"
-                app:cardElevation="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical">
-
-                    <CheckBox
-                        android:id="@+id/dash_option"
-                        style="@style/CheckBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:drawableEnd="@drawable/ic_dash_pay"
-                        android:text="@string/explore_payment_dash" />
-
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginStart="54dp"
-                        android:background="@color/divider_color" />
-
-                    <CheckBox
-                        android:id="@+id/gift_card_option"
-                        style="@style/CheckBox"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:drawableEnd="@drawable/ic_gift_card_rounded"
-                        android:text="@string/explore_payment_gift_card" />
-                </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            android:paddingHorizontal="15dp"
+            android:animateLayoutChanges="true">
 
             <TextView
                 android:id="@+id/sort_by_label"
@@ -133,6 +85,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
                 app:cardBackgroundColor="@color/background_secondary"
                 app:cardCornerRadius="10dp"
                 app:cardElevation="0dp">
@@ -153,7 +106,6 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
-                android:layout_marginTop="26dp"
                 android:text="@string/explore_location" />
 
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -191,6 +143,100 @@
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <TextView
+                android:id="@+id/payment_methods_label"
+                style="@style/Caption.SemiBold.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/explore_payment_method" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/payment_methods"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
+                app:cardBackgroundColor="@color/background_secondary"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingVertical="2dp"
+                    android:paddingHorizontal="16dp"
+                    android:orientation="vertical">
+
+                    <CheckBox
+                        android:id="@+id/dash_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:drawablePadding="8dp"
+                        android:paddingVertical="16dp"
+                        android:drawableStart="@drawable/ic_dash_pay"
+                        android:text="@string/explore_payment_dash" />
+
+                    <CheckBox
+                        android:id="@+id/gift_card_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:drawablePadding="8dp"
+                        android:paddingVertical="16dp"
+                        android:drawableStart="@drawable/ic_gift_card_rounded"
+                        android:text="@string/explore_payment_gift_card" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <TextView
+                android:id="@+id/gift_card_types_label"
+                style="@style/Caption.SemiBold.Secondary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="15dp"
+                android:text="@string/gift_card_types" />
+
+            <androidx.cardview.widget.CardView
+                android:id="@+id/gift_card_types"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="26dp"
+                app:cardBackgroundColor="@color/background_secondary"
+                app:cardCornerRadius="10dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:paddingVertical="2dp"
+                    android:paddingHorizontal="16dp"
+                    android:orientation="vertical">
+
+                    <CheckBox
+                        android:id="@+id/flexible_amount_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:paddingVertical="16dp"
+                        android:text="@string/flexible_amount_option" />
+
+                    <CheckBox
+                        android:id="@+id/fixed_denom_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:paddingVertical="16dp"
+                        android:text="@string/fixed_denom_option" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
             <TextView
                 android:id="@+id/radius_label"

@@ -101,7 +101,6 @@ import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -140,8 +139,7 @@ class MainViewModel @Inject constructor(
     dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService,
-    private val crowdNodeApi: CrowdNodeApi
+    private val coinJoinService: CoinJoinService
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
         private const val BATCHING_PERIOD = 500L
@@ -214,10 +212,6 @@ class MainViewModel @Inject constructor(
     private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
-    private val _mostRecentTransaction = MutableLiveData<Transaction>()
-    val mostRecentTransaction: LiveData<Transaction>
-        get() = _mostRecentTransaction
-
     private val _temporaryHideBalance = MutableStateFlow<Boolean?>(null)
     val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
@@ -231,12 +225,8 @@ class MainViewModel @Inject constructor(
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
 
-    private val _stakingAPY = MutableLiveData<Double>()
-
     val isPassphraseVerified: Boolean
         get() = !config.remindBackupSeed
-    val stakingAPY: LiveData<Double>
-        get() = _stakingAPY
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
 
@@ -284,8 +274,7 @@ class MainViewModel @Inject constructor(
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCountData = NotificationCountLiveData(platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -321,12 +310,13 @@ class MainViewModel @Inject constructor(
             UsernameSortOrderBy.LAST_ACTIVITY,
             false
         ).distinctUntilChanged()
-         .onEach { contacts ->
+        .onEach { contacts ->
             this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
-                Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
+               Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
             } ?: LocalDate.now()
             val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
             this.contacts = contactsByIdentity
+            refreshContactsForAllTransactions()
         }.launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
@@ -356,10 +346,6 @@ class MainViewModel @Inject constructor(
 
         walletData.observeMixedBalance()
             .onEach(_mixedBalance::postValue)
-            .launchIn(viewModelScope)
-
-        walletData.observeMostRecentTransaction()
-            .onEach(_mostRecentTransaction::postValue)
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -456,14 +442,6 @@ class MainViewModel @Inject constructor(
 
     fun processDirectTransaction(tx: Transaction) {
         walletData.processDirectTransaction(tx)
-    }
-
-    fun getLastStakingAPY() {
-        viewModelScope.launch(Dispatchers.IO) {
-            val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
-            log.info("fees: without $withoutFees")
-            _stakingAPY.postValue(withoutFees * blockchainStateProvider.getLastMasternodeAPY())
-        }
     }
 
     suspend fun getCoinJoinMode(): CoinJoinMode {
@@ -636,7 +614,11 @@ class MainViewModel @Inject constructor(
                 // update the current item by replacing the current item
                 items[dateKey]?.toMutableList()?.let { list ->
                     val itemIndex = list.indexOfFirst { it.id == rowView.id }
-                    list[itemIndex] = transactionRow
+                    if (itemIndex == -1) {
+                        log.info("cannot find {} in list of {} items", rowView.id, list.size)
+                    } else {
+                        list[itemIndex] = transactionRow
+                    }
                     items[dateKey] = list
                 }
             } else {
@@ -665,6 +647,21 @@ class MainViewModel @Inject constructor(
 
         _transactions.value = items
         this@MainViewModel.txByHash = txByHash
+        getContactsAndMetadataForTransactions(contactsToUpdate)
+    }
+
+    private fun refreshContactsForAllTransactions() {
+        val transactions = walletData.getTransactions()
+        val contactsToUpdate = mutableListOf<Transaction>()
+
+        for (tx in transactions) {
+            val dateKey = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+
+            if (dateKey >= minContactCreatedDate) {
+                contactsToUpdate.add(tx)
+            }
+        }
+
         getContactsAndMetadataForTransactions(contactsToUpdate)
     }
 
@@ -734,14 +731,9 @@ class MainViewModel @Inject constructor(
         this@MainViewModel.txByHash = txByHash
     }
 
-    private suspend fun updateSyncStatus(state: BlockchainState) {
+    private fun updateSyncStatus(state: BlockchainState) {
         if (_isBlockchainSynced.value != state.isSynced()) {
             _isBlockchainSynced.postValue(state.isSynced())
-
-            if (state.isSynced()) {
-                val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
-                _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
-            }
         }
 
         _isBlockchainSyncFailed.postValue(state.syncFailed())
@@ -931,7 +923,5 @@ class MainViewModel @Inject constructor(
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
 
-    fun isTestNet(): Boolean {
-        return walletData.wallet?.params?.id != NetworkParameters.ID_MAINNET
-    }
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
 }

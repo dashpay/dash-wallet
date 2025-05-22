@@ -17,8 +17,10 @@
 
 package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StyleRes
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isGone
@@ -64,11 +66,15 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     @Inject
     lateinit var authManager: AuthenticationManager
 
+    private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // Optionally handle result here
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val merchant = viewModel.giftCardMerchant
-        val paymentValue = viewModel.giftCardPaymentValue
+        val paymentValue = viewModel.giftCardPaymentValue.value
         val savingsFraction = merchant.savingsFraction
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
@@ -101,12 +107,39 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 viewModel.purchaseGiftCard()
             } catch (ex: CTXSpendException) {
                 hideLoading()
-                AdaptiveDialog.create(
-                    R.drawable.ic_error,
-                    getString(R.string.gift_card_purchase_failed),
-                    ex.message ?: getString(R.string.gift_card_error),
-                    getString(R.string.button_close)
-                ).show(requireActivity())
+                when {
+                    ex.errorCode == 400 && ex.isLimitError -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_limit_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_ctx)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                // TODO: share
+                                val intent = viewModel.createEmailIntent(
+                                    "CTX Issue: Spending Limit Problem",
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
+                    else -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            ex.message ?: getString(R.string.gift_card_error),
+                            getString(R.string.button_close)
+                        ).show(requireActivity())
+                    }
+                }
                 return@launch
             }
 

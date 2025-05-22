@@ -50,6 +50,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
 
@@ -59,6 +60,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
@@ -68,6 +70,7 @@ import org.bitcoinj.wallet.Protos;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
+import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 import org.bitcoinj.wallet.authentication.AuthenticationKeyUsage;
@@ -84,12 +87,10 @@ import org.dash.wallet.common.transactions.TransactionWrapperFactory;
 import org.dash.wallet.common.transactions.filters.TransactionFilter;
 import org.dash.wallet.common.transactions.TransactionWrapper;
 import org.dash.wallet.features.exploredash.ExploreSyncWorker;
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants;
 import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
-import de.schildbach.wallet.data.CoinJoinConfig;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
@@ -173,6 +174,7 @@ public class WalletApplication extends MultiDexApplication
 
     private File walletFile;
     private Wallet wallet;
+    private volatile AuthenticationGroupExtension authenticationGroupExtension;
     public static final String ACTION_WALLET_REFERENCE_CHANGED = WalletApplication.class.getPackage().getName()
             + ".wallet_reference_changed";
 
@@ -236,7 +238,7 @@ public class WalletApplication extends MultiDexApplication
         FirebaseApp.initializeApp(this);
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
-        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this), getResources());
+        config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new ActivitiesTracker() {
@@ -405,7 +407,7 @@ public class WalletApplication extends MultiDexApplication
         }
 
         if (wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
-            AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
+            authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
             if (authKeyTypes.stream().anyMatch(keyType -> authenticationGroupExtension.getKeyChain(keyType) == null)) {
                 // if the wallet is encrypted, don't add these keys
                 if (!wallet.isEncrypted()) {
@@ -499,7 +501,8 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void initDashSpend() {
-        CTXSpendConstants.CLIENT_ID = BuildConfig.CTXSPEND_CLIENT_ID;
+        // there is nothing to set for now. No client id or client secret.
+        // X-Client-Id will be set as "dcg_android"
     }
 
     @TargetApi(Build.VERSION_CODES.O)
@@ -682,6 +685,12 @@ public class WalletApplication extends MultiDexApplication
         return wallet;
     }
 
+    @Nullable
+    @Override
+    public AuthenticationGroupExtension getAuthenticationGroupExtension() {
+        return authenticationGroupExtension;
+    }
+
     @Override
     @NonNull
     public TransactionBag getTransactionBag() {
@@ -700,6 +709,10 @@ public class WalletApplication extends MultiDexApplication
             walletStream = new FileInputStream(walletFile);
             wallet = new WalletProtobufSerializer().readWallet(walletStream, false, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS));
 
+            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+            if (authenticationGroupExtension != null) {
+                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+            }
             if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
                 throw new UnreadableWalletException("bad wallet network parameters: " + wallet.getParams().getId());
 
@@ -710,12 +723,20 @@ public class WalletApplication extends MultiDexApplication
             Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
+            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+            if (authenticationGroupExtension != null) {
+                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+            }
         } catch (final UnreadableWalletException x) {
             log.error("problem loading wallet", x);
 
             Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
+            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+            if (authenticationGroupExtension != null) {
+                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+            }
         } finally {
             if (walletStream != null) {
                 try {
@@ -732,6 +753,10 @@ public class WalletApplication extends MultiDexApplication
             Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
+            WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
+            if (authenticationGroupExtension != null) {
+                this.authenticationGroupExtension = (AuthenticationGroupExtension) authenticationGroupExtension;
+            }
         }
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
@@ -880,8 +905,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void resetBlockchain() {
         // reset the extensions
-        if (wallet != null && wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
-            AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
+        if (wallet != null && authenticationGroupExtension != null) {
             authenticationGroupExtension.reset();
         }
         // implicitly stops blockchain service
@@ -945,8 +969,7 @@ public class WalletApplication extends MultiDexApplication
 
     @SuppressLint("NewApi")
     public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
-        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context),
-                context.getResources());
+        final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final long lastUsedAgo = config.getLastUsedAgo();
 
         // apply some backoff
@@ -1052,6 +1075,7 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        authenticationGroupExtension = null;
         walletBalanceObserver.close();
         walletBalanceObserver = null;
         if (afterWipeFunction != null)
@@ -1106,18 +1130,23 @@ public class WalletApplication extends MultiDexApplication
 
     @NotNull
     @Override
+    public Address currentReceiveAddress() {
+        return wallet.freshReceiveAddress();
+    }
+
+    @NotNull
+    @Override
     public Address freshReceiveAddress() {
         return wallet.freshReceiveAddress();
     }
 
     @NotNull
     public Coin getWalletBalance() {
-        if (wallet == null) {
+        if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;
         }
 
-        //return wallet.getBalance(Wallet.BalanceType.ESTIMATED);
-       return  walletBalanceObserver.getTotalBalance().getValue();
+        return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
     @NonNull
@@ -1199,10 +1228,9 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<List<AuthenticationKeyUsage>> observeAuthenticationKeyUsage() {
-        if (wallet == null || !wallet.getKeyChainExtensions().containsKey(AuthenticationGroupExtension.EXTENSION_ID)) {
+        if (wallet == null || authenticationGroupExtension == null) {
             return FlowKt.emptyFlow();
         }
-        AuthenticationGroupExtension authenticationGroupExtension = (AuthenticationGroupExtension) wallet.getKeyChainExtensions().get(AuthenticationGroupExtension.EXTENSION_ID);
         return new MasternodeObserver(authenticationGroupExtension).observeAuthenticationKeyUsage();
     }
 
@@ -1219,6 +1247,9 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Collection<Transaction> getTransactions(@NonNull TransactionFilter... filters) {
+        if (wallet == null) {
+            return Lists.newArrayList();
+        }
         Set<Transaction> transactions = wallet.getTransactions(true);
 
         if (filters.length == 0) {
@@ -1299,5 +1330,15 @@ public class WalletApplication extends MultiDexApplication
 
     public void setCoinJoinService(CoinJoinService coinJoinService) {
         this.coinJoinService = coinJoinService;
+    }
+
+    @Override
+    public boolean lockOutput(@NotNull TransactionOutPoint outPoint) {
+        if (wallet != null) {
+            wallet.lockOutput(outPoint);
+            return true;
+        }
+
+        return false;
     }
 }

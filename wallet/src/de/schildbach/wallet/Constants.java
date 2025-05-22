@@ -75,10 +75,12 @@ public final class Constants {
         String[] supportedAbis = Build.SUPPORTED_ABIS;
         boolean is32Bit = true;
 
-        for (String abi : supportedAbis) {
-            if (abi.equals("arm64-v8a") || abi.equals("x86_64")) {
-                is32Bit = false;
-                break;
+        if (supportedAbis != null) {
+            for (String abi : supportedAbis) {
+                if (abi.equals("arm64-v8a") || abi.equals("x86_64")) {
+                    is32Bit = false;
+                    break;
+                }
             }
         }
 
@@ -91,7 +93,7 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v2.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;
@@ -111,7 +113,6 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-testnet";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v2-testnet.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;
@@ -120,7 +121,7 @@ public final class Constants {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3-testnet.db");
                 break;
             }
             case "devnet": {
@@ -134,14 +135,13 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "-" + devNetName;
                 FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
-                org.dash.wallet.common.util.Constants.EXPLORE_GC_FILE_PATH = "explore/explore-v2-devnet.db";
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
                 SUPPORTS_TXMETADATA = false;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-testnet.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3-devnet.db");
                 break;
             }
             default: {

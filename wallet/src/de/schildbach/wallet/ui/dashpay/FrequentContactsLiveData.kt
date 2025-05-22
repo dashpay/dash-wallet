@@ -16,7 +16,6 @@
 package de.schildbach.wallet.ui.dashpay
 
 import android.text.format.DateUtils
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Resource
@@ -25,11 +24,16 @@ import de.schildbach.wallet.service.platform.PlatformSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.WalletDataProvider
 import org.dashj.platform.dashpay.BlockchainIdentity
 import java.util.*
 
-class FrequentContactsLiveData(walletApplication: WalletApplication, val platformRepo: PlatformRepo, platformSyncService: PlatformSyncService, val scope: CoroutineScope)
-    : ContactsBasedLiveData<Resource<List<UsernameSearchResult>>>(walletApplication, platformSyncService) {
+class FrequentContactsLiveData(
+    private val walletData: WalletDataProvider,
+    val platformRepo: PlatformRepo,
+    platformSyncService: PlatformSyncService,
+    val scope: CoroutineScope
+) : ContactsBasedLiveData<Resource<List<UsernameSearchResult>>>(platformSyncService) {
 
     companion object {
         const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
@@ -45,7 +49,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
             val contactRequests = platformRepo.searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             when (contactRequests.status) {
                 Status.SUCCESS -> {
-                    if (!platformRepo.hasIdentity) {
+                    if (!platformRepo.hasBlockchainIdentity) {
                         return@launch
                     }
 
@@ -83,7 +87,7 @@ class FrequentContactsLiveData(walletApplication: WalletApplication, val platfor
             var count = 0
 
             for (tx in transactions) {
-                val txValue = tx.getValue(walletApplication.wallet)
+                val txValue = tx.getValue(walletData.transactionBag)
                 if ((sent && txValue.isNegative) || (!sent && txValue.isPositive)) {
                     if (tx.updateTime.time > threeMonthsAgo) {
                         count++

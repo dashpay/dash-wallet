@@ -32,10 +32,6 @@
             app:argType="org.dash.wallet.features.exploredash.ui.explore.ExploreTopic" />
 
         <action
-            android:id="@+id/explore_to_info"
-            app:destination="@id/infoDialog" />
-
-        <action
             android:id="@+id/search_to_filters"
             app:destination="@id/filtersDialog" />
 
@@ -86,12 +82,6 @@
         android:name="org.dash.wallet.features.exploredash.ui.ctxspend.PurchaseGiftCardFragment"
         android:label="fragment_purchase_ctxspend_gift_card"
         tools:layout="@layout/fragment_purchase_ctxspend_gift_card"/>
-
-    <dialog
-        android:id="@+id/infoDialog"
-        android:name="org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog"
-        android:label="explore_dash_info"
-        tools:layout="@layout/explore_dash_main_info"/>
 
     <dialog
         android:id="@+id/filtersDialog"

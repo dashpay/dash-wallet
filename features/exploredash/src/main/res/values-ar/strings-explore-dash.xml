@@ -46,7 +46,6 @@
     <string name="explore_no_atms">لا توجد أجهزة صراف آلي</string>
     <string name="distance_miles">%s اميال</string>
     <string name="distance_kilometers">%s كيلومترات</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="zero">%d تجار</item>
         <item quantity="one">%d تاجر</item>
@@ -94,7 +93,6 @@
     <string name="explore_filtered_by">تمت تصفيتها بواسطة:</string>
     <string name="explore_pay_gift_card">ادفع ببطاقة الهدايا</string>
     <string name="explore_sort_by">ترتيب حسب</string>
-
     <string-array name="merchants_filter_options">
         <item>عبر الانترنت</item>
         <item>قريب</item>
@@ -125,6 +123,7 @@
     <string-array name="sort_by_options_names">
         <item>اسم</item>
         <item>مسافة</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -178,4 +177,14 @@
     <string name="sync_in_progress_network_error">تمت مقاطعة المزامنة... الشبكة غير متصلة بالإنترنت أو لا يمكن الوصول إليها</string>
 
 
+    <string name="purchase_confirm_transaction">تأكيد</string>
+    <string name="purchase_gift_card_confirm">تأكيد</string>
+    <string name="insufficient_money_title">لا يوجد عملات كافية</string>
+    <string name="insufficient_money_msg">رصيد غير كاف</string>
+    <string name="send_coins_error_msg">مشكلة في إرسال العملات!</string>
+    <string name="password">كلمة المرور</string>
+    <string name="something_wrong_title">هناك خطأ ما</string>
+    <string name="retry">إعادة المحاولة</string>
+    <string name="try_again">حاول ثانية</string>
+    <string name="cancel">إلغاء</string>
     </resources>

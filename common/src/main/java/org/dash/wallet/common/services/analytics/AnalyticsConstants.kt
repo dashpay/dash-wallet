@@ -230,6 +230,7 @@ object AnalyticsConstants {
         const val FILTER_MERCHANT_SELECT_GIFT_CARD = "explore_filter_merch_select_gift_card"
         const val FILTER_MERCHANT_SORT_BY_NAME = "explore_filter_merch_sort_by_name"
         const val FILTER_MERCHANT_SORT_BY_DISTANCE = "explore_filter_merch_sort_by_distance"
+        const val FILTER_MERCHANT_SORT_BY_DISCOUNT = "explore_filter_merch_sort_by_discount"
         const val FILTER_MERCHANT_CURRENT_LOCATION = "explore_filter_merch_current_location"
         const val FILTER_MERCHANT_SELECTED_LOCATION = "explore_filter_merch_selected_location"
         const val FILTER_MERCHANT_ONE_MILE = "explore_filter_merch_one_mile"
@@ -402,5 +403,10 @@ object AnalyticsConstants {
         const val SCAN_TO_SEND = "locked_screen_btn_scan_to_send"
         const val SCAN_TO_SEND_SEND = "locked_screen_btn_scan_to_send_btn_send"
         const val SCAN_TO_SEND_SUCCESS = "locked_screen_btn_scan_to_send_success"
+    }
+
+    object BlockchainExplorer {
+        const val INSIGHT_PICKED = "blockchain_explorer_insight_picked"
+        const val BLOCKCHAIR_PICKED = "blockchain_explorer_blockchair_picked"
     }
 }

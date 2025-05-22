@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ไม่พบเอทีเอ็ม</string>
     <string name="distance_miles">%s ไมล์</string>
     <string name="distance_kilometers">%s กิโลเมตร</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d ร้านค้า</item>
     </plurals>
@@ -84,7 +83,6 @@
     <string name="explore_filtered_by">กรองโดย:</string>
     <string name="explore_pay_gift_card">จ่ายด้วยบัตรของขวัญ</string>
     <string name="explore_sort_by">เรียงลำดับตาม</string>
-
     <string-array name="merchants_filter_options">
         <item>ออนไลน์</item>
         <item>ใกล้เคียง</item>
@@ -115,6 +113,7 @@
     <string-array name="sort_by_options_names">
         <item>ชื่อ</item>
         <item>ระยะทาง</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -163,4 +162,14 @@
     <string name="sync_in_progress_network_error">การซิงค์ถูกขัดจังหวะ... เครือข่ายออฟไลน์หรือไม่สามารถเข้าถึงได้</string>
 
 
+    <string name="purchase_confirm_transaction">ยืนยัน</string>
+    <string name="purchase_gift_card_confirm">ยืนยัน</string>
+    <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
+    <string name="insufficient_money_msg">ยอดเงินไม่เพียงพอ</string>
+    <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
+    <string name="password">รหัสผ่าน</string>
+    <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
+    <string name="retry">ลองอีกครั้ง</string>
+    <string name="try_again">ลองอีกครั้ง</string>
+    <string name="cancel">ยกเลิก</string>
     </resources>

@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin 抵押输入</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoin 混币</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin 创建面额</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">使用CoinJoin合并尘埃交易</string>
     <string name="network_monitor_activity_title">网络监视器</string>
     <string name="network_monitor_peer_list_title">网络节点</string>
     <string name="network_monitor_block_list_title">区块</string>
@@ -296,6 +297,7 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加钱包 dump 信息</string>
     <string name="report_issue_dialog_mail_intent_chooser">发送报告使用…</string>
     <string name="report_issue_dialog_mail_intent_failed">发送报告失败.</string>
+    <string name="report_issue_dialog_generating_report">正在生成报告</string>
     <string name="report_transaction_history_export">导出</string>
     <string name="report_transaction_history_title">导出CSV文件</string>
     <string name="report_transaction_history_not_synced_title">导出CSV文件</string>
@@ -412,4 +414,7 @@
     <string name="battery_optimization_dialog_unrestricted_title">您想要在后台接收支付推送么?</string>
     <string name="battery_optimization_dialog_message_not_optimized">此 app 被设置为在后台运行一段时间后仍继续运行.\n\n我们推荐允许此 app 一直保持更新最新状态, 即便是在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
     <string name="battery_optimization_dialog_button_change">打开设置</string>
-    </resources>
+    <string name="credits_profile_change_message">更新资料信息</string>
+
+    <string name="block_explorer_selection_title">选择区块浏览器</string>
+</resources>

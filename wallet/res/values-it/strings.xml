@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Collaterale Input CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Miscelazione CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Crea denominazioni</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Raggruppa residui post mixing</string>
     <string name="network_monitor_activity_title">Controllo della rete</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocchi</string>
@@ -415,4 +416,5 @@
     <string name="battery_optimization_dialog_button_change">Apri Impostazioni</string>
     <string name="credits_profile_change_message">Aggiorna le informazioni del profilo</string>
 
+    <string name="block_explorer_selection_title">Seleziona il block explorer</string>
 </resources>

@@ -99,6 +99,8 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             } catch (ex: SendException) {
                 Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
             }
+            // currentAmount requires viewModel.initPaymentIntent be executed first
+            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it) }
         }
 
         if (savedInstanceState == null) {
@@ -165,7 +167,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
 
-        enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
@@ -193,6 +194,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
             !viewModel.everythingPlausible() ||
+            viewModel.dryRunSuccessful.value != true ||
             viewModel.isBlockchainReplaying.value ?: false
 
         enterAmountFragment?.setViewDetails(

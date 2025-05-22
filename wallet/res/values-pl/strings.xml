@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Zabezpieczenie dla transakcji wejściowych do CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Mieszanie CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">Stwórz Denominacje CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Połącz drobne kwoty.</string>
     <string name="network_monitor_activity_title">Monitor sieci</string>
     <string name="network_monitor_peer_list_title">Połączenia</string>
     <string name="network_monitor_block_list_title">Bloki</string>
@@ -415,4 +416,5 @@
     <string name="battery_optimization_dialog_button_change">Otwórz Ustawienia</string>
     <string name="credits_profile_change_message">Aktualizuj informacje profilu</string>
 
+    <string name="block_explorer_selection_title">Wybierz Przeglądarkę Bloków</string>
 </resources>

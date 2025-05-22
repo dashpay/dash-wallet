@@ -21,15 +21,18 @@ import android.annotation.SuppressLint
 import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.os.Parcelable
 import android.text.SpannableString
 import android.text.style.StyleSpan
 import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.addCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.main.MainActivity
@@ -37,31 +40,39 @@ import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRegistrationBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.parcelize.Parcelize
 import org.dash.wallet.common.ui.viewBinding
 import org.dashj.platform.sdk.platform.Names
 
+enum class CreateUsernameActions {
+    CREATE_NEW,
+    DISPLAY_COMPLETE,
+    REUSE_TRANSACTION,
+    FROM_INVITE,
+    FROM_INVITE_REUSE_TRANSACTION,
+}
+
+@Parcelize
+data class CreateUsernameArgs(
+    val actions: CreateUsernameActions? = null,
+    val userName: String? = null,
+    val invite: InvitationLinkData? = null,
+    val fromOnboardng: Boolean = false,
+) : Parcelable
 
 @AndroidEntryPoint
 @ExperimentalCoroutinesApi
 class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registration) {
-
-    companion object {
-        const val CREATE_USER_NAME_ARGS = "CreateUsernameArgs"
-    }
     private val binding by viewBinding(FragmentUsernameRegistrationBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val requestUsernameViewModel: RequestUserNameViewModel by activityViewModels()
-    private lateinit var walletApplication: WalletApplication
 
-    private var reuseTransaction: Boolean = false
-    private var useInvite: Boolean = false
-
-    private var createUsernameArgs: CreateUsernameArgs? = null
     private val slideInAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.slide_in_bottom) }
     private val fadeOutAnimation by lazy { AnimationUtils.loadAnimation(requireContext(), R.anim.fade_out) }
     private lateinit var completeUsername: String
     private var isProcessing = false
+    private var onBackPressedCallback: OnBackPressedCallback? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -71,9 +82,11 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
             closeActivity()
         }
         binding.processingIdentityDismissBtn.setOnClickListener { closeActivity() }
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            closeActivity()
+        }
 
         initViewModel()
-        walletApplication = requireActivity().application as WalletApplication
     }
 
     @SuppressLint("ResourceType")
@@ -105,10 +118,6 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
                 }
             }
         }
-    }
-
-    private fun doneAndDismiss() {
-        dashPayViewModel.usernameDoneAndDismiss()
     }
 
     private fun showCompleteState() {
@@ -158,5 +167,10 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
             binding.processingIdentityMessage.text = spannableContent
             isProcessing = true
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
     }
 }

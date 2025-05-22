@@ -72,7 +72,6 @@ class WalletBalanceObserver(
         wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
         emitLastBalances()
-        emitBalances()
     }
 
     fun close() {

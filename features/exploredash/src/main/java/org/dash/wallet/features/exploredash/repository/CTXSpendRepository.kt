@@ -17,6 +17,8 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -31,12 +33,36 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
 import javax.inject.Inject
 
-class CTXSpendException(message: String) : Exception(message) {
+class CTXSpendException(
+    message: String,
+    val errorCode: Int? = null,
+    val errorBody: String? = null
+) : Exception(message) {
     var resourceString: ResourceString? = null
+    private val errorMap: Map<String, Any>
 
     constructor(message: ResourceString) : this("") {
         this.resourceString = message
     }
+
+    init {
+        val type = object : TypeToken<Map<String, Any>>() {}.type
+        errorMap = try {
+            if (errorBody != null) {
+                Gson().fromJson(errorBody, type) ?: emptyMap()
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    val isLimitError: Boolean
+        get() {
+            val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
+            return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
+        }
 }
 
 class CTXSpendRepository @Inject constructor(
@@ -94,9 +120,8 @@ class CTXSpendRepository @Inject constructor(
         )
     }
 
-    override suspend fun getMerchant(merchantId: String) = safeApiCall {
+    override suspend fun getMerchant(merchantId: String) =
         api.getMerchant(merchantId)
-    }
 
     override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
         api.getGiftCard(txid)
@@ -117,6 +142,6 @@ interface CTXSpendRepositoryInt {
         merchantId: String
     ): ResponseResource<GiftCardResponse?>
 
-    suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>
+    suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
 }

@@ -48,10 +48,13 @@ data class Merchant(
     var paymentMethod: String? = "",
     var merchantId: String? = null,
     var redeemType: String? = "",
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
+    var denominationsType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
-    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
-    @Ignore var physicalAmount: Int = 0
+    @Ignore var physicalAmount: Int = 0,
+    @Ignore var fixedDenomination: Boolean = false,
+    @Ignore var denominations: List<Int> = listOf()
 ) : SearchResult() {
 
     // 1% discount is 0.01

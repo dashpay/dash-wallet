@@ -27,8 +27,6 @@ import android.nfc.NdefMessage
 import android.nfc.NfcAdapter
 import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
-import android.provider.Settings
 import android.view.MenuItem
 import android.view.WindowManager
 import androidx.activity.result.contract.ActivityResultContracts
@@ -54,13 +52,13 @@ import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.AcceptInviteActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
-import de.schildbach.wallet.ui.main.WalletActivityExt.checkLowStorageAlert
-import de.schildbach.wallet.ui.main.WalletActivityExt.checkTimeSkew
-import de.schildbach.wallet.ui.main.WalletActivityExt.handleFirebaseAction
-import de.schildbach.wallet.ui.main.WalletActivityExt.requestDisableBatteryOptimisation
-import de.schildbach.wallet.ui.main.WalletActivityExt.setupBottomNavigation
-import de.schildbach.wallet.ui.main.WalletActivityExt.showFiatCurrencyChangeDetectedDialog
-import de.schildbach.wallet.ui.main.WalletActivityExt.showStaleRatesToast
+import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
+import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
+import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
+import de.schildbach.wallet.ui.main.MainActivityExt.requestDisableBatteryOptimisation
+import de.schildbach.wallet.ui.main.MainActivityExt.setupBottomNavigation
+import de.schildbach.wallet.ui.main.MainActivityExt.showFiatCurrencyChangeDetectedDialog
+import de.schildbach.wallet.ui.main.MainActivityExt.showStaleRatesToast
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.more.MixDashFirstDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
@@ -85,7 +83,6 @@ import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.lang.IllegalStateException
-import java.util.*
 import javax.inject.Inject
 
 
@@ -260,7 +257,9 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
                     startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
                 } else {
-                    MixDashFirstDialogFragment().show(this@MainActivity)
+                    MixDashFirstDialogFragment().show(this@MainActivity) {
+                        startActivity(Intent(this@MainActivity, CreateUsernameActivity::class.java))
+                    }
                 }
             }
         }
@@ -428,7 +427,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                     alertDialog.show()
                 }
             }.parse()
-        } else if (extras != null && extras.containsKey(WalletActivityExt.NOTIFICATION_ACTION_KEY)) {
+        } else if (extras != null && extras.containsKey(MainActivityExt.NOTIFICATION_ACTION_KEY)) {
             handleFirebaseAction(extras)
         }
     }

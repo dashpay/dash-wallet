@@ -53,7 +53,7 @@ class TransactionResultViewModel @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val topUpsDao: TopUpsDao,
     private val platformRepo: PlatformRepo,
-    private val analytics: AnalyticsService,
+    val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {
     val dashFormat: MonetaryFormat = configuration.format.noCode()
@@ -139,7 +139,8 @@ class TransactionResultViewModel @Inject constructor(
     }
 
     private suspend fun findContact(tx: Transaction) {
-        if (!platformRepo.hasIdentity) {
+        // check hasIdentity since later we need blockchainIdentity
+        if (!platformRepo.hasBlockchainIdentity) {
             _contact.postValue(null)
             return
         }

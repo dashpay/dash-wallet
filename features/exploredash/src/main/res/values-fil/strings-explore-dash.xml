@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Walang mga ATM</string>
     <string name="distance_miles">%s milya</string>
     <string name="distance_kilometers">%s kilometro</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d mga merchant</item>
         <item quantity="other">%d mga merchant</item>
@@ -86,7 +85,6 @@
     <string name="explore_filtered_by">Na-filter ni:</string>
     <string name="explore_pay_gift_card">Magbayad gamit ang gift card</string>
     <string name="explore_sort_by">Pag-uri-uriin ayon</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Sa malapit</item>
@@ -117,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>Pangalan</item>
         <item>Distansya</item>
+        <item>Diskwento</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -169,4 +168,61 @@
     <string name="sync_in_progress_network_error">Naantala ang pag-sync... Ang network ay offline o hindi maabot</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">sa</string>
+    <string name="purchase_gift_card_min">Pinakamababa: %s</string>
+    <string name="purchase_gift_card_max">Pinakamataas: %s</string>
+    <string name="purchase_gift_card_discount_hint">Bumibili ka ng %s gift card para sa %s (%s diskwento)</string>
+    <string name="button_next">Susunod</string>
+    <string name="purchase_gift_card_from">mula sa</string>
+    <string name="purchase_gift_card_to">Sa</string>
+    <string name="purchase_confirm_transaction">Kumpirmahin</string>
+    <string name="purchase_gift_card_total_label">kabuuang gift card</string>
+    <string name="purchase_gift_card_discount">Diskwento</string>
+    <string name="purchase_gift_card_you_pay">Magbabayad ka</string>
+    <string name="purchase_gift_card_confirm">Kumpirmahin</string>
+    <string name="purchase_gift_card_details">Mga detalye ng gift card</string>
+    <string name="purchase_original_purchase">Orihinal na pagbili</string>
+    <string name="purchase_check_current_balance">Suriin ang kasalukuyang balanse</string>
+    <string name="purchase_card_number">Numero ng card</string>
+    <string name="purchase_card_pin">PIN ng Card</string>
+    <string name="purchase_view_transaction">Tingnan ang Mga Detalye ng Transaksyon</string>
+    <string name="purchase_see_how_to_use_gift_card">Tingnan kung paano gumamit ng gift card</string>
+    <string name="purchase_how_to_use_gift_card">Paano gumamit ng gift card</string>
+    <string name="purchase_self_checkout">Self-checkout</string>
+    <string name="purchase_Request_assistance">Humiling ng tulong mula sa isang empleyado upang makuha ang isang digital gift card.</string>
+    <string name="purchase_in_store">Nakatago</string>
+    <string name="purchase_tell_the_cashier">Sabihin sa cashier na nagbabayad ka gamit ang isang digital gift card. Cashier: i-type ang kabuuang halaga sa field ng Bankcard, pagkatapos ay i-type ang numero ng gift card sa field ng Account at pindutin ang Enter.</string>
+    <string name="purchase_in_the_payment_section">Sa seksyon ng pagbabayad, ilagay ang numero ng iyong digital na gift card sa field ng gift card.</string>
+    <string name="purchase_powered_by">Pinatatakbo ng</string>
+    <string name="insufficient_money_title">Hindi sapat ang barya</string>
+    <string name="insufficient_money_msg">Hindi sapat na pondo</string>
+    <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
+    <string name="gift_card_barcode_failed">Nabigong i-load ang barcode</string>
+    <string name="gift_card_tx_title">Gift card · %s</string>
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Ilagay ang verification code</string>
+    <string name="verification_check_email">Suriin ang iyong email at ilagay ang verification code</string>
+    <string name="buy_gift_card">Bumili ng gift card gamit ang iyong DashSpend account</string>
+    <string name="create_new_account">Lumikha ng Bagong Account</string>
+    <string name="password">Password</string>
+    <string name="logged_in_as">Naka-log in bilang %s</string>
+    <string name="log_out">Mag-log out</string>
+    <string name="invaild_code">Maling code ang inilagay mo. Pakisuri ang iyong email at subukang muli.</string>
+    <string name="something_wrong_title">May maling nangyari</string>
+    <string name="retry">Subukang muli</string>
+    <string name="gift_card_purchase_failed">Nabigo ang pagbili ng gift card</string>
+    <string name="try_again">Subukan muli</string>
+    <string name="cancel">Kanselahin</string>
+    <string name="gift_card_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Pakisubukang muli.</string>
+    <string name="gift_card_details_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Mangyaring makipag-ugnayan sa suporta.</string>
+    <string name="gift_card_unknown_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Mangyaring makipag-ugnayan sa suporta sa txid %s.</string>
+    <string name="gift_card_rejected">Tinanggihan ang pagbabayad.  Mangyaring makipag-ugnayan sa CTX gamit ang gift card id %s at payment id %s at transaction id %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Ang pagbabayad ay ginawa para sa merchant na nagbibigay ng isang redeem URL, ngunit hindi iyon kasalukuyang sinusuportahan. Mangyaring makipag-ugnayan sa CTX gamit ang gift card id %s at payment id %s at transaction id %s.</string>
+    <string name="accept_terms_conditions">Tinatanggap ko ang mga tuntunin at kundisyon ng DashSpend</string>
+    <string name="tap_link_to_proceed">Upang lumikha ng isang account sa DashSpend dapat mong i-tap ang link sa ibaba upang magpatuloy</string>
+    <string name="accept_to_proceed">Upang gumawa ng account sa DashSpend kailangan mong tanggapin ang mga tuntunin at kundisyon ng DashSpend</string>
+    <string name="log_in_to_ctxspend_account_desc">Ang iyong email ay ginagamit lamang upang magpadala ng isang beses na password.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Bumili ng gift card gamit ang iyong DashSpend account</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Gumawa ng DashSpend account o mag-log in sa dati nang account</string>
     </resources>

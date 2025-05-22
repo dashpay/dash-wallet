@@ -62,6 +62,8 @@
     <string name="invitation_accept_message_3">Ανεβάστε τη φωτογραφία σας, εξατομικεύστε την ταυτότητά σας</string>
     <string name="invitation_accept_continue">Συνέχεια</string>
     <string name="invitation_contact_request_sent_message">Ένα αίτημα επαφής έχει σταλεί σε %s από τότε που σας προσκάλεσε.</string>
+    <string name="topup_confirm_message">Έχετε επιλέξει να φορτίσετε την ταυτότητά σας. Το ακόλουθο ποσό θα αφαιρεθεί από το υπόλοιπό σας.</string>
+
     <string name="username_being_created">Το όνομα χρήστη %s δημιουργείται στο δίκτυο Dash</string>
     <string name="username_being_requested">Το όνομα χρήστη σας %s ζητείται στο δίκτυο Dash Network</string>
 
@@ -73,6 +75,7 @@
     <string name="processing_home_step_3" tools:ignore="TypographyFractions">(3/3) Εγγραφή Ονόματος Χρήστη</string>
     <string name="processing_home_step_3_requesting" tools:ignore="TypographyFractions">(3/3) Αίτημα για όνομα χρήστη</string>
     <string name="processing_home_step_3_restoring">(3/3) Ανάκτηση ονόματος χρήστη</string>
+    <string name="restore_identity">Επαναφορά ταυτότητας</string>
     <string name="processing_done_title">Γεια σας %s,</string>
     <string name="processing_done_subtitle">Ο λογαριασμός σας είναι έτοιμος</string>
     <string name="processing_voting_subtitle">Η ψηφοφορία για το όνομα χρήστη σας έχει αρχίσει</string>
@@ -248,6 +251,7 @@
     <string name="please_note_cant_change_this_later">Σημειώστε ότι δεν θα μπορείτε να το αλλάξετε αργότερα.</string>
     <string name="Intermediate_level_WIFI_Warning">Το επίπεδο προστασίας προσωπικών δεδομένων ενδιάμεσου επιπέδου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο.</string>
     <string name="Advanced_level_WIFI_Warning">Το προχωρημένο επίπεδο απορρήτου απαιτεί αξιόπιστη σύνδεση στο διαδίκτυο</string>
+    <string name="privcay_level_WIFI_warning_desc">Συνιστάται να βρίσκεστε σε δίκτυο Wi-Fi για να αποφύγετε πρόσθετα τέλη ανάμειξης.</string>
     <string name="continue_anyway">Συνέχεια Ούτως ή άλλως</string>
     <string name="welcome_to_dash_pay">Καλώς ήρθατε στο Dash Pay</string>
     <string name="pay_to_usernames">Πληρώστε για ονόματα χρήστη. χωρίς αλφαριθμητικές διευθύνσεις.</string>
@@ -279,9 +283,14 @@
     <string name="only_duplicates">Μόνο διπλότυπα</string>
     <string name="only_links">Μόνο αιτήματα με συνδέσμους</string>
     <string name="only_links_short">Με συνδέσμους</string>
+    <string name="date">Ημερομηνία αίτησης: %s</string>
     <string name="votes">Ψήφοι: %s</string>
+    <string name="voting_ends">Η ψηφοφορία λήγει: %s</string>
+
     <string-array name="usernames_group_by_options">
         <item>κανενα</item>
+        <item>Τα πιο σύντομα πρώτα</item>
+        <item>Τα τελευταία πρωτα</item>
     </string-array>
 
     <string-array name="usernames_sort_by_options">
@@ -351,7 +360,9 @@
     <string name="add_masternode_key">Προσθήκη κλειδιού ψηφοφορίας Masternode</string>
     <string name="dont_ask_again">Μη με ξαναρωτήσεις</string>
     <string name="vote_submitting">Υποβολή της ψήφου σας για το όνομα χρήστη %s</string>
+    <string name="quick_vote_submitting">Υποβολή της ψήφου σας για όλα τα ονόματα χρήστη</string>
     <string name="vote_submitted">Ψηφίσατε για το όνομα χρήστη %s</string>
+    <string name="quick_vote_submitted">Ψηφίσατε επιτυχώς για όλα τα ονόματα χρήστη</string>
     <string name="cancel_submitting">Ακύρωση της ψήφου σας για το όνομα χρήστη %s</string>
     <string name="cancel_submitted">Ακυρώθηκε η ψήφος για το όνομα χρήστη %s</string>
     <string name="block_submitting">Αποκλεισμός για το όνομα χρήστη %s</string>
@@ -362,6 +373,9 @@
     <string name="quick_vote">Γρήγορη Ψηφοφορία</string>
     <string name="quick_vote_subtitle">Πατώντας το κουμπί \"Ψηφίστε για όλους\", θα ψηφίσετε αυτόματα για όλα τα φιλτραρισμένα ονόματα χρηστών (%d) που υποβλήθηκαν πρώτα.</string>
     <string name="vote_for_all">Ψηφίστε για Όλους</string>
+    <string name="one_vote_left_title">Μία ψήφος έμεινε</string>
+    <string name="one_vote_left_show_usernames">Προβολή Ονομάτων Χρήστη</string>
+    <string name="one_vote_left_subtitle">Έχετε ήδη ψηφίσει για αυτά τα ονόματα χρήστη %d φορές. Μπορείτε να δώσετε μόνο μία ακόμη ψήφο για  αυτά τα ονόματα χρήστη.</string>
     <string name="voting_period_active"> Περίοδος ψηφοφορίας ονόματος χρήστη Ενεργή</string>
     <string name="there_was_a_network_error">Υπήρξε σφάλμα δικτύου, μπορείτε να προσπαθήσετε ξανά χωρίς επιπλέον κόστος</string>
     <string name="requested_username_has_been">Το όνομα χρήστη έχει ζητηθεί.</string>
@@ -434,6 +448,18 @@
     <string name="mix_dash_mix">Υπόλοιπο Ανάμειξης</string>
     <string name="mix_dash_title">Αναμείξτε τα Dash σας</string>
     <string name="mix_dash_message">Για να αποτρέψετε άλλα άτομα από το να βλέπουν σε ποιον κάνετε πληρωμές, συνιστάται να αναμίξετε το υπόλοιπό σας πριν δημιουργήσετε το όνομα χρήστη σας.</string>
+    <string name="tools_credits_title">Credits</string>
     <string name="tools_credits_buy_button">Αγορά</string>
+    <string name="dashpay_what_are_credits_title">Τι είναι τα Credits;</string>
+    <string name="dashpay_what_are_credits_message">Οι χρήστες πληρώνουν τέλη προμήθειας για να αλληλεπιδρούν με το δίκτυο Dash. Για τον λόγο αυτό, όλες οι αλλαγές στο προφίλ σας απαιτούν την καταβολή ενός μικρού ποσού που μπορεί να πληρωθεί με μονάδες.\n\nΤα credits σας μπορούν να χρησιμοποιηθούν για:</string>
+    <string name="credits_send_and_accept_contact_requests">Αποστολή και αποδοχή αιτημάτων επαφών</string>
+    <string name="platform_credits">Credits Πλατφόρμας</string>
     <string name="platform_credits_error">Σφάλμα</string>
-    </resources>
+    <string name="platform_credits_not_transferred">Εκκρεμή Credits πλατφόρμας</string>
+    <string name="voting_period">Περίοδος ψηφοφορίας</string>
+    <string name="voting_period_ends_in_days">Η ψηφοφορία λήγει σε %d ημέρες</string>
+    <string name="voting_period_ends_today">Η ψηφοφορία λήγει σήμερα</string>
+    <string name="voting_period_ends_tomorrow">Η ψηφοφορία λήγει αύριο</string>
+    <string name="link_included">περιλαμβάνεται σύνδεσμος</string>
+    <string name="group_by">Ομαδοποίηση κατά</string>
+</resources>

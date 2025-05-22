@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Nie ma Bankomatów</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometrów</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%dsprzedawcy</item>
         <item quantity="few">%dsprzewdawców</item>
@@ -66,6 +65,7 @@
     <string name="explore_back_to_nearest">Wróć do najbliższego miejsca</string>
     <string name="explore_select_location">Wybierz miejsce</string>
     <string name="explore_pay_with_dash">Płać za pomocą Dash</string>
+    <string name="explore_pay_with_dash_save">Zachowaj %.2f%%</string>
     <string name="explore_buy_gift_card">Kup Kartę Podarunkową</string>
     <string name="explore_buy_dash">Kup Dash</string>
     <string name="explore_sell_dash">Sprzedaj Dash</string>
@@ -90,7 +90,6 @@
     <string name="explore_filtered_by">Od filtrowane pod względem:</string>
     <string name="explore_pay_gift_card">Płać za pomocą karty podarunkowej</string>
     <string name="explore_sort_by">Sortuj według</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>W pobliżu</item>
@@ -121,6 +120,7 @@
     <string-array name="sort_by_options_names">
         <item>Imię</item>
         <item>Dystans</item>
+        <item>Zniżka</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -177,4 +177,70 @@
     <string name="sync_in_progress_network_error">Synchronizacja przerwana… Sieć jest w trybie offline lub nieosiągalna</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">przy</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">Kupujesz %s kartę podarunkową za %s (%s zniżki)</string>
+    <string name="button_next">Dalej</string>
+    <string name="purchase_gift_card_from">Od</string>
+    <string name="purchase_gift_card_to">Do</string>
+    <string name="purchase_confirm_transaction">Potwierdź</string>
+    <string name="purchase_gift_card_total_label">Wartość karty podarunkowej</string>
+    <string name="purchase_gift_card_discount">Zniżka</string>
+    <string name="purchase_gift_card_you_pay">Płacisz</string>
+    <string name="purchase_gift_card_confirm">Potwierdź</string>
+    <string name="purchase_gift_card_details">Szczegóły karty podarunkowej</string>
+    <string name="purchase_original_purchase">Pierwszy zakup</string>
+    <string name="purchase_check_current_balance">Sprawdź aktualne saldo</string>
+    <string name="purchase_card_number">Numer Karty</string>
+    <string name="purchase_card_pin">PIN Karty</string>
+    <string name="purchase_view_transaction">Zobacz Szczegóły Transakcji</string>
+    <string name="purchase_see_how_to_use_gift_card">Zobacz jak używać karty podarunkowe</string>
+    <string name="purchase_how_to_use_gift_card">Jak uzywać z karty podarunkowej</string>
+    <string name="purchase_self_checkout">Samoobsługowa płatność</string>
+    <string name="purchase_Request_assistance">Poproś pracownika o pomoc z użyciem karty upominkowej aby dokonać płatności.</string>
+    <string name="purchase_in_store">W sklepie</string>
+    <string name="purchase_tell_the_cashier">Powiedz kasjerowi, że płacisz cyfrową kartą podarunkową. Kasjer: wpisz całkowitą kwotę w polu Karta bankowa, następnie wpisz numer karty podarunkowej w polu Konto i naciśnij Enter.</string>
+    <string name="purchase_in_the_payment_section">W sekcji płatności wprowadź numer swojej karty w polu karty podarunkowej.</string>
+    <string name="purchase_powered_by">Obsługiwane przez</string>
+    <string name="insufficient_money_title">Brak wystarczających środków</string>
+    <string name="insufficient_money_msg">Niewystarczająca ilość funduszy</string>
+    <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
+    <string name="gift_card_barcode_failed">Nie udało się załadować kodu kreskowego</string>
+    <string name="gift_card_tx_title">Karta podarunkowa · %s</string>
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Wprowadź kod weryfikacyjny</string>
+    <string name="verification_check_email">Sprawdź swoją pocztę e-mail i wprowadź kod weryfikacyjny</string>
+    <string name="buy_gift_card">Kup kartę podarunkową za pomocą konta DashSpend</string>
+    <string name="dashspend_create_account">Utwórz konto lub zaloguj się na istniejące.</string>
+    <string name="create_new_account">Stwórz nowe konto</string>
+    <string name="login">Zaloguj się</string>
+    <string name="password">Hasło</string>
+    <string name="logged_in_as">Zalogowany jako %s</string>
+    <string name="log_out">Wyloguj się</string>
+    <string name="invaild_code">Wpisałeś nieprawidłowy kod. Sprawdź swoją pocztę e-mail i spróbuj ponownie.</string>
+    <string name="something_wrong_title">Coś poszło nie tak!</string>
+    <string name="retry">Ponów</string>
+    <string name="gift_card_purchase_failed">Zakup karty podarunkowej nie powiódł się</string>
+    <string name="try_again">Spróbuj ponownie</string>
+    <string name="cancel">Anuluj</string>
+    <string name="gift_card_error">Nie mogliśmy kupić karty podarunkowej z niewiadomej dla nas przyczyny. Proszę spróbuj ponownie.</string>
+    <string name="gift_card_details_error">Nie mogliśmy kupić karty podarunkowej z niewiadomej dla nas przyczyny. Proszę spróbuj skontakotwać się z pomocą techniczną.</string>
+    <string name="gift_card_unknown_error">Nie mogliśmy kupić karty podarunkowej z niewiadomej dla nas przyczyny. Proszę spróbuj skontakotwać się z pomocą techniczną i podaj im ten numer transakcji %s.</string>
+    <string name="gift_card_rejected">Płatność została odrzucona. Skontaktuj się z CTX, podaj im ten identyfikator karty podarunkowej %s, identyfikator płatności%s oraz numer identyfikacyjny transakcji %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Płatność została dokonana dla sprzedawcy, który używa adresu URL umożliwiającego realizację zamówienia, ale obecnie nie jest on obsługiwany. Skontaktuj się z CTX, podaj im ten identyfikator karty podarunkowej %s, identyfikator płatności %soraz numer identyfikacyjny transakcji %s.</string>
+    <string name="dashspend_terms_conditions">Zaakceptuj warunki i zasady</string>
+    <string name="accept_terms_conditions">Akceptuję regulamin DashSpend</string>
+    <string name="tap_link_to_proceed">Aby utworzyć konto w DashSpend, musisz kliknąć poniższy link, aby kontynuować</string>
+    <string name="accept_to_proceed">Aby założyć konto w DashSpend musisz zaakceptować regulamin DashSpend</string>
+    <string name="view_terms_conditions">Warunki &amp; zasady</string>
+    <string name="barcode_placeholder">Gdy tylko twój kod zostanie wygenerowany, zostanie wyświetlony tutaj.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Stwórz konto</string>
+    <string name="log_in_to_ctxspend_account">Zaloguj się do twojego konta</string>
+    <string name="log_in_to_ctxspend_account_desc">Twój adres e-mail służy wyłącznie do wysyłania hasła jednorazowego.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Kup kartę podarunkową za pomocą konta DashSpend</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Stwórz konto DashSpend lub zaloguj się do już istniejącego</string>
     </resources>

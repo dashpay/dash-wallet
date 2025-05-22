@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Žiadne bankomaty</string>
     <string name="distance_miles">%s míľ</string>
     <string name="distance_kilometers">%s kilometrov</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d obchodník</item>
         <item quantity="few">%d obchodníci</item>
@@ -90,7 +89,6 @@
     <string name="explore_filtered_by">Filtrované podľa:</string>
     <string name="explore_pay_gift_card">Plaťte darčekovou kartou</string>
     <string name="explore_sort_by">Zoradiť podľa</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>V blízkosti</item>
@@ -121,6 +119,7 @@
     <string-array name="sort_by_options_names">
         <item>Meno</item>
         <item>Vzdialenosť</item>
+        <item>Zľava</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -177,4 +176,61 @@
     <string name="sync_in_progress_network_error">Synchronizácia bola prerušená… Sieť je offline alebo nedostupná</string>
 
 
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">v</string>
+    <string name="purchase_gift_card_min">Min: %s</string>
+    <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="purchase_gift_card_discount_hint">Kupujete darčekovú kartu v hodnote %s pre %s (%s zľava)</string>
+    <string name="button_next">Ďalej</string>
+    <string name="purchase_gift_card_from">Od</string>
+    <string name="purchase_gift_card_to">Komu</string>
+    <string name="purchase_confirm_transaction">Potvrdiť</string>
+    <string name="purchase_gift_card_total_label">Darčeková karta spolu</string>
+    <string name="purchase_gift_card_discount">Zľava</string>
+    <string name="purchase_gift_card_you_pay">Platíte</string>
+    <string name="purchase_gift_card_confirm">Potvrdiť</string>
+    <string name="purchase_gift_card_details">Podrobnosti darčekovej karty</string>
+    <string name="purchase_original_purchase">Pôvodná kúpa</string>
+    <string name="purchase_check_current_balance">Skontrolujte aktuálny zostatok</string>
+    <string name="purchase_card_number">Číslo karty</string>
+    <string name="purchase_card_pin">PIN karty</string>
+    <string name="purchase_view_transaction">Zobraziť podrobnosti transakcie</string>
+    <string name="purchase_see_how_to_use_gift_card">Pozrite si, ako použiť darčekovú kartu</string>
+    <string name="purchase_how_to_use_gift_card">Ako používať darčekovú kartu</string>
+    <string name="purchase_self_checkout">Samoobslužná pokladňa</string>
+    <string name="purchase_Request_assistance">Požiadajte zamestnanca o pomoc pri uplatnení digitálnej darčekovej karty.</string>
+    <string name="purchase_in_store">V obchode</string>
+    <string name="purchase_tell_the_cashier">Povedzte pokladníkovi, že platíte digitálnou darčekovou kartou. Pokladňa: do poľa Banková karta zadajte celkovú sumu, potom do poľa Účet zadajte číslo darčekovej karty a stlačte kláves Enter.</string>
+    <string name="purchase_in_the_payment_section">V sekcii platby zadajte do poľa darčekovej karty číslo digitálnej darčekovej karty.</string>
+    <string name="purchase_powered_by">Používa technológiu</string>
+    <string name="insufficient_money_title">Nedostatok mincí</string>
+    <string name="insufficient_money_msg">Nedostatok prostriedkov</string>
+    <string name="send_coins_error_msg">Problém pri odosielaní!</string>
+    <string name="gift_card_barcode_failed">Čiarový kód sa nepodarilo načítať</string>
+    <string name="gift_card_tx_title">Darčeková karta %s</string>
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Zadajte overovací kód</string>
+    <string name="verification_check_email">Skontrolujte svoj e-mail a zadajte overovací kód</string>
+    <string name="buy_gift_card">Kúpte si darčekovú kartu pomocou účtu DashSpend</string>
+    <string name="create_new_account">Vytvoriť nový účet</string>
+    <string name="password">Heslo</string>
+    <string name="logged_in_as">Prihlásený ako %s</string>
+    <string name="log_out">Odhlásiť sa</string>
+    <string name="invaild_code">Zadali ste nesprávny kód. Skontrolujte svoj e-mail a skúste to znova.</string>
+    <string name="something_wrong_title">Niečo sa pokazilo!</string>
+    <string name="retry">Znovu</string>
+    <string name="gift_card_purchase_failed">Nákup darčekovej karty zlyhal</string>
+    <string name="try_again">Skúsiť znova</string>
+    <string name="cancel">Zrušiť</string>
+    <string name="gift_card_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Prosím skúste znova.</string>
+    <string name="gift_card_details_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu.</string>
+    <string name="gift_card_unknown_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu s txid %s.</string>
+    <string name="gift_card_rejected">Platba bola odmietnutá. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Platba bola uskutočnená u obchodníka, ktorý poskytuje adresu URL na uplatnenie, ale táto nie je momentálne podporovaná. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
+    <string name="accept_terms_conditions">Prijímam zmluvné podmienky DashSpend</string>
+    <string name="tap_link_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte klepnúť na odkaz nižšie, aby ste mohli pokračovať</string>
+    <string name="accept_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte prijať zmluvné podmienky DashSpend</string>
+    <string name="log_in_to_ctxspend_account_desc">Váš email slúži len na zaslanie jednorazového hesla.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Kúpte si darčekovú kartu pomocou svojho účtu na výdavky v Dash</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Vytvorte si účet DashSpend alebo sa prihláste do existujúceho účtu</string>
     </resources>

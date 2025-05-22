@@ -54,7 +54,7 @@
             tools:background="@null" />
     </FrameLayout>
 
-    <org.dash.wallet.common.ui.segmented_picker.VerticalSegmentedPicker
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/currency_options"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
