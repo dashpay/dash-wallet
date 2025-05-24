@@ -120,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 words</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 or 24 words</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Wallet could not be restored:\n\n%s\n\nBad recovery phrase?</string>
 
@@ -471,4 +471,10 @@
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_stale">Prices are at least 30 minutes old. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50% since the last update.</string>
+    <string name="select_security_level_title">Select Security Level</string>
+    <string name="select_security_level_message">You can secure your wallet with a 12 or 24 word recovery phrase.</string>
+    <string name="select_security_level_12_words_title">Secure</string>
+    <string name="select_security_level_12_words_message">12 word recovery phrase</string>
+    <string name="select_security_level_24_words_title">Very secure</string>
+    <string name="select_security_level_24_words_message">24 word recovery phrase</string>
 </resources>
