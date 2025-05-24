@@ -95,7 +95,7 @@ abstract class AppModule {
 
         @Provides
         fun provideDeviceInfo(@ApplicationContext context: Context): DeviceInfoProvider =
-            DeviceInfoProvider(context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager)
+            DeviceInfoProvider(context.resources, context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager)
 
         @Singleton
         @Provides
