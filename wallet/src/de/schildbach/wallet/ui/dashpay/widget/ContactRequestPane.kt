@@ -24,6 +24,7 @@ import android.view.View
 import android.widget.LinearLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ContactRequestViewBinding
 
@@ -140,9 +141,10 @@ class ContactRequestPane(context: Context, attrs: AttributeSet) : LinearLayout(c
     }
 
     fun applyFriendsState() {
-        binding.mainButton.visibility = View.GONE
-        binding.payButtonPane.visibility = View.VISIBLE
-        binding.contactRequestReceivedPane.visibility = View.GONE
+        binding.mainButton.isVisible = false
+        binding.payButtonPane.isVisible = true
+        binding.contactRequestReceivedPane.isVisible = false
+        binding.contactHistoryDisclaimer.isVisible = false
     }
 
     fun applyDisclaimerState(username: String?) {

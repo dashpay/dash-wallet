@@ -26,6 +26,7 @@ import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
@@ -37,6 +38,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
@@ -112,6 +114,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
     lateinit var config: Configuration
     @Inject
     lateinit var pinRetryController: PinRetryController
+
+    private val selectWordCountLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+            viewModel.createNewWallet(
+                onboardingInvite,
+                result.data!!.extras!!.getInt(SelectSecurityLevelActivity.EXTRA_WORD_COUNT)
+            )
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -245,8 +257,9 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private fun initView() {
         binding.createNewWallet.setOnClickListener {
-            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-            viewModel.createNewWallet(onboardingInvite)
+            selectWordCountLauncher.launch(
+                Intent(this, SelectSecurityLevelActivity::class.java)
+            )
         }
         binding.recoveryWallet.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)

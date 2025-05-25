@@ -30,6 +30,7 @@ import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.crypto.LinuxSecureRandom
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DeterministicKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
@@ -49,13 +50,14 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.security.SecureRandom
 import java.text.ParseException
 import java.util.LinkedList
 import javax.inject.Inject
 
 interface WalletFactory {
     // Onboarding
-    fun create(params: NetworkParameters): Wallet
+    fun create(params: NetworkParameters, seedWordCount: Int): Wallet
     fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
@@ -99,8 +101,18 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    override fun create(params: NetworkParameters): Wallet {
-        val wallet = WalletEx.createDeterministic(params, Script.ScriptType.P2PKH)
+    override fun create(params: NetworkParameters, seedWordCount: Int): Wallet {
+        //val wallet = WalletEx.createDeterministic(params, Script.ScriptType.P2PKH)
+        val bits = when (seedWordCount) {
+            12 -> DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS
+            24 -> DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS * 2
+            else -> error("only 12 or 24 words are supported when creating a wallet")
+        }
+        val wallet = WalletEx.fromSeed(
+            params,
+            DeterministicSeed(SecureRandom(), bits, ""),
+            Script.ScriptType.P2PKH
+        )
         addMissingExtensions(wallet)
         checkWalletValid(wallet, params)
         return wallet

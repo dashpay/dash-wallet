@@ -275,97 +275,99 @@ class PlatformRepo @Inject constructor(
 
     @Throws(Exception::class)
     suspend fun searchUsernames(text: String, onlyExactUsername: Boolean = false, limit: Int = -1): List<UsernameSearchResult> {
-        val userIdString = blockchainIdentity.uniqueIdString
-        val userId = blockchainIdentity.uniqueIdentifier
+        return withContext(Dispatchers.IO) {
+            val userIdString = blockchainIdentity.uniqueIdString
+            val userId = blockchainIdentity.uniqueIdentifier
 
-        // Names.search does support retrieving 100 names at a time if retrieveAll = false
-        //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
-        // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
-        // it is not clear why a search for an existing username results in a failure to find it again.
-        val nameDocuments = if (!onlyExactUsername) {
-            platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
-        } else {
-            val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
-            if (nameDocument != null) {
-                listOf(nameDocument)
+            // Names.search does support retrieving 100 names at a time if retrieveAll = false
+            //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
+            // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
+            // it is not clear why a search for an existing username results in a failure to find it again.
+            val nameDocuments = if (!onlyExactUsername) {
+                platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
             } else {
-                listOf()
+                val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+                if (nameDocument != null) {
+                    listOf(nameDocument)
+                } else {
+                    listOf()
+                }
             }
-        }
-        val userIds = if (onlyExactUsername) {
-            val result = mutableListOf<Identifier>()
-            val exactNameDoc = try {
-                DomainDocument(nameDocuments.first { text == it.data["normalizedLabel"] })
-            } catch (e: NoSuchElementException) {
-                null
+            val userIds = if (onlyExactUsername) {
+                val result = mutableListOf<Identifier>()
+                val exactNameDoc = try {
+                    DomainDocument(nameDocuments.first { text == it.data["normalizedLabel"] })
+                } catch (e: NoSuchElementException) {
+                    null
+                }
+                if (exactNameDoc != null) {
+                    result.add(getIdentityForName(exactNameDoc))
+                }
+                result
+            } else {
+                nameDocuments.map { getIdentityForName(DomainDocument(it)) }
+            }.toSet().toList()
+
+            val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
+                val profileDocuments = platform.profiles.getList(userIds)
+                profileDocuments.associateBy({ it.ownerId }, { it })
+            } else {
+                log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
+                mapOf()
             }
-            if (exactNameDoc != null) {
-                result.add(getIdentityForName(exactNameDoc))
-            }
-            result
-        } else {
-            nameDocuments.map { getIdentityForName(DomainDocument(it)) }
-        }.toSet().toList()
 
-        val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
-            val profileDocuments = platform.profiles.getList(userIds)
-            profileDocuments.associateBy({ it.ownerId }, { it })
-        } else {
-            log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")
-            mapOf()
-        }
+            val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
 
-        val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
+            // Get all contact requests where toUserId == userId
+            val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userIdString)
 
-        // Get all contact requests where toUserId == userId
-        val fromContactDocuments = dashPayContactRequestDao.loadFromOthers(userIdString)
+            val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-        val usernameSearchResults = ArrayList<UsernameSearchResult>()
-
-        for (domainDoc in nameDocuments) {
-            val nameDoc = DomainDocument(domainDoc)
-            if (nameDoc.dashAliasIdentityId != null) {
-                continue // skip aliases
-            }
+            for (domainDoc in nameDocuments) {
+                val nameDoc = DomainDocument(domainDoc)
+                if (nameDoc.dashAliasIdentityId != null) {
+                    continue // skip aliases
+                }
 
                 //Remove own user document from result
-            val nameDocIdentityId = getIdentityForName(nameDoc)
-            if (nameDocIdentityId == userId) {
-                continue
-            }
-            var toContact: DashPayContactRequest? = null
-            var fromContact: DashPayContactRequest? = null
-
-            // Determine if any of our contacts match the current name's identity
-            if (toContactDocuments.isNotEmpty()) {
-                toContact = toContactDocuments.find { contact ->
-                    contact.toUserIdentifier == nameDocIdentityId
+                val nameDocIdentityId = getIdentityForName(nameDoc)
+                if (nameDocIdentityId == userId) {
+                    continue
                 }
-            }
+                var toContact: DashPayContactRequest? = null
+                var fromContact: DashPayContactRequest? = null
 
-            // Determine if our identity is someone else's contact
-            if (fromContactDocuments.isNotEmpty()) {
-                fromContact = fromContactDocuments.find { contact ->
-                    contact.userIdentifier == nameDocIdentityId
+                // Determine if any of our contacts match the current name's identity
+                if (toContactDocuments.isNotEmpty()) {
+                    toContact = toContactDocuments.find { contact ->
+                        contact.toUserIdentifier == nameDocIdentityId
+                    }
                 }
-            }
 
-            val username = nameDoc.label
-            val profileDoc = profileById[nameDocIdentityId]
+                // Determine if our identity is someone else's contact
+                if (fromContactDocuments.isNotEmpty()) {
+                    fromContact = fromContactDocuments.find { contact ->
+                        contact.userIdentifier == nameDocIdentityId
+                    }
+                }
 
-            val dashPayProfile = if (profileDoc != null)
-                DashPayProfile.fromDocument(profileDoc, username)!!
-            else DashPayProfile(nameDocIdentityId.toString(), username)
+                val username = nameDoc.label
+                val profileDoc = profileById[nameDocIdentityId]
 
-            usernameSearchResults.add(UsernameSearchResult(username,
+                val dashPayProfile = if (profileDoc != null)
+                    DashPayProfile.fromDocument(profileDoc, username)!!
+                else DashPayProfile(nameDocIdentityId.toString(), username)
+
+                usernameSearchResults.add(UsernameSearchResult(username,
                     dashPayProfile, toContact, fromContact))
+            }
+
+            // TODO: this is only needed when Proofs don't sort results
+            // This was added in v0.20
+            usernameSearchResults.sortBy { Names.normalizeString(it.username) }
+
+            return@withContext usernameSearchResults
         }
-
-        // TODO: this is only needed when Proofs don't sort results
-        // This was added in v0.20
-        usernameSearchResults.sortBy { Names.normalizeString(it.username) }
-
-        return usernameSearchResults
     }
 
     /**

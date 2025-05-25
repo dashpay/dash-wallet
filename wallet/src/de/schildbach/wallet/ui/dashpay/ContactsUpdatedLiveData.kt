@@ -16,12 +16,11 @@
 
 package de.schildbach.wallet.ui.dashpay
 
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformSyncService
 
-class ContactsUpdatedLiveData(walletApplication: WalletApplication, platformSyncService: PlatformSyncService)
-    : ContactsBasedLiveData<Resource<Boolean>>(walletApplication, platformSyncService) {
+class ContactsUpdatedLiveData(platformSyncService: PlatformSyncService)
+    : ContactsBasedLiveData<Resource<Boolean>>(platformSyncService) {
 
     override fun onContactsUpdated() {
         postValue(Resource.success(true))

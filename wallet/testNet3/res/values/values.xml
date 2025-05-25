@@ -21,9 +21,11 @@
 	</string-array>
 	<string-array name="preferences_block_explorer_values">
 		<item>http://insight.testnet.networks.dash.org/insight/</item>
+		<item>https://blockchair.com/dash/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">
 		<item>Insight</item>
+		<item>Blockchair</item>
 	</string-array>
 
 </resources>
