@@ -90,7 +90,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 )
                 viewModel.setIsFixedDenomination(merchant.fixedDenomination)
 
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     viewModel.updateMerchantDetails(merchant)
 
                     if (setMerchantEnabled()) {
