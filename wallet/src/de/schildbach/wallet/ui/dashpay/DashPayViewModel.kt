@@ -105,9 +105,9 @@ open class DashPayViewModel @Inject constructor(
         dashPayConfig.observe(DashPayConfig.FREQUENT_CONTACTS)
             .filterNotNull()
             .onEach { frequentContacts ->
-                _frequentContacts.value = frequentContacts.map { contactIdentifier ->
+                _frequentContacts.value = frequentContacts.mapNotNull { contactIdentifier ->
                     val profile = platformRepo.loadProfileByUserId(contactIdentifier)
-                    platformRepo.loadContactRequestsAndReturn(profile)!!
+                    platformRepo.loadContactRequestsAndReturn(profile)
                 }
             }
             .launchIn(viewModelScope)
