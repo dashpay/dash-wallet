@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -284,7 +285,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        val coinJoinBalance = walletDataProvider.observeMixedBalance().first()
+        val coinJoinBalance = walletDataProvider.observeMixedBalance().firstOrNull() ?: Coin.ZERO
         val hasBalanceLeftToMix = updateBalanceMutex.withLock {
             CoinJoinClientOptions.setAmount(balance)
             val walletEx = walletDataProvider.wallet as WalletEx
