@@ -129,7 +129,8 @@ class PlatformSynchronizationService @Inject constructor(
     private val usernameRequestDao: UsernameRequestDao,
     private val usernameVoteDao: UsernameVoteDao,
     private val identityConfig: BlockchainIdentityConfig,
-    private val topUpRepository: TopUpRepository
+    private val topUpRepository: TopUpRepository,
+    private val dashPayConfig: DashPayConfig
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -365,6 +366,10 @@ class PlatformSynchronizationService @Inject constructor(
                 }
 
                 updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
+            } else {
+                if (dashPayConfig.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
+                    platformRepo.updateFrequentContacts()
+                }
             }
             // fire listeners if there were new contacts
             if (addedContact) {
