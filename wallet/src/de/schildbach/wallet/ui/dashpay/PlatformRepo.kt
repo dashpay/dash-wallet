@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
+import android.text.format.DateUtils
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
@@ -41,8 +42,6 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
-import de.schildbach.wallet.ui.dashpay.FrequentContactsLiveData.Companion.TIMESPAN
-import de.schildbach.wallet.ui.dashpay.FrequentContactsLiveData.Companion.TOP_CONTACT_COUNT
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -105,6 +104,8 @@ class PlatformRepo @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
+        const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
+        const val TOP_CONTACT_COUNT = 4
     }
 
     var onIdentityResolved: ((Identity?) -> Unit)? = {}
@@ -478,28 +479,33 @@ class PlatformRepo @Inject constructor(
             .distinctUntilChanged()
     }
 
-    suspend fun updateFrequentContacts() {
-        val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
-        val frequentContacts = when (contactRequests.status) {
-            Status.SUCCESS -> {
-                if (!hasBlockchainIdentity) {
-                    return
+    suspend fun updateFrequentContacts(newTx: Transaction) {
+        if (hasIdentity() && blockchainIdentity.getContactForTransaction(newTx) != null) {
+            val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
+            val frequentContacts = when (contactRequests.status) {
+                Status.SUCCESS -> {
+                    if (!hasBlockchainIdentity) {
+                        return
+                    }
+
+                    val threeMonthsAgo = Date().time - TIMESPAN
+
+                    val results =
+                        getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)
+
+                    if (results.size < TOP_CONTACT_COUNT) {
+                        val moreResults =
+                            getTopContacts(contactRequests.data, results, blockchainIdentity, threeMonthsAgo, false)
+                        results.addAll(moreResults)
+                    }
+
+                    results
                 }
 
-                val threeMonthsAgo = Date().time - TIMESPAN
-
-                val results = getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)
-
-                if (results.size < TOP_CONTACT_COUNT) {
-                    val moreResults = getTopContacts(contactRequests.data, results, blockchainIdentity, threeMonthsAgo, false)
-                    results.addAll(moreResults)
-                }
-
-                results
+                else -> listOf<UsernameSearchResult>()
             }
-            else -> listOf<UsernameSearchResult>()
+            dashPayConfig.set(DashPayConfig.FREQUENT_CONTACTS, frequentContacts.map { it.getIdentity() }.toSet())
         }
-        dashPayConfig.set(DashPayConfig.FREQUENT_CONTACTS, frequentContacts.map { it.getIdentity() }.toSet())
     }
 
     private fun getTopContacts(items: List<UsernameSearchResult>,

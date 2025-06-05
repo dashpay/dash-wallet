@@ -64,7 +64,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -1466,9 +1468,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         return syncPercentage
     }
 
-    private fun handleContactPayments(tx: Transaction) {
-        serviceScope.launch {
+    private var handleContactPaymentsJob: Job? = null
 
+    private fun handleContactPayments(tx: Transaction) {
+        handleContactPaymentsJob?.cancel()
+        handleContactPaymentsJob = serviceScope.launch {
+            delay(TimeUnit.SECONDS.toMillis(1)) // debounce delay, 1 second
+            platformRepo.updateFrequentContacts(tx)
         }
     }
 
