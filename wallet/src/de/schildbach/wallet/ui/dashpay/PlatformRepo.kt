@@ -481,6 +481,12 @@ class PlatformRepo @Inject constructor(
 
     suspend fun updateFrequentContacts(newTx: Transaction) {
         if (hasIdentity() && blockchainIdentity.getContactForTransaction(newTx) != null) {
+            updateFrequentContacts()
+        }
+    }
+
+    suspend fun updateFrequentContacts() {
+        if (hasIdentity()) {
             val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             val frequentContacts = when (contactRequests.status) {
                 Status.SUCCESS -> {
