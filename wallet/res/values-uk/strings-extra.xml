@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Сканувати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Відправити</string>
+    <string name="shortcut_send">Відправити</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Надіслати контакту</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -297,6 +297,7 @@
     <string name="about_review_and_rate">Напишіть відгук і оцініть додаток</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
+    <string name="about_copyright">Всі права захищено © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Гаманець Dash %s</string>
     <string name="about_last_explore_device_sync">Останнє дослідження синхронізації пристрою</string>

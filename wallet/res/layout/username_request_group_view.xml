@@ -134,6 +134,7 @@
             android:src="@drawable/ic_thumb_up_blue"
             />
     </LinearLayout>
+
     <ImageView
         android:id="@+id/chevron"
         android:layout_width="11dp"

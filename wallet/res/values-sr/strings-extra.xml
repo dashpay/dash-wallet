@@ -8,7 +8,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Skeniraj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Pošalji</string>
+    <string name="shortcut_send">Pošalji</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Uvezi privatni ključ</string>
     <!-- Lock Screen: Text above the PIN Entry area -->

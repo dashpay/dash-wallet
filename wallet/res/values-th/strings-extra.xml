@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">สแกน</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">ส่ง</string>
+    <string name="shortcut_send">ส่ง</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">ส่งไปยังผู้ติดต่อ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->

@@ -32,7 +32,6 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
@@ -47,13 +46,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bouncycastle.crypto.params.KeyParameter
-import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -85,7 +79,7 @@ open class DashPayViewModel @Inject constructor(
     private val contactsLiveData = MutableLiveData<UsernameSearch>()
     private val contactUserIdLiveData = MutableLiveData<String?>()
 
-    val contactsUpdatedLiveData = ContactsUpdatedLiveData(walletApplication, platformSyncService)
+    val contactsUpdatedLiveData = ContactsUpdatedLiveData(platformSyncService)
     val _frequentContacts = MutableStateFlow<List<UsernameSearchResult>>(listOf())
     val frequentContacts = _frequentContacts.asStateFlow()
     val blockchainStateData = blockchainState.observeState()
@@ -135,6 +129,7 @@ open class DashPayViewModel @Inject constructor(
             )
         )
     }
+
     val getUsernameLiveData = usernameLiveData.switchMap { username ->
         getUsernameJob.cancel()
         getUsernameJob = Job()

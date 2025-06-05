@@ -20,9 +20,11 @@ package de.schildbach.wallet.ui
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,12 +40,11 @@ import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityDashpayUserBinding
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
-import org.bitcoinj.wallet.AuthenticationKeyChain
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -65,7 +66,7 @@ class DashPayUserActivity : LockScreenActivity() {
     }
     private val notificationsAdapter: NotificationsAdapter by lazy {
         NotificationsAdapter(this,
-            walletDataProvider.wallet!!,
+            walletDataProvider.transactionBag,
             false,
             { searchResult, position -> onAcceptRequest(searchResult, position) },
             { searchResult, position -> onIgnoreRequest(searchResult, position) },
@@ -108,57 +109,9 @@ class DashPayUserActivity : LockScreenActivity() {
 
         binding = ActivityDashpayUserBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         binding.close.setOnClickListener { finish() }
 
-        if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
-            viewModel.userData = intent.getParcelableExtra(EXTRA_INIT_USER_DATA)!!
-            viewModel.updateProfileData(viewModel.userData.dashPayProfile) // save the profile to the database for non-contacts
-            updateContactRelationUi()
-        } else {
-            val dashPayProfile = intent.getParcelableExtra(EXTRA_INIT_PROFILE_DATA) as DashPayProfile?
-
-            if (dashPayProfile != null) {
-                viewModel.updateProfileData(dashPayProfile) // save the profile to the database for non-contacts
-                viewModel.userData = UsernameSearchResult(dashPayProfile.username, dashPayProfile, null, null)
-                viewModel.initUserData(dashPayProfile.username).observe(this) {
-                    updateContactRelationUi()
-                }
-            }
-        }
-
-        viewModel.userLiveData.observe(this) {
-            updateContactRelationUi()
-        }
-        viewModel.sendContactRequestState.observe(this) {
-            imitateUserInteraction()
-            updateContactRelationUi()
-        }
-        viewModel.notificationsForUser.observe(this) {
-            if (Status.SUCCESS == it.status) {
-                if (it.data != null) {
-                    processResults(it.data)
-                }
-            }
-        }
-        viewModel.transactionsLiveData.observe(this) {
-            viewModel.notificationsForUser.onContactsUpdated()
-        }
-
-        val username = viewModel.userData.username
-        val profile = viewModel.userData.dashPayProfile
-        val displayName = profile.displayName
-
-        ProfilePictureDisplay.display(binding.avatar, profile)
-
-        if (displayName.isNotEmpty()) {
-            binding.displayNameTxt.text = displayName
-            binding.usernameTxt.text = username
-        } else {
-            binding.displayNameTxt.text = username
-        }
         binding.contactRequestPane.setOnUserActionListener(object : ContactRequestPane.OnUserActionListener {
-
             override fun onSendContactRequestClick() {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.SEND_REQUEST)
                 // check credit balance
@@ -183,6 +136,51 @@ class DashPayUserActivity : LockScreenActivity() {
 
         binding.activityRv.layoutManager = LinearLayoutManager(this)
         binding.activityRv.adapter = this.notificationsAdapter
+
+        viewModel.userData.filterNotNull().observe(this) { userData ->
+            updateContactRelationUi()
+
+            val username = userData.username
+            val profile = userData.dashPayProfile
+            val displayName = profile.displayName
+
+            ProfilePictureDisplay.display(binding.avatar, profile)
+
+            if (displayName.isNotEmpty()) {
+                binding.displayNameTxt.text = displayName
+                binding.usernameTxt.text = username
+            } else {
+                binding.displayNameTxt.text = username
+            }
+        }
+
+        val userData = if (intent.hasExtra(EXTRA_INIT_USER_DATA)) {
+            intent.getParcelableExtra<UsernameSearchResult>(EXTRA_INIT_USER_DATA)
+        } else {
+            intent.getParcelableExtra<DashPayProfile>(EXTRA_INIT_PROFILE_DATA)?.let { profile ->
+                UsernameSearchResult(profile.username, profile, null, null)
+            }
+        }
+
+        if (userData != null) {
+            viewModel.initUserData(userData)
+        }
+
+        viewModel.sendContactRequestState.observe(this) { state ->
+            imitateUserInteraction()
+            updateContactRelationUi()
+        }
+
+        viewModel.notifications.observe(this) { notifications ->
+            if (notifications.isNotEmpty()) {
+                binding.activityRv.isVisible = true
+                binding.activityRvTopLine.isVisible = true
+                processResults(notifications)
+            } else {
+                binding.activityRv.isVisible = false
+                binding.activityRvTopLine.isVisible = false
+            }
+        }
 
         dashPayViewModel.blockchainStateData.observe(this) {
             it?.apply {
@@ -220,13 +218,11 @@ class DashPayUserActivity : LockScreenActivity() {
     }
 
     private fun updateContactRelationUi() {
-        val userData = viewModel.userData
+        val userData = viewModel.userData.value ?: return
         val state = viewModel.sendContactRequestState.value
-        ContactRelation.process(viewModel.userData.type, state, object : ContactRelation.RelationshipCallback {
+        ContactRelation.process(userData.type, state, object : ContactRelation.RelationshipCallback {
             override fun none() {
                 binding.contactRequestPane.applySendStateWithDisclaimer(userData.username)
-                binding.activityRv.visibility = View.GONE
-                binding.activityRvTopLine.visibility = View.GONE
             }
 
             override fun inviting() {
@@ -235,17 +231,10 @@ class DashPayUserActivity : LockScreenActivity() {
 
             override fun invited() {
                 binding.contactRequestPane.applySentStateWithDisclaimer(userData.username)
-                viewModel.initUserData(userData.username).observe(this@DashPayUserActivity) {
-                    binding.activityRv.visibility = View.VISIBLE
-                    binding.activityRvTopLine.visibility = View.VISIBLE
-                    viewModel.initNotificationsForUser()
-                }
             }
 
             override fun inviteReceived() {
                 binding.contactRequestPane.applyReceivedState(userData.username)
-                binding.activityRv.visibility = View.VISIBLE
-                binding.activityRvTopLine.visibility = View.GONE
             }
 
             override fun acceptingInvite() {
@@ -254,14 +243,8 @@ class DashPayUserActivity : LockScreenActivity() {
 
             override fun friends() {
                 binding.contactRequestPane.applyFriendsState()
-                binding.activityRv.visibility = View.VISIBLE
-                binding.activityRvTopLine.visibility = View.GONE
             }
         })
-
-        if (userData.type != UsernameSearchResult.Type.NO_RELATIONSHIP) {
-            viewModel.initNotificationsForUser()
-        }
     }
 
     override fun finish() {
@@ -270,7 +253,8 @@ class DashPayUserActivity : LockScreenActivity() {
     }
 
     private fun startPayActivity() {
-        handleString(viewModel.userData.dashPayProfile.userId, true, R.string.scan_to_pay_username_dialog_message)
+        val userData = viewModel.userData.value ?: return
+        handleString(userData.dashPayProfile.userId, true, R.string.scan_to_pay_username_dialog_message)
         finish()
     }
 
