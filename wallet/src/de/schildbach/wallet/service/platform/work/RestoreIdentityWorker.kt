@@ -80,7 +80,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
         const val NOTIFICATION_ID = 1000
     }
 
-    override suspend fun doWorkInForeground(): Result {
+    override suspend fun doWorkInForeground(inForeground: Boolean): Result {
         val password = inputData.getString(KEY_PASSWORD)
                 ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
         val identity = inputData.getString(KEY_IDENTITY)
