@@ -71,7 +71,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="@dimen/list_entry_padding_vertical"
             android:layout_marginTop="@dimen/list_entry_padding_vertical"
-            android:checked="true"
+            android:checked="false"
             android:text="@string/report_issue_dialog_collect_wallet_dump"
             style="@style/OldCheckBox"/>
 
@@ -138,7 +138,14 @@
                 android:text="@string/report_issue_dialog_generating_report"
                 />
         </LinearLayout>
-
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:maxLines="1"
+            tools:text="wallet dump"
+            />
     </LinearLayout>
 
 </ScrollView>

@@ -297,6 +297,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
     <string name="report_issue_dialog_generating_report">Generating report</string>
+    <string name="report_issue_dialog_status_device_info">device information</string>
+    <string name="report_issue_dialog_status_installed_packages">list of installed packages</string>
+    <string name="report_issue_dialog_status_application_log">application log</string>
+    <string name="report_issue_dialog_status_application_info">application info</string>
+    <string name="report_issue_dialog_status_wallet_dump">wallet dump (slow)</string>
+    <string name="report_issue_dialog_status_contextual_info">contextual info</string>
+    <string name="report_issue_dialog_status_background_traces">background traces</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">finishing</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
