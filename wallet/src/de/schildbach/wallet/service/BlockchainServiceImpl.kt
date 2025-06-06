@@ -631,7 +631,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.debug("PreBlockDownload: " + increment + "%..." + preBlocksWeight + " " + stage.name + " " + peerGroup!!.syncStage.name)
                 if (peerGroup != null && peerGroup!!.syncStage == PeerGroup.SyncStage.PREBLOCKS) {
                     syncPercentage = (startPreBlockPercent + increment).toInt()
-                    log.info("PreBlockDownload: " + syncPercentage + "%..." + peerGroup!!.syncStage.name)
+                    log.info("PreBlockDownload: " + syncPercentage + "%..." + stage.name)
                     postOrPostDelayed()
                 }
                 lastPreBlockStage = stage
@@ -1050,7 +1050,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (!blockChainFileExists) {
                 log.info("blockchain does not exist, resetting wallet")
                 propagateContext()
-                // could wallet be null?
                 wallet?.reset()
                 resetMNLists(false)
                 resetMNListsOnPeerGroupStart = true

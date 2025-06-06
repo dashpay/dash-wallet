@@ -1,4 +1,13 @@
 Dash Wallet
+v11.2.2
+* Fix QR codes (not include usernames)
+* Show merchant types dialog
+* Support fix denomination gift cards (5, 10, 25, ...)
+* Home Screen improvements for CoinJoin wallets
+* Add fixed denomination gift card search filters
+* Fix UI bugs on gift card search screen
+* Update translations
+
 v11.2.1
 * Add Blockchair block explorer
 * Fix various crashes and bugs related to home screen

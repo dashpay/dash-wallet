@@ -65,14 +65,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -219,7 +222,11 @@ class MainViewModel @Inject constructor(
         .combine(_temporaryHideBalance) { autoHide, temporaryHide ->
             temporaryHide ?: autoHide ?: false
         }
-        .asLiveData()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
+        )
     private val _remindMetadata = MutableStateFlow(false)
     val remindMetadata = _remindMetadata.asStateFlow()
     val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
@@ -227,9 +234,6 @@ class MainViewModel @Inject constructor(
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
     val isNetworkUnavailable: LiveData<Boolean>
         get() = _isNetworkUnavailable
-
-    val isPassphraseVerified: Boolean
-        get() = !config.remindBackupSeed
 
     val currencyChangeDetected = SingleLiveEvent<Pair<String, String>>()
 
@@ -277,8 +281,7 @@ class MainViewModel @Inject constructor(
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData =
-        NotificationCountLiveData(walletApplication, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCountData = NotificationCountLiveData(platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -345,11 +348,15 @@ class MainViewModel @Inject constructor(
 
         // we need the total wallet balance for mixing progress,
         walletData.observeTotalBalance()
-            .onEach(_totalBalance::postValue)
+            .onEach {
+                _totalBalance.value = it
+            }
             .launchIn(viewModelScope)
 
         walletData.observeMixedBalance()
-            .onEach(_mixedBalance::postValue)
+            .onEach {
+                _mixedBalance.value = it
+            }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -413,8 +420,7 @@ class MainViewModel @Inject constructor(
     }
 
     fun triggerHideBalance() {
-        val isHiding = hideBalance.value ?: false
-        _temporaryHideBalance.value = !isHiding
+        _temporaryHideBalance.value = !hideBalance.value
 
         if (_temporaryHideBalance.value == true) {
             logEvent(AnalyticsConstants.Home.HIDE_BALANCE)
@@ -463,7 +469,7 @@ class MainViewModel @Inject constructor(
             coinJoinService.updateTimeSkew(timeSkew)
             log.info("timeskew: {} ms", timeSkew)
             return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
-        } catch (ex: Exception) {
+        } catch (_: Exception) {
             // Ignore errors
             Pair(false, 0)
         }
@@ -575,7 +581,7 @@ class MainViewModel @Inject constructor(
                 }
 
                 if (included && wrapper != null) {
-                    itemId = wrapper!!.id
+                    itemId = wrapper.id
                 } else {
                     this.crowdNodeWrapperFactory.tryInclude(tx).also {
                         included = it.first
@@ -583,7 +589,7 @@ class MainViewModel @Inject constructor(
                     }
 
                     if (included && wrapper != null) {
-                        itemId = wrapper!!.id
+                        itemId = wrapper.id
                     }
                 }
             }
@@ -603,7 +609,7 @@ class MainViewModel @Inject constructor(
                 )
             } else {
                 TransactionRowView.fromTransactionWrapper(
-                    wrapper!!,
+                    wrapper,
                     walletData.transactionBag,
                     Constants.CONTEXT,
                     null,
@@ -927,7 +933,7 @@ class MainViewModel @Inject constructor(
         (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
     }
 
-    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction()
+    fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
 
     fun metadataReminder() {
         viewModelScope.launch {

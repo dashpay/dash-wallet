@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.coinjoin.CoinJoinClientManager
 import org.bitcoinj.coinjoin.CoinJoinClientOptions
@@ -195,7 +196,11 @@ class CoinJoinMixingService @Inject constructor(
                 // Time has changed, handle the change here
                 log.info("Time or Time Zone changed")
                 coroutineScope.launch {
-                    updateTimeSkewInternal(getTimeSkew(force = true))
+                    try {
+                        updateTimeSkewInternal(getTimeSkew(force = true))
+                    } catch (e: Exception) {
+                        log.info("There was a problem obtaining the timeskew")
+                    }
                 }
             }
         }
@@ -283,8 +288,8 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        updateBalanceMutex.lock()
-        try {
+        val coinJoinBalance = walletDataProvider.observeMixedBalance().first()
+        val hasBalanceLeftToMix = updateBalanceMutex.withLock {
             CoinJoinClientOptions.setAmount(balance)
             val walletEx = walletDataProvider.wallet as WalletEx
             org.bitcoinj.core.Context.propagate(walletEx.context)
@@ -304,7 +309,6 @@ class CoinJoinMixingService @Inject constructor(
             val denominatedBalance = walletEx.denominatedBalance
             log.info("timing: denominatedBalance $watch2")
             // log.info("timing: coinJoinBalance: start")
-            val coinJoinBalance = walletDataProvider.observeMixedBalance().first() //walletEx.coinJoinBalance
             log.info("timing: coinJoinBalance $watch2")
             val hasPartiallyMixedCoins = (denominatedBalance - coinJoinBalance).isGreaterThan(Coin.ZERO)
 
@@ -324,7 +328,6 @@ class CoinJoinMixingService @Inject constructor(
                 hasAnonymizableBalance || canDenominate -> true
                 else -> false
             }
-
             log.info(
                 "coinjoin: can mix balance: $hasBalanceLeftToMix = balance: (${
                     anonBalance.isGreaterThan(
@@ -332,17 +335,17 @@ class CoinJoinMixingService @Inject constructor(
                     )
                 } && canDenominate: $canDenominate) || partially-mixed: $hasPartiallyMixedCoins"
             )
-            updateState(
-                config.getMode(),
-                getCurrentTimeSkew(),
-                hasBalanceLeftToMix,
-                networkStatus,
-                blockchainState,
-                blockchainStateProvider.getBlockChain()
-            )
-        } finally {
-            updateBalanceMutex.unlock()
+            hasBalanceLeftToMix
         }
+
+        updateState(
+            config.getMode(),
+            getCurrentTimeSkew(),
+            hasBalanceLeftToMix,
+            networkStatus,
+            blockchainState,
+            blockchainStateProvider.getBlockChain()
+        )
     }
 
     private suspend fun updateState(
@@ -353,11 +356,7 @@ class CoinJoinMixingService @Inject constructor(
         blockchainState: BlockchainState,
         blockChain: AbstractBlockChain?
     ) {
-        updateMutex.lock()
-//        log.info(
-//            "coinjoin-old-state: ${this.mode}, ${this.timeSkew}ms, ${this.hasAnonymizableBalance}, ${this.networkStatus}, synced: ${this.blockchainState.isSynced()} ${blockChain != null}"
-//        )
-        try {
+        updateMutex.withLock {
             setBlockchain(blockChain)
             log.info(
                 "coinjoin-state: $mode, $timeSkew ms, $hasAnonymizableBalance, $networkStatus, synced: ${blockchainState.isSynced()}, ${blockChain != null}"
@@ -392,16 +391,13 @@ class CoinJoinMixingService @Inject constructor(
             }
             updateProgressFromCache()
             updateIsMixing()
-        } finally {
-            updateMutex.unlock()
         }
     }
 
     private suspend fun updateMixingState(
         mixingStatus: MixingStatus
     ) {
-        updateMixingStateMutex.lock()
-        try {
+        updateMixingStateMutex.withLock {
             val previousMixingStatus = _mixingState.value
             _mixingState.value = mixingStatus
             log.info("coinjoin-state-mixing: $previousMixingStatus -> $mixingStatus")
@@ -440,8 +436,6 @@ class CoinJoinMixingService @Inject constructor(
                 }
             }
             updateIsMixing()
-        } finally {
-            updateMixingStateMutex.unlock()
         }
     }
     private fun updateIsMixing() {

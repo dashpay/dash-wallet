@@ -23,6 +23,15 @@ import android.text.SpannableString
 import android.text.style.ForegroundColorSpan
 import android.text.style.RelativeSizeSpan
 import android.view.View
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
@@ -30,7 +39,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -63,8 +77,11 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
-    private var currencyConversionOptionList: List<String> = emptyList()
     private var hasInternet: Boolean = true
+    private var pickedCurrencyIndex by mutableIntStateOf(0)
+    private var currencyOptions by mutableStateOf(listOf<SegmentedOption>())
+    private val pickedCurrencyOption: String
+        get() = currencyOptions[pickedCurrencyIndex].title
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -72,7 +89,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         binding.continueBtn.isEnabled = false
         binding.continueBtn.setOnClickListener {
-            viewModel.continueSwap(binding.currencyOptions.pickedOption)
+            viewModel.continueSwap(pickedCurrencyOption)
         }
 
         viewModel.selectedCryptoCurrencyAccount.observe(viewLifecycleOwner) {
@@ -87,8 +104,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         }
 
         binding.bottomCard.isVisible = false
-
-        binding.currencyOptions.pickedOptionIndex = 0
+        pickedCurrencyIndex = 0
 
         binding.maxButton.setOnClickListener {
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
@@ -115,9 +131,26 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
             }
         }
 
-        binding.currencyOptions.setOnOptionPickedListener { value, index ->
-            setAmountValue(value, viewModel.enteredConvertAmount)
-            viewModel.selectedPickerCurrencyCode = value
+        binding.currencyOptions.setContent {
+            SegmentedPicker(
+                currencyOptions,
+                modifier = Modifier
+                    .height(48.dp)
+                    .width(40.dp),
+                selectedIndex = pickedCurrencyIndex,
+                style = SegmentedPickerStyle(
+                    displayMode = PickerDisplayMode.Vertical,
+                    cornerRadius = 8f,
+                    backgroundColor = Color.Transparent,
+                    thumbColor = MyTheme.Colors.primary5,
+                    textStyle = MyTheme.Micro,
+                    shadowElevation = 0
+                )
+            ) { value, index ->
+                pickedCurrencyIndex = index
+                setAmountValue(value.title, viewModel.enteredConvertAmount)
+                viewModel.selectedPickerCurrencyCode = value.title
+            }
         }
     }
 
@@ -137,18 +170,15 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
 
     private fun resetViewSelection(it: CoinBaseUserAccountDataUIModel?) {
         it?.coinbaseAccount?.currency?.let { currencyCode ->
-            currencyConversionOptionList = if (viewModel.dashToCrypto.value == true) {
+            currencyOptions = if (viewModel.dashToCrypto.value == true) {
                 listOf(Constants.DASH_CURRENCY, viewModel.selectedLocalCurrencyCode, currencyCode)
             } else {
                 listOf(currencyCode, viewModel.selectedLocalCurrencyCode, Constants.DASH_CURRENCY)
-            }
-            binding.currencyOptions.apply {
-                pickedOptionIndex = 0
-                provideOptions(currencyConversionOptionList)
-            }
+            }.map { SegmentedOption(it) }
+            pickedCurrencyIndex = 0
             viewModel.enteredConvertAmount = "0"
-            viewModel.selectedPickerCurrencyCode = binding.currencyOptions.pickedOption
-            applyNewValue(viewModel.enteredConvertAmount, binding.currencyOptions.pickedOption)
+            viewModel.selectedPickerCurrencyCode = pickedCurrencyOption
+            applyNewValue(viewModel.enteredConvertAmount, pickedCurrencyOption)
             binding.currencyOptions.isVisible = true
             binding.maxButtonWrapper.isVisible = true
             binding.inputWrapper.isVisible = true
@@ -241,14 +271,14 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
         fun refreshValue() {
             value.clear()
             val inputValue =
-                if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) {
+                if (viewModel.selectedLocalCurrencyCode == pickedCurrencyOption) {
                     val localCurrencySymbol =
                         GenericUtils.getLocalCurrencySymbol(viewModel.selectedLocalCurrencyCode)
                     binding.inputAmount.text.split(" ")
                         .first { it != localCurrencySymbol }
                 } else {
                     binding.inputAmount.text.split(" ")
-                        .first { it != binding.currencyOptions.pickedOption }
+                        .first { it != pickedCurrencyOption }
                 }
             if (inputValue != "0") {
                 value.append(inputValue)
@@ -268,7 +298,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 val lengthOfDecimalPart =
                     value.toString().length - value.toString().indexOf(decimalSeparator)
                 val decimalsThreshold =
-                    if (viewModel.selectedLocalCurrencyCode == binding.currencyOptions.pickedOption) 2 else 8
+                    if (viewModel.selectedLocalCurrencyCode == pickedCurrencyOption) 2 else 8
 
                 if (lengthOfDecimalPart > decimalsThreshold) {
                     return
@@ -279,10 +309,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 try {
                     appendIfValidAfter(number.toString())
 
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption)
+                    applyNewValue(value.toString(), pickedCurrencyOption)
                 } catch (x: Exception) {
                     value.deleteCharAt(value.length - 1)
-                    applyNewValue(value.toString(), binding.currencyOptions.pickedOption)
+                    applyNewValue(value.toString(), pickedCurrencyOption)
                 }
             }
         }
@@ -295,7 +325,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 value.deleteCharAt(value.length - 1)
                 viewModel.resetSwapValueError()
             }
-            applyNewValue(value.toString(), binding.currencyOptions.pickedOption)
+            applyNewValue(value.toString(), pickedCurrencyOption)
             maxAmountSelected = false
         }
 
@@ -311,7 +341,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency) {
                 value.append(DECIMAL_SEPARATOR)
             }
 
-            applyNewValue(value.toString(), binding.currencyOptions.pickedOption)
+            applyNewValue(value.toString(), pickedCurrencyOption)
         }
 
         private fun appendIfValidAfter(number: String) {

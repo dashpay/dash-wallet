@@ -140,7 +140,7 @@ class TransactionResultViewModel @Inject constructor(
 
     private suspend fun findContact(tx: Transaction) {
         // check hasIdentity since later we need blockchainIdentity
-        if (!platformRepo.hasIdentity) {
+        if (!platformRepo.hasBlockchainIdentity) {
             _contact.postValue(null)
             return
         }

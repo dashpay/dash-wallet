@@ -18,15 +18,23 @@
 package de.schildbach.wallet.ui.main
 
 import android.app.Activity
-import androidx.fragment.app.activityViewModels
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
@@ -35,19 +43,27 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
-import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.util.InputParser.StringInputParser
+import de.schildbach.wallet.ui.EditProfileActivity
+import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
 import de.schildbach.wallet.ui.dashpay.utils.display
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutOption
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsList
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsPane
+import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
+import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
+import de.schildbach.wallet.ui.util.InputParser.StringInputParser
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -62,10 +78,14 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -77,6 +97,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
     }
 
     private val viewModel: MainViewModel by activityViewModels()
+    private val shortcutViewModel: ShortcutsViewModel by activityViewModels()
     private val binding by viewBinding(HomeContentBinding::bind)
     private lateinit var mixingBinding: MixingStatusPaneBinding
     @Inject lateinit var configuration: Configuration
@@ -90,6 +111,14 @@ class WalletFragment : Fragment(R.layout.home_content) {
         if (result.resultCode == Activity.RESULT_OK && intent != null) {
             val input = intent.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
             input?.let { handleString(input, R.string.button_scan, R.string.input_parser_cannot_classify) }
+        }
+    }
+
+    private val stakingLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Constants.USER_BUY_SELL_DASH) {
+            safeNavigate(WalletFragmentDirections.homeToBuySell())
         }
     }
 
@@ -128,6 +157,27 @@ class WalletFragment : Fragment(R.layout.home_content) {
         binding.dashpayUserAvatar.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Home.AVATAR)
             startActivity(Intent(requireContext(), EditProfileActivity::class.java))
+        }
+
+        binding.infoPanel.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+
+        binding.infoPanel.setContent {
+            if (shortcutViewModel.showShortcutInfo) {
+                InfoPanel(
+                    stringResource(R.string.customize_shortcuts),
+                    stringResource(R.string.customize_shortcuts_description),
+                    modifier = Modifier
+                        .wrapContentHeight()
+                        .fillMaxWidth()
+                        .padding(horizontal = 2.dp),
+                    leftIconRes = R.drawable.ic_shortcuts,
+                    actionIconRes = R.drawable.ic_popup_close
+                ) {
+                    shortcutViewModel.hideShortcutInfo()
+                }
+            }
         }
 
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
@@ -219,6 +269,8 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
         viewModel.totalBalance.observe(viewLifecycleOwner) {
             updateMixedAndTotalBalance()
+            val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
+            shortcutViewModel.userHasBalance = balance.isPositive
         }
 
         viewModel.mixedBalance.observe(viewLifecycleOwner) {
@@ -251,75 +303,32 @@ class WalletFragment : Fragment(R.layout.home_content) {
 
     override fun onResume() {
         super.onResume()
-        showHideSecureAction()
+        shortcutViewModel.refreshIsPassphraseVerified()
     }
 
     private fun initShortcutActions() {
-        binding.shortcutsPane.setOnShortcutClickListener { v ->
-            when (v) {
-                binding.shortcutsPane.secureNowButton -> {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET)
-                    handleVerifySeed()
+        binding.shortcutsPane.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+
+        binding.shortcutsPane.setContent {
+            ShortcutsPane(
+                shortcuts = shortcutViewModel.shortcuts,
+                onClick = { shortcut ->
+                    onShortcutTap(shortcut)
+                },
+                onLongClick = { shortcut, index ->
+                    onShortcutLongTap(shortcut, index)
                 }
-                binding.shortcutsPane.scanToPayButton -> {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY)
-                    handleScan(v)
-                }
-                binding.shortcutsPane.buySellButton -> {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
-                    safeNavigate(WalletFragmentDirections.homeToBuySell())
-                }
-                binding.shortcutsPane.payToAddressButton -> {
-                    handlePayToAddress()
-                }
-                binding.shortcutsPane.payToContactButton -> {
-                    handleSelectContact()
-                }
-                binding.shortcutsPane.receiveButton -> {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
-                    findNavController().navigate(
-                        R.id.paymentsFragment,
-                        bundleOf(
-                            PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
-                        )
-                    )
-                }
-                binding.shortcutsPane.importPrivateKey -> {
-                    SweepWalletActivity.start(requireContext(), true)
-                }
-                binding.shortcutsPane.explore -> {
-                    viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)
-                    findNavController().navigate(
-                        R.id.exploreFragment,
-                        bundleOf(),
-                        NavOptions.Builder()
-                            .setEnterAnim(R.anim.slide_in_bottom)
-                            .build()
-                    )
-                }
-            }
+            )
         }
 
         refreshShortcutBar()
     }
 
     private fun refreshShortcutBar() {
-        showHideSecureAction()
-        refreshIfUserHasBalance()
-        refreshIfUserHasIdentity()
-    }
-
-    private fun showHideSecureAction() {
-        binding.shortcutsPane.isPassphraseVerified = viewModel.isPassphraseVerified
-    }
-
-    private fun refreshIfUserHasBalance() {
-        val balance: Coin = viewModel.totalBalance.value ?: Coin.ZERO
-        binding.shortcutsPane.userHasBalance = balance.isPositive
-    }
-
-    private fun refreshIfUserHasIdentity() {
-        binding.shortcutsPane.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
+        shortcutViewModel.refreshIsPassphraseVerified()
+        shortcutViewModel.userHasContacts = viewModel.hasIdentity && viewModel.hasContacts.value
     }
 
     private fun updateSyncState() {
@@ -345,15 +354,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
     }
 
-    private fun handleScan(clickView: View?) {
-        if (clickView != null) {
-            val options = ScanActivity.getLaunchOptions(activity, clickView)
-            val intent = ScanActivity.getTransitionIntent(activity, clickView)
-            scanLauncher.launch(intent, options)
-        } else {
-            val intent = ScanActivity.getIntent(activity)
-            scanLauncher.launch(intent)
-        }
+    private fun handleScan() {
+        val intent = ScanActivity.getIntent(activity)
+        scanLauncher.launch(intent)
     }
 
     private fun startVerifySeedActivity(pin: String) {
@@ -423,5 +426,117 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 R.drawable.ic_notification_bell
             }
         )
+    }
+
+    private fun onShortcutTap(shortcut: ShortcutOption) {
+        when (shortcut) {
+            ShortcutOption.SECURE_NOW -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SECURE_WALLET)
+                handleVerifySeed()
+            }
+            ShortcutOption.SCAN_QR -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SCAN_TO_PAY)
+                handleScan()
+            }
+            ShortcutOption.BUY_SELL -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
+                safeNavigate(WalletFragmentDirections.homeToBuySell())
+            }
+            ShortcutOption.SEND_TO_ADDRESS -> {
+                handlePayToAddress()
+            }
+            ShortcutOption.SEND_TO_CONTACT -> {
+                handleSelectContact()
+            }
+            ShortcutOption.SEND -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_SEND)
+                findNavController().navigate(
+                    R.id.paymentsFragment,
+                    bundleOf(
+                        PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_PAY
+                    )
+                )
+            }
+            ShortcutOption.RECEIVE -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_RECEIVE)
+                findNavController().navigate(
+                    R.id.paymentsFragment,
+                    bundleOf(
+                        PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
+                    )
+                )
+            }
+            ShortcutOption.EXPLORE -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_EXPLORE)
+                findNavController().navigate(
+                    R.id.exploreFragment,
+                    bundleOf(),
+                    NavOptions.Builder()
+                        .setEnterAnim(R.anim.slide_in_bottom)
+                        .build()
+                )
+            }
+            ShortcutOption.WHERE_TO_SPEND -> {
+                safeNavigate(WalletFragmentDirections.homeToSearch(type = ExploreTopic.Merchants))
+            }
+            ShortcutOption.ATMS -> {
+                safeNavigate(WalletFragmentDirections.homeToSearch(type = ExploreTopic.ATMs))
+            }
+            ShortcutOption.STAKING -> {
+                handleStakingNavigation()
+            }
+            ShortcutOption.TOPPER -> {
+                lifecycleScope.launch {
+                    val uri = shortcutViewModel.getTopperUrl(getString(R.string.dash_wallet_name))
+                    requireActivity().openCustomTab(uri)
+                }
+            }
+            ShortcutOption.UPHOLD -> {
+                safeNavigate(WalletFragmentDirections.homeToUphold())
+            }
+            ShortcutOption.COINBASE -> {
+                if (shortcutViewModel.isCoinbaseAuthenticated) {
+                    safeNavigate(WalletFragmentDirections.homeToCoinbase())
+                } else {
+                    safeNavigate(WalletFragmentDirections.homeToBuySellOverview(ServiceType.COINBASE))
+                }
+            }
+        }
+    }
+
+    private fun onShortcutLongTap(shortcut: ShortcutOption, index: Int) {
+        if (shortcut == ShortcutOption.SECURE_NOW) {
+            return
+        }
+
+        ComposeBottomSheet(R.style.SecondaryBackground, forceExpand = true) { dialog ->
+            ShortcutsList(shortcutViewModel.getAllShortcutOptions(shortcut)) { newShortcut ->
+                shortcutViewModel.replaceShortcut(index, newShortcut)
+                dialog.dismiss()
+            }
+        }.show(requireActivity())
+
+        shortcutViewModel.hideShortcutInfo() // Assume user is aware of this feature already
+    }
+
+    private fun handleStakingNavigation() {
+        lifecycleScope.launch {
+            if (viewModel.isBlockchainSynced.value == true) {
+                stakingLauncher.launch(Intent(requireContext(), StakingActivity::class.java))
+            } else {
+                val openWebsite = AdaptiveDialog.create(
+                    null,
+                    getString(R.string.chain_syncing),
+                    getString(R.string.crowdnode_wait_for_sync),
+                    getString(R.string.button_close),
+                    getString(R.string.crowdnode_open_website)
+                ).showAsync(requireActivity())
+
+                if (openWebsite == true) {
+                    val browserIntent = Intent(Intent.ACTION_VIEW, getString(R.string.crowdnode_website).toUri())
+                    startActivity(browserIntent)
+                }
+            }
+        }
     }
 }

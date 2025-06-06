@@ -32,8 +32,10 @@ import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SortOption
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
+import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.ui.explore.FilterMode
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
@@ -258,7 +260,7 @@ class ExploreViewModelTest {
             val territory = "Texas"
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any()) } doReturn
                         flow { emit(merchants.filter { it.territory == territory }) }
                 }
 
@@ -282,7 +284,7 @@ class ExploreViewModelTest {
                 mockPreferences,
                 analyticsService
             )
-            viewModel.setSelectedTerritory(territory)
+            viewModel.setFilters("", territory, 5, SortOption.Name, DenomOption.Both)
             viewModel.setFilterMode(FilterMode.All)
             viewModel.searchBounds = GeoBounds.noBounds
 
@@ -292,7 +294,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants("", territory, "", GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants("", territory, "", DenomOption.Both, GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -306,7 +308,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any()) } doReturn
+                    on { observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -339,7 +341,7 @@ class ExploreViewModelTest {
             )
             viewModel.setFilterMode(FilterMode.Nearby)
             viewModel.searchBounds = bounds
-            viewModel.paymentMethodFilter = PaymentMethod.DASH
+            viewModel.setFilters(PaymentMethod.DASH, "", 20, SortOption.Name, DenomOption.Both)
             viewModel.submitSearchQuery(query)
 
             // Should return active physical merchants matching query and Dash payment method
@@ -352,7 +354,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, bounds)
+            verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, DenomOption.Both, bounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -366,7 +368,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any()) } doReturn
+                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants.filter {
@@ -396,7 +398,7 @@ class ExploreViewModelTest {
                 mockPreferences,
                 analyticsService
             )
-            viewModel.setSelectedTerritory(territory)
+            viewModel.setFilters("", territory, 5, SortOption.Name, DenomOption.Both)
             viewModel.searchBounds = GeoBounds.noBounds
             viewModel.setFilterMode(FilterMode.All)
             viewModel.submitSearchQuery(query)
@@ -409,7 +411,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants(query, territory, "", GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants(query, territory, "", DenomOption.Both, GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -433,7 +435,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -484,7 +486,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants("", "", "", bounds)
+            verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }

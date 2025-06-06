@@ -25,15 +25,14 @@
     android:background="@color/background_primary"
     tools:context=".ui.EnterAmountToTransferFragment">
 
-    <org.dash.wallet.common.ui.segmented_picker.VerticalSegmentedPicker
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/currency_options"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:layout="@layout/vertical_segmented_picker"
-         />
+        android:layout="@layout/vertical_segmented_picker" />
 
     <LinearLayout
         android:id="@+id/input_wrapper"

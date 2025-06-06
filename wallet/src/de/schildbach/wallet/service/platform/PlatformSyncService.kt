@@ -236,7 +236,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override fun shutdown() {
-        if (platformSyncJob != null && platformRepo.hasIdentity) {
+        if (platformSyncJob != null && platformRepo.hasBlockchainIdentity) {
             Preconditions.checkState(platformSyncJob!!.isActive)
             log.info("Shutting down the platform sync job")
             syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
@@ -265,7 +265,7 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun updateContactRequests(initialSync: Boolean) {
 
         // if there is no wallet or identity, then skip the remaining steps of the update
-        if (!platformRepo.hasIdentity || walletApplication.wallet == null) {
+        if (!platformRepo.hasBlockchainIdentity || walletApplication.wallet == null) {
             return
         }
 
@@ -1015,9 +1015,8 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("fetching ${items.size} tx metadata items in $watch")
     }
 
-
     private suspend fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
-        if (!platformRepo.hasIdentity) {
+        if (!platformRepo.hasBlockchainIdentity) {
             return
         }
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })

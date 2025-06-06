@@ -33,7 +33,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.core.TransactionBag
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
@@ -74,12 +74,12 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
 
         @Suppress("UNCHECKED_CAST")
         val transactionCache = (args[0] as HashMap<Sha256Hash, TransactionCacheEntry>)
-        val wallet = (args[1] as Wallet)
+        val bag = (args[1] as TransactionBag)
         val chainLockBlockHeight = (args[2] as Int)
-        bind(tx, transactionCache, wallet, chainLockBlockHeight)
+        bind(tx, transactionCache, bag, chainLockBlockHeight)
     }
 
-    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, wallet: Wallet, chainLockBlockHeight: Int) {
+    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, bag: TransactionBag, chainLockBlockHeight: Int) {
         if (itemView is CardView) {
             (itemView as CardView).setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
         }
@@ -88,16 +88,16 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         val fee = tx.fee
 
         if (!transactionCache.containsKey(tx.txId)) {
-            val value = tx.getValue(wallet)
+            val value = tx.getValue(bag)
             val sent = value.signum() < 0
-            val self = tx.isEntirelySelf(wallet)
+            val self = tx.isEntirelySelf(bag)
             val showFee = sent && fee != null && !fee.isZero
             val address: Address?
             address = if (sent) {
-                val addresses = TransactionUtils.getToAddressOfSent(tx, wallet)
+                val addresses = TransactionUtils.getToAddressOfSent(tx, bag)
                 if (addresses.isEmpty()) null else addresses[0]
             } else {
-                TransactionUtils.getWalletAddressOfReceived(tx, wallet)
+                TransactionUtils.getWalletAddressOfReceived(tx, bag)
             }
             val addressLabel = if (address != null) AddressBookProvider.resolveLabel(itemView.context, address.toBase58()) else null
             val txType = tx.type
@@ -132,7 +132,7 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         // Set primary status - Sent:  Sent, Masternode Special Tx's, Internal
         //                  Received:  Received, Mining Rewards, Masternode Rewards
         //
-        val idPrimaryStatus = txResourceMapper.getTransactionTypeName(tx, wallet)
+        val idPrimaryStatus = txResourceMapper.getTransactionTypeName(tx, bag)
         primaryStatusView.setText(idPrimaryStatus)
         primaryStatusView.setTextColor(primaryStatusColor)
 
@@ -187,7 +187,15 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         // Show the secondary status:
         //
         var secondaryStatusId = -1
-        if (confidence.hasErrors()) secondaryStatusId = txResourceMapper.getErrorName(tx) else if (!txCache.sent) secondaryStatusId = txResourceMapper.getReceivedStatusString(tx, wallet.context, chainLockBlockHeight)
+        if (confidence.hasErrors()) {
+            secondaryStatusId = txResourceMapper.getErrorName(tx)
+        } else if (!txCache.sent) {
+            secondaryStatusId = txResourceMapper.getReceivedStatusString(
+                tx,
+                de.schildbach.wallet.Constants.CONTEXT,
+                chainLockBlockHeight
+            )
+        }
         if (secondaryStatusId != -1) secondaryStatusView.setText(secondaryStatusId) else secondaryStatusView.text = null
         secondaryStatusView.setTextColor(secondaryStatusColor)
     }

@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">Filtrováno:</string>
     <string name="explore_pay_gift_card">Platba dárkovým poukazem</string>
     <string name="explore_sort_by">Řadit podle</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Nejbližší</item>
@@ -116,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>Jméno</item>
         <item>Vzdálenost</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">

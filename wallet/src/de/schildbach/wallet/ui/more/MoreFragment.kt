@@ -173,7 +173,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
                     startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
                 } else {
-                    MixDashFirstDialogFragment().show(requireActivity())
+                    MixDashFirstDialogFragment().show(requireActivity()) {
+                        startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                    }
                 }
             }
         }

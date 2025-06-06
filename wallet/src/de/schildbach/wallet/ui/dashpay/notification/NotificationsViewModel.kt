@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.dashpay.notification
 import android.text.format.DateUtils
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
@@ -37,7 +36,6 @@ import kotlin.math.max
 
 @HiltViewModel
 class NotificationsViewModel @Inject constructor(
-    walletApplication: WalletApplication,
     platformRepo: PlatformRepo,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
@@ -48,7 +46,7 @@ class NotificationsViewModel @Inject constructor(
     private val dashSystemService: DashSystemService,
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    val notificationsLiveData = NotificationsLiveData(walletApplication, platformRepo, platformSyncService, viewModelScope, userAlertDao)
+    val notificationsLiveData = NotificationsLiveData(platformRepo, platformSyncService, viewModelScope, userAlertDao)
 
     fun searchNotifications(text: String) {
         notificationsLiveData.query = text
