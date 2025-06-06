@@ -6,9 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,26 +53,27 @@ fun DashButton(
         style == Style.Filled -> DashBlue
         style == Style.FilledBlue -> DashBlue
         style == Style.FilledRed -> MyTheme.Colors.red
-        style == Style.TintedBlue -> Color(0x0D008DE4)
+        style == Style.TintedBlue -> MyTheme.Colors.dashBlue5
         style == Style.TintedGray -> Color(0x1AB0B6BC)
         style == Style.TintedRed -> MyTheme.Colors.red5
-        style == Style.FilledWhiteBlue -> Color(0xFFFFFFFF)
+        style == Style.FilledWhiteBlue -> MyTheme.Colors.backgroundPrimary
         style == Style.TintedWhite -> Color(0x1AFFFFFF)
+        style == Style.PlainRed -> MyTheme.Colors.red5
         else -> Color.Transparent
     }
 
     val contentColor = when {
-        !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.40f)
+        !isEnabled -> MyTheme.Colors.textPrimary.copy(alpha = 0.40f)
         style == Style.Filled -> Color.White
         style == Style.FilledBlue -> Color.White
         style == Style.FilledRed -> Color.White
         style == Style.TintedBlue -> DashBlue
         style == Style.PlainBlue -> DashBlue
-        style == Style.PlainBlack -> Color(0xFF191C1F)
-        style == Style.PlainRed -> Color(0xFFEA3943)
-        style == Style.TintedRed -> Color(0xFFEA3943)
-        style == Style.TintedGray -> Color(0xFF191C1F)
-        style == Style.StrokeGray -> Color(0xFF191C1F)
+        style == Style.PlainBlack -> MyTheme.Colors.textPrimary
+        style == Style.PlainRed -> MyTheme.Colors.red
+        style == Style.TintedRed -> MyTheme.Colors.red
+        style == Style.TintedGray -> MyTheme.Colors.textPrimary
+        style == Style.StrokeGray -> MyTheme.Colors.textPrimary
         style == Style.FilledWhiteBlue -> DashBlue
         style == Style.TintedWhite -> Color.White
 
@@ -125,7 +124,6 @@ fun DashButton(
                 strokeWidth = 2.dp,
                 modifier = Modifier
                     .size(size.iconSize)
-                    .padding(vertical = 2.dp)
             )
             Spacer(modifier = Modifier.width(size.paddingHorizontal))
         }
@@ -134,7 +132,7 @@ fun DashButton(
                 text,
                 fontSize = size.fontSize,
                 lineHeight = size.lineSize,
-                fontFamily = MyTheme.InterFont,
+                fontFamily = MyTheme.interRegular,
                 fontWeight = FontWeight.SemiBold,
                 color = contentColor,
                 overflow = TextOverflow.Ellipsis,
@@ -155,7 +153,7 @@ fun DashButton(
 }
 
 enum class Style {
-                 Plain,
+    Plain,
     Outlined,
     Filled,
     FilledBlue,

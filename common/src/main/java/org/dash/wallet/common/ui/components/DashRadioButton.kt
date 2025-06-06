@@ -1,11 +1,10 @@
 package org.dash.wallet.common.ui.components
 
-import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,12 +15,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
-
 /**
  * Custom radio button component with text and optional helper text
  * Matches the design system from Figma
@@ -30,19 +27,20 @@ import org.dash.wallet.common.R
  * @param helpText Optional help text to display below the main text
  * @param selected Whether this radio button is selected
  * @param onClick Callback to be invoked when this radio button is clicked
- * @param textEndAligned Whether the text should be right/end aligned
  * @param modifier Modifier to be applied to the component
  * @param enabled Whether the radio button is enabled or disabled
  */
 @Composable
 fun DashRadioButton(
+    modifier: Modifier = Modifier,
     text: String,
     helpText: String? = null,
     selected: Boolean,
     onClick: () -> Unit,
     leadingIcon: Int? = null,
-    textEndAligned: Boolean = false,
-    modifier: Modifier = Modifier,
+    trailingText: String? = null,
+    trailingHelpText: String? = null,
+
     enabled: Boolean = true
 ) {
     val primaryTextColor = MyTheme.Colors.textPrimary
@@ -60,12 +58,12 @@ fun DashRadioButton(
                 enabled = enabled,
                 role = Role.RadioButton
             )
-            .padding(0.dp, 10.dp),
+            .padding(10.dp, 8.dp),
         color = Color.Transparent
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (textEndAligned) Arrangement.End else Arrangement.Start,
+            //horizontalArrangement = if (textEndAligned) Arrangement.End else Arrangement.Start,
             modifier = Modifier.fillMaxWidth()
         ) {
             leadingIcon?.let {
@@ -80,30 +78,30 @@ fun DashRadioButton(
                         tint = Color.Unspecified
                     )
                 }
+                Spacer(modifier = Modifier.width(12.dp))
             }
 
-            if (textEndAligned) {
+            TextContent(
+                text = text,
+                helpText = helpText,
+                primaryTextColor = primaryTextColor.copy(alpha = contentAlpha),
+                secondaryTextColor = secondaryTextColor.copy(alpha = contentAlpha),
+                textFirst = false,
+                modifier = Modifier.weight(1f)
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
+            if (trailingText != null || trailingHelpText != null) {
                 TextContent(
-                    text = text,
-                    helpText = helpText,
+                    text = trailingText,
+                    helpText = trailingHelpText,
+                    textStyle = MyTheme.Caption,
                     primaryTextColor = primaryTextColor.copy(alpha = contentAlpha),
                     secondaryTextColor = secondaryTextColor.copy(alpha = contentAlpha),
                     textFirst = true,
                     modifier = Modifier.weight(1f)
                 )
-
                 Spacer(modifier = Modifier.width(10.dp))
-            } else {
-                Spacer(modifier = Modifier.width(12.dp))
-
-                TextContent(
-                    text = text,
-                    helpText = helpText,
-                    primaryTextColor = primaryTextColor.copy(alpha = contentAlpha),
-                    secondaryTextColor = secondaryTextColor.copy(alpha = contentAlpha),
-                    textFirst = false,
-                    modifier = Modifier.weight(1f)
-                )
             }
             RadioButtonIndicator(
                 selected = selected,
@@ -120,51 +118,53 @@ private fun RadioButtonIndicator(
     borderColor: Color,
     radioButtonColor: Color
 ) {
-    Box(
-        modifier = Modifier
-            .size(26.dp)
-            .clip(CircleShape)
-            .border(1.8.dp, borderColor, CircleShape)
-            .padding(5.dp)
-    ) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(CircleShape)
-                    .background(radioButtonColor)
-            )
-        }
+    if (selected) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .border(6.dp, radioButtonColor, CircleShape)
+                .padding(5.dp)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .clip(CircleShape)
+                .border(1.8.dp, borderColor, CircleShape)
+                .padding(5.dp)
+        )
     }
 }
 
 @Composable
 private fun TextContent(
-    text: String,
+    modifier: Modifier = Modifier,
+    text: String?,
     helpText: String?,
+    textStyle: TextStyle = MyTheme.CaptionMedium,
+    helpTextStyle: TextStyle = MyTheme.OverlineCaptionMedium,
     primaryTextColor: Color,
     secondaryTextColor: Color,
     textFirst: Boolean,
-    modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier,
         horizontalAlignment = if (textFirst) Alignment.End else Alignment.Start
     ) {
-        Text(
-            text = text,
-            color = primaryTextColor,
-            fontSize = 13.sp,
-            lineHeight = 18.sp,
-            fontWeight = if (textFirst) FontWeight.Normal else FontWeight.Medium,
-            style = MyTheme.CaptionMedium
-        )
+        if (text != null) {
+            Text(
+                text = text,
+                color = primaryTextColor,
+                style = textStyle
+            )
+        }
 
         if (helpText != null) {
             Text(
                 text = helpText,
                 color = secondaryTextColor,
-                style = MyTheme.OverlineCaptionMedium
+                style = helpTextStyle
             )
         }
     }
@@ -173,9 +173,18 @@ private fun TextContent(
 @Preview(showBackground = true)
 @Composable
 fun RadioButtonPreview() {
-    var selectedOption by remember { mutableStateOf(1) }
+    var selectedOption by remember { mutableIntStateOf(1) }
 
     Column(modifier = Modifier.padding(16.dp)) {
+        DashRadioButton(
+            leadingIcon = R.drawable.ic_preview,
+            text = "Text",
+            helpText = "help text",
+            selected = selectedOption == 3,
+            onClick = { selectedOption = 3 },
+            trailingText = "Text",
+            trailingHelpText = "help text"
+        )
         // Radio button with text on the right
         DashRadioButton(
             text = "Option 1",
@@ -206,15 +215,54 @@ fun RadioButtonPreview() {
         Spacer(modifier = Modifier.height(16.dp))
 
         // Text on the left, radio button on the right
-        DashRadioButton(
-            text = "Right-aligned option",
-            helpText = "Help text for this option",
-            selected = selectedOption == 3,
-            onClick = { selectedOption = 3 },
-            textEndAligned = true
+
+        HorizontalDivider()
+        Text("RadioGroup (simple)", style = MyTheme.OverlineSemibold)
+        HorizontalDivider()
+        val selectedFrequency = remember { mutableStateOf("Once per month") }
+        RadioGroup(
+            listOf("Once per week", "Once per month", "Once Per day"),
+            selectedFrequency.value,
+            { selectedFrequency.value = it }
+        )
+        HorizontalDivider()
+        Text("RadioGroup (local currencies)", style = MyTheme.OverlineSemibold)
+        HorizontalDivider()
+        val selectedCurrency = remember { mutableIntStateOf(1) }
+        RadioGroup(
+            listOf(
+                DashRadioGroupOption(
+                    R.drawable.currency_code_usd,
+                    "United States Dollar",
+                    helpText = "25.00",
+                    trailingHelpText = "USD"
+                ),
+                DashRadioGroupOption(
+                    R.drawable.currency_code_chf,
+                    "Swiss Franc",
+                    helpText = "22.00",
+                    trailingHelpText = "CHF"
+                ),
+                DashRadioGroupOption(
+                    R.drawable.currency_code_rub,
+                    "Russian Ruble",
+                    helpText = "121.00",
+                    trailingHelpText = "RUB"
+                )
+            ),
+            selectedCurrency.intValue,
+            { selectedCurrency.intValue = it }
         )
     }
 }
+
+data class DashRadioGroupOption(
+    val icon: Int? = null,
+    val text: String,
+    val helpText: String? = null,
+    val trailingText: String? = null,
+    val trailingHelpText: String? = null
+)
 
 // Usage example for a radio group
 @Composable
@@ -230,6 +278,33 @@ fun RadioGroup(
                 text = option,
                 selected = option == selectedOption,
                 onClick = { onOptionSelected(option) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            if (option != options.last()) {
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun RadioGroup(
+    options: List<DashRadioGroupOption>,
+    selectedOption: Int,
+    onOptionSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        options.forEachIndexed { index, option ->
+            DashRadioButton(
+                leadingIcon = option.icon,
+                text = option.text,
+                helpText = option.helpText,
+                trailingText = option.trailingText,
+                trailingHelpText = option.trailingHelpText,
+                selected = index == selectedOption,
+                onClick = { onOptionSelected(index) },
                 modifier = Modifier.fillMaxWidth()
             )
 
