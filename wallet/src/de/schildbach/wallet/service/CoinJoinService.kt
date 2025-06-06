@@ -289,7 +289,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        val coinJoinBalance = walletDataProvider.observeMixedBalance().firstOrNull() ?: Coin.ZERO
+        val coinJoinBalance = walletDataProvider.getMixedBalance()
         val hasBalanceLeftToMix = updateBalanceMutex.withLock {
             CoinJoinClientOptions.setAmount(balance)
             val walletEx = walletDataProvider.wallet as WalletEx

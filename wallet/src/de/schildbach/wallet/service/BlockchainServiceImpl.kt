@@ -1485,7 +1485,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun updateAppWidget() {
-        val balance = application.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+        val balance = application.getWalletBalance()
         WalletBalanceWidgetProvider.updateWidgets(this@BlockchainServiceImpl, balance)
     }
 
