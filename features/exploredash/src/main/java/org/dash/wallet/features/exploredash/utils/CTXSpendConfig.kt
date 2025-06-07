@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.utils
 
 import android.content.Context
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
