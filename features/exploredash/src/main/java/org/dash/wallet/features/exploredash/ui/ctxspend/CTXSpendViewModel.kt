@@ -280,6 +280,14 @@ class CTXSpendViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
+    suspend fun checkToken(): Boolean {
+        return try {
+            repository.refreshToken()
+        } catch (ex: Exception) {
+            false
+        }
+    }
+
     fun createEmailIntent(
         subject: String,
         ex: CTXSpendException
