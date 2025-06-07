@@ -286,6 +286,7 @@ class CTXSpendViewModel @Inject constructor(
         } catch (ex: Exception) {
             false
         }
+    }
 
     fun createEmailIntent(
         subject: String,
