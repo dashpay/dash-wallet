@@ -1348,6 +1348,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
+                        coinJoinService.shutdown()
                         application.finalizeWipe()
                     }
                     //Clear the blockchain identity

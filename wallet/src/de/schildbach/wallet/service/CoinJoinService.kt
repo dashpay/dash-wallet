@@ -104,6 +104,8 @@ interface CoinJoinService {
     suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
+    /** shutdown coinjoin mixing */
+    suspend fun shutdown()
 }
 
 enum class MixingStatus {
@@ -275,6 +277,10 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
+    override suspend fun shutdown() {
+        config.setMode(CoinJoinMode.NONE)
+    }
+
     private suspend fun getCurrentTimeSkew(): Long {
         return try {
             getTimeSkew()
@@ -290,9 +296,10 @@ class CoinJoinMixingService @Inject constructor(
 
     private suspend fun updateBalance(balance: Coin) {
         val coinJoinBalance = walletDataProvider.getMixedBalance()
-        val hasBalanceLeftToMix = updateBalanceMutex.withLock {
+        val walletEx = walletDataProvider.wallet as? WalletEx // may be null if wallet was reset
+        val hasBalanceLeftToMix = walletEx != null && updateBalanceMutex.withLock {
             CoinJoinClientOptions.setAmount(balance)
-            val walletEx = walletDataProvider.wallet as WalletEx
+
             org.bitcoinj.core.Context.propagate(walletEx.context)
             val anonBalance = walletEx.getAnonymizableBalance(false, false)
 
