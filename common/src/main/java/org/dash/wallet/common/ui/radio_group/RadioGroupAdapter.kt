@@ -193,13 +193,16 @@ class RadioButtonViewHolder(
     }
 }
 
-fun RecyclerView.setupRadioGroup(radioGroupAdapter: RadioGroupAdapter) {
-    val divider = ContextCompat.getDrawable(context, R.drawable.list_divider)!!
-    val decorator = ListDividerDecorator(
-        divider,
-        showAfterLast = false,
-        marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
-    )
-    addItemDecoration(decorator)
+fun RecyclerView.setupRadioGroup(radioGroupAdapter: RadioGroupAdapter, useDecorator: Boolean = true) {
+    if (useDecorator) {
+        val divider = ContextCompat.getDrawable(context, R.drawable.list_divider)!!
+        val decorator = ListDividerDecorator(
+            divider,
+            showAfterLast = false,
+            marginStart = resources.getDimensionPixelOffset(R.dimen.divider_margin_horizontal)
+        )
+        addItemDecoration(decorator)
+    }
+
     adapter = radioGroupAdapter
 }

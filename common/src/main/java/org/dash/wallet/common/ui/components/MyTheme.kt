@@ -28,21 +28,90 @@ import org.dash.wallet.common.R
 
 object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
+    private val interRegular = FontFamily(Font(R.font.inter_regular))
+    private val interMedium = FontFamily(Font(R.font.inter_medium))
+    private val interSemibold = FontFamily(Font(R.font.inter_semibold))
+    private val interBold = FontFamily(Font(R.font.inter_bold))
 
-    val Body2Regular = TextStyle(
-        fontSize = 14.sp,
-        lineHeight = 20.sp,
-        fontFamily = FontFamily.Default, // FontFamily(Font(R.font.inter)) // crashes,
-        fontWeight = FontWeight(400),
-        color = Color.White
+    val Micro = TextStyle(
+        fontSize = 10.sp,
+        lineHeight = 16.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(500),
+        textAlign = TextAlign.Center,
+    )
+
+    val CaptionMedium = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
+    )
+
+    val Overline = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500),
+        textAlign = TextAlign.Center
     )
 
     val OverlineSemibold = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        fontFamily = FontFamily.Default, // FontFamily(Font(R.font.inter)) // crashes,
+        fontFamily = interSemibold,
         fontWeight = FontWeight(600),
-        color = Color.White,
         textAlign = TextAlign.Center
     )
+
+    val Caption = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
+    val OverlineMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500),
+        textAlign = TextAlign.Center
+    )
+
+    val Body2Regular = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
+    val SubtitleSemibold = TextStyle(
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        fontFamily = interSemibold,
+        fontWeight = FontWeight(600)
+    )
+
+    val H6Bold = TextStyle(
+        fontSize = 20.sp,
+        lineHeight = 26.sp,
+        fontFamily = interBold,
+        fontWeight = FontWeight(700)
+    )
+
+    object Colors {
+        val backgroundPrimary = Color(0xFFF5F6F7)
+        val textPrimary = Color(0xFF191C1F)
+        val backgroundSecondary = Color(0xFFFFFFFF)
+        val textSecondary = Color(0xFF6E757C)
+        val divider = Color(0x1A191C1F)
+        val primary4 = Color(0x14191C1F)
+        val primary5 = Color(0x0D191C1F)
+        val primary40 = Color(0x66191C1F)
+        val dashBlue = Color(0xFF008DE4)
+        val dashBlue5 = Color(0x0D008DE4)
+        val gray = Color(0xFFB0B6BC)
+        val gray400 = Color(0xFF75808A)
+    }
 }

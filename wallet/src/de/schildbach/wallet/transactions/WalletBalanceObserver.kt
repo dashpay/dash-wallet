@@ -18,7 +18,6 @@
 package de.schildbach.wallet.transactions
 
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
@@ -40,7 +39,6 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.data.WalletUIConfig
 import org.slf4j.LoggerFactory
-
 
 class WalletBalanceObserver(
     private val wallet: Wallet,
@@ -72,7 +70,6 @@ class WalletBalanceObserver(
         wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletChangeListener)
         wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletChangeListener)
         emitLastBalances()
-        emitBalances()
     }
 
     fun close() {

@@ -48,10 +48,12 @@ fun ButtonLarge(
     modifier: Modifier,
     colors: ButtonColors,
     @StringRes
-    textId: Int
+    textId: Int,
+    enabled: Boolean = true
 ) {
     Button(
         onClick = { onClick.invoke() },
+        enabled = enabled,
         modifier = modifier
             .height(46.dp), // from Button.Primary.Large
         colors = colors,
@@ -80,18 +82,18 @@ fun ButtonLargePreview() {
             .padding(20.dp, 10.dp, 20.dp, 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        ButtonLarge(
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = colorResource(id = R.color.dash_white),
-                contentColor = colorResource(id = R.color.dash_blue),
-                disabledContainerColor = colorResource(id = R.color.disabled_button_bg),
-                disabledContentColor = colorResource(id = R.color.dash_blue)
-            ),
-            R.string.button_okay
-        )
+    ButtonLarge(
+        onClick = {  },
+        modifier = Modifier
+            .fillMaxWidth(),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = colorResource(id = R.color.dash_white),
+            contentColor = colorResource(id = R.color.dash_blue),
+            disabledContainerColor = colorResource(id = R.color.disabled_button_bg),
+            disabledContentColor = colorResource(id = R.color.dash_blue)
+        ),
+        R.string.button_okay
+    )
 
         ButtonLarge(
             onClick = { },
@@ -105,5 +107,5 @@ fun ButtonLargePreview() {
             ),
             R.string.network_unavailable_balance_not_accurate
         )
-    }
+}
 }

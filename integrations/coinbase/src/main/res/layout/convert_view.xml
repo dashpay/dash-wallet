@@ -24,7 +24,8 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/root_container"
-        android:background="@drawable/selectable_round_corners"
+        android:background="@drawable/rounded_background"
+        android:theme="@style/SecondaryBackground"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
@@ -72,7 +73,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="61dp"
-            android:background="@color/background_secondary"
             app:is_crypto_convert_item_arrow_visible="true"
             app:is_crypto_convert_item_group_visible="false"
             app:layout_constraintEnd_toEndOf="parent"
@@ -88,8 +88,7 @@
             app:layout_constraintTop_toBottomOf="@+id/convert_from_btn"
             app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
             app:layout_constraintEnd_toEndOf="@+id/convert_from_btn"
-            tools:visibility="visible"
-            >
+            tools:visibility="visible">
 
             <LinearLayout
                 android:id="@+id/wallet_balance_container"
@@ -107,29 +106,29 @@
                     android:visibility="gone"
                     tools:visibility="visible" />
 
-            <org.dash.wallet.common.ui.CurrencyTextView
-                android:id="@+id/convert_from_dash_balance"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="0dp"
-                android:layout_gravity="center_vertical"
-                android:lineSpacingExtra="2sp"
-                android:textColor="@color/dash_black"
-                android:textSize="10sp"
-                tools:text="Dash Wallet"
-                tools:visibility="visible" />
+                <org.dash.wallet.common.ui.CurrencyTextView
+                    android:id="@+id/convert_from_dash_balance"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="0dp"
+                    android:layout_gravity="center_vertical"
+                    android:lineSpacingExtra="2sp"
+                    android:textColor="@color/dash_black"
+                    android:textSize="10sp"
+                    tools:text="Dash Wallet"
+                    tools:visibility="visible" />
 
-            <org.dash.wallet.common.ui.CurrencyTextView
-                android:id="@+id/convert_from_dash_fiat_amount"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="5dp"
-                android:layout_gravity="center_vertical"
-                android:includeFontPadding="false"
-                android:textColor="@color/dash_gray"
-                android:textSize="10sp"
-                tools:text="USD 0.00"
-                tools:visibility="visible" />
+                <org.dash.wallet.common.ui.CurrencyTextView
+                    android:id="@+id/convert_from_dash_fiat_amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="5dp"
+                    android:layout_gravity="center_vertical"
+                    android:includeFontPadding="false"
+                    android:textColor="@color/dash_gray"
+                    android:textSize="10sp"
+                    tools:text="USD 0.00"
+                    tools:visibility="visible" />
             </LinearLayout>
 
 
@@ -162,8 +161,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="match_parent"
                 android:layout_toEndOf="@+id/loading_progress_container"
-                android:visibility="invisible"
-                />
+                android:visibility="invisible" />
         </RelativeLayout>
 
         <TextView
@@ -183,7 +181,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:background="@color/background_secondary"
             app:crypto_convert_item_icon="@drawable/ic_dash_blue_filled"
             tools:crypto_convert_item_service_title="@string/dash_wallet_name"
             tools:crypto_convert_item_title="@string/dash"

@@ -1,18 +1,43 @@
+/*
+ * Copyright 2020 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.schildbach.wallet.ui.dashpay.work
 
 import android.annotation.SuppressLint
 import android.app.Application
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.liveData
-import androidx.lifecycle.switchMap
-import androidx.work.*
+import android.content.Context
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkContinuation
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.work.BaseWorker
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
-class SendContactRequestOperation(val application: Application) {
+@OptIn(ExperimentalCoroutinesApi::class)
+class SendContactRequestOperation(val context: Context) {
 
     class SendContactRequestOperationException(message: String) : java.lang.Exception(message)
 
@@ -23,26 +48,30 @@ class SendContactRequestOperation(val application: Application) {
 
         fun uniqueWorkName(toUserId: String) = WORK_NAME + toUserId
 
+        fun hasActiveOperation(context: Context, userId: String): Boolean {
+            val workInfos = WorkManager.getInstance(context).getWorkInfosForUniqueWork(uniqueWorkName(userId)).get()
+            return workInfos.any { !it.state.isFinished }
+        }
+
         fun operationStatus(
-            application: Application,
+            context: Context,
             toUserId: String,
             analytics: AnalyticsService
-        ): LiveData<Resource<Pair<String, String>>> {
-            val workManager: WorkManager = WorkManager.getInstance(application)
-            return workManager.getWorkInfosForUniqueWorkLiveData(uniqueWorkName(toUserId)).switchMap {
-                return@switchMap liveData {
-
-                    if (it.isNullOrEmpty()) {
-                        return@liveData
+        ): Flow<Resource<Pair<String, String>>> {
+            val workManager: WorkManager = WorkManager.getInstance(context)
+            return workManager.getWorkInfosForUniqueWorkFlow(uniqueWorkName(toUserId)).flatMapLatest { workInfos ->
+                flow {
+                    if (workInfos.isNullOrEmpty()) {
+                        return@flow
                     }
 
-                    if (it.size > 1) {
+                    if (workInfos.size > 1) {
                         val e = RuntimeException("there should never be more than one unique work ${uniqueWorkName(toUserId)}")
                         analytics.logError(e)
                         throw e
                     }
 
-                    val workInfo = it[0]
+                    val workInfo = workInfos[0]
                     when (workInfo.state) {
                         WorkInfo.State.SUCCEEDED -> {
                             val userIdOut = SendContactRequestWorker.extractUserId(workInfo.outputData)!!
@@ -75,17 +104,16 @@ class SendContactRequestOperation(val application: Application) {
             }
         }
 
-        fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
+        fun allOperationsStatus(application: Application): Flow<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
-            return workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!).switchMap {
-                return@switchMap liveData {
-
-                    if (it.isNullOrEmpty()) {
-                        return@liveData
+            return workManager.getWorkInfosByTagFlow(SendContactRequestWorker::class.qualifiedName!!).flatMapLatest { workInfos ->
+                flow {
+                    if (workInfos.isNullOrEmpty()) {
+                        return@flow
                     }
 
                     val result = mutableMapOf<String, Resource<WorkInfo>>()
-                    it.forEach {
+                    workInfos.forEach {
                         var toUserId = ""
                         it.tags.forEach { tag ->
                             if (tag.startsWith("toUserId:")) {
@@ -122,13 +150,6 @@ class SendContactRequestOperation(val application: Application) {
         }
     }
 
-    private val workManager: WorkManager = WorkManager.getInstance(application)
-
-    /**
-     * Gets the list of all SendContactRequestWorker WorkInfo's
-     */
-    val allOperationsData = workManager.getWorkInfosByTagLiveData(SendContactRequestWorker::class.qualifiedName!!)
-
     @SuppressLint("EnqueueWork")
     fun create(toUserId: String): WorkContinuation {
 
@@ -140,10 +161,9 @@ class SendContactRequestOperation(val application: Application) {
                 .addTag("toUserId:$toUserId")
                 .build()
 
-        return WorkManager.getInstance(application)
+        return WorkManager.getInstance(context)
                 .beginUniqueWork(uniqueWorkName(toUserId),
                         ExistingWorkPolicy.KEEP,
                         sendContactRequestWorker)
     }
-
-}
+} 

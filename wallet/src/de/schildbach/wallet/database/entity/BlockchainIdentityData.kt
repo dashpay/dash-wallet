@@ -23,6 +23,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.google.common.base.Stopwatch
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
@@ -43,6 +44,7 @@ import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.util.Converters
 import org.dashj.platform.sdk.KeyType
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -72,6 +74,9 @@ data class BlockchainIdentityData(
     var votingPeriodStart: Long? = null
     ) {
 
+    companion object {
+        val log = LoggerFactory.getLogger(BlockchainIdentityData::class.java)
+    }
     var id = 1
         set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
@@ -88,9 +93,14 @@ data class BlockchainIdentityData(
             return if (list.isEmpty()) null else list.first()
         }
         if (wallet != null) {
+            val watch1 = Stopwatch.createStarted()
             creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
+                log.info("loading wallet.getTransaction: {}", watch1)
                 val authExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-                authExtension.getAssetLockTransaction(this)
+                val watch2 = Stopwatch.createStarted()
+                val result = authExtension.getAssetLockTransaction(this)
+                log.info("loading getAssetLockTransaction: {}", watch2)
+                result
             }
         }
         return creditFundingTransactionCache

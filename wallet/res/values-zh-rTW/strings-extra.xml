@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">掃描</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">付款</string>
+    <string name="shortcut_send">付款</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">發送給聯繫人</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -288,7 +288,6 @@
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
-    <string name="about_copyright">版權所有 © 2024 Dash Core Group</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">DashPay 錢包%s</string>
     <string name="about_last_explore_device_sync">上一次探索設備同步</string>

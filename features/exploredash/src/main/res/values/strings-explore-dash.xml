@@ -88,6 +88,9 @@
     <string name="explore_filtered_by">Filtered by:</string>
     <string name="explore_pay_gift_card">Pay with gift card</string>
     <string name="explore_sort_by">Sort by</string>
+    <string name="gift_card_types">Gift card types</string>
+    <string name="flexible_amount_option">Flexible amounts</string>
+    <string name="fixed_denom_option">Fixed denominated amounts</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -119,6 +122,7 @@
     <string-array name="sort_by_options_names">
         <item>Name</item>
         <item>Distance</item>
+        <item>Discount</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -203,6 +207,8 @@
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="gift_card_barcode_failed">Failed to load the barcode</string>
     <string name="gift_card_tx_title">Gift card · %s</string>
+    <string name="select_amount">Select amount</string>
+    <string name="select_fixed_amount">This merchant sells gift cards at fixed prices</string>
 
     <!-- dash spend login-->
     <string name="enter_verification_code">Enter verification code</string>
@@ -222,6 +228,7 @@
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
+    <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>
     <string name="gift_card_rejected">The payment has been rejected.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
@@ -231,6 +238,7 @@
     <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">Terms &amp; conditions</string>
     <string name="barcode_placeholder">As soon as your code is generated, it will be displayed here.</string>
+    <string name="gift_card_contact_ctx">Contact CTX Support</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Create account</string>
@@ -239,4 +247,7 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Buy a gift card with your DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="ctx_terms_url" translatable="false">https://ctx.com/gift-card-agreement/</string>
+    <string name="temporarily_unavailable">Temporarily unavailable</string>
+    <string name="token_expired_title">Your session expired</string>
+    <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
 </resources>

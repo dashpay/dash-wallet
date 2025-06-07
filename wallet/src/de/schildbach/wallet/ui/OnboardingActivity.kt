@@ -25,6 +25,7 @@ import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.Arrangement
@@ -43,6 +44,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.onboarding.WelcomePagerAdapter
 import de.schildbach.wallet_test.R
@@ -124,6 +126,16 @@ class OnboardingActivity : RestoreFromFileActivity() {
     lateinit var config: Configuration
     @Inject
     lateinit var pinRetryController: PinRetryController
+
+    private val selectWordCountLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
+            viewModel.createNewWallet(
+                onboardingInvite,
+                result.data!!.extras!!.getInt(SelectSecurityLevelActivity.EXTRA_WORD_COUNT)
+            )
+        }
+    }
 
     private val onPageChanged = object : ViewPager2.OnPageChangeCallback() {
 
@@ -306,6 +318,14 @@ class OnboardingActivity : RestoreFromFileActivity() {
         //showButtonsDelayed()
     }
 
+    private fun initView() {
+        binding.createNewWallet.setOnClickListener {
+            selectWordCountLauncher.launch(
+                Intent(this, SelectSecurityLevelActivity::class.java)
+            )
+        }
+    }
+
     private fun createNewWallet() {
         viewModel.createNewWallet()
     }
@@ -319,12 +339,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
     private fun restoreWallet() {
         viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
         restoreWalletFromFile()
-    }
-
-    private fun initView() {
-        viewModel.startActivityAction.observe(this) {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
-        }
     }
 
     @SuppressLint("StringFormatInvalid")

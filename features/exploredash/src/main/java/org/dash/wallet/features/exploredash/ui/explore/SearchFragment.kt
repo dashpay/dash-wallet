@@ -33,7 +33,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
@@ -42,11 +44,13 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
@@ -64,6 +68,7 @@ import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
+import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
@@ -110,14 +115,20 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         hideKeyboard()
 
         if (item is Merchant) {
-            viewModel.openMerchantDetails(item, true)
+            lifecycleScope.launch {
+                viewModel.openMerchantDetails(item, true)
+                updateIsEnabled(item)
+            }
         } else if (item is Atm) {
             viewModel.openAtmDetails(item)
         }
     }
 
     private val merchantLocationsAdapter = MerchantsLocationsAdapter { merchant, _ ->
-        viewModel.openMerchantDetails(merchant)
+        lifecycleScope.launch {
+            viewModel.openMerchantDetails(merchant)
+            updateIsEnabled(merchant)
+        }
     }
 
     private val searchResultsDecorator: ListDividerDecorator by lazy {
@@ -133,14 +144,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var savedLocationsScrollPosition: Int = -1
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-
-        lifecycleScope.launch {
-            viewModel.setIsInfoShown(false)
-        }
-    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -170,6 +173,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.toolbarTitle.text = getToolbarTitle()
         binding.recenterMapBtn.setOnClickListener { viewModel.recenterMapCallback.call() }
+
+        binding.infoButton.setOnClickListener {
+            ExploreDashInfoDialog().show(requireActivity())
+        }
+
+        binding.infoButton.setOnClickListener {
+            ExploreDashInfoDialog().show(requireActivity())
+        }
 
         binding.manageGpsView.managePermissionsBtn.setOnClickListener {
             lifecycleScope.launch {
@@ -217,6 +228,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         searchHeaderAdapter.allowSpaceForMessage = true
                         recenterMapBtnSpacer.isVisible = true
                         syncMessage.text = getString(R.string.sync_in_progress_canceled)
+                    }
+                }
+            }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                if (!ctxSpendViewModel.checkToken()) {
+                    AdaptiveDialog.create(
+                        null,
+                        getString(R.string.token_expired_title),
+                        getString(R.string.token_expired_message),
+                        getString(R.string.button_okay)
+                    ).show(requireActivity()) {
+                        if (isAdded) {
+                            showLoginDialog()
+                        }
                     }
                 }
             }
@@ -321,7 +349,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         viewModel.filterMode.observe(viewLifecycleOwner) { mode ->
-            searchHeaderAdapter.isFilterButtonVisible = mode != FilterMode.Online
             binding.noResultsPanel.isVisible = false
             searchHeaderAdapter.title = getSearchTitle()
             searchHeaderAdapter.subtitle = getSearchSubtitle()
@@ -447,11 +474,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 filters.territory.isNotEmpty()
         }
 
-        viewModel.selectedTerritory.observe(viewLifecycleOwner) {
-            val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
-            bottomSheet.isDraggable = isBottomSheetDraggable()
-            bottomSheet.state = setBottomSheetState()
-        }
+        viewModel.appliedFilters
+            .distinctUntilChangedBy { it.territory }
+            .observe(viewLifecycleOwner) {
+                val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
+                bottomSheet.isDraggable = isBottomSheetDraggable()
+                bottomSheet.state = setBottomSheetState()
+            }
 
         viewLifecycleOwner.observeOnDestroy {
             binding.searchResults.adapter = null
@@ -547,7 +576,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
-                                ctxSpendViewModel.updateMerchantDetails(viewModel.selectedItem.value as Merchant)
+                                val merchant = viewModel.selectedItem.value as Merchant
+                                ctxSpendViewModel.updateMerchantDetails(merchant)
+                                updateIsEnabled(merchant)
                             }
                         }
                         transitToDetails()
@@ -633,7 +664,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         binding.searchResults.adapter = ConcatAdapter(searchHeaderAdapter, searchResultsAdapter)
-        searchHeaderAdapter.searchText = viewModel.searchQuery
+        searchHeaderAdapter.searchText = viewModel.appliedFilters.value.query
 
         val layoutParams = binding.searchResults.layoutParams as ConstraintLayout.LayoutParams
         layoutParams.topMargin = resources.getDimensionPixelOffset(R.dimen.search_results_margin_top)
@@ -730,17 +761,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             return ""
         }
 
-        val searchLocation =
-            if (viewModel.selectedTerritory.value?.isNotEmpty() == true) {
-                viewModel.selectedTerritory.value
-            } else {
-                val radiusOption = viewModel.selectedRadiusOption.value ?: ExploreViewModel.DEFAULT_RADIUS_OPTION
-                resources.getQuantityString(
-                    if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
-                    radiusOption,
-                    radiusOption
-                )
-            }
+        val searchLocation = viewModel.appliedFilters.value.territory.ifEmpty {
+            val radiusOption = viewModel.appliedFilters.value.radius
+            resources.getQuantityString(
+                if (viewModel.isMetric) R.plurals.radius_kilometers else R.plurals.radius_miles,
+                radiusOption,
+                radiusOption
+            )
+        }
 
         val resultSize = viewModel.pagingSearchResultsCount.value ?: 0
         val quantityStr =
@@ -807,8 +835,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         return viewModel.selectedItem.value == null &&
             viewModel.isLocationEnabled.value == true &&
             (
-                isPhysicalSearch || viewModel.paymentMethodFilter.isNotEmpty() ||
-                    viewModel.selectedTerritory.value?.isNotEmpty() == true
+                isPhysicalSearch || viewModel.appliedFilters.value.payment.isNotEmpty() ||
+                    viewModel.appliedFilters.value.territory.isNotEmpty()
                 )
     }
 
@@ -829,8 +857,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun isBottomSheetDraggable(): Boolean {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch =
-            viewModel.selectedTerritory.value.isNullOrEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
+            viewModel.isLocationEnabled.value == true
 
         return !isDetails && nearbySearch
     }
@@ -839,8 +867,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setBottomSheetState(forceExpand: Boolean = false): Int {
         val screenState = viewModel.screenState.value
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
-        val nearbySearch =
-            viewModel.selectedTerritory.value.isNullOrEmpty() && viewModel.isLocationEnabled.value == true
+        val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
+            viewModel.isLocationEnabled.value == true
 
         return when {
             forceExpand -> BottomSheetBehavior.STATE_EXPANDED
@@ -861,6 +889,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (isMerchantTopic) {
                 viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
             }
+        }
+    }
+
+    private suspend fun updateIsEnabled(merchant: Merchant) {
+        val wasEnabled = merchant.active
+        ctxSpendViewModel.updateMerchantDetails(merchant)
+
+        if (merchant.active != wasEnabled) {
+            binding.itemDetails.bindItem(merchant)
         }
     }
 }

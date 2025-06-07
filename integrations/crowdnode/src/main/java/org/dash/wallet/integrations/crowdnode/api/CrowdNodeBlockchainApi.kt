@@ -67,11 +67,11 @@ open class CrowdNodeBlockchainApi @Inject constructor(
         it.outputs.filter { output ->
             ScriptPattern.isP2PKH(output.scriptPubKey) &&
                 Address.fromPubKeyHash(
-                walletData.wallet!!.params,
+                walletData.networkParameters,
                 ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
             ) == accountAddress
         }.forEach { output ->
-            walletData.wallet!!.lockOutput(output.outPointFor)
+            walletData.lockOutput(output.outPointFor)
         }
     }
 

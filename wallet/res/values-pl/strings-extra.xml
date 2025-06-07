@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Zeskanuj</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Wyślij</string>
+    <string name="shortcut_send">Wyślij</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Wyślij do Kontaktu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -297,7 +297,7 @@
     <string name="about_review_and_rate">Przeglądnij i oceń appke</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2024 Dash Core Group</string>
+    <string name="about_copyright">Prawa autorskie © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Ostatnia synchronizacja Eksploruj na urządzeniu</string>

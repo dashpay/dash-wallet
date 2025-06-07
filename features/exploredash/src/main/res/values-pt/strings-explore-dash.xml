@@ -63,6 +63,7 @@
     <string name="explore_back_to_nearest">Voltar para o local mais próximo</string>
     <string name="explore_select_location">Selecionar local</string>
     <string name="explore_pay_with_dash">Pagar com Dash</string>
+    <string name="explore_pay_with_dash_save">Salvar %.2f%%</string>
     <string name="explore_buy_gift_card">Comprar um Vale-presente</string>
     <string name="explore_buy_dash">Comprar Dash</string>
     <string name="explore_sell_dash">Vender Dash</string>
@@ -87,7 +88,6 @@
     <string name="explore_filtered_by">Filtrado por:</string>
     <string name="explore_pay_gift_card">Pagar com cartão presente</string>
     <string name="explore_sort_by">Ordenar por</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Próximo</item>
@@ -118,6 +118,7 @@
     <string-array name="sort_by_options_names">
         <item>Nome</item>
         <item>Distância</item>
+        <item>Desconto</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -204,12 +205,13 @@
     <string name="send_coins_error_msg">Erro ao enviar Dash!</string>
     <string name="gift_card_barcode_failed">Falha ao carregar o código de barras</string>
     <string name="gift_card_tx_title">Cartão-presente · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Digite o código de verificação</string>
     <string name="verification_check_email">Verifique seu email e insira o código de verificação</string>
     <string name="buy_gift_card">Compre um cartão-presente com sua conta DashSpend</string>
+    <string name="dashspend_create_account">Crie uma conta ou faça login em uma existente</string>
     <string name="create_new_account">Criar nova conta</string>
+    <string name="login">Entrar</string>
     <string name="password">Senha</string>
     <string name="logged_in_as">Conectado como %s</string>
     <string name="log_out">Sair</string>
@@ -224,9 +226,16 @@
     <string name="gift_card_unknown_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, entre em contato com o suporte com o txid %s.</string>
     <string name="gift_card_rejected">O pagamento foi rejeitado. Por favor, entre em contato com CTX com o ID do cartão-presente %s, o ID do pagamento %s e o ID da transação %s.</string>
     <string name="gift_card_redeem_url_not_supported">O pagamento foi feito para um comerciante que fornece uma URL de resgate, mas isso não é suportado atualmente. Por favor, entre em contato com CTX com o ID do cartão-presente %s, o ID do pagamento %s e o ID da transação %s.</string>
+    <string name="dashspend_terms_conditions">Aceitar termos e condições</string>
     <string name="accept_terms_conditions">Eu aceito os termos e condições do DashSpend</string>
     <string name="tap_link_to_proceed">Para criar uma conta no DashSpend, você deve clicar no link abaixo</string>
     <string name="accept_to_proceed">Para criar uma conta no DashSpend, você deve aceitar os termos e condições do DashSpend</string>
+    <string name="view_terms_conditions">Termos &amp; condições</string>
+    <string name="barcode_placeholder">Assim que seu código for gerado, ele será exibido aqui.</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Criar conta</string>
+    <string name="log_in_to_ctxspend_account">Entrar na sua conta</string>
     <string name="log_in_to_ctxspend_account_desc">Seu email é usado apenas para enviar uma senha única.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Compre um cartão-presente com sua conta DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Crie uma conta no DashSpend ou faça login em uma existente</string>

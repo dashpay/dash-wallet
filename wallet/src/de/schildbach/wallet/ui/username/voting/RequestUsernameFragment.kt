@@ -342,6 +342,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     }
 
     private fun onContinue() {
+        KeyboardUtil.hideKeyboard(requireContext(), binding.usernameInput)
+
         if (requestUserNameViewModel.uiState.value.usernameContestable) {
             AdaptiveDialog.create(
                 R.drawable.ic_verify_identity,

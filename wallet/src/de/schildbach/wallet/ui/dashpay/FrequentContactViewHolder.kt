@@ -15,12 +15,9 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.view.LayoutInflater
-import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.ui.dashpay.utils.display
-import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FrequentContactItemBinding
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 

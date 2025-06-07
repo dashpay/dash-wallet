@@ -34,10 +34,10 @@ import de.schildbach.wallet_test.databinding.NotificationTransactionRowBinding
 import de.schildbach.wallet_test.databinding.ProfileActivityHeaderRowBinding
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.core.TransactionBag
 import java.util.*
 
-class NotificationsAdapter(val context: Context, val wallet: Wallet, private val showAvatars: Boolean = false,
+class NotificationsAdapter(val context: Context, val transactionBag: TransactionBag, private val showAvatars: Boolean = false,
                            private val acceptRequest: (usernameSearchResult: UsernameSearchResult, position: Int) -> Unit,
                            private val ignoreRequest: (usernameSearchResult: UsernameSearchResult, position: Int) -> Unit,
                            private val onUserAlertDismissListener: (Int) -> Unit,
@@ -126,7 +126,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                         notificationViewItem.isNew, position == 0, recentlyModified, showAvatars, acceptRequest, ignoreRequest)
             }
             NOTIFICATION_PAYMENT -> {
-                holder.bind(notificationItem, transactionCache, wallet, chainLockBlockHeight)
+                holder.bind(notificationItem, transactionCache, transactionBag, chainLockBlockHeight)
             }
             NOTIFICATION_ALERT -> {
                 val userAlertItem = notificationItem as NotificationItemUserAlert
@@ -185,7 +185,7 @@ class NotificationsAdapter(val context: Context, val wallet: Wallet, private val
                 else -> when (notificationViewItem.notificationItem) {
                     is NotificationItemPayment -> {
                         val tx = notificationViewItem.notificationItem.tx!!
-                        val sent = tx.getValue(wallet).signum() < 0
+                        val sent = tx.getValue(transactionBag).signum() < 0
                         val isInternal = tx.purpose == Transaction.Purpose.KEY_ROTATION
                         if (filter === ProfileActivityHeaderHolder.Filter.INCOMING && !sent && !isInternal
                                 || filter === ProfileActivityHeaderHolder.Filter.ALL || filter === ProfileActivityHeaderHolder.Filter.OUTGOING && sent && !isInternal) {

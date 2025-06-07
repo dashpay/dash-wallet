@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">فیلتر بر اساس: </string>
     <string name="explore_pay_gift_card">پرداخت با کارت اعتباری</string>
     <string name="explore_sort_by">مرتب کردن بر اساس</string>
-
     <string-array name="merchants_filter_options">
         <item>آنلاین</item>
         <item>نزدیک‌ترین</item>
@@ -116,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>نام</item>
         <item>فاصله</item>
+        <item>تخفیف</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -200,7 +200,6 @@
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="gift_card_barcode_failed">بارکد بارگذاری نشد</string>
     <string name="gift_card_tx_title">کارت هدیه. %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">شماره تائید را وارد کنید</string>
     <string name="verification_check_email">ایمیل‌تان را چک کنید و کد تائید را وارد کنید</string>

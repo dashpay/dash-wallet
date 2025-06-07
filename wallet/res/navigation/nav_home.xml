@@ -63,6 +63,40 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/home_to_search"
+            app:destination="@id/nav_explore"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+
+            <argument
+                android:name="type"
+                android:defaultValue="Merchants"
+                app:argType="org.dash.wallet.features.exploredash.ui.explore.ExploreTopic" />
+        </action>
+
+        <action
+            android:id="@+id/home_to_uphold"
+            app:destination="@id/upholdPortalFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/home_to_BuySellOverview"
+            app:destination="@id/integrationOverviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/home_to_coinbase"
+            app:destination="@id/nav_coinbase"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment

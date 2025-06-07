@@ -20,9 +20,7 @@ import androidx.lifecycle.LiveData
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.platform.PlatformSyncService
 
-abstract class ContactsBasedLiveData<T>(val walletApplication: WalletApplication,
-                                        val platformSyncService: PlatformSyncService
-) : LiveData<T>(), OnContactsUpdated {
+abstract class ContactsBasedLiveData<T>(val platformSyncService: PlatformSyncService) : LiveData<T>(), OnContactsUpdated {
 
     private var listening = false
 

@@ -17,6 +17,8 @@
 
 package org.dash.wallet.features.exploredash.repository
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -26,24 +28,53 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-class CTXSpendException(message: String) : Exception(message) {
+class CTXSpendException(
+    message: String,
+    val errorCode: Int? = null,
+    val errorBody: String? = null
+) : Exception(message) {
     var resourceString: ResourceString? = null
+    private val errorMap: Map<String, Any>
 
     constructor(message: ResourceString) : this("") {
         this.resourceString = message
     }
+
+    init {
+        val type = object : TypeToken<Map<String, Any>>() {}.type
+        errorMap = try {
+            if (errorBody != null) {
+                Gson().fromJson(errorBody, type) ?: emptyMap()
+            } else {
+                emptyMap()
+            }
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    val isLimitError: Boolean
+        get() {
+            val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
+            return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
+        }
 }
 
 class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
-    private val config: CTXSpendConfig
+    private val config: CTXSpendConfig,
+    private val tokenAuthenticator: TokenAuthenticator
 ) : CTXSpendRepositoryInt {
-
+    companion object {
+        private val ONE_DAY = TimeUnit.DAYS.toMillis(1)
+    }
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun login(email: String): ResponseResource<Boolean> = safeApiCall {
@@ -94,12 +125,29 @@ class CTXSpendRepository @Inject constructor(
         )
     }
 
-    override suspend fun getMerchant(merchantId: String) = safeApiCall {
+    override suspend fun getMerchant(merchantId: String) =
         api.getMerchant(merchantId)
-    }
 
     override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
         api.getGiftCard(txid)
+    }
+
+    override suspend fun refreshToken(): Boolean {
+        return when (val tokenResponse = tokenAuthenticator.getUpdatedToken()) {
+            is ResponseResource.Success -> {
+                tokenResponse.value?.let {
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                    true
+                } ?: false
+            }
+
+            else -> {
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                false
+            }
+        }
     }
 }
 
@@ -117,6 +165,7 @@ interface CTXSpendRepositoryInt {
         merchantId: String
     ): ResponseResource<GiftCardResponse?>
 
-    suspend fun getMerchant(merchantId: String): ResponseResource<GetMerchantResponse?>
+    suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
+    suspend fun refreshToken(): Boolean
 }

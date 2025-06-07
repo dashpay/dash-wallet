@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">Na-filter ni:</string>
     <string name="explore_pay_gift_card">Magbayad gamit ang gift card</string>
     <string name="explore_sort_by">Pag-uri-uriin ayon</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Sa malapit</item>
@@ -116,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>Pangalan</item>
         <item>Distansya</item>
+        <item>Diskwento</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -200,7 +200,6 @@
     <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
     <string name="gift_card_barcode_failed">Nabigong i-load ang barcode</string>
     <string name="gift_card_tx_title">Gift card · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Ilagay ang verification code</string>
     <string name="verification_check_email">Suriin ang iyong email at ilagay ang verification code</string>

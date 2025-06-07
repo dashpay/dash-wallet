@@ -90,7 +90,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
         notificationsAdapter = NotificationsAdapter(
             requireContext(),
-            walletDataProvider.wallet!!,
+            walletDataProvider.transactionBag,
             true,
             { u, position -> onAcceptRequest(u, position) },
             { u, position -> onIgnoreRequest(u, position) },

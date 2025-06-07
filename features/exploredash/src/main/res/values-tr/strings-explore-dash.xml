@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">Şuna göre filtrelendi:</string>
     <string name="explore_pay_gift_card">Hediye kartıyla öde</string>
     <string name="explore_sort_by">Göre sırala</string>
-
     <string-array name="merchants_filter_options">
         <item>Çevrimiçi</item>
         <item>Yakında</item>
@@ -116,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>İsim</item>
         <item>Mesafe</item>
+        <item>İndirim</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -198,7 +198,6 @@
     <string name="send_coins_error_msg">Dash gönderim problemi!</string>
     <string name="gift_card_barcode_failed">Barkod yüklenemedi</string>
     <string name="gift_card_tx_title">Hediye Kartı · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">dogrulama kodunu giriniz</string>
     <string name="verification_check_email">E-postanızı kontrol edin ve doğrulama kodunu girin</string>

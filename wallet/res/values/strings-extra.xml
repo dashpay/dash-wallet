@@ -31,9 +31,9 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scan</string>
+    <string name="shortcut_scan_to_pay">Scan QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Send</string>
+    <string name="shortcut_send">Send</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Send to Contact</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Receive</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Import Private Key</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Add Shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Quick Receive</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash address copied to clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Show</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is not a recovery phrase word</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 words</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Recovery phrase must have 12 or 24 words</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Bad recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Wallet could not be restored:\n\n%s\n\nBad recovery phrase?</string>
 
@@ -219,7 +217,7 @@
     <string name="verify_info_title_1">Dash Core Group does NOT store this recovery phrase</string>
     <string name="verify_info_subtitle_1">Anyone that has your recovery phrase can access your funds.</string>
     <string name="verify_info_title_2">You will NOT be able to restore the wallet without a recovery phrase</string>
-    <string name="verify_info_subtitle_2">Write it in a safe place and don’t show it to anyone.</string>
+    <string name="verify_info_subtitle_2">Write it in a safe place and don\'t show it to anyone.</string>
     <string name="verify_seed_buttons_tip">Please tap on the words from your recovery phrase in the right order</string>
     <string name="verify_seed_success_title">Verified Successfully</string>
     <string name="verify_seed_success_message">Your wallet is secured now. You can use your recovery phrase anytime to recover your account on another device.</string>
@@ -294,7 +292,7 @@
     <string name="about_review_and_rate">Review and rate the app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2024 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_github_link" translatable="false">https://github.com/dashevo/dash-wallet</string>
     <string name="about_version_name">DashPay Wallet %s</string>
@@ -469,4 +467,10 @@
     <string name="stale_exchange_rates_error">Prices weren\'t retrieved. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_stale">Prices are at least 30 minutes old. Fiat values may be incorrect.</string>
     <string name="stale_exchange_rates_volatile">Prices have fluctuated more than 50% since the last update.</string>
+    <string name="select_security_level_title">Select Security Level</string>
+    <string name="select_security_level_message">You can secure your wallet with a 12 or 24 word recovery phrase.</string>
+    <string name="select_security_level_12_words_title">Secure</string>
+    <string name="select_security_level_12_words_message">12 word recovery phrase</string>
+    <string name="select_security_level_24_words_title">Very secure</string>
+    <string name="select_security_level_24_words_message">24 word recovery phrase</string>
 </resources>

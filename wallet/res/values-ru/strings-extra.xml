@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">Скан.</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Отправить</string>
+    <string name="shortcut_send">Отправить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Отправить человеку в списке контактов</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -297,7 +297,7 @@
     <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
-    <string name="about_copyright">Авторские права © 2024 Dash Core Group</string>
+    <string name="about_copyright">Авторские права © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Кошелёк DashPay %s</string>
     <string name="about_last_explore_device_sync">Последняя синхронизация с Explore</string>
@@ -450,7 +450,7 @@
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
     <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
-    <string name="masternode_key_type_total">ключи</string>
+    <string name="masternode_key_type_total">%d ключей</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>
     <string name="masternode_key_address">Адрес</string>

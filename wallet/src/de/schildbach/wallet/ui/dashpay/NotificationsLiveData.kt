@@ -17,7 +17,6 @@
 package de.schildbach.wallet.ui.dashpay
 
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.livedata.Resource
@@ -27,12 +26,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 open class NotificationsLiveData(
-    walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
     platformSyncService: PlatformSyncService,
     protected val scope: CoroutineScope,
     private val userAlertDao: UserAlertDao
-): ContactsBasedLiveData<Resource<List<NotificationItem>>>(walletApplication, platformSyncService) {
+): ContactsBasedLiveData<Resource<List<NotificationItem>>>(platformSyncService) {
 
     var query = ""
         set(value) {

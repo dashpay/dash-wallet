@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui
 import androidx.lifecycle.ViewModel
 import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
@@ -56,12 +55,12 @@ class OnboardingViewModel @Inject constructor(
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    fun createNewWallet() {
+    fun createNewWallet(seedWordCount: Int) {
         analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
                 walletApplication.initEnvironmentIfNeeded()
-                val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
+        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
                 log.info("successfully created new wallet")
                 walletApplication.setWallet(wallet)
                 configuration.armBackupSeedReminder()

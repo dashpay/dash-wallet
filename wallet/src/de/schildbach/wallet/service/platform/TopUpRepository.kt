@@ -69,6 +69,7 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.wallet.AuthenticationKeyChain
+import kotlinx.coroutines.flow.first
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import java.net.URLEncoder
@@ -82,7 +83,7 @@ import kotlin.coroutines.resume
  * 3. [SendInviteWorker] to create Invitations (dynamic link)
  */
 interface TopUpRepository {
-    fun createAssetLockTransaction(
+    suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
         keyParameter: KeyParameter?,
@@ -160,6 +161,7 @@ class TopUpRepositoryImpl @Inject constructor(
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
+        private const val MIN_DUST_FACTOR = 10L
     }
 
     private val workerJob = Job()
@@ -167,20 +169,21 @@ class TopUpRepositoryImpl @Inject constructor(
     private val platform = platformRepo.platform
     private val authExtension by lazy { walletDataProvider.wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension }
 
-    override fun createAssetLockTransaction(
+    override suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
         keyParameter: KeyParameter?,
         useCoinJoin: Boolean
     ) {
-        Context.propagate(walletDataProvider.wallet!!.context)
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
             Constants.DASH_PAY_FEE
         }
-        val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
+        val balance = walletDataProvider.observeSpendableBalance().first()
+        val emptyWallet = balance == fee ||
+                (balance >= fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR)))
+        Context.propagate(walletDataProvider.wallet!!.context)
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
             keyParameter,

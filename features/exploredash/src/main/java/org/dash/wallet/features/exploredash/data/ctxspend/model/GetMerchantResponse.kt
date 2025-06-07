@@ -16,16 +16,37 @@
  */
 package org.dash.wallet.features.exploredash.data.ctxspend.model
 
+sealed class DenominationType(val value: String) {
+    object MinMax : DenominationType("min-max")
+    object MinMaxMajor : DenominationType("min-max-major")
+    object Fixed : DenominationType("fixed")
+
+    companion object {
+        fun fromString(value: String): DenominationType {
+            return when (value) {
+                MinMax.value -> MinMax
+                MinMaxMajor.value -> MinMaxMajor
+                Fixed.value -> Fixed
+                else -> throw IllegalArgumentException("Unknown denomination type: $value")
+            }
+        }
+    }
+}
+
 /**
- * denominationType: "min-max", "min-max-major" or "fixed"
+ * denominations handling for merchant response
  */
 data class GetMerchantResponse(
     val id: String,
     val denominations: List<String>,
     val denominationsType: String,
     val savingsPercentage: Int = 0,
-    val redeemType: String = ""
+    val redeemType: String = "",
+    val enabled: Boolean = true
 ) {
+    val denominationType: DenominationType
+        get() = DenominationType.fromString(denominationsType)
+
     val minimumCardPurchase: Double
         get() {
             require(denominations.isNotEmpty())
@@ -33,20 +54,19 @@ data class GetMerchantResponse(
         }
     val maximumCardPurchase: Double
         get() {
-            return when (denominationsType) {
-                "min-max" -> {
+            return when (denominationType) {
+                is DenominationType.MinMax -> {
                     require(denominations.size == 2)
                     denominations[1].toDouble()
                 }
-                "min-max-major" -> {
+                is DenominationType.MinMaxMajor -> {
                     require(denominations.size == 3)
                     denominations[1].toDouble()
                 }
-                "fixed" -> {
+                is DenominationType.Fixed -> {
                     require(denominations.isNotEmpty())
                     denominations.last().toDouble()
                 }
-                else -> error("unknown denomination type")
             }
         }
 }

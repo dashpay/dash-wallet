@@ -412,6 +412,7 @@
     <string name="coinjoin_start">Commencer le mélange</string>
     <string name="coinjoin_stop">Arrêter le mélange</string>
     <string name="coinjoin_mixing">Mélange</string>
+    <string name="coinjoin_mixing_finishing">Achèvement du mélange</string>
     <string name="coinjoin_paused">Mélange mis en pause</string>
     <string name="coinjoin_not_started">Non démarré</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>

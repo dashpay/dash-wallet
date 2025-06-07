@@ -33,7 +33,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_scan_to_pay">스캔</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">보내기</string>
+    <string name="shortcut_send">보내기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">연락처에 전송하기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -289,6 +289,7 @@
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
     <string name="about_license">GNU General Public License v3.0</string>
+    <string name="about_version_name">대시페이 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
     <string name="about_last_explore_server_update">마지막 익스플로어 서버 업데이트</string>
     <string name="about_firebase_installation_id">파이어베이스 설치 ID</string>

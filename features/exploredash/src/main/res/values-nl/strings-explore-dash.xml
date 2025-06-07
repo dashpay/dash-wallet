@@ -85,7 +85,6 @@
     <string name="explore_filtered_by">Gefilterd op:</string>
     <string name="explore_pay_gift_card">Betaal met geschenkbon</string>
     <string name="explore_sort_by">Sorteer op</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Dichtbij</item>
@@ -116,6 +115,7 @@
     <string-array name="sort_by_options_names">
         <item>Naam</item>
         <item>Afstand</item>
+        <item>Korting</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -200,7 +200,6 @@
     <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
     <string name="gift_card_barcode_failed">Kan de streepjescode niet laden</string>
     <string name="gift_card_tx_title">Cadeaukaart · %s</string>
-
     <!-- dash spend login-->
     <string name="enter_verification_code">Voer verificatiecode in</string>
     <string name="verification_check_email">Controleer je e-mail en voer de verificatiecode in</string>

@@ -80,7 +80,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             }
             binding.shareButton.setOnClickListener {
                 onShareClicked?.invoke()
-                handleShare(paymentRequestUri)
+                address?.let { handleShare(it.toBase58()) }
             }
 
             refresh()
@@ -118,6 +118,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             if (!avatar.isNullOrEmpty()) {
                 ProfilePictureDisplay.display(binding.avatar, avatar, avatarHash, username, false, null)
             }
+            refresh()
         } else {
             binding.usernamePreviewPane.isVisible = false
         }
@@ -152,7 +153,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         val address = this.address
 
         if (address != null) {
-            paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, null, null)
+            paymentRequestUri = BitcoinURI.convertToBitcoinURI(address.parameters, address.toBase58(), amount, null, null, username)
             val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
             binding.qrPreview.setImageDrawable(qrCodeBitmap)
         } else {
