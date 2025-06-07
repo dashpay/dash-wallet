@@ -110,6 +110,7 @@
     <string name="log_in">Log In</string>
 
     <string name="chain_syncing">The chain is syncing…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
 
     <!-- basic formats -->
     <string name="percent" translatable="false">%d%%</string>

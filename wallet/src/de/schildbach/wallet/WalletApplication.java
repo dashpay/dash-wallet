@@ -60,6 +60,7 @@ import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
+import org.bitcoinj.core.TransactionOutPoint;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 import org.bitcoinj.utils.Threading;
@@ -1329,5 +1330,15 @@ public class WalletApplication extends MultiDexApplication
 
     public void setCoinJoinService(CoinJoinService coinJoinService) {
         this.coinJoinService = coinJoinService;
+    }
+
+    @Override
+    public boolean lockOutput(@NotNull TransactionOutPoint outPoint) {
+        if (wallet != null) {
+            wallet.lockOutput(outPoint);
+            return true;
+        }
+
+        return false;
     }
 }

@@ -295,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
     <string name="report_issue_dialog_generating_report">Generating report</string>
     <string name="report_transaction_history_export">Export</string>
@@ -420,4 +419,9 @@
     <string name="credits_profile_change_message">Update profile information</string>
 
     <string name="block_explorer_selection_title">Select block explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Select option</string>
+    <string name="customize_shortcuts">Customize shortcut bar</string>
+    <string name="customize_shortcuts_description">Hold any button above to replace it with the function you need</string>
 </resources>
