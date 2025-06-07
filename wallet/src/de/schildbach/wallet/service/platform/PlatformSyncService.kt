@@ -365,6 +365,10 @@ class PlatformSynchronizationService @Inject constructor(
                 }
 
                 updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
+            } else {
+                if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
+                    platformRepo.updateFrequentContacts()
+                }
             }
             // fire listeners if there were new contacts
             if (addedContact) {

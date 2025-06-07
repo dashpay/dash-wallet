@@ -7,12 +7,12 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import de.schildbach.wallet_test.R
+import org.slf4j.LoggerFactory
 
 abstract class BaseForegroundWorker(
     context: Context,
@@ -23,18 +23,22 @@ abstract class BaseForegroundWorker(
     private val initialTitle: String,
     private val initialContent: String
 ): BaseWorker(context, parameters) {
+    companion object {
+        private val log = LoggerFactory.getLogger(BaseForegroundWorker::class.java)
+    }
     private val notificationManager = NotificationManagerCompat.from(context)
-    abstract suspend fun doWorkInForeground(): Result
+    abstract suspend fun doWorkInForeground(inForeground: Boolean): Result
 
     override suspend fun doWorkWithBaseProgress(): Result {
         return try {
             // Ensure permission is granted before proceeding
             if (hasNotificationPermission()) {
                 setForegroundAsync(createForegroundInfo())
-                doWorkInForeground()
+                doWorkInForeground(true)
             } else {
                 // Log or handle the case where permission is not granted
-                Result.failure()
+                log.info("executing work in background")
+                doWorkInForeground(false)
             }
         } catch (e: SecurityException) {
             // Log and handle SecurityException gracefully

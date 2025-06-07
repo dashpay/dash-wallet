@@ -295,11 +295,11 @@ class SendCoinsViewModel @Inject constructor(
         return currentAmount.isLessThan(thresholdAmount)
     }
 
-    fun getPendingBalance(): Coin {
+    suspend fun getPendingBalance(): Coin = withContext(Dispatchers.IO) {
         val estimated = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
         val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
 
-        return estimated.subtract(available)
+        estimated.subtract(available)
     }
 
     fun shouldAdjustAmount(): Boolean {
