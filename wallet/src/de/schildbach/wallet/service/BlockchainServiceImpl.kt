@@ -64,7 +64,9 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -340,6 +342,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 }
                 handleMetadata(tx)
+                handleContactPayments(tx)
                 updateAppWidget()
             }
 
@@ -572,10 +575,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
 
-            /*
-            This method is called by super.onBlocksDownloaded when the percentage
-            of the chain downloaded is 100.0% (completely done)
-        */
+            /** This method is called by super.onBlocksDownloaded when the percentage
+                of the chain downloaded is 100.0% (completely done)
+            */
             override fun doneDownload() {
                 super.doneDownload()
                 log.info("DoneDownload {}", syncPercentage)
@@ -583,6 +585,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // set to 100% so that observers will see that sync is completed
                 syncPercentage = 100
                 updateBlockchainState()
+                if (Constants.SUPPORTS_PLATFORM) {
+                    serviceScope.launch {
+                        platformRepo.updateFrequentContacts()
+                    }
+                }
             }
 
             override fun onMasterNodeListDiffDownloaded(
@@ -1341,6 +1348,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
+                        coinJoinService.shutdown()
                         application.finalizeWipe()
                     }
                     //Clear the blockchain identity
@@ -1465,8 +1473,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         return syncPercentage
     }
 
+    private var handleContactPaymentsJob: Job? = null
+
+    private fun handleContactPayments(tx: Transaction) {
+        if (blockchainState?.replaying != true) {
+            handleContactPaymentsJob?.cancel()
+            handleContactPaymentsJob = serviceScope.launch {
+                delay(TimeUnit.SECONDS.toMillis(1)) // debounce delay, 1 second
+                platformRepo.updateFrequentContacts(tx)
+            }
+        }
+    }
+
     private fun updateAppWidget() {
-        val balance = application.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+        val balance = application.getWalletBalance()
         WalletBalanceWidgetProvider.updateWidgets(this@BlockchainServiceImpl, balance)
     }
 

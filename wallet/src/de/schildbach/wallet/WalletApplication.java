@@ -1149,6 +1149,15 @@ public class WalletApplication extends MultiDexApplication
         return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
+    @NotNull
+    public Coin getMixedBalance() {
+        if (wallet == null || walletBalanceObserver == null) {
+            return Coin.ZERO;
+        }
+
+        return  walletBalanceObserver.getMixedBalance().getValue();
+    }
+
     @NonNull
     @Override
     public Flow<Coin> observeTotalBalance() {
@@ -1316,7 +1325,7 @@ public class WalletApplication extends MultiDexApplication
             @NonNull Coin amount
     ) throws LeftoverBalanceException {
         new CrowdNodeBalanceCondition().check(
-                wallet.getBalance(Wallet.BalanceType.ESTIMATED),
+                getWalletBalance(),
                 address,
                 amount,
                 crowdNodeConfig

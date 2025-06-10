@@ -64,12 +64,12 @@ class SettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    var decimalFormat: DecimalFormat = DecimalFormat("0.000")
+    private var decimalFormat: DecimalFormat = DecimalFormat("0.000")
     val walletBalance: String
-        get() = decimalFormat.format(walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED).toBigDecimal())
+        get() = decimalFormat.format(walletDataProvider.getWalletBalance().toBigDecimal())
 
     val mixedBalance: String
-        get() = decimalFormat.format((walletDataProvider.wallet as WalletEx).coinJoinBalance.toBigDecimal())
+        get() = decimalFormat.format(walletDataProvider.getMixedBalance().toBigDecimal())
 
     suspend fun shouldShowCoinJoinInfo(): Boolean {
         return coinJoinConfig.get(CoinJoinConfig.FIRST_TIME_INFO_SHOWN) != true
