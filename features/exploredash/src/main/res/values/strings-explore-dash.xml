@@ -248,4 +248,6 @@
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="ctx_terms_url" translatable="false">https://ctx.com/gift-card-agreement/</string>
     <string name="temporarily_unavailable">Temporarily unavailable</string>
+    <string name="token_expired_title">Your session expired</string>
+    <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
 </resources>

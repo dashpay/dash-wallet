@@ -1348,6 +1348,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
+                        coinJoinService.shutdown()
                         application.finalizeWipe()
                     }
                     //Clear the blockchain identity
@@ -1485,7 +1486,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun updateAppWidget() {
-        val balance = application.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED)
+        val balance = application.getWalletBalance()
         WalletBalanceWidgetProvider.updateWidgets(this@BlockchainServiceImpl, balance)
     }
 
