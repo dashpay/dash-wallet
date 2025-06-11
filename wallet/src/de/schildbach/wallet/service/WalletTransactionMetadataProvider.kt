@@ -588,6 +588,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
+    override suspend fun exists(txId: Sha256Hash): Boolean {
+        return transactionMetadataDao.exists(txId)
+    }
+
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {
         return transactionMetadataDao.observe(txId)
             .distinctUntilChanged()
