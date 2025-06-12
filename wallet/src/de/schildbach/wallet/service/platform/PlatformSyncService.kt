@@ -240,7 +240,7 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("maybe publish meets requirements")
             publishChangeCache(newEverythingBeforeTimestamp)
         } else {
-            log.info("last platform push was less than 3 hours ago, skipping")
+            log.info("last platform push was less than $CUTOFF_MIN ago, skipping")
         }
     }
 
