@@ -22,22 +22,14 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.schildbach.wallet.data.CoinJoinConfig
-import de.schildbach.wallet.database.dao.TopUpsDao
-import de.schildbach.wallet.database.entity.TopUp
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
-import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.PlatformSynchronizationService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.TRANSACTION_METADATA_LAST_PAST_SAVE
-import kotlinx.coroutines.delay
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -48,41 +40,42 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     private val analytics: AnalyticsService,
-    private val platformBroadcastService: PlatformBroadcastService,
+    private val platformSynchronizationService: PlatformSynchronizationService,
     private val walletDataProvider: WalletDataProvider,
-    private val platformRepo: PlatformRepo,
     private val dashPayConfig: DashPayConfig
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(PublishTransactionMetadataWorker::class.java)
         const val KEY_PASSWORD = "PublishTransactionMetadataWorker.PASSWORD"
-        // const val KEY_IDENTITY = "PublishTransactionMetadataWorker.IDENTITY"
+        //const val KEY_PUBLISH_PAST = "PublishTransactionMetadataWorker.PUBLISH_PAST"
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
-        val password = inputData.getString(KEY_PASSWORD)
-            ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
-        //val identity = inputData.getString(KEY_IDENTITY)
-        //    ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_IDENTITY parameter"))
+//        val password = inputData.getString(KEY_PASSWORD)
+ //           ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
+        //val publishPast = inputData.getBoolean(KEY_PUBLISH_PAST, false)
 
 
-        val encryptionKey: KeyParameter
-        try {
-            encryptionKey = walletDataProvider.wallet!!.keyCrypter!!.deriveKey(password)
-        } catch (ex: KeyCrypterException) {
-            analytics.logError(ex, "Topup Identity: failed to derive encryption key")
-            val msg = formatExceptionMessage("derive encryption key", ex)
-            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
-        }
+//        val encryptionKey: KeyParameter
+//        try {
+//            encryptionKey = walletDataProvider.wallet!!.keyCrypter!!.deriveKey(password)
+//        } catch (ex: KeyCrypterException) {
+//            analytics.logError(ex, "Topup Identity: failed to derive encryption key")
+//            val msg = formatExceptionMessage("derive encryption key", ex)
+//            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
+//        }
 
         return try {
             org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
             val now = System.currentTimeMillis()
-            for (i in 0 until 100) {
-                setProgress(i)
-                delay(50)
+            setProgress(0)
+            val saveInfo = platformSynchronizationService.publishPastTxMetadata() { progress ->
+                setProgress(progress)
             }
-            dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now)
+            if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
+                dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now)
+            }
+            log.info("publish txmetadata successful: $saveInfo")
             Result.success(
                 workDataOf(
                     //KEY_IDENTITY to identity,

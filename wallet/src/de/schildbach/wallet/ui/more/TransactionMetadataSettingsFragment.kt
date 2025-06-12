@@ -66,15 +66,20 @@ class TransactionMetadataSettingsFragment : Fragment(R.layout.fragment_transacti
         // ask the user
         val hasTxs = viewModel.hasPastTransactionsToSave.value
         val settings = viewModel.filterState.value
-        val notSaving = !(settings.saveToNetwork && settings.savePastTxToNetwork)
+        val lastSaveDate = if (viewModel.lastSaveDate.value != 0L) {
+            SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(viewModel.lastSaveDate.value)
+        } else {
+            SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(viewModel.firstUnsavedTxDate)
+        }
+        val notSaving = !(settings.saveToNetwork || settings.savePastTxToNetwork)
         if (hasTxs && notSaving) {
             AdaptiveDialog.create(
                 null,
                 getString(R.string.transaction_metadata_save_new_tx_title),
                 getString(
                     R.string.transaction_metadata_you_have_n_tx,
-                    1, // TODO: placeholder for actual tx count
-                    SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM).format(Date())
+                    viewModel.unsavedTxCount, // TODO: placeholder for actual tx count
+                    lastSaveDate
                 ),
                 getString(R.string.transaction_metadata_save_transactions),
                 getString(R.string.transaction_metadata_continue_without_saving)

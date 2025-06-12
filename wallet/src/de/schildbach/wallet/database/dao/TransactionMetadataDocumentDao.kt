@@ -174,4 +174,7 @@ interface TransactionMetadataDocumentDao {
 
     @Query("DELETE FROM transaction_metadata_platform")
     suspend fun clear()
+
+    @Query("SELECT * FROM transaction_metadata_platform WHERE txId = :txId")
+    suspend fun getTransactionMetadata(txId: Sha256Hash): List<TransactionMetadataDocument>
 }

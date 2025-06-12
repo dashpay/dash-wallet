@@ -19,6 +19,7 @@ package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.TaxCategory
 
@@ -154,5 +155,14 @@ interface TransactionMetadataChangeCacheDao {
         )
     """)
     suspend fun getCachedItemsBefore(maxTimestamp: Long): List<TransactionMetadataCacheItem>
+
+    @Query("""
+        SELECT * FROM transaction_metadata_cache 
+        WHERE txId IN (
+            SELECT txId FROM transaction_metadata 
+            WHERE timestamp < :maxTimestamp
+        )
+    """)
+    fun observeCachedItemsBefore(maxTimestamp: Long): Flow<List<TransactionMetadataCacheItem>>
 
 }
