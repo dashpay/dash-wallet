@@ -107,5 +107,6 @@
     <string name="log_in">ログイン</string>
 
     <string name="chain_syncing">チェーンを同期中</string>
+    <string name="report_issue_dialog_mail_intent_chooser">報告を送信中…</string>
 
     </resources>

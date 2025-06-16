@@ -107,5 +107,6 @@
     <string name="log_in">Iniciar sesión</string>
 
     <string name="chain_syncing">La cadena esta sincronizando...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Enviar informe mediante…</string>
 
     </resources>

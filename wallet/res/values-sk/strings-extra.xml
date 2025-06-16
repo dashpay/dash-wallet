@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Záloha</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovať</string>
+    <string name="shortcut_scan_to_pay">Skenovať QR kód</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Poslať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Prijať</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importovať privátny Kľúč</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Pridať odkaz</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Rýchlo prijať</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash adresa skopírovaná do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Ukázať</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" nie je slovom obnovenia</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráza pre obnovenie musí mať 12 slov</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráza pre obnovenie musí mať 12 alebo 24 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Zlá fráza pre obnovenie</string>
     <string name="restore_wallet_from_invalid_seed_failure">Peňaženku nebolo možné obnoviť:\n\n%s\n\nZlá fráza pre obnovenie?</string>
 
@@ -297,6 +295,7 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © 2025 Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Peňaženka DashPay %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
@@ -470,4 +469,10 @@
     <string name="stale_exchange_rates_error">Nepodarilo sa získať ceny. Hotovostné ceny môžu byť nesprávne.</string>
     <string name="stale_exchange_rates_stale">Ceny sú staré minimálne 30 minút. Hotovostné ceny môžu byť nesprávne.</string>
     <string name="stale_exchange_rates_volatile">Ceny sa od poslednej aktualizácie zmenili o viac ako 50 %.</string>
+    <string name="select_security_level_title">Vyberte úroveň zabezpečenia</string>
+    <string name="select_security_level_message">Svoju peňaženku si môžete zabezpečiť pomocou obnovovacej frázy s dĺžkou 12 alebo 24 slov.</string>
+    <string name="select_security_level_12_words_title">Zabezbečiť</string>
+    <string name="select_security_level_12_words_message">12 slovná fráza pre obnovenie</string>
+    <string name="select_security_level_24_words_title">Veľmi bezpečná</string>
+    <string name="select_security_level_24_words_message">24 slovná fráza pre obnovenie</string>
 </resources>

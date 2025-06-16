@@ -234,6 +234,7 @@
     <string name="cancel">Отмена</string>
     <string name="gift_card_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, попробуйте ещё раз.</string>
     <string name="gift_card_details_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой.</string>
+    <string name="gift_card_limit_error">Правила покупки у этого продавца изменились. Чтобы узнать больше, свяжитесь с поддержкой CTX.</string>
     <string name="gift_card_unknown_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой с txid %s.</string>
     <string name="gift_card_rejected">Перевод был отклонён. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
     <string name="gift_card_redeem_url_not_supported">Вы перевели оплату магазину, который предоставлял ссылку для погашения карты, но эта функция больше не поддерживается. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
@@ -243,6 +244,7 @@
     <string name="accept_to_proceed">Чтобы создать аккаунт DashSpend, необходимо принять условия и положения DashSpend</string>
     <string name="view_terms_conditions">Условия использования</string>
     <string name="barcode_placeholder">Как только ваш код будет сгенерирован, он отобразится здесь.</string>
+    <string name="gift_card_contact_ctx">Связаться с поддержкой CTX</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Создать учетную запись</string>

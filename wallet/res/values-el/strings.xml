@@ -294,7 +294,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Επισύναψη καταλόγου των εγκατεστημένων πακέτων</string>
     <string name="report_issue_dialog_collect_application_log">Επισύναψη αρχείου καταγραφής της εφαρμογής</string>
     <string name="report_issue_dialog_collect_wallet_dump">Επισύναψη αρχείου ένδειξης σφαλμάτων πορτοφολιού</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Αποστολή αναφοράς χρησιμοποιώντας…</string>
     <string name="report_issue_dialog_mail_intent_failed">Αποτυχία αποστολής της αναφοράς.</string>
     <string name="report_issue_dialog_generating_report">Δημιουργία αναφοράς</string>
     <string name="report_transaction_history_export">Εξαγωγή</string>

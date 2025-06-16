@@ -29,7 +29,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">การสำรองข้อมูล</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">สแกน</string>
+    <string name="shortcut_scan_to_pay">สแกน QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">ส่ง</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -40,8 +40,6 @@
     <string name="shortcut_receive">ได้รับ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">นำเข้าคีย์ส่วนตัว</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">ใส่ทางลัด</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">ได้รับอย่างรวดเร็ว</string>
@@ -120,7 +118,6 @@
     <string name="request_coins_clipboard_address_msg">คัดลอกที่อยู่ Dash ไปยัง คลิปบอร์ด</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">แสดง</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">%sไม่ใช่วลีกู้คืน</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">การกู้คืนวลีต้องมี 12 คำ</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">วลีกู้คืนไม่ดี</string>
     <string name="restore_wallet_from_invalid_seed_failure">ไม่สามารถทำการกู้คืนกระเป๋าสตางค์ได้:\n\n%s\n\n วลีรหัสผ่านถูกต้องหรือไม่</string>
 
@@ -209,7 +206,6 @@
     <string name="verify_info_title_1">กลุ่ม Dash Core ไม่ได้จัดเก็บวลีการกู้คืนนี้</string>
     <string name="verify_info_subtitle_1">ทุกคนที่มีวลีกู้คืนของคุณสามารถเข้าถึงเงินของคุณได้</string>
     <string name="verify_info_title_2">คุณจะไม่สามารถกู้คืนกระเป๋าเงินได้หากไม่มีวลีการกู้คืน</string>
-    <string name="verify_info_subtitle_2">เขียนไว้ในที่ปลอดภัยและอย่าแสดงให้ใครเห็น</string>
     <string name="verify_seed_buttons_tip">โปรดแตะที่คำจากวลีการกู้คืนของคุณในลำดับที่ถูกต้อง</string>
     <string name="verify_seed_success_title">้ตรวจสอบสำเร็จ</string>
     <string name="verify_seed_success_message">กระเป๋าสตางค์ของคุณปลอดภัยแล้ว คุณสามารถใช้วลีกู้คืนได้ทุกเวลาเพื่อกู้คืนบัญชีของคุณบนอุปกรณ์อื่น</string>

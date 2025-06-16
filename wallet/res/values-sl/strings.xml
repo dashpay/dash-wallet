@@ -236,7 +236,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Dodaj seznam nameščenih paketov</string>
     <string name="report_issue_dialog_collect_application_log">Pripni aplikacijski zapisnik</string>
     <string name="report_issue_dialog_collect_wallet_dump">Pripni kopijo denarnice</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Pošlji poročilo z aplikacijo…</string>
     <string name="report_issue_dialog_mail_intent_failed">Pošiljanje poročila je spodletelo.</string>
     <string name="about_title">Vizitka</string>
     <string name="about_version_title">Verzija</string>

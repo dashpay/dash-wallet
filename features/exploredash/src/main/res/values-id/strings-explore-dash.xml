@@ -59,6 +59,7 @@
     <string name="explore_back_to_nearest">Kembali ke lokasi terdekat</string>
     <string name="explore_select_location">Pilih Lokasi</string>
     <string name="explore_pay_with_dash">Bayar dengan Dash</string>
+    <string name="explore_pay_with_dash_save">Simpan %.2f%%</string>
     <string name="explore_buy_gift_card">Beli Kartu Hadiah</string>
     <string name="explore_buy_dash">Beli Dash</string>
     <string name="explore_sell_dash">Jual Dash</string>
@@ -83,6 +84,10 @@
     <string name="explore_filtered_by">Difilter oleh:</string>
     <string name="explore_pay_gift_card">Bayar dengan kartu hadiah</string>
     <string name="explore_sort_by">Urutkan dengan</string>
+    <string name="gift_card_types">Tipe kartu hadiah</string>
+    <string name="flexible_amount_option">Jumlah yang fleksibel</string>
+    <string name="fixed_denom_option">Jumlah denominasi tetap</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Terdekat</item>
@@ -196,11 +201,16 @@
     <string name="send_coins_error_msg">Gagal mengirim koin!</string>
     <string name="gift_card_barcode_failed">Gagal memuat barcode</string>
     <string name="gift_card_tx_title">Kartu hadiah · %s</string>
+    <string name="select_amount">Pilih jumlah</string>
+    <string name="select_fixed_amount">Pedagang ini menjual kartu hadiah dengan harga tetap</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Masukkan Kode verifikasi</string>
     <string name="verification_check_email">Periksa email anda dan masukkan kode verifikasi</string>
     <string name="buy_gift_card">Beli kartu hadiah dengan akun DashSpend anda</string>
+    <string name="dashspend_create_account">Buat akun atau masuk ke akun yang sudah ada</string>
     <string name="create_new_account">Buat Akun Baru</string>
+    <string name="login">Masuk</string>
     <string name="password">Kata sandi</string>
     <string name="logged_in_as">Masuk sebagai %s</string>
     <string name="log_out">Keluar</string>
@@ -212,13 +222,23 @@
     <string name="cancel">Batal</string>
     <string name="gift_card_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan, cobal lagi.</string>
     <string name="gift_card_details_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi pusat dukungan.</string>
+    <string name="gift_card_limit_error">Batasan pembelian untuk pedagang ini telah berubah. Silakan hubungi Dukungan CTX untuk informasi lebih lanjut.</string>
     <string name="gift_card_unknown_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi dukungan dengan txid %s.</string>
     <string name="gift_card_rejected">Pembayaran telah ditolak. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
     <string name="gift_card_redeem_url_not_supported">Pembayaran telah dibuat untuk pedagang yang menyediakan URL penebusan, tapi saat ini belum didukung. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
+    <string name="dashspend_terms_conditions">Terima syarat dan kondisi</string>
     <string name="accept_terms_conditions">Say menerima syarat dan ketentuan DashSpend</string>
     <string name="tap_link_to_proceed">Untuk membuat akun di DashSpend Anda harus mengetuk tautan di bawah untuk melanjutkan</string>
     <string name="accept_to_proceed">Untuk membuat akun di DashSpend Anda harus menerima syarat dan ketentuan DashSpend</string>
+    <string name="view_terms_conditions">Syarat &amp; kondisi</string>
+    <string name="barcode_placeholder">Segera setelah kode Anda dibuat, kode tersebut akan ditampilkan di sini.</string>
+    <string name="gift_card_contact_ctx">Hubungi dukungan CTX</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Buat akun</string>
+    <string name="log_in_to_ctxspend_account">Masuk ke akun anda</string>
     <string name="log_in_to_ctxspend_account_desc">Email anda hanya digunakan untuk mengirim one-time password.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Beli kartu hadiah dengan akun DashSpend anda</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Buat akun DashSpend atau masuk dengan akun yang sudah ada</string>
-    </resources>
+    <string name="temporarily_unavailable">Tidak tersedia untuk sementara</string>
+</resources>

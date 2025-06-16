@@ -286,7 +286,6 @@
     <string name="report_issue_dialog_collect_installed_packages">ผนวกรายการแพคเกจที่ติดตั้งไว้</string>
     <string name="report_issue_dialog_collect_application_log">ผนวกแอพพลิเคชั่นล็อค</string>
     <string name="report_issue_dialog_collect_wallet_dump">ผนวกการถ่ายโอนข้อมูล wallet </string>
-    <string name="report_issue_dialog_mail_intent_chooser">ส่งรายงานโดยใช้...</string>
     <string name="report_issue_dialog_mail_intent_failed">การส่งรายงานล้มเหลว</string>
     <string name="report_transaction_history_export">ส่งออก</string>
     <string name="report_transaction_history_title">ส่งออก CSV </string>

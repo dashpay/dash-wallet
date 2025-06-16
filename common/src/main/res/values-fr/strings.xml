@@ -107,5 +107,6 @@
     <string name="log_in">Se connecter</string>
 
     <string name="chain_syncing">Synchronisation de la chaîne...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
 
     </resources>

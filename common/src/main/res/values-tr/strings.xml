@@ -103,5 +103,6 @@
     <string name="log_in">Giriş Yap</string>
 
     <string name="chain_syncing">Zincir senkronize ediliyor…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Raporu şununla gönder…</string>
 
     </resources>

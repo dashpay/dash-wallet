@@ -197,7 +197,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Bashkangjit listen a aplikacioneve të instaluara</string>
     <string name="report_issue_dialog_collect_application_log">Bashkangjitni \'log\' skedën e aplikacionit</string>
     <string name="report_issue_dialog_collect_wallet_dump">Bashkangjitni \'dump\' skedën e kuletës</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Dërgo raporting duke përdorur…</string>
     <string name="report_issue_dialog_mail_intent_failed">Dërgimi i raportit dështoj.</string>
     <string name="about_title">Rreth</string>
     <string name="about_version_title">Verzioni</string>

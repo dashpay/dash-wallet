@@ -107,5 +107,6 @@
     <string name="log_in">Zaloguj się</string>
 
     <string name="chain_syncing">Łańcuch synchronizuje się…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Wyślij zgłoszenie używając…</string>
 
     </resources>

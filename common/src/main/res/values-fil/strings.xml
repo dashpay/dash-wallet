@@ -107,5 +107,6 @@
     <string name="log_in">Mag log in</string>
 
     <string name="chain_syncing">Nagsi-sync ang chain…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
 
     </resources>

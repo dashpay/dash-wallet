@@ -27,8 +27,6 @@
     <string name="dialog_confirm_total">Celkem</string>
     <string name="shortcut_action_join_dashpay">Připojit k DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovat</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Poslat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_pay_to_contact">Odeslat kontaktu</string>
@@ -38,8 +36,6 @@
     <string name="shortcut_receive">Přijmout</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importovat Privátní Klíč</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Přidat zkratku</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Přijmout</string>
@@ -118,7 +114,6 @@
     <string name="request_coins_clipboard_address_msg">Dash adresa zkopírována do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zobrazit</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Špátná fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_failure">Peněženka nemohla být obnovena:\n\%s\n\nŠpatná fráze pro obnovení?</string>
 

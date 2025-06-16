@@ -230,6 +230,7 @@
     <string name="cancel">Annulla</string>
     <string name="gift_card_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Per favore riprova.</string>
     <string name="gift_card_details_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Si prega di contattare l\'assistenza.</string>
+    <string name="gift_card_limit_error">I limiti di acquisto per questo commerciante sono cambiati. Contatta l\'assistenza CTX per ulteriori informazioni.</string>
     <string name="gift_card_unknown_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Contatta l\'assistenza con il txid %s.</string>
     <string name="gift_card_rejected">Il pagamento è stato rifiutato. Si prega di contattare CTX con l\'ID %s della carta regalo, l\'ID del pagamento %s e l\'ID della transazione %s.</string>
     <string name="gift_card_redeem_url_not_supported">Il pagamento è stato effettuato per il commerciante che fornisce un URL di riscatto, ma ciò non è attualmente supportato. Si prega di contattare CTX con l\'ID della carta regalo %s, l\'ID del pagamento %s e l\'ID della transazione %s.</string>
@@ -239,6 +240,7 @@
     <string name="accept_to_proceed">Per creare un account su DashSpend devi accettare i termini e le condizioni di DashSpend</string>
     <string name="view_terms_conditions">Termini &amp; condizioni</string>
     <string name="barcode_placeholder">Non appena il tuo codice sarà generato, verrà visualizzato qui.</string>
+    <string name="gift_card_contact_ctx">Contatta il supporto CTX</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Crea un account</string>

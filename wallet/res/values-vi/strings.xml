@@ -281,7 +281,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Thêm vào danh sách các gói được cài đặt</string>
     <string name="report_issue_dialog_collect_application_log">Nhật trình chỉ thị của ứng dụng</string>
     <string name="report_issue_dialog_collect_wallet_dump">Các lỗi mà ví tiền gặp phải</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Gửi báo cáo sử dụng…</string>
     <string name="report_issue_dialog_mail_intent_failed">Gửi báo cáo không thành công.</string>
     <string name="about_title">Thông tin</string>
     <string name="about_version_title">Phiên bản</string>
