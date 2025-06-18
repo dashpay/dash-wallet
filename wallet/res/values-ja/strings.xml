@@ -178,7 +178,8 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoinの担保入力</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoinのミキシング</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoinの通貨単位の作成</string>
-    <string name="network_monitor_activity_title">ネットワークモニタ</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoinのダストの合算</string>
+    <string name="network_monitor_activity_title">ネットワークモニター</string>
     <string name="network_monitor_peer_list_title">ピア</string>
     <string name="network_monitor_block_list_title">ブロック</string>
     <string name="block_row_mining_difficulty_adjustment">採掘難易度の調整</string>
@@ -294,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">インストールされたパッケージのリストを追加</string>
     <string name="report_issue_dialog_collect_application_log">アプリケーションログを追加</string>
     <string name="report_issue_dialog_collect_wallet_dump">ウォレットダンプを追加</string>
-    <string name="report_issue_dialog_mail_intent_chooser">報告を送信中…</string>
     <string name="report_issue_dialog_mail_intent_failed">報告に失敗しました。</string>
     <string name="report_issue_dialog_generating_report">報告を生成中</string>
     <string name="report_transaction_history_export">エクスポート</string>
@@ -415,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">設定を開く</string>
     <string name="credits_profile_change_message">プロフィール情報を更新する</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">ブロックエクスプローラーを選択する</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">オプションを選択する</string>
+    <string name="customize_shortcuts">ショートカットバーをカスタマイズする</string>
+    <string name="customize_shortcuts_description">上記のいずれかのボタンを長押しすると、そのボタンを必要な機能に置き換えることができます</string>
+</resources>

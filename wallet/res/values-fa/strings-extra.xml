@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">نسخه پشتیبان‌گیری</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">اسکن</string>
+    <string name="shortcut_scan_to_pay">اسکن کیوآر کد</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">ارسال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">دریافت</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">وارد کردن کلید خصوصی</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">اضافه کردن میانبر</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">دریافت سریع</string>
@@ -124,7 +122,7 @@
     <string name="request_coins_clipboard_address_msg">نشانی دش کپی شد</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">نمایش</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» جزو کلمات عبارت بازیابی نیست</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">عبارت بازیابی باید شامل ۱۲ کلمه باشد</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">عبارت بازیابی باید ۱۲ یا ۲۴ کلمه داشته باشد</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">عبارت بازیابی نادرست است</string>
     <string name="restore_wallet_from_invalid_seed_failure">امکان بازیابی کیف پول وجود ندارد: \n\n %s \n\n\ عبارت بازیابی نادرست؟ </string>
 
@@ -219,7 +217,7 @@
     <string name="verify_info_title_1">دش کر گروپ این عبارت بازیابی را ذخیره نمی‌کند. </string>
     <string name="verify_info_subtitle_1">هر کسی که عبارت بازیابی‌تان را داشته باشد، به موجودی‌تان دسترسی خواهد داشت. </string>
     <string name="verify_info_title_2">بدون داشتن عبارت بازیابی، نمی‌توانید کیف پول‌تان را بازیابی کنید. </string>
-    <string name="verify_info_subtitle_2">این عبارت را در جایی امن بنویسید و آن را به کسی نشان ندهید. </string>
+    <string name="verify_info_subtitle_2">آن را در جای امن بنویسید و به کسی نشان ندهید.</string>
     <string name="verify_seed_buttons_tip">لطفا این کلمات را بر اساس ترتیب کلمات در عبارت بازیابی، به ترتیب انتخاب کنید. </string>
     <string name="verify_seed_success_title">با موفقیت تائید شد</string>
     <string name="verify_seed_success_message">کیف پول‌تان اکنون امن است. هر گاه خواستید می‌توانید از این عبارت بازیابی برای بازگرداندن حساب‌تان روی دستگاهی دیگر استفاده کنید. </string>
@@ -293,6 +291,7 @@
     <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
+    <string name="about_copyright">کپی‌رایت ۲۰۲۵ © Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش‌پی والت %s</string>
     <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
@@ -466,4 +465,10 @@
     <string name="stale_exchange_rates_error">قیمت‌ها به دست نیامد. قیمت‌های پول رسمی شاید نادرست باشد</string>
     <string name="stale_exchange_rates_stale">قیمت‌ها متعلق به حداقل ۳۰ دقیقه پیش است. قیمت‌های پول رسمی شاید درست نباشد. </string>
     <string name="stale_exchange_rates_volatile">قیمت‌ها از به‌روزرسانی قبلی بیش از ۵۰ درصد نوسان کرده است. </string>
+    <string name="select_security_level_title">سطح امنیت را انتخاب کنید</string>
+    <string name="select_security_level_message">با عبارت بازیابی ۱۲ یا ۲۴ کلمه‌ای می‌توانید امنیت کیف پول‌تان را بالا ببرید.</string>
+    <string name="select_security_level_12_words_title">امن</string>
+    <string name="select_security_level_12_words_message">عبارت بازیابی ۱۲ کلمه‌ای</string>
+    <string name="select_security_level_24_words_title">بسیار امن</string>
+    <string name="select_security_level_24_words_message">عبارت بازیابی ۲۴ کلمه‌ای</string>
 </resources>

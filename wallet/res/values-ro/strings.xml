@@ -250,7 +250,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Adaugă lista pachetelor instalate</string>
     <string name="report_issue_dialog_collect_application_log">Adaugă log-ul aplicatiei</string>
     <string name="report_issue_dialog_collect_wallet_dump">Adaugă dump-ul portofelului</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Trimite raportul folosind...</string>
     <string name="report_issue_dialog_mail_intent_failed">Trimiterea raportului a eșuat.</string>
     <string name="about_title">Despre</string>
     <string name="about_version_title">Versiunea</string>

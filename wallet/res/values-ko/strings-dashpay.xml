@@ -413,6 +413,7 @@
     <string name="coinjoin_start">믹싱 시작</string>
     <string name="coinjoin_stop">믹싱 중지</string>
     <string name="coinjoin_mixing">믹싱</string>
+    <string name="coinjoin_mixing_finishing">믹싱을 마치는 중</string>
     <string name="coinjoin_paused">믹싱이 멈춰짐</string>
     <string name="coinjoin_not_started">시작되지 않음</string>
     <string name="coinjoin_progress_balance">%2$s 중 %1$s</string>

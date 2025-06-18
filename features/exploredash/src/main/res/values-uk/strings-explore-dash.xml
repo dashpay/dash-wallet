@@ -236,7 +236,6 @@
     <string name="accept_to_proceed">Прийміть правила та умови DashSpend, щоб створити обліковий запис DashSpend</string>
     <string name="view_terms_conditions">Терміни і умови</string>
     <string name="barcode_placeholder">Щойно ваш код буде згенеровано, він відобразиться тут.</string>
-
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Створити аккаунт</string>
     <string name="log_in_to_ctxspend_account">Увійти в свій аккаунт</string>

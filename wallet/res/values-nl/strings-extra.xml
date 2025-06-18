@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Zoeken</string>
+    <string name="shortcut_scan_to_pay">Scan QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Verzenden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Ontvang</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importeer persoonlijke sleutel</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Voeg snelkoppeling toe</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Snel Ontvangen</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash-adres is gekopieerd naar het klembord</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Toon</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" is geen herstelzinwoord</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Herstelzin moet 12 woorden hebben</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Herstelzin moet 12 of 24 woorden bevatten</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Incorrecte herstelzin</string>
     <string name="restore_wallet_from_invalid_seed_failure">Portemonnee kon niet worden hersteld:\n\n%s\n\nVerkeerde herstelzin?</string>
 
@@ -291,6 +289,7 @@
     <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
+    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Portemonnee %s</string>
     <string name="about_last_explore_device_sync">Laatste Explore-apparaatsynchronisatie</string>
@@ -464,4 +463,10 @@
     <string name="stale_exchange_rates_error">Prijzen zijn niet opgehaald. Fiat waarden kunnen onjuist zijn.</string>
     <string name="stale_exchange_rates_stale">Prijzen zijn minstens 30 minuten oud. Fiat waarden kunnen onjuist zijn.</string>
     <string name="stale_exchange_rates_volatile">Sinds de laatste update zijn de prijzen meer dan 50% veranderd.</string>
+    <string name="select_security_level_title">Kies beveiligingsniveau</string>
+    <string name="select_security_level_message">Je kunt je portemonnee beveiligen met een herstelzin van 12 of 24 woorden.</string>
+    <string name="select_security_level_12_words_title">Veilig</string>
+    <string name="select_security_level_12_words_message">Herstelzin met 12 woorden</string>
+    <string name="select_security_level_24_words_title">Heel veilig</string>
+    <string name="select_security_level_24_words_message">Herstelzin met 24 woorden</string>
 </resources>

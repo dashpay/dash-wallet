@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">코인조인 담보 입력</string>
     <string name="transaction_row_status_coinjoin_mixing">코인조인 믹싱</string>
     <string name="transaction_row_status_coinjoin_create_denominations">코인조인 디노미네이션 생성</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">코인조인 더스트 모으기</string>
     <string name="network_monitor_activity_title">블럭체인 모니터링</string>
     <string name="network_monitor_peer_list_title">피어</string>
     <string name="network_monitor_block_list_title">블럭</string>
@@ -294,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">설치된 패키지 목록 첨부</string>
     <string name="report_issue_dialog_collect_application_log">어플리케이션 로그 첨부</string>
     <string name="report_issue_dialog_collect_wallet_dump">지갑 덤프 파일 첨부</string>
-    <string name="report_issue_dialog_mail_intent_chooser">오류 보고서 전송 방식을 선택하세요...</string>
     <string name="report_issue_dialog_mail_intent_failed">오류 보고서 전송에 실패했습니다.</string>
     <string name="report_issue_dialog_generating_report">보고서 생성중</string>
     <string name="report_transaction_history_export">내보내기</string>
@@ -415,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">설정 열기</string>
     <string name="credits_profile_change_message">프로필 정보 업데이트</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">블록 탐색기 선택하기</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">옵션 선택하기</string>
+    <string name="customize_shortcuts">바로가기 모음 사용자 지정하기 </string>
+    <string name="customize_shortcuts_description">위의 버튼을 길게 눌러 필요한 기능으로 변경하세요</string>
+</resources>

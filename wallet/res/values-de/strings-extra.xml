@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scannen</string>
+    <string name="shortcut_scan_to_pay">QR Code scannen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Senden</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Empfangen</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Privaten Schlüssel importieren</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Shortcut hinzufügen</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Schnell Empfangen</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash-Adresse in die Zwischenablage kopiert</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zeigen</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ist kein Wort aus der Wiederherstellungs-Wortfolge</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Wiederherstellungs-Wortfolge muss 12 Wörter haben</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Wiederherstellungsphrase muss 12 oder 24 Wörter enthalten</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Fehlerhafte Wiederherstellungs-Wortfolge</string>
     <string name="restore_wallet_from_invalid_seed_failure">Die Wallet konnte nicht wiederhergestellt werden:\n\n%s\n\nFalsche Wiederherstellungsphrase?</string>
 
@@ -217,7 +215,7 @@
     <string name="verify_info_title_1">Die Dash Core Group speichert deine Wiederherstellungsphrase NICHT.</string>
     <string name="verify_info_subtitle_1">Jede Person mit deiner Wiederherstellungsphrase, kann auf dein Guthaben zugreifen.</string>
     <string name="verify_info_title_2">Du kannst die Wallet ohne Wiederherstellungsphrase NICHT wiederherstellen.</string>
-    <string name="verify_info_subtitle_2">Schreibe es auf, lege es an einen sicheren Platz und zeige es niemanden.</string>
+    <string name="verify_info_subtitle_2">Schreibe sie auf, lege die Notiz an einen sicheren Platz und zeige diese niemanden.</string>
     <string name="verify_seed_buttons_tip">Bitte tippe die Wörter deiner Wiederherstellungsphrase in der richtigen Reihenfolge an</string>
     <string name="verify_seed_success_title">Erfolgreich verifiziert</string>
     <string name="verify_seed_success_message">Deine Wallet ist jetzt gesichert. Du kannst die Phrase jederzeit nutzen, um die Wallet auf einem anderen Gerät wiederherzustellen.</string>
@@ -465,4 +463,10 @@
     <string name="stale_exchange_rates_error">Die Preise konnten nicht abgerufen werden.  Es ist möglich, dass die Fiat-Werte nicht korrekt sind.</string>
     <string name="stale_exchange_rates_stale">Die Preise sind mindestens 30 Minuten alt. Es ist möglich, dass die Fiat-Werte nicht korrekt sind.</string>
     <string name="stale_exchange_rates_volatile">Die Preise sind seit dem letzten Update um mehr als 50% geschwankt.</string>
+    <string name="select_security_level_title">Sicherheitsstufe</string>
+    <string name="select_security_level_message">Du kannst deine Wallet mit einer Wiederherstellungsphrase mit 12 oder 24 Wörtern sichern.</string>
+    <string name="select_security_level_12_words_title">Sichern</string>
+    <string name="select_security_level_12_words_message">Wiederherstellungsphrase mit 12 Wörtern</string>
+    <string name="select_security_level_24_words_title">Sehr sicher</string>
+    <string name="select_security_level_24_words_message">Wiederherstellungsphrase mit 24 Wörtern</string>
 </resources>

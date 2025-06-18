@@ -245,7 +245,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Dodaj listu instaliranih paketa</string>
     <string name="report_issue_dialog_collect_application_log">Dodaj log aplikacije</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dodaj dump novčanika</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Pošalji izveštaj koristeći...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nije uspelo slanje izveštaja.</string>
     <string name="about_title">Informacije</string>
     <string name="about_version_title">Verzija</string>

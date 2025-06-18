@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scansiona</string>
+    <string name="shortcut_scan_to_pay">Scansiona QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Invia</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Ricevi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importa chiave privata</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Aggiungi Scorciatoia</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Rapido Ricevi</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Indirizzo Dash copiato negli appunti</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostra</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" non è una parola della frase di recupero</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase di recupero deve avere 12 parole</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase di recupero deve contenere 12 o 24 parole</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase di recupero errata</string>
     <string name="restore_wallet_from_invalid_seed_failure">Impossibile ripristinare il portafoglio:\n\n%s\n\nFrase di recupero Errata?</string>
 
@@ -468,4 +466,10 @@
     <string name="stale_exchange_rates_error">I prezzi non sono stati recuperati. I valori Fiat potrebbero essere errati.</string>
     <string name="stale_exchange_rates_stale">I prezzi risalgono ad almeno 30 minuti. I valori Fiat potrebbero essere errati.</string>
     <string name="stale_exchange_rates_volatile">I prezzi hanno oscillato di oltre il 50% dall\'ultimo aggiornamento.</string>
+    <string name="select_security_level_title">Seleziona il Livello di Sicurezza</string>
+    <string name="select_security_level_message">Puoi proteggere il tuo wallet con una frase di recupero composta da 12 o 24 parole.</string>
+    <string name="select_security_level_12_words_title">Sicura</string>
+    <string name="select_security_level_12_words_message">Frase di recupero di 12 parole</string>
+    <string name="select_security_level_24_words_title">Molto sicura</string>
+    <string name="select_security_level_24_words_message">Frase di recupero di 24 parole</string>
 </resources>

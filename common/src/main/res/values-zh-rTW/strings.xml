@@ -107,5 +107,6 @@
     <string name="log_in">登入</string>
 
     <string name="chain_syncing">區塊鏈正在同步…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">寄送報告…</string>
 
     </resources>
