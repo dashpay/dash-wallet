@@ -28,6 +28,8 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.util.CrashReporter
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Sha256Hash
@@ -48,6 +50,19 @@ import java.util.TreeSet
 import java.util.zip.GZIPOutputStream
 import javax.inject.Inject
 
+enum class ReportGenerationStatus {
+    NotStarted,
+    ContextualInfo,
+    ApplicationInfo,
+    StackTrace,
+    DeviceInfo,
+    Packages,
+    Logs,
+    WalletDump,
+    BackgroundTraces,
+    Finishing,
+    Complete
+}
 
 @HiltViewModel
 class ContactSupportViewModel @Inject constructor(
@@ -66,6 +81,8 @@ class ContactSupportViewModel @Inject constructor(
     var contextualData: String? = null
     var stackTrace: String? = null
     var isCrash: Boolean = false
+    private val _status = MutableStateFlow(ReportGenerationStatus.NotStarted)
+    val status = _status.asStateFlow()
 
     suspend fun createReport(
         userIssueDescription: String,
@@ -74,6 +91,7 @@ class ContactSupportViewModel @Inject constructor(
         collectApplicationLog: Boolean,
         collectWalletDump: Boolean
     ): Pair<String, ArrayList<Uri>> = withContext(Dispatchers.IO) {
+        log.info("createReport({})", collectWalletDump)
         val text = StringBuilder()
         val attachments = ArrayList<Uri>()
         val cacheDir = application.cacheDir
@@ -83,6 +101,7 @@ class ContactSupportViewModel @Inject constructor(
         text.append(userIssueDescription).append('\n')
 
         try {
+            _status.value = ReportGenerationStatus.ContextualInfo
             val contextualData: CharSequence? = collectContextualData()
             if (contextualData != null) {
                 text.append("\n\n\n=== contextual data ===\n\n")
@@ -93,6 +112,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         try {
+            _status.value = ReportGenerationStatus.ApplicationInfo
             text.append("\n\n\n=== application info ===\n\n")
             val applicationInfo: CharSequence = collectApplicationInfo()
             text.append(applicationInfo)
@@ -101,6 +121,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         try {
+            _status.value = ReportGenerationStatus.StackTrace
             val stackTrace: CharSequence? = collectStackTrace()
             if (stackTrace != null) {
                 text.append("\n\n\n=== stack trace ===\n\n")
@@ -112,6 +133,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         if (collectDeviceInfo) {
+            _status.value = ReportGenerationStatus.DeviceInfo
             try {
                 text.append("\n\n\n=== device info ===\n\n")
                 val deviceInfo: CharSequence = collectDeviceInfo()
@@ -122,6 +144,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         if (collectInstalledPackages) {
+            _status.value = ReportGenerationStatus.Packages
             try {
                 text.append("\n\n\n=== installed packages ===\n\n")
                 CrashReporter.appendInstalledPackages(text, application)
@@ -131,6 +154,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         if (collectApplicationLog) {
+            _status.value = ReportGenerationStatus.Logs
             val logDir = File(application.filesDir, "log")
             var totalLogsSize = 0L
             if (logDir.exists()) {
@@ -153,6 +177,8 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         if (collectWalletDump) {
+            _status.value = ReportGenerationStatus.WalletDump
+            log.info("createReport - collecting wallet dump")
             try {
                 val walletDump: CharSequence = collectWalletDump()
                 val file = File.createTempFile("wallet-dump.", ".txt", reportDir)
@@ -190,6 +216,7 @@ class ContactSupportViewModel @Inject constructor(
         }
 
         try {
+            _status.value = ReportGenerationStatus.BackgroundTraces
             val savedBackgroundTraces = File.createTempFile("background-traces.", ".txt", reportDir)
             if (CrashReporter.collectSavedBackgroundTraces(savedBackgroundTraces)) {
                 attachments.add(
@@ -206,6 +233,7 @@ class ContactSupportViewModel @Inject constructor(
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
         log.info("create report: {}", watch)
+        _status.value = ReportGenerationStatus.Finishing
         return@withContext Pair(text.toString(), attachments)
     }
 
@@ -272,9 +300,12 @@ class ContactSupportViewModel @Inject constructor(
             org.bitcoinj.core.Context.propagate(it.context)
             val walletDump = it.toString(
                 false,
+                false,
+                null,
                 false, // don't include transactions here
                 true,
-                null
+                null,
+                false
             )
             // only include pending and dead transactions
             val txDump = StringBuilder()
