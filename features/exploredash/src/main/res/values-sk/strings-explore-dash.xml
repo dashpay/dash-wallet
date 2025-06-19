@@ -65,6 +65,7 @@
     <string name="explore_back_to_nearest">Späť na najbližšie miesto</string>
     <string name="explore_select_location">Vyberte umiestnenie</string>
     <string name="explore_pay_with_dash">Plaťte pomocou Dash</string>
+    <string name="explore_pay_with_dash_save">Uložiť %.2f%%</string>
     <string name="explore_buy_gift_card">Kúpiť darčekovú kartu</string>
     <string name="explore_buy_dash">Kúpiť Dash</string>
     <string name="explore_sell_dash">Predať Dash</string>
@@ -89,6 +90,10 @@
     <string name="explore_filtered_by">Filtrované podľa:</string>
     <string name="explore_pay_gift_card">Plaťte darčekovou kartou</string>
     <string name="explore_sort_by">Zoradiť podľa</string>
+    <string name="gift_card_types">Typy darčekových kariet</string>
+    <string name="flexible_amount_option">Flexibilné sumy</string>
+    <string name="fixed_denom_option">Fixné denominované sumy</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>V blízkosti</item>
@@ -208,11 +213,16 @@
     <string name="send_coins_error_msg">Problém pri odosielaní!</string>
     <string name="gift_card_barcode_failed">Čiarový kód sa nepodarilo načítať</string>
     <string name="gift_card_tx_title">Darčeková karta %s</string>
+    <string name="select_amount">Vyberte sumu</string>
+    <string name="select_fixed_amount">Tento obchodník predáva darčekové karty za fixné ceny</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Zadajte overovací kód</string>
     <string name="verification_check_email">Skontrolujte svoj e-mail a zadajte overovací kód</string>
     <string name="buy_gift_card">Kúpte si darčekovú kartu pomocou účtu DashSpend</string>
+    <string name="dashspend_create_account">Vytvorte si účet alebo sa prihláste do existujúceho</string>
     <string name="create_new_account">Vytvoriť nový účet</string>
+    <string name="login">Prihlásiť sa</string>
     <string name="password">Heslo</string>
     <string name="logged_in_as">Prihlásený ako %s</string>
     <string name="log_out">Odhlásiť sa</string>
@@ -224,13 +234,23 @@
     <string name="cancel">Zrušiť</string>
     <string name="gift_card_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Prosím skúste znova.</string>
     <string name="gift_card_details_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu.</string>
+    <string name="gift_card_limit_error">Limity nákupov pre tohto obchodníka sa zmenili. Pre viac informácií kontaktujte podporu CTX.</string>
     <string name="gift_card_unknown_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu s txid %s.</string>
     <string name="gift_card_rejected">Platba bola odmietnutá. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
     <string name="gift_card_redeem_url_not_supported">Platba bola uskutočnená u obchodníka, ktorý poskytuje adresu URL na uplatnenie, ale táto nie je momentálne podporovaná. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
+    <string name="dashspend_terms_conditions">Prijmite zmluvné podmienky</string>
     <string name="accept_terms_conditions">Prijímam zmluvné podmienky DashSpend</string>
     <string name="tap_link_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte klepnúť na odkaz nižšie, aby ste mohli pokračovať</string>
     <string name="accept_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte prijať zmluvné podmienky DashSpend</string>
+    <string name="view_terms_conditions">Zmluvné podmienky</string>
+    <string name="barcode_placeholder">Hneď ako bude váš kód vygenerovaný, zobrazí sa tu.</string>
+    <string name="gift_card_contact_ctx">Kontaktovať podporu CTX</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Vytvoriť účet</string>
+    <string name="log_in_to_ctxspend_account">Prihlásiť sa do svojho účtu</string>
     <string name="log_in_to_ctxspend_account_desc">Váš email slúži len na zaslanie jednorazového hesla.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Kúpte si darčekovú kartu pomocou svojho účtu na výdavky v Dash</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Vytvorte si účet DashSpend alebo sa prihláste do existujúceho účtu</string>
-    </resources>
+    <string name="temporarily_unavailable">Dočasne nedostupné</string>
+</resources>

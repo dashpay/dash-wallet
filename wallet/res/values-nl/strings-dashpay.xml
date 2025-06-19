@@ -414,6 +414,7 @@ gebruikersnaam</b></string>
     <string name="coinjoin_start">Start met mixen</string>
     <string name="coinjoin_stop">Stop het mixen</string>
     <string name="coinjoin_mixing">Aan het mixen</string>
+    <string name="coinjoin_mixing_finishing">Mixen wordt afgerond</string>
     <string name="coinjoin_paused">mixen gepauzeerd </string>
     <string name="coinjoin_not_started">Niet gestart</string>
     <string name="coinjoin_progress_balance">%1$s van %2$s</string>

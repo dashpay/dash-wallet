@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Сохранить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Скан.</string>
+    <string name="shortcut_scan_to_pay">Сканировать QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Отправить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Получить</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Импорт ключа</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Добавить</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Получить быстро</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Адрес скопирован в буфер обмена</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Показать</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">«%s» не является словом из фразы восстановления</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фраза восстановления должна состоять из 12 слов</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фраза восстановления должна состоять из 12 или 24 слов</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Некорректная фраза восстановления</string>
     <string name="restore_wallet_from_invalid_seed_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность фразы восстановления.</string>
 
@@ -450,7 +448,7 @@
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
     <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
-    <string name="masternode_key_type_total">%d ключей</string>
+    <string name="masternode_key_type_total">ключи</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>
     <string name="masternode_key_address">Адрес</string>
@@ -471,4 +469,10 @@
     <string name="stale_exchange_rates_error">Данные о курсе не были получены. Курс валют может быть неточным.</string>
     <string name="stale_exchange_rates_stale">Данные о курсе были получены не менее 30 минут назад. Курс валют может быть неточным.</string>
     <string name="stale_exchange_rates_volatile">Курс изменился более чем на 50% с момента последнего обновления.</string>
+    <string name="select_security_level_title">Выбрать уровень безопасности</string>
+    <string name="select_security_level_message">Вы можете защитить свой кошелёк фразой восстановления, состоящей из 12 или 24 слов</string>
+    <string name="select_security_level_12_words_title">Безопасно</string>
+    <string name="select_security_level_12_words_message">Фраза восстановления из 12 слов</string>
+    <string name="select_security_level_24_words_title">Очень безопасно</string>
+    <string name="select_security_level_24_words_message">Фраза восстановления из 24 слов</string>
 </resources>

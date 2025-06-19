@@ -70,4 +70,6 @@
     <string name="disconnected">Odpojeno</string>
     <string name="enter_amount_available">k dispozici</string>
     <string name="transaction_row_rate_not_available">Není dostupný</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Odeslat hlášení pomocí…</string>
+
     </resources>

@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Cadangan</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Pindai</string>
+    <string name="shortcut_scan_to_pay">Pindai QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Kirim</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Terima</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Impor kunci pribadi</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Tambah Pintasan</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Terima Cepat</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Alamat Dash disalin</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Tunjukkan</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" bukan kata frasa pemulihan</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frasa pemulihan harus memiliki 12 kata</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frasa pemulihan harus memiliki 12 atau 24 kata</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frasa pemulihan yang buruk</string>
     <string name="restore_wallet_from_invalid_seed_failure">Kunci pribadi tidak dapat dipulihkan:\n\n%s\n\nKata sandi salah?</string>
 
@@ -214,7 +212,7 @@
     <string name="verify_info_title_1">Dash Core Group TIDAK menyimpan frasa pemulihan ini</string>
     <string name="verify_info_subtitle_1">Siapa saja yang mempunyai frasa pemulihan anda dapat mengakses dana anda.</string>
     <string name="verify_info_title_2">Anda TIDAK akan bisa memulihkan dompet tanpa frasa pemulihan</string>
-    <string name="verify_info_subtitle_2">Tulis itu pada tempat yang aman dan jangan tunjukkan pada siapapun.</string>
+    <string name="verify_info_subtitle_2">Tuliskan di tempat yang aman dan jangan perlihatkan kepada siapa pun.</string>
     <string name="verify_seed_buttons_tip">Ketuk kata-kata dari frasa pemulihan Anda dalam urutan yang benar</string>
     <string name="verify_seed_success_title">Berhasil Diverifikasi</string>
     <string name="verify_seed_success_message">Dompet Anda aman sekarang. Anda dapat menggunakan frasa pemulihan kapan saja untuk memulihkan akun di perangkat lain.</string>
@@ -288,6 +286,7 @@
     <string name="about_review_and_rate">Tinjau dan beri peringkat aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
+    <string name="about_copyright">Hak Cipta © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dompet DashPay %s</string>
     <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
@@ -461,4 +460,10 @@
     <string name="stale_exchange_rates_error">Harga tidak diambil. Nilai Fiat mungkin salah.</string>
     <string name="stale_exchange_rates_stale">Harga setidaknya berumur 30 menit. Nilai Fiat mungkin salah.</string>
     <string name="stale_exchange_rates_volatile">Harga telah berfluktuasi lebih dari 50% sejak pembaruan terakhir.</string>
+    <string name="select_security_level_title">Pilih Tingkat Keamanan</string>
+    <string name="select_security_level_message">Anda dapat mengamankan dompet Anda dengan frasa pemulihan 12 atau 24 kata.</string>
+    <string name="select_security_level_12_words_title">Aman</string>
+    <string name="select_security_level_12_words_message">12 kata frasa pemulihan</string>
+    <string name="select_security_level_24_words_title">Sangat aman</string>
+    <string name="select_security_level_24_words_message">24 kata frasa pemulihan</string>
 </resources>

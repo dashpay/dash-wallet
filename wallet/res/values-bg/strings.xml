@@ -281,7 +281,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Добавяне списък на инсталираните пакети</string>
     <string name="report_issue_dialog_collect_application_log">Добавяне лог на приложението</string>
     <string name="report_issue_dialog_collect_wallet_dump">Добавяне dump  на портфейла</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Изпрати доклад използвайки…</string>
     <string name="report_issue_dialog_mail_intent_failed">Изпращането на доклад е неуспешно.</string>
     <string name="about_title">За</string>
     <string name="about_version_title">Версията</string>

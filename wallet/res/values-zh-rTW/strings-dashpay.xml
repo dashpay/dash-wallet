@@ -413,6 +413,7 @@
     <string name="coinjoin_start">開始混合</string>
     <string name="coinjoin_stop">停止混合</string>
     <string name="coinjoin_mixing">混合</string>
+    <string name="coinjoin_mixing_finishing">正在完成混合</string>
     <string name="coinjoin_paused">混合暫停</string>
     <string name="coinjoin_not_started">尚未開始</string>
     <string name="coinjoin_progress_balance">%1$s of %2$s</string>

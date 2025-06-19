@@ -286,7 +286,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Kurulu paketlerin listesini ekle</string>
     <string name="report_issue_dialog_collect_application_log">Uygulama günlüğünü ilave et</string>
     <string name="report_issue_dialog_collect_wallet_dump">Cüzdan dökümünü ilave et</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Raporu şununla gönder…</string>
     <string name="report_issue_dialog_mail_intent_failed">Rapor gönderimi başarısız.</string>
     <string name="report_transaction_history_export">Dışa Aktar</string>
     <string name="report_transaction_history_title">CSV Dışa Aktarma</string>

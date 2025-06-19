@@ -412,6 +412,7 @@
     <string name="coinjoin_start">آغاز ترکیب</string>
     <string name="coinjoin_stop">توقف ترکیب</string>
     <string name="coinjoin_mixing">در حال ترکیب</string>
+    <string name="coinjoin_mixing_finishing">پایان ترکیب</string>
     <string name="coinjoin_paused">توقف موقت ترکیب</string>
     <string name="coinjoin_not_started">شروع نشده</string>
     <string name="coinjoin_progress_balance">%1$s از %2$s</string>

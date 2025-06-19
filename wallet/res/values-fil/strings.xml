@@ -294,7 +294,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Ilakip ang listahan ng installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Ilakip ang application log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Ilakip ang wallet dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nabigo ang pagpapadala ng report.</string>
     <string name="report_issue_dialog_generating_report">Pagbuo ng ulat</string>
     <string name="report_transaction_history_export">Export</string>

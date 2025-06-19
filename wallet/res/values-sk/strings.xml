@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Kolaterálne vstupy Coinjoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Miešanie CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">Vytvorené denominácie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Celkový CoinJoin Dust</string>
     <string name="network_monitor_activity_title">Stav siete</string>
     <string name="network_monitor_peer_list_title">Uzly</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -294,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Pripojiť zoznam nainštalovaných balíčkov</string>
     <string name="report_issue_dialog_collect_application_log">Pripojiť aplikačný log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
     <string name="report_issue_dialog_generating_report">Generovanie prehľadu</string>
     <string name="report_transaction_history_export">Exportovať</string>
@@ -415,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
     <string name="credits_profile_change_message">Aktualizujte informácie o profile</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Vyberte prieskumníka blokov</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Vyberte možnosť</string>
+    <string name="customize_shortcuts">Prispôsobiť panel skratiek</string>
+    <string name="customize_shortcuts_description">Pre nahradenie požadovanou funkciou, podržte ľubovoľné vyššie umiestnené tlačidlo</string>
+</resources>

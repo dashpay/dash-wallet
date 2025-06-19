@@ -296,7 +296,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Liste von installierten Paketen anhängen</string>
     <string name="report_issue_dialog_collect_application_log">Applikations-Logfile anhängen</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dump der Wallet anhängen</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Bericht senden mit…</string>
     <string name="report_issue_dialog_mail_intent_failed">Senden des Berichts fehlgeschlagen.</string>
     <string name="report_issue_dialog_generating_report">Bericht erstellen</string>
     <string name="report_transaction_history_export">Export</string>
@@ -418,4 +417,9 @@
     <string name="credits_profile_change_message">Profilinformation updaten</string>
 
     <string name="block_explorer_selection_title">Blockexplorer auswählen</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Option auswählen</string>
+    <string name="customize_shortcuts">Shortcut-Leiste anpassen</string>
+    <string name="customize_shortcuts_description">Halte eine beliebige Taste oben gedrückt, um sie durch die gewünschte Funktion zu ersetzen</string>
 </resources>

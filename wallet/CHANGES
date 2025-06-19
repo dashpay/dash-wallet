@@ -1,4 +1,14 @@
 Dash Wallet
+v11.3.0
+* Improve Frequent Contacts list display time
+* DashSpend: Refresh CTX tokens
+* Add support for 24 word recovery phrases
+* DashSpend: Fix discount display during purchase
+* Shortcuts: allow editing on the home screen
+* DashSpend: Add more error handling
+* Fix various UI issues
+* Fix various crashes
+
 v11.2.2
 * Fix QR codes (not include usernames)
 * Show merchant types dialog

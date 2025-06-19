@@ -413,6 +413,7 @@
     <string name="coinjoin_start">Έναρξη μίξης.</string>
     <string name="coinjoin_stop">Διακοπή μίξης</string>
     <string name="coinjoin_mixing">Ανάμιξη</string>
+    <string name="coinjoin_mixing_finishing">Η ανάμιξη ολοκληρώθηκε</string>
     <string name="coinjoin_paused">Ανάμειξη σε παύση</string>
     <string name="coinjoin_not_started">Δεν ξεκίνησε</string>
     <string name="coinjoin_progress_balance">%1$s από%2$s</string>

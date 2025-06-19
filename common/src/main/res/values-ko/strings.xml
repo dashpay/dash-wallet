@@ -107,5 +107,6 @@
     <string name="log_in">로그인</string>
 
     <string name="chain_syncing">체인 동기화 중...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">오류 보고서 전송 방식을 선택하세요...</string>
 
     </resources>

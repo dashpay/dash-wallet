@@ -212,7 +212,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Expandera lista för installerade paket</string>
     <string name="report_issue_dialog_collect_application_log">Bifoga applikationslogg</string>
     <string name="report_issue_dialog_collect_wallet_dump">Bifoga plånboksdump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Skicka rapport med…</string>
     <string name="report_issue_dialog_mail_intent_failed">Rapportering misslyckades</string>
     <string name="about_title">Om</string>
     <string name="about_version_title">Version</string>

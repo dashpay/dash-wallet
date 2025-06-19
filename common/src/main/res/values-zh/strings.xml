@@ -107,5 +107,6 @@
     <string name="log_in">登录</string>
 
     <string name="chain_syncing">区块链正在同步...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">发送报告使用…</string>
 
     </resources>

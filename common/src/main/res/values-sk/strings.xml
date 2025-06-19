@@ -107,5 +107,6 @@
     <string name="log_in">Prihlásiť sa</string>
 
     <string name="chain_syncing">Reťazec sa synchronizuje...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
 
     </resources>

@@ -107,5 +107,6 @@
     <string name="log_in">Увійти</string>
 
     <string name="chain_syncing">Блокчейн синхронізується...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
 
     </resources>

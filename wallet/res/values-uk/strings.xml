@@ -299,7 +299,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Додати список встановлених пакетів</string>
     <string name="report_issue_dialog_collect_application_log">Додати лог додатку</string>
     <string name="report_issue_dialog_collect_wallet_dump">Додати дамп пам\'яті гаманця</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
     <string name="report_issue_dialog_mail_intent_failed">Помилка при відправці звіту.</string>
     <string name="report_issue_dialog_generating_report">Формування звіту</string>
     <string name="report_transaction_history_export">Експорт</string>
@@ -421,4 +420,5 @@
     <string name="credits_profile_change_message">Оновіть інформацію профілю</string>
 
     <string name="block_explorer_selection_title">Виберіть оглядач блоків</string>
-</resources>
+
+    </resources>
