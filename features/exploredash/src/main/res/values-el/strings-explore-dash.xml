@@ -61,6 +61,7 @@
     <string name="explore_back_to_nearest">Πίσω στην πλησιέστερη τοποθεσία</string>
     <string name="explore_select_location">Επιλέξτε τοποθεσία</string>
     <string name="explore_pay_with_dash">Πληρώστε με Dash</string>
+    <string name="explore_pay_with_dash_save">Aποθήκευση %.2f%%</string>
     <string name="explore_buy_gift_card">Αγοράστε μια δωροκάρτα</string>
     <string name="explore_buy_dash">Αγορά Dash</string>
     <string name="explore_sell_dash">Πώληση Dash</string>
@@ -85,6 +86,10 @@
     <string name="explore_filtered_by">Φιλτράρεται από:</string>
     <string name="explore_pay_gift_card">Πληρώστε με δωροκάρτα</string>
     <string name="explore_sort_by">Ταξινόμηση κατά</string>
+    <string name="gift_card_types">Τύποι δωροκάρτας</string>
+    <string name="flexible_amount_option">Flexible amounts</string>
+    <string name="fixed_denom_option">Ποσά σε σταθερές μονάδες</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Κοντινή τοποθεσία</item>
@@ -200,11 +205,16 @@
     <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
     <string name="gift_card_barcode_failed">Απέτυχε η φόρτωση του barcode</string>
     <string name="gift_card_tx_title">Δωροκάρτα · %s</string>
+    <string name="select_amount">επιλεξτε ποσό</string>
+    <string name="select_fixed_amount">Αυτός ο έμπορος πωλεί δωροκάρτες σε σταθερές τιμές</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Πληκτρολογήστε τον κωδικό επαλήθευσης</string>
     <string name="verification_check_email">Ελέγξτε το email σας και πληκτρολογήστε τον κωδικό επαλήθευσης</string>
     <string name="buy_gift_card">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
+    <string name="dashspend_create_account">Δημιουργήστε έναν λογαριασμό ή συνδεθείτε στον ήδη υπάρχοντα.</string>
     <string name="create_new_account">Δημιουργία νέου λογαριασμού</string>
+    <string name="login">Είσοδος</string>
     <string name="password">Κωδικός</string>
     <string name="logged_in_as">Συνδεθήκατε ως %s</string>
     <string name="log_out">Αποσύνδεση </string>
@@ -216,13 +226,23 @@
     <string name="cancel">Ακύρωση</string>
     <string name="gift_card_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλώ, δοκιμάστε ξανά.</string>
     <string name="gift_card_details_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη.</string>
+    <string name="gift_card_limit_error">Τα όρια αγορών για αυτόν τον έμπορο έχουν αλλάξει. Παρακαλούμε επικοινωνήστε με την Υποστήριξη CTX για περισσότερες πληροφορίες.</string>
     <string name="gift_card_unknown_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη με το txid %s.</string>
     <string name="gift_card_rejected">Η πληρωμή απορρίφθηκε. Παρακαλούμε επικοινωνήστε με την CTX με το αναγνωριστικό της δωροκάρτας %s και το αναγνωριστικό πληρωμής %s και το αναγνωριστικό συναλλαγής%s.</string>
     <string name="gift_card_redeem_url_not_supported">Η πληρωμή έχει γίνει για τον έμπορο που παρέχει μια διεύθυνση URL εξαργύρωσης, αλλά αυτό δεν υποστηρίζεται επί του παρόντος. Παρακαλούμε επικοινωνήστε με την CTX με το αναγνωριστικό της δωροκάρτας %s και το αναγνωριστικό πληρωμής %s και το αναγνωριστικό συναλλαγής %s.</string>
+    <string name="dashspend_terms_conditions">Αποδοχή των όρων και προϋποθέσεων</string>
     <string name="accept_terms_conditions">Αποδέχομαι τους όρους και τις προϋποθέσεις του DashSpend</string>
     <string name="tap_link_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να πατήσετε στον παρακάτω σύνδεσμο για να προχωρήσετε.</string>
     <string name="accept_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να αποδεχτείτε τους όρους και τις προϋποθέσεις του DashSpend.</string>
+    <string name="view_terms_conditions">Όροι και Προϋποθέσεις</string>
+    <string name="barcode_placeholder">Μόλις δημιουργηθεί ο κώδικας σας, θα εμφανιστεί εδώ.</string>
+    <string name="gift_card_contact_ctx">Επικοινωνήστε με την CTX υποστήριξη</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Δημιουργία λογαριασμού</string>
+    <string name="log_in_to_ctxspend_account">Συνδεθείτε στο λογαριασμό σας</string>
     <string name="log_in_to_ctxspend_account_desc">Το email σας χρησιμοποιείται μόνο για την αποστολή ενός κωδικού πρόσβασης μιας χρήσης.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Δημιουργήστε έναν λογαριασμό στο DashSpend ή συνδεθείτε στον ήδη υπάρχοντα.</string>
-    </resources>
+    <string name="temporarily_unavailable">Προσωρινά μη διαθέσιμο</string>
+</resources>
