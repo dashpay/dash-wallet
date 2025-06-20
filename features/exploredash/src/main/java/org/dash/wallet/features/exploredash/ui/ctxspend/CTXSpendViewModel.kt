@@ -282,7 +282,7 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun checkToken(): Boolean {
         return try {
-            repository.refreshToken()
+            !repository.isUserSignedIn() || repository.refreshToken()
         } catch (ex: Exception) {
             false
         }

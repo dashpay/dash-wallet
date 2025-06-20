@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">Mga Collateral na Input ng CoinJoin</string>
     <string name="transaction_row_status_coinjoin_mixing">Paghahalo ng CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Lumikha ng mga Denominasyon</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Mga kapantay</string>
     <string name="network_monitor_block_list_title">Bloke</string>
@@ -414,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">Buksan ang settings</string>
     <string name="credits_profile_change_message">I-update ang impormasyon ng profile</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Piliin ang block explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Pumili ng opsyon</string>
+    <string name="customize_shortcuts">I-customize ang shortcut bar</string>
+    <string name="customize_shortcuts_description">Pindutin ang anumang pindutan sa itaas upang palitan ito ng function na kailangan mo</string>
+</resources>

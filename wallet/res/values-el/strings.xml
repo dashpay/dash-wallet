@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin Collateral Inputs</string>
     <string name="transaction_row_status_coinjoin_mixing">Ανάμειξη CoinJoin</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Δημιουργία ονομαστικών μονάδων</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Παρακολούθηση δικτύου</string>
     <string name="network_monitor_peer_list_title">Ομότιμοι</string>
     <string name="network_monitor_block_list_title">Τμήματα</string>
@@ -414,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">Άνοιγμα Ρυθμίσεων</string>
     <string name="credits_profile_change_message">Ενημέρωση πληροφοριών προφίλ</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Επιλέξτε blockchain explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Επιλέξτε επιλογή</string>
+    <string name="customize_shortcuts">Προσαρμογή της γραμμής συντομεύσεων</string>
+    <string name="customize_shortcuts_description">Κρατήστε πατημένο οποιοδήποτε κουμπί παραπάνω για να το αντικαταστήσετε με τη λειτουργία που χρειάζεστε</string>
+</resources>
