@@ -120,6 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Η διεύθυνση Dash αντιγράφτηκε στο πρόχειρο</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Προβολή</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" δεν είναι μια φράση ανάκτησης</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Η φράση ανάκτησης πρέπει να έχει 12 με 24 λέξεις</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Λάθος φράση ανάκτησης</string>
     <string name="restore_wallet_from_invalid_seed_failure">Το Πορτοφόλι δεν μπόρεσε να ανακτηθεί:\n\n%s\n\nΛάθος φράση ανάκτησης;</string>
 
@@ -214,6 +215,7 @@
     <string name="verify_info_title_1">Το Dash Core Group ΔΕΝ αποθηκεύει αυτή τη φράση ανάκτησης</string>
     <string name="verify_info_subtitle_1">Οποιοσδήποτε έχει τη φράση ανάκτησης μπορεί να έχει πρόσβαση στα κεφάλαιά σας.</string>
     <string name="verify_info_title_2">ΔΕΝ θα μπορέσετε να επαναφέρετε το πορτοφόλι χωρίς μια φράση αποκατάστασης.</string>
+    <string name="verify_info_subtitle_2">Γράψτε την σε ασφαλές μέρος και μην την δείξετε σε κανέναν.</string>
     <string name="verify_seed_buttons_tip">Πατήστε στις λέξεις από τη φράση ανάκτησης σας με τη σωστή σειρά</string>
     <string name="verify_seed_success_title">Επιβεβαιώθηκε με επιτυχία</string>
     <string name="verify_seed_success_message">Το πορτοφόλι σας είναι ασφαλές τώρα. Μπορείτε να χρησιμοποιήσετε τη φράση ανάκτησης ανά πάσα στιγμή για να ανακτήσετε το λογαριασμό σας σε άλλη συσκευή.</string>
@@ -287,6 +289,7 @@
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
+    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Πορτοφόλι %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
@@ -460,4 +463,10 @@
     <string name="stale_exchange_rates_error">Οι τιμές δεν ανακτήθηκαν. Οι Fiat τιμές ενδέχεται να είναι εσφαλμένες.</string>
     <string name="stale_exchange_rates_stale">Οι τιμές είναι τουλάχιστον 30 λεπτά παλαιότερες. Οι τιμές Fiat ενδέχεται να είναι λανθασμένες.</string>
     <string name="stale_exchange_rates_volatile">Οι τιμές έχουν κυμανθεί περισσότερο από 50% από την τελευταία ενημέρωση.</string>
-    </resources>
+    <string name="select_security_level_title">Επιλέξτε επίπεδο ασφαλείας</string>
+    <string name="select_security_level_message">Μπορείτε να ασφαλίσετε το πορτοφόλι σας με μια φράση ανάκτησης 12 ή 24 λέξεων.</string>
+    <string name="select_security_level_12_words_title">Ασφαλές</string>
+    <string name="select_security_level_12_words_message">Φράση ανάκτησης 12 λέξεων</string>
+    <string name="select_security_level_24_words_title">Πολύ ασφαλές</string>
+    <string name="select_security_level_24_words_message">Φράση ανάκτησης 24 λέξεων</string>
+</resources>
