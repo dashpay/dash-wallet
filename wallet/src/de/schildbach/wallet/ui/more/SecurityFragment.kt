@@ -207,13 +207,13 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                         null -> { }
                         true, false -> {
                             // TODO: Disable Reset Wallet for now
-                            // doReset()
+                            doReset()
                         }
                     }
                 }
             } else {
                 // TODO: Disable Reset Wallet for now
-                // doReset()
+                doReset()
             }
         }
     }
