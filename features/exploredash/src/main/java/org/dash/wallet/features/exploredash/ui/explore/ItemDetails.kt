@@ -22,7 +22,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.AttributeSet
 import android.view.LayoutInflater
-import android.view.View.OnClickListener
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -40,6 +39,7 @@ import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
@@ -57,8 +57,8 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onNavigationButtonClicked: (() -> Unit)? = null
     private var onDialPhoneButtonClicked: (() -> Unit)? = null
     private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
-    private var onBuyGiftCardButtonClicked: (() -> Unit)? = null
-    private var onExploreLogOutClicked: (() -> Unit)? = null
+    private var onBuyGiftCardButtonClicked: ((GiftCardService) -> Unit)? = null
+    private var onExploreLogOutClicked: ((GiftCardService) -> Unit)? = null
 
     private var isLoggedIn = false
     private var isAtm = false
@@ -110,11 +110,11 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         onOpenWebsiteButtonClicked = listener
     }
 
-    fun setOnBuyGiftCardButtonClicked(listener: () -> Unit) {
+    fun setOnBuyGiftCardButtonClicked(listener: (GiftCardService) -> Unit) {
         onBuyGiftCardButtonClicked = listener
     }
 
-    fun setOnCTXSpendLogOutClicked(listener: () -> Unit) {
+    fun setOnCTXSpendLogOutClicked(listener: (GiftCardService) -> Unit) {
         onExploreLogOutClicked = listener
     }
 
@@ -132,7 +132,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 Pair(
                     context.resources.getString(R.string.log_out),
                     OnClickListener {
-                        onExploreLogOutClicked?.invoke()
+                        onExploreLogOutClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardService.PiggyCards else GiftCardService.CTX)
                         binding.loginExploreUser.isGone = true
                     }
                 ),
@@ -210,6 +210,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             payBtnIcon.setImageDrawable(drawable)
 
             if (isDash) {
+                piggyCardsCheckbox.isVisible = false
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
@@ -217,10 +218,14 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtn.isEnabled = merchant.active ?: true
                 temporaryUnavailableText.isVisible = merchant.active == false
             } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
+                piggyCardsCheckbox.isVisible = true
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
-                payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
+                payBtn.setOnClickListener {
+                    // TODO: multiple gift card options UI
+                    onBuyGiftCardButtonClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardService.PiggyCards else GiftCardService.CTX)
+                }
                 payBtn.isEnabled = merchant.active ?: true
                 temporaryUnavailableText.isVisible = merchant.active == false
             }

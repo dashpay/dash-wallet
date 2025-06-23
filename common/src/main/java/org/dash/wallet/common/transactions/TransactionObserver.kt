@@ -13,13 +13,18 @@ suspend fun Transaction.waitToMatchFilters(vararg filters: TransactionFilter) {
         transactionConfidenceListener = TransactionConfidence.Listener { _, _ ->
             if (filters.isEmpty() || filters.any { it.matches(this) }) {
                 confidence.removeEventListener(transactionConfidenceListener)
-                continuation.resume(Unit)
+
+                if (continuation.isActive) {
+                    continuation.resume(Unit)
+                }
             }
         }
 
         // Check if already matches
         if (filters.isEmpty() || filters.any { it.matches(this) }) {
-            continuation.resume(Unit)
+            if (continuation.isActive) {
+                continuation.resume(Unit)
+            }
             return@suspendCancellableCoroutine
         }
 

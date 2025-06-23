@@ -55,6 +55,7 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
@@ -66,7 +67,7 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapte
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashSpendLoginInfoDialog
 import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
@@ -243,7 +244,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         getString(R.string.button_okay)
                     ).show(requireActivity()) {
                         if (isAdded) {
-                            showLoginDialog()
+                            showLoginDialog(GiftCardService.CTX) // TODO: piggycards token expiration
                         }
                     }
                 }
@@ -383,12 +384,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun showLoginDialog() {
-        CTXSpendLoginInfoDialog().show(
+    private fun showLoginDialog(service: GiftCardService) {
+        DashSpendLoginInfoDialog(service.logo).show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    CTXSpendTermsDialog().show(requireActivity()) {
+                    CTXSpendTermsDialog(service.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
@@ -406,7 +407,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             },
             onExtraMessageAction = {
-                requireActivity().openCustomTab(getString(R.string.ctx_terms_url))
+                requireActivity().openCustomTab(
+                    service.termsAndConditions
+                )
             }
         )
     }
@@ -518,19 +521,19 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        binding.itemDetails.setOnBuyGiftCardButtonClicked {
+        binding.itemDetails.setOnBuyGiftCardButtonClicked { service ->
             lifecycleScope.launch {
-                if (!ctxSpendViewModel.isUserSignedInCTXSpend()) {
-                    showLoginDialog()
+                if (!ctxSpendViewModel.isUserSignedInService(service)) {
+                    showLoginDialog(service)
                 } else {
-                    openPurchaseGiftCardFragment()
+                    openPurchaseGiftCardFragment() // TODO: service
                 }
             }
         }
 
-        binding.itemDetails.setOnCTXSpendLogOutClicked {
+        binding.itemDetails.setOnCTXSpendLogOutClicked { service ->
             lifecycleScope.launch {
-                if (ctxSpendViewModel.isUserSignedInCTXSpend()) {
+                if (ctxSpendViewModel.isUserSignedInService(service)) {
                     ctxSpendViewModel.logout()
                 }
             }
@@ -538,7 +541,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         ctxSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
             lifecycleScope.launch {
-                binding.itemDetails.setCTXSpendLogInUser(email, ctxSpendViewModel.isUserSignedInCTXSpend())
+                binding.itemDetails.setCTXSpendLogInUser(email, ctxSpendViewModel.isUserSignedInService(GiftCardService.CTX)) // TODO: piggycards
             }
         }
 

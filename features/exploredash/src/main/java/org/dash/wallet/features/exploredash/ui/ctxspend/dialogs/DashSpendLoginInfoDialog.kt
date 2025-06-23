@@ -19,14 +19,17 @@ package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
 
 import android.os.Bundle
 import android.view.View
+import androidx.annotation.DrawableRes
 import androidx.annotation.StyleRes
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.DialogCtxSpendLoginInfoBinding
+import org.dash.wallet.features.exploredash.databinding.DialogDashSpendLoginInfoBinding
 
-class CTXSpendLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_ctx_spend_login_info) {
+class DashSpendLoginInfoDialog(
+    @DrawableRes val icon: Int
+) : OffsetDialogFragment(R.layout.dialog_dash_spend_login_info) {
 
     private var onExtraMessageListener: (() -> Unit)? = null
     private var onResultListener: ((Boolean?) -> Unit)? = null
@@ -34,11 +37,12 @@ class CTXSpendLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_ctx_spend_l
     @StyleRes
     override val backgroundStyle = R.style.PrimaryBackground
 
-    private val binding by viewBinding(DialogCtxSpendLoginInfoBinding::bind)
+    private val binding by viewBinding(DialogDashSpendLoginInfoBinding::bind)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        binding.dialogIcon.setImageResource(icon)
         binding.dialogPositiveButton.setOnClickListener { onPositiveAction() }
         binding.dialogNegativeButton.setOnClickListener { onNegativeAction() }
         binding.dialogExtraMessage.setOnClickListener { onExtraMessageAction() }

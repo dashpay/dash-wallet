@@ -19,7 +19,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashSpendLoginInfoDialog">
 
     <ImageButton
         android:id="@+id/collapse_button"
@@ -31,7 +31,7 @@
         android:layout_height="60dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginHorizontal="20dp"
-        android:src="@drawable/ic_ctx_logo_blue" />
+        tools:src="@drawable/ic_ctx_logo_blue" />
 
     <TextView
         android:id="@+id/dialog_title"
