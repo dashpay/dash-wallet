@@ -29,7 +29,6 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -144,44 +143,28 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
 
         try {
-            when (val response = getGiftCardByTxid(txid)) {
-                is ResponseResource.Success -> {
-                    val giftCard = response.value!!
-                    when (giftCard.status) {
-                        "unpaid" -> {
-                            // TODO: handle
-                        }
-                        "paid" -> {
-                            // TODO: handle
-                        }
-                        "fulfilled" -> {
-                            if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                cancelTicker()
-                                updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
-                                log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
-                                saveBarcode(giftCard.cardNumber)
-                            } else if (giftCard.redeemUrl.isNotEmpty()) {
-                                log.error("CTXSpend returned a redeem url card: not supported")
-                                _uiState.update {
-                                    it.copy(
-                                        error = CTXSpendException(
-                                            ResourceString(
-                                                R.string.gift_card_redeem_url_not_supported,
-                                                listOf(giftCard.id, giftCard.paymentId, txid)
-                                            )
-                                        )
-                                    )
-                                }
-                            }
-                        }
-                        "rejected" -> {
-                            // TODO: handle
-                            log.error("CTXSpend returned error: rejected")
+            val giftCard = getGiftCardByTxid(txid)
+            if (giftCard != null) {
+                when (giftCard.status) {
+                    "unpaid" -> {
+                        // TODO: handle
+                    }
+                    "paid" -> {
+                        // TODO: handle
+                    }
+                    "fulfilled" -> {
+                        if (!giftCard.cardNumber.isNullOrEmpty()) {
+                            cancelTicker()
+                            updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                            log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
+                            saveBarcode(giftCard.cardNumber)
+                        } else if (giftCard.redeemUrl.isNotEmpty()) {
+                            log.error("CTXSpend returned a redeem url card: not supported")
                             _uiState.update {
                                 it.copy(
                                     error = CTXSpendException(
                                         ResourceString(
-                                            R.string.gift_card_rejected,
+                                            R.string.gift_card_redeem_url_not_supported,
                                             listOf(giftCard.id, giftCard.paymentId, txid)
                                         )
                                     )
@@ -189,31 +172,46 @@ class GiftCardDetailsViewModel @Inject constructor(
                             }
                         }
                     }
+                    "rejected" -> {
+                        // TODO: handle
+                        log.error("CTXSpend returned error: rejected")
+                        _uiState.update {
+                            it.copy(
+                                error = CTXSpendException(
+                                    ResourceString(
+                                        R.string.gift_card_rejected,
+                                        listOf(giftCard.id, giftCard.paymentId, txid)
+                                    )
+                                )
+                            )
+                        }
+                    }
                 }
-
-                is ResponseResource.Failure -> {
-                    if (retries > 0) {
-                        retries--
-                        return
-                    }
-                    cancelTicker()
-                    val message = response.errorBody
-                    log.error("CTXSpend returned error: $message")
-                    _uiState.update {
-                        it.copy(
-                            error = CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid)))
-                        )
-                    }
+            } else {
+                if (retries > 0) {
+                    retries--
+                    return
+                }
+                cancelTicker()
+                log.error("CTXSpend returned null gift card")
+                _uiState.update {
+                    it.copy(
+                        error = CTXSpendException(ResourceString(R.string.gift_card_unknown_error, listOf(txid)))
+                    )
                 }
             }
         } catch (ex: Exception) {
+            if (retries > 0) {
+                retries--
+                return
+            }
             cancelTicker()
             log.error("Failed to fetch gift card info", ex)
             _uiState.update { it.copy(error = ex) }
         }
     }
 
-    private suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?> {
+    private suspend fun getGiftCardByTxid(txid: String): GiftCardResponse? {
         return repository.getGiftCardByTxid(txid = txid)
     }
 

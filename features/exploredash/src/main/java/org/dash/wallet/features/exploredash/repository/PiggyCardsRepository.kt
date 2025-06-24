@@ -18,12 +18,9 @@
 package org.dash.wallet.features.exploredash.repository
 
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.features.exploredash.data.piggycards.model.*
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
-import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -35,11 +32,11 @@ class PiggyCardsRepository @Inject constructor(
 
     override val userEmail: Flow<String?> = config.observeSecureData(PiggyCardsConfig.PREFS_KEY_EMAIL)
 
-    override suspend fun login(email: String): ResponseResource<Boolean> = safeApiCall {
+    override suspend fun login(email: String): Boolean {
         val existingUserId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
         val existingPassword = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
         
-        if (existingUserId != null && existingPassword != null) {
+        return if (existingUserId != null && existingPassword != null) {
             val response = api.login(LoginRequest(userId = existingUserId, password = existingPassword))
             handleLoginResponse(response)
         } else {
@@ -53,7 +50,7 @@ class PiggyCardsRepository @Inject constructor(
         email: String,
         country: String,
         state: String?
-    ): ResponseResource<Boolean> = safeApiCall {
+    ): Boolean {
         val response = api.signup(
             SignupRequest(
                 firstName = firstName,
@@ -71,16 +68,16 @@ class PiggyCardsRepository @Inject constructor(
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_COUNTRY, country)
         state?.let { config.setSecuredData(PiggyCardsConfig.PREFS_KEY_STATE, it) }
         
-        true
+        return true
     }
 
-    override suspend fun verifyEmail(code: String): ResponseResource<Boolean> = safeApiCall {
+    override suspend fun verifyEmail(code: String): Boolean {
         val email = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
         val response = api.verifyOtp(VerifyOtpRequest(email = email!!, otp = code))
         
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD, response.generatedPassword)
         
-        performAutoLogin()
+        return performAutoLogin()
     }
 
     private suspend fun performAutoLogin(): Boolean {
@@ -88,12 +85,8 @@ class PiggyCardsRepository @Inject constructor(
         val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
         
         if (userId != null && password != null) {
-            return try {
-                val response = api.login(LoginRequest(userId = userId, password = password))
-                handleLoginResponse(response)
-            } catch (e: Exception) {
-                false
-            }
+            val response = api.login(LoginRequest(userId = userId, password = password))
+            return handleLoginResponse(response)
         }
         return false
     }
@@ -137,16 +130,16 @@ class PiggyCardsRepository @Inject constructor(
         return performAutoLogin()
     }
 
-    override suspend fun getMerchants(country: String): ResponseResource<List<Merchant>> = safeApiCall {
-        api.getMerchants(country)
+    override suspend fun getMerchants(country: String): List<Merchant> {
+        return api.getMerchants(country)
     }
 
-    override suspend fun getMerchant(merchantId: String): ResponseResource<MerchantDetails> = safeApiCall {
-        api.getMerchant(merchantId)
+    override suspend fun getMerchant(merchantId: String): MerchantDetails {
+        return api.getMerchant(merchantId)
     }
 
-    override suspend fun getMerchantLocations(merchantId: String): ResponseResource<List<Location>> = safeApiCall {
-        api.getMerchantLocations(merchantId)
+    override suspend fun getMerchantLocations(merchantId: String): List<Location> {
+        return api.getMerchantLocations(merchantId)
     }
 
     override suspend fun createOrder(
@@ -156,11 +149,11 @@ class PiggyCardsRepository @Inject constructor(
         name: String?,
         ipAddress: String?,
         location: String?
-    ): ResponseResource<OrderResponse> = safeApiCall {
+    ): OrderResponse {
         val userEmail = email ?: getEmail() ?: ""
         val userName = name ?: "${config.getSecuredData(PiggyCardsConfig.PREFS_KEY_FIRST_NAME)} ${config.getSecuredData(PiggyCardsConfig.PREFS_KEY_LAST_NAME)}"
         
-        api.createOrder(
+        return api.createOrder(
             OrderRequest(
                 merchantId = merchantId,
                 amount = amount,
@@ -172,8 +165,8 @@ class PiggyCardsRepository @Inject constructor(
         )
     }
 
-    override suspend fun getOrderStatus(orderId: String): ResponseResource<OrderStatusResponse> = safeApiCall {
-        api.getOrderStatus(orderId)
+    override suspend fun getOrderStatus(orderId: String): OrderStatusResponse {
+        return api.getOrderStatus(orderId)
     }
 
     override suspend fun isNewUser(): Boolean {
@@ -185,24 +178,24 @@ class PiggyCardsRepository @Inject constructor(
 interface PiggyCardsRepositoryInt {
     val userEmail: Flow<String?>
     
-    suspend fun login(email: String): ResponseResource<Boolean>
+    suspend fun login(email: String): Boolean
     suspend fun signup(
         firstName: String,
         lastName: String,
         email: String,
         country: String,
         state: String?
-    ): ResponseResource<Boolean>
-    suspend fun verifyEmail(code: String): ResponseResource<Boolean>
+    ): Boolean
+    suspend fun verifyEmail(code: String): Boolean
     suspend fun isUserSignedIn(): Boolean
     suspend fun getEmail(): String?
     suspend fun logout()
     suspend fun refreshToken(): Boolean
     suspend fun isNewUser(): Boolean
     
-    suspend fun getMerchants(country: String): ResponseResource<List<Merchant>>
-    suspend fun getMerchant(merchantId: String): ResponseResource<MerchantDetails>
-    suspend fun getMerchantLocations(merchantId: String): ResponseResource<List<Location>>
+    suspend fun getMerchants(country: String): List<Merchant>
+    suspend fun getMerchant(merchantId: String): MerchantDetails
+    suspend fun getMerchantLocations(merchantId: String): List<Location>
     suspend fun createOrder(
         merchantId: String,
         amount: Double,
@@ -210,6 +203,6 @@ interface PiggyCardsRepositoryInt {
         name: String? = null,
         ipAddress: String? = null,
         location: String? = null
-    ): ResponseResource<OrderResponse>
-    suspend fun getOrderStatus(orderId: String): ResponseResource<OrderStatusResponse>
+    ): OrderResponse
+    suspend fun getOrderStatus(orderId: String): OrderStatusResponse
 }

@@ -38,7 +38,6 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
@@ -127,29 +126,20 @@ class CTXSpendViewModel @Inject constructor(
         giftCardMerchant.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
 
-            val response = repository.purchaseGiftCard(
-                merchantId = it,
-                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                fiatCurrency = "USD",
-                cryptoCurrency = Constants.DASH_CURRENCY
-            )
-
-            when (response) {
-                is ResponseResource.Success -> {
-                    return response.value!!
-                }
-                is ResponseResource.Failure -> {
-                    log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
-                    throw CTXSpendException(
-                        "purchaseGiftCard error ${response.errorCode}: ${response.errorBody}",
-                        response.errorCode,
-                        response.errorBody
-                    )
-                }
-                // else -> {}
+            try {
+                val response = repository.purchaseGiftCard(
+                    merchantId = it,
+                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatCurrency = "USD",
+                    cryptoCurrency = Constants.DASH_CURRENCY
+                )
+                return response!!
+            } catch (e: Exception) {
+                log.error("purchaseGiftCard error", e)
+                throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null)
             }
         }
-        throw CTXSpendException("purchaseGiftCard error")
+        throw CTXSpendException("purchaseGiftCard error: merchantId is null")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
