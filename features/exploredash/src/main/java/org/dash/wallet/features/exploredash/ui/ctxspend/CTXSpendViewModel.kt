@@ -48,6 +48,7 @@ import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
@@ -226,7 +227,13 @@ class CTXSpendViewModel @Inject constructor(
         }
     }
 
-    suspend fun isUserSignedInCTXSpend() = repository.isUserSignedIn()
+    suspend fun isUserSignedInService(service: GiftCardService): Boolean {
+        // TODO: better open-closed
+        return when (service) {
+            GiftCardService.CTX -> repository.isUserSignedIn()
+            GiftCardService.PiggyCards -> false // TODO
+        }
+    }
 
     suspend fun signInToCTXSpend(email: String) = repository.login(email)
 

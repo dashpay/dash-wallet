@@ -29,7 +29,9 @@ import org.dash.wallet.features.exploredash.databinding.DialogDashspendTermsBind
 import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-class CTXSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
+class CTXSpendTermsDialog(
+    val termsLink: String
+) : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
     override val forceExpand: Boolean = true
     private val viewModel by exploreViewModels<CTXSpendViewModel>()
     private val binding by viewBinding(DialogDashspendTermsBinding::bind)
@@ -45,7 +47,7 @@ class CTXSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms
 
         binding.termsLink.setOnClickListener {
             viewModel.openedCTXSpendTermsAndConditions = true
-            requireActivity().openCustomTab(getString(R.string.ctx_terms_url))
+            requireActivity().openCustomTab(termsLink)
         }
 
         binding.acceptTermsCheckbox.setOnCheckedChangeListener { _, isChecked ->

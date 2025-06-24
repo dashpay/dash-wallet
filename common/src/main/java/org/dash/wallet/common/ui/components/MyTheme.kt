@@ -106,7 +106,7 @@ object MyTheme {
         val backgroundSecondary = Color(0xFFFFFFFF)
         val textSecondary = Color(0xFF6E757C)
         val divider = Color(0x1A191C1F)
-        val primary4 = Color(0x14191C1F)
+        val primary8 = Color(0x14191C1F)
         val primary5 = Color(0x0D191C1F)
         val primary40 = Color(0x66191C1F)
         val dashBlue = Color(0xFF008DE4)

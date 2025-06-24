@@ -83,7 +83,7 @@ fun MerchantDenominations(
                         labelColor = MyTheme.Colors.textPrimary
                     ),
                     border = FilterChipDefaults.filterChipBorder(
-                        borderColor = MyTheme.Colors.primary4,
+                        borderColor = MyTheme.Colors.primary8,
                         selectedBorderColor = MyTheme.Colors.dashBlue,
                         borderWidth = 1.5.dp,
                         selectedBorderWidth = 1.5.dp,

@@ -19,7 +19,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashSpendLoginInfoDialog">
 
     <ImageButton
         android:id="@+id/collapse_button"
