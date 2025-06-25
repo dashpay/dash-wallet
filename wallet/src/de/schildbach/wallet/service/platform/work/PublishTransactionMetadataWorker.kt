@@ -22,15 +22,11 @@ import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
-import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSynchronizationService
-import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.TRANSACTION_METADATA_LAST_PAST_SAVE
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.crypto.KeyCrypterException
-import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -51,19 +47,6 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
-//        val password = inputData.getString(KEY_PASSWORD)
- //           ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to "missing KEY_PASSWORD parameter"))
-        //val publishPast = inputData.getBoolean(KEY_PUBLISH_PAST, false)
-
-
-//        val encryptionKey: KeyParameter
-//        try {
-//            encryptionKey = walletDataProvider.wallet!!.keyCrypter!!.deriveKey(password)
-//        } catch (ex: KeyCrypterException) {
-//            analytics.logError(ex, "Topup Identity: failed to derive encryption key")
-//            val msg = formatExceptionMessage("derive encryption key", ex)
-//            return Result.failure(workDataOf(KEY_ERROR_MESSAGE to msg))
-//        }
 
         return try {
             org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
@@ -72,15 +55,22 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
             val saveInfo = platformSynchronizationService.publishPastTxMetadata() { progress ->
                 setProgress(progress)
             }
-            if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
+            if (saveInfo.itemsSaved != 0 && saveInfo.itemsSaved < saveInfo.itemsToSave) {
                 dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now)
-            }
-            log.info("publish txmetadata successful: $saveInfo")
-            Result.success(
-                workDataOf(
-                    //KEY_IDENTITY to identity,
+                log.info("publish txmetadata successful: $saveInfo")
+                Result.success(
+                    workDataOf(
+                        //KEY_IDENTITY to identity,
+                    )
                 )
-            )
+            } else {
+                log.info("publish txmetadata failure: $saveInfo")
+                Result.failure(
+                    workDataOf(
+                        KEY_EXCEPTION to "only saved ${saveInfo.itemsSaved} of ${saveInfo.itemsToSave}",
+                    )
+                )
+            }
         } catch (ex: Exception) {
             analytics.logError(ex, ": failed to txmetadata identity")
             val args = when (ex) {
