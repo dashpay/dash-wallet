@@ -199,6 +199,9 @@ class PlatformSynchronizationService @Inject constructor(
 
     private suspend fun maybePublishChangeCache() {
         val saveSettings = dashPayConfig.getTransactionMetadataSettings()
+        if (!saveSettings.saveToNetwork) {
+            return
+        }
         val lastPush = config.get(DashPayConfig.LAST_METADATA_PUSH) ?: 0
         // maybe we don't need this
         // val lastTransactionTime = transactionMetadataChangeCacheDao.lastTransactionTime()
@@ -238,7 +241,7 @@ class PlatformSynchronizationService @Inject constructor(
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
         if (shouldPushToNetwork && meetsSaveFrequency) {
             log.info("maybe publish meets requirements")
-            publishChangeCache(newEverythingBeforeTimestamp)
+            publishChangeCache(newEverythingBeforeTimestamp, saveAll = false)
         } else {
             log.info("last platform push was less than $CUTOFF_MIN ago, skipping")
         }
@@ -1024,10 +1027,14 @@ class PlatformSynchronizationService @Inject constructor(
         log.info("fetching ${items.size} tx metadata items in $watch")
     }
 
-    private suspend fun publishTransactionMetadata(txMetadataItems: List<TransactionMetadataCacheItem>) {
+    private suspend fun publishTransactionMetadata(
+        txMetadataItems: List<TransactionMetadataCacheItem>,
+        progressListener: (suspend (Int) -> Unit)? = null
+    ) {
         if (!platformRepo.hasBlockchainIdentity) {
             return
         }
+        progressListener?.invoke(0)
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
@@ -1048,9 +1055,19 @@ class PlatformSynchronizationService @Inject constructor(
                 it.merchantUrl
             )
         }
+        progressListener?.invoke(10)
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         val keyIndex = transactionMetadataChangeCacheDao.count() + transactionMetadataDocumentDao.countAllRequests()
-        platformRepo.blockchainIdentity.publishTxMetaData(metadataList, walletEncryptionKey, keyIndex, TxMetadataDocument.VERSION_PROTOBUF)
+        platformRepo.blockchainIdentity.publishTxMetaData(
+            metadataList,
+            walletEncryptionKey,
+            keyIndex,
+            TxMetadataDocument.VERSION_PROTOBUF
+        ) { progress ->
+            syncScope.launch(Dispatchers.IO) {
+                progressListener?.invoke(10 + progress * 90 / 100)
+            }
+        }
     }
 
     private fun mergeTransactionMetadataDocuments(txId: Sha256Hash, docs: List<TransactionMetadataDocument>): TransactionMetadataCacheItem {
@@ -1136,28 +1153,34 @@ class PlatformSynchronizationService @Inject constructor(
                     // make sure it is not already saved?
 
                     val previouslySaved = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId)
+                    log.info("publish: previously saved: {}", previouslySaved)
 
                     val saved = mergeTransactionMetadataDocuments(tx.txId, previouslySaved)
+                    log.info("publish: merged saved: {}", saved)
 
                     val metadataItem = TransactionMetadataCacheItem(
                         metadata,
                         giftCard
                     )
+                    log.info("publish: item: {}", metadataItem)
                     val diff = metadataItem - saved
-                    transactionMetadataChangeCacheDao.insert(diff);
+                    log.info("publish: diff: {}", diff)
+                    if (diff.isNotEmpty() && !transactionMetadataChangeCacheDao.has(diff)) {
+                        transactionMetadataChangeCacheDao.insert(diff)
+                    }
                     itemsToSave++
                 }
-                progressListener.invoke(i * 100 / txes.size)
+                progressListener.invoke(i * 100 / txes.size / 2)
             }
         }
         // call publishChangeCache
-        val itemsSaved = publishChangeCache(System.currentTimeMillis()) { progress ->
-            progressListener.invoke(progress)
+        val itemsSaved = publishChangeCache(System.currentTimeMillis(), saveAll = true) { progress ->
+            progressListener.invoke(50 + progress / 2)
         }
         return TxMetadataSaveInfo(itemsSaved, itemsToSave)
     }
 
-    private suspend fun publishChangeCache(before: Long, progressListener: (suspend (Int) -> Unit)? = null): Int {
+    private suspend fun publishChangeCache(before: Long, saveAll: Boolean, progressListener: (suspend (Int) -> Unit)? = null): Int {
         if (!Constants.SUPPORTS_TXMETADATA) {
             return 0
         }
@@ -1177,12 +1200,12 @@ class PlatformSynchronizationService @Inject constructor(
             if (itemsToPublish.containsKey(changedItem.txId)) {
                 val item = itemsToPublish[changedItem.txId]!!
 
-                if (saveSettings.shouldSavePrivateMemos()) {
+                if (saveSettings.shouldSavePrivateMemos(saveAll)) {
                     changedItem.memo?.let { memo ->
                         item.memo = memo
                     }
                 }
-                if (saveSettings.shouldSaveExchangeRates()) {
+                if (saveSettings.shouldSaveExchangeRates(saveAll)) {
                     if (changedItem.rate != null && changedItem.currencyCode != null) {
                         item.rate = changedItem.rate
                         item.currencyCode = changedItem.currencyCode
@@ -1191,17 +1214,17 @@ class PlatformSynchronizationService @Inject constructor(
                         item.sentTimestamp = timestamp
                     }
                 }
-                if (saveSettings.shouldSaveTaxCategory()) {
+                if (saveSettings.shouldSaveTaxCategory(saveAll)) {
                     changedItem.taxCategory?.let { taxCategory ->
                         item.taxCategory = taxCategory
                     }
                 }
-                if (saveSettings.shouldSavePaymentCategory()) {
+                if (saveSettings.shouldSavePaymentCategory(saveAll)) {
                     changedItem.service?.let { service ->
                         item.service = service
                     }
                 }
-                if (saveSettings.shouldSaveGiftcardInfo()) {
+                if (saveSettings.shouldSaveGiftcardInfo(saveAll)) {
                     changedItem.customIconUrl?.let { customIconUrl ->
                         item.customIconUrl = customIconUrl
                     }
@@ -1231,18 +1254,24 @@ class PlatformSynchronizationService @Inject constructor(
                 itemsToPublish[changedItem.txId] = changedItem
             }
         }
+        progressListener?.invoke(10)
         var itemsSaved = 0
         try {
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
             // publish non-empty items
-            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() })
+            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }) {
+                progressListener?.invoke(10 + it * 90 / 100)
+            }
             log.info("published ${itemsToPublish.values.size} tx metadata items to platform")
 
             // clear out published items from the cache table
-            transactionMetadataChangeCacheDao.removeByIds(itemsToPublish.values.map { it.id })
+            log.info("published and remove ${changedItems.map { it.id }} tx metadata items from cache")
+            transactionMetadataChangeCacheDao.removeByIds(changedItems.map { it.id })
             config.set(DashPayConfig.LAST_METADATA_PUSH, System.currentTimeMillis())
             itemsSaved = changedItems.size
+
+            updateTransactionMetadata()
         } catch (_: CancellationException) {
             log.info("publishing updates canceled")
         } catch (e: Exception) {
@@ -1565,7 +1594,7 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun clearDatabases() {
         // push all changes to platform before clearing the database tables
         if (Constants.SUPPORTS_PLATFORM && dashPayConfig.shouldSaveOnReset()) {
-            publishChangeCache(System.currentTimeMillis()) // Before now - push everything
+            publishChangeCache(System.currentTimeMillis(), saveAll = true) // Before now - push everything
         }
         transactionMetadataChangeCacheDao.clear()
         transactionMetadataDocumentDao.clear()
