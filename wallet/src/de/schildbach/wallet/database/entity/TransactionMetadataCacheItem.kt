@@ -70,7 +70,7 @@ data class TransactionMetadataCacheItem(
     )
 
     fun isNotEmpty(): Boolean {
-        return sentTimestamp != null || taxCategory != null || !memo.isNullOrEmpty() ||
+        return taxCategory != null || !memo.isNullOrEmpty() ||
             currencyCode != null || rate != null || service != null || customIconUrl != null ||
             giftCardNumber != null || giftCardPin != null || merchantName != null || originalPrice != null ||
             barcodeValue != null || barcodeFormat != null || merchantUrl != null
@@ -105,7 +105,7 @@ data class TransactionMetadataCacheItem(
 
     fun compare(currentItem: TransactionMetadata, giftCard: GiftCard?): Boolean {
         val txData =  txId == currentItem.txId &&
-                this.memo == currentItem.memo &&
+                (this.memo ?: "") == currentItem.memo &&
                 this.taxCategory == currentItem.taxCategory &&
                 this.service == currentItem.service &&
                 this.currencyCode == currentItem.currencyCode &&
