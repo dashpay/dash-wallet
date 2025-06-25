@@ -49,11 +49,11 @@ data class TransactionMetadataSettings(
     /* not saved to the data store */
     val modified: Boolean = false
 ) {
-    fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
-    fun shouldSaveTaxCategory() = saveToNetwork && saveTaxCategory
-    fun shouldSaveExchangeRates() = saveToNetwork && saveExchangeRates
-    fun shouldSavePrivateMemos() = saveToNetwork && savePrivateMemos
-    fun shouldSaveGiftcardInfo() = saveToNetwork && saveGiftcardInfo
+    fun shouldSavePaymentCategory(saveAll: Boolean) = /*saveToNetwork &&*/ saveAll || savePaymentCategory
+    fun shouldSaveTaxCategory(saveAll: Boolean) = /*saveToNetwork &&*/ saveAll || saveTaxCategory
+    fun shouldSaveExchangeRates(saveAll: Boolean) = /*saveToNetwork &&*/ saveAll || saveExchangeRates
+    fun shouldSavePrivateMemos(saveAll: Boolean) = /*saveToNetwork &&*/ saveAll || savePrivateMemos
+    fun shouldSaveGiftcardInfo(saveAll: Boolean) = /*saveToNetwork &&*/ saveAll || saveGiftcardInfo
 
     /** determine if relavant changes have been made */
     fun isEqual(other: TransactionMetadataSettings?): Boolean {
