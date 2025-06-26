@@ -129,9 +129,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private val selectWordCountLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
             viewModel.createNewWallet(
-                onboardingInvite,
                 result.data!!.extras!!.getInt(SelectSecurityLevelActivity.EXTRA_WORD_COUNT)
             )
         }
@@ -143,12 +141,10 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //viewModel.onboardingInvite = intent.getParcelableExtra(EXTRA_INVITE)
         if (pinRetryController.isLockedForever) {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
-            // hideSlogan()
             binding.closeApp.setOnClickListener {
                 finish()
             }
@@ -313,21 +309,13 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun onboarding() {
-        initView()
         initViewModel()
-        //showButtonsDelayed()
-    }
-
-    private fun initView() {
-        binding.createNewWallet.setOnClickListener {
-            selectWordCountLauncher.launch(
-                Intent(this, SelectSecurityLevelActivity::class.java)
-            )
-        }
     }
 
     private fun createNewWallet() {
-        viewModel.createNewWallet()
+        selectWordCountLauncher.launch(
+            Intent(this, SelectSecurityLevelActivity::class.java)
+        )
     }
 
     private fun recoverWalletFromSeedPhrase() {

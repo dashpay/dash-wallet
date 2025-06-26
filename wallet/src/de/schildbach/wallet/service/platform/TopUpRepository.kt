@@ -606,7 +606,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
         val extension = authExtension
 
-        if (platformRepo.hasIdentity) {
+        if (platformRepo.hasBlockchainIdentity) {
             workerScope.launch(Dispatchers.IO) {
                 // Context.getOrCreate(platform.params)
                 val inviteKey = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes)
