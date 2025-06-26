@@ -33,7 +33,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.payments.parsers.PaymentIntentParser
 import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
@@ -116,7 +115,6 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
         this.frequentContactsAdapter.itemClickListener = this
 
         initViewModel()
-        dashPayViewModel.getFrequentContacts()
     }
 
     private fun initViewModel() {
@@ -124,27 +122,23 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
             val visibility = if (it == null) View.GONE else View.VISIBLE
             binding.contactsPane.visibility = visibility
         }
-
-        dashPayViewModel.frequentContactsLiveData.observe(viewLifecycleOwner) {
-            if (Status.SUCCESS == it.status) {
-                if (it.data.isNullOrEmpty()) {
-                    binding.frequentContactsRv.visibility = View.GONE
-                    // TODO: how do we show an arrow
-                    // binding.payByContactSelect.showForwardArrow(false)
-                } else {
-                    binding.frequentContactsRv.visibility = View.VISIBLE
-                    // TODO: how do we show an arrow
-                    // binding.payByContactSelect.showForwardArrow(true)
-                }
-                binding.frequentContactsRv.visibility = binding.frequentContactsRv.visibility
-
-                if (it.data != null) {
-                    val results = arrayListOf<UsernameSearchResult>()
-                    results.addAll(it.data)
-                    frequentContactsAdapter.results = results
-                }
-            } else if (it.status == Status.ERROR) {
+        binding.frequentContactsRv.visibility = View.GONE
+        dashPayViewModel.frequentContacts.observe(viewLifecycleOwner) { frequentContacts ->
+            if (frequentContacts.isEmpty()) {
                 binding.frequentContactsRv.visibility = View.GONE
+                // TODO: how do we show an arrow
+                // binding.payByContactSelect.showForwardArrow(false)
+            } else {
+                binding.frequentContactsRv.visibility = View.VISIBLE
+                // TODO: how do we show an arrow
+                // binding.payByContactSelect.showForwardArrow(true)
+            }
+            binding.frequentContactsRv.visibility = binding.frequentContactsRv.visibility
+
+            if (frequentContacts.isNotEmpty()) {
+                val results = arrayListOf<UsernameSearchResult>()
+                results.addAll(frequentContacts)
+                frequentContactsAdapter.results = results
             }
         }
     }

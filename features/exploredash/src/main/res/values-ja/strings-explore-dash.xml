@@ -59,6 +59,7 @@
     <string name="explore_back_to_nearest">最寄りの店舗に戻る</string>
     <string name="explore_select_location">店舗を選択する</string>
     <string name="explore_pay_with_dash">Dashで支払う</string>
+    <string name="explore_pay_with_dash_save">%.2f%%をセーブする</string>
     <string name="explore_buy_gift_card">ギフトカードを購入する</string>
     <string name="explore_buy_dash">Dashを購入する</string>
     <string name="explore_sell_dash">Dashを売る</string>
@@ -83,6 +84,10 @@
     <string name="explore_filtered_by">でフィルターをかける</string>
     <string name="explore_pay_gift_card">ギフトカード支払い</string>
     <string name="explore_sort_by">で並び替え</string>
+    <string name="gift_card_types">ギフトカードの種類</string>
+    <string name="flexible_amount_option">フレキシブルアマウント</string>
+    <string name="fixed_denom_option">固定した指定通貨の金額</string>
+
     <string-array name="merchants_filter_options">
         <item>オンライン</item>
         <item>周辺環境</item>
@@ -196,11 +201,16 @@
     <string name="send_coins_error_msg">送金に問題が発生しました！</string>
     <string name="gift_card_barcode_failed">バーコードのロードに失敗しました</string>
     <string name="gift_card_tx_title">ギフトカード · %s</string>
+    <string name="select_amount">金額を選択する</string>
+    <string name="select_fixed_amount">この加盟店はギフトカードを固定価格で販売しています</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">認証コードを入力</string>
     <string name="verification_check_email">メールを確認して認証コードを入力する</string>
     <string name="buy_gift_card">DashSpendアカウントでギフトカードを購入する</string>
+    <string name="dashspend_create_account">アカウントを作成するか既存のアカウントにログインする</string>
     <string name="create_new_account">新しいアカウントを作成</string>
+    <string name="login">ログイン</string>
     <string name="password">パスワード</string>
     <string name="logged_in_as">%sとしてログインしました</string>
     <string name="log_out">ログアウト</string>
@@ -212,13 +222,23 @@
     <string name="cancel">キャンセル</string>
     <string name="gift_card_error">何らかの理由でギフトカードを購入できませんでした。もう一度お試しください。</string>
     <string name="gift_card_details_error">何らかの理由でギフトカードを購入できませんでした。サポートまでご連絡ください。</string>
+    <string name="gift_card_limit_error">この加盟店の購入限度額が変更されました。詳細については、CTXサポートまでお問い合わせください。</string>
     <string name="gift_card_unknown_error">何らかの理由でギフトカードを購入できませんでした。タックスID%sを添えてサポートまでご連絡ください。 </string>
     <string name="gift_card_rejected">支払いが拒否されました。ギフトカードID%s、決済ID%s、取引ID%sをCTXまでご連絡ください。</string>
     <string name="gift_card_redeem_url_not_supported">決済は引き換えURLを提供する加盟店に対して行われましたが、そのURLは現在サポートされていません。ギフトカードID%s、決済ID%s、取引ID%sをCTXまでご連絡ください。</string>
+    <string name="dashspend_terms_conditions">利用規約に同意する</string>
     <string name="accept_terms_conditions">私はDashSpendの利用規約に同意します</string>
     <string name="tap_link_to_proceed">DashSpendでアカウントを作成するにあたって、以下のリンクをタップして作成の手続きを進めることになります</string>
     <string name="accept_to_proceed">DashSpendでアカウントを作成するにあたって、お客様はDashSpendの利用規約に同意する必要があります</string>
+    <string name="view_terms_conditions">利用規約</string>
+    <string name="barcode_placeholder">お客様のコードが生成されると、こちらに表示されます。</string>
+    <string name="gift_card_contact_ctx">CTXサポートにお問い合わせする</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">アカウントを作成する</string>
+    <string name="log_in_to_ctxspend_account">アカウントにログインする</string>
     <string name="log_in_to_ctxspend_account_desc">お客様のメールはワンタイムパスワードを送る時にのみ使用されます。</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpendアカウントでギフトカードを購入する</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpendのアカウントを作成するか既存のアカウントにログインする</string>
-    </resources>
+    <string name="temporarily_unavailable">現在はご利用いただけません</string>
+</resources>

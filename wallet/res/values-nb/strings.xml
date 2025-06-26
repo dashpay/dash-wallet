@@ -208,7 +208,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Legg ved liste over installerte pakker</string>
     <string name="report_issue_dialog_collect_application_log">Legg ved programlogg</string>
     <string name="report_issue_dialog_collect_wallet_dump">Legg ved dump av lommebok</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Send rapport ved hjelp av…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending av rapport mislyktes.</string>
     <string name="about_title">Om</string>
     <string name="about_version_title">Versjon</string>

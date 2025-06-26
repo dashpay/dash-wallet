@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">バックアップ</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">スキャン</string>
+    <string name="shortcut_scan_to_pay">QRをスキャンする</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">送金する</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">入金</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">秘密鍵をインポート</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">ショートカットを追加する</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">クイック入金</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dashアドレスがクリップボードにコピーされました</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">表示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" は復元フレーズのワードではありません</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">復元フレーズは12ワードなくてはいけません。</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">リカバリーフレーズは12単語か24単語で構成する必要があります</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">正しくない復元フレーズ</string>
     <string name="restore_wallet_from_invalid_seed_failure">ウォレットは復元できませんでした:\n\n%s\n\n復元フレーズが間違っていますか?</string>
 
@@ -214,8 +212,8 @@
     <string name="verify_info_title_1">Dashコアグループは、このリカバリーフレーズを保存していません</string>
     <string name="verify_info_subtitle_1">お客様のリカバリーフレーズをお持ちの方は、どなたでもお客様の資金にアクセスすることができます。</string>
     <string name="verify_info_title_2">リカバリーフレーズがないとウォレットの復元はできません</string>
-    <string name="verify_info_subtitle_2">リカバリーフレーズを安全な場所に書き留め、他人に見せないでください。</string>
-    <string name="verify_seed_buttons_tip">復元フレーズの言葉を正しい順番にタップしてください</string>
+    <string name="verify_info_subtitle_2">リカバリーフレーズを安全なところに書き留め、他の人から見られないようにしてください。</string>
+    <string name="verify_seed_buttons_tip">リカバリーフレーズの言葉を正しい順番にタップしてください</string>
     <string name="verify_seed_success_title">IPアドレスで使用済みです
 </string>
     <string name="verify_seed_success_message">現在あなたのウォレットは安全です。復元フレーズを使えばいつでも
@@ -290,6 +288,7 @@
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
+    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPayウォレット%s</string>
     <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>
@@ -465,4 +464,10 @@
     <string name="stale_exchange_rates_error">価格を取得できませんでした。フィアットの値が正しくない可能性があります。</string>
     <string name="stale_exchange_rates_stale">価格は30分以上前のものです。フィアットの値が正しくない可能性があります。</string>
     <string name="stale_exchange_rates_volatile">価格は前回のアップデートから50％以上変動しています。</string>
+    <string name="select_security_level_title">セキュリティレベルを選択する</string>
+    <string name="select_security_level_message">12単語または24単語のリカバリーフレーズでお客様のウォレットを安全に保護できます。</string>
+    <string name="select_security_level_12_words_title">安全</string>
+    <string name="select_security_level_12_words_message">12単語のリカバリーフレーズ</string>
+    <string name="select_security_level_24_words_title">非常に安全</string>
+    <string name="select_security_level_24_words_message">24単語のリカバリーフレーズ</string>
 </resources>

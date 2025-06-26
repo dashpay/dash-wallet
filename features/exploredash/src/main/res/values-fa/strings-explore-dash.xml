@@ -61,6 +61,7 @@
     <string name="explore_back_to_nearest">بازگشت به نزدیک‌ترین موقعیت</string>
     <string name="explore_select_location">انتخاب مکان</string>
     <string name="explore_pay_with_dash">پرداخت با دش</string>
+    <string name="explore_pay_with_dash_save">پس‌انداز%.2f%%</string>
     <string name="explore_buy_gift_card">خرید کارت هدیه</string>
     <string name="explore_buy_dash">خرید دش</string>
     <string name="explore_sell_dash">فروش دش</string>
@@ -85,6 +86,10 @@
     <string name="explore_filtered_by">فیلتر بر اساس: </string>
     <string name="explore_pay_gift_card">پرداخت با کارت اعتباری</string>
     <string name="explore_sort_by">مرتب کردن بر اساس</string>
+    <string name="gift_card_types">انواع کارت هدیه</string>
+    <string name="flexible_amount_option">مبالغ منعطف</string>
+    <string name="fixed_denom_option">مبالغ تعیین‌شده ثابت</string>
+
     <string-array name="merchants_filter_options">
         <item>آنلاین</item>
         <item>نزدیک‌ترین</item>
@@ -200,11 +205,16 @@
     <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
     <string name="gift_card_barcode_failed">بارکد بارگذاری نشد</string>
     <string name="gift_card_tx_title">کارت هدیه. %s</string>
+    <string name="select_amount">مبلغ را انتخاب کنید</string>
+    <string name="select_fixed_amount">این فروشنده کارت‌های هدیه را با قیمت‌های ثابت به فروش می‌رساند</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">شماره تائید را وارد کنید</string>
     <string name="verification_check_email">ایمیل‌تان را چک کنید و کد تائید را وارد کنید</string>
     <string name="buy_gift_card">با حساب دش‌اسپند خود کارت هدیه بخرید</string>
+    <string name="dashspend_create_account">یک حساب کاربری ایجاد کنید یا وارد حساب موجود شوید</string>
     <string name="create_new_account">ایجاد حساب جدید</string>
+    <string name="login">ورود به حساب</string>
     <string name="password">گذرواژه</string>
     <string name="logged_in_as">ورود به عنوان %s</string>
     <string name="log_out">خروج</string>
@@ -216,13 +226,23 @@
     <string name="cancel">لغو</string>
     <string name="gift_card_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا دوباره تلاش کنید. </string>
     <string name="gift_card_details_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_limit_error">محدودیت های خرید برای این فروشنده تغییر کرده است. لطفاً برای اطلاعات بیشتر با پشتیبانی CTX تماس بگیرید.</string>
     <string name="gift_card_unknown_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با شناسه %s با پشتیبانی تماس بگیرید. </string>
     <string name="gift_card_rejected">پرداخت رد شد. لطفا با کارت هدیه با شناسه %s و شناسه پرداخت %s و شناسه تراکنش %s با سی‌تی‌اکس تماس بگیرید. </string>
     <string name="gift_card_redeem_url_not_supported">پرداخت برای فروشنده‌ای که نشانی اینترنتی برداشت از کارت هدیه را ارائه می‌کند صورت گرفت، اما در حال حاضر، از آن پشتیبانی نمی‌شود. لطفا با کارت هدیه با شناسه %s و شناسه پرداخت %s و شناسه تراکنش %s با سی‌تی‌اکس تماس بگیرید. </string>
+    <string name="dashspend_terms_conditions">پذیرش شرایط و مقررات</string>
     <string name="accept_terms_conditions">شرایط و مقررات دش‌اسپند را می‌پذیرم. </string>
     <string name="tap_link_to_proceed">برای ایجاد حساب در دش‌اسنپد باید روی لینک زیر کلیک کنید</string>
     <string name="accept_to_proceed">برای ایجاد حساب در دش‌اسپند باید شرایط و مقررات دش‌اسپند را بپذیرید. </string>
+    <string name="view_terms_conditions">شرایط  &amp;  مقررات</string>
+    <string name="barcode_placeholder">به محض اینکه کد شما ایجاد شد، در اینجا نمایش داده می‌شود</string>
+    <string name="gift_card_contact_ctx">تماس با پشتیبانی CTX</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">ایجاد حساب</string>
+    <string name="log_in_to_ctxspend_account">ورود به حساب شما</string>
     <string name="log_in_to_ctxspend_account_desc">ایمیل‌تان فقط برای ارسال گذرواژه یک‌بارمصرف استفاده می‌شود. </string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">با حساب دش‌اسپند خود کارت هدیه بخرید.</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">یک حساب دش‌اسپند ایجاد کنید یا به حساب فعلی‌تان وارد شوید. </string>
-    </resources>
+    <string name="temporarily_unavailable">به صورت موقت در دسترس نیست</string>
+</resources>

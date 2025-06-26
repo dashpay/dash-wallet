@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Respaldo</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Explorar</string>
+    <string name="shortcut_scan_to_pay">Scanear QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Recibir</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Barrer billetera de papel</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Agregar atajo</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Recibir Rápidamente </string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dirección Dash copiada en el portapapeles</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" no es una palabra de la frase de recuperación</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase de recuperación debe contener 12 palabras</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">La frase de recuperación debe contener 12 o 24 palabras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperación incorrecta</string>
     <string name="restore_wallet_from_invalid_seed_failure">La billetera no se pudo restaurar:\n\n%s\n\nBad frase de recuperación?</string>
 
@@ -220,7 +218,7 @@
     <string name="verify_info_title_1">El grupo de Dash Core NO almacena esta frase de recuperación</string>
     <string name="verify_info_subtitle_1">Cualquiera que tenga su frase de recuperación puede acceder a sus fondos.</string>
     <string name="verify_info_title_2">NO podrás restaurar la billetera sin una frase de recuperación</string>
-    <string name="verify_info_subtitle_2">Escríbela en un lugar seguro y no se lo muestres a nadie.</string>
+    <string name="verify_info_subtitle_2">Escríbala en un lugar seguro y no se la muestre a nadie.</string>
     <string name="verify_seed_buttons_tip">Por favor escribe las palabras de tu frase de recuperación en el orden correcto</string>
     <string name="verify_seed_success_title">Verificado Exitosamente</string>
     <string name="verify_seed_success_message">Tu billetera está segura ahora. Podrás utilizar tu frase de recuperación en cualquier momento para recuperar tu cuenta en otro dispositivo.</string>
@@ -468,4 +466,10 @@
     <string name="stale_exchange_rates_error">Los precios no fueron encontrados. Los valores mostrados en FIAT pueden estar equivocados.</string>
     <string name="stale_exchange_rates_stale">Los precios mostrados tienen al menos 30 minutos de antiguedad. Los valores en FIAT pueden ser incorrectos.</string>
     <string name="stale_exchange_rates_volatile">Los precios han fluctuado más de 50% desde la última revisión.</string>
+    <string name="select_security_level_title">Seleccione el nivel de seguridad deseado</string>
+    <string name="select_security_level_message">Puede asegurar su monedero con su frase de 12 o 24 palabras</string>
+    <string name="select_security_level_12_words_title">Seguro</string>
+    <string name="select_security_level_12_words_message">Frase de recuperación de 12 palabras</string>
+    <string name="select_security_level_24_words_title">Muy seguro</string>
+    <string name="select_security_level_24_words_message">Frase de recuperación de 24 palabras</string>
 </resources>

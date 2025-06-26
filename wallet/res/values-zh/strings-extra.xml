@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">备份</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">扫描</string>
+    <string name="shortcut_scan_to_pay">扫描二维码</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">发送</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">导入私钥</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">添加快捷方式</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Dash地址已复制</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">显示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是一个助记词</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">助记词必须包括 12 个词</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">助记词必须包括 12 或 24个词</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">错误的助记词</string>
     <string name="restore_wallet_from_invalid_seed_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的助记词？</string>
 
@@ -462,4 +460,10 @@
     <string name="stale_exchange_rates_error">价格未被检索到. 法币价值或许错误.</string>
     <string name="stale_exchange_rates_stale">价格至少有30分钟的延迟. 法币显示价值或许错误.</string>
     <string name="stale_exchange_rates_volatile">价格据上次更新已经有超过50%的波动.</string>
+    <string name="select_security_level_title">选择安全级别</string>
+    <string name="select_security_level_message">您可以使用 12 或 24个助记词来保护您的钱包.</string>
+    <string name="select_security_level_12_words_title">安全</string>
+    <string name="select_security_level_12_words_message">12 字助记词</string>
+    <string name="select_security_level_24_words_title">非常安全</string>
+    <string name="select_security_level_24_words_message">24 字助记词</string>
 </resources>

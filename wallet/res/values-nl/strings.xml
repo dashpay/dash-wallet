@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin inputs</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoin mixen</string>
     <string name="transaction_row_status_coinjoin_create_denominations">Creëer CoinJoin denominaties</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Voeg CoinJoin dust samen</string>
     <string name="network_monitor_activity_title">Netwerkmonitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blokken</string>
@@ -294,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Voeg een lijst van geinstalleerde paketten toe</string>
     <string name="report_issue_dialog_collect_application_log">Voeg applicatie log toe</string>
     <string name="report_issue_dialog_collect_wallet_dump">Voeg portemonnee dump toe</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Stuur rapport met...</string>
     <string name="report_issue_dialog_mail_intent_failed">Versturen van rapport is mislukt.</string>
     <string name="report_issue_dialog_generating_report">Rapport wordt gegenereerd.</string>
     <string name="report_transaction_history_export">Exporteer</string>
@@ -415,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">Open instellingen</string>
     <string name="credits_profile_change_message">Profielinformatie bijwerken.</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">Selecteer block verkenner</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Selecteer optie</string>
+    <string name="customize_shortcuts">Werkbalk voor snelkoppelingen aanpassen</string>
+    <string name="customize_shortcuts_description">Houd hier boven een willekeurige knop ingedrukt om deze te vervangen door de functie die je nodig hebt.</string>
+</resources>

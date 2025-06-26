@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -103,6 +104,8 @@ interface CoinJoinService {
     suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
+    /** shutdown coinjoin mixing */
+    suspend fun shutdown()
 }
 
 enum class MixingStatus {
@@ -274,6 +277,10 @@ class CoinJoinMixingService @Inject constructor(
         }
     }
 
+    override suspend fun shutdown() {
+        config.setMode(CoinJoinMode.NONE)
+    }
+
     private suspend fun getCurrentTimeSkew(): Long {
         return try {
             getTimeSkew()
@@ -288,10 +295,11 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateBalance(balance: Coin) {
-        val coinJoinBalance = walletDataProvider.observeMixedBalance().first()
-        val hasBalanceLeftToMix = updateBalanceMutex.withLock {
+        val coinJoinBalance = walletDataProvider.getMixedBalance()
+        val walletEx = walletDataProvider.wallet as? WalletEx // may be null if wallet was reset
+        val hasBalanceLeftToMix = walletEx != null && updateBalanceMutex.withLock {
             CoinJoinClientOptions.setAmount(balance)
-            val walletEx = walletDataProvider.wallet as WalletEx
+
             org.bitcoinj.core.Context.propagate(walletEx.context)
             val anonBalance = walletEx.getAnonymizableBalance(false, false)
 

@@ -107,5 +107,6 @@
     <string name="log_in">Log in</string>
 
     <string name="chain_syncing">De blockchain wordt gesynchroniseerd...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Stuur rapport met...</string>
 
     </resources>

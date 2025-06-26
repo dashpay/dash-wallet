@@ -295,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Inclure la liste des paquetages installés</string>
     <string name="report_issue_dialog_collect_application_log">Inclure le journal de l\'application</string>
     <string name="report_issue_dialog_collect_wallet_dump">Inclure une exportation du portefeuille</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
     <string name="report_issue_dialog_mail_intent_failed">Échec lors de l\'envoi du rapport.</string>
     <string name="report_issue_dialog_generating_report">Génération du rapport</string>
     <string name="report_transaction_history_export">Exportation</string>
@@ -417,4 +416,9 @@
     <string name="credits_profile_change_message">Mise à jour des infos du profil</string>
 
     <string name="block_explorer_selection_title">Choisir l’explorateur de blocs</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Choisissez l\'option</string>
+    <string name="customize_shortcuts">Personnaliser la barre de raccourcis</string>
+    <string name="customize_shortcuts_description">Touchez un bouton ci-dessus pour le remplacer par toute fonction dont vous avez besoin</string>
 </resources>

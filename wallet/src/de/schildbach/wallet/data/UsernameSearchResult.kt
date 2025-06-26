@@ -67,6 +67,12 @@ data class UsernameSearchResult(val username: String,
         REQUEST_RECEIVED,
         CONTACT_ESTABLISHED
     }
+
+    fun getIdentity(): String {
+        return toContactRequest?.toUserId
+            ?: fromContactRequest?.userId
+            ?: throw IllegalStateException("Cannot get identity: no contact request available")
+    }
 }
 
 fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {

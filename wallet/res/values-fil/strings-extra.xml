@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">back-up</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Scan</string>
+    <string name="shortcut_scan_to_pay">I-scan ang QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Ipadala</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Tumanggap</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">I-import ang private key</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Maglagay ng shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Tanggapin ng mabilis</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Ang Dash address ay nakopya na sa clipboard</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Ipakita</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ay hindi isang recovery phrase na salita</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Ang recovery phrase ay dapat mayroong 12 mga salita</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Ang recovery phrase ay dapat mayroong 12 o 24 na mga salita</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Maling recovery phrase</string>
     <string name="restore_wallet_from_invalid_seed_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling recovery phrase?</string>
 
@@ -291,6 +289,7 @@
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
+    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
@@ -464,4 +463,10 @@
     <string name="stale_exchange_rates_error">Hindi nakuha ang mga presyo. Maaaring mali ang mga halaga ng Fiat.</string>
     <string name="stale_exchange_rates_stale">Ang mga presyo ay hindi bababa sa 30 minutong gulang. Maaaring mali ang mga halaga ng Fiat.</string>
     <string name="stale_exchange_rates_volatile">Nag-iba-iba ang mga presyo nang higit sa 50% mula noong huling pag-update.</string>
+    <string name="select_security_level_title">Piliin ang Antas ng Seguridad</string>
+    <string name="select_security_level_message">Mase-secure mo ang iyong wallet gamit ang 12 o 24 na salita na recovery phrase</string>
+    <string name="select_security_level_12_words_title">Ligtas</string>
+    <string name="select_security_level_12_words_message">12 salita na recovery phrase</string>
+    <string name="select_security_level_24_words_title">Napaka-secure</string>
+    <string name="select_security_level_24_words_message">24 na salita na parirala sa pagbawi</string>
 </resources>

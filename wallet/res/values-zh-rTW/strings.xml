@@ -178,6 +178,7 @@
     <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin 抵押品輸入</string>
     <string name="transaction_row_status_coinjoin_mixing">CoinJoin 混合</string>
     <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin 建立面額</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">使用CoinJoin合併塵埃交易</string>
     <string name="network_monitor_activity_title">網路監視器</string>
     <string name="network_monitor_peer_list_title">節點</string>
     <string name="network_monitor_block_list_title">區塊</string>
@@ -294,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">附加安裝app列表</string>
     <string name="report_issue_dialog_collect_application_log">附加應用程式日誌</string>
     <string name="report_issue_dialog_collect_wallet_dump">附加錢包dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">寄送報告…</string>
     <string name="report_issue_dialog_mail_intent_failed">寄送報告失敗。</string>
     <string name="report_issue_dialog_generating_report">正在生成報告</string>
     <string name="report_transaction_history_export">導出</string>
@@ -415,4 +415,10 @@
     <string name="battery_optimization_dialog_button_change">開啟設定</string>
     <string name="credits_profile_change_message">更新個人資料信息</string>
 
-    </resources>
+    <string name="block_explorer_selection_title">選擇區塊瀏覽器</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">選擇選項</string>
+    <string name="customize_shortcuts">自定義快捷欄</string>
+    <string name="customize_shortcuts_description">按住上面的任何按鈕將其替換為您需要的功能</string>
+</resources>

@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">백업</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">스캔</string>
+    <string name="shortcut_scan_to_pay">QR 코드 스캔</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">보내기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">받기</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">프라이빗 키 불러오기</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">단축키 추가</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">빠른 송금 수령</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">대시 주소가 클립보드에 복사되었습니다</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">보기</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\"는 복원 문구에 쓰이는 단어가 아닙니다</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">복원 문구는 반드시 12개의 단어로 구성돼야 합니다</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">복원 문구는 반드시 12 또는 24 개의 단어로 구성되어야 합니다</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">잘못된 복원 문구</string>
     <string name="restore_wallet_from_invalid_seed_failure">지갑을 복구하지 못했습니다:\n\n%s복원 문구를 잘못 입력하셨나요?</string>
 
@@ -288,6 +286,7 @@
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
+    <string name="about_copyright">Copyright © 2025 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시페이 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
@@ -461,4 +460,10 @@
     <string name="stale_exchange_rates_error">가격을 불러오지 않았습니다. 금액이 정확하지 않을 수 있습니다.</string>
     <string name="stale_exchange_rates_stale">마지막 가격 업데이트가 최소 30분을 경과했습니다. 금액이 정확하지 않을 수 있습니다.</string>
     <string name="stale_exchange_rates_volatile">가격이 지난 업데이트와 비교하여 50% 이상 변동하였습니다.</string>
+    <string name="select_security_level_title">보안 수준 선택하기</string>
+    <string name="select_security_level_message">당신의 지갑을 12 또는 24 단어 복원 문구를 통해 안전하게 지킬 수 있습니다.</string>
+    <string name="select_security_level_12_words_title">안전</string>
+    <string name="select_security_level_12_words_message">12 단어 복원 문구</string>
+    <string name="select_security_level_24_words_title">매우 안전</string>
+    <string name="select_security_level_24_words_message">24 단어 복원 문구</string>
 </resources>

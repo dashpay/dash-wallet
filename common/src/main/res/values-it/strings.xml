@@ -108,5 +108,6 @@
     <string name="log_in">Accedi</string>
 
     <string name="chain_syncing">La catena si sta sincronizzando...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Invio della segnalazione…</string>
 
     </resources>

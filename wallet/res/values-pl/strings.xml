@@ -295,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Dodaj listę zainstalowanych pakietów</string>
     <string name="report_issue_dialog_collect_application_log">Dołącz dziennik aplikacji</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dołącz zrzut portfela</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Wyślij zgłoszenie używając…</string>
     <string name="report_issue_dialog_mail_intent_failed">Wysyłanie raportu nie powiodło się.</string>
     <string name="report_issue_dialog_generating_report">Generuje raport</string>
     <string name="report_transaction_history_export">Eksportuj</string>
@@ -417,4 +416,9 @@
     <string name="credits_profile_change_message">Aktualizuj informacje profilu</string>
 
     <string name="block_explorer_selection_title">Wybierz Przeglądarkę Bloków</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Wybierz opcje</string>
+    <string name="customize_shortcuts">Dostosuj pasek skrótów</string>
+    <string name="customize_shortcuts_description">Przytrzymaj dowolny powyższy przycisk, aby zastąpić go potrzebną funkcją</string>
 </resources>

@@ -107,5 +107,6 @@
     <string name="log_in">masuk</string>
 
     <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
 
     </resources>

@@ -138,7 +138,7 @@ Username</b></string>
     <string name="scan_to_pay_username_dialog_message">Non è un nome utente o un\'identità Dash valida\n\n%s</string>
     <string name="send_coins_to_username">Invio a</string>
     <string name="contact_history_disclaimer">Aggiungi % come contatto a <b> Paga Direttamente al nome utente </b> e <b>Conserva la cronologia delle transazioni reciproche</b></string>
-    <string name="contact_history_disclaimer_pending">Una volta che % avrà accettato la tua richiesta, potrai farlo <b> Paga direttamente usando Username</b></string>
+    <string name="contact_history_disclaimer_pending">Una volta che % avrà accettato la tua richiesta, potrai farlo <b> pagare utilizzando direttamente lo Username</b></string>
     <string name="stranger_activity_disclaimer_text">I pagamenti effettuati direttamente agli indirizzi non verranno mantenuti in attività.</string>
     <string name="error_loading_identity">Errore durante il caricamento dell\'identità</string>
 

@@ -103,5 +103,6 @@
     <string name="log_in">เข้าสู่ระบบ</string>
 
     <string name="chain_syncing">โซ่กำลังซิงค์...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">ส่งรายงานโดยใช้...</string>
 
     </resources>

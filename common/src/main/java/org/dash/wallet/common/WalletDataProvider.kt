@@ -46,6 +46,7 @@ interface WalletDataProvider {
     fun currentReceiveAddress(): Address
 
     fun getWalletBalance(): Coin
+    fun getMixedBalance(): Coin
 
     fun observeWalletChanged(): Flow<Unit>
 

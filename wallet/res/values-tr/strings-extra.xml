@@ -29,7 +29,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Yedekle</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Tara</string>
+    <string name="shortcut_scan_to_pay">QR Tara</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Gönder</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -40,8 +40,6 @@
     <string name="shortcut_receive">Al</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Özel Anahtarı İçe Aktar</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Kısayol Ekle</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Hızlı Al</string>
@@ -120,7 +118,6 @@
     <string name="request_coins_clipboard_address_msg">Dash adresi panoya kopyalandı</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Göster</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" kurtarma cümlesi kelimesi değil</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Kurtarma cümlesi 12 kelime olmalı</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Hatalı kurtarma cümlesi</string>
     <string name="restore_wallet_from_invalid_seed_failure">Cüzdan geri yüklenemedi:\n\n%s\n\nYanlış kurtarma sözcük grubu?</string>
 
@@ -212,7 +209,6 @@
     <string name="verify_info_title_1">Dash Core Group bu kurtarma sözcük grubunu SAKLAMAZ</string>
     <string name="verify_info_subtitle_1">Kurtarma sözcük grubunuza sahip olan herkes fonlarınıza erişebilir.</string>
     <string name="verify_info_title_2">Bir kurtarma sözcük grubu olmadan cüzdanı geri yükleyemezsiniz</string>
-    <string name="verify_info_subtitle_2">Güvenli bir yere yazın ve kimseye göstermeyin.</string>
     <string name="verify_seed_buttons_tip">Lütfen kurtarma sözcük grubunuzu doğru şekilde sıralayın</string>
     <string name="verify_seed_success_title">Başarıyla Doğrulandı</string>
     <string name="verify_seed_success_message">Cüzdanınız artık güvende. Hesabınızı başka bir cihaza aktarmak için kurtarma sözcük grubunuzu istediğiniz zaman kullanabilirsiniz.</string>
@@ -439,4 +435,4 @@
     <string name="stale_exchange_rates_error">Fiyatlar alınamadı. Fiat değerleri yanlış olabilir.</string>
     <string name="stale_exchange_rates_stale">Fiyatlar en az 30 dakikalıktır. Fiat değerleri yanlış olabilir.</string>
     <string name="stale_exchange_rates_volatile">Fiyatlar son güncellemeden bu yana %50\'den fazla dalgalandı.</string>
-</resources>
+    </resources>

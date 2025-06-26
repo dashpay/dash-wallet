@@ -235,7 +235,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (!ctxSpendViewModel.checkToken()) {
+                if (args.type == ExploreTopic.Merchants && !ctxSpendViewModel.checkToken()) {
                     AdaptiveDialog.create(
                         null,
                         getString(R.string.token_expired_title),

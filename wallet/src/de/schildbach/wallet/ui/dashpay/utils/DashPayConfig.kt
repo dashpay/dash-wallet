@@ -23,6 +23,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
@@ -64,6 +65,7 @@ open class DashPayConfig @Inject constructor(
         val TOPUP_COUNTER = intPreferencesKey("topup_counter")
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
+        val FREQUENT_CONTACTS = stringSetPreferencesKey("frequent_contacts")
         val INVITATION_LINK = stringPreferencesKey("invitation_link")
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
     }
