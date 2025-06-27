@@ -50,8 +50,8 @@ class PiggyCardsRepository @Inject constructor(
                 firstName = "",
                 lastName = "",
                 email = email,
-                country = "",
-                state = ""
+                country = "US",
+                state = "AZ"
             )
         )
         
