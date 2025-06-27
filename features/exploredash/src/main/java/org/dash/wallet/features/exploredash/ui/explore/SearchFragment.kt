@@ -514,6 +514,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
+        binding.itemDetails.setOnDashSpendLogOutClicked { service ->
+            lifecycleScope.launch {
+                if (dashSpendViewModel.isUserSignedInService(service)) {
+                    dashSpendViewModel.logout()
+                }
+            }
+        }
+
+        binding.itemDetails.setGiftCardServicePicked { service ->
+            dashSpendViewModel.observeDashSpendState(service)
+        }
+
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
                 binding.itemDetails.bindItem(item)
@@ -533,17 +545,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        binding.itemDetails.setOnCTXSpendLogOutClicked { service ->
+        dashSpendViewModel.dashSpendState.observe(viewLifecycleOwner) { state ->
             lifecycleScope.launch {
-                if (dashSpendViewModel.isUserSignedInService(service)) {
-                    dashSpendViewModel.logout()
-                }
-            }
-        }
-
-        dashSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
-            lifecycleScope.launch {
-                binding.itemDetails.setCTXSpendLogInUser(email, dashSpendViewModel.isUserSignedInService(GiftCardService.CTX)) // TODO: piggycards
+                binding.itemDetails.setDashSpendUser(state.email, state.isLoggedIn)
             }
         }
 

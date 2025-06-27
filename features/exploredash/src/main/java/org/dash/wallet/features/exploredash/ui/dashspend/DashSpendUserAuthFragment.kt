@@ -41,6 +41,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import retrofit2.HttpException
 
 @AndroidEntryPoint
 class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_auth) {
@@ -196,9 +197,13 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                     )
                 }
             } catch (e: Exception) {
+                val message = when (e) {
+                    is HttpException -> e.response()?.errorBody()?.string()
+                    else -> e.message
+                }
                 viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
                 binding.inputWrapper.isErrorEnabled = true
-                binding.inputErrorTv.text = e.message ?: getString(R.string.error)
+                binding.inputErrorTv.text = message ?: getString(R.string.error)
                 binding.inputErrorTv.isVisible = true
             }
             hideLoading()

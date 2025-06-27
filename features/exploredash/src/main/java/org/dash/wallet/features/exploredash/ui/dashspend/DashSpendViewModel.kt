@@ -24,6 +24,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,6 +59,11 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+data class DashSpendState(
+    val email: String? = null,
+    val isLoggedIn: Boolean = false
+)
+
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
@@ -75,6 +81,8 @@ class DashSpendViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
     }
+
+    private var stateTrackingJob: Job? = null
 
     private val services: Map<GiftCardService, DashSpendRepository> by lazy {
         mapOf(
@@ -96,7 +104,9 @@ class DashSpendViewModel @Inject constructor(
             return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
         }
 
-    val userEmail = ctxSpendRepository.userEmail.asLiveData()
+    private val _dashSpendState = MutableStateFlow(DashSpendState())
+    val dashSpendState: StateFlow<DashSpendState>
+        get() = _dashSpendState.asStateFlow()
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
@@ -220,12 +230,23 @@ class DashSpendViewModel @Inject constructor(
             !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
     }
 
-    private fun updatePurchaseLimits() {
-        _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
-            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+    fun observeDashSpendState(service: GiftCardService?) {
+        val serviceRepository = services[service]
+        stateTrackingJob?.cancel()
+
+        if (service == null || serviceRepository == null) {
+            return
         }
+
+        stateTrackingJob = serviceRepository.userEmail
+            .distinctUntilChanged()
+            .onEach { email ->
+                val isLoggedIn = serviceRepository.isUserSignedIn()
+                _dashSpendState.value = _dashSpendState.value.copy(
+                    email = email,
+                    isLoggedIn = isLoggedIn
+                )
+            }.launchIn(viewModelScope)
     }
 
     suspend fun isUserSignedInService(service: GiftCardService): Boolean {
@@ -338,5 +359,13 @@ class DashSpendViewModel @Inject constructor(
             report.append("body:\n").append(it).append("\n")
         }
         return report.toString()
+    }
+
+    private fun updatePurchaseLimits() {
+        _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
+            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+        }
     }
 }
