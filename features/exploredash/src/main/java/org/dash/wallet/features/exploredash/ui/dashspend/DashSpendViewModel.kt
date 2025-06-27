@@ -51,7 +51,9 @@ import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
+import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
+import org.dash.wallet.features.exploredash.repository.DashSpendRepository
+import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -62,7 +64,8 @@ class CTXSpendViewModel @Inject constructor(
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
-    private val repository: CTXSpendRepositoryInt,
+    private val repositoryFactory: DashSpendRepositoryFactory,
+    private val ctxSpendRepository: CTXSpendRepository,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
@@ -71,6 +74,13 @@ class CTXSpendViewModel @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(CTXSpendViewModel::class.java)
+    }
+
+    private val services: Map<GiftCardService, DashSpendRepository> by lazy {
+        mapOf(
+            GiftCardService.CTX to repositoryFactory.create(GiftCardService.CTX),
+            GiftCardService.PiggyCards to repositoryFactory.create(GiftCardService.PiggyCards)
+        )
     }
 
     val dashFormat: MonetaryFormat
@@ -86,7 +96,7 @@ class CTXSpendViewModel @Inject constructor(
             return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
         }
 
-    val userEmail = repository.userEmail.asLiveData()
+    val userEmail = ctxSpendRepository.userEmail.asLiveData()
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
@@ -127,7 +137,7 @@ class CTXSpendViewModel @Inject constructor(
             val amountValue = giftCardPaymentValue.value
 
             try {
-                val response = repository.purchaseGiftCard(
+                val response = ctxSpendRepository.purchaseGiftCard(
                     merchantId = it,
                     fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                     fiatCurrency = "USD",
@@ -177,10 +187,11 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
-        repository.getCTXSpendEmail()?.let { email ->
-            return repository.getMerchant(merchantId)
+        return if (ctxSpendRepository.isUserSignedIn()) {
+            ctxSpendRepository.getMerchant(merchantId)
+        } else {
+            null
         }
-        return null
     }
 
     fun refreshMinMaxCardPurchaseValues() {
@@ -218,18 +229,22 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun isUserSignedInService(service: GiftCardService): Boolean {
-        // TODO: better open-closed
-        return when (service) {
-            GiftCardService.CTX -> repository.isUserSignedIn()
-            GiftCardService.PiggyCards -> false // TODO
-        }
+        return services[service]?.isUserSignedIn() == true
     }
 
-    suspend fun signInToCTXSpend(email: String) = repository.login(email)
+    suspend fun signUp(service: GiftCardService, email: String): Boolean {
+        return services[service]?.signup(email) == true
+    }
 
-    suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
+    suspend fun signIn(service: GiftCardService, email: String): Boolean {
+        return services[service]?.login(email) == true
+    }
 
-    suspend fun logout() = repository.logout()
+    suspend fun verifyEmail(service: GiftCardService, code: String): Boolean {
+        return services[service]?.verifyEmail(code) == true
+    }
+
+    suspend fun logout() = ctxSpendRepository.logout()
 
     fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
         val giftCard = GiftCard(
@@ -279,7 +294,7 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun checkToken(): Boolean {
         return try {
-            !repository.isUserSignedIn() || repository.refreshToken()
+            !ctxSpendRepository.isUserSignedIn() || ctxSpendRepository.refreshToken()
         } catch (ex: Exception) {
             false
         }
