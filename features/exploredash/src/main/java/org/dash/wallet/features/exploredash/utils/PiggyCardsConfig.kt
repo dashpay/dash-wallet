@@ -38,10 +38,6 @@ class PiggyCardsConfig @Inject constructor(
         val PREFS_KEY_USER_ID = stringPreferencesKey("piggy_cards_user_id")
         val PREFS_KEY_PASSWORD = stringPreferencesKey("piggy_cards_password")
         val PREFS_KEY_EMAIL = stringPreferencesKey("piggy_cards_email")
-        val PREFS_KEY_FIRST_NAME = stringPreferencesKey("piggy_cards_first_name")
-        val PREFS_KEY_LAST_NAME = stringPreferencesKey("piggy_cards_last_name")
-        val PREFS_KEY_COUNTRY = stringPreferencesKey("piggy_cards_country")
-        val PREFS_KEY_STATE = stringPreferencesKey("piggy_cards_state")
         val PREFS_KEY_TOKEN_EXPIRES_AT = stringPreferencesKey("piggy_cards_token_expires_at")
     }
 }

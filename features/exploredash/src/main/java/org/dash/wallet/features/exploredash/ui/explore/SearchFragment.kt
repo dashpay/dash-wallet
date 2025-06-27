@@ -65,10 +65,10 @@ import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderA
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.DashSpendLoginInfoDialog
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendUserAuthFragment
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -81,7 +81,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
-    private val ctxSpendViewModel by exploreViewModels<CTXSpendViewModel>()
+    private val dashSpendViewModel by exploreViewModels<DashSpendViewModel>()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
@@ -236,7 +236,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (args.type == ExploreTopic.Merchants && !ctxSpendViewModel.checkToken()) {
+                if (args.type == ExploreTopic.Merchants && !dashSpendViewModel.checkToken()) {
                     AdaptiveDialog.create(
                         null,
                         getString(R.string.token_expired_title),
@@ -389,11 +389,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    CTXSpendTermsDialog(service.termsAndConditions).show(requireActivity()) {
+                    DashSpendTermsDialog(service.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
-                                CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
+                                DashSpendUserAuthFragment.AuthType.CREATE_ACCOUNT,
+                                service
                             )
                         )
                     }
@@ -401,7 +402,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.LOGIN)
                     safeNavigate(
                         SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
-                            CTXSpendUserAuthFragment.CTXSpendUserAuthType.SIGN_IN
+                            DashSpendUserAuthFragment.AuthType.SIGN_IN,
+                            service
                         )
                     )
                 }
@@ -523,7 +525,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.itemDetails.setOnBuyGiftCardButtonClicked { service ->
             lifecycleScope.launch {
-                if (!ctxSpendViewModel.isUserSignedInService(service)) {
+                if (!dashSpendViewModel.isUserSignedInService(service)) {
                     showLoginDialog(service)
                 } else {
                     openPurchaseGiftCardFragment() // TODO: service
@@ -533,15 +535,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.itemDetails.setOnCTXSpendLogOutClicked { service ->
             lifecycleScope.launch {
-                if (ctxSpendViewModel.isUserSignedInService(service)) {
-                    ctxSpendViewModel.logout()
+                if (dashSpendViewModel.isUserSignedInService(service)) {
+                    dashSpendViewModel.logout()
                 }
             }
         }
 
-        ctxSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
+        dashSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
             lifecycleScope.launch {
-                binding.itemDetails.setCTXSpendLogInUser(email, ctxSpendViewModel.isUserSignedInService(GiftCardService.CTX)) // TODO: piggycards
+                binding.itemDetails.setCTXSpendLogInUser(email, dashSpendViewModel.isUserSignedInService(GiftCardService.CTX)) // TODO: piggycards
             }
         }
 
@@ -580,7 +582,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
                                 val merchant = viewModel.selectedItem.value as Merchant
-                                ctxSpendViewModel.updateMerchantDetails(merchant)
+                                dashSpendViewModel.updateMerchantDetails(merchant)
                                 updateIsEnabled(merchant)
                             }
                         }
@@ -897,7 +899,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private suspend fun updateIsEnabled(merchant: Merchant) {
         val wasEnabled = merchant.active
-        ctxSpendViewModel.updateMerchantDetails(merchant)
+        dashSpendViewModel.updateMerchantDetails(merchant)
 
         if (merchant.active != wasEnabled) {
             binding.itemDetails.bindItem(merchant)

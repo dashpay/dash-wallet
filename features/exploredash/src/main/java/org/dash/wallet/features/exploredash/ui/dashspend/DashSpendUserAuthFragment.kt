@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend
+package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.os.Build
 import android.os.Bundle
@@ -39,14 +39,14 @@ import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
-import org.dash.wallet.features.exploredash.databinding.FragmentCtxSpendUserAuthBinding
+import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
 @AndroidEntryPoint
-class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth) {
-    private val binding by viewBinding(FragmentCtxSpendUserAuthBinding::bind)
-    private val viewModel by exploreViewModels<CTXSpendViewModel>()
-    private val args by navArgs<CTXSpendUserAuthFragmentArgs>()
+class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_auth) {
+    private val binding by viewBinding(FragmentDashSpendUserAuthBinding::bind)
+    private val viewModel by exploreViewModels<DashSpendViewModel>()
+    private val args by navArgs<DashSpendUserAuthFragmentArgs>()
 
     enum class AuthType(
         @StringRes val screenTitle: Int,
@@ -189,7 +189,7 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
 
                 if (success) {
                     safeNavigate(
-                        CTXSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
+                        DashSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
                             AuthType.OTP,
                             service
                         )
@@ -212,7 +212,7 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                 if (success) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                     hideKeyboard()
-                    safeNavigate(CTXSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
+                    safeNavigate(DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                 }
             } catch (e: Exception) {
                 binding.inputWrapper.isErrorEnabled = true

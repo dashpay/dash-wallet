@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
+package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import android.os.Bundle
 import android.view.View
@@ -26,14 +26,14 @@ import org.dash.wallet.common.ui.wiggle
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashspendTermsBinding
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-class CTXSpendTermsDialog(
+class DashSpendTermsDialog(
     val termsLink: String
 ) : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
     override val forceExpand: Boolean = true
-    private val viewModel by exploreViewModels<CTXSpendViewModel>()
+    private val viewModel by exploreViewModels<DashSpendViewModel>()
     private val binding by viewBinding(DialogDashspendTermsBinding::bind)
     private var onResultListener: (() -> Unit)? = null
 

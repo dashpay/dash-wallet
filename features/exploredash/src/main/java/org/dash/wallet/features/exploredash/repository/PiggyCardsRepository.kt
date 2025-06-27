@@ -28,7 +28,7 @@ import javax.inject.Inject
 class PiggyCardsRepository @Inject constructor(
     private val api: PiggyCardsApi,
     private val config: PiggyCardsConfig
-) : PiggyCardsRepositoryInt {
+) : DashSpendRepository {
 
     override val userEmail: Flow<String?> = config.observeSecureData(PiggyCardsConfig.PREFS_KEY_EMAIL)
 
@@ -44,29 +44,19 @@ class PiggyCardsRepository @Inject constructor(
         }
     }
 
-    override suspend fun signup(
-        firstName: String,
-        lastName: String,
-        email: String,
-        country: String,
-        state: String?
-    ): Boolean {
+    override suspend fun signup(email: String): Boolean {
         val response = api.signup(
             SignupRequest(
-                firstName = firstName,
-                lastName = lastName,
+                firstName = "",
+                lastName = "",
                 email = email,
-                country = country,
-                state = state
+                country = "",
+                state = ""
             )
         )
         
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID, response.userId)
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL, email)
-        config.setSecuredData(PiggyCardsConfig.PREFS_KEY_FIRST_NAME, firstName)
-        config.setSecuredData(PiggyCardsConfig.PREFS_KEY_LAST_NAME, lastName)
-        config.setSecuredData(PiggyCardsConfig.PREFS_KEY_COUNTRY, country)
-        state?.let { config.setSecuredData(PiggyCardsConfig.PREFS_KEY_STATE, it) }
         
         return true
     }
@@ -119,9 +109,6 @@ class PiggyCardsRepository @Inject constructor(
         }
     }
 
-    override suspend fun getEmail(): String? =
-        config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
-
     override suspend fun logout() {
         config.clearAll()
     }
@@ -129,80 +116,4 @@ class PiggyCardsRepository @Inject constructor(
     override suspend fun refreshToken(): Boolean {
         return performAutoLogin()
     }
-
-    override suspend fun getMerchants(country: String): List<Merchant> {
-        return api.getMerchants(country)
-    }
-
-    override suspend fun getMerchant(merchantId: String): MerchantDetails {
-        return api.getMerchant(merchantId)
-    }
-
-    override suspend fun getMerchantLocations(merchantId: String): List<Location> {
-        return api.getMerchantLocations(merchantId)
-    }
-
-    override suspend fun createOrder(
-        merchantId: String,
-        amount: Double,
-        email: String?,
-        name: String?,
-        ipAddress: String?,
-        location: String?
-    ): OrderResponse {
-        val userEmail = email ?: getEmail() ?: ""
-        val userName = name ?: "${config.getSecuredData(PiggyCardsConfig.PREFS_KEY_FIRST_NAME)} ${config.getSecuredData(PiggyCardsConfig.PREFS_KEY_LAST_NAME)}"
-        
-        return api.createOrder(
-            OrderRequest(
-                merchantId = merchantId,
-                amount = amount,
-                email = userEmail,
-                name = userName,
-                ipAddress = ipAddress,
-                location = location
-            )
-        )
-    }
-
-    override suspend fun getOrderStatus(orderId: String): OrderStatusResponse {
-        return api.getOrderStatus(orderId)
-    }
-
-    override suspend fun isNewUser(): Boolean {
-        val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
-        return userId.isNullOrEmpty()
-    }
-}
-
-interface PiggyCardsRepositoryInt {
-    val userEmail: Flow<String?>
-    
-    suspend fun login(email: String): Boolean
-    suspend fun signup(
-        firstName: String,
-        lastName: String,
-        email: String,
-        country: String,
-        state: String?
-    ): Boolean
-    suspend fun verifyEmail(code: String): Boolean
-    suspend fun isUserSignedIn(): Boolean
-    suspend fun getEmail(): String?
-    suspend fun logout()
-    suspend fun refreshToken(): Boolean
-    suspend fun isNewUser(): Boolean
-    
-    suspend fun getMerchants(country: String): List<Merchant>
-    suspend fun getMerchant(merchantId: String): MerchantDetails
-    suspend fun getMerchantLocations(merchantId: String): List<Location>
-    suspend fun createOrder(
-        merchantId: String,
-        amount: Double,
-        email: String? = null,
-        name: String? = null,
-        ipAddress: String? = null,
-        location: String? = null
-    ): OrderResponse
-    suspend fun getOrderStatus(orderId: String): OrderStatusResponse
 }

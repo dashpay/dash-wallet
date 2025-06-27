@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.utils
 object PiggyCardsConstants {
     const val BASE_URL_DEV = "https://apidev.piggy.cards/dash/v1/"
     const val BASE_URL_PROD = "https://api.piggy.cards/dash/v1/"
+    const val BASE_URL = BASE_URL_DEV  // TODO: Switch to PROD for production
     
     const val TOKEN_EXPIRES_IN_SECONDS = 3600
 }

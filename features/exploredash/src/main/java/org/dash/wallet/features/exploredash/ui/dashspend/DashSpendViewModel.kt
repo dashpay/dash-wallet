@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend
+package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.content.Intent
 import androidx.lifecycle.*
@@ -59,7 +59,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
-class CTXSpendViewModel @Inject constructor(
+class DashSpendViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
@@ -73,7 +73,7 @@ class CTXSpendViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private val log = LoggerFactory.getLogger(CTXSpendViewModel::class.java)
+        private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
     }
 
     private val services: Map<GiftCardService, DashSpendRepository> by lazy {

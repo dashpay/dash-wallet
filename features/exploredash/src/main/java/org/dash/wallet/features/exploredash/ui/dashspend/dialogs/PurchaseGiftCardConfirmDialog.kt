@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend.dialogs
+package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import android.content.Intent
 import android.os.Bundle
@@ -47,7 +47,7 @@ import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -61,7 +61,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
-    private val viewModel by exploreViewModels<CTXSpendViewModel>()
+    private val viewModel by exploreViewModels<DashSpendViewModel>()
 
     @Inject
     lateinit var authManager: AuthenticationManager

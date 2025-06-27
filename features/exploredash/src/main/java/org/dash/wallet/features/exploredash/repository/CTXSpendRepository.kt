@@ -69,11 +69,10 @@ class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
     private val config: CTXSpendConfig,
     private val tokenAuthenticator: TokenAuthenticator
-) : CTXSpendRepositoryInt {
-    companion object {
-        private val ONE_DAY = TimeUnit.DAYS.toMillis(1)
-    }
+) : CTXSpendRepositoryInt, DashSpendRepository {
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
+
+    override suspend fun signup(email: String) = login(email)
 
     override suspend fun login(email: String): Boolean {
         api.login(LoginRequest(email = email))
@@ -92,9 +91,6 @@ class CTXSpendRepository @Inject constructor(
 
     override suspend fun isUserSignedIn() =
         config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
-
-    override suspend fun getCTXSpendEmail() =
-        config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun logout() {
         config.clearAll()
@@ -142,15 +138,13 @@ class CTXSpendRepository @Inject constructor(
             false
         }
     }
+
+    suspend fun getCTXSpendEmail(): String? {
+        return config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
+    }
 }
 
 interface CTXSpendRepositoryInt {
-    val userEmail: Flow<String?>
-    suspend fun login(email: String): Boolean
-    suspend fun verifyEmail(code: String): Boolean
-    suspend fun isUserSignedIn(): Boolean
-    suspend fun getCTXSpendEmail(): String?
-    suspend fun logout()
     suspend fun purchaseGiftCard(
         cryptoCurrency: String,
         fiatCurrency: String,
@@ -160,5 +154,4 @@ interface CTXSpendRepositoryInt {
 
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): GiftCardResponse?
-    suspend fun refreshToken(): Boolean
 }
