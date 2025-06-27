@@ -51,12 +51,11 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
 
     enum class AuthType(
         @StringRes val screenTitle: Int,
-        @StringRes val screenSubtitle: Int,
         @StringRes val textInputHint: Int
     ) {
-        CREATE_ACCOUNT(R.string.create_ctx_spend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
-        SIGN_IN(R.string.log_in_to_ctxspend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
-        OTP(R.string.enter_verification_code, R.string.verification_check_email, R.string.password)
+        CREATE_ACCOUNT(R.string.create_ctx_spend_account, R.string.email),
+        SIGN_IN(R.string.log_in_to_ctxspend_account, R.string.email),
+        OTP(R.string.enter_verification_code, R.string.password)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -69,8 +68,11 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
 
         val authType = args.authType
         binding.title.setText(authType.screenTitle)
-        binding.descLabel.setText(authType.screenSubtitle)
         binding.inputWrapper.setHint(authType.textInputHint)
+        binding.descLabel.setText(when(authType) {
+            AuthType.OTP -> R.string.verification_check_email
+            else -> args.service.disclaimer
+        })
 
         binding.input.doOnTextChanged { text, _, _, _ ->
             binding.inputWrapper.isErrorEnabled = false
