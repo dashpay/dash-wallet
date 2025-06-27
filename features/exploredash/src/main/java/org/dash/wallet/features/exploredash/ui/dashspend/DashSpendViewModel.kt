@@ -265,7 +265,9 @@ class DashSpendViewModel @Inject constructor(
         return services[service]?.verifyEmail(code) == true
     }
 
-    suspend fun logout() = ctxSpendRepository.logout()
+    suspend fun logout(service: GiftCardService) {
+        services[service]?.logout()
+    }
 
     fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
         val giftCard = GiftCard(

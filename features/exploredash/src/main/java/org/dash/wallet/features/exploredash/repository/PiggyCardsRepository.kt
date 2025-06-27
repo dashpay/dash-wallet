@@ -32,17 +32,7 @@ class PiggyCardsRepository @Inject constructor(
 
     override val userEmail: Flow<String?> = config.observeSecureData(PiggyCardsConfig.PREFS_KEY_EMAIL)
 
-    override suspend fun login(email: String): Boolean {
-        val existingUserId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
-        val existingPassword = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
-        
-        return if (existingUserId != null && existingPassword != null) {
-            val response = api.login(LoginRequest(userId = existingUserId, password = existingPassword))
-            handleLoginResponse(response)
-        } else {
-            false
-        }
-    }
+    override suspend fun login(email: String) = signup(email)
 
     override suspend fun signup(email: String): Boolean {
         val response = api.signup(
@@ -113,7 +103,7 @@ class PiggyCardsRepository @Inject constructor(
         config.clearAll()
     }
 
-    override suspend fun refreshToken(): Boolean {
+    private suspend fun refreshToken(): Boolean {
         return performAutoLogin()
     }
 }

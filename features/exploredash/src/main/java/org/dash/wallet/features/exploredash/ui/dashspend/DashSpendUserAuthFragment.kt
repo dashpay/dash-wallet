@@ -181,6 +181,8 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
 
     private fun authUser(service: GiftCardService, email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
+            var errorMessage: String
+
             try {
                 val success = if (isSignIn) {
                     viewModel.signIn(service, email)
@@ -195,18 +197,25 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                             service
                         )
                     )
+
+                    hideLoading()
+                    return@launch
+                } else {
+                    errorMessage = getString(R.string.login_error_title, service.name)
                 }
             } catch (e: Exception) {
                 val message = when (e) {
                     is HttpException -> e.response()?.errorBody()?.string()
                     else -> e.message
                 }
-                viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
-                binding.inputWrapper.isErrorEnabled = true
-                binding.inputErrorTv.text = message ?: getString(R.string.error)
-                binding.inputErrorTv.isVisible = true
+                errorMessage = message ?: getString(R.string.error)
             }
+
             hideLoading()
+            viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
+            binding.inputWrapper.isErrorEnabled = true
+            binding.inputErrorTv.isVisible = true
+            binding.inputErrorTv.text = errorMessage
         }
     }
 

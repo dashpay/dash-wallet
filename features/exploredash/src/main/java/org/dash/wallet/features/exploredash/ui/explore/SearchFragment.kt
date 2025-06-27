@@ -516,9 +516,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         binding.itemDetails.setOnDashSpendLogOutClicked { service ->
             lifecycleScope.launch {
-                if (dashSpendViewModel.isUserSignedInService(service)) {
-                    dashSpendViewModel.logout()
-                }
+                dashSpendViewModel.logout(service)
             }
         }
 

@@ -30,7 +30,6 @@ import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthentic
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class CTXSpendException(
@@ -154,4 +153,5 @@ interface CTXSpendRepositoryInt {
 
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): GiftCardResponse?
+    suspend fun refreshToken(): Boolean
 }
