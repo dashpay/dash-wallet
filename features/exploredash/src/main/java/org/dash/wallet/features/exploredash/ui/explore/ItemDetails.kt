@@ -110,7 +110,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     fun setOnOpenWebsiteButtonClicked(listener: () -> Unit) {
         onOpenWebsiteButtonClicked = listener
     }
-
+    
     fun setOnBuyGiftCardButtonClicked(listener: (GiftCardProvider) -> Unit) {
         onBuyGiftCardButtonClicked = listener
     }
