@@ -54,14 +54,3 @@ suspend fun <T> safeApiCall(
         }
     }
 }
-
-fun <T> ResponseResource<T>.unwrap(): T {
-    return when (this) {
-        is ResponseResource.Success -> {
-            this.value
-        }
-        is ResponseResource.Failure -> {
-            throw this.throwable
-        }
-    }
-}

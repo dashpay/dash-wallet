@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:paddingBottom="15dp"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.PurchaseGiftCardConfirmDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.dashspend.dialogs.PurchaseGiftCardConfirmDialog">
 
     <LinearLayout
         android:id="@+id/header"

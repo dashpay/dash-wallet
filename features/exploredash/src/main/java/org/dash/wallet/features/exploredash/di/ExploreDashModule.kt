@@ -37,6 +37,7 @@ import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -63,6 +64,14 @@ abstract class ExploreDashModule {
         @Provides
         fun provideCTXAuthApi(remoteDataSource: RemoteDataSource): CTXSpendTokenApi {
             return remoteDataSource.buildApi(CTXSpendTokenApi::class.java)
+        }
+
+        @Provides
+        fun provideDashSpendFactory(
+            ctxSpendConfig: CTXSpendConfig,
+            piggyCardsConfig: PiggyCardsConfig
+        ): DashSpendRepositoryFactory {
+            return DashSpendRepositoryFactory(ctxSpendConfig, piggyCardsConfig)
         }
     }
 

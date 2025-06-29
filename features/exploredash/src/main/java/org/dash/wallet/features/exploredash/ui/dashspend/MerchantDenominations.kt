@@ -1,4 +1,4 @@
-package org.dash.wallet.features.exploredash.ui.ctxspend
+package org.dash.wallet.features.exploredash.ui.dashspend
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
