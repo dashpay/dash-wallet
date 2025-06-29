@@ -38,7 +38,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import retrofit2.HttpException
@@ -181,29 +181,29 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
         binding.continueButton.isClickable = true
     }
 
-    private fun authUser(service: GiftCardService, email: String, isSignIn: Boolean) {
+    private fun authUser(provider: GiftCardProvider, email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             var errorMessage: String
 
             try {
                 val success = if (isSignIn) {
-                    viewModel.signIn(service, email)
+                    viewModel.signIn(provider, email)
                 } else {
-                    viewModel.signUp(service, email)
+                    viewModel.signUp(provider, email)
                 }
 
                 if (success) {
                     safeNavigate(
                         DashSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
                             AuthType.OTP,
-                            service
+                            provider
                         )
                     )
 
                     hideLoading()
                     return@launch
                 } else {
-                    errorMessage = getString(R.string.login_error_title, service.name)
+                    errorMessage = getString(R.string.login_error_title, provider.name)
                 }
             } catch (e: Exception) {
                 val message = when (e) {
@@ -221,10 +221,10 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
         }
     }
 
-    private fun verifyEmail(service: GiftCardService, code: String) {
+    private fun verifyEmail(provider: GiftCardProvider, code: String) {
         lifecycleScope.launch {
             try {
-                val success = viewModel.verifyEmail(service, code)
+                val success = viewModel.verifyEmail(provider, code)
                 if (success) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                     hideKeyboard()

@@ -7,19 +7,19 @@ import kotlinx.parcelize.Parcelize
 import org.dash.wallet.features.exploredash.R
 
 @Parcelize
-sealed class GiftCardService(
+sealed class GiftCardProvider(
     val name: String,
     @DrawableRes val logo: Int,
     @StringRes val disclaimer: Int,
     val termsAndConditions: String
 ): Parcelable {
-    object CTX: GiftCardService(
+    object CTX: GiftCardProvider(
         "CTX",
         R.drawable.ic_ctx_logo_blue,
         R.string.log_in_to_ctxspend_account_desc,
         "https://ctx.com/gift-card-agreement/"
     )
-    object PiggyCards: GiftCardService(
+    object PiggyCards: GiftCardProvider(
         "PiggyCards",
         R.drawable.ic_piggycards_logo,
         R.string.log_in_to_piggycards_account_desc,

@@ -55,7 +55,7 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
@@ -244,7 +244,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         getString(R.string.button_okay)
                     ).show(requireActivity()) {
                         if (isAdded) {
-                            showLoginDialog(GiftCardService.CTX) // TODO: piggycards token expiration
+                            showLoginDialog(GiftCardProvider.CTX) // TODO: piggycards token expiration
                         }
                     }
                 }
@@ -384,17 +384,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun showLoginDialog(service: GiftCardService) {
-        DashSpendLoginInfoDialog(service.logo).show(
+    private fun showLoginDialog(provider: GiftCardProvider) {
+        DashSpendLoginInfoDialog(provider.logo).show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    DashSpendTermsDialog(service.termsAndConditions).show(requireActivity()) {
+                    DashSpendTermsDialog(provider.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
                                 DashSpendUserAuthFragment.AuthType.CREATE_ACCOUNT,
-                                service
+                                provider
                             )
                         )
                     }
@@ -403,14 +403,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     safeNavigate(
                         SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
                             DashSpendUserAuthFragment.AuthType.SIGN_IN,
-                            service
+                            provider
                         )
                     )
                 }
             },
             onExtraMessageAction = {
                 requireActivity().openCustomTab(
-                    service.termsAndConditions
+                    provider.termsAndConditions
                 )
             }
         )
@@ -514,14 +514,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
-        binding.itemDetails.setOnDashSpendLogOutClicked { service ->
+        binding.itemDetails.setOnDashSpendLogOutClicked { provider ->
             lifecycleScope.launch {
-                dashSpendViewModel.logout(service)
+                dashSpendViewModel.logout(provider)
             }
         }
 
-        binding.itemDetails.setGiftCardServicePicked { service ->
-            dashSpendViewModel.observeDashSpendState(service)
+        binding.itemDetails.setGiftCardProviderPicked { provider ->
+            dashSpendViewModel.observeDashSpendState(provider)
         }
 
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->

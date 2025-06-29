@@ -39,7 +39,7 @@ import org.dash.wallet.common.ui.setRoundedRippleBackground
 import org.dash.wallet.common.util.makeLinks
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
@@ -57,9 +57,9 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onNavigationButtonClicked: (() -> Unit)? = null
     private var onDialPhoneButtonClicked: (() -> Unit)? = null
     private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
-    private var onBuyGiftCardButtonClicked: ((GiftCardService) -> Unit)? = null
-    private var onExploreLogOutClicked: ((GiftCardService) -> Unit)? = null
-    private var giftCardServicePicked: ((GiftCardService?) -> Unit)? = null
+    private var onBuyGiftCardButtonClicked: ((GiftCardProvider) -> Unit)? = null
+    private var onExploreLogOutClicked: ((GiftCardProvider) -> Unit)? = null
+    private var giftCardProviderPicked: ((GiftCardProvider?) -> Unit)? = null
 
     private var isLoggedIn = false
     private var isAtm = false
@@ -111,16 +111,16 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
         onOpenWebsiteButtonClicked = listener
     }
 
-    fun setOnBuyGiftCardButtonClicked(listener: (GiftCardService) -> Unit) {
+    fun setOnBuyGiftCardButtonClicked(listener: (GiftCardProvider) -> Unit) {
         onBuyGiftCardButtonClicked = listener
     }
 
-    fun setOnDashSpendLogOutClicked(listener: (GiftCardService) -> Unit) {
+    fun setOnDashSpendLogOutClicked(listener: (GiftCardProvider) -> Unit) {
         onExploreLogOutClicked = listener
     }
 
-    fun setGiftCardServicePicked(listener: (GiftCardService?) -> Unit) {
-        giftCardServicePicked = listener
+    fun setGiftCardProviderPicked(listener: (GiftCardProvider?) -> Unit) {
+        giftCardProviderPicked = listener
     }
 
     @SuppressLint("SetTextI18n")
@@ -137,7 +137,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 Pair(
                     context.resources.getString(R.string.log_out),
                     OnClickListener {
-                        onExploreLogOutClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardService.PiggyCards else GiftCardService.CTX)
+                        onExploreLogOutClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
                         binding.loginExploreUser.isGone = true
                     }
                 ),
@@ -216,7 +216,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
             if (isDash) {
                 piggyCardsCheckbox.isVisible = false
-                giftCardServicePicked?.invoke(null)
+                giftCardProviderPicked?.invoke(null)
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
                 payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
@@ -225,12 +225,12 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 temporaryUnavailableText.isVisible = merchant.active == false
             } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
                 piggyCardsCheckbox.isVisible = true
-                giftCardServicePicked?.invoke(GiftCardService.PiggyCards)
+                giftCardProviderPicked?.invoke(GiftCardProvider.PiggyCards)
                 piggyCardsCheckbox.setOnClickListener {
-                    giftCardServicePicked?.invoke(if (piggyCardsCheckbox.isChecked) {
-                        GiftCardService.PiggyCards
+                    giftCardProviderPicked?.invoke(if (piggyCardsCheckbox.isChecked) {
+                        GiftCardProvider.PiggyCards
                     } else {
-                        GiftCardService.CTX
+                        GiftCardProvider.CTX
                     })
                 }
                 payBtn.isVisible = true
@@ -239,7 +239,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtn.setOnClickListener {
                     // TODO: multiple gift card options UI
                     // TODO: when implementing new design for ItemDetails, better to translate this whole class to Compose
-                    onBuyGiftCardButtonClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardService.PiggyCards else GiftCardService.CTX)
+                    onBuyGiftCardButtonClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
                 }
                 payBtn.isEnabled = merchant.active ?: true
                 temporaryUnavailableText.isVisible = merchant.active == false
@@ -277,7 +277,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     private fun bindAtmDetails(atm: Atm) {
         binding.apply {
-            giftCardServicePicked?.invoke(null)
+            giftCardProviderPicked?.invoke(null)
             payBtn.isVisible = false
             manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
             itemType.isVisible = false
