@@ -550,6 +550,19 @@ class TopUpRepositoryImpl @Inject constructor(
             linkGenerator.setChannel("invitation")
             linkGenerator.setReferrerUID(UUID.randomUUID().toString())
             linkGenerator.setCampaign("dashpay_invitation")
+            val title = walletApplication.getString(R.string.invitation_preview_title)
+            val nameLabel = dashPayProfile.nameLabel
+            val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
+            val imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
+            val description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
+
+            linkGenerator.addParameters(
+                mapOf(
+                    "af_og_title" to title,
+                    "af_og_description" to description,
+                    "af_og_image" to imageUrl.toString()
+                )
+            )
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
 
