@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui
 import android.content.Intent
 import androidx.core.net.toUri
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.data.InvitationLinkData
@@ -34,7 +33,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.tasks.await
+import android.net.Uri
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.PeerGroup.SyncStage
 import org.dash.wallet.common.services.BlockchainStateProvider
@@ -83,15 +82,37 @@ class InviteHandlerViewModel @Inject constructor(
     }
 
     suspend fun handleInvite(intent: Intent): InvitationLinkData? = withContext(Dispatchers.IO) {
-        val pendingResult = FirebaseDynamicLinks.getInstance().getDynamicLink(intent).await()
-        val link = pendingResult?.link
-        if (link != null && InvitationLinkData.isValid(link)) {
-            log.info("received invite $link")
-            InvitationLinkData(link)
+        val data = intent.data
+        log.info("Processing intent data: $data")
+
+        if (data != null) {
+            // Check for AppsFlyer deep link parameter
+            val deepLinkValue = data.getQueryParameter("af_dp")
+            log.info("AppsFlyer deep_link_value: $deepLinkValue")
+
+            if (deepLinkValue != null) {
+                val link = Uri.parse(deepLinkValue)
+                if (InvitationLinkData.isValid(link)) {
+                    log.info("received valid invite from AppsFlyer: $link")
+                    return@withContext InvitationLinkData(link)
+                } else {
+                    log.warn("Invalid invitation link from AppsFlyer: $link")
+                }
+            } else {
+                // Check if the intent data itself is a valid invitation link
+                if (InvitationLinkData.isValid(data)) {
+                    log.info("received direct invite link: $data")
+                    return@withContext InvitationLinkData(data)
+                } else {
+                    log.warn("Intent data is not a valid invitation link: $data")
+                }
+            }
         } else {
-            log.info("invalid invite ignored")
-            null
+            log.warn("Intent data is null")
         }
+
+        log.info("No valid invite found in intent")
+        null
     }
 
     suspend fun setInvitationLink(invitation: InvitationLinkData, fromOnboarding: Boolean) {

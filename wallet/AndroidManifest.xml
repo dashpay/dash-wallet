@@ -17,6 +17,7 @@
     <!-- enable when Bluetooth functionality is completely restored -->
     <!--uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" /-->
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
     <!-- dangerous permissions -->
     <uses-permission android:name="android.permission.CAMERA" /> <!-- group: CAMERA -->
@@ -69,7 +70,8 @@
         android:largeHeap="true"
         android:theme="@style/My.Theme"
         android:taskAffinity=""
-        tools:ignore="LockedOrientationActivity">
+        tools:ignore="LockedOrientationActivity"
+        tools:replace="android:allowBackup,android:fullBackupContent,android:dataExtractionRules">
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -221,24 +223,19 @@
             android:theme="@style/My.Theme.Transparent"
             android:exported="true">
 
-            <intent-filter android:autoVerify="true"
-                tools:targetApi="m">
-
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dashpay" android:host="invite" />
+            </intent-filter>
 
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:path="/applink"
-                    android:scheme="http" />
-
-                <data
-                    android:host="invitations.dashpay.io"
-                    android:path="/applink"
-                    android:scheme="https" />
-
+            <!-- Optional: separate filter for OneLink (https) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="dashpaytest.onelink.me" />
             </intent-filter>
 
         </activity>

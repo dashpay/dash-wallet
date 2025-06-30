@@ -64,7 +64,7 @@ data class InvitationLinkData(
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
-            val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+            val linkBuilder = Uri.parse("dashpay://invite").buildUpon()
                 .appendQueryParameter(PARAM_USER, username)
                 .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
                 .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))

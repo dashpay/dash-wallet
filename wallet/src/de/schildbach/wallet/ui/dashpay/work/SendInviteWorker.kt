@@ -50,8 +50,7 @@ class SendInviteWorker @AssistedInject constructor(
         const val KEY_FUNDING_ADDRESS = "SendInviteWorker.FUNDING_ADDRESS"
         const val KEY_TX_ID = "SendInviteWorker.KEY_TX_ID"
         const val KEY_USER_ID = "SendInviteWorker.KEY_USER_ID"
-        const val KEY_DYNAMIC_LINK = "SendInviteWorker.KEY_DYNAMIC_LINK"
-        const val KEY_SHORT_DYNAMIC_LINK = "SendInviteWorker.KEY_SHORT_DYNAMIC_LINK"
+        const val KEY_APPSFLYER_LINK = "SendInviteWorker.KEY_APPSFLYER_LINK"
         const val KEY_VALUE = "SendInviteWorker.KEY_VALUE"
         private val log = LoggerFactory.getLogger(SendInviteWorker::class.java)
     }
@@ -63,10 +62,8 @@ class SendInviteWorker @AssistedInject constructor(
             get() = data.getByteArray(KEY_TX_ID)!!
         val userId
             get() = data.getString(KEY_USER_ID)!!
-        val dynamicLink
-            get() = data.getString(KEY_DYNAMIC_LINK)!!
         val shortDynamicLink
-            get() = data.getString(KEY_SHORT_DYNAMIC_LINK)!!
+            get() = data.getString(KEY_APPSFLYER_LINK)!!
         val value: Coin
             get() = Coin.valueOf(data.getLong(KEY_VALUE, 0L))
     }
@@ -126,15 +123,14 @@ class SendInviteWorker @AssistedInject constructor(
                 }
             }
 
-            // create the dynamic link
+            // create the AppsFlyer link
             invitation = invitationsDao.loadByFundingAddress(fundingAddress)!!
             if (invitation.dynamicLink == null) {
                 val dashPayProfile = platformRepo.getLocalUserProfile()
-                val dynamicLink = topUpRepository.createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
-                val shortDynamicLink = topUpRepository.buildShortDynamicLink(dynamicLink)
+                val appsFlyerLink = topUpRepository.createAppsFlyerLink(dashPayProfile!!, assetLockTx, encryptionKey)
                 invitation = invitation.copy(
-                    shortDynamicLink = shortDynamicLink.shortLink.toString(),
-                    dynamicLink = dynamicLink.uri.toString()
+                    shortDynamicLink = appsFlyerLink.shortLink,
+                    dynamicLink = appsFlyerLink.link
                 )
                 topUpRepository.updateInvitation(invitation)
             }
@@ -143,8 +139,7 @@ class SendInviteWorker @AssistedInject constructor(
                     KEY_TX_ID to assetLockTx.txId.bytes,
                     KEY_VALUE to value,
                     KEY_USER_ID to assetLockTx.identityId.toStringBase58(),
-                    KEY_DYNAMIC_LINK to invitation.dynamicLink,
-                    KEY_SHORT_DYNAMIC_LINK to invitation.shortDynamicLink
+                    KEY_APPSFLYER_LINK to invitation.shortDynamicLink
                 )
             )
         } catch (ex: Exception) {
