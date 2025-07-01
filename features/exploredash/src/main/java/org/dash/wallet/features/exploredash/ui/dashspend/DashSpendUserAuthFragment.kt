@@ -33,6 +33,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
@@ -41,10 +42,15 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
 import retrofit2.HttpException
 
 @AndroidEntryPoint
 class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_auth) {
+    companion object {
+        private val log = LoggerFactory.getLogger(DashSpendUserAuthFragment::class.java)
+    }
+
     private val binding by viewBinding(FragmentDashSpendUserAuthBinding::bind)
     private val viewModel by exploreViewModels<DashSpendViewModel>()
     private val args by navArgs<DashSpendUserAuthFragmentArgs>()
@@ -206,6 +212,8 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                     errorMessage = getString(R.string.login_error_title, provider.name)
                 }
             } catch (e: Exception) {
+                log.error("DashSpend: error during signup/login to ${provider.name}: ${e::class.simpleName} - ${e.message}", e)
+
                 val message = when (e) {
                     is HttpException -> e.response()?.errorBody()?.string()
                     else -> e.message
