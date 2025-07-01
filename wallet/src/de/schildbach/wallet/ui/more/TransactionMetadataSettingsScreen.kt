@@ -69,7 +69,9 @@ fun TransactionMetadataSettingsScreen(
     val lastSaveDate by viewModel.lastSaveDate.collectAsState()
     val futureSaveDate by viewModel.futureSaveDate.collectAsState()
     val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishLiveData by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+    val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+    val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
+    val currentDate = Date(System.currentTimeMillis())
 
     Scaffold(
         topBar = {
@@ -154,14 +156,14 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(savePastTxToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_past_title),
-                    subtitle = if (BaseWorker.extractProgress(publishLiveData.data?.progress) != -1) {
-                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(Date(lastSaveDate)))
+                    subtitle = if (isSaving) {
+                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
-                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(Date(System.currentTimeMillis())))
+                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
                     } else {
                         stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
                     },
-                    enabled = hasPastTransactionsToSave
+                    enabled = hasPastTransactionsToSave && !isSaving
                 )
                 // Future transactions checkbox
                 DashCheckbox(

@@ -229,6 +229,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 }
             }
         }
+        setTransactionMetadataText(isSaving = false, saveProgress = -1)
     }
 
     private fun setBatteryOptimizationText() {

@@ -151,10 +151,10 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val PUSH_PERIOD = if (true) 3.minutes else 3.hours // revert this
         val WEEKLY_PUSH_PERIOD = 7.days
-        val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
-        val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
+        val CUTOFF_MIN = if (true) 3.minutes else 3.hours // revert this
+        val CUTOFF_MAX = if (true) 6.minutes else 6.hours // revert this
         const val MIN_TXMETADATA_BATCHSIZE = 2
         const val MAX_TXMETADATA_BATCHSIZE = 35
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
@@ -1030,9 +1030,9 @@ class PlatformSynchronizationService @Inject constructor(
     private suspend fun publishTransactionMetadata(
         txMetadataItems: List<TransactionMetadataCacheItem>,
         progressListener: (suspend (Int) -> Unit)? = null
-    ) {
+    ): Int {
         if (!platformRepo.hasBlockchainIdentity) {
-            return
+            return 0
         }
         progressListener?.invoke(0)
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
@@ -1068,6 +1068,7 @@ class PlatformSynchronizationService @Inject constructor(
                 progressListener?.invoke(10 + progress * 90 / 100)
             }
         }
+        return txMetadataItems.size
     }
 
     private fun mergeTransactionMetadataDocuments(txId: Sha256Hash, docs: List<TransactionMetadataDocument>): TransactionMetadataCacheItem {
@@ -1177,12 +1178,12 @@ class PlatformSynchronizationService @Inject constructor(
         val itemsSaved = publishChangeCache(System.currentTimeMillis(), saveAll = true) { progress ->
             progressListener.invoke(50 + progress / 2)
         }
-        return TxMetadataSaveInfo(itemsSaved, itemsToSave)
+        return itemsSaved
     }
 
-    private suspend fun publishChangeCache(before: Long, saveAll: Boolean, progressListener: (suspend (Int) -> Unit)? = null): Int {
+    private suspend fun publishChangeCache(before: Long, saveAll: Boolean, progressListener: (suspend (Int) -> Unit)? = null): TxMetadataSaveInfo {
         if (!Constants.SUPPORTS_TXMETADATA) {
-            return 0
+            return TxMetadataSaveInfo.NONE
         }
         log.info("publishing updates to tx metadata items before $before")
         val itemsToPublish = hashMapOf<Sha256Hash, TransactionMetadataCacheItem>()
@@ -1190,7 +1191,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         if (changedItems.isEmpty()) {
             log.info("no tx metadata changes before this time")
-            return 0
+            return TxMetadataSaveInfo.NONE
         }
         val saveSettings = dashPayConfig.getTransactionMetadataSettings()
 
@@ -1256,6 +1257,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         progressListener?.invoke(10)
         var itemsSaved = 0
+        var itemsToSave = changedItems.size
         try {
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
@@ -1279,7 +1281,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
 
         log.info("publishing updates to tx metadata items complete")
-        return itemsSaved
+        return TxMetadataSaveInfo(itemsSaved, itemsToSave)
     }
 
     // uses get_vote_polls to get active vote polls, but must check remaining

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group
+ * Copyright 2025 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package de.schildbach.wallet.service.platform.work
 
 import android.content.Context
@@ -43,7 +44,6 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(PublishTransactionMetadataWorker::class.java)
         const val KEY_PASSWORD = "PublishTransactionMetadataWorker.PASSWORD"
-        //const val KEY_PUBLISH_PAST = "PublishTransactionMetadataWorker.PUBLISH_PAST"
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {
@@ -55,7 +55,7 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
             val saveInfo = platformSynchronizationService.publishPastTxMetadata() { progress ->
                 setProgress(progress)
             }
-            if (saveInfo.itemsSaved != 0 && saveInfo.itemsSaved < saveInfo.itemsToSave) {
+            if (saveInfo.itemsSaved == saveInfo.itemsToSave) {
                 dashPayConfig.set(TRANSACTION_METADATA_LAST_PAST_SAVE, now)
                 log.info("publish txmetadata successful: $saveInfo")
                 Result.success(
@@ -79,7 +79,6 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
             }
             Result.failure(
                 workDataOf(
-                    //KEY_IDENTITY to identity,
                     KEY_EXCEPTION to ex.javaClass.simpleName,
                     KEY_ERROR_MESSAGE to formatExceptionMessage("publish txmetadata exception:", ex),
                     KEY_EXCEPTION_ARGS to args

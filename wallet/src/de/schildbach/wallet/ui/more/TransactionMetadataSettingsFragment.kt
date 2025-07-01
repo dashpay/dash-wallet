@@ -33,7 +33,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import java.text.SimpleDateFormat
-import java.util.Date
 
 @AndroidEntryPoint
 @OptIn(ExperimentalCoroutinesApi::class)
