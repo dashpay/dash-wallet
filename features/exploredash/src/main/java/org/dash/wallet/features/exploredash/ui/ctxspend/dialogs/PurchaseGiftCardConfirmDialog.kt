@@ -74,6 +74,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         super.onViewCreated(view, savedInstanceState)
 
         val merchant = viewModel.giftCardMerchant
+        if (merchant == null) {
+            log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
+            dismiss()
+            return
+        }
         val paymentValue = viewModel.giftCardPaymentValue.value
         val savingsFraction = merchant.savingsFraction
         binding.merchantName.text = merchant.name
@@ -97,6 +102,13 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private fun onConfirmButtonClicked() {
         lifecycleScope.launch {
+            // Double-check merchant is still available before proceeding
+            if (viewModel.giftCardMerchant == null) {
+                log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
+                dismiss()
+                return@launch
+            }
+
             if (authManager.authenticate(requireActivity()) == null) {
                 return@launch
             }
