@@ -83,16 +83,19 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         // Try to restore from saved state first
         val savedMerchantId = viewModel.getSavedMerchantId()
         val currentMerchant = exploreViewModel.selectedItem.value
-        
-        if (savedMerchantId != null && currentMerchant is Merchant && currentMerchant.merchantId == savedMerchantId) {
-            // State restoration: merchant matches saved state
-            setupMerchant(currentMerchant)
-        } else if (currentMerchant is Merchant && currentMerchant.merchantId != null && !currentMerchant.source.isNullOrEmpty()) {
-            // Normal flow: new merchant selection
-            setupMerchant(currentMerchant)
-        } else {
-            // No valid merchant available
-            findNavController().popBackStack()
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (savedMerchantId != null && currentMerchant == null) {
+                // restore state if saved merchant exists
+                if (setupMerchant(savedMerchantId)) {
+                    findNavController().popBackStack()
+                }
+            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null && !currentMerchant.source.isNullOrEmpty()) {
+                setupMerchant(currentMerchant)
+            } else {
+                // No valid merchant available
+                findNavController().popBackStack()
+            }
         }
 
         viewModel.isFixedDenomination.observe(viewLifecycleOwner) { isFixed ->
@@ -319,7 +322,17 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
-    private fun setupMerchant(merchant: Merchant) {
+    private suspend fun setupMerchant(merchantId: String): Boolean {
+        val merchant = viewModel.getMerchantById(merchantId)
+        return if (merchant != null) {
+            setupMerchant(merchant)
+            true
+        } else {
+            false
+        }
+    }
+
+    private suspend fun setupMerchant(merchant: Merchant) {
         viewModel.giftCardMerchant = merchant
         binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
         binding.paymentHeaderView.setPaymentAddressViewIcon(
@@ -327,14 +340,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             R.drawable.ic_image_placeholder
         )
         viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+        viewModel.updateMerchantDetails(merchant)
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.updateMerchantDetails(merchant)
-
-            if (setMerchantEnabled()) {
-                viewModel.setIsFixedDenomination(merchant.fixedDenomination)
-                setCardPurchaseLimits()
-            }
+        if (setMerchantEnabled()) {
+            viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+            setCardPurchaseLimits()
         }
     }
 

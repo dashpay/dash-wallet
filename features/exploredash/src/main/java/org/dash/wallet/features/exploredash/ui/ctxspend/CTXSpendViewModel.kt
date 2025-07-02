@@ -24,6 +24,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -49,6 +51,7 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
@@ -67,7 +70,8 @@ class CTXSpendViewModel @Inject constructor(
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
     private val analytics: AnalyticsService,
-    private val savedStateHandle: SavedStateHandle
+    private val savedStateHandle: SavedStateHandle,
+    private val exploreDao: MerchantDao
 ) : ViewModel() {
 
     companion object {
@@ -168,7 +172,7 @@ class CTXSpendViewModel @Inject constructor(
         return transaction.txId
     }
 
-    suspend fun updateMerchantDetails(merchant: Merchant) {
+    suspend fun updateMerchantDetails(merchant: Merchant) = withContext(Dispatchers.IO) {
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
@@ -194,7 +198,7 @@ class CTXSpendViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
+    suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
         repository.getCTXSpendEmail()?.let { email ->
             return repository.getMerchant(merchantId)
         }
@@ -345,5 +349,9 @@ class CTXSpendViewModel @Inject constructor(
             report.append("body:\n").append(it).append("\n")
         }
         return report.toString()
+    }
+
+    suspend fun getMerchantById(merchantId: String): Merchant? = withContext(Dispatchers.IO) {
+        exploreDao.getMerchantById(merchantId)
     }
 }
