@@ -216,7 +216,7 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
 
                 val message = when (e) {
                     is HttpException -> e.response()?.errorBody()?.string()
-                    else -> e.message
+                    else -> e.message ?: e::class.simpleName
                 }
                 errorMessage = message ?: getString(R.string.error)
             }
