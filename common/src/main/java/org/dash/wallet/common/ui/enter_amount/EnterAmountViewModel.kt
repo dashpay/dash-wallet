@@ -165,4 +165,12 @@ class EnterAmountViewModel @Inject constructor(
             _selectedCurrencyCode.value = walletUIConfig.getExchangeCurrencyCode()
         }
     }
+
+    fun clearSavedState() {
+        _amount.value = Coin.ZERO
+        _fiatAmount.value = Fiat.valueOf(selectedCurrencyCode, 0)
+        savedStateHandle.remove<String>(KEY_SELECTED_CURRENCY)
+        savedStateHandle.remove<Long>(KEY_AMOUNT)
+        savedStateHandle.remove<String>(KEY_FIAT_AMOUNT)
+    }
 }

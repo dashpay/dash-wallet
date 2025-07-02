@@ -76,7 +76,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
+        binding.titleBar.setNavigationOnClickListener { 
+            enterAmountViewModel.clearSavedState()
+            findNavController().popBackStack() 
+        }
 
         setPaymentHeader()
 
