@@ -77,12 +77,17 @@ class CTXSpendViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(CTXSpendViewModel::class.java)
         private const val MERCHANT_ID_KEY = "merchant_id"
+        private const val BALANCE_KEY = "balance"
     }
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
 
-    private val _balance = MutableLiveData<Coin>()
+    private val _balance = MutableLiveData<Coin>().apply {
+        savedStateHandle.get<Long>(BALANCE_KEY)?.let {
+            value = Coin.valueOf(it)
+        }
+    }
     val balance: LiveData<Coin>
         get() = _balance
 
@@ -133,6 +138,11 @@ class CTXSpendViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
+
+        // Save balance changes to SavedStateHandle
+        _balance.observeForever { coin ->
+            savedStateHandle[BALANCE_KEY] = coin?.value
+        }
     }
 
     suspend fun purchaseGiftCard(): GiftCardResponse {

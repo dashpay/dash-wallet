@@ -87,7 +87,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         viewLifecycleOwner.lifecycleScope.launch {
             if (savedMerchantId != null && currentMerchant == null) {
                 // restore state if saved merchant exists
-                if (setupMerchant(savedMerchantId)) {
+                if (!setupMerchant(savedMerchantId)) {
                     findNavController().popBackStack()
                 }
             } else if (currentMerchant is Merchant && currentMerchant.merchantId != null && !currentMerchant.source.isNullOrEmpty()) {
