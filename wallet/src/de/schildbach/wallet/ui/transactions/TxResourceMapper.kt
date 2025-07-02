@@ -72,11 +72,15 @@ open class TxResourceMapper {
                         val cftx = authExtension.getAssetLockTransaction(tx)
 
                         val group = authExtension.keyChainGroup as AuthenticationKeyChainGroup
-                        typeId = when (group.getKeyChainType(cftx.assetLockPublicKeyId.bytes)) {
-                            AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING -> R.string.dashpay_invite_fee
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING -> R.string.dashpay_upgrade_fee
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP -> R.string.dashpay_topup_fee
-                            else -> R.string.transaction_row_status_sent
+                        typeId = if (cftx.assetLockPublicKeyId != null) {
+                            when (group.getKeyChainType(cftx.assetLockPublicKeyId.bytes)) {
+                                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING -> R.string.dashpay_invite_fee
+                                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING -> R.string.dashpay_upgrade_fee
+                                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP -> R.string.dashpay_topup_fee
+                                else -> R.string.transaction_row_status_sent
+                            }
+                        } else {
+                            R.string.transaction_row_status_sent
                         }
                     } else if (coinJoinType == CoinJoinTransactionType.Mixing) {
                         typeId = R.string.transaction_row_status_coinjoin_mixing
