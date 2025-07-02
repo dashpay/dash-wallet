@@ -120,6 +120,14 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             } catch (ex: CTXSpendException) {
                 hideLoading()
                 when {
+                    ex.isNetworkError -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_error),
+                            getString(R.string.button_close)
+                        ).show(requireActivity())
+                    }
                     ex.errorCode == 400 && ex.isLimitError -> {
                         AdaptiveDialog.create(
                             R.drawable.ic_error,

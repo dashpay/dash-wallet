@@ -139,12 +139,21 @@ class CTXSpendViewModel @Inject constructor(
         giftCardMerchant?.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
 
-            val response = repository.purchaseGiftCard(
-                merchantId = it,
-                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                fiatCurrency = "USD",
-                cryptoCurrency = Constants.DASH_CURRENCY
-            )
+            val response = try {
+                repository.purchaseGiftCard(
+                    merchantId = it,
+                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatCurrency = "USD",
+                    cryptoCurrency = Constants.DASH_CURRENCY
+                )
+            } catch (ex: Exception) {
+                log.error("purchaseGiftCard network error", ex)
+                throw CTXSpendException(
+                    "network-connection-error",
+                    null,
+                    ex.message
+                )
+            }
 
             when (response) {
                 is ResponseResource.Success -> {
