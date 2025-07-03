@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend
+package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.os.Build
 import android.os.Bundle
@@ -32,30 +32,36 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.databinding.FragmentCtxSpendUserAuthBinding
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
+import retrofit2.HttpException
 
 @AndroidEntryPoint
-class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth) {
-    private val binding by viewBinding(FragmentCtxSpendUserAuthBinding::bind)
-    private val viewModel by exploreViewModels<CTXSpendViewModel>()
-    private val args by navArgs<CTXSpendUserAuthFragmentArgs>()
+class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_auth) {
+    companion object {
+        private val log = LoggerFactory.getLogger(DashSpendUserAuthFragment::class.java)
+    }
 
-    enum class CTXSpendUserAuthType(
+    private val binding by viewBinding(FragmentDashSpendUserAuthBinding::bind)
+    private val viewModel by exploreViewModels<DashSpendViewModel>()
+    private val args by navArgs<DashSpendUserAuthFragmentArgs>()
+
+    enum class AuthType(
         @StringRes val screenTitle: Int,
-        @StringRes val screenSubtitle: Int,
         @StringRes val textInputHint: Int
     ) {
-        CREATE_ACCOUNT(R.string.create_ctx_spend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
-        SIGN_IN(R.string.log_in_to_ctxspend_account, R.string.log_in_to_ctxspend_account_desc, R.string.email),
-        OTP(R.string.enter_verification_code, R.string.verification_check_email, R.string.password)
+        CREATE_ACCOUNT(R.string.create_ctx_spend_account, R.string.email),
+        SIGN_IN(R.string.log_in_to_ctxspend_account, R.string.email),
+        OTP(R.string.enter_verification_code, R.string.password)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -66,16 +72,19 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
         }
         binding.continueButton.isEnabled = false
 
-        val authType = args.ctxSpendUserAuthType
+        val authType = args.authType
         binding.title.setText(authType.screenTitle)
-        binding.descLabel.setText(authType.screenSubtitle)
         binding.inputWrapper.setHint(authType.textInputHint)
+        binding.descLabel.setText(when(authType) {
+            AuthType.OTP -> R.string.verification_check_email
+            else -> args.service.disclaimer
+        })
 
         binding.input.doOnTextChanged { text, _, _, _ ->
             binding.inputWrapper.isErrorEnabled = false
             binding.inputErrorTv.isVisible = false
 
-            if (authType != CTXSpendUserAuthType.OTP) {
+            if (authType != AuthType.OTP) {
                 binding.continueButton.isEnabled = isEmail(text)
             } else {
                 binding.continueButton.isEnabled = !text.isNullOrEmpty()
@@ -98,8 +107,8 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
         }
 
         when (authType) {
-            CTXSpendUserAuthType.SIGN_IN,
-            CTXSpendUserAuthType.CREATE_ACCOUNT -> {
+            AuthType.SIGN_IN,
+            AuthType.CREATE_ACCOUNT -> {
                 binding.bottomCard.isVisible = false
                 binding.input.postDelayed({ showKeyboard() }, 100)
                 binding.input.showSoftInputOnFocus = true
@@ -108,7 +117,7 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
                     binding.input.setAutofillHints(View.AUTOFILL_HINT_EMAIL_ADDRESS)
                 }
             }
-            CTXSpendUserAuthType.OTP -> {
+            AuthType.OTP -> {
                 binding.bottomCard.isVisible = true
                 binding.input.showSoftInputOnFocus = false
                 binding.input.requestFocus()
@@ -158,10 +167,10 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
     private fun continueAction() {
         showLoading()
         val input = binding.input.text.toString()
-        when (args.ctxSpendUserAuthType) {
-            CTXSpendUserAuthType.SIGN_IN -> authUserToCTXSpend(input, true)
-            CTXSpendUserAuthType.CREATE_ACCOUNT -> authUserToCTXSpend(input, false)
-            CTXSpendUserAuthType.OTP -> verifyEmail(input)
+        when (args.authType) {
+            AuthType.SIGN_IN -> authUser(args.service, input, true)
+            AuthType.CREATE_ACCOUNT -> authUser(args.service, input, false)
+            AuthType.OTP -> verifyEmail(args.service, input)
             else -> {}
         }
     }
@@ -178,47 +187,61 @@ class CTXSpendUserAuthFragment : Fragment(R.layout.fragment_ctx_spend_user_auth)
         binding.continueButton.isClickable = true
     }
 
-    private fun authUserToCTXSpend(email: String, isSignIn: Boolean) {
+    private fun authUser(provider: GiftCardProvider, email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
-            when (
-                val response = viewModel.signInToCTXSpend(email)
-            ) {
-                is ResponseResource.Success -> {
-                    if (response.value) {
-                        safeNavigate(
-                            CTXSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
-                                CTXSpendUserAuthType.OTP
-                            )
+            var errorMessage: String
+
+            try {
+                val success = if (isSignIn) {
+                    viewModel.signIn(provider, email)
+                } else {
+                    viewModel.signUp(provider, email)
+                }
+
+                if (success) {
+                    safeNavigate(
+                        DashSpendUserAuthFragmentDirections.authToCtxSpendUserAuthFragment(
+                            AuthType.OTP,
+                            provider
                         )
-                    }
+                    )
+
+                    hideLoading()
+                    return@launch
+                } else {
+                    errorMessage = getString(R.string.login_error_title, provider.name)
                 }
-                is ResponseResource.Failure -> {
-                    viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
-                    binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text =
-                        if (response.errorBody.isNullOrEmpty()) getString(R.string.error) else response.errorBody
-                    binding.inputErrorTv.isVisible = true
+            } catch (e: Exception) {
+                log.error("DashSpend: error during signup/login to ${provider.name}: ${e::class.simpleName} - ${e.message}", e)
+
+                val message = when (e) {
+                    is HttpException -> e.response()?.errorBody()?.string()
+                    else -> e.message ?: e::class.simpleName
                 }
+                errorMessage = message ?: getString(R.string.error)
             }
+
             hideLoading()
+            viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
+            binding.inputWrapper.isErrorEnabled = true
+            binding.inputErrorTv.isVisible = true
+            binding.inputErrorTv.text = errorMessage
         }
     }
 
-    private fun verifyEmail(code: String) {
+    private fun verifyEmail(provider: GiftCardProvider, code: String) {
         lifecycleScope.launch {
-            when (val response = viewModel.verifyEmail(code)) {
-                is ResponseResource.Success -> {
-                    if (response.value) {
-                        viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
-                        hideKeyboard()
-                        safeNavigate(CTXSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
-                    }
+            try {
+                val success = viewModel.verifyEmail(provider, code)
+                if (success) {
+                    viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
+                    hideKeyboard()
+                    safeNavigate(DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
                 }
-                is ResponseResource.Failure -> {
-                    binding.inputWrapper.isErrorEnabled = true
-                    binding.inputErrorTv.text = getString(R.string.invaild_code)
-                    binding.inputErrorTv.isVisible = true
-                }
+            } catch (e: Exception) {
+                binding.inputWrapper.isErrorEnabled = true
+                binding.inputErrorTv.text = getString(R.string.invaild_code)
+                binding.inputErrorTv.isVisible = true
             }
             hideLoading()
         }

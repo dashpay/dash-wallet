@@ -249,4 +249,7 @@
     <string name="temporarily_unavailable">Temporarily unavailable</string>
     <string name="token_expired_title">Your session expired</string>
     <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Your email will not be shared with anyone other than PiggyCards.</string>
 </resources>

@@ -20,8 +20,6 @@ package org.dash.wallet.features.exploredash.repository
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.safeApiCall
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
@@ -32,7 +30,6 @@ import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthentic
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 class CTXSpendException(
@@ -71,34 +68,28 @@ class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
     private val config: CTXSpendConfig,
     private val tokenAuthenticator: TokenAuthenticator
-) : CTXSpendRepositoryInt {
-    companion object {
-        private val ONE_DAY = TimeUnit.DAYS.toMillis(1)
-    }
+) : CTXSpendRepositoryInt, DashSpendRepository {
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
-    override suspend fun login(email: String): ResponseResource<Boolean> = safeApiCall {
-        api.login(LoginRequest(email = email)).also {
-            config.setSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL, email)
-            config.set(CTXSpendConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
-        }
-        true
+    override suspend fun signup(email: String) = login(email)
+
+    override suspend fun login(email: String): Boolean {
+        api.login(LoginRequest(email = email))
+        config.setSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL, email)
+        config.set(CTXSpendConfig.PREFS_DEVICE_UUID, UUID.randomUUID().toString())
+        return true
     }
 
-    override suspend fun verifyEmail(code: String): ResponseResource<Boolean> = safeApiCall {
+    override suspend fun verifyEmail(code: String): Boolean {
         val email = config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
-        api.verifyEmail(VerifyEmailRequest(email = email!!, code = code)).also {
-            config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it?.accessToken!!)
-            config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it?.refreshToken!!)
-        }
-        config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
+        val response = api.verifyEmail(VerifyEmailRequest(email = email!!, code = code))
+        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, response?.accessToken!!)
+        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, response?.refreshToken!!)
+        return config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
     override suspend fun isUserSignedIn() =
         config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
-
-    override suspend fun getCTXSpendEmail() =
-        config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun logout() {
         config.clearAll()
@@ -114,8 +105,8 @@ class CTXSpendRepository @Inject constructor(
         fiatCurrency: String,
         fiatAmount: String,
         merchantId: String
-    ) = safeApiCall {
-        api.purchaseGiftCard(
+    ): GiftCardResponse? {
+        return api.purchaseGiftCard(
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 cryptoCurrency = "DASH",
                 fiatCurrency = "USD",
@@ -125,47 +116,42 @@ class CTXSpendRepository @Inject constructor(
         )
     }
 
-    override suspend fun getMerchant(merchantId: String) =
+    override suspend fun getMerchant(merchantId: String): GetMerchantResponse? =
         api.getMerchant(merchantId)
 
-    override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
-        api.getGiftCard(txid)
+    override suspend fun getGiftCardByTxid(txid: String): GiftCardResponse? {
+        return api.getGiftCard(txid)
     }
 
     override suspend fun refreshToken(): Boolean {
-        return when (val tokenResponse = tokenAuthenticator.getUpdatedToken()) {
-            is ResponseResource.Success -> {
-                tokenResponse.value?.let {
-                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
-                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
-                    true
-                } ?: false
-            }
-
-            else -> {
-                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
-                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
-                false
-            }
+        return try {
+            val tokenResponse = tokenAuthenticator.getUpdatedToken()
+            tokenResponse?.let {
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                true
+            } ?: false
+        } catch (e: Exception) {
+            config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+            config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+            false
         }
+    }
+
+    suspend fun getCTXSpendEmail(): String? {
+        return config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
     }
 }
 
 interface CTXSpendRepositoryInt {
-    val userEmail: Flow<String?>
-    suspend fun login(email: String): ResponseResource<Boolean>
-    suspend fun verifyEmail(code: String): ResponseResource<Boolean>
-    suspend fun isUserSignedIn(): Boolean
-    suspend fun getCTXSpendEmail(): String?
-    suspend fun logout()
     suspend fun purchaseGiftCard(
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
         merchantId: String
-    ): ResponseResource<GiftCardResponse?>
+    ): GiftCardResponse?
 
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
-    suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
+    suspend fun getGiftCardByTxid(txid: String): GiftCardResponse?
     suspend fun refreshToken(): Boolean
 }

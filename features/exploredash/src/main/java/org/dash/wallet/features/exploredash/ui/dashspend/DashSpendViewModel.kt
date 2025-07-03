@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.ui.ctxspend
+package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.content.Intent
 import androidx.lifecycle.*
@@ -24,6 +24,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -38,7 +39,6 @@ import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
@@ -48,22 +48,30 @@ import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
+import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
+import org.dash.wallet.features.exploredash.repository.DashSpendRepository
+import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+data class DashSpendState(
+    val email: String? = null,
+    val isLoggedIn: Boolean = false
+)
+
 @HiltViewModel
-class CTXSpendViewModel @Inject constructor(
+class DashSpendViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     exchangeRates: ExchangeRatesProvider,
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
-    private val repository: CTXSpendRepositoryInt,
+    private val repositoryFactory: DashSpendRepositoryFactory,
+    private val ctxSpendRepository: CTXSpendRepository,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
@@ -71,7 +79,16 @@ class CTXSpendViewModel @Inject constructor(
 ) : ViewModel() {
 
     companion object {
-        private val log = LoggerFactory.getLogger(CTXSpendViewModel::class.java)
+        private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
+    }
+
+    private var stateTrackingJob: Job? = null
+
+    private val providers: Map<GiftCardProvider, DashSpendRepository> by lazy {
+        mapOf(
+            GiftCardProvider.CTX to repositoryFactory.create(GiftCardProvider.CTX),
+            GiftCardProvider.PiggyCards to repositoryFactory.create(GiftCardProvider.PiggyCards)
+        )
     }
 
     val dashFormat: MonetaryFormat
@@ -87,7 +104,9 @@ class CTXSpendViewModel @Inject constructor(
             return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
         }
 
-    val userEmail = repository.userEmail.asLiveData()
+    private val _dashSpendState = MutableStateFlow(DashSpendState())
+    val dashSpendState: StateFlow<DashSpendState>
+        get() = _dashSpendState.asStateFlow()
 
     private val _exchangeRate: MutableLiveData<ExchangeRate> = MutableLiveData()
     val usdExchangeRate: LiveData<ExchangeRate>
@@ -127,29 +146,20 @@ class CTXSpendViewModel @Inject constructor(
         giftCardMerchant.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
 
-            val response = repository.purchaseGiftCard(
-                merchantId = it,
-                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                fiatCurrency = "USD",
-                cryptoCurrency = Constants.DASH_CURRENCY
-            )
-
-            when (response) {
-                is ResponseResource.Success -> {
-                    return response.value!!
-                }
-                is ResponseResource.Failure -> {
-                    log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
-                    throw CTXSpendException(
-                        "purchaseGiftCard error ${response.errorCode}: ${response.errorBody}",
-                        response.errorCode,
-                        response.errorBody
-                    )
-                }
-                // else -> {}
+            try {
+                val response = ctxSpendRepository.purchaseGiftCard(
+                    merchantId = it,
+                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatCurrency = "USD",
+                    cryptoCurrency = Constants.DASH_CURRENCY
+                )
+                return response!!
+            } catch (e: Exception) {
+                log.error("purchaseGiftCard error", e)
+                throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null)
             }
         }
-        throw CTXSpendException("purchaseGiftCard error")
+        throw CTXSpendException("purchaseGiftCard error: merchantId is null")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
@@ -187,10 +197,11 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
-        repository.getCTXSpendEmail()?.let { email ->
-            return repository.getMerchant(merchantId)
+        return if (ctxSpendRepository.isUserSignedIn()) {
+            ctxSpendRepository.getMerchant(merchantId)
+        } else {
+            null
         }
-        return null
     }
 
     fun refreshMinMaxCardPurchaseValues() {
@@ -219,27 +230,44 @@ class CTXSpendViewModel @Inject constructor(
             !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
     }
 
-    private fun updatePurchaseLimits() {
-        _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
-            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+    fun observeDashSpendState(provider: GiftCardProvider?) {
+        val serviceRepository = providers[provider]
+        stateTrackingJob?.cancel()
+
+        if (provider == null || serviceRepository == null) {
+            return
         }
+
+        stateTrackingJob = serviceRepository.userEmail
+            .distinctUntilChanged()
+            .onEach { email ->
+                val isLoggedIn = serviceRepository.isUserSignedIn()
+                _dashSpendState.value = _dashSpendState.value.copy(
+                    email = email,
+                    isLoggedIn = isLoggedIn
+                )
+            }.launchIn(viewModelScope)
     }
 
-    suspend fun isUserSignedInService(service: GiftCardService): Boolean {
-        // TODO: better open-closed
-        return when (service) {
-            GiftCardService.CTX -> repository.isUserSignedIn()
-            GiftCardService.PiggyCards -> false // TODO
-        }
+    suspend fun isUserSignedInService(provider: GiftCardProvider): Boolean {
+        return providers[provider]?.isUserSignedIn() == true
     }
 
-    suspend fun signInToCTXSpend(email: String) = repository.login(email)
+    suspend fun signUp(provider: GiftCardProvider, email: String): Boolean {
+        return providers[provider]?.signup(email) == true
+    }
 
-    suspend fun verifyEmail(code: String) = repository.verifyEmail(code)
+    suspend fun signIn(provider: GiftCardProvider, email: String): Boolean {
+        return providers[provider]?.login(email) == true
+    }
 
-    suspend fun logout() = repository.logout()
+    suspend fun verifyEmail(provider: GiftCardProvider, code: String): Boolean {
+        return providers[provider]?.verifyEmail(code) == true
+    }
+
+    suspend fun logout(provider: GiftCardProvider) {
+        providers[provider]?.logout()
+    }
 
     fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
         val giftCard = GiftCard(
@@ -289,7 +317,7 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun checkToken(): Boolean {
         return try {
-            !repository.isUserSignedIn() || repository.refreshToken()
+            !ctxSpendRepository.isUserSignedIn() || ctxSpendRepository.refreshToken()
         } catch (ex: Exception) {
             false
         }
@@ -333,5 +361,13 @@ class CTXSpendViewModel @Inject constructor(
             report.append("body:\n").append(it).append("\n")
         }
         return report.toString()
+    }
+
+    private fun updatePurchaseLimits() {
+        _exchangeRate.value?.let {
+            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+            minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
+            maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
+        }
     }
 }

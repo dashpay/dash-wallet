@@ -59,7 +59,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {

@@ -110,7 +110,10 @@ class EnterAmountViewModel @Inject constructor(
         // User changed the currency in Settings
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
-            .onEach { _selectedCurrencyCode.value = it }
+            .distinctUntilChanged()
+            .onEach {
+                _selectedCurrencyCode.value = it
+            }
             .launchIn(viewModelScope)
     }
 
