@@ -116,7 +116,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val _lastSaveDate = MutableStateFlow<Long>(-1)
     override val lastSaveDate = _lastSaveDate.asStateFlow()
     private val _futureSaveDate = MutableStateFlow<Long>(-1)
-    override val futureSaveDate = _lastSaveDate.asStateFlow()
+    override val futureSaveDate = _futureSaveDate.asStateFlow()
     private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
     override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
     private val _oldUnsavedTransactions = MutableStateFlow<List<Transaction>>(listOf())

@@ -43,7 +43,6 @@ class PublishTransactionMetadataWorker @AssistedInject constructor(
 ) : BaseWorker(context, parameters) {
     companion object {
         private val log = LoggerFactory.getLogger(PublishTransactionMetadataWorker::class.java)
-        const val KEY_PASSWORD = "PublishTransactionMetadataWorker.PASSWORD"
     }
 
     override suspend fun doWorkWithBaseProgress(): Result {

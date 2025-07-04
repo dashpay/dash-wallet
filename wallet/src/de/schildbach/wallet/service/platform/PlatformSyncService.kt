@@ -151,12 +151,10 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = if (true) 3.minutes else 3.hours // revert this
+        val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
         val WEEKLY_PUSH_PERIOD = 7.days
-        val CUTOFF_MIN = if (true) 3.minutes else 3.hours // revert this
-        val CUTOFF_MAX = if (true) 6.minutes else 6.hours // revert this
-        const val MIN_TXMETADATA_BATCHSIZE = 2
-        const val MAX_TXMETADATA_BATCHSIZE = 35
+        val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
     }
 
@@ -1088,7 +1086,7 @@ class PlatformSynchronizationService @Inject constructor(
             originalPrice = docs.lastOrNull { it.originalPrice != null }?.originalPrice,
             barcodeValue = docs.lastOrNull { it.barcodeValue != null }?.barcodeValue,
             barcodeFormat = docs.lastOrNull { it.barcodeFormat != null }?.barcodeFormat,
-            merchantUrl = docs.lastOrNull { it.merchantUrl != null }?.service,
+            merchantUrl = docs.lastOrNull { it.merchantUrl != null }?.merchantUrl,
         )
     }
 

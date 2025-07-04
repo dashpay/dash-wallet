@@ -206,13 +206,11 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
                     when (result) {
                         null -> { }
                         true, false -> {
-                            // TODO: Disable Reset Wallet for now
                             doReset()
                         }
                     }
                 }
             } else {
-                // TODO: Disable Reset Wallet for now
                 doReset()
             }
         }

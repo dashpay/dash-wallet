@@ -119,7 +119,6 @@ data class TransactionMetadataCacheItem(
                     this.merchantUrl == giftCard.merchantUrl &&
                     this.originalPrice == giftCard.price
         }
-
-        return txData && if (giftCard != null) giftCardEquals!! else true
+        return txData && (giftCard == null || giftCardEquals == true)
     }
 }

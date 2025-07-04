@@ -183,7 +183,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     private suspend fun shouldSaveToCache(): Boolean {
         val currentTime = System.currentTimeMillis()
-        val shouldSaveToCache = true; //dashPayConfig.isSavingToNetwork() && currentTime > dashPayConfig.getSaveAfterTimestamp()
+        val shouldSaveToCache = true // for now always save to cache to support past, future saving of metadata
         log.info(
             "saving to cache: {} = saving: {} && current: {} > safe after: {}",
             shouldSaveToCache,
