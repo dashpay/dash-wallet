@@ -146,10 +146,6 @@ class SecurityViewModel @Inject constructor(
         }
     }
 
-    suspend fun setSaveOnReset() = withContext(Dispatchers.IO) {
-        dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_ON_RESET, true)
-    }
-
     suspend fun hasPendingTxMetadataToSave(): Boolean = withContext(Dispatchers.IO) {
         /*dashPayConfig.isSavingToNetwork() &&  */platformSyncService.hasPendingTxMetadataToSave()
     }

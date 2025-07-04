@@ -504,6 +504,7 @@
     <string name="transaction_metadata_saving_to_network">Saving to network - %d%%</string>
     <string name="transaction_metadata_last_saved_date">Last saved %s</string>
     <string name="transaction_metadata_past_already_saved">All transactions made up to %s have already been saved</string>
+    <string name="transaction_metadata_past_already_saved_none">No transactions have been saved</string>
     <string name="transaction_metadata_past_syncing">All transactions made up to %s are syncing</string>
     <string name="transaction_metadata_save_new_tx_title">Do you want to save unsaved transactions?</string>
     <string name="transaction_metadata_you_have_n_tx">You have %d unsaved transactions since %s</string>

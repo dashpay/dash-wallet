@@ -118,7 +118,7 @@ fun TransactionMetadataSettingsScreen(
                     } else {
                         R.string.save_changes
                     }),
-                    isEnabled = filterState.modified
+                    isEnabled = filterState.modified && filterState.isValid()
                 )
             }
         }
@@ -160,8 +160,10 @@ fun TransactionMetadataSettingsScreen(
                         stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
                         stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
-                    } else {
+                    } else if (lastSaveDate != 0L){
                         stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
+                    } else {
+                        stringResource(R.string.transaction_metadata_past_already_saved_none, dateFormat.format(Date(lastSaveDate)))
                     },
                     enabled = hasPastTransactionsToSave && !isSaving
                 )
@@ -172,7 +174,11 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
+                    subtitle = if (futureSaveDate != 0L) {
+                        stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
+                    } else {
+                        stringResource(R.string.transaction_metadata_future_subtitle, stringResource(R.string.time_today))
+                    }
                 )
             }
 
