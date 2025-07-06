@@ -136,12 +136,9 @@ class PublishTransactionMetadataOperation(val application: Application) {
 
     @SuppressLint("EnqueueWork")
     fun create(workId: String): WorkContinuation {
-        val password = SecurityGuard().retrievePassword()
         val worker = OneTimeWorkRequestBuilder<PublishTransactionMetadataWorker>()
             .setInputData(
-                workDataOf(
-                    PublishTransactionMetadataWorker.KEY_PASSWORD to password,
-                )
+                workDataOf()
             )
             .addTag("workId:$workId")
             .build()
