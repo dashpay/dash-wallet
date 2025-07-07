@@ -23,11 +23,11 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentActivity
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
-import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogTransactionMetadataBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -43,7 +43,8 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
         }
     }
     private val binding by viewBinding(DialogTransactionMetadataBinding::bind)
-    private val viewModel: TransactionMetadataSettingsViewModel by viewModels()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private val viewModel by viewModels<TransactionMetadataSettingsViewModel>()
     private val args by navArgs<TransactionMetadataDialogArgs>()
     private var onButtonClickListener: ((Boolean?) -> Unit)? = null
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
