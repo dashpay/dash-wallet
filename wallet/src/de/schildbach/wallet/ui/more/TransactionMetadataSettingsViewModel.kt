@@ -17,16 +17,17 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.work.WorkInfo
 import com.google.common.collect.Comparators.max
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.rates.ExchangeRatesRepository
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.work.PublishTransactionMetadataOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
@@ -34,20 +35,28 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
@@ -74,7 +83,7 @@ interface TransactionMetadataSettingsPreviewViewModel {
     val lastSaveWorkId: StateFlow<String?>
     val lastSaveDate: StateFlow<Long>
     val futureSaveDate: StateFlow<Long>
-    fun publishOperationLiveData(workId: String): LiveData<Resource<WorkInfo>>
+    fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>
 }
 
 @ExperimentalCoroutinesApi
@@ -82,11 +91,12 @@ interface TransactionMetadataSettingsPreviewViewModel {
 class TransactionMetadataSettingsViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val dashPayConfig: DashPayConfig,
-    private val blockchainIdentityConfig: BlockchainIdentityConfig,
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesRepository,
     private val analyticsService: AnalyticsService,
-    private val transactionMetadataDao: TransactionMetadataDao
+    private val transactionMetadataDao: TransactionMetadataDao,
+    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
+    private val platformSyncService: PlatformSyncService
 ) : ViewModel(), TransactionMetadataSettingsPreviewViewModel {
     companion object {
         val CURRENT_DATA_COST = Coin.valueOf(25000) //0.00025000
@@ -106,10 +116,14 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private val _lastSaveDate = MutableStateFlow<Long>(-1)
     override val lastSaveDate = _lastSaveDate.asStateFlow()
     private val _futureSaveDate = MutableStateFlow<Long>(-1)
-    override val futureSaveDate = _lastSaveDate.asStateFlow()
+    override val futureSaveDate = _futureSaveDate.asStateFlow()
     private val _hasPastTransactionsToSave = MutableStateFlow<Boolean>(false)
     override val hasPastTransactionsToSave = _hasPastTransactionsToSave.asStateFlow()
-
+    private val _oldUnsavedTransactions = MutableStateFlow<List<Transaction>>(listOf())
+    var firstUnsavedTxDate: Long = 0
+        private set
+    var unsavedTxCount: Int = 0
+        private set
     private val publishOperation = PublishTransactionMetadataOperation(walletApplication)
 
     init {
@@ -150,9 +164,39 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         dashPayConfig.observe(DashPayConfig.TRANSACTION_METADATA_LAST_PAST_SAVE)
-            .flatMapLatest { transactionMetadataDao.observeByTimestampRange(it ?: 0, System.currentTimeMillis()) }
-            .onEach { _hasPastTransactionsToSave.value = it.isNotEmpty() }
+            .flatMapLatest { startTimestamp ->
+                transactionMetadataDao.observeByTimestampRange(startTimestamp ?: 0, System.currentTimeMillis())
+                    .flatMapConcat {
+                        _oldUnsavedTransactions
+                    }
+                    .flatMapConcat {
+                        transactionMetadataChangeCacheDao.observeCachedItemsBefore(System.currentTimeMillis())
+                            .map {
+                                it.map {
+                                    // use default values, just need a count of items
+                                    item -> TransactionMetadata(
+                                        item.txId,
+                                    item.sentTimestamp ?: 0,
+                                        Coin.ZERO,
+                                        TransactionCategory.Sent
+                                    )
+                                }
+                            }
+                    }
+            }
+            .onEach {
+                // are there older transactions not in the database?
+                _hasPastTransactionsToSave.value = it.isNotEmpty()
+                unsavedTxCount = it.size
+                log.info("unsaved count: ${it.size}")
+            }
             .launchIn(viewModelWorkerScope)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val (oldUnsavedList, _) = platformSyncService.getUnsavedTransactions()
+            log.info("old unsaved count: ${oldUnsavedList.size}")
+            _oldUnsavedTransactions.value = oldUnsavedList
+        }
     }
 
     suspend fun saveDataToNetwork(saveToNetwork: Boolean) {
@@ -236,7 +280,7 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
         return nextId
     }
 
-    override fun publishOperationLiveData(workId: String) = PublishTransactionMetadataOperation.operationStatus(
+    override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>> = PublishTransactionMetadataOperation.operationStatusFlow(
         walletApplication,
         workId,
         analyticsService

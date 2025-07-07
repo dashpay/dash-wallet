@@ -14,11 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
 
 @Composable
@@ -40,7 +38,8 @@ fun DashCheckbox(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
+            .defaultMinSize(minHeight = 50.dp)
+            //.clip(RoundedCornerShape(8.dp))
             .background(Color.White)
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .clickable(
@@ -107,7 +106,8 @@ fun DashCheckbox(
             // Trailing text content
             if (trailingText != null || trailingHelpText != null) {
                 Column(
-                    verticalArrangement = Arrangement.Center
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.End
                 ) {
                     trailingText?.let {
                         Text(
@@ -168,9 +168,20 @@ fun CheckboxSample() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .background(Color.White)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        DashCheckbox(
+            checked = isChecked4,
+            onCheckedChange = { isChecked4 = it },
+            leadingIcon = R.drawable.ic_preview,
+            title = "text",
+            subtitle = "help text",
+            trailingText = "text",
+            trailingHelpText = "help text"
+        )
         // Example 1: Simple checkbox with leading text
         DashCheckbox(
             checked = true,
@@ -200,7 +211,7 @@ fun CheckboxSample() {
 
         // Example 1: Simple checkbox with leading text
         DashCheckbox(
-            checked = isChecked,
+            checked = isChecked2,
             onCheckedChange = { isChecked2 = it },
             title = "Accept terms and conditions (Disabled)",
             subtitle = "Required for account creation (1 line)",
@@ -210,20 +221,13 @@ fun CheckboxSample() {
 
         // Example 1: Simple checkbox with long leading text
         DashCheckbox(
-            checked = isChecked,
+            checked = isChecked3,
             onCheckedChange = { isChecked3 = it },
             title = "Accept terms and conditions",
             subtitle = "Required for account creation and large downloads of information (two lines)."
         )
 
         // Example 2: Checkbox with both leading and trailing content
-        DashCheckbox(
-            checked = isChecked,
-            onCheckedChange = { isChecked4 = it },
-            title = "Promotional emails",
-            subtitle = "Receive updates and offers",
-            trailingText = "Optional",
-            trailingHelpText = "You can change this later"
-        )
+
     }
 }

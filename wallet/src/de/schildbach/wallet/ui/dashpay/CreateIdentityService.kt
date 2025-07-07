@@ -264,7 +264,6 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentityDataBase = platformRepo.loadBlockchainIdentityBaseData() // for other info
         when {
             (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring && blockchainIdentityDataTmp.creationStateErrorMessage == null) -> {
-                // TODO: handle case when blockchain reset has happened and the cftx was not found yet
                 val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
                         ?: throw IllegalStateException("can't find asset lock transaction")
 

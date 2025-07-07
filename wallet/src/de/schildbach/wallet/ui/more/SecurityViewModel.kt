@@ -21,11 +21,10 @@ import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
-import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
@@ -56,10 +55,9 @@ class SecurityViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val walletApplication: WalletApplication,
     val biometricHelper: BiometricHelper,
-    private val dashPayConfig: DashPayConfig,
     blockchainIdentityConfig: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao,
-    private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao
+    private val platformSyncService: PlatformSyncService,
 ): BaseProfileViewModel(blockchainIdentityConfig, dashPayProfileDao) {
     private var selectedExchangeRate: ExchangeRate? = null
 
@@ -144,11 +142,7 @@ class SecurityViewModel @Inject constructor(
         }
     }
 
-    suspend fun setSaveOnReset() = withContext(Dispatchers.IO) {
-        dashPayConfig.set(DashPayConfig.TRANSACTION_METADATA_SAVE_ON_RESET, true)
-    }
-
     suspend fun hasPendingTxMetadataToSave(): Boolean = withContext(Dispatchers.IO) {
-        dashPayConfig.isSavingToNetwork() && transactionMetadataChangeCacheDao.count() > 0
+        platformSyncService.hasPendingTxMetadataToSave()
     }
 }

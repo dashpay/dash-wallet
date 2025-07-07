@@ -97,7 +97,7 @@ public final class Constants {
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
-                SUPPORTS_TXMETADATA = false;
+                SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);

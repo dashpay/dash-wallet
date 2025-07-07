@@ -183,7 +183,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     private suspend fun shouldSaveToCache(): Boolean {
         val currentTime = System.currentTimeMillis()
-        val shouldSaveToCache = dashPayConfig.isSavingToNetwork() && currentTime > dashPayConfig.getSaveAfterTimestamp()
+        val shouldSaveToCache = true // for now always save to cache to support past, future saving of metadata
         log.info(
             "saving to cache: {} = saving: {} && current: {} > safe after: {}",
             shouldSaveToCache,
@@ -586,6 +586,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
         syncScope.launch(Dispatchers.IO) {
             markAddressWithTaxCategory(address, isInput, taxCategory, service)
         }
+    }
+
+    override suspend fun exists(txId: Sha256Hash): Boolean {
+        return transactionMetadataDao.exists(txId)
     }
 
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {

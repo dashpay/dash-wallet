@@ -25,9 +25,10 @@ import androidx.lifecycle.switchMap
 import androidx.work.*
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.work.BaseWorker
-import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesOperation
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
-import org.bitcoinj.core.Sha256Hash
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.map
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
@@ -65,27 +66,27 @@ class PublishTransactionMetadataOperation(val application: Application) {
             }
         }
 
-//        fun operationStatus(
-//            application: Application,
-//            identity: String,
-//            analytics: AnalyticsService
-//        ): LiveData<Resource<WorkInfo>> {
-//            val workManager: WorkManager = WorkManager.getInstance(application)
-//            return workManager.getWorkInfosByTagLiveData("identity:$identity").switchMap {
-//                return@switchMap liveData {
-//                    if (it.isNullOrEmpty()) {
-//                        return@liveData
-//                    }
-//
-//                    if (it.size > 1) {
-//                        val e = RuntimeException("there should never be more than one unique work $txId")
-//                        analytics.logError(e)
-//                        throw e
-//                    }
-//                    emit(convertState(it.first()))
-//                }
-//            }
-//        }
+        fun operationStatusFlow(
+            application: Application,
+            workId: String,
+            analytics: AnalyticsService
+        ): Flow<Resource<WorkInfo>> {
+            val workManager = WorkManager.getInstance(application)
+            return workManager
+                .getWorkInfosForUniqueWorkFlow(uniqueWorkName(workId))
+                .map { list ->
+                    if (list.isNullOrEmpty()) {
+                        return@map null
+                    }
+                    if (list.size > 1) {
+                        val e = RuntimeException("there should never be more than one unique work ${uniqueWorkName(workId)}")
+                        analytics.logError(e)
+                        throw e
+                    }
+                    convertState(list.first())
+                }
+                .filterNotNull()
+        }
 
         fun allOperationsStatus(application: Application): LiveData<MutableMap<String, Resource<WorkInfo>>> {
             val workManager: WorkManager = WorkManager.getInstance(application)
@@ -133,21 +134,11 @@ class PublishTransactionMetadataOperation(val application: Application) {
         }
     }
 
-//    private val workManager: WorkManager = WorkManager.getInstance(application)
-//
-//    /**
-//     * Gets the list of all SendContactRequestWorker WorkInfo's
-//     */
-//    val allOperationsData = workManager.getWorkInfosByTagLiveData(TopupIdentityOperation::class.qualifiedName!!)
-
     @SuppressLint("EnqueueWork")
     fun create(workId: String): WorkContinuation {
-        val password = SecurityGuard().retrievePassword()
         val worker = OneTimeWorkRequestBuilder<PublishTransactionMetadataWorker>()
             .setInputData(
-                workDataOf(
-                    PublishTransactionMetadataWorker.KEY_PASSWORD to password,
-                )
+                workDataOf()
             )
             .addTag("workId:$workId")
             .build()

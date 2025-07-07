@@ -32,20 +32,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.asFlow
-import androidx.lifecycle.liveData
 import androidx.work.WorkInfo
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.launch
-import org.checkerframework.checker.units.qual.s
 import org.dash.wallet.common.data.Resource
-import org.dash.wallet.common.ui.components.ButtonLarge
-import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashCheckbox
 import org.dash.wallet.common.ui.components.DashRadioButton
@@ -56,7 +50,7 @@ import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionMetadataSettingsScreen(
     onBackClick: () -> Unit,
@@ -75,7 +69,9 @@ fun TransactionMetadataSettingsScreen(
     val lastSaveDate by viewModel.lastSaveDate.collectAsState()
     val futureSaveDate by viewModel.futureSaveDate.collectAsState()
     val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishLiveData by viewModel.publishOperationLiveData(lastSaveWorkId ?: "").asFlow().collectAsState(Resource.canceled<WorkInfo>())
+    val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+    val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
+    val currentDate = Date(System.currentTimeMillis())
 
     Scaffold(
         topBar = {
@@ -122,7 +118,7 @@ fun TransactionMetadataSettingsScreen(
                     } else {
                         R.string.save_changes
                     }),
-                    isEnabled = filterState.modified
+                    isEnabled = filterState.modified && filterState.isValid()
                 )
             }
         }
@@ -160,14 +156,16 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(savePastTxToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_past_title),
-                    subtitle = if (BaseWorker.extractProgress(publishLiveData.data?.progress) != -1) {
-                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(Date(lastSaveDate)))
+                    subtitle = if (isSaving) {
+                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
-                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(Date(System.currentTimeMillis())))
-                    } else {
+                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
+                    } else if (lastSaveDate != 0L){
                         stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
+                    } else {
+                        stringResource(R.string.transaction_metadata_past_already_saved_none, dateFormat.format(Date(lastSaveDate)))
                     },
-                    enabled = hasPastTransactionsToSave
+                    enabled = hasPastTransactionsToSave && !isSaving
                 )
                 // Future transactions checkbox
                 DashCheckbox(
@@ -176,7 +174,11 @@ fun TransactionMetadataSettingsScreen(
                         viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
+                    subtitle = if (futureSaveDate != 0L) {
+                        stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
+                    } else {
+                        stringResource(R.string.transaction_metadata_future_subtitle, stringResource(R.string.time_today))
+                    }
                 )
             }
 
@@ -285,7 +287,7 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
         )
     ) {
         Column(
-            modifier = Modifier.padding(6.dp)
+            modifier = Modifier.padding(8.dp, 0.dp),
         ) {
             content()
         }
@@ -303,9 +305,7 @@ fun TransactionMetadataScreenPreview() {
         override val lastSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2))
         override val futureSaveDate: StateFlow<Long> = MutableStateFlow(System.currentTimeMillis())
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
-        override fun publishOperationLiveData(workId: String) = liveData {
-            emit(Resource.canceled<WorkInfo>())
-        }
+        override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>  = MutableStateFlow(Resource.canceled())
     }
     TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
 }

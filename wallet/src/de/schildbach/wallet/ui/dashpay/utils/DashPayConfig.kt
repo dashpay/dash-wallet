@@ -49,11 +49,11 @@ data class TransactionMetadataSettings(
     /* not saved to the data store */
     val modified: Boolean = false
 ) {
-    fun shouldSavePaymentCategory() = saveToNetwork && savePaymentCategory
-    fun shouldSaveTaxCategory() = saveToNetwork && saveTaxCategory
-    fun shouldSaveExchangeRates() = saveToNetwork && saveExchangeRates
-    fun shouldSavePrivateMemos() = saveToNetwork && savePrivateMemos
-    fun shouldSaveGiftcardInfo() = saveToNetwork && saveGiftcardInfo
+    fun shouldSavePaymentCategory(saveAll: Boolean) = saveAll || savePaymentCategory
+    fun shouldSaveTaxCategory(saveAll: Boolean) = saveAll || saveTaxCategory
+    fun shouldSaveExchangeRates(saveAll: Boolean) = saveAll || saveExchangeRates
+    fun shouldSavePrivateMemos(saveAll: Boolean) = saveAll || savePrivateMemos
+    fun shouldSaveGiftcardInfo(saveAll: Boolean) = saveAll || saveGiftcardInfo
 
     /** determine if relavant changes have been made */
     fun isEqual(other: TransactionMetadataSettings?): Boolean {
@@ -66,6 +66,10 @@ data class TransactionMetadataSettings(
             other.savePrivateMemos == this.savePrivateMemos &&
             other.saveGiftcardInfo == this.saveGiftcardInfo
     }
+
+    /** returns true if saveToNetwork is false or saveToNetwork is true while one of the categories is selection */
+    fun isValid() = !saveToNetwork || (saveTaxCategory || savePaymentCategory ||
+            saveGiftcardInfo || saveExchangeRates || savePrivateMemos)
 }
 
 @Singleton
@@ -106,13 +110,13 @@ open class DashPayConfig @Inject constructor(
         // transaction metadata settings
         val TRANSACTION_METADATA_FEATURE_INSTALLED = longPreferencesKey("transaction_metadata_feature_installed")
         val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")
-        // val TRANSACTION_METADATA_SAVE_PREVIOUS = booleanPreferencesKey("transaction_metadata_save_previous")
         val TRANSACTION_METADATA_SAVE_TO_NETWORK = booleanPreferencesKey("transaction_metadata_save_to_network")
         val TRANSACTION_METADATA_SAVE_FREQUENCY = stringPreferencesKey("transaction_metadata_save_frequency")
         val TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY = booleanPreferencesKey("transaction_metadata_save_payment_category")
         val TRANSACTION_METADATA_SAVE_TAX_CATEGORY = booleanPreferencesKey("transaction_metadata_save_tax_category")
         val TRANSACTION_METADATA_SAVE_EXCHANGE = booleanPreferencesKey("transaction_metadata_save_exchange_rates")
         val TRANSACTION_METADATA_SAVE_MEMOS = booleanPreferencesKey("transaction_metadata_save_memos")
+        val TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO = booleanPreferencesKey("transaction_metadata_save_gift_card_info")
         val TRANSACTION_METADATA_SAVE_AFTER = longPreferencesKey("transaction_metadata_save_after")
         val TRANSACTION_METADATA_SAVE_ON_RESET = booleanPreferencesKey("transaction_metadata_save_on_reset")
         val TRANSACTION_METADATA_LAST_SAVE_WORK_ID = stringPreferencesKey("transaction_metadata_last_save_work_id")
@@ -174,7 +178,8 @@ open class DashPayConfig @Inject constructor(
                 savePaymentCategory = prefs[TRANSACTION_METADATA_SAVE_PAYMENT_CATEGORY] ?: false,
                 saveTaxCategory = prefs[TRANSACTION_METADATA_SAVE_TAX_CATEGORY] ?: false,
                 saveExchangeRates = prefs[TRANSACTION_METADATA_SAVE_EXCHANGE] ?: false,
-                savePrivateMemos = prefs[TRANSACTION_METADATA_SAVE_MEMOS] ?: false
+                savePrivateMemos = prefs[TRANSACTION_METADATA_SAVE_MEMOS] ?: false,
+                saveGiftcardInfo = prefs[TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO] ?: false
             )
         }
 
@@ -190,6 +195,7 @@ open class DashPayConfig @Inject constructor(
             saveTaxCategory = get(TRANSACTION_METADATA_SAVE_TAX_CATEGORY) ?: false,
             saveExchangeRates = get(TRANSACTION_METADATA_SAVE_EXCHANGE) ?: false,
             savePrivateMemos = get(TRANSACTION_METADATA_SAVE_MEMOS) ?: false,
+            saveGiftcardInfo = get(TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO) ?: false,
             saveAfterTimestamp = get(TRANSACTION_METADATA_SAVE_AFTER) ?: Long.MAX_VALUE
         )
     }
@@ -201,13 +207,14 @@ open class DashPayConfig @Inject constructor(
         set(TRANSACTION_METADATA_SAVE_TAX_CATEGORY, settings.saveTaxCategory)
         set(TRANSACTION_METADATA_SAVE_EXCHANGE, settings.saveExchangeRates)
         set(TRANSACTION_METADATA_SAVE_MEMOS, settings.savePrivateMemos)
+        set(TRANSACTION_METADATA_SAVE_GIFT_CARD_INFO, settings.saveGiftcardInfo)
     }
 
     suspend fun shouldSaveOnReset(): Boolean = get(TRANSACTION_METADATA_SAVE_ON_RESET) == true
 
     suspend fun isSavingToNetwork(): Boolean = get(TRANSACTION_METADATA_SAVE_TO_NETWORK) ?: false
 
-    suspend fun getSaveAfterTimestamp(): Long = get(TRANSACTION_METADATA_SAVE_AFTER) ?: Long.MAX_VALUE
+    suspend fun getSaveAfterTimestamp(): Long = get(TRANSACTION_METADATA_SAVE_AFTER) ?: 0L
 
     suspend fun getMetadataFeatureInstalled(): Long {
         val installedDate = get(TRANSACTION_METADATA_FEATURE_INSTALLED) ?: 0
