@@ -53,11 +53,6 @@
             app:destination="@id/transaction_metadata_info_dialog"
             app:enterAnim="@anim/activity_stay"
             app:exitAnim="@anim/slide_out_right"/>
-
-        <argument
-            android:name="turn_on_save_data"
-            app:argType="boolean"
-            app:defaultValue="false" />
     </fragment>
 
     <dialog
