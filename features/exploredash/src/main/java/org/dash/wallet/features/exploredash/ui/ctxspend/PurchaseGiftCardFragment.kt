@@ -76,9 +76,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.titleBar.setNavigationOnClickListener { 
+        binding.titleBar.setNavigationOnClickListener {
             enterAmountViewModel.clearSavedState()
-            findNavController().popBackStack() 
+            findNavController().popBackStack()
         }
 
         setPaymentHeader()
@@ -93,7 +93,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 if (!setupMerchant(savedMerchantId)) {
                     findNavController().popBackStack()
                 }
-            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null && !currentMerchant.source.isNullOrEmpty()) {
+            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null &&
+                !currentMerchant.source.isNullOrEmpty()
+            ) {
                 setupMerchant(currentMerchant)
             } else {
                 // No valid merchant available
@@ -373,7 +375,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     @Composable
     private fun DenominationsBottomContainer() {
         val merchant = viewModel.giftCardMerchant ?: return
-        
+
         Box(
             modifier = Modifier.background(
                 color = MyTheme.Colors.backgroundSecondary,
