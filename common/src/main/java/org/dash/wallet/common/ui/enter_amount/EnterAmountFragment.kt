@@ -203,10 +203,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         if (binding.amountView.dashToFiat) {
             binding.amountView.input = viewModel.amount.value?.toPlainString() ?: Coin.ZERO.toPlainString()
         } else {
-            //viewModel.selectedExchangeRate.value?.let {
-                //val rate = ExchangeRate(it.fiat)
-                binding.amountView.input = viewModel.fiatAmount.value?.toPlainString() ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0).toPlainString()
-            //}
+            binding.amountView.input = viewModel.fiatAmount.value?.toPlainString()
+                ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0).toPlainString()
         }
     }
 
