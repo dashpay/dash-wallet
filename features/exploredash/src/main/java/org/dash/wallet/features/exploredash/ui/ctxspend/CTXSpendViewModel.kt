@@ -161,7 +161,8 @@ class CTXSpendViewModel @Inject constructor(
                 throw CTXSpendException(
                     "network-connection-error",
                     null,
-                    ex.message
+                    ex.message,
+                    ex
                 )
             }
 
