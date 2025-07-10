@@ -344,7 +344,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             merchant.logoLocation,
             R.drawable.ic_image_placeholder
         )
-        viewModel.setIsFixedDenomination(merchant.fixedDenomination)
         viewModel.updateMerchantDetails(merchant)
 
         if (setMerchantEnabled()) {
