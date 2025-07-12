@@ -230,6 +230,13 @@
                 <data android:scheme="dashpay" android:host="invite" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dashwallet" android:host="invite" />
+            </intent-filter>
+
             <!-- Optional: separate filter for OneLink (https) -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
