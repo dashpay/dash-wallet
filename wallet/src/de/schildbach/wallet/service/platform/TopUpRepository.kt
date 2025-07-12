@@ -18,8 +18,6 @@ package de.schildbach.wallet.service.platform
 
 import android.net.Uri
 import com.google.common.base.Stopwatch
-import com.appsflyer.AppsFlyerLib
-import com.appsflyer.share.LinkGenerator
 import com.appsflyer.share.LinkGenerator.ResponseListener
 import com.appsflyer.share.ShareInviteHelper
 import de.schildbach.wallet.Constants
@@ -70,9 +68,7 @@ import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import kotlinx.coroutines.flow.first
-import okhttp3.internal.wait
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import java.net.URLEncoder
@@ -217,10 +213,10 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction {
         Context.propagate(walletDataProvider.wallet!!.context)
-        var cftxData = platform.client.getTransaction(invite.cftx)
+        var cftxData = platform.client.getTransaction(invite.assetLockTx)
         //TODO: remove when iOS uses big endian
         if (cftxData == null)
-            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
@@ -260,10 +256,10 @@ class TopUpRepositoryImpl @Inject constructor(
     //
     override fun obtainAssetLockTransaction(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
         Context.propagate(walletDataProvider.wallet!!.context)
-        var cftxData = platform.client.getTransaction(invite.cftx)
+        var cftxData = platform.client.getTransaction(invite.assetLockTx)
         //TODO: remove when iOS uses big endian
         if (cftxData == null)
-            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
@@ -565,10 +561,10 @@ class TopUpRepositoryImpl @Inject constructor(
             )
             linkGenerator.generateLink(walletApplication, object : ResponseListener {
                 override fun onResponse(link: String?) {
-
                     log.info("AppsFlyer link generated successfully: {}", link)
-                    log.info("AppsFlyer linkgenerator : {}", linkGenerator.generateLink())
+                    log.info("AppsFlyer link generator : {}", linkGenerator.generateLink())
                     log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
+                    log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
 
                     continuation.resume(
                         DynamicLink(
@@ -729,11 +725,11 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
         val stopWatch = Stopwatch.createStarted()
-        var tx = getAssetLockTransaction(invite.cftx)
+        var tx = getAssetLockTransaction(invite.assetLockTx)
         log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
         // TODO: remove when iOS uses big endian
         if (tx == null) {
-            tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            tx = getAssetLockTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         }
         if (tx != null) {
             val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
@@ -779,8 +775,8 @@ class TopUpRepositoryImpl @Inject constructor(
                 return false
             }
         }
-        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
-        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
+        log.warn("Invitation uses an invalid transaction ${invite.assetLockTx} and took $stopWatch")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.assetLockTx}")
     }
 
     override fun close() {
