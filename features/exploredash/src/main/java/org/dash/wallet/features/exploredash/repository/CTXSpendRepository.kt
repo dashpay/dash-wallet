@@ -34,12 +34,14 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.net.ssl.SSLHandshakeException
 
 class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
-    val errorBody: String? = null
-) : Exception(message) {
+    val errorBody: String? = null,
+    cause: Exception? = null
+) : Exception(message, cause) {
     var resourceString: ResourceString? = null
     private val errorMap: Map<String, Any>
 
@@ -65,6 +67,8 @@ class CTXSpendException(
             val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
             return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
         }
+    val isNetworkError: Boolean
+        get() = cause?.let { it is SSLHandshakeException } ?: false
 }
 
 class CTXSpendRepository @Inject constructor(

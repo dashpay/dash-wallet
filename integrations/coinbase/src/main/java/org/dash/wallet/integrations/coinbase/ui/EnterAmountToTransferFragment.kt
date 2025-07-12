@@ -78,8 +78,13 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.isFiatSelected = false
-        viewModel.isMaxAmountSelected = false
+        try {
+            viewModel.isFiatSelected = false
+            viewModel.isMaxAmountSelected = false
+        } catch (e: IllegalArgumentException) {
+            // Handle case where nav graph is no longer on back stack after process death
+            return
+        }
         pickedCurrencyIndex = 0
         binding.keyboardView.onKeyboardActionListener = keyboardActionListener
         formatTransferredAmount(CoinbaseConstants.VALUE_ZERO)

@@ -24,6 +24,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -49,6 +51,7 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
@@ -66,24 +69,34 @@ class CTXSpendViewModel @Inject constructor(
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     networkState: NetworkStateInt,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
+    private val savedStateHandle: SavedStateHandle,
+    private val exploreDao: MerchantDao
 ) : ViewModel() {
 
     companion object {
         private val log = LoggerFactory.getLogger(CTXSpendViewModel::class.java)
+        private const val MERCHANT_ID_KEY = "merchant_id"
+        private const val BALANCE_KEY = "balance"
     }
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
 
-    private val _balance = MutableLiveData<Coin>()
+    private val _balance = MutableLiveData<Coin>().apply {
+        savedStateHandle.get<Long>(BALANCE_KEY)?.let {
+            value = Coin.valueOf(it)
+        }
+    }
     val balance: LiveData<Coin>
         get() = _balance
 
     val balanceWithDiscount: Coin?
-        get() = _balance.value?.let {
-            val d = giftCardMerchant.savingsFraction
-            return Coin.valueOf((it.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
+        get() = _balance.value?.let { balance ->
+            giftCardMerchant?.let { merchant ->
+                val d = merchant.savingsFraction
+                return Coin.valueOf((balance.value / (1.0 - d)).toLong()).minus(Transaction.DEFAULT_TX_FEE.multiply(20))
+            }
         }
 
     val userEmail = repository.userEmail.asLiveData()
@@ -100,7 +113,12 @@ class CTXSpendViewModel @Inject constructor(
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
-    lateinit var giftCardMerchant: Merchant
+    var giftCardMerchant: Merchant? = null
+        set(value) {
+            field = value
+            // Save merchant ID to state handle for restoration
+            savedStateHandle[MERCHANT_ID_KEY] = value?.merchantId
+        }
 
     var minCardPurchaseCoin: Coin = Coin.ZERO
     var minCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
@@ -120,18 +138,33 @@ class CTXSpendViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach(_balance::postValue)
             .launchIn(viewModelScope)
+
+        // Save balance changes to SavedStateHandle
+        _balance.observeForever { coin ->
+            savedStateHandle[BALANCE_KEY] = coin?.value
+        }
     }
 
     suspend fun purchaseGiftCard(): GiftCardResponse {
-        giftCardMerchant.merchantId?.let {
+        giftCardMerchant?.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
 
-            val response = repository.purchaseGiftCard(
-                merchantId = it,
-                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                fiatCurrency = "USD",
-                cryptoCurrency = Constants.DASH_CURRENCY
-            )
+            val response = try {
+                repository.purchaseGiftCard(
+                    merchantId = it,
+                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatCurrency = "USD",
+                    cryptoCurrency = Constants.DASH_CURRENCY
+                )
+            } catch (ex: Exception) {
+                log.error("purchaseGiftCard network error", ex)
+                throw CTXSpendException(
+                    "network-connection-error",
+                    null,
+                    ex.message,
+                    ex
+                )
+            }
 
             when (response) {
                 is ResponseResource.Success -> {
@@ -154,12 +187,12 @@ class CTXSpendViewModel @Inject constructor(
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
         val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
+        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant?.logoLocation)
 
         return transaction.txId
     }
 
-    suspend fun updateMerchantDetails(merchant: Merchant) {
+    suspend fun updateMerchantDetails(merchant: Merchant) = withContext(Dispatchers.IO) {
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
@@ -185,7 +218,7 @@ class CTXSpendViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
+    suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
         repository.getCTXSpendEmail()?.let { email ->
             return repository.getMerchant(merchantId)
         }
@@ -193,29 +226,35 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     fun refreshMinMaxCardPurchaseValues() {
-        val minCardPurchase = giftCardMerchant.minCardPurchase ?: 0.0
-        val maximumCardPurchase = giftCardMerchant.maxCardPurchase ?: 0.0
-        minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
-        maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
-        updatePurchaseLimits()
+        giftCardMerchant?.let { merchant ->
+            val minCardPurchase = merchant.minCardPurchase ?: 0.0
+            val maximumCardPurchase = merchant.maxCardPurchase ?: 0.0
+            minCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, minCardPurchase.toString())
+            maxCardPurchaseFiat = Fiat.parseFiat(Constants.USD_CURRENCY, maximumCardPurchase.toString())
+            updatePurchaseLimits()
+        }
     }
 
     fun withinLimits(purchaseAmount: Coin): Boolean {
-        if (giftCardMerchant.fixedDenomination) {
-            return true
-        }
-
-        return !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
-            !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+        return giftCardMerchant?.let { merchant ->
+            if (merchant.fixedDenomination) {
+                true
+            } else {
+                !purchaseAmount.isLessThan(minCardPurchaseCoin) &&
+                    !purchaseAmount.isGreaterThan(maxCardPurchaseCoin)
+            }
+        } ?: false
     }
 
     fun withinLimits(purchaseAmount: Fiat): Boolean {
-        if (giftCardMerchant.fixedDenomination) {
-            return true
-        }
-
-        return !purchaseAmount.isLessThan(minCardPurchaseFiat) &&
-            !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
+        return giftCardMerchant?.let { merchant ->
+            if (merchant.fixedDenomination) {
+                true
+            } else {
+                !purchaseAmount.isLessThan(minCardPurchaseFiat) &&
+                    !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
+            }
+        } ?: false
     }
 
     private fun updatePurchaseLimits() {
@@ -237,9 +276,9 @@ class CTXSpendViewModel @Inject constructor(
     fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
         val giftCard = GiftCard(
             txId = txId,
-            merchantName = giftCardMerchant.name ?: "",
+            merchantName = giftCardMerchant?.name ?: "",
             price = giftCardPaymentValue.value.toBigDecimal().toDouble(),
-            merchantUrl = giftCardMerchant.website,
+            merchantUrl = giftCardMerchant?.website,
             note = giftCardId
         )
         viewModelScope.launch {
@@ -299,20 +338,24 @@ class CTXSpendViewModel @Inject constructor(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    fun createReportEmail(ex: CTXSpendException): String {
+    fun getSavedMerchantId(): String? {
+        return savedStateHandle.get<String>(MERCHANT_ID_KEY)
+    }
+
+    private fun createReportEmail(ex: CTXSpendException): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
-        if (this::giftCardMerchant.isInitialized) {
+        giftCardMerchant?.let { merchant ->
             report.append("Merchant details").append("\n")
-                .append("name: ").append(giftCardMerchant.name).append("\n")
-                .append("id: ").append(giftCardMerchant.merchantId).append("\n")
-                .append("min: ").append(giftCardMerchant.minCardPurchase).append("\n")
-                .append("max: ").append(giftCardMerchant.maxCardPurchase).append("\n")
-                .append("discount: ").append(giftCardMerchant.savingsFraction).append("\n")
-                .append("denominations type: ").append(giftCardMerchant.denominationsType).append("\n")
-                .append("denominations: ").append(giftCardMerchant.denominations).append("\n")
+                .append("name: ").append(merchant.name).append("\n")
+                .append("id: ").append(merchant.merchantId).append("\n")
+                .append("min: ").append(merchant.minCardPurchase).append("\n")
+                .append("max: ").append(merchant.maxCardPurchase).append("\n")
+                .append("discount: ").append(merchant.savingsFraction).append("\n")
+                .append("denominations type: ").append(merchant.denominationsType).append("\n")
+                .append("denominations: ").append(merchant.denominations).append("\n")
                 .append("\n")
-        } else {
+        } ?: run {
             report.append("No merchant selected").append("\n")
         }
         report.append("\n")
@@ -326,5 +369,9 @@ class CTXSpendViewModel @Inject constructor(
             report.append("body:\n").append(it).append("\n")
         }
         return report.toString()
+    }
+
+    suspend fun getMerchantById(merchantId: String): Merchant? = withContext(Dispatchers.IO) {
+        exploreDao.getMerchantById(merchantId)
     }
 }

@@ -199,6 +199,15 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
+    private fun setAmountFromSavedState() {
+        if (binding.amountView.dashToFiat) {
+            binding.amountView.input = viewModel.amount.value?.toPlainString() ?: Coin.ZERO.toPlainString()
+        } else {
+            binding.amountView.input = viewModel.fiatAmount.value?.toPlainString()
+                ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0).toPlainString()
+        }
+    }
+
     private fun setupAmountView(dashToFiat: Boolean) {
         pickedCurrencyOption = if (dashToFiat) 1 else 0
         binding.currencyOptions.setViewCompositionStrategy(
@@ -223,6 +232,7 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
             }
         }
+        setAmountFromSavedState()
 
         binding.maxButton.setOnClickListener {
             lifecycleScope.launch { onMaxAmountButtonClick() }

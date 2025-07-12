@@ -25,6 +25,7 @@ import androidx.annotation.StyleRes
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
@@ -39,6 +40,7 @@ import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
@@ -62,6 +64,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
     private val viewModel by exploreViewModels<CTXSpendViewModel>()
+    private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 
     @Inject
     lateinit var authManager: AuthenticationManager
@@ -74,6 +77,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         super.onViewCreated(view, savedInstanceState)
 
         val merchant = viewModel.giftCardMerchant
+        if (merchant == null) {
+            log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
+            dismiss()
+            return
+        }
         val paymentValue = viewModel.giftCardPaymentValue.value
         val savingsFraction = merchant.savingsFraction
         binding.merchantName.text = merchant.name
@@ -97,6 +105,13 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private fun onConfirmButtonClicked() {
         lifecycleScope.launch {
+            // Double-check merchant is still available before proceeding
+            if (viewModel.giftCardMerchant == null) {
+                log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
+                dismiss()
+                return@launch
+            }
+
             if (authManager.authenticate(requireActivity()) == null) {
                 return@launch
             }
@@ -108,6 +123,14 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             } catch (ex: CTXSpendException) {
                 hideLoading()
                 when {
+                    ex.isNetworkError -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_error),
+                            getString(R.string.button_close)
+                        ).show(requireActivity())
+                    }
                     ex.errorCode == 400 && ex.isLimitError -> {
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
@@ -154,6 +177,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
             val transactionId = createSendingRequestFromDashUri(data.paymentUrls?.get("DASH.DASH")!!)
             transactionId?.let {
+                enterAmountViewModel.clearSavedState()
                 viewModel.saveGiftCardDummy(transactionId, data.id)
                 showGiftCardDetailsDialog(transactionId, data.id)
             }

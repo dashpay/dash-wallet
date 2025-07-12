@@ -76,28 +76,30 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
+        binding.titleBar.setNavigationOnClickListener {
+            enterAmountViewModel.clearSavedState()
+            findNavController().popBackStack()
+        }
 
         setPaymentHeader()
 
-        exploreViewModel.selectedItem.value?.let { merchant ->
-            if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                viewModel.giftCardMerchant = merchant
-                binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
-                binding.paymentHeaderView.setPaymentAddressViewIcon(
-                    merchant.logoLocation,
-                    R.drawable.ic_image_placeholder
-                )
-                viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+        // Try to restore from saved state first
+        val savedMerchantId = viewModel.getSavedMerchantId()
+        val currentMerchant = exploreViewModel.selectedItem.value
 
-                viewLifecycleOwner.lifecycleScope.launch {
-                    viewModel.updateMerchantDetails(merchant)
-
-                    if (setMerchantEnabled()) {
-                        viewModel.setIsFixedDenomination(merchant.fixedDenomination)
-                        setCardPurchaseLimits()
-                    }
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (savedMerchantId != null && currentMerchant == null) {
+                // restore state if saved merchant exists
+                if (!setupMerchant(savedMerchantId)) {
+                    findNavController().popBackStack()
                 }
+            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null &&
+                !currentMerchant.source.isNullOrEmpty()
+            ) {
+                setupMerchant(currentMerchant)
+            } else {
+                // No valid merchant available
+                findNavController().popBackStack()
             }
         }
 
@@ -120,9 +122,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         enterAmountViewModel.fiatAmount.observe(viewLifecycleOwner) {
-            if (!viewModel.giftCardMerchant.fixedDenomination) {
-                showCardPurchaseLimits()
-                viewModel.setGiftCardPaymentValue(it)
+            viewModel.giftCardMerchant?.let { merchant ->
+                if (!merchant.fixedDenomination) {
+                    showCardPurchaseLimits()
+                    viewModel.setGiftCardPaymentValue(it)
+                }
             }
         }
 
@@ -189,7 +193,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     /** if the merchant is not active, then close this fragment */
     private fun setMerchantEnabled(): Boolean {
-        if (viewModel.giftCardMerchant.active == false) {
+        if (viewModel.giftCardMerchant?.active != true) {
             findNavController().popBackStack()
             return false
         }
@@ -209,9 +213,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        if (viewModel.giftCardMerchant.fixedDenomination) {
-            return
-        }
+        viewModel.giftCardMerchant?.let { merchant ->
+            if (merchant.fixedDenomination) {
+                return
+            }
+        } ?: return
 
         val amountFiat = enterAmountViewModel.fiatAmount.value
         amountFiat?.let {
@@ -239,7 +245,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        val merchant = viewModel.giftCardMerchant
+        val merchant = viewModel.giftCardMerchant ?: run {
+            binding.discountValue.isVisible = false
+            return
+        }
         val savingsFraction = merchant.savingsFraction
 
         if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
@@ -318,6 +327,31 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
+    private suspend fun setupMerchant(merchantId: String): Boolean {
+        val merchant = viewModel.getMerchantById(merchantId)
+        return if (merchant != null) {
+            setupMerchant(merchant)
+            true
+        } else {
+            false
+        }
+    }
+
+    private suspend fun setupMerchant(merchant: Merchant) {
+        viewModel.giftCardMerchant = merchant
+        binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
+        binding.paymentHeaderView.setPaymentAddressViewIcon(
+            merchant.logoLocation,
+            R.drawable.ic_image_placeholder
+        )
+        viewModel.updateMerchantDetails(merchant)
+
+        if (setMerchantEnabled()) {
+            viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+            setCardPurchaseLimits()
+        }
+    }
+
     private fun exceedsBalance(): Boolean {
         val rate = viewModel.usdExchangeRate.value
 
@@ -339,6 +373,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     @Composable
     private fun DenominationsBottomContainer() {
+        val merchant = viewModel.giftCardMerchant ?: return
+
         Box(
             modifier = Modifier.background(
                 color = MyTheme.Colors.backgroundSecondary,
@@ -353,7 +389,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             val selectedDenomination = viewModel.giftCardPaymentValue.collectAsStateWithLifecycle()
             MerchantDenominations(
                 modifier = Modifier.padding(20.dp),
-                denominations = viewModel.giftCardMerchant.denominations,
+                denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
                 selectedDenomination = selectedDenomination.value.toBigDecimal().toInt(),
                 canContinue = !exceedsBalance(),
