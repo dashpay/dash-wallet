@@ -470,62 +470,6 @@ class TopUpRepositoryImpl @Inject constructor(
         return invitationsDao.loadByUserId(userId)
     }
 
-//    override suspend fun createDynamicLink(
-//        dashPayProfile: DashPayProfile,
-//        assetLockTx: AssetLockTransaction,
-//        aesKeyParameter: KeyParameter
-//    ): DynamicLink {
-//        log.info("creating dynamic link for invitation")
-//        // dashj Context does not work with coroutines well, so we need to call Context.propogate
-//        // in each suspend method that uses the dashj Context
-//        Context.propagate(walletDataProvider.wallet!!.context)
-//        val username = dashPayProfile.username
-//        val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
-//        return FirebaseDynamicLinks.getInstance()
-//            .createDynamicLink().apply {
-//                link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter).link
-//                domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
-//                setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
-//                setIosParameters(
-//                    DynamicLink.IosParameters.Builder(
-//                    Constants.Invitation.IOS_APP_BUNDLEID
-//                ).apply {
-//                    appStoreId = Constants.Invitation.IOS_APP_APPSTOREID
-//                }.build())
-//            }
-//            .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
-//                title = walletApplication.getString(R.string.invitation_preview_title)
-//                val nameLabel = dashPayProfile.nameLabel
-//                val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
-//                imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
-//                description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
-//            }.build())
-//            .setGoogleAnalyticsParameters(
-//                DynamicLink.GoogleAnalyticsParameters.Builder(
-//                    walletApplication.getString(R.string.app_name_dashpay),
-//                    Constants.Invitation.UTM_MEDIUM,
-//                    Constants.Invitation.UTM_CAMPAIGN
-//                ).build()
-//            )
-//            .buildDynamicLink()
-//    }
-//
-//    override suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink {
-//        return suspendCoroutine { continuation ->
-//            FirebaseDynamicLinks.getInstance().createDynamicLink()
-//                .setLongLink(dynamicLink.uri)
-//                .buildShortDynamicLink()
-//                .addOnSuccessListener {
-//                    log.debug("dynamic link successfully created")
-//                    continuation.resume(it)
-//                }
-//                .addOnFailureListener {
-//                    log.error(it.message, it)
-//                    continuation.resumeWithException(it)
-//                }
-//        }
-//    }
-
     override suspend fun createAppsFlyerLink(
         dashPayProfile: DashPayProfile,
         assetLockTx: AssetLockTransaction,
@@ -542,7 +486,6 @@ class TopUpRepositoryImpl @Inject constructor(
         return suspendCoroutine { continuation ->
             val linkGenerator = ShareInviteHelper.generateInviteUrl(walletApplication)
             linkGenerator.setBaseDeeplink(invitationLinkData.link.toString())
-            // linkGenerator.addParameter("af_android_url", invitationLinkData.link.toString())
             linkGenerator.setChannel("invitation")
             linkGenerator.setReferrerUID(UUID.randomUUID().toString())
             linkGenerator.setCampaign("dashpay_invitation")
