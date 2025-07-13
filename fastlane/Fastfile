@@ -104,7 +104,7 @@ platform :android do
 
   desc "Build apk"
   lane :build do |options|
-    explore_db(options)
+    # explore_db(options)
 
 	[
 		"#{ENV['PWD']}/service.properties", 
