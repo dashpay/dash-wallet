@@ -115,7 +115,8 @@ open class MerchantAtmDataSource @Inject constructor(
                     territory,
                     MerchantType.ONLINE,
                     paymentMethod,
-                    denominationType
+                    denominationType,
+                    provider
                 )
             } else {
                 merchantDao.observeByTerritory(
@@ -125,6 +126,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     MerchantType.ONLINE,
                     paymentMethod,
                     denominationType,
+                    provider,
                     -1
                 )
             }
@@ -135,6 +137,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     MerchantType.ONLINE,
                     paymentMethod,
                     denominationType,
+                    provider,
                     bounds.northLat,
                     bounds.eastLng,
                     bounds.southLat,
@@ -147,6 +150,7 @@ open class MerchantAtmDataSource @Inject constructor(
                     MerchantType.ONLINE,
                     paymentMethod,
                     denominationType,
+                    provider,
                     bounds.northLat,
                     bounds.eastLng,
                     bounds.southLat,
@@ -191,6 +195,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         sortByDiscount,
                         userLat,
                         userLng
@@ -200,6 +205,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         sortByDiscount,
                         userLat,
                         userLng
@@ -217,6 +223,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -230,6 +237,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -259,6 +267,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         sortOption.ordinal,
                         userLat,
                         userLng,
@@ -271,6 +280,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         sortOption.ordinal,
                         userLat,
                         userLng,
@@ -304,9 +314,9 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod, denominationType)
+                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod, denominationType, provider)
                 } else {
-                    merchantDao.getGroupedResultCount(types, paymentMethod, denominationType)
+                    merchantDao.getGroupedResultCount(types, paymentMethod, denominationType, provider)
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
@@ -318,6 +328,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -328,6 +339,7 @@ open class MerchantAtmDataSource @Inject constructor(
                         types,
                         paymentMethod,
                         denominationType,
+                        provider,
                         bounds.northLat,
                         bounds.eastLng,
                         bounds.southLat,
@@ -344,10 +356,11 @@ open class MerchantAtmDataSource @Inject constructor(
                         territory,
                         types,
                         paymentMethod,
-                        denominationType
+                        denominationType,
+                        provider
                     )
                 } else {
-                    merchantDao.getByTerritoryResultCount(territory, types, paymentMethod, denominationType)
+                    merchantDao.getByTerritoryResultCount(territory, types, paymentMethod, denominationType, provider)
                 }
             }
         }
@@ -492,6 +505,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 MerchantType.ONLINE,
                 paymentMethod,
                 denominationType,
+                provider,
                 bounds.northLat,
                 bounds.eastLng,
                 bounds.southLat,
@@ -506,6 +520,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 MerchantType.ONLINE,
                 paymentMethod,
                 denominationType,
+                provider,
                 limit
             )
         }
