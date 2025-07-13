@@ -189,8 +189,11 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
     private fun updateGiftCardVisibility() {
         val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
-        binding.giftCardTypesLabel.isVisible = hasGiftCardOptions
-        binding.giftCardTypes.isVisible = hasGiftCardOptions
+        val isMerchantScreen = viewModel.exploreTopic == ExploreTopic.Merchants
+        
+        // Only show gift card types for Merchants screen
+        binding.giftCardTypesLabel.isVisible = hasGiftCardOptions && isMerchantScreen
+        binding.giftCardTypes.isVisible = hasGiftCardOptions && isMerchantScreen
 
         val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !hasGiftCardOptions
         binding.sortByCard.isVisible = !shouldHideSorting

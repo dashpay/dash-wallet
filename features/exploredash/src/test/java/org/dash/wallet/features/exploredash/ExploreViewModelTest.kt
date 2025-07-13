@@ -260,7 +260,7 @@ class ExploreViewModelTest {
             val territory = "Texas"
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any(), any()) } doReturn
                         flow { emit(merchants.filter { it.territory == territory }) }
                 }
 
@@ -294,7 +294,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants("", territory, "", DenomOption.Both, GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -308,7 +308,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -354,7 +354,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, DenomOption.Both, bounds)
+            verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, DenomOption.Both, "", bounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -368,7 +368,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants.filter {
@@ -411,7 +411,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants(query, territory, "", DenomOption.Both, GeoBounds.noBounds)
+            verify(dataSource).observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
@@ -435,7 +435,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -486,7 +486,7 @@ class ExploreViewModelTest {
             val actual = viewModel.boundedSearchFlow.first()
 
             assertEquals(expected, actual)
-            verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, bounds)
+            verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, "", bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
             verifyNoMoreInteractions(dataSource)
         }
