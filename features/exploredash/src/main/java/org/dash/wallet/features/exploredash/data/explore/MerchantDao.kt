@@ -38,7 +38,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -70,7 +70,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant 
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -105,7 +105,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -133,7 +133,7 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
@@ -171,7 +171,7 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
@@ -200,7 +200,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -236,7 +236,7 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -259,7 +259,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -298,7 +298,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -319,7 +319,7 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT *, COUNT(*) AS physical_amount
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -345,7 +345,7 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -361,7 +361,7 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -390,7 +390,7 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -412,7 +412,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:source = '' OR source = :source COLLATE NOCASE)
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -444,7 +444,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
@@ -473,7 +473,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:source = '' OR source = :source COLLATE NOCASE) 
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND (:excludeType = '' OR type != :excludeType)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
@@ -499,7 +499,7 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND (:excludeType = '' OR type != :excludeType)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
