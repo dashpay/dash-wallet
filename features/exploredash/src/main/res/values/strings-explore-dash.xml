@@ -75,8 +75,10 @@
     <string name="explore_filter">Filter</string>
     <string name="explore_filters">Filters</string>
     <string name="explore_apply_filter">Apply</string>
-    <string name="explore_payment_method">Payment Method</string>
+    <string name="explore_spending_options">Spending options</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">CTX gift cards</string>
+    <string name="piggycards_gift_cards">Piggy Cards gift cards</string>
     <string name="explore_payment_gift_card">Gift card</string>
     <string name="explore_filter_gift_cards">Gift cards</string>
     <string name="explore_radius">Radius</string>
@@ -91,6 +93,7 @@
     <string name="gift_card_types">Gift card types</string>
     <string name="flexible_amount_option">Flexible amounts</string>
     <string name="fixed_denom_option">Fixed denominated amounts</string>
+    <string name="gift_card_providers">Gift card providers</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>

@@ -77,10 +77,11 @@ data class FilterOptions(
     val payment: String,
     val denominationType: DenomOption,
     val sortOption: SortOption,
-    val radius: Int // Can be miles or kilometers, see isMetric
+    val radius: Int, // Can be miles or kilometers, see isMetric
+    val provider: String = ""
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION)
+        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION, "")
     }
 }
 
@@ -349,7 +350,8 @@ class ExploreViewModel @Inject constructor(
         selectedTerritory: String,
         selectedRadiusOption: Int,
         sortOption: SortOption,
-        denomOption: DenomOption
+        denomOption: DenomOption,
+        providerFilter: String = ""
     ) {
         _appliedFilters.update { current ->
             current.copy(
@@ -357,7 +359,8 @@ class ExploreViewModel @Inject constructor(
                 payment = paymentFilter,
                 denominationType = denomOption,
                 sortOption = sortOption,
-                radius = selectedRadiusOption
+                radius = selectedRadiusOption,
+                provider = providerFilter
             )
         }
     }
@@ -433,6 +436,7 @@ class ExploreViewModel @Inject constructor(
                     _appliedFilters.value.territory,
                     "",
                     DenomOption.Both,
+                    "",
                     radiusBounds,
                     limit
                 )
@@ -506,6 +510,7 @@ class ExploreViewModel @Inject constructor(
                 filters.territory,
                 filters.payment,
                 filters.denominationType,
+                filters.provider,
                 bounds
             )
         } else {
@@ -546,6 +551,7 @@ class ExploreViewModel @Inject constructor(
                     type,
                     filters.payment,
                     filters.denominationType,
+                    filters.provider,
                     bounds,
                     sortOption,
                     userLat ?: 0.0,
@@ -596,6 +602,7 @@ class ExploreViewModel @Inject constructor(
                     type,
                     _appliedFilters.value.payment,
                     _appliedFilters.value.denominationType,
+                    _appliedFilters.value.provider,
                     radiusBounds ?: GeoBounds.noBounds
                 )
             } else {

@@ -29,6 +29,7 @@ interface ExploreDataSource {
         territory: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds
     ): Flow<List<Merchant>>
 
@@ -38,6 +39,7 @@ interface ExploreDataSource {
         type: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds,
         sortOption: SortOption,
         userLat: Double,
@@ -51,6 +53,7 @@ interface ExploreDataSource {
         type: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds
     ): Int
 
@@ -74,6 +77,7 @@ interface ExploreDataSource {
         territory: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds,
         limit: Int
     ): Flow<List<Merchant>>
@@ -93,6 +97,7 @@ open class MerchantAtmDataSource @Inject constructor(
         territory: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds
     ): Flow<List<Merchant>> {
         val denominationType = if (denomType == DenomOption.Both) {
@@ -158,6 +163,7 @@ open class MerchantAtmDataSource @Inject constructor(
         type: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds,
         sortOption: SortOption,
         userLat: Double,
@@ -282,6 +288,7 @@ open class MerchantAtmDataSource @Inject constructor(
         type: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds
     ): Int {
         val denominationType = if (denomType == DenomOption.Both) {
@@ -468,15 +475,14 @@ open class MerchantAtmDataSource @Inject constructor(
         territory: String,
         paymentMethod: String,
         denomType: DenomOption,
+        provider: String,
         bounds: GeoBounds,
         limit: Int
     ): Flow<List<Merchant>> {
-        val denominationType = if (denomType == DenomOption.Both) {
-            ""
-        } else if (denomType == DenomOption.Fixed) {
-            "fixed"
-        } else {
-            "min-max"
+        val denominationType = when (denomType) {
+            DenomOption.Both -> ""
+            DenomOption.Fixed -> "fixed"
+            else -> "min-max"
         }
 
         return if (territory.isBlank() && bounds != GeoBounds.noBounds) {

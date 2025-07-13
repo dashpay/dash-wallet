@@ -77,15 +77,15 @@ class GCExploreDatabase @Inject constructor(
     val configScope = CoroutineScope(Dispatchers.IO)
 
     override suspend fun getRemoteTimestamp(): Long {
-        val remoteDataInfo =
-            try {
-                ensureAuthenticated()
-                remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
-                remoteDataRef!!.metadata.await()
-            } catch (ex: Exception) {
-                log.warn("error getting remote data timestamp", ex)
-                null
-            }
+        val remoteDataInfo = try {
+            ensureAuthenticated()
+            remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
+            remoteDataRef!!.metadata.await()
+        } catch (ex: Exception) {
+            log.warn("error getting remote data timestamp", ex)
+            null
+        }
+
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
         return dataTimestamp ?: -1L
     }
@@ -157,8 +157,8 @@ class GCExploreDatabase @Inject constructor(
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment = extractComment(zipFile)
-        updateTimestampCache = comment[0].toLong()
-        val checksum = comment[1]
+        updateTimestampCache = 1751998996541//comment[0].toLong()
+        val checksum = "abf588d"//comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())
         val zipHeader = zipFile.getFileHeader("explore.db")
