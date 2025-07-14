@@ -54,7 +54,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private var sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
     private var selectedTerritory: String = ""
     private var dashPaymentOn: Boolean = true
-    private var giftCardPaymentOn: Boolean = true
+    private var ctxPaymentOn: Boolean = true
+    private var piggyCardsPaymentOn: Boolean = true
     private var sortOptions = listOf<SortOption>()
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
@@ -114,39 +115,53 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupPaymentMethods() {
-        val isDashOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-            viewModel.appliedFilters.value.payment == PaymentMethod.DASH
-        dashPaymentOn = isDashOn
-        binding.dashOption.isChecked = isDashOn
+        // Initialize spending options based on current filter state
+        val currentPayment = viewModel.appliedFilters.value.payment
+        val currentProvider = viewModel.appliedFilters.value.provider
+        
+        // Dash is always available
+        dashPaymentOn = currentPayment.isEmpty() || currentPayment == PaymentMethod.DASH
+        binding.dashOption.isChecked = dashPaymentOn
+        
+        // CTX and PiggyCards are gift card providers
+        val isGiftCardMode = currentPayment.isEmpty() || currentPayment == PaymentMethod.GIFT_CARD
+        ctxPaymentOn = isGiftCardMode && (currentProvider.isEmpty() || currentProvider == "CTX")
+        piggyCardsPaymentOn = isGiftCardMode && (currentProvider.isEmpty() || currentProvider == "PiggyCards")
+        
+        binding.ctxOption.isChecked = ctxPaymentOn
+        binding.piggycardsOption.isChecked = piggyCardsPaymentOn
+
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
-            if (!isChecked && !binding.giftCardOption.isChecked) {
-                // shouldn't allow to uncheck both options
-                binding.giftCardOption.isChecked = true
+            if (!isChecked && !binding.ctxOption.isChecked && !binding.piggycardsOption.isChecked) {
+                // At least one option must be selected
+                binding.ctxOption.isChecked = true
+                binding.piggycardsOption.isChecked = true
             }
 
             dashPaymentOn = isChecked
+            updateGiftCardVisibility()
             checkResetButton()
         }
 
-        val isGiftCardOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-            viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
-        giftCardPaymentOn = isGiftCardOn
-        binding.giftCardOption.isChecked = isGiftCardOn
-        binding.giftCardTypesLabel.isVisible = isGiftCardOn
-        binding.giftCardTypes.isVisible = isGiftCardOn
-        binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
-            if (!isChecked && !binding.dashOption.isChecked) {
+        binding.ctxOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.dashOption.isChecked && !binding.piggycardsOption.isChecked) {
+                // At least one option must be selected
                 binding.dashOption.isChecked = true
             }
 
-            giftCardPaymentOn = isChecked
-            binding.giftCardTypesLabel.isVisible = isChecked
-            binding.giftCardTypes.isVisible = isChecked
+            ctxPaymentOn = isChecked
+            updateGiftCardVisibility()
+            checkResetButton()
+        }
 
-            val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !isChecked
-            binding.sortByCard.isVisible = !shouldHideSorting
-            binding.sortByLabel.isVisible = !shouldHideSorting
+        binding.piggycardsOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.dashOption.isChecked && !binding.ctxOption.isChecked) {
+                // At least one option must be selected
+                binding.dashOption.isChecked = true
+            }
 
+            piggyCardsPaymentOn = isChecked
+            updateGiftCardVisibility()
             checkResetButton()
         }
 
@@ -168,6 +183,21 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
             checkResetButton()
         }
+
+        updateGiftCardVisibility()
+    }
+
+    private fun updateGiftCardVisibility() {
+        val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
+        val isMerchantScreen = viewModel.exploreTopic == ExploreTopic.Merchants
+        
+        // Only show gift card types for Merchants screen
+        binding.giftCardTypesLabel.isVisible = hasGiftCardOptions && isMerchantScreen
+        binding.giftCardTypes.isVisible = hasGiftCardOptions && isMerchantScreen
+
+        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !hasGiftCardOptions
+        binding.sortByCard.isVisible = !shouldHideSorting
+        binding.sortByLabel.isVisible = !shouldHideSorting
     }
 
     private fun setupSortByOptions() {
@@ -198,7 +228,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
         this.sortOptions = sortOptions
 
-        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !binding.giftCardOption.isChecked
+        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !ctxPaymentOn && !piggyCardsPaymentOn
         binding.sortByCard.isVisible = !shouldHideSorting
         binding.sortByLabel.isVisible = !shouldHideSorting
 
@@ -324,12 +354,20 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
     private fun applyFilters() {
         var paymentFilter = ""
+        var providerFilter = ""
 
-        if (!dashPaymentOn || !giftCardPaymentOn) {
-            paymentFilter = if (dashPaymentOn) {
-                PaymentMethod.DASH
-            } else {
-                PaymentMethod.GIFT_CARD
+        // Determine payment method and provider based on selected options
+        val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
+        
+        if (dashPaymentOn && !hasGiftCardOptions) {
+            paymentFilter = PaymentMethod.DASH
+        } else if (!dashPaymentOn && hasGiftCardOptions) {
+            paymentFilter = PaymentMethod.GIFT_CARD
+            // Set provider filter for gift cards
+            if (ctxPaymentOn && !piggyCardsPaymentOn) {
+                providerFilter = "CTX"
+            } else if (!ctxPaymentOn && piggyCardsPaymentOn) {
+                providerFilter = "PiggyCards"
             }
         }
 
@@ -341,14 +379,14 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             DenomOption.Flexible
         }
 
-        viewModel.setFilters(paymentFilter, selectedTerritory, selectedRadiusOption, sortOption, denomOption)
-        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
+        viewModel.setFilters(paymentFilter, selectedTerritory, selectedRadiusOption, sortOption, denomOption, providerFilter)
+        viewModel.trackFilterEvents(dashPaymentOn, hasGiftCardOptions)
     }
 
     private fun checkResetButton() {
         var isEnabled = false
 
-        if (!dashPaymentOn || !giftCardPaymentOn) {
+        if (!dashPaymentOn || !ctxPaymentOn || !piggyCardsPaymentOn) {
             isEnabled = true
         }
 
@@ -374,8 +412,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private fun resetFilters() {
         dashPaymentOn = true
         binding.dashOption.isChecked = true
-        giftCardPaymentOn = true
-        binding.giftCardOption.isChecked = true
+        ctxPaymentOn = true
+        binding.ctxOption.isChecked = true
+        piggyCardsPaymentOn = true
+        binding.piggycardsOption.isChecked = true
 
         binding.flexibleAmountOption.isChecked = true
         binding.fixedDenomOption.isChecked = true
@@ -393,6 +433,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
         sortByOptionsAdapter?.selectedIndex = sortOptions.indexOf(sortOption)
 
+        updateGiftCardVisibility()
         binding.resetFiltersBtn.isEnabled = false
     }
 }
