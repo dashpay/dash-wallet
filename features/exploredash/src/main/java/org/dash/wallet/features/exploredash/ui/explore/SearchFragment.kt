@@ -40,6 +40,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.content.Intent
+import androidx.core.net.toUri
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
@@ -60,6 +63,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
@@ -145,6 +149,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var savedLocationsScrollPosition: Int = -1
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
+
+    // State variables for ItemDetails compose content
+    private var currentItem: SearchResult? = null
+    private var isLoggedIn: Boolean = false
+    private var userEmail: String? = null
+    private var selectedProvider: GiftCardProvider? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -493,60 +503,92 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupItemDetails() {
-        binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
-            if (isPayingWithDash) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-            }
-
-            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-        }
-        binding.itemDetails.setOnReceiveDashClicked {
-            deepLinkNavigate(
-                DeepLinkDestination.ReceiveDash(source = "explore")
-            )
-        }
-        binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
-        binding.itemDetails.setOnShowAllLocationsClicked {
-            viewModel.selectedItem.value?.let { merchant ->
-                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                    viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+        // Set up the ComposeView with proper lifecycle strategy
+        binding.itemDetails.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        
+        fun updateComposeContent() {
+            binding.itemDetails.setContent {
+                val item = currentItem
+                if (item != null) {
+                    ItemDetails(
+                        item = item,
+                        isLoggedIn = isLoggedIn,
+                        userEmail = userEmail,
+                        selectedProvider = selectedProvider,
+                        onProviderSelected = { provider ->
+                            selectedProvider = provider
+                            dashSpendViewModel.observeDashSpendState(provider)
+                            updateComposeContent()
+                        },
+                        onSendDashClicked = { isPayingWithDash ->
+                            if (isPayingWithDash) {
+                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                            }
+                            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+                        },
+                        onReceiveDashClicked = {
+                            deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+                        },
+                        onShowAllLocationsClicked = {
+                            viewModel.selectedItem.value?.let { merchant ->
+                                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                                    viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                                }
+                            }
+                        },
+                        onBackButtonClicked = {
+                            viewModel.backFromMerchantLocation()
+                        },
+                        onNavigationButtonClicked = {
+                            openMaps(item)
+                        },
+                        onDialPhoneButtonClicked = {
+                            if (isMerchantTopic) {
+                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                            }
+                            item.phone?.let { phone -> dialPhone(phone) }
+                        },
+                        onOpenWebsiteButtonClicked = {
+                            if (isMerchantTopic) {
+                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                            }
+                            item.website?.let { website -> openWebsite(website) }
+                        },
+                        onBuyGiftCardButtonClicked = { service ->
+                            lifecycleScope.launch {
+                                if (!dashSpendViewModel.isUserSignedInService(service)) {
+                                    showLoginDialog(service)
+                                } else {
+                                    openPurchaseGiftCardFragment() // TODO: service
+                                }
+                            }
+                        },
+                        onExploreLogOutClicked = { provider ->
+                            lifecycleScope.launch {
+                                dashSpendViewModel.logout(provider)
+                            }
+                        }
+                    )
                 }
             }
         }
 
-        binding.itemDetails.setOnDashSpendLogOutClicked { provider ->
-            lifecycleScope.launch {
-                dashSpendViewModel.logout(provider)
-            }
-        }
-
-        binding.itemDetails.setGiftCardProviderPicked { provider ->
-            dashSpendViewModel.observeDashSpendState(provider)
-        }
-
+        // Observe selected item changes
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
+            currentItem = item
             if (item != null) {
-                binding.itemDetails.bindItem(item)
                 binding.toolbarTitle.text = item.name
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
+            updateComposeContent()
         }
 
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { service ->
-            lifecycleScope.launch {
-                if (!dashSpendViewModel.isUserSignedInService(service)) {
-                    showLoginDialog(service)
-                } else {
-                    openPurchaseGiftCardFragment() // TODO: service
-                }
-            }
-        }
-
+        // Observe DashSpend state changes
         dashSpendViewModel.dashSpendState.observe(viewLifecycleOwner) { state ->
-            lifecycleScope.launch {
-                binding.itemDetails.setDashSpendUser(state.email, state.isLoggedIn)
-            }
+            isLoggedIn = state.email?.isNotEmpty() == true && state.isLoggedIn
+            userEmail = state.email
+            updateComposeContent()
         }
 
         trackMerchantDetailsEvents(binding)
@@ -709,7 +751,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             val header =
                 MerchantLocationsHeaderAdapter(
                     item.name ?: "",
-                    binding.itemDetails.getMerchantType(item.type),
+                    getMerchantType(item.type),
                     item.logoLocation ?: ""
                 )
 
@@ -886,17 +928,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
-        binding.itemDetails.setOnDialPhoneButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-            }
-        }
-
-        binding.itemDetails.setOnOpenWebsiteButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-            }
-        }
+        // Analytics tracking is now handled directly in the setupItemDetails callbacks
+        // This method is kept for potential future tracking needs
     }
 
     private suspend fun updateIsEnabled(merchant: Merchant) {
@@ -904,7 +937,44 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         dashSpendViewModel.updateMerchantDetails(merchant)
 
         if (merchant.active != wasEnabled) {
-            binding.itemDetails.bindItem(merchant)
+            currentItem = merchant
         }
+    }
+
+    private fun openMaps(item: SearchResult) {
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+        }
+
+        uri?.let {
+            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
+            startActivity(intent)
+        }
+    }
+
+    private fun dialPhone(phone: String) {
+        val intent = Intent(Intent.ACTION_DIAL, "tel: $phone".toUri())
+        startActivity(intent)
+    }
+
+    private fun openWebsite(website: String) {
+        val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
+        val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
+        startActivity(intent)
+    }
+
+    private fun getMerchantType(type: String?): String {
+        return when (cleanMerchantTypeValue(type)) {
+            MerchantType.ONLINE -> getString(R.string.explore_online_merchant)
+            MerchantType.PHYSICAL -> getString(R.string.explore_physical_merchant)
+            MerchantType.BOTH -> getString(R.string.explore_both_types_merchant)
+            else -> ""
+        }
+    }
+
+    private fun cleanMerchantTypeValue(value: String?): String? {
+        return value?.trim()?.lowercase()?.replace(" ", "_")
     }
 }

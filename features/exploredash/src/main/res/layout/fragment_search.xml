@@ -191,7 +191,7 @@
                     android:text="@string/explore_reset_all_filters" />
             </LinearLayout>
 
-            <org.dash.wallet.features.exploredash.ui.explore.ItemDetails
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/item_details"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
