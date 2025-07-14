@@ -93,6 +93,7 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:2.4.0"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 

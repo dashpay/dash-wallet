@@ -21,34 +21,20 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.util.AttributeSet
-import android.view.LayoutInflater
-import android.widget.ImageView
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.view.ViewGroup
 import android.widget.LinearLayout
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.net.toUri
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePaddingRelative
-import coil.load
-import coil.size.Scale
-import coil.transform.RoundedCornersTransformation
-import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.ui.setRoundedRippleBackground
-import org.dash.wallet.common.util.makeLinks
-import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.*
-import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
-import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.*
 
 class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
-    private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
 
     private var onSendDashClicked: ((isPayingWithDash: Boolean) -> Unit)? = null
     private var onReceiveDashClicked: (() -> Unit)? = null
@@ -61,26 +47,89 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     private var onExploreLogOutClicked: ((GiftCardProvider) -> Unit)? = null
     private var giftCardProviderPicked: ((GiftCardProvider?) -> Unit)? = null
 
-    private var isLoggedIn = false
+    private var currentItem by mutableStateOf<SearchResult?>(null)
+    private var isLoggedIn by mutableStateOf(false)
+    private var userEmail by mutableStateOf<String?>(null)
+    private var selectedProvider by mutableStateOf<GiftCardProvider?>(null)
     private var isAtm = false
 
     var log: Logger = LoggerFactory.getLogger(ItemDetails::class.java)
+    private val composeView: ComposeView
 
     init {
         orientation = VERTICAL
-        val horizontalPadding = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-        updatePaddingRelative(start = horizontalPadding, end = horizontalPadding)
+        layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        
+        composeView = ComposeView(context).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val item = currentItem
+                if (item != null) {
+                    log.debug("ItemDetails: Rendering item ${item.name}")
+                    ItemDetailsContent(
+                        item = item,
+                        isLoggedIn = isLoggedIn,
+                        userEmail = userEmail,
+                        selectedProvider = selectedProvider,
+                        onProviderSelected = { provider ->
+                            selectedProvider = provider
+                            giftCardProviderPicked?.invoke(provider)
+                        },
+                        onSendDashClicked = { isPayingWithDash ->
+                            onSendDashClicked?.invoke(isPayingWithDash)
+                        },
+                        onReceiveDashClicked = {
+                            onReceiveDashClicked?.invoke()
+                        },
+                        onShowAllLocationsClicked = {
+                            onShowAllLocationsClicked?.invoke()
+                        },
+                        onBackButtonClicked = {
+                            onBackButtonClicked?.invoke()
+                        },
+                        onNavigationButtonClicked = {
+                            openMaps(item)
+                            onNavigationButtonClicked?.invoke()
+                        },
+                        onDialPhoneButtonClicked = {
+                            item.phone?.let { phone -> dialPhone(phone) }
+                            onDialPhoneButtonClicked?.invoke()
+                        },
+                        onOpenWebsiteButtonClicked = {
+                            item.website?.let { website -> openWebsite(website) }
+                            onOpenWebsiteButtonClicked?.invoke()
+                        },
+                        onBuyGiftCardButtonClicked = { provider ->
+                            onBuyGiftCardButtonClicked?.invoke(provider)
+                        },
+                        onExploreLogOutClicked = { provider ->
+                            onExploreLogOutClicked?.invoke(provider)
+                        }
+                    )
+                } else {
+                    log.debug("ItemDetails: No item to display")
+                    // Empty content when no item is bound
+                }
+            }
+        }
+        
+        addView(composeView, ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        ))
     }
 
     fun bindItem(item: SearchResult) {
+        log.debug("ItemDetails: bindItem called with ${item.name}")
         if (item is Merchant) {
             isAtm = false
-            bindMerchantDetails(item)
-            refreshEmailVisibility()
         } else if (item is Atm) {
             isAtm = true
-            bindAtmDetails(item)
         }
+        currentItem = item
     }
 
     fun setOnSendDashClicked(listener: (Boolean) -> Unit) {
@@ -126,24 +175,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
     @SuppressLint("SetTextI18n")
     fun setDashSpendUser(email: String?, userSignIn: Boolean) {
         isLoggedIn = email?.isNotEmpty() == true && userSignIn
-        refreshEmailVisibility()
-        email?.let {
-            binding.loginExploreUser.text =
-                context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
-                " " +
-                context.resources.getString(R.string.log_out)
-
-            binding.loginExploreUser.makeLinks(
-                Pair(
-                    context.resources.getString(R.string.log_out),
-                    OnClickListener {
-                        onExploreLogOutClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
-                        binding.loginExploreUser.isGone = true
-                    }
-                ),
-                isUnderlineText = true
-            )
-        }
+        userEmail = email
     }
 
     fun getMerchantType(type: String?): String {
@@ -152,170 +184,6 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
             MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
             MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
             else -> ""
-        }
-    }
-
-    private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
-        binding.apply {
-            itemName.text = item.name
-            itemAddress.text = item.getDisplayAddress("\n")
-
-            val isMetric = Locale.getDefault().isMetric
-            val distanceStr = item.getDistanceStr(isMetric)
-            itemDistance.text =
-                when {
-                    distanceStr.isEmpty() -> ""
-                    isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
-                    else -> resources.getString(R.string.distance_miles, distanceStr)
-                }
-            itemDistance.isVisible = !isOnline && distanceStr.isNotEmpty()
-
-            linkBtn.isVisible = !item.website.isNullOrEmpty()
-            linkBtn.setOnClickListener {
-                openWebsite(item.website!!)
-                onOpenWebsiteButtonClicked?.invoke()
-            }
-
-            directionBtn.isVisible =
-                !isOnline && ((item.latitude != null && item.longitude != null) || !item.googleMaps.isNullOrBlank())
-            directionBtn.setOnClickListener {
-                openMaps(item)
-                onNavigationButtonClicked?.invoke()
-            }
-
-            callBtn.isVisible = !isOnline && !item.phone.isNullOrEmpty()
-            callBtn.setOnClickListener {
-                dialPhone(item.phone!!)
-                onDialPhoneButtonClicked?.invoke()
-            }
-        }
-    }
-
-    private fun bindMerchantDetails(merchant: Merchant) {
-        binding.apply {
-            val isGrouped = merchant.physicalAmount > 0
-            val isOnline = merchant.type == MerchantType.ONLINE
-
-            buySellContainer.isVisible = false
-            locationHint.isVisible = false
-            backButton.isVisible = !isOnline && !isGrouped
-
-            loadImage(merchant.logoLocation, itemImage)
-            itemType.text = getMerchantType(merchant.type)
-            itemAddress.isVisible = !isOnline
-            showAllBtn.isVisible = !isOnline && isGrouped && merchant.physicalAmount > 1
-
-            val isDash = merchant.paymentMethod?.trim()?.lowercase() == PaymentMethod.DASH
-            val drawable =
-                ResourcesCompat.getDrawable(
-                    resources,
-                    if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card_inverted,
-                    null
-                )
-            payBtnIcon.setImageDrawable(drawable)
-
-            if (isDash) {
-                piggyCardsCheckbox.isVisible = false
-                giftCardProviderPicked?.invoke(null)
-                payBtn.isVisible = true
-                payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
-                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
-                payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
-                payBtn.isEnabled = merchant.active ?: true
-                temporaryUnavailableText.isVisible = merchant.active == false
-            } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
-                piggyCardsCheckbox.isVisible = true
-                giftCardProviderPicked?.invoke(GiftCardProvider.PiggyCards)
-                piggyCardsCheckbox.setOnClickListener {
-                    giftCardProviderPicked?.invoke(if (piggyCardsCheckbox.isChecked) {
-                        GiftCardProvider.PiggyCards
-                    } else {
-                        GiftCardProvider.CTX
-                    })
-                }
-                payBtn.isVisible = true
-                payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
-                payBtn.setOnClickListener {
-                    // TODO: multiple gift card options UI
-                    // TODO: when implementing new design for ItemDetails, better to translate this whole class to Compose
-                    onBuyGiftCardButtonClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
-                }
-                payBtn.isEnabled = merchant.active ?: true
-                temporaryUnavailableText.isVisible = merchant.active == false
-            }
-
-            showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
-            backButton.setOnClickListener { onBackButtonClicked?.invoke() }
-
-            if (isOnline) {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> { matchConstraintPercentHeight = 1f }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
-            } else {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight =
-                        ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
-                }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
-            }
-
-            bindCommonDetails(merchant, isOnline)
-
-            if (merchant.savingsFraction != 0.0) {
-                binding.discountValue.isVisible = true
-                binding.discountStem.isVisible = true
-                binding.discountValue.text = root.context.getString(
-                    R.string.explore_pay_with_dash_save,
-                    merchant.savingsPercentageAsDouble
-                )
-            } else {
-                binding.discountValue.isVisible = false
-                binding.discountStem.isVisible = false
-            }
-        }
-    }
-
-    private fun bindAtmDetails(atm: Atm) {
-        binding.apply {
-            giftCardProviderPicked?.invoke(null)
-            payBtn.isVisible = false
-            manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
-            itemType.isVisible = false
-            showAllBtn.isVisible = false
-            backButton.isVisible = false
-            buySellContainer.isVisible = true
-
-            sellBtn.setOnClickListener { onSendDashClicked?.invoke(false) }
-            buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
-
-            buyBtn.isVisible = atm.type != AtmType.SELL
-            sellBtn.isVisible = atm.type != AtmType.BUY && !atm.type.isNullOrEmpty()
-
-            root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
-            }
-
-            loadImage(atm.logoLocation, logoImg)
-            loadImage(atm.coverImage, itemImage)
-
-            bindCommonDetails(atm, false)
-        }
-    }
-
-    private fun loadImage(image: String?, into: ImageView) {
-        if (image.isNullOrEmpty()) {
-            into.isVisible = false
-        } else {
-            into.isVisible = true
-            into.load(image) {
-                crossfade(200)
-                scale(Scale.FILL)
-                placeholder(R.drawable.ic_image_placeholder)
-                error(R.drawable.ic_image_placeholder)
-                transformations(
-                    RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
-                )
-            }
         }
     }
 
@@ -345,9 +213,5 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
 
     private fun cleanMerchantTypeValue(value: String?): String? {
         return value?.trim()?.lowercase()?.replace(" ", "_")
-    }
-
-    private fun refreshEmailVisibility() {
-        binding.loginExploreUser.isVisible = isLoggedIn && !isAtm
     }
 }
