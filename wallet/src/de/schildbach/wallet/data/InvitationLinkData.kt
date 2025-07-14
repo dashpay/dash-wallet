@@ -49,22 +49,19 @@ data class InvitationLinkData(
     val validationState: InvitationValidationState? = null,
     val validationTimestamp: Long? = null
 ) : Parcelable {
-
     companion object {
+        private const val URI_PREFIX = "dashpay://invite"
         private const val PARAM_USER = "du"
-        private const val PARAM_USER_2 = "user"
         private const val PARAM_DISPLAY_NAME = "display-name"
         private const val PARAM_AVATAR_URL = "avatar-url"
         private const val PARAM_CFTX = "assetlocktx"
-        private const val PARAM_CFTX_2 = "cftx"
         private const val PARAM_PRIVATE_KEY = "pk"
         private const val PARAM_IS_LOCK = "islock"
-        private const val PARAM_IS_LOCK_2 = "is-lock"
         private val VALIDATION_EXPIRED = TimeUnit.MINUTES.toMillis(1)
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
-            val linkBuilder = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+            val linkBuilder = Uri.parse(URI_PREFIX).buildUpon()
                 .appendQueryParameter(PARAM_USER, username)
                 .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
                 .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
@@ -81,16 +78,15 @@ data class InvitationLinkData(
 
         fun isValid(link: Uri): Boolean {
             val queryParams = link.queryParameterNames
-            return (((queryParams.contains(PARAM_USER) || queryParams.contains(PARAM_USER_2))
-                    && (queryParams.contains(PARAM_CFTX) || queryParams.contains(PARAM_CFTX_2))
-                    && queryParams.contains(PARAM_PRIVATE_KEY)
-                    && (queryParams.contains(PARAM_IS_LOCK_2) || queryParams.contains(PARAM_IS_LOCK))))
+            return queryParams.contains(PARAM_USER) &&
+                queryParams.contains(PARAM_PRIVATE_KEY) &&
+                queryParams.contains(PARAM_IS_LOCK)
         }
     }
 
     @IgnoredOnParcel
     val user by lazy {
-        link.getQueryParameter(PARAM_USER) ?: link.getQueryParameter(PARAM_USER_2)!!
+        link.getQueryParameter(PARAM_USER)!!
     }
 
     @IgnoredOnParcel
@@ -106,18 +102,18 @@ data class InvitationLinkData(
     }
 
     @IgnoredOnParcel
-    val cftx by lazy {
-        (link.getQueryParameter(PARAM_CFTX) ?: link.getQueryParameter(PARAM_CFTX_2)!!).lowercase()
+    val assetLockTx by lazy {
+        link.getQueryParameter(PARAM_CFTX)!!.lowercase()
     }
 
     @IgnoredOnParcel
     val privateKey by lazy {
-        link.getQueryParameter(PARAM_PRIVATE_KEY)
+        link.getQueryParameter(PARAM_PRIVATE_KEY)!!
     }
 
     @IgnoredOnParcel
     val instantSendLock by lazy {
-        (link.getQueryParameter(PARAM_IS_LOCK) ?: link.getQueryParameter(PARAM_IS_LOCK_2)!!).lowercase()
+        link.getQueryParameter(PARAM_IS_LOCK)!!.lowercase()
     }
 
     @Deprecated("use link")
@@ -125,7 +121,7 @@ data class InvitationLinkData(
         .appendQueryParameter(PARAM_USER, user)
         .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
         .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
-        .appendQueryParameter(PARAM_CFTX, cftx)
+        .appendQueryParameter(PARAM_CFTX, assetLockTx)
         .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey)
         .appendQueryParameter(PARAM_IS_LOCK, instantSendLock)
         .build()

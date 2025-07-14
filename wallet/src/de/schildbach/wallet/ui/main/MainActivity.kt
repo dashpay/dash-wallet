@@ -34,9 +34,12 @@ import androidx.activity.viewModels
 import androidx.annotation.NavigationRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.net.toUri
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.findNavController
+import com.appsflyer.AppsFlyerConversionListener
+import com.appsflyer.AppsFlyerLib
 import com.google.common.collect.ImmutableList
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants

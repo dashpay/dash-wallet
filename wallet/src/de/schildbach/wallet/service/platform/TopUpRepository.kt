@@ -18,12 +18,12 @@ package de.schildbach.wallet.service.platform
 
 import android.net.Uri
 import com.google.common.base.Stopwatch
-import com.google.firebase.dynamiclinks.DynamicLink
-import com.google.firebase.dynamiclinks.FirebaseDynamicLinks
-import com.google.firebase.dynamiclinks.ShortDynamicLink
+import com.appsflyer.share.LinkGenerator.ResponseListener
+import com.appsflyer.share.ShareInviteHelper
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.data.DynamicLink
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
@@ -68,12 +68,12 @@ import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
+import java.util.UUID
 import kotlin.coroutines.resume
 
 /**
@@ -123,13 +123,12 @@ interface TopUpRepository {
 
     suspend fun updateInvitation(invitation: Invitation)
     suspend fun getInvitation(userId: String): Invitation?
-    suspend fun createDynamicLink(
+
+    suspend fun createAppsFlyerLink(
         dashPayProfile: DashPayProfile,
         assetLockTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter
     ): DynamicLink
-
-    suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink
 
     suspend fun checkInvites(encryptionKey: KeyParameter)
     suspend fun updateInvitations()
@@ -214,10 +213,10 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction {
         Context.propagate(walletDataProvider.wallet!!.context)
-        var cftxData = platform.client.getTransaction(invite.cftx)
+        var cftxData = platform.client.getTransaction(invite.assetLockTx)
         //TODO: remove when iOS uses big endian
         if (cftxData == null)
-            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
@@ -257,10 +256,10 @@ class TopUpRepositoryImpl @Inject constructor(
     //
     override fun obtainAssetLockTransaction(blockchainIdentity: BlockchainIdentity, invite: InvitationLinkData) {
         Context.propagate(walletDataProvider.wallet!!.context)
-        var cftxData = platform.client.getTransaction(invite.cftx)
+        var cftxData = platform.client.getTransaction(invite.assetLockTx)
         //TODO: remove when iOS uses big endian
         if (cftxData == null)
-            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            cftxData = platform.client.getTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         val assetLockTx = AssetLockTransaction(platform.params, cftxData!!)
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
@@ -471,61 +470,63 @@ class TopUpRepositoryImpl @Inject constructor(
         return invitationsDao.loadByUserId(userId)
     }
 
-    override suspend fun createDynamicLink(
+    override suspend fun createAppsFlyerLink(
         dashPayProfile: DashPayProfile,
         assetLockTx: AssetLockTransaction,
         aesKeyParameter: KeyParameter
     ): DynamicLink {
-        log.info("creating dynamic link for invitation")
+        log.info("creating AppsFlyer link for invitation")
         // dashj Context does not work with coroutines well, so we need to call Context.propogate
         // in each suspend method that uses the dashj Context
         Context.propagate(walletDataProvider.wallet!!.context)
         val username = dashPayProfile.username
         val avatarUrlEncoded = URLEncoder.encode(dashPayProfile.avatarUrl, StandardCharsets.UTF_8.displayName())
-        return FirebaseDynamicLinks.getInstance()
-            .createDynamicLink().apply {
-                link = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter).link
-                domainUriPrefix = Constants.Invitation.DOMAIN_URI_PREFIX
-                setAndroidParameters(DynamicLink.AndroidParameters.Builder().build())
-                setIosParameters(
-                    DynamicLink.IosParameters.Builder(
-                    Constants.Invitation.IOS_APP_BUNDLEID
-                ).apply {
-                    appStoreId = Constants.Invitation.IOS_APP_APPSTOREID
-                }.build())
-            }
-            .setSocialMetaTagParameters(DynamicLink.SocialMetaTagParameters.Builder().apply {
-                title = walletApplication.getString(R.string.invitation_preview_title)
-                val nameLabel = dashPayProfile.nameLabel
-                val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
-                imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
-                description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
-            }.build())
-            .setGoogleAnalyticsParameters(
-                DynamicLink.GoogleAnalyticsParameters.Builder(
-                    walletApplication.getString(R.string.app_name_dashpay),
-                    Constants.Invitation.UTM_MEDIUM,
-                    Constants.Invitation.UTM_CAMPAIGN
-                ).build()
-            )
-            .buildDynamicLink()
-    }
+        val invitationLinkData = InvitationLinkData.create(username, dashPayProfile.displayName, avatarUrlEncoded, assetLockTx, aesKeyParameter)
 
-    override suspend fun buildShortDynamicLink(dynamicLink: DynamicLink): ShortDynamicLink {
         return suspendCoroutine { continuation ->
-            FirebaseDynamicLinks.getInstance().createDynamicLink()
-                .setLongLink(dynamicLink.uri)
-                .buildShortDynamicLink()
-                .addOnSuccessListener {
-                    log.debug("dynamic link successfully created")
-                    continuation.resume(it)
+            val linkGenerator = ShareInviteHelper.generateInviteUrl(walletApplication)
+            linkGenerator.setBaseDeeplink(invitationLinkData.link.toString())
+            linkGenerator.setChannel("invitation")
+            linkGenerator.setReferrerUID(UUID.randomUUID().toString())
+            linkGenerator.setCampaign("dashpay_invitation")
+            val title = walletApplication.getString(R.string.invitation_preview_title)
+            val nameLabel = dashPayProfile.nameLabel
+            val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
+            val imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
+            val description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
+
+            linkGenerator.addParameters(
+                mapOf(
+                    "af_og_title" to title,
+                    "af_og_description" to description,
+                    "af_og_image" to imageUrl.toString()
+                )
+            )
+            linkGenerator.generateLink(walletApplication, object : ResponseListener {
+                override fun onResponse(link: String?) {
+                    log.info("AppsFlyer link generated successfully: {}", link)
+                    log.info("AppsFlyer link generator : {}", linkGenerator.generateLink())
+                    log.info("AppsFlyer af_dp : {}", invitationLinkData.link.toString())
+                    log.info("AppsFlyer user parameters {}", linkGenerator.userParams)
+
+                    continuation.resume(
+                        DynamicLink(
+                            link!!,
+                            linkGenerator.generateLink(),
+                            invitationLinkData.link.toString(),
+                            DynamicLink.AppsFlyer
+                        )
+                    )
                 }
-                .addOnFailureListener {
-                    log.error(it.message, it)
-                    continuation.resumeWithException(it)
+
+                override fun onResponseError(error: String?) {
+                    log.error("Failed to generate AppsFlyer link: $error")
+                    continuation.resumeWithException(Exception("Failed to generate AppsFlyer link: $error"))
                 }
+            })
         }
     }
+
     private var checkedPreviousInvitations = false
 
     override suspend fun checkInvites(encryptionKey: KeyParameter) {
@@ -544,12 +545,11 @@ class TopUpRepositoryImpl @Inject constructor(
                         val dashPayProfile = platformRepo.getLocalUserProfile()
                         val assetLockTx = fundingTxes[invitation.txid]
                         if (assetLockTx != null) {
-                            val dynamicLink = createDynamicLink(dashPayProfile!!, assetLockTx, encryptionKey)
-                            val shortDynamicLink = buildShortDynamicLink(dynamicLink)
+                            val appsFlyerLink = createAppsFlyerLink(dashPayProfile!!, assetLockTx, encryptionKey)
                             updateInvitation(
                                 invitation.copy(
-                                    shortDynamicLink = shortDynamicLink.shortLink.toString(),
-                                    dynamicLink = dynamicLink.uri.toString()
+                                    shortDynamicLink = appsFlyerLink.shortLink,
+                                    dynamicLink = appsFlyerLink.link
                                 )
                             )
                         }
@@ -606,7 +606,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
         val extension = authExtension
 
-        if (platformRepo.hasIdentity) {
+        if (platformRepo.hasBlockchainIdentity) {
             workerScope.launch(Dispatchers.IO) {
                 // Context.getOrCreate(platform.params)
                 val inviteKey = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes)
@@ -668,11 +668,11 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override fun validateInvitation(invite: InvitationLinkData): Boolean {
         val stopWatch = Stopwatch.createStarted()
-        var tx = getAssetLockTransaction(invite.cftx)
+        var tx = getAssetLockTransaction(invite.assetLockTx)
         log.info("validateInvitation: obtaining transaction info for invite took $stopWatch")
         // TODO: remove when iOS uses big endian
         if (tx == null) {
-            tx = getAssetLockTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
+            tx = getAssetLockTransaction(Sha256Hash.wrap(invite.assetLockTx).reversedBytes.toHex())
         }
         if (tx != null) {
             val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
@@ -718,8 +718,8 @@ class TopUpRepositoryImpl @Inject constructor(
                 return false
             }
         }
-        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
-        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
+        log.warn("Invitation uses an invalid transaction ${invite.assetLockTx} and took $stopWatch")
+        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.assetLockTx}")
     }
 
     override fun close() {

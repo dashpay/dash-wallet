@@ -80,8 +80,8 @@ open class InvitationFragmentViewModel @Inject constructor(
 
     val sendInviteStatusLiveData = SendInviteStatusLiveData(walletApplication, fundingAddress)
 
-    val dynamicLinkData
-        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
+//    val dynamicLinkData
+//        get() = sendInviteStatusLiveData.value!!.data!!.dynamicLink
 
     val shortDynamicLinkData
         get() = sendInviteStatusLiveData.value!!.data!!.shortDynamicLink

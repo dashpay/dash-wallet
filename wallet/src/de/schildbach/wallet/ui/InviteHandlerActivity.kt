@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui
 
-import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
@@ -81,11 +79,16 @@ class InviteHandlerActivity : AppCompatActivity() {
     private fun handleInvite(intent: Intent?) {
         if (intent != null) {
             lifecycleScope.launch {
-                viewModel.handleInvite(intent)?.let { invitation ->
+                val invitation = viewModel.handleInvite(intent)
+                if (invitation != null) {
                     handleInvite(invitation)
+                } else {
+                    log.info("No valid invitation found in intent, finishing activity")
+                    finish()
                 }
             }
         } else {
+            log.info("Intent is null, finishing activity")
             finish()
         }
     }
