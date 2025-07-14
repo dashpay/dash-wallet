@@ -182,32 +182,5 @@ class ExploreDatabaseMigrations {
         val migration2To3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) { }
         }
-
-//        val migration4To5 = object : Migration(4, 5) {
-//            override fun migrate(database: SupportSQLiteDatabase) {
-//                database.execSQL(
-//                    "CREATE TABLE IF NOT EXISTS gift_card_providers (" +
-//                        "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
-//                        "merchantId INTEGER NOT NULL, " +
-//                        "provider TEXT NOT NULL, " +
-//                        "redeemType TEXT NOT NULL, " +
-//                        "savingsPercentage INTEGER NOT NULL, " +
-//                        "active INTEGER NOT NULL, " +
-//                        "denominationsType TEXT NOT NULL, " +
-//                        "sourceId TEXT NOT NULL, " +
-//                        "FOREIGN KEY(merchantId) REFERENCES merchant(id) ON UPDATE NO ACTION ON DELETE CASCADE" +
-//                    ")"
-//                )
-//                database.execSQL(
-//                    "CREATE INDEX IF NOT EXISTS index_gift_card_providers_merchantId ON gift_card_providers (merchantId)"
-//                )
-//                database.execSQL(
-//                    "CREATE INDEX IF NOT EXISTS index_gift_card_providers_provider ON gift_card_providers (provider)"
-//                )
-//                database.execSQL(
-//                    "CREATE INDEX IF NOT EXISTS index_gift_card_providers_active ON gift_card_providers (active)"
-//                )
-//            }
-//        }
     }
 }

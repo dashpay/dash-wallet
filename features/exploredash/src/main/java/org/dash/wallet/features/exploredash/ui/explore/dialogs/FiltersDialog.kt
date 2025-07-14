@@ -369,9 +369,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             } else if (!ctxPaymentOn && piggyCardsPaymentOn) {
                 providerFilter = "PiggyCards"
             }
-            // If both are selected, leave provider empty (show all)
         }
-        // If both Dash and gift card options are selected, leave filters empty (show all)
 
         val denomOption = if (binding.fixedDenomOption.isChecked && binding.flexibleAmountOption.isChecked) {
             DenomOption.Both

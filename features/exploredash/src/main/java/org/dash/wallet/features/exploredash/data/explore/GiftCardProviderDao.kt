@@ -18,38 +18,17 @@
 package org.dash.wallet.features.exploredash.data.explore
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.explore.model.GiftCardProvider
 
 @Dao
 interface GiftCardProviderDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(provider: GiftCardProvider)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(providers: List<GiftCardProvider>)
-
     @Query("SELECT * FROM gift_card_providers WHERE merchantId = :merchantId")
     suspend fun getProvidersByMerchantId(merchantId: Long): List<GiftCardProvider>
-
-    @Query("SELECT * FROM gift_card_providers WHERE merchantId = :merchantId")
-    fun getProvidersByMerchantIdFlow(merchantId: Long): Flow<List<GiftCardProvider>>
 
     @Query("SELECT * FROM gift_card_providers WHERE provider = :provider")
     suspend fun getProvidersByProviderName(provider: String): List<GiftCardProvider>
 
     @Query("SELECT * FROM gift_card_providers WHERE active = :active")
     suspend fun getActiveProviders(active: Boolean = true): List<GiftCardProvider>
-
-    @Query("SELECT * FROM gift_card_providers")
-    suspend fun getAllProviders(): List<GiftCardProvider>
-
-    @Query("DELETE FROM gift_card_providers WHERE merchantId = :merchantId")
-    suspend fun deleteByMerchantId(merchantId: Long)
-
-    @Query("DELETE FROM gift_card_providers")
-    suspend fun deleteAll()
 }

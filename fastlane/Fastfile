@@ -104,13 +104,13 @@ platform :android do
 
   desc "Build apk"
   lane :build do |options|
-    # explore_db(options)
+    explore_db(options)
 
 	[
 		"#{ENV['PWD']}/service.properties", 
 		"#{ENV['PWD']}/local.properties", 
 		"#{ENV['PWD']}/wallet/google-services.json", 
-		#"#{ENV['PWD']}/wallet/assets/explore/explore.db"
+		"#{ENV['PWD']}/wallet/assets/explore/explore.db"
 	].each do |filename|
 		if !File.exist? "#{filename}"
 			UI.user_error!("Missing #{filename}")
