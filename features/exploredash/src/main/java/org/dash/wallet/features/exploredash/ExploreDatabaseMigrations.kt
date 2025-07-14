@@ -182,5 +182,11 @@ class ExploreDatabaseMigrations {
         val migration2To3 = object : Migration(2, 3) {
             override fun migrate(database: SupportSQLiteDatabase) { }
         }
+
+        val migration3To4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+
+            }
+        }
     }
 }

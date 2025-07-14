@@ -30,6 +30,7 @@ import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
+import org.dash.wallet.features.exploredash.data.explore.model.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
@@ -45,9 +46,10 @@ import kotlin.coroutines.resumeWithException
         Merchant::class,
         MerchantFTS::class,
         Atm::class,
-        AtmFTS::class
+        AtmFTS::class,
+        GiftCardProvider::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -124,7 +126,11 @@ abstract class ExploreDatabase : RoomDatabase() {
                             log.info("onOpenPrepackagedDatabase")
                         }
                     }
-                ).addMigrations(ExploreDatabaseMigrations.migration1To2, ExploreDatabaseMigrations.migration2To3)
+                ).addMigrations(
+                    ExploreDatabaseMigrations.migration1To2,
+                    ExploreDatabaseMigrations.migration2To3,
+                    ExploreDatabaseMigrations.migration3To4
+                )
 
                 val onOpenCallback = object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
@@ -160,7 +166,11 @@ abstract class ExploreDatabase : RoomDatabase() {
 
                 database = dbBuilder
                     .setJournalMode(JournalMode.TRUNCATE)
-                    .addMigrations(ExploreDatabaseMigrations.migration1To2, ExploreDatabaseMigrations.migration2To3)
+                    .addMigrations(
+                        ExploreDatabaseMigrations.migration1To2,
+                        ExploreDatabaseMigrations.migration2To3,
+                        ExploreDatabaseMigrations.migration3To4
+                    )
                     .addCallback(onOpenCallback)
                     .build()
 
