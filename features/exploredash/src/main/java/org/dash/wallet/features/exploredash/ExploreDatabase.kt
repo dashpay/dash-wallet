@@ -27,6 +27,7 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
+import org.dash.wallet.features.exploredash.data.explore.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.AtmFTS
@@ -57,6 +58,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
     abstract fun merchantDao(): MerchantDao
     abstract fun atmDao(): AtmDao
+    abstract fun giftCardProviderDao(): GiftCardProviderDao
 
     companion object {
         private const val EXPLORE_DB_NAME = "explore-database"

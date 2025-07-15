@@ -21,6 +21,12 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 
+data class GiftCardProviderInfo(
+    val providerId: String,
+    val savingsPercentage: Int,
+    val denominationsType: String
+)
+
 object PaymentMethod {
     const val DASH = "dash"
     const val GIFT_CARD = "gift card"
@@ -54,7 +60,8 @@ data class Merchant(
     @Ignore var maxCardPurchase: Double? = null,
     @Ignore var physicalAmount: Int = 0,
     @Ignore var fixedDenomination: Boolean = false,
-    @Ignore var denominations: List<Int> = listOf()
+    @Ignore var denominations: List<Int> = listOf(),
+    @Ignore var giftCardProviders: List<GiftCardProviderInfo> = listOf()
 ) : SearchResult() {
 
     // 1% discount is 0.01
