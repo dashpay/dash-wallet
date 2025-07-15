@@ -26,7 +26,7 @@ import androidx.room.PrimaryKey
 data class GiftCardProvider(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
-    val merchantId: Long,
+    val merchantId: String,
     val provider: String,
     val redeemType: String,
     val savingsPercentage: Int,
