@@ -259,7 +259,7 @@
     <!-- Provider Selection -->
     <string name="select_gift_card_provider">Select gift card provider</string>
     <string name="flexible_amounts">Flexible amounts</string>
-    <string name="fixed_prices">Fixed prices</string>
+    <string name="fixed_amounts">Fixed amounts</string>
     <string name="address">Address</string>
     <string name="phone">Phone</string>
     <string name="website">Website</string>

@@ -105,6 +105,7 @@ object MyTheme {
         val textPrimary = Color(0xFF191C1F)
         val backgroundSecondary = Color(0xFFFFFFFF)
         val textSecondary = Color(0xFF6E757C)
+        val textTertiary = Color(0xff75808A)
         val divider = Color(0x1A191C1F)
         val primary8 = Color(0x14191C1F)
         val primary5 = Color(0x0D191C1F)

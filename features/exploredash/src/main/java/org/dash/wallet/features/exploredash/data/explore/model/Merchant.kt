@@ -23,8 +23,9 @@ import androidx.room.Index
 
 data class GiftCardProviderInfo(
     val providerId: String,
+    val providerName: String,
     val savingsPercentage: Int,
-    val denominationsType: String
+    val denominationsType: String,
 )
 
 object PaymentMethod {

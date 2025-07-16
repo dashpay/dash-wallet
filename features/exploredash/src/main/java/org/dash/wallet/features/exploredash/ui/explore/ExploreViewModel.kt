@@ -173,9 +173,9 @@ class ExploreViewModel @Inject constructor(
     val searchLocationName: LiveData<String>
         get() = _searchLocationName
 
-    private val _selectedItem = MutableLiveData<SearchResult?>()
-    val selectedItem: LiveData<SearchResult?>
-        get() = _selectedItem
+    private val _selectedItem = MutableStateFlow<SearchResult?>(null)
+    val selectedItem: StateFlow<SearchResult?>
+        get() = _selectedItem.asStateFlow()
 
     private val _isLocationEnabled = MutableLiveData(false)
     val isLocationEnabled: LiveData<Boolean>
@@ -374,7 +374,7 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        _selectedItem.postValue(merchant)
+        _selectedItem.value = merchant
 
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
@@ -392,13 +392,13 @@ class ExploreViewModel @Inject constructor(
 
     fun openAtmDetails(atm: Atm) {
         analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
-        _selectedItem.postValue(atm)
+        _selectedItem.value = atm
         _screenState.postValue(ScreenState.Details)
     }
 
     fun openSearchResults() {
         nearestLocation = null
-        _selectedItem.postValue(null)
+        _selectedItem.value = null
         _screenState.postValue(ScreenState.SearchResults)
         _allMerchantLocations.postValue(listOf())
         this.allMerchantLocationsJob?.cancel()
@@ -485,6 +485,10 @@ class ExploreViewModel @Inject constructor(
 
     fun clearFilters() {
         _appliedFilters.value = FilterOptions.DEFAULT
+    }
+
+    fun updateSelectedItem(item: SearchResult) {
+        _selectedItem.value = item
     }
 
     suspend fun isInfoShown(): Boolean =

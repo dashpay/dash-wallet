@@ -43,8 +43,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
@@ -53,10 +55,11 @@ import java.util.*
 @Composable
 fun ItemDetails(
     item: SearchResult,
+    modifier: Modifier = Modifier,
     isLoggedIn: Boolean = false,
     userEmail: String? = null,
-    selectedProvider: GiftCardProvider? = null,
-    onProviderSelected: (GiftCardProvider?) -> Unit = {},
+    selectedProvider: GiftCardProvider,
+    onProviderSelected: (GiftCardProvider) -> Unit = {},
     onSendDashClicked: (Boolean) -> Unit = {},
     onReceiveDashClicked: () -> Unit = {},
     onShowAllLocationsClicked: () -> Unit = {},
@@ -65,8 +68,7 @@ fun ItemDetails(
     onDialPhoneButtonClicked: () -> Unit = {},
     onOpenWebsiteButtonClicked: () -> Unit = {},
     onBuyGiftCardButtonClicked: (GiftCardProvider) -> Unit = {},
-    onExploreLogOutClicked: (GiftCardProvider) -> Unit = {},
-    modifier: Modifier = Modifier
+    onExploreLogOutClicked: (GiftCardProvider) -> Unit = {}
 ) {
     when (item) {
         is Merchant -> {
@@ -106,8 +108,8 @@ private fun MerchantDetailsContent(
     merchant: Merchant,
     isLoggedIn: Boolean,
     userEmail: String?,
-    selectedProvider: GiftCardProvider?,
-    onProviderSelected: (GiftCardProvider?) -> Unit,
+    selectedProvider: GiftCardProvider,
+    onProviderSelected: (GiftCardProvider) -> Unit,
     onSendDashClicked: (Boolean) -> Unit,
     onShowAllLocationsClicked: () -> Unit,
     onBackButtonClicked: () -> Unit,
@@ -175,6 +177,7 @@ private fun MerchantDetailsContent(
                 // Multiple providers selection or single action button
                 if (hasMultipleProviders && !isDash) {
                     MultipleProvidersSection(
+                        providers = merchant.giftCardProviders,
                         selectedProvider = selectedProvider,
                         onProviderSelected = onProviderSelected
                     )
@@ -195,7 +198,7 @@ private fun MerchantDetailsContent(
                     Spacer(modifier = Modifier.height(16.dp))
                     UserLoginStatus(
                         email = userEmail,
-                        selectedProvider = selectedProvider ?: GiftCardProvider.CTX,
+                        selectedProvider = selectedProvider,
                         onLogOutClicked = onExploreLogOutClicked
                     )
                 }
@@ -267,8 +270,9 @@ private fun MerchantHeader(
 
 @Composable
 private fun MultipleProvidersSection(
-    selectedProvider: GiftCardProvider?,
-    onProviderSelected: (GiftCardProvider?) -> Unit
+    providers: List<GiftCardProviderInfo>,
+    selectedProvider: GiftCardProvider,
+    onProviderSelected: (GiftCardProvider) -> Unit
 ) {
     Column {
         Text(
@@ -284,25 +288,19 @@ private fun MultipleProvidersSection(
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F6F7))
         ) {
             Column {
-                ProviderOption(
-                    provider = GiftCardProvider.CTX,
-                    providerName = "CTX",
-                    subtitle = stringResource(R.string.flexible_amounts),
-                    discount = "-5%",
-                    isSelected = selectedProvider == GiftCardProvider.CTX,
-                    onSelected = { onProviderSelected(GiftCardProvider.CTX) }
-                )
-                
-                HorizontalDivider(color = Color(0xFFE0E0E0))
-                
-                ProviderOption(
-                    provider = GiftCardProvider.PiggyCards,
-                    providerName = "PiggyCards",
-                    subtitle = stringResource(R.string.fixed_prices),
-                    discount = "-10%",
-                    isSelected = selectedProvider == GiftCardProvider.PiggyCards,
-                    onSelected = { onProviderSelected(GiftCardProvider.PiggyCards) }
-                )
+                for (provider in providers) {
+                    ProviderOption(
+                        providerName = provider.providerName,
+                        subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+                            stringResource(R.string.flexible_amounts)
+                        } else {
+                            stringResource(R.string.fixed_amounts)
+                        },
+                        discount = (provider.savingsPercentage.toDouble() / 100).toString(), // TODO
+                        isSelected = selectedProvider == GiftCardProvider.CTX,
+                        onSelected = { onProviderSelected(GiftCardProvider.CTX) }
+                    )
+                }
             }
         }
     }
@@ -310,7 +308,6 @@ private fun MultipleProvidersSection(
 
 @Composable
 private fun ProviderOption(
-    provider: GiftCardProvider,
     providerName: String,
     subtitle: String,
     discount: String,
@@ -489,47 +486,53 @@ private fun MerchantDetails(
     onDialPhoneButtonClicked: () -> Unit,
     onOpenWebsiteButtonClicked: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            // Address
-            if (!merchant.getDisplayAddress("\n").isNullOrEmpty()) {
-                DetailItem(
-                    title = stringResource(R.string.address),
-                    content = merchant.getDisplayAddress("\n") ?: "",
-                    subtitle = getDistanceText(merchant),
-                    hasAction = merchant.hasCoordinates() || !merchant.googleMaps.isNullOrBlank(),
-                    actionIcon = R.drawable.ic_direction,
-                    onActionClick = onNavigationButtonClicked
-                )
-            }
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Card(
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary)
+        ) {
+            Column(modifier = Modifier.padding(10.dp)) {
+                // Address
+                if (merchant.getDisplayAddress("\n").isNotEmpty()) {
+                    DetailItem(
+                        title = stringResource(R.string.address),
+                        content = merchant.getDisplayAddress("\n"),
+                        subtitle = getDistanceText(merchant),
+                        hasAction = merchant.hasCoordinates() || !merchant.googleMaps.isNullOrBlank(),
+                        actionIcon = R.drawable.ic_direction,
+                        onActionClick = onNavigationButtonClicked
+                    )
+                }
 
-            // Phone
-            if (!merchant.phone.isNullOrEmpty()) {
-                DetailItem(
-                    title = stringResource(R.string.phone),
-                    content = merchant.phone!!,
-                    isClickable = true,
-                    onContentClick = onDialPhoneButtonClicked
-                )
-            }
+                // Phone
+                if (!merchant.phone.isNullOrEmpty()) {
+                    DetailItem(
+                        title = stringResource(R.string.phone),
+                        content = merchant.phone!!,
+                        isClickable = true,
+                        onContentClick = onDialPhoneButtonClicked
+                    )
+                }
 
-            // Website
-            if (!merchant.website.isNullOrEmpty()) {
-                DetailItem(
-                    title = stringResource(R.string.website),
-                    content = merchant.website!!,
-                    isClickable = true,
-                    onContentClick = onOpenWebsiteButtonClicked
-                )
+                // Website
+                if (!merchant.website.isNullOrEmpty()) {
+                    DetailItem(
+                        title = stringResource(R.string.website),
+                        content = merchant.website!!,
+                        isClickable = true,
+                        onContentClick = onOpenWebsiteButtonClicked
+                    )
+                }
             }
+        }
 
-            // Show all locations
-            if (isGrouped && merchant.physicalAmount > 1) {
-                HorizontalDivider(color = Color(0xFFE0E0E0), modifier = Modifier.padding(vertical = 6.dp))
+        // Show all locations
+        if (isGrouped && merchant.physicalAmount > 1) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary),
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
                 ShowAllLocationsItem(
                     count = merchant.physicalAmount,
                     onClick = onShowAllLocationsClicked
@@ -647,7 +650,7 @@ private fun ShowAllLocationsItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -660,8 +663,7 @@ private fun ShowAllLocationsItem(
         Icon(
             painter = painterResource(id = R.drawable.ic_show_all),
             contentDescription = null,
-            tint = Color(0xFFB0B6BC),
-            modifier = Modifier.size(16.dp)
+            tint = MyTheme.Colors.textTertiary
         )
     }
 }
@@ -811,10 +813,10 @@ private fun AtmDetails(
         )
 
         // Address
-        if (!atm.getDisplayAddress("\n").isNullOrEmpty()) {
+        if (atm.getDisplayAddress("\n").isNotEmpty()) {
             Spacer(modifier = Modifier.height(10.dp))
             Text(
-                text = atm.getDisplayAddress("\n") ?: "",
+                text = atm.getDisplayAddress("\n"),
                 fontSize = 14.sp,
                 color = Color(0xFF191C1F),
                 lineHeight = 20.sp

@@ -42,7 +42,12 @@ import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import android.content.Intent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
@@ -151,10 +156,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
 
     // State variables for ItemDetails compose content
-    private var currentItem: SearchResult? = null
-    private var isLoggedIn: Boolean = false
-    private var userEmail: String? = null
-    private var selectedProvider: GiftCardProvider? = null
+    private var selectedProvider: GiftCardProvider by mutableStateOf(GiftCardProvider.CTX)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -505,93 +507,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun setupItemDetails() {
         // Set up the ComposeView with proper lifecycle strategy
         binding.itemDetails.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-        
-        fun updateComposeContent() {
-            binding.itemDetails.setContent {
-                val item = currentItem
-                if (item != null) {
-                    ItemDetails(
-                        item = item,
-                        isLoggedIn = isLoggedIn,
-                        userEmail = userEmail,
-                        selectedProvider = selectedProvider,
-                        onProviderSelected = { provider ->
-                            selectedProvider = provider
-                            dashSpendViewModel.observeDashSpendState(provider)
-                            updateComposeContent()
-                        },
-                        onSendDashClicked = { isPayingWithDash ->
-                            if (isPayingWithDash) {
-                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-                            }
-                            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-                        },
-                        onReceiveDashClicked = {
-                            deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
-                        },
-                        onShowAllLocationsClicked = {
-                            viewModel.selectedItem.value?.let { merchant ->
-                                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                                    viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                                }
-                            }
-                        },
-                        onBackButtonClicked = {
-                            viewModel.backFromMerchantLocation()
-                        },
-                        onNavigationButtonClicked = {
-                            openMaps(item)
-                        },
-                        onDialPhoneButtonClicked = {
-                            if (isMerchantTopic) {
-                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-                            }
-                            item.phone?.let { phone -> dialPhone(phone) }
-                        },
-                        onOpenWebsiteButtonClicked = {
-                            if (isMerchantTopic) {
-                                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-                            }
-                            item.website?.let { website -> openWebsite(website) }
-                        },
-                        onBuyGiftCardButtonClicked = { service ->
-                            lifecycleScope.launch {
-                                if (!dashSpendViewModel.isUserSignedInService(service)) {
-                                    showLoginDialog(service)
-                                } else {
-                                    openPurchaseGiftCardFragment() // TODO: service
-                                }
-                            }
-                        },
-                        onExploreLogOutClicked = { provider ->
-                            lifecycleScope.launch {
-                                dashSpendViewModel.logout(provider)
-                            }
-                        }
-                    )
-                }
+        binding.itemDetails.setContent {
+            val item by viewModel.selectedItem.collectAsStateWithLifecycle()
+            item?.let {
+                ItemDetailsComposable(it)
             }
         }
 
         // Observe selected item changes
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
-            currentItem = item
             if (item != null) {
                 binding.toolbarTitle.text = item.name
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
-            updateComposeContent()
         }
-
-        // Observe DashSpend state changes
-        dashSpendViewModel.dashSpendState.observe(viewLifecycleOwner) { state ->
-            isLoggedIn = state.email?.isNotEmpty() == true && state.isLoggedIn
-            userEmail = state.email
-            updateComposeContent()
-        }
-
-        trackMerchantDetailsEvents(binding)
     }
 
     private fun setupScreenTransitions() {
@@ -685,19 +615,34 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
         val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 0f)
-        val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 1f)
-        AnimatorSet()
-            .apply {
-                playTogether(animResults, animBackButton, animDrag, animDetails)
-                duration = 200
-                doOnEnd {
-                    binding.searchResults.isVisible = false
-                    binding.dragIndicator.isVisible = false
-                    binding.backToNearestBtn.isVisible = false
+        
+        // Keep drag indicator visible if bottom sheet is draggable
+        if (bottomSheet.isDraggable) {
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
                 }
-            }
-            .start()
+                .start()
+        } else {
+            val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDrag, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.dragIndicator.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
+                }
+                .start()
+        }
     }
 
     private fun transitToSearchResults() {
@@ -908,8 +853,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
         val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
             viewModel.isLocationEnabled.value == true
+        val locationEnabled = viewModel.isLocationEnabled.value == true
+        val isOnlineMerchant = viewModel.selectedItem.value?.type == MerchantType.ONLINE
 
-        return !isDetails && nearbySearch
+        return (isDetails && !isOnlineMerchant) || (!isDetails && nearbySearch && locationEnabled)
     }
 
     @BottomSheetBehavior.State
@@ -927,17 +874,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
-        // Analytics tracking is now handled directly in the setupItemDetails callbacks
-        // This method is kept for potential future tracking needs
-    }
-
     private suspend fun updateIsEnabled(merchant: Merchant) {
         val wasEnabled = merchant.active
         dashSpendViewModel.updateMerchantDetails(merchant)
 
         if (merchant.active != wasEnabled) {
-            currentItem = merchant
+            viewModel.updateSelectedItem(merchant)
         }
     }
 
@@ -976,5 +918,68 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private fun cleanMerchantTypeValue(value: String?): String? {
         return value?.trim()?.lowercase()?.replace(" ", "_")
+    }
+
+    @Composable
+    private fun ItemDetailsComposable(item: SearchResult) {
+        val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
+        ItemDetails(
+            item = item,
+            isLoggedIn = state.isLoggedIn,
+            userEmail = state.email,
+            selectedProvider = selectedProvider,
+            onProviderSelected = { provider ->
+                selectedProvider = provider
+                dashSpendViewModel.observeDashSpendState(provider)
+            },
+            onSendDashClicked = { isPayingWithDash ->
+                if (isPayingWithDash) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                }
+                deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+            },
+            onReceiveDashClicked = {
+                deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+            },
+            onShowAllLocationsClicked = {
+                viewModel.selectedItem.value?.let { merchant ->
+                    if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                        viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                    }
+                }
+            },
+            onBackButtonClicked = {
+                viewModel.backFromMerchantLocation()
+            },
+            onNavigationButtonClicked = {
+                openMaps(item)
+            },
+            onDialPhoneButtonClicked = {
+                if (isMerchantTopic) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                }
+                item.phone?.let { phone -> dialPhone(phone) }
+            },
+            onOpenWebsiteButtonClicked = {
+                if (isMerchantTopic) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                }
+                item.website?.let { website -> openWebsite(website) }
+            },
+            onBuyGiftCardButtonClicked = { service ->
+                lifecycleScope.launch {
+                    if (!dashSpendViewModel.isUserSignedInService(service)) {
+                        showLoginDialog(service)
+                    } else {
+                        openPurchaseGiftCardFragment() // TODO: service
+                    }
+                }
+            },
+            onExploreLogOutClicked = { provider ->
+                lifecycleScope.launch {
+                    dashSpendViewModel.logout(provider)
+                }
+            }
+        )
     }
 }
