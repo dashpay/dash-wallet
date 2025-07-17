@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
@@ -62,7 +64,8 @@ class MerchantDaoTest {
                 pagingSearchByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
             } doReturn TestPagingSource()
         }
-    private val dataSource = MerchantAtmDataSource(merchantDaoMock, atmDaoMock)
+    private val giftCardProvidersMock = mock<GiftCardProviderDao>()
+    private val dataSource = MerchantAtmDataSource(merchantDaoMock, atmDaoMock, giftCardProvidersMock)
 
     @Test
     fun observeAllPagingWithOnlineType_correctMethodCalled_querySanitized() {
