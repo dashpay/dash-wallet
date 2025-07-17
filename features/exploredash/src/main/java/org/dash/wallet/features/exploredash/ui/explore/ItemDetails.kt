@@ -220,8 +220,8 @@ private fun MerchantDetailsContent(
         
         if (hasAddress || hasPhone || hasWebsite || hasShowAllLocations) {
             Spacer(modifier = Modifier.height(16.dp))
-            MerchantDetails(
-                merchant = merchant,
+            ItemContactDetails(
+                item = merchant,
                 isOnline = isOnline,
                 isGrouped = isGrouped,
                 onShowAllLocationsClicked = onShowAllLocationsClicked,
@@ -565,18 +565,18 @@ private fun UserLoginStatus(
 }
 
 @Composable
-private fun MerchantDetails(
-    merchant: Merchant,
-    isOnline: Boolean,
-    isGrouped: Boolean,
-    onShowAllLocationsClicked: () -> Unit,
+private fun ItemContactDetails(
+    item: SearchResult,
+    isOnline: Boolean = false,
+    isGrouped: Boolean = false,
+    onShowAllLocationsClicked: () -> Unit = {},
     onNavigationButtonClicked: () -> Unit,
     onDialPhoneButtonClicked: () -> Unit,
     onOpenWebsiteButtonClicked: () -> Unit
 ) {
-    val hasAddress = !isOnline && merchant.getDisplayAddress("\n").isNotEmpty()
-    val hasPhone = !merchant.phone.isNullOrEmpty()
-    val hasWebsite = !merchant.website.isNullOrEmpty()
+    val hasAddress = !isOnline && item.getDisplayAddress("\n").isNotEmpty()
+    val hasPhone = !item.phone.isNullOrEmpty()
+    val hasWebsite = !item.website.isNullOrEmpty()
     
     Column(modifier = Modifier.fillMaxWidth()) {
         // Only show card if there are details to display
@@ -588,13 +588,13 @@ private fun MerchantDetails(
                 )
             ) {
                 Column(modifier = Modifier.padding(if (isOnline) 6.dp else 10.dp)) {
-                    // Address - only for physical merchants
+                    // Address - only for physical items
                     if (hasAddress) {
                         DetailItem(
                             title = stringResource(R.string.address),
-                            content = merchant.getDisplayAddress("\n"),
-                            subtitle = getDistanceText(merchant),
-                            hasAction = merchant.hasCoordinates() || !merchant.googleMaps.isNullOrBlank(),
+                            content = item.getDisplayAddress("\n"),
+                            subtitle = getDistanceText(item),
+                            hasAction = item.hasCoordinates() || !item.googleMaps.isNullOrBlank(),
                             actionIcon = R.drawable.ic_direction,
                             onActionClick = onNavigationButtonClicked
                         )
@@ -604,7 +604,7 @@ private fun MerchantDetails(
                     if (hasPhone) {
                         DetailItem(
                             title = stringResource(R.string.phone),
-                            content = merchant.phone!!,
+                            content = item.phone!!,
                             isClickable = true,
                             onContentClick = onDialPhoneButtonClicked
                         )
@@ -614,7 +614,7 @@ private fun MerchantDetails(
                     if (hasWebsite) {
                         DetailItem(
                             title = stringResource(R.string.website),
-                            content = merchant.website!!,
+                            content = item.website!!,
                             isClickable = true,
                             onContentClick = onOpenWebsiteButtonClicked
                         )
@@ -624,14 +624,14 @@ private fun MerchantDetails(
         }
 
         // Show all locations - only for grouped physical merchants
-        if (!isOnline && isGrouped && merchant.physicalAmount > 1) {
+        if (!isOnline && isGrouped && item is Merchant && item.physicalAmount > 1) {
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary),
                 modifier = Modifier.padding(top = 12.dp)
             ) {
                 ShowAllLocationsItem(
-                    count = merchant.physicalAmount,
+                    count = item.physicalAmount,
                     onClick = onShowAllLocationsClicked
                 )
             }
@@ -654,7 +654,7 @@ private fun DetailItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Top
     ) {
         Column(
             modifier = Modifier
@@ -678,8 +678,9 @@ private fun DetailItem(
                 style = MyTheme.Body2Regular,
                 color = if (isClickable) MyTheme.Colors.dashBlue else MyTheme.Colors.textPrimary
             )
+
             if (!subtitle.isNullOrEmpty()) {
-                Spacer(modifier = Modifier.height(2.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subtitle,
                     style = MyTheme.Overline,
@@ -689,9 +690,10 @@ private fun DetailItem(
         }
 
         if (hasAction && actionIcon != null && onActionClick != null) {
+            Spacer(Modifier.width(8.dp))
             IconButton(
                 onClick = onActionClick,
-                modifier = Modifier.size(22.dp)
+                modifier = Modifier.padding(top = 16.dp).size(22.dp)
             ) {
                 Icon(
                     painter = painterResource(id = actionIcon),
@@ -829,126 +831,39 @@ private fun AtmDetailsContent(
         // Location hint
         Text(
             text = stringResource(R.string.explore_atm_location_hint),
-            fontSize = 12.sp,
-            color = Color(0xFF75808A),
-            modifier = Modifier.padding(bottom = 5.dp)
+            style = MyTheme.Overline,
+            color = MyTheme.Colors.textSecondary,
+            modifier = Modifier.padding(start = 12.dp, bottom = 5.dp)
         )
 
-        // ATM image
-        AsyncImage(
-            model = atm.coverImage ?: "",
-            contentDescription = atm.name,
-            modifier = Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = R.drawable.ic_image_placeholder),
-            error = painterResource(id = R.drawable.ic_image_placeholder)
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
-
-        // ATM details
-        AtmDetails(
-            atm = atm,
-            onNavigationButtonClicked = onNavigationButtonClicked,
-            onDialPhoneButtonClicked = onDialPhoneButtonClicked,
-            onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked
-        )
-    }
-}
-
-@Composable
-private fun AtmDetails(
-    atm: Atm,
-    onNavigationButtonClicked: () -> Unit,
-    onDialPhoneButtonClicked: () -> Unit,
-    onOpenWebsiteButtonClicked: () -> Unit
-) {
-    Column {
-        // Name
-        Text(
-            text = atm.name ?: "",
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color(0xFF191C1F)
-        )
-
-        // Address
-        if (atm.getDisplayAddress("\n").isNotEmpty()) {
-            Spacer(modifier = Modifier.height(10.dp))
+        // ATM Name
+        if (!atm.name.isNullOrEmpty()) {
             Text(
-                text = atm.getDisplayAddress("\n"),
-                fontSize = 14.sp,
-                color = Color(0xFF191C1F),
-                lineHeight = 20.sp
+                text = atm.name!!,
+                style = MyTheme.SubtitleSemibold,
+                color = MyTheme.Colors.textPrimary,
+                modifier = Modifier.padding(start = 12.dp, bottom = 16.dp)
             )
         }
 
-        // Distance and actions
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Distance
-            val distanceText = getDistanceText(atm)
-            if (distanceText.isNotEmpty()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_distance),
-                        contentDescription = null,
-                        tint = Color(0xFF75808A),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = distanceText,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF75808A)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Action buttons
-            Row {
-                if (!atm.phone.isNullOrEmpty()) {
-                    IconButton(onClick = onDialPhoneButtonClicked) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_call),
-                            contentDescription = stringResource(R.string.call),
-                            tint = Color(0xFF191C1F)
-                        )
-                    }
-                }
-
-                if (atm.hasCoordinates() || !atm.googleMaps.isNullOrBlank()) {
-                    IconButton(onClick = onNavigationButtonClicked) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_direction),
-                            contentDescription = stringResource(R.string.directions),
-                            tint = Color(0xFF191C1F)
-                        )
-                    }
-                }
-
-                if (!atm.website.isNullOrEmpty()) {
-                    IconButton(onClick = onOpenWebsiteButtonClicked) {
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_link),
-                            contentDescription = stringResource(R.string.website),
-                            tint = Color(0xFF191C1F)
-                        )
-                    }
-                }
-            }
+        // ATM details
+        val hasAtmDetails = atm.getDisplayAddress("\n").isNotEmpty() || 
+                           !atm.phone.isNullOrEmpty() || 
+                           !atm.website.isNullOrEmpty()
+        
+        if (hasAtmDetails) {
+            ItemContactDetails(
+                item = atm,
+                isOnline = false,
+                isGrouped = false,
+                onNavigationButtonClicked = onNavigationButtonClicked,
+                onDialPhoneButtonClicked = onDialPhoneButtonClicked,
+                onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked
+            )
         }
     }
 }
+
 
 // Helper functions
 @Composable

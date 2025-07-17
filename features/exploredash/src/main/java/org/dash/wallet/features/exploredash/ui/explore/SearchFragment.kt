@@ -696,6 +696,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
         bottomSheet.state = setBottomSheetState(expand)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         viewModel.selectedItem.value?.let { item ->
             val header =
