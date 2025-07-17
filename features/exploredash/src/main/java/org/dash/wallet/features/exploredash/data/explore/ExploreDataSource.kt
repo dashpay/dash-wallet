@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.data.explore
 
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.ui.explore.DenomOption
 import javax.inject.Inject
@@ -85,11 +87,13 @@ interface ExploreDataSource {
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
+    suspend fun getGiftCardProvidersFor(merchantId: String): List<GiftCardProvider>
 }
 
 open class MerchantAtmDataSource @Inject constructor(
     private val merchantDao: MerchantDao,
-    private val atmDao: AtmDao
+    private val atmDao: AtmDao,
+    private val giftCardProviderDao: GiftCardProviderDao
 ) : ExploreDataSource {
 
     override fun observePhysicalMerchants(
@@ -524,6 +528,10 @@ open class MerchantAtmDataSource @Inject constructor(
                 limit
             )
         }
+    }
+
+    override suspend fun getGiftCardProvidersFor(merchantId: String): List<GiftCardProvider> {
+        return giftCardProviderDao.getProvidersByMerchantId(merchantId)
     }
 
     override fun sanitizeQuery(query: String): String {

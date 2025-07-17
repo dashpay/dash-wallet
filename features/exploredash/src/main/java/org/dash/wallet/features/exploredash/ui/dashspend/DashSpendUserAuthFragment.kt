@@ -33,13 +33,12 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
@@ -187,7 +186,7 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
         binding.continueButton.isClickable = true
     }
 
-    private fun authUser(provider: GiftCardProvider, email: String, isSignIn: Boolean) {
+    private fun authUser(provider: GiftCardProviderType, email: String, isSignIn: Boolean) {
         lifecycleScope.launch {
             var errorMessage: String
 
@@ -229,7 +228,7 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
         }
     }
 
-    private fun verifyEmail(provider: GiftCardProvider, code: String) {
+    private fun verifyEmail(provider: GiftCardProviderType, code: String) {
         lifecycleScope.launch {
             try {
                 val success = viewModel.verifyEmail(provider, code)

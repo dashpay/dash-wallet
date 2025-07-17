@@ -57,13 +57,16 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.applyStyle
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
@@ -156,7 +159,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
 
     // State variables for ItemDetails compose content
-    private var selectedProvider: GiftCardProvider by mutableStateOf(GiftCardProvider.CTX)
+    private var selectedProvider: GiftCardProviderType by mutableStateOf(GiftCardProviderType.CTX)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -256,7 +259,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         getString(R.string.button_okay)
                     ).show(requireActivity()) {
                         if (isAdded) {
-                            showLoginDialog(GiftCardProvider.CTX) // TODO: piggycards token expiration
+                            showLoginDialog(GiftCardProviderType.CTX) // TODO: piggycards token expiration
                         }
                     }
                 }
@@ -396,7 +399,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun showLoginDialog(provider: GiftCardProvider) {
+    private fun showLoginDialog(provider: GiftCardProviderType) {
         DashSpendLoginInfoDialog(provider.logo).show(
             requireActivity(),
             onResult = {
@@ -608,6 +611,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.state = setBottomSheetState(isOnline)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreBottomContentBackground)
 
         binding.itemDetails.isVisible = true
         binding.upButton.isVisible = false
@@ -652,6 +656,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
         bottomSheet.state = setBottomSheetState(bottomSheetWasExpanded)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         if (binding.searchResults.itemDecorationCount < 1) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
@@ -929,8 +934,12 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             userEmail = state.email,
             selectedProvider = selectedProvider,
             onProviderSelected = { provider ->
-                selectedProvider = provider
-                dashSpendViewModel.observeDashSpendState(provider)
+                selectedProvider = if (provider.provider == GiftCardProviderType.CTX.name) {
+                    GiftCardProviderType.CTX
+                } else {
+                    GiftCardProviderType.PiggyCards
+                }
+                dashSpendViewModel.observeDashSpendState(selectedProvider)
             },
             onSendDashClicked = { isPayingWithDash ->
                 if (isPayingWithDash) {
@@ -966,18 +975,18 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
                 item.website?.let { website -> openWebsite(website) }
             },
-            onBuyGiftCardButtonClicked = { service ->
+            onBuyGiftCardButtonClicked = {
                 lifecycleScope.launch {
-                    if (!dashSpendViewModel.isUserSignedInService(service)) {
-                        showLoginDialog(service)
+                    if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
+                        showLoginDialog(selectedProvider)
                     } else {
                         openPurchaseGiftCardFragment() // TODO: service
                     }
                 }
             },
-            onExploreLogOutClicked = { provider ->
+            onExploreLogOutClicked = {
                 lifecycleScope.launch {
-                    dashSpendViewModel.logout(provider)
+                    dashSpendViewModel.logout(selectedProvider)
                 }
             }
         )

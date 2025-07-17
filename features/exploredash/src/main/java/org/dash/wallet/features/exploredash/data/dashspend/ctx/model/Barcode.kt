@@ -14,13 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.ctxspend.model
 
-import com.google.gson.annotations.SerializedName
+package org.dash.wallet.features.exploredash.data.dashspend.ctx.model
 
-data class PurchaseGiftCardRequest(
-    @SerializedName("cryptoCurrency") val cryptoCurrency: String? = null,
-    @SerializedName("fiatAmount") val fiatAmount: String? = null,
-    @SerializedName("fiatCurrency") val fiatCurrency: String? = null,
-    @SerializedName("merchantId") val merchantId: String? = null
+import com.google.zxing.BarcodeFormat
+
+data class Barcode(
+    val value: String,
+    val barcodeFormat: BarcodeFormat
 )

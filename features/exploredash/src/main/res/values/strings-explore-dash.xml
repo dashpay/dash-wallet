@@ -266,4 +266,6 @@
     <string name="call">Call</string>
     <string name="directions">Directions</string>
     <string name="explore_show_all_locations">Show all locations (%d)</string>
+    <string name="provider">Provider</string>
+    <string name="save">Save</string>
 </resources>

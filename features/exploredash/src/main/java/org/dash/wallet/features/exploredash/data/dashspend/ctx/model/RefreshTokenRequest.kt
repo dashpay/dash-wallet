@@ -1,4 +1,4 @@
-package org.dash.wallet.features.exploredash.data.ctxspend.model
+package org.dash.wallet.features.exploredash.data.dashspend.ctx.model
 
 import com.google.gson.annotations.SerializedName
 

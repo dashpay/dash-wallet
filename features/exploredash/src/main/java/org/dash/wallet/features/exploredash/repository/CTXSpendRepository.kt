@@ -21,11 +21,11 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
-import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
-import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
-import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGiftCardRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.VerifyEmailRequest
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig

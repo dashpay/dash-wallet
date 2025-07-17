@@ -17,7 +17,7 @@
 
 package org.dash.wallet.features.exploredash.repository
 
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.PiggyCardsRemoteDataSource
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
@@ -34,10 +34,10 @@ class DashSpendRepositoryFactory @Inject constructor(
     private val ctxSpendConfig: CTXSpendConfig,
     private val piggyCardsConfig: PiggyCardsConfig
 ) {
-    fun create(provider: GiftCardProvider): DashSpendRepository {
+    fun create(provider: GiftCardProviderType): DashSpendRepository {
         return when (provider) {
-            GiftCardProvider.CTX -> createCTXSpend()
-            GiftCardProvider.PiggyCards -> createPiggyCardsRepository()
+            GiftCardProviderType.CTX -> createCTXSpend()
+            GiftCardProviderType.PiggyCards -> createPiggyCardsRepository()
         }
     }
 

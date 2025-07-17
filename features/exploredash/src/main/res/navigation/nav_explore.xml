@@ -78,7 +78,7 @@
 
         <argument
             android:name="service"
-            app:argType="org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider" />
+            app:argType="org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType" />
     </fragment>
 
     <fragment

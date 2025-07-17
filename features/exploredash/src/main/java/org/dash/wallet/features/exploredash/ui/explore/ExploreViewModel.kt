@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
+import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
@@ -374,19 +375,26 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        _selectedItem.value = merchant
-
-        if (isGrouped) {
-            if (canShowNearestLocation(merchant)) {
-                // Opening details screen
-                nearestLocation = merchant
-                _screenState.postValue(ScreenState.DetailsGrouped)
-            } else {
-                // Opening all merchant locations screen
-                openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+        viewModelScope.launch {
+            merchant.merchantId?.let { id ->
+                val providers = exploreData.getGiftCardProvidersFor(id)
+                merchant.giftCardProviders = providers
             }
-        } else {
-            _screenState.postValue(ScreenState.Details)
+
+            _selectedItem.value = merchant
+
+            if (isGrouped) {
+                if (canShowNearestLocation(merchant)) {
+                    // Opening details screen
+                    nearestLocation = merchant
+                    _screenState.postValue(ScreenState.DetailsGrouped)
+                } else {
+                    // Opening all merchant locations screen
+                    openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                }
+            } else {
+                _screenState.postValue(ScreenState.Details)
+            }
         }
     }
 

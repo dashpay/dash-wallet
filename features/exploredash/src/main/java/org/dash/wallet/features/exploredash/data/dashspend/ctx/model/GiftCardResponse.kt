@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.ctxspend.model
+package org.dash.wallet.features.exploredash.data.dashspend.ctx.model
 
 import com.google.gson.annotations.SerializedName
 

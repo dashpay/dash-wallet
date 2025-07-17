@@ -45,10 +45,10 @@ import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
@@ -84,10 +84,10 @@ class DashSpendViewModel @Inject constructor(
 
     private var stateTrackingJob: Job? = null
 
-    private val providers: Map<GiftCardProvider, DashSpendRepository> by lazy {
+    private val providers: Map<GiftCardProviderType, DashSpendRepository> by lazy {
         mapOf(
-            GiftCardProvider.CTX to repositoryFactory.create(GiftCardProvider.CTX),
-            GiftCardProvider.PiggyCards to repositoryFactory.create(GiftCardProvider.PiggyCards)
+            GiftCardProviderType.CTX to repositoryFactory.create(GiftCardProviderType.CTX),
+            GiftCardProviderType.PiggyCards to repositoryFactory.create(GiftCardProviderType.PiggyCards)
         )
     }
 
@@ -230,7 +230,7 @@ class DashSpendViewModel @Inject constructor(
             !purchaseAmount.isGreaterThan(maxCardPurchaseFiat)
     }
 
-    fun observeDashSpendState(provider: GiftCardProvider?) {
+    fun observeDashSpendState(provider: GiftCardProviderType?) {
         val serviceRepository = providers[provider]
         stateTrackingJob?.cancel()
 
@@ -249,23 +249,23 @@ class DashSpendViewModel @Inject constructor(
             }.launchIn(viewModelScope)
     }
 
-    suspend fun isUserSignedInService(provider: GiftCardProvider): Boolean {
+    suspend fun isUserSignedInService(provider: GiftCardProviderType): Boolean {
         return providers[provider]?.isUserSignedIn() == true
     }
 
-    suspend fun signUp(provider: GiftCardProvider, email: String): Boolean {
+    suspend fun signUp(provider: GiftCardProviderType, email: String): Boolean {
         return providers[provider]?.signup(email) == true
     }
 
-    suspend fun signIn(provider: GiftCardProvider, email: String): Boolean {
+    suspend fun signIn(provider: GiftCardProviderType, email: String): Boolean {
         return providers[provider]?.login(email) == true
     }
 
-    suspend fun verifyEmail(provider: GiftCardProvider, code: String): Boolean {
+    suspend fun verifyEmail(provider: GiftCardProviderType, code: String): Boolean {
         return providers[provider]?.verifyEmail(code) == true
     }
 
-    suspend fun logout(provider: GiftCardProvider) {
+    suspend fun logout(provider: GiftCardProviderType) {
         providers[provider]?.logout()
     }
 

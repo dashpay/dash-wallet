@@ -52,7 +52,7 @@ import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.deepLinkNavigate
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.ctxspend.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.slf4j.LoggerFactory

@@ -16,8 +16,8 @@
  */
 package org.dash.wallet.features.exploredash.network.service.ctxspend
 
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenRequest
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenResponse
 import retrofit2.http.Body
 import retrofit2.http.POST
 

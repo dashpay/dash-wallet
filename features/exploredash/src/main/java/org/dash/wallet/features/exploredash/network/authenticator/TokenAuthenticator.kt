@@ -23,8 +23,8 @@ import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenRequest
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenResponse
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import javax.inject.Inject
