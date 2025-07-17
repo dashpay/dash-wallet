@@ -374,27 +374,25 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        viewModelScope.launch {
-            merchant.merchantId?.let { id ->
-                val providers = exploreData.getGiftCardProvidersFor(id)
+    suspend fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
+        merchant.merchantId?.let { id ->
+            val providers = exploreData.getGiftCardProvidersFor(id)
                 merchant.giftCardProviders = providers
-            }
+        }
 
-            _selectedItem.value = merchant
+        _selectedItem.value = merchant
 
-            if (isGrouped) {
-                if (canShowNearestLocation(merchant)) {
-                    // Opening details screen
-                    nearestLocation = merchant
-                    _screenState.postValue(ScreenState.DetailsGrouped)
-                } else {
-                    // Opening all merchant locations screen
-                    openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                }
+        if (isGrouped) {
+            if (canShowNearestLocation(merchant)) {
+                // Opening details screen
+                nearestLocation = merchant
+                _screenState.postValue(ScreenState.DetailsGrouped)
             } else {
-                _screenState.postValue(ScreenState.Details)
+                // Opening all merchant locations screen
+                openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
             }
+        } else {
+            _screenState.postValue(ScreenState.Details)
         }
     }
 
@@ -412,7 +410,7 @@ class ExploreViewModel @Inject constructor(
         this.allMerchantLocationsJob?.cancel()
     }
 
-    fun onMapMarkerSelected(id: Int) {
+    suspend fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id }
             ?: _physicalSearchResults.value?.firstOrNull { it.id == id }
         item?.let {
@@ -481,7 +479,9 @@ class ExploreViewModel @Inject constructor(
         val openedLocation = nearestLocation
 
         if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
-            openMerchantDetails(openedLocation, true)
+            viewModelScope.launch {
+                openMerchantDetails(openedLocation, true)
+            }
         }
     }
 
