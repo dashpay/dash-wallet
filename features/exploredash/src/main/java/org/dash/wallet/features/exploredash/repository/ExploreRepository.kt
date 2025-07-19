@@ -157,8 +157,8 @@ class GCExploreDatabase @Inject constructor(
     override fun getDatabaseInputStream(file: File): InputStream? {
         val zipFile = ZipFile(file)
         val comment = extractComment(zipFile)
-        updateTimestampCache = 1751998996541//comment[0].toLong()
-        val checksum = "abf588d"//comment[1]
+        updateTimestampCache = comment[0].toLong()
+        val checksum = comment[1]
         log.info("package timestamp {}, checksum {}", updateTimestampCache, checksum)
         zipFile.setPassword(checksum.toCharArray())
         val zipHeader = zipFile.getFileHeader("explore.db")
