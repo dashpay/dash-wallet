@@ -14,15 +14,19 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.piggycards.model
+package org.dash.wallet.features.exploredash.data.dashspend.piggycards.model
 
 import com.google.gson.annotations.SerializedName
 
-data class LoginResponse(
-    @SerializedName("access_token")
-    val accessToken: String,
-    @SerializedName("token_type")
-    val tokenType: String,
-    @SerializedName("expires_in")
-    val expiresIn: Int
+data class SignupRequest(
+    @SerializedName("firstName")
+    val firstName: String,
+    @SerializedName("lastName")
+    val lastName: String,
+    @SerializedName("email")
+    val email: String,
+    @SerializedName("country")
+    val country: String,
+    @SerializedName("state")
+    val state: String? = null
 )

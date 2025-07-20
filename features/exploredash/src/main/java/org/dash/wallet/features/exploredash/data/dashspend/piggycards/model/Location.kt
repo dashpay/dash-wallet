@@ -14,11 +14,17 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.piggycards.model
+package org.dash.wallet.features.exploredash.data.dashspend.piggycards.model
 
 import com.google.gson.annotations.SerializedName
 
-data class VerifyOtpResponse(
-    @SerializedName("generatedPassword")
-    val generatedPassword: String
+data class Location(
+    @SerializedName("id")
+    val id: String,
+    @SerializedName("address")
+    val address: String,
+    @SerializedName("latitude")
+    val latitude: Double,
+    @SerializedName("longitude")
+    val longitude: Double
 )

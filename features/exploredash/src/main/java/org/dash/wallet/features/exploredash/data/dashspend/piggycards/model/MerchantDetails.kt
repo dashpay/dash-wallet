@@ -14,21 +14,25 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.piggycards.model
+package org.dash.wallet.features.exploredash.data.dashspend.piggycards.model
 
 import com.google.gson.annotations.SerializedName
 
-data class OrderRequest(
-    @SerializedName("merchantId")
-    val merchantId: String,
-    @SerializedName("amount")
-    val amount: Double,
-    @SerializedName("email")
-    val email: String,
+data class MerchantDetails(
+    @SerializedName("id")
+    val id: String,
     @SerializedName("name")
     val name: String,
-    @SerializedName("ipAddress")
-    val ipAddress: String?,
-    @SerializedName("location")
-    val location: String?
+    @SerializedName("discount")
+    val discount: Double?,
+    @SerializedName("imageUrl")
+    val imageUrl: String?,
+    @SerializedName("fixedDenominations")
+    val fixedDenominations: List<Double>?,
+    @SerializedName("variableDenomination")
+    val variableDenomination: Boolean,
+    @SerializedName("minAmount")
+    val minAmount: Double?,
+    @SerializedName("maxAmount")
+    val maxAmount: Double?
 )
