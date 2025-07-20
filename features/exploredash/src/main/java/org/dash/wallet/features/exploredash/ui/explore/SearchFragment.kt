@@ -167,15 +167,14 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.halfExpandedRatio =
-            ResourcesCompat.getFloat(
-                resources,
-                if (args.type == ExploreTopic.Merchants) {
-                    R.dimen.merchant_half_expanded_ratio
-                } else {
-                    R.dimen.atm_half_expanded_ratio
-                }
-            )
+        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(
+            resources,
+            if (args.type == ExploreTopic.Merchants) {
+                R.dimen.merchant_half_expanded_ratio
+            } else {
+                R.dimen.atm_half_expanded_ratio
+            }
+        )
 
         searchHeaderAdapter = SearchHeaderAdapter(args.type)
         setupBackNavigation()
@@ -203,8 +202,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
             }
         }
-
-        dashSpendViewModel.observeDashSpendState(selectedProvider)
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             val item = viewModel.selectedItem.value
@@ -523,6 +520,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
                 binding.toolbarTitle.text = item.name
+
+                if (item is Merchant && item.giftCardProviders.size == 1) {
+                    selectedProvider = GiftCardProviderType.fromProviderName(item.giftCardProviders.first().provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                }
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
@@ -937,11 +939,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             userEmail = state.email,
             selectedProvider = selectedProvider,
             onProviderSelected = { provider ->
-                selectedProvider = if (provider.provider == GiftCardProviderType.CTX.name) {
-                    GiftCardProviderType.CTX
-                } else {
-                    GiftCardProviderType.PiggyCards
-                }
+                selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
                 dashSpendViewModel.observeDashSpendState(selectedProvider)
             },
             onSendDashClicked = { isPayingWithDash ->

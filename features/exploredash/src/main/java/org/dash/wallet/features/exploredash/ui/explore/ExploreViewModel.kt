@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
-import android.util.Log
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*

@@ -25,4 +25,14 @@ sealed class GiftCardProviderType(
         R.string.log_in_to_piggycards_account_desc,
         "https://piggy.cards/index.php?route=information/information&information_id=5"
     )
+
+    companion object {
+        fun fromProviderName(name: String): GiftCardProviderType {
+            return when(name) {
+                CTX.name -> CTX
+                PiggyCards.name -> PiggyCards
+                else -> CTX
+            }
+        }
+    }
 }
