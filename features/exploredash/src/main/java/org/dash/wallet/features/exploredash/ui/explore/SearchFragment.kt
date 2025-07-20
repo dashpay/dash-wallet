@@ -203,6 +203,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             }
         }
 
+        dashSpendViewModel.observeDashSpendState(selectedProvider)
+
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             val item = viewModel.selectedItem.value
             val isOnline = item?.type == MerchantType.ONLINE
