@@ -1,4 +1,9 @@
-Dash Wallet
+Dash Wallet / DashPay
+
+v11.3.1
+* fix bug re: refreshing CTX tokens
+* simplify Contact Support (uncheck append wallet dump)
+
 v11.3.0
 * Improve Frequent Contacts list display time
 * DashSpend: Refresh CTX tokens
