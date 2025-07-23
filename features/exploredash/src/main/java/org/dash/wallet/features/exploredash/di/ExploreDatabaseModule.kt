@@ -26,6 +26,7 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.ExploreDatabase
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import javax.inject.Singleton
@@ -40,12 +41,17 @@ object ExploreDatabaseModule {
     }
 
     @Provides
-    fun provideMerchantDao(a2Database: ExploreDatabase): MerchantDao {
-        return a2Database.merchantDao()
+    fun provideMerchantDao(database: ExploreDatabase): MerchantDao {
+        return database.merchantDao()
     }
 
     @Provides
-    fun provideAtmDao(a2Database: ExploreDatabase): AtmDao {
-        return a2Database.atmDao()
+    fun provideAtmDao(database: ExploreDatabase): AtmDao {
+        return database.atmDao()
+    }
+
+    @Provides
+    fun provideGiftCardDao(database: ExploreDatabase): GiftCardProviderDao {
+        return database.giftCardProviderDao()
     }
 }

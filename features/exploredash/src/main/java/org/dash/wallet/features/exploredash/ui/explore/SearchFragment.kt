@@ -40,6 +40,14 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import android.content.Intent
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
@@ -49,17 +57,21 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.applyStyle
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
@@ -146,21 +158,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
 
+    // State variables for ItemDetails compose content
+    private var selectedProvider: GiftCardProviderType by mutableStateOf(GiftCardProviderType.CTX)
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.halfExpandedRatio =
-            ResourcesCompat.getFloat(
-                resources,
-                if (args.type == ExploreTopic.Merchants) {
-                    R.dimen.merchant_half_expanded_ratio
-                } else {
-                    R.dimen.atm_half_expanded_ratio
-                }
-            )
+        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(
+            resources,
+            if (args.type == ExploreTopic.Merchants) {
+                R.dimen.merchant_half_expanded_ratio
+            } else {
+                R.dimen.atm_half_expanded_ratio
+            }
+        )
 
         searchHeaderAdapter = SearchHeaderAdapter(args.type)
         setupBackNavigation()
@@ -188,6 +202,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
             }
         }
+
+        dashSpendViewModel.observeDashSpendState(selectedProvider)
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             val item = viewModel.selectedItem.value
@@ -244,7 +260,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         getString(R.string.button_okay)
                     ).show(requireActivity()) {
                         if (isAdded) {
-                            showLoginDialog(GiftCardProvider.CTX) // TODO: piggycards token expiration
+                            showLoginDialog(GiftCardProviderType.CTX) // TODO: piggycards token expiration
                         }
                     }
                 }
@@ -384,7 +400,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun showLoginDialog(provider: GiftCardProvider) {
+    private fun showLoginDialog(provider: GiftCardProviderType) {
         DashSpendLoginInfoDialog(provider.logo).show(
             requireActivity(),
             onResult = {
@@ -493,63 +509,28 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupItemDetails() {
-        binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
-            if (isPayingWithDash) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-            }
-
-            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-        }
-        binding.itemDetails.setOnReceiveDashClicked {
-            deepLinkNavigate(
-                DeepLinkDestination.ReceiveDash(source = "explore")
-            )
-        }
-        binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
-        binding.itemDetails.setOnShowAllLocationsClicked {
-            viewModel.selectedItem.value?.let { merchant ->
-                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                    viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                }
+        // Set up the ComposeView with proper lifecycle strategy
+        binding.itemDetails.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        binding.itemDetails.setContent {
+            val item by viewModel.selectedItem.collectAsStateWithLifecycle()
+            item?.let {
+                ItemDetailsComposable(it)
             }
         }
 
-        binding.itemDetails.setOnDashSpendLogOutClicked { provider ->
-            lifecycleScope.launch {
-                dashSpendViewModel.logout(provider)
-            }
-        }
-
-        binding.itemDetails.setGiftCardProviderPicked { provider ->
-            dashSpendViewModel.observeDashSpendState(provider)
-        }
-
+        // Observe selected item changes
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
-                binding.itemDetails.bindItem(item)
                 binding.toolbarTitle.text = item.name
+
+                if (item is Merchant && item.giftCardProviders.size == 1) {
+                    selectedProvider = GiftCardProviderType.fromProviderName(item.giftCardProviders.first().provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                }
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
         }
-
-        binding.itemDetails.setOnBuyGiftCardButtonClicked { service ->
-            lifecycleScope.launch {
-                if (!dashSpendViewModel.isUserSignedInService(service)) {
-                    showLoginDialog(service)
-                } else {
-                    openPurchaseGiftCardFragment() // TODO: service
-                }
-            }
-        }
-
-        dashSpendViewModel.dashSpendState.observe(viewLifecycleOwner) { state ->
-            lifecycleScope.launch {
-                binding.itemDetails.setDashSpendUser(state.email, state.isLoggedIn)
-            }
-        }
-
-        trackMerchantDetailsEvents(binding)
     }
 
     private fun setupScreenTransitions() {
@@ -636,6 +617,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.state = setBottomSheetState(isOnline)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreBottomContentBackground)
 
         binding.itemDetails.isVisible = true
         binding.upButton.isVisible = false
@@ -643,19 +625,34 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
         val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 0f)
-        val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 1f)
-        AnimatorSet()
-            .apply {
-                playTogether(animResults, animBackButton, animDrag, animDetails)
-                duration = 200
-                doOnEnd {
-                    binding.searchResults.isVisible = false
-                    binding.dragIndicator.isVisible = false
-                    binding.backToNearestBtn.isVisible = false
+        
+        // Keep drag indicator visible if bottom sheet is draggable
+        if (bottomSheet.isDraggable) {
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
                 }
-            }
-            .start()
+                .start()
+        } else {
+            val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDrag, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.dragIndicator.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
+                }
+                .start()
+        }
     }
 
     private fun transitToSearchResults() {
@@ -665,6 +662,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
         bottomSheet.state = setBottomSheetState(bottomSheetWasExpanded)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         if (binding.searchResults.itemDecorationCount < 1) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
@@ -704,12 +702,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
         bottomSheet.state = setBottomSheetState(expand)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         viewModel.selectedItem.value?.let { item ->
             val header =
                 MerchantLocationsHeaderAdapter(
                     item.name ?: "",
-                    binding.itemDetails.getMerchantType(item.type),
+                    getMerchantType(item.type),
                     item.logoLocation ?: ""
                 )
 
@@ -866,8 +865,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
         val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
             viewModel.isLocationEnabled.value == true
+        val locationEnabled = viewModel.isLocationEnabled.value == true
+        val isOnlineMerchant = viewModel.selectedItem.value?.type == MerchantType.ONLINE
 
-        return !isDetails && nearbySearch
+        return (isDetails && !isOnlineMerchant) || (!isDetails && nearbySearch && locationEnabled)
     }
 
     @BottomSheetBehavior.State
@@ -885,26 +886,112 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
-        binding.itemDetails.setOnDialPhoneButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-            }
-        }
-
-        binding.itemDetails.setOnOpenWebsiteButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-            }
-        }
-    }
-
     private suspend fun updateIsEnabled(merchant: Merchant) {
         val wasEnabled = merchant.active
         dashSpendViewModel.updateMerchantDetails(merchant)
 
         if (merchant.active != wasEnabled) {
-            binding.itemDetails.bindItem(merchant)
+            viewModel.updateSelectedItem(merchant)
         }
+    }
+
+    private fun openMaps(item: SearchResult) {
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+        }
+
+        uri?.let {
+            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
+            startActivity(intent)
+        }
+    }
+
+    private fun dialPhone(phone: String) {
+        val intent = Intent(Intent.ACTION_DIAL, "tel: $phone".toUri())
+        startActivity(intent)
+    }
+
+    private fun openWebsite(website: String) {
+        val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
+        val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
+        startActivity(intent)
+    }
+
+    private fun getMerchantType(type: String?): String {
+        return when (cleanMerchantTypeValue(type)) {
+            MerchantType.ONLINE -> getString(R.string.explore_online_merchant)
+            MerchantType.PHYSICAL -> getString(R.string.explore_physical_merchant)
+            MerchantType.BOTH -> getString(R.string.explore_both_types_merchant)
+            else -> ""
+        }
+    }
+
+    private fun cleanMerchantTypeValue(value: String?): String? {
+        return value?.trim()?.lowercase()?.replace(" ", "_")
+    }
+
+    @Composable
+    private fun ItemDetailsComposable(item: SearchResult) {
+        val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
+        ItemDetails(
+            item = item,
+            isLoggedIn = state.isLoggedIn,
+            userEmail = state.email,
+            selectedProvider = selectedProvider,
+            onProviderSelected = { provider ->
+                selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
+                dashSpendViewModel.observeDashSpendState(selectedProvider)
+            },
+            onSendDashClicked = { isPayingWithDash ->
+                if (isPayingWithDash) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                }
+                deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+            },
+            onReceiveDashClicked = {
+                deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+            },
+            onShowAllLocationsClicked = {
+                viewModel.selectedItem.value?.let { merchant ->
+                    if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                        viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                    }
+                }
+            },
+            onBackButtonClicked = {
+                viewModel.backFromMerchantLocation()
+            },
+            onNavigationButtonClicked = {
+                openMaps(item)
+            },
+            onDialPhoneButtonClicked = {
+                if (isMerchantTopic) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                }
+                item.phone?.let { phone -> dialPhone(phone) }
+            },
+            onOpenWebsiteButtonClicked = {
+                if (isMerchantTopic) {
+                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                }
+                item.website?.let { website -> openWebsite(website) }
+            },
+            onBuyGiftCardButtonClicked = {
+                lifecycleScope.launch {
+                    if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
+                        showLoginDialog(selectedProvider)
+                    } else {
+                        openPurchaseGiftCardFragment() // TODO: service
+                    }
+                }
+            },
+            onExploreLogOutClicked = {
+                lifecycleScope.launch {
+                    dashSpendViewModel.logout(selectedProvider)
+                }
+            }
+        )
     }
 }

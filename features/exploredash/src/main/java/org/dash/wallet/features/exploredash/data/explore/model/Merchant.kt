@@ -20,12 +20,7 @@ package org.dash.wallet.features.exploredash.data.explore.model
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
-
-data class GiftCardProviderInfo(
-    val providerId: String,
-    val savingsPercentage: Int,
-    val denominationsType: String
-)
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 
 object PaymentMethod {
     const val DASH = "dash"
@@ -61,7 +56,7 @@ data class Merchant(
     @Ignore var physicalAmount: Int = 0,
     @Ignore var fixedDenomination: Boolean = false,
     @Ignore var denominations: List<Int> = listOf(),
-    @Ignore var giftCardProviders: List<GiftCardProviderInfo> = listOf()
+    @Ignore var giftCardProviders: List<GiftCardProvider> = listOf()
 ) : SearchResult() {
 
     // 1% discount is 0.01

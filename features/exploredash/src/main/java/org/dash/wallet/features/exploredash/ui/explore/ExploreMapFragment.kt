@@ -39,6 +39,7 @@ import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
@@ -226,7 +227,9 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                viewModel.onMapMarkerSelected(marker.tag as Int)
+                lifecycleScope.launch {
+                    viewModel.onMapMarkerSelected(marker.tag as Int)
+                }
                 true
             }
 

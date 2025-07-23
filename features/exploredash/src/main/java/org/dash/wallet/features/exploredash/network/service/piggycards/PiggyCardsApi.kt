@@ -16,8 +16,18 @@
  */
 package org.dash.wallet.features.exploredash.network.service.piggycards
 
-import org.dash.wallet.features.exploredash.data.piggycards.model.*
-import retrofit2.Response
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Location
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Merchant
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.MerchantDetails
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderResponse
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderStatusResponse
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.SignupRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.SignupResponse
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpResponse
 import retrofit2.http.*
 
 interface PiggyCardsApi {

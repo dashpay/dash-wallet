@@ -497,11 +497,10 @@ class ExploreViewModelTest {
         runBlocking {
             val locationMock = mock<UserLocationStateInt>()
             val dataSource = mock<ExploreDataSource>()
-            val dataSyncStatus =
-                mock<DataSyncStatusService> {
-                    on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
-                    on { hasObservedLastError() } doReturn flow { emit(false) }
-                }
+            val dataSyncStatus = mock<DataSyncStatusService> {
+                on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
+                on { hasObservedLastError() } doReturn flow { emit(false) }
+            }
             val analyticsService = mock<AnalyticsService>()
 
             val viewModel = ExploreViewModel(

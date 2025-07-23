@@ -17,337 +17,935 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.content.Intent
-import android.util.AttributeSet
-import android.view.LayoutInflater
-import android.widget.ImageView
-import android.widget.LinearLayout
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.net.toUri
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
-import androidx.core.view.updateLayoutParams
-import androidx.core.view.updatePaddingRelative
-import coil.load
-import coil.size.Scale
-import coil.transform.RoundedCornersTransformation
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.ui.setRoundedRippleBackground
-import org.dash.wallet.common.util.makeLinks
+import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.*
-import org.dash.wallet.features.exploredash.databinding.ItemDetailsViewBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.util.*
+import java.text.DecimalFormat
+import kotlin.String
 
-class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context, attrs) {
-    private val binding = ItemDetailsViewBinding.inflate(LayoutInflater.from(context), this)
-
-    private var onSendDashClicked: ((isPayingWithDash: Boolean) -> Unit)? = null
-    private var onReceiveDashClicked: (() -> Unit)? = null
-    private var onShowAllLocationsClicked: (() -> Unit)? = null
-    private var onBackButtonClicked: (() -> Unit)? = null
-    private var onNavigationButtonClicked: (() -> Unit)? = null
-    private var onDialPhoneButtonClicked: (() -> Unit)? = null
-    private var onOpenWebsiteButtonClicked: (() -> Unit)? = null
-    private var onBuyGiftCardButtonClicked: ((GiftCardProvider) -> Unit)? = null
-    private var onExploreLogOutClicked: ((GiftCardProvider) -> Unit)? = null
-    private var giftCardProviderPicked: ((GiftCardProvider?) -> Unit)? = null
-
-    private var isLoggedIn = false
-    private var isAtm = false
-
-    var log: Logger = LoggerFactory.getLogger(ItemDetails::class.java)
-
-    init {
-        orientation = VERTICAL
-        val horizontalPadding = resources.getDimensionPixelOffset(R.dimen.details_horizontal_margin)
-        updatePaddingRelative(start = horizontalPadding, end = horizontalPadding)
-    }
-
-    fun bindItem(item: SearchResult) {
-        if (item is Merchant) {
-            isAtm = false
-            bindMerchantDetails(item)
-            refreshEmailVisibility()
-        } else if (item is Atm) {
-            isAtm = true
-            bindAtmDetails(item)
+@Composable
+fun ItemDetails(
+    item: SearchResult,
+    modifier: Modifier = Modifier,
+    isLoggedIn: Boolean = false,
+    userEmail: String? = null,
+    selectedProvider: GiftCardProviderType,
+    onProviderSelected: (GiftCardProvider) -> Unit = {},
+    onSendDashClicked: (Boolean) -> Unit = {},
+    onReceiveDashClicked: () -> Unit = {},
+    onShowAllLocationsClicked: () -> Unit = {},
+    onBackButtonClicked: () -> Unit = {},
+    onNavigationButtonClicked: () -> Unit = {},
+    onDialPhoneButtonClicked: () -> Unit = {},
+    onOpenWebsiteButtonClicked: () -> Unit = {},
+    onBuyGiftCardButtonClicked: () -> Unit = {},
+    onExploreLogOutClicked: () -> Unit = {}
+) {
+    when (item) {
+        is Merchant -> {
+            MerchantDetailsContent(
+                merchant = item,
+                isLoggedIn = isLoggedIn,
+                userEmail = userEmail,
+                selectedProvider = selectedProvider,
+                onProviderSelected = onProviderSelected,
+                onSendDashClicked = onSendDashClicked,
+                onShowAllLocationsClicked = onShowAllLocationsClicked,
+                onBackButtonClicked = onBackButtonClicked,
+                onNavigationButtonClicked = onNavigationButtonClicked,
+                onDialPhoneButtonClicked = onDialPhoneButtonClicked,
+                onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked,
+                onBuyGiftCardButtonClicked = onBuyGiftCardButtonClicked,
+                onExploreLogOutClicked = onExploreLogOutClicked,
+                modifier = modifier
+            )
         }
-    }
-
-    fun setOnSendDashClicked(listener: (Boolean) -> Unit) {
-        onSendDashClicked = listener
-    }
-
-    fun setOnShowAllLocationsClicked(listener: () -> Unit) {
-        onShowAllLocationsClicked = listener
-    }
-
-    fun setOnReceiveDashClicked(listener: () -> Unit) {
-        onReceiveDashClicked = listener
-    }
-
-    fun setOnBackButtonClicked(listener: () -> Unit) {
-        onBackButtonClicked = listener
-    }
-
-    fun setOnNavigationButtonClicked(listener: () -> Unit) {
-        onNavigationButtonClicked = listener
-    }
-
-    fun setOnDialPhoneButtonClicked(listener: () -> Unit) {
-        onDialPhoneButtonClicked = listener
-    }
-
-    fun setOnOpenWebsiteButtonClicked(listener: () -> Unit) {
-        onOpenWebsiteButtonClicked = listener
-    }
-    
-    fun setOnBuyGiftCardButtonClicked(listener: (GiftCardProvider) -> Unit) {
-        onBuyGiftCardButtonClicked = listener
-    }
-
-    fun setOnDashSpendLogOutClicked(listener: (GiftCardProvider) -> Unit) {
-        onExploreLogOutClicked = listener
-    }
-
-    fun setGiftCardProviderPicked(listener: (GiftCardProvider?) -> Unit) {
-        giftCardProviderPicked = listener
-    }
-
-    @SuppressLint("SetTextI18n")
-    fun setDashSpendUser(email: String?, userSignIn: Boolean) {
-        isLoggedIn = email?.isNotEmpty() == true && userSignIn
-        refreshEmailVisibility()
-        email?.let {
-            binding.loginExploreUser.text =
-                context.resources.getString(R.string.logged_in_as, email.maskEmail()) +
-                " " +
-                context.resources.getString(R.string.log_out)
-
-            binding.loginExploreUser.makeLinks(
-                Pair(
-                    context.resources.getString(R.string.log_out),
-                    OnClickListener {
-                        onExploreLogOutClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
-                        binding.loginExploreUser.isGone = true
-                    }
-                ),
-                isUnderlineText = true
+        is Atm -> {
+            AtmDetailsContent(
+                atm = item,
+                onSendDashClicked = onSendDashClicked,
+                onReceiveDashClicked = onReceiveDashClicked,
+                onNavigationButtonClicked = onNavigationButtonClicked,
+                onDialPhoneButtonClicked = onDialPhoneButtonClicked,
+                onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked,
+                modifier = modifier
             )
         }
     }
+}
 
-    fun getMerchantType(type: String?): String {
-        return when (cleanMerchantTypeValue(type)) {
-            MerchantType.ONLINE -> resources.getString(R.string.explore_online_merchant)
-            MerchantType.PHYSICAL -> resources.getString(R.string.explore_physical_merchant)
-            MerchantType.BOTH -> resources.getString(R.string.explore_both_types_merchant)
-            else -> ""
-        }
-    }
+@Composable
+private fun MerchantDetailsContent(
+    merchant: Merchant,
+    isLoggedIn: Boolean,
+    userEmail: String?,
+    selectedProvider: GiftCardProviderType,
+    onProviderSelected: (GiftCardProvider) -> Unit,
+    onSendDashClicked: (Boolean) -> Unit,
+    onShowAllLocationsClicked: () -> Unit,
+    onBackButtonClicked: () -> Unit,
+    onNavigationButtonClicked: () -> Unit,
+    onDialPhoneButtonClicked: () -> Unit,
+    onOpenWebsiteButtonClicked: () -> Unit,
+    onBuyGiftCardButtonClicked: () -> Unit,
+    onExploreLogOutClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isOnline = merchant.type == MerchantType.ONLINE
+    val isGrouped = merchant.physicalAmount > 0
+    val isDash = merchant.paymentMethod?.trim()?.lowercase() == PaymentMethod.DASH
+    val hasMultipleProviders = merchant.giftCardProviders.size > 1
 
-    private fun bindCommonDetails(item: SearchResult, isOnline: Boolean) {
-        binding.apply {
-            itemName.text = item.name
-            itemAddress.text = item.getDisplayAddress("\n")
-
-            val isMetric = Locale.getDefault().isMetric
-            val distanceStr = item.getDistanceStr(isMetric)
-            itemDistance.text =
-                when {
-                    distanceStr.isEmpty() -> ""
-                    isMetric -> resources.getString(R.string.distance_kilometers, distanceStr)
-                    else -> resources.getString(R.string.distance_miles, distanceStr)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (isOnline) {
+                    Modifier
+                        .fillMaxHeight()
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                } else {
+                    Modifier.padding(horizontal = 20.dp)
                 }
-            itemDistance.isVisible = !isOnline && distanceStr.isNotEmpty()
-
-            linkBtn.isVisible = !item.website.isNullOrEmpty()
-            linkBtn.setOnClickListener {
-                openWebsite(item.website!!)
-                onOpenWebsiteButtonClicked?.invoke()
-            }
-
-            directionBtn.isVisible =
-                !isOnline && ((item.latitude != null && item.longitude != null) || !item.googleMaps.isNullOrBlank())
-            directionBtn.setOnClickListener {
-                openMaps(item)
-                onNavigationButtonClicked?.invoke()
-            }
-
-            callBtn.isVisible = !isOnline && !item.phone.isNullOrEmpty()
-            callBtn.setOnClickListener {
-                dialPhone(item.phone!!)
-                onDialPhoneButtonClicked?.invoke()
+            )
+    ) {
+        // Back button for physical merchants
+        if (!isOnline && !isGrouped) {
+            TextButton(
+                onClick = onBackButtonClicked,
+                modifier = Modifier.padding(bottom = 15.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_small_back_arrow),
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = stringResource(R.string.explore_back_to_locations),
+                    fontSize = 12.sp
+                )
             }
         }
-    }
 
-    private fun bindMerchantDetails(merchant: Merchant) {
-        binding.apply {
-            val isGrouped = merchant.physicalAmount > 0
-            val isOnline = merchant.type == MerchantType.ONLINE
-
-            buySellContainer.isVisible = false
-            locationHint.isVisible = false
-            backButton.isVisible = !isOnline && !isGrouped
-
-            loadImage(merchant.logoLocation, itemImage)
-            itemType.text = getMerchantType(merchant.type)
-            itemAddress.isVisible = !isOnline
-            showAllBtn.isVisible = !isOnline && isGrouped && merchant.physicalAmount > 1
-
-            val isDash = merchant.paymentMethod?.trim()?.lowercase() == PaymentMethod.DASH
-            val drawable =
-                ResourcesCompat.getDrawable(
-                    resources,
-                    if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card_inverted,
-                    null
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                // Merchant header
+                MerchantHeader(
+                    merchant = merchant,
+                    isOnline = isOnline
                 )
-            payBtnIcon.setImageDrawable(drawable)
 
-            if (isDash) {
-                piggyCardsCheckbox.isVisible = false
-                giftCardProviderPicked?.invoke(null)
-                payBtn.isVisible = true
-                payBtnTxt.text = context.getText(R.string.explore_pay_with_dash)
-                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Blue)
-                payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
-                payBtn.isEnabled = merchant.active ?: true
-                temporaryUnavailableText.isVisible = merchant.active == false
-            } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
-                piggyCardsCheckbox.isVisible = true
-                giftCardProviderPicked?.invoke(GiftCardProvider.PiggyCards)
-                piggyCardsCheckbox.setOnClickListener {
-                    giftCardProviderPicked?.invoke(if (piggyCardsCheckbox.isChecked) {
-                        GiftCardProvider.PiggyCards
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (!isDash) {
+                    if (hasMultipleProviders) {
+                        MultipleProvidersSection(
+                            providers = merchant.giftCardProviders,
+                            selectedProvider = selectedProvider,
+                            onProviderSelected = onProviderSelected
+                        )
                     } else {
-                        GiftCardProvider.CTX
-                    })
+                        merchant.giftCardProviders.firstOrNull()?.let { provider ->
+                            SingleProviderSection(
+                                provider = provider,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
                 }
-                payBtn.isVisible = true
-                payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
-                payBtn.setRoundedRippleBackground(R.style.PrimaryButtonTheme_Large_Orange)
-                payBtn.setOnClickListener {
-                    // TODO: multiple gift card options UI
-                    // TODO: when implementing new design for ItemDetails, better to translate this whole class to Compose
-                    onBuyGiftCardButtonClicked?.invoke(if (binding.piggyCardsCheckbox.isChecked) GiftCardProvider.PiggyCards else GiftCardProvider.CTX)
-                }
-                payBtn.isEnabled = merchant.active ?: true
-                temporaryUnavailableText.isVisible = merchant.active == false
-            }
 
-            showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
-            backButton.setOnClickListener { onBackButtonClicked?.invoke() }
-
-            if (isOnline) {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> { matchConstraintPercentHeight = 1f }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_online_margin_top))
-            } else {
-                root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                    matchConstraintPercentHeight =
-                        ResourcesCompat.getFloat(resources, R.dimen.merchant_details_height_ratio)
-                }
-                updatePaddingRelative(top = resources.getDimensionPixelOffset(R.dimen.details_physical_margin_top))
-            }
-
-            bindCommonDetails(merchant, isOnline)
-
-            if (merchant.savingsFraction != 0.0) {
-                binding.discountValue.isVisible = true
-                binding.discountStem.isVisible = true
-                binding.discountValue.text = root.context.getString(
-                    R.string.explore_pay_with_dash_save,
-                    merchant.savingsPercentageAsDouble
+                ActionButton(
+                    merchant = merchant,
+                    isDash = isDash,
+                    onSendDashClicked = onSendDashClicked,
+                    onBuyGiftCardButtonClicked = onBuyGiftCardButtonClicked
                 )
-            } else {
-                binding.discountValue.isVisible = false
-                binding.discountStem.isVisible = false
+
+                // User login status
+                if (isLoggedIn && userEmail != null && !isDash) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    UserLoginStatus(
+                        email = userEmail,
+                        onLogOutClicked = onExploreLogOutClicked
+                    )
+                }
             }
+        }
+
+        // Merchant details (address, phone, website) - only show if there are details
+        val hasAddress = !isOnline && merchant.getDisplayAddress("\n").isNotEmpty()
+        val hasPhone = !merchant.phone.isNullOrEmpty()
+        val hasWebsite = !merchant.website.isNullOrEmpty()
+        val hasShowAllLocations = !isOnline && isGrouped && merchant.physicalAmount > 1
+        
+        if (hasAddress || hasPhone || hasWebsite || hasShowAllLocations) {
+            Spacer(modifier = Modifier.height(16.dp))
+            ItemContactDetails(
+                item = merchant,
+                isOnline = isOnline,
+                isGrouped = isGrouped,
+                onShowAllLocationsClicked = onShowAllLocationsClicked,
+                onNavigationButtonClicked = onNavigationButtonClicked,
+                onDialPhoneButtonClicked = onDialPhoneButtonClicked,
+                onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked
+            )
+        }
+    }
+}
+
+@Composable
+private fun MerchantHeader(
+    merchant: Merchant,
+    isOnline: Boolean
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        AsyncImage(
+            model = merchant.logoLocation ?: "",
+            contentDescription = merchant.name,
+            modifier = Modifier
+                .size(50.dp)
+                .clip(RoundedCornerShape(8.dp)),
+            contentScale = ContentScale.Crop,
+            placeholder = painterResource(id = R.drawable.ic_image_placeholder),
+            error = painterResource(id = R.drawable.ic_image_placeholder)
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = merchant.name ?: "",
+                style = MyTheme.SubtitleSemibold,
+                color = MyTheme.Colors.textPrimary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = getMerchantTypeText(merchant.type, isOnline),
+                style = MyTheme.Caption,
+                color = MyTheme.Colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+private fun MultipleProvidersSection(
+    providers: List<GiftCardProvider>,
+    selectedProvider: GiftCardProviderType,
+    onProviderSelected: (GiftCardProvider) -> Unit
+) {
+    val discountFormat = remember {
+        DecimalFormat().apply {
+            maximumFractionDigits = 2
+            minimumFractionDigits = 0
         }
     }
 
-    private fun bindAtmDetails(atm: Atm) {
-        binding.apply {
-            giftCardProviderPicked?.invoke(null)
-            payBtn.isVisible = false
-            manufacturer.text = atm.manufacturer?.replaceFirstChar { it.uppercase() }
-            itemType.isVisible = false
-            showAllBtn.isVisible = false
-            backButton.isVisible = false
-            buySellContainer.isVisible = true
+    Column {
+        Text(
+            text = stringResource(R.string.select_gift_card_provider),
+            style = MyTheme.CaptionMedium,
+            color = MyTheme.Colors.textSecondary,
+            modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 2.dp)
+        )
 
-            sellBtn.setOnClickListener { onSendDashClicked?.invoke(false) }
-            buyBtn.setOnClickListener { onReceiveDashClicked?.invoke() }
+        Column {
+            for (provider in providers) {
+                ProviderOption(
+                    providerName = provider.provider,
+                    subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+                        stringResource(R.string.flexible_amounts)
+                    } else {
+                        stringResource(R.string.fixed_amounts)
+                    },
+                    discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%",
+                    isSelected = provider.provider == selectedProvider.name,
+                    onSelected = { onProviderSelected(provider) }
+                )
 
-            buyBtn.isVisible = atm.type != AtmType.SELL
-            sellBtn.isVisible = atm.type != AtmType.BUY && !atm.type.isNullOrEmpty()
-
-            root.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                matchConstraintPercentHeight = ResourcesCompat.getFloat(resources, R.dimen.atm_details_height_ratio)
+                Spacer(modifier = Modifier.height(12.dp))
             }
-
-            loadImage(atm.logoLocation, logoImg)
-            loadImage(atm.coverImage, itemImage)
-
-            bindCommonDetails(atm, false)
         }
     }
+}
 
-    private fun loadImage(image: String?, into: ImageView) {
-        if (image.isNullOrEmpty()) {
-            into.isVisible = false
-        } else {
-            into.isVisible = true
-            into.load(image) {
-                crossfade(200)
-                scale(Scale.FILL)
-                placeholder(R.drawable.ic_image_placeholder)
-                error(R.drawable.ic_image_placeholder)
-                transformations(
-                    RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+@Composable
+private fun SingleProviderSection(
+    provider: GiftCardProvider
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        // Provider section
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_gift_card_black),
+                    contentDescription = null,
+                    tint = MyTheme.Colors.textPrimary,
+                    modifier = Modifier.size(18.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.provider),
+                        style = MyTheme.CaptionMedium,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                    Text(
+                        text = provider.provider,
+                        style = MyTheme.Caption,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                }
+            }
+        }
+        
+        // Savings section
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(10.dp),
+            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Save icon
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_percentage),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(18.dp)
+                )
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = stringResource(R.string.save),
+                        style = MyTheme.CaptionMedium,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                    Text(
+                        text = "${provider.savingsPercentage / 100}%",
+                        style = MyTheme.Caption,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProviderOption(
+    providerName: String,
+    subtitle: String,
+    discount: String,
+    isSelected: Boolean,
+    onSelected: () -> Unit
+) {
+    val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
+    val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor, shape = RoundedCornerShape(12.dp))
+            .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+            .clickable { onSelected() }
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = providerName,
+                style = MyTheme.CaptionMedium,
+                color = MyTheme.Colors.textPrimary,
+            )
+            Text(
+                text = subtitle,
+                style = MyTheme.Overline,
+                color = MyTheme.Colors.textTertiary
+            )
+        }
+
+        Text(
+            text = discount,
+            style = MyTheme.Caption,
+            color = MyTheme.Colors.textPrimary
+        )
+
+        RadioButton(
+            selected = isSelected,
+            onClick = onSelected,
+            colors = RadioButtonDefaults.colors(
+                selectedColor = MyTheme.Colors.dashBlue,
+                unselectedColor = MyTheme.Colors.gray
+            )
+        )
+    }
+}
+
+@Composable
+private fun ActionButton(
+    merchant: Merchant,
+    isDash: Boolean,
+    onSendDashClicked: (Boolean) -> Unit,
+    onBuyGiftCardButtonClicked: () -> Unit
+) {
+    val isEnabled = merchant.active ?: true
+    
+    Column {
+        if (!isEnabled) {
+            Text(
+                text = stringResource(R.string.temporarily_unavailable),
+                style = MyTheme.Overline,
+                color = MyTheme.Colors.gray400,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                textAlign = TextAlign.Center
+            )
+        }
+
+        Button(
+            onClick = {
+                if (isDash) {
+                    onSendDashClicked(true)
+                } else {
+                    onBuyGiftCardButtonClicked()
+                }
+            },
+            enabled = isEnabled,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isDash) MyTheme.Colors.dashBlue else MyTheme.Colors.orange,
+                disabledContainerColor = MyTheme.Colors.gray
+            )
+        ) {
+            Icon(
+                painter = painterResource(
+                    id = if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card
+                ),
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = stringResource(
+                    if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
+                ),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+        }
+
+        // Discount badge for Dash payments
+        if (isDash && merchant.savingsFraction != 0.0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .offset(y = (-24).dp)
+                    .background(
+                        color = MyTheme.Colors.textPrimary,
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 5.dp, vertical = 1.dp)
+            ) {
+                Text(
+                    text = stringResource(
+                        R.string.explore_pay_with_dash_save,
+                        merchant.savingsPercentageAsDouble
+                    ),
+                    style = MyTheme.Overline,
+                    color = MyTheme.Colors.backgroundSecondary
                 )
             }
         }
     }
+}
 
-    private fun openMaps(item: SearchResult) {
-        val uri = if (!item.googleMaps.isNullOrBlank()) {
-            item.googleMaps
+@Composable
+private fun UserLoginStatus(
+    email: String,
+    onLogOutClicked: () -> Unit
+) {
+    val annotatedText = buildAnnotatedString {
+        append(stringResource(R.string.logged_in_as, email.maskEmail()))
+        append(" ")
+        pushStringAnnotation(tag = "logout", annotation = "logout")
+        withStyle(
+            SpanStyle(
+                color = Color(0xFF008DE4),
+                textDecoration = TextDecoration.Underline
+            )
+        ) {
+            append(stringResource(R.string.log_out))
+        }
+        pop()
+    }
+
+    Text(
+        text = annotatedText,
+        fontSize = 13.sp,
+        color = Color(0xFF525C66),
+        textAlign = TextAlign.Center,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onLogOutClicked()
+            }
+    )
+}
+
+@Composable
+private fun ItemContactDetails(
+    item: SearchResult,
+    isOnline: Boolean = false,
+    isGrouped: Boolean = false,
+    onShowAllLocationsClicked: () -> Unit = {},
+    onNavigationButtonClicked: () -> Unit,
+    onDialPhoneButtonClicked: () -> Unit,
+    onOpenWebsiteButtonClicked: () -> Unit
+) {
+    val hasAddress = !isOnline && item.getDisplayAddress("\n").isNotEmpty()
+    val hasPhone = !item.phone.isNullOrEmpty()
+    val hasWebsite = !item.website.isNullOrEmpty()
+    
+    Column(modifier = Modifier.fillMaxWidth()) {
+        // Only show card if there are details to display
+        if (hasAddress || hasPhone || hasWebsite) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = if (isOnline) Color.White else MyTheme.Colors.backgroundSecondary
+                )
+            ) {
+                Column(modifier = Modifier.padding(if (isOnline) 6.dp else 10.dp)) {
+                    // Address - only for physical items
+                    if (hasAddress) {
+                        DetailItem(
+                            title = stringResource(R.string.address),
+                            content = item.getDisplayAddress("\n"),
+                            subtitle = getDistanceText(item),
+                            hasAction = item.hasCoordinates() || !item.googleMaps.isNullOrBlank(),
+                            actionIcon = R.drawable.ic_direction,
+                            onActionClick = onNavigationButtonClicked
+                        )
+                    }
+
+                    // Phone
+                    if (hasPhone) {
+                        DetailItem(
+                            title = stringResource(R.string.phone),
+                            content = item.phone!!,
+                            isClickable = true,
+                            onContentClick = onDialPhoneButtonClicked
+                        )
+                    }
+
+                    // Website
+                    if (hasWebsite) {
+                        DetailItem(
+                            title = stringResource(R.string.website),
+                            content = item.website!!,
+                            isClickable = true,
+                            onContentClick = onOpenWebsiteButtonClicked
+                        )
+                    }
+                }
+            }
+        }
+
+        // Show all locations - only for grouped physical merchants
+        if (!isOnline && isGrouped && item is Merchant && item.physicalAmount > 1) {
+            Card(
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary),
+                modifier = Modifier.padding(top = 12.dp)
+            ) {
+                ShowAllLocationsItem(
+                    count = item.physicalAmount,
+                    onClick = onShowAllLocationsClicked
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailItem(
+    title: String,
+    content: String,
+    subtitle: String? = null,
+    isClickable: Boolean = false,
+    hasAction: Boolean = false,
+    actionIcon: Int? = null,
+    onContentClick: (() -> Unit)? = null,
+    onActionClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .then(
+                    if (isClickable && onContentClick != null) {
+                        Modifier.clickable { onContentClick() }
+                    } else {
+                        Modifier
+                    }
+                )
+        ) {
+            Text(
+                text = title,
+                style = MyTheme.Overline,
+                color = MyTheme.Colors.textSecondary
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = content,
+                style = MyTheme.Body2Regular,
+                color = if (isClickable) MyTheme.Colors.dashBlue else MyTheme.Colors.textPrimary
+            )
+
+            if (!subtitle.isNullOrEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = subtitle,
+                    style = MyTheme.Overline,
+                    color = MyTheme.Colors.textSecondary
+                )
+            }
+        }
+
+        if (hasAction && actionIcon != null && onActionClick != null) {
+            Spacer(Modifier.width(8.dp))
+            IconButton(
+                onClick = onActionClick,
+                modifier = Modifier.padding(top = 16.dp).size(22.dp)
+            ) {
+                Icon(
+                    painter = painterResource(id = actionIcon),
+                    contentDescription = null,
+                    tint = Color.Unspecified
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShowAllLocationsItem(
+    count: Int,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 15.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = stringResource(R.string.explore_show_all_locations, count),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF191C1F),
+            modifier = Modifier.weight(1f)
+        )
+        Icon(
+            painter = painterResource(id = R.drawable.ic_show_all),
+            contentDescription = null,
+            tint = MyTheme.Colors.textTertiary
+        )
+    }
+}
+
+@Composable
+private fun AtmDetailsContent(
+    atm: Atm,
+    onSendDashClicked: (Boolean) -> Unit,
+    onReceiveDashClicked: () -> Unit,
+    onNavigationButtonClicked: () -> Unit,
+    onDialPhoneButtonClicked: () -> Unit,
+    onOpenWebsiteButtonClicked: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        // ATM header with buy/sell buttons
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // Logo and manufacturer
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AsyncImage(
+                        model = atm.logoLocation ?: "",
+                        contentDescription = atm.manufacturer,
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Crop,
+                        placeholder = painterResource(id = R.drawable.ic_image_placeholder),
+                        error = painterResource(id = R.drawable.ic_image_placeholder)
+                    )
+                    Spacer(modifier = Modifier.width(14.dp))
+                    Text(
+                        text = atm.manufacturer?.replaceFirstChar { it.uppercase() } ?: "",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF191C1F)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Buy/Sell buttons
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    if (atm.type != AtmType.SELL) {
+                        Button(
+                            onClick = onReceiveDashClicked,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MyTheme.Colors.green
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.explore_buy_dash),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+
+                    if (atm.type != AtmType.SELL && atm.type != AtmType.BUY && !atm.type.isNullOrEmpty()) {
+                        Spacer(modifier = Modifier.width(7.dp))
+                    }
+
+                    if (atm.type != AtmType.BUY && !atm.type.isNullOrEmpty()) {
+                        Button(
+                            onClick = { onSendDashClicked(false) },
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF008DE4)
+                            )
+                        ) {
+                            Text(
+                                text = stringResource(R.string.explore_sell_dash),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Location hint
+        Text(
+            text = stringResource(R.string.explore_atm_location_hint),
+            style = MyTheme.Overline,
+            color = MyTheme.Colors.textSecondary,
+            modifier = Modifier.padding(start = 12.dp, bottom = 5.dp)
+        )
+
+        // ATM Name
+        if (!atm.name.isNullOrEmpty()) {
+            Text(
+                text = atm.name!!,
+                style = MyTheme.SubtitleSemibold,
+                color = MyTheme.Colors.textPrimary,
+                modifier = Modifier.padding(start = 12.dp, bottom = 16.dp)
+            )
+        }
+
+        // ATM details
+        val hasAtmDetails = atm.getDisplayAddress("\n").isNotEmpty() || 
+                           !atm.phone.isNullOrEmpty() || 
+                           !atm.website.isNullOrEmpty()
+        
+        if (hasAtmDetails) {
+            ItemContactDetails(
+                item = atm,
+                isOnline = false,
+                isGrouped = false,
+                onNavigationButtonClicked = onNavigationButtonClicked,
+                onDialPhoneButtonClicked = onDialPhoneButtonClicked,
+                onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked
+            )
+        }
+    }
+}
+
+
+// Helper functions
+@Composable
+private fun getMerchantTypeText(type: String?, isOnline: Boolean): String {
+    return when (cleanMerchantTypeValue(type)) {
+        MerchantType.ONLINE -> stringResource(R.string.explore_online_merchant)
+        MerchantType.PHYSICAL -> stringResource(R.string.explore_physical_merchant)
+        MerchantType.BOTH -> stringResource(R.string.explore_both_types_merchant)
+        else -> ""
+    }
+}
+
+@Composable
+private fun getDistanceText(item: SearchResult): String {
+    val context = LocalContext.current
+    val isMetric = Locale.getDefault().isMetric
+    val distanceStr = item.getDistanceStr(isMetric)
+    
+    return when {
+        distanceStr.isEmpty() -> ""
+        isMetric -> context.getString(R.string.distance_kilometers, distanceStr)
+        else -> context.getString(R.string.distance_miles, distanceStr)
+    }
+}
+
+private fun cleanMerchantTypeValue(value: String?): String? {
+    return value?.trim()?.lowercase()?.replace(" ", "_")
+}
+
+private fun SearchResult.hasCoordinates(): Boolean {
+    return latitude != null && longitude != null
+}
+
+private fun String.maskEmail(): String {
+    val parts = split("@")
+    return if (parts.size == 2) {
+        val username = parts[0]
+        val domain = parts[1]
+        val masked = if (username.length > 2) {
+            username.first() + "*".repeat(username.length - 2) + username.last()
         } else {
-            context.getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
+            username
         }
+        "$masked@$domain"
+    } else {
+        this
+    }
+}
 
-        uri?.let {
-            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
-            context.startActivity(intent)
-        }
+@Preview(showBackground = true)
+@Composable
+private fun PreviewMerchantDetails() {
+    val ctxProvider = GiftCardProvider(
+        merchantId = UUID.randomUUID().toString(),
+        provider = "CTX",
+        redeemType = "gift card",
+        savingsPercentage = 1000,
+        active = true,
+        denominationsType = "fixed",
+        sourceId = "123"
+    )
+    val merchant = Merchant().apply {
+        name = "Burger King"
+        type = MerchantType.PHYSICAL
+        logoLocation = ""
+        paymentMethod = PaymentMethod.GIFT_CARD
+        source = ServiceName.CTXSpend
+        active = true
+        phone = "+1234567890"
+        website = "www.burgerking.com"
+        latitude = 0.0
+        longitude = 0.0
+        physicalAmount = 10
+        giftCardProviders = listOf(
+            ctxProvider
+        )
     }
 
-    private fun dialPhone(phone: String) {
-        val intent = Intent(Intent.ACTION_DIAL, "tel: $phone".toUri())
-        context.startActivity(intent)
-    }
-
-    private fun openWebsite(website: String) {
-        val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
-        val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
-        context.startActivity(intent)
-    }
-
-    private fun cleanMerchantTypeValue(value: String?): String? {
-        return value?.trim()?.lowercase()?.replace(" ", "_")
-    }
-
-    private fun refreshEmailVisibility() {
-        binding.loginExploreUser.isVisible = isLoggedIn && !isAtm
-    }
+    ItemDetails(
+        item = merchant,
+        isLoggedIn = true,
+        userEmail = "user@example.com",
+        selectedProvider = GiftCardProviderType.CTX
+    )
 }

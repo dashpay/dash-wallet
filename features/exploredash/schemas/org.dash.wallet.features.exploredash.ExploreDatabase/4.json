@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "0000ee66a2435c2ebffe1d4cfe35dee7",
+    "identityHash": "b571284317035b59474823f11d5bfcf5",
     "entities": [
       {
         "tableName": "merchant",
@@ -444,7 +444,7 @@
       },
       {
         "tableName": "gift_card_providers",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `merchantId` INTEGER NOT NULL, `provider` TEXT NOT NULL, `redeemType` TEXT NOT NULL, `savingsPercentage` INTEGER NOT NULL, `active` INTEGER NOT NULL, `denominationsType` TEXT NOT NULL, `sourceId` TEXT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `merchantId` TEXT NOT NULL, `provider` TEXT NOT NULL, `redeemType` TEXT NOT NULL, `savingsPercentage` INTEGER NOT NULL, `active` INTEGER NOT NULL, `denominationsType` TEXT NOT NULL, `sourceId` TEXT NOT NULL)",
         "fields": [
           {
             "fieldPath": "id",
@@ -455,7 +455,7 @@
           {
             "fieldPath": "merchantId",
             "columnName": "merchantId",
-            "affinity": "INTEGER",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -508,7 +508,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0000ee66a2435c2ebffe1d4cfe35dee7')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b571284317035b59474823f11d5bfcf5')"
     ]
   }
 }

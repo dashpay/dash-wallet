@@ -18,7 +18,10 @@
 package org.dash.wallet.features.exploredash.repository
 
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.features.exploredash.data.piggycards.model.*
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.SignupRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import java.time.LocalDateTime

@@ -10,7 +10,7 @@ buildscript {
         hiltWorkVersion = '1.2.0'
         workRuntimeVersion='2.9.1'
         firebaseVersion = '32.1.1'
-        roomVersion = '2.5.2'
+        roomVersion = '2.6.1'
         jetpackVersion = '1.8.0'
         appCompatVersion = '1.4.2'
 

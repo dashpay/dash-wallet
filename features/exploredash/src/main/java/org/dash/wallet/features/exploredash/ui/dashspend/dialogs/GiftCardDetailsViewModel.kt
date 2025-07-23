@@ -35,8 +35,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.ctxspend.model.Barcode
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository

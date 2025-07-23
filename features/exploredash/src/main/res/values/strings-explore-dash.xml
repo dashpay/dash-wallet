@@ -255,4 +255,17 @@
 
     <!-- PiggyCards -->
     <string name="log_in_to_piggycards_account_desc">Your email will not be shared with anyone other than PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Select gift card provider</string>
+    <string name="flexible_amounts">Flexible amounts</string>
+    <string name="fixed_amounts">Fixed amounts</string>
+    <string name="address">Address</string>
+    <string name="phone">Phone</string>
+    <string name="website">Website</string>
+    <string name="call">Call</string>
+    <string name="directions">Directions</string>
+    <string name="explore_show_all_locations">Show all locations (%d)</string>
+    <string name="provider">Provider</string>
+    <string name="save">Save</string>
 </resources>
