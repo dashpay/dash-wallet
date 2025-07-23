@@ -128,7 +128,7 @@ abstract class ExploreDatabase : RoomDatabase() {
                             log.info("onOpenPrepackagedDatabase")
                         }
                     }
-                ).addMigrations(ExploreDatabaseMigrations.migration1To2, ExploreDatabaseMigrations.migration2To3)//, ExploreDatabaseMigrations.migration3To4, ExploreDatabaseMigrations.migration4To5)
+                ).addMigrations(ExploreDatabaseMigrations.migration1To2, ExploreDatabaseMigrations.migration2To3, ExploreDatabaseMigrations.migration3To4)
 
                 val onOpenCallback = object : Callback() {
                     override fun onOpen(db: SupportSQLiteDatabase) {
