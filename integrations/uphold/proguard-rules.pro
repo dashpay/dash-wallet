@@ -23,3 +23,7 @@
 -keep class org.spongycastle.** { *; }
 -keepclassmembers class org.spongycastle.** { *; }
 -dontwarn org.spongycastle.**
+
+# SpongyCastle (used in uphold integration)
+-keep class com.madgag.spongycastle.** { *; }
+-dontwarn com.madgag.spongycastle.**
