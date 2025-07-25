@@ -341,6 +341,8 @@ class EditProfileActivity : LockScreenActivity() {
             .builder()
             .setRequestedScopes(
                 listOf(Scope(DriveScopes.DRIVE))
+                       // listOf(Scope(DriveScopes.DRIVE_FILE))
+
             ).build()
 
         Identity.getAuthorizationClient(this@EditProfileActivity)

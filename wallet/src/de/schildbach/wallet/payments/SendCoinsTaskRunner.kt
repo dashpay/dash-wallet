@@ -143,7 +143,7 @@ class SendCoinsTaskRunner @Inject constructor(
     ): SendPaymentService.TransactionDetails {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
-        val securityGuard = SecurityGuard()
+        val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val encryptionKey = securityFunctions.deriveKey(wallet, password)
         sendRequest.aesKey = encryptionKey
@@ -440,7 +440,7 @@ class SendCoinsTaskRunner @Inject constructor(
     fun signSendRequest(sendRequest: SendRequest) {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
 
-        val securityGuard = SecurityGuard()
+        val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val encryptionKey = securityFunctions.deriveKey(wallet, password)
 

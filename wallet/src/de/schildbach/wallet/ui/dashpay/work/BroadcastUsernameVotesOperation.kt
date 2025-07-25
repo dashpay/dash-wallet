@@ -131,7 +131,7 @@ class BroadcastUsernameVotesOperation(val application: Application) {
         masternodeKeys: List<ByteArray>,
         isQuickVoting: Boolean
     ): WorkContinuation {
-        val password = SecurityGuard().retrievePassword()
+        val password = SecurityGuard.getInstance().retrievePassword()
         val verifyIdentityWorker = OneTimeWorkRequestBuilder<BroadcastUsernameVotesWorker>()
             .setInputData(
                 workDataOf(

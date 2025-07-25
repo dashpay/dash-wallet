@@ -427,7 +427,7 @@ class PlatformSynchronizationService @Inject constructor(
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
-                        val securityGuard = SecurityGuard()
+                        val securityGuard = SecurityGuard.getInstance()
                         securityGuard.retrievePassword()
                     } catch (e: IllegalArgumentException) {
                         log.error("There was an error retrieving the wallet password", e)
@@ -475,7 +475,7 @@ class PlatformSynchronizationService @Inject constructor(
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
-                        val securityGuard = SecurityGuard()
+                        val securityGuard = SecurityGuard.getInstance()
                         securityGuard.retrievePassword()
                     } catch (e: IllegalArgumentException) {
                         log.error("There was an error retrieving the wallet password", e)
