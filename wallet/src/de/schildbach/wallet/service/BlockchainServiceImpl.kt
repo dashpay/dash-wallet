@@ -1042,10 +1042,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
-        val wallet = application.wallet
         serviceScope.launch {
             cleanupDeferred?.await()
             propagateContext()
+            val wallet = application.wallet
+            if (wallet == null) {
+                log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                return@launch
+            }
             peerConnectivityListener = PeerConnectivityListener()
             broadcastPeerState(0)
             blockChainFile =
@@ -1057,7 +1061,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (!blockChainFileExists) {
                 log.info("blockchain does not exist, resetting wallet")
                 propagateContext()
-                wallet?.reset()
+                wallet.reset()
                 resetMNLists(false)
                 resetMNListsOnPeerGroupStart = true
             }
@@ -1067,7 +1071,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
                 headerStore?.chainHead // detect corruptions as early as possible
                 withContext(Dispatchers.Main) { verifyBlockStores() }
-                val earliestKeyCreationTime = wallet!!.earliestKeyCreationTime
+                val earliestKeyCreationTime = wallet.earliestKeyCreationTime
                 if (!blockChainFileExists && earliestKeyCreationTime > 0) {
                     try {
                         val watch = Stopwatch.createStarted()
@@ -1117,12 +1121,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 connectivityReceiverRegistered = true
                 log.info("receiver register: connectivityReceiver, {}", connectivityReceiver)
             }
-            application.wallet!!.addCoinsReceivedEventListener(
+            wallet.addCoinsReceivedEventListener(
                 Threading.SAME_THREAD,
                 walletEventListener
             )
-            application.wallet!!.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
-            application.wallet!!.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
+            wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
+            wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
             config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
             withContext(Dispatchers.Main) {
                 registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
@@ -1231,18 +1235,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
-                    val tx = application.wallet!!.getTransaction(hash)
-                    if (peerGroup != null) {
-                        log.info("broadcasting transaction " + tx!!.hashAsString)
-                        val count = peerGroup!!.numConnectedPeers()
-                        var minimum = peerGroup!!.minBroadcastConnections
-                        // if the number of peers is <= 3, then only require that number of peers to send
-                        // if the number of peers is 0, then require 3 peers (default min connections)
-                        if (count in 1..3) minimum = count
-                        peerGroup!!.broadcastTransaction(tx, minimum, true)
+                    val wallet = application.wallet
+                    if (wallet != null) {
+                        val tx = wallet.getTransaction(hash)
+                        if (peerGroup != null) {
+                            log.info("broadcasting transaction " + tx!!.hashAsString)
+                            val count = peerGroup!!.numConnectedPeers()
+                            var minimum = peerGroup!!.minBroadcastConnections
+                            // if the number of peers is <= 3, then only require that number of peers to send
+                            // if the number of peers is 0, then require 3 peers (default min connections)
+                            if (count in 1..3) minimum = count
+                            peerGroup!!.broadcastTransaction(tx, minimum, true)
+                        } else {
+                            log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
+                            tx.confidence.setPeerInfo(0, 1)
+                        }
                     } else {
-                        log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
-                        tx.confidence.setPeerInfo(0, 1)
+                        log.error("wallet is null, cannot broadcast transaction")
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOOMFILTERS == action) {
                     if (peerGroup != null) {
@@ -1305,9 +1314,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 onCreateCompleted.await() // wait until onCreate is finished
                 checkMutex.lock()
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
-                application.wallet!!.removeChangeEventListener(walletEventListener)
-                application.wallet!!.removeCoinsSentEventListener(walletEventListener)
-                application.wallet!!.removeCoinsReceivedEventListener(walletEventListener)
+                val wallet = application.wallet
+                if (wallet != null) {
+                    wallet.removeChangeEventListener(walletEventListener)
+                    wallet.removeCoinsSentEventListener(walletEventListener)
+                    wallet.removeCoinsReceivedEventListener(walletEventListener)
+                }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
@@ -1320,7 +1332,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
                     peerGroup!!.stop()
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
-                    application.wallet!!.riskAnalyzer = defaultRiskAnalyzer
+                    if (wallet != null) {
+                        wallet.riskAnalyzer = defaultRiskAnalyzer
+                    }
                     riskAnalyzer!!.shutdown()
                     log.info("peergroup stopped")
                 }
