@@ -143,7 +143,7 @@ class SendInviteOperation(val application: Application) {
     @SuppressLint("EnqueueWork")
     fun create(id: String): WorkContinuation {
 
-        val password = SecurityGuard().retrievePassword()
+        val password = SecurityGuard.getInstance().retrievePassword()
         val sendInviteWorker = OneTimeWorkRequestBuilder<SendInviteWorker>()
                 .setInputData(
                     workDataOf(

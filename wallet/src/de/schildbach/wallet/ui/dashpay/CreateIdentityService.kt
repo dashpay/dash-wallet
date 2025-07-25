@@ -185,7 +185,7 @@ class CreateIdentityService : LifecycleService() {
     override fun onCreate() {
         super.onCreate()
         try {
-            securityGuard = SecurityGuard()
+            securityGuard = SecurityGuard.getInstance()
         } catch (e: Exception) {
             log.error("unable to instantiate SecurityGuard", e)
             stopSelf()

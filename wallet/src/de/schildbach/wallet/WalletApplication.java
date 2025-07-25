@@ -1059,7 +1059,7 @@ public class WalletApplication extends MultiDexApplication
         getSharedPreferences(HistoryHeaderAdapter.PREFS_FILE_NAME, MODE_PRIVATE).edit().clear().apply();
         WorkManager.getInstance(this).pruneWork();
         try {
-            new SecurityGuard().removeKeys();
+            SecurityGuard.getInstance().removeKeys();
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
             log.warn("error occurred when removing security keys", e);

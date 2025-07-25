@@ -41,6 +41,9 @@ class ModernEncryptionProvider(
     }
 
     private var encryptionIv = restoreIv()
+    
+    // Lock for atomic key generation
+    private val keyGenerationLock = Any()
 
     @Throws(GeneralSecurityException::class)
     override fun encrypt(keyAlias: String, textToEncrypt: String): ByteArray? {
@@ -87,18 +90,23 @@ class ModernEncryptionProvider(
     @Throws(GeneralSecurityException::class)
     private fun getSecretKey(alias: String): SecretKey {
         if (!keyStore.containsAlias(alias)) {
-            val keyGenerator: KeyGenerator = KeyGenerator
-                .getInstance(KeyProperties.KEY_ALGORITHM_AES, keyStore.provider)
-            keyGenerator.init(
-                KeyGenParameterSpec.Builder(
-                    alias,
-                    KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
-                ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                    .setRandomizedEncryptionRequired(false)
-                    .build()
-            )
-            keyGenerator.generateKey()
+            synchronized(keyGenerationLock) {
+                // Check again inside synchronized block
+                if (!keyStore.containsAlias(alias)) {
+                    val keyGenerator: KeyGenerator = KeyGenerator
+                        .getInstance(KeyProperties.KEY_ALGORITHM_AES, keyStore.provider)
+                    keyGenerator.init(
+                        KeyGenParameterSpec.Builder(
+                            alias,
+                            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+                        ).setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                            .setRandomizedEncryptionRequired(false)
+                            .build()
+                    )
+                    keyGenerator.generateKey()
+                }
+            }
         }
         return (keyStore.getEntry(alias, null) as KeyStore.SecretKeyEntry).secretKey
     }

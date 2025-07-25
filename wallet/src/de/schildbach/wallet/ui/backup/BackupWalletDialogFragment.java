@@ -87,6 +87,7 @@ import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.payments.DeriveKeyTask;
 import de.schildbach.wallet.security.SecurityFunctions;
 import de.schildbach.wallet.security.SecurityGuard;
+import de.schildbach.wallet.security.SecurityGuardException;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.ui.ShowPasswordCheckListener;
 import de.schildbach.wallet.util.Crypto;
@@ -312,7 +313,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
                 final Protos.Wallet walletProto = new WalletProtobufSerializer().walletToProto(wallet);
 
                 try {
-                    SecurityGuard securityGuard = new SecurityGuard();
+                    SecurityGuard securityGuard = SecurityGuard.getInstance();
                     if (wallet.isEncrypted()) {
                         String walletPassword = securityGuard.retrievePassword();
                         final Wallet decryptedWallet = new WalletProtobufSerializer().readWallet(Constants.NETWORK_PARAMETERS, walletFactory.getExtensions(Constants.NETWORK_PARAMETERS), walletProto);
@@ -333,7 +334,7 @@ public class BackupWalletDialogFragment extends DialogFragment {
                     } else {
                         backupWallet(wallet, targetUri, targetProvider, password);
                     }
-                } catch (GeneralSecurityException | IOException | UnreadableWalletException ex) {
+                } catch (SecurityGuardException | GeneralSecurityException | IOException | UnreadableWalletException ex) {
                     log.error("problem backing up wallet to " + targetUri, ex);
                     ErrorDialogFragment.showDialog(requireActivity().getSupportFragmentManager(), ex.toString());
                 }

@@ -81,7 +81,7 @@ class UpdateProfileWorker @AssistedInject constructor(
 
         val encryptionKey: KeyParameter
         try {
-            val password = SecurityGuard().retrievePassword()
+            val password = SecurityGuard.getInstance().retrievePassword()
             encryptionKey = WalletApplication.getInstance().wallet!!.keyCrypter!!.deriveKey(password)
         } catch (ex: KeyCrypterException) {
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DECRYPTION.name))
