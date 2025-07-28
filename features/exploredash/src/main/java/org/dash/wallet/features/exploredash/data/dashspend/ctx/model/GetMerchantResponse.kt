@@ -42,7 +42,8 @@ data class GetMerchantResponse(
     val denominationsType: String,
     val savingsPercentage: Int = 0,
     val redeemType: String = "",
-    val enabled: Boolean = true
+    val enabled: Boolean = true,
+    val productId: String = ""
 ) {
     val denominationType: DenominationType
         get() = DenominationType.fromString(denominationsType)

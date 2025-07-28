@@ -30,14 +30,18 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.network.PiggyCardsRemoteDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
+import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -57,7 +61,7 @@ abstract class ExploreDashModule {
         }
 
         @Provides
-        fun provideApi(ctxSpendDataSource: RemoteDataSource): CTXSpendApi {
+        fun provideCTXSpendApi(ctxSpendDataSource: RemoteDataSource): CTXSpendApi {
             return ctxSpendDataSource.buildApi(CTXSpendApi::class.java)
         }
 
@@ -72,6 +76,11 @@ abstract class ExploreDashModule {
             piggyCardsConfig: PiggyCardsConfig
         ): DashSpendRepositoryFactory {
             return DashSpendRepositoryFactory(ctxSpendConfig, piggyCardsConfig)
+        }
+
+        @Provides
+        fun providePiggyCardsApi(piggyCardsDataSource: PiggyCardsRemoteDataSource): PiggyCardsApi {
+            return piggyCardsDataSource.buildApi(PiggyCardsApi::class.java)
         }
     }
 

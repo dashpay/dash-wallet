@@ -297,17 +297,17 @@ class WalletTransactionMetadataProvider @Inject constructor(
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
-                service = ServiceName.CTXSpend,
+                service = service,
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
             transactionMetadataChangeCacheDao.markGiftCardTx(
                 txId,
-                ServiceName.CTXSpend,
+                service,
                 TaxCategory.Expense,
                 iconUrl
             )
@@ -503,7 +503,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                     metadata.icon = bitmaps[iconId]
                                 }
 
-                                if (metadata.service == ServiceName.CTXSpend) {
+                                if (ServiceName.isDashSpend(metadata.service)) {
                                     metadata.title = giftCards[metadata.txId]?.merchantName
                                 }
                             }

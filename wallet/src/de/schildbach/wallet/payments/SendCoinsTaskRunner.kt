@@ -51,6 +51,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
+import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.DirectPayException
@@ -179,29 +180,35 @@ class SendCoinsTaskRunner @Inject constructor(
     }
 
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent): Transaction {
+
         val requestUrl = basePaymentIntent.paymentRequestUrl
-            ?: throw InvalidPaymentRequestURL("Payment request URL is null")
+        if (requestUrl != null) {
 
-        val request = buildOkHttpPaymentRequest(requestUrl)
-        val response = Constants.HTTP_CLIENT.call(request)
-        response.ensureSuccessful()
+            val request = buildOkHttpPaymentRequest(requestUrl)
+            val response = Constants.HTTP_CLIENT.call(request)
+            response.ensureSuccessful()
 
-        val contentType = response.header("Content-Type")
-        val byteStream = response.body?.byteStream()
+            val contentType = response.header("Content-Type")
+            val byteStream = response.body?.byteStream()
 
-        if (byteStream == null || contentType.isNullOrEmpty()) {
-            throw IOException("Null response for the payment request: $requestUrl")
+            if (byteStream == null || contentType.isNullOrEmpty()) {
+                throw IOException("Null response for the payment request: $requestUrl")
+            }
+
+            val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+
+            if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+                log.info("BIP72 trust check failed")
+                throw IllegalStateException("BIP72 trust check failed: $requestUrl")
+            }
+
+            val sendRequest = createRequestFromPaymentIntent(paymentIntent)
+            return sendPayment(paymentIntent, sendRequest)
+        } else {
+            val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
+            val sendRequestForSigning = SendRequest.forTx(sendRequest.tx)
+            return sendCoins(sendRequestForSigning)
         }
-
-        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
-
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
-            log.info("BIP72 trust check failed")
-            throw IllegalStateException("BIP72 trust check failed: $requestUrl")
-        }
-
-        val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-        return sendPayment(paymentIntent, sendRequest)
     }
 
     fun createRequestFromPaymentIntent(paymentIntent: PaymentIntent): SendRequest {

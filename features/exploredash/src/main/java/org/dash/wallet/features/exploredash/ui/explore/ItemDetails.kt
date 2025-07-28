@@ -386,8 +386,9 @@ private fun SingleProviderSection(
                         style = MyTheme.CaptionMedium,
                         color = MyTheme.Colors.textPrimary
                     )
+                    val format = DecimalFormat("0.0") // TODO: where should this go
                     Text(
-                        text = "${provider.savingsPercentage / 100}%",
+                        text = "${format.format(provider.savingsPercentage / 100.0)}%",
                         style = MyTheme.Caption,
                         color = MyTheme.Colors.textPrimary
                     )

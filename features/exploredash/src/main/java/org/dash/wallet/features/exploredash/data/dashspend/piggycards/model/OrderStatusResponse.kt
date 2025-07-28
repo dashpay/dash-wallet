@@ -37,10 +37,10 @@ data class OrderData(
     @SerializedName("status")
     val status: String,
     @SerializedName("cards")
-    val cards: List<GiftCard>
+    val cards: List<OrderGiftCard>
 )
 
-data class GiftCard(
+data class OrderGiftCard(
     @SerializedName("name")
     val name: String,
     @SerializedName("claimCode")
@@ -50,5 +50,7 @@ data class GiftCard(
     @SerializedName("barcodelink")
     val barcodeLink: String?,
     @SerializedName("cardStatus")
-    val cardStatus: String
+    val cardStatus: String,
+    val claimLink: String? = null,
+    val answer: String? = null
 )

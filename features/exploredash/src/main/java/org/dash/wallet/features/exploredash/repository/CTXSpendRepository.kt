@@ -105,7 +105,7 @@ class CTXSpendRepository @Inject constructor(
         fiatCurrency: String,
         fiatAmount: String,
         merchantId: String
-    ): GiftCardResponse? {
+    ): GiftCardResponse {
         return api.purchaseGiftCard(
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 cryptoCurrency = "DASH",

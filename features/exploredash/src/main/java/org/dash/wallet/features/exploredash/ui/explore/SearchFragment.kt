@@ -565,7 +565,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
                                 val merchant = viewModel.selectedItem.value as Merchant
-                                dashSpendViewModel.updateMerchantDetails(merchant)
+                                dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
                                 updateIsEnabled(merchant)
                             }
                         }
@@ -888,7 +888,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private suspend fun updateIsEnabled(merchant: Merchant) {
         val wasEnabled = merchant.active
-        dashSpendViewModel.updateMerchantDetails(merchant)
+        dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
 
         if (merchant.active != wasEnabled) {
             viewModel.updateSelectedItem(merchant)
@@ -980,6 +980,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             },
             onBuyGiftCardButtonClicked = {
                 lifecycleScope.launch {
+                    dashSpendViewModel.selectedProvider = selectedProvider
                     if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
                         showLoginDialog(selectedProvider)
                     } else {
