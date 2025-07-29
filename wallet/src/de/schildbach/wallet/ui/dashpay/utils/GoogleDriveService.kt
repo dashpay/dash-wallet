@@ -99,5 +99,7 @@ class GoogleDriveService(
         .builder()
         .setRequestedScopes(
             listOf(Scope(DriveScopes.DRIVE_FILE))
-        ).build()
+        )
+        .setOptOutIncludingGrantedScopes(false)
+        .build()
 }
