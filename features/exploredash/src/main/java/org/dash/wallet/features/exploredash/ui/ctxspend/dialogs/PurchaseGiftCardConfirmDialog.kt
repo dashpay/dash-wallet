@@ -235,7 +235,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
 
-            this@PurchaseGiftCardConfirmDialog.dismiss()
+            this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
         }
     }
 
