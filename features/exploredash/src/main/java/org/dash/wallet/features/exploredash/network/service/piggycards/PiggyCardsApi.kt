@@ -17,6 +17,7 @@
 package org.dash.wallet.features.exploredash.network.service.piggycards
 
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Brand
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.ExchangeRateResult
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.GiftcardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
@@ -54,4 +55,7 @@ interface PiggyCardsApi {
 
     @GET("orders/{id}")
     suspend fun getOrderStatus(@Path("id") orderId: String): OrderStatusResponse
+
+    @GET("exchange-rate")
+    suspend fun getExchangeRate(@Query("currency") currency: String): ExchangeRateResult
 }
