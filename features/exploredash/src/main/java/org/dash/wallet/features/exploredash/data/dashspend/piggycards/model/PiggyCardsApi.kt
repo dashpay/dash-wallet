@@ -28,5 +28,6 @@ data class Giftcard(
     val quantity: Int,
     @SerializedName("brand_id") val brandId: Int
 ) {
-    val isFixed = priceType == "Fixed"
+    val isFixed
+        get() = priceType.trim().lowercase() == "fixed"
 }
