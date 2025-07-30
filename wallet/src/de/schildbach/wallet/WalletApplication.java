@@ -1194,7 +1194,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeSpendableBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
+        if (wallet == null || walletBalanceObserver == null || coinJoinService == null) {
             return FlowKt.emptyFlow();
         }
 
