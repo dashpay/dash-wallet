@@ -57,6 +57,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
+import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
@@ -79,8 +80,8 @@ class DashSpendViewModel @Inject constructor(
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
     private val repositoryFactory: DashSpendRepositoryFactory,
-    private val ctxSpendRepository: CTXSpendRepository,
-    private val piggyCardsRepository: PiggyCardsRepository,
+    // private val ctxSpendRepository: CTXSpendRepository,
+    // private val piggyCardsRepository: PiggyCardsRepository,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     private val giftCardProviderDao: GiftCardProviderDao,
@@ -101,6 +102,8 @@ class DashSpendViewModel @Inject constructor(
             GiftCardProviderType.PiggyCards to repositoryFactory.create(GiftCardProviderType.PiggyCards)
         )
     }
+    private val ctxSpendRepository = providers[GiftCardProviderType.CTX]!!
+    private val piggyCardsRepository = providers[GiftCardProviderType.PiggyCards]!!
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -160,26 +163,11 @@ class DashSpendViewModel @Inject constructor(
             when (selectedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
-                        val response = ctxSpendRepository.purchaseGiftCard(
+                        ctxSpendRepository.orderGiftcard(
                             merchantId = provider!!.sourceId,
                             fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                            fiatCurrency = "USD",
+                            fiatCurrency = Constants.USD_CURRENCY,
                             cryptoCurrency = Constants.DASH_CURRENCY
-                        )
-                        // return value
-                        GiftCardInfo(
-                            response.id,
-                            status = GiftCardStatus.valueOf(response.status.uppercase()),
-                            cryptoAmount = response.cryptoAmount,
-                            cryptoCurrency = response.cryptoCurrency,
-                            paymentCryptoNetwork = response.paymentCryptoNetwork,
-                            paymentId = response.paymentId,
-                            percentDiscount = response.percentDiscount,
-                            rate = response.rate,
-                            redeemUrl = response.redeemUrl,
-                            fiatAmount = response.fiatAmount,
-                            fiatCurrency = response.fiatCurrency,
-                            paymentUrls = response.paymentUrls,
                         )
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error", e)
@@ -188,31 +176,11 @@ class DashSpendViewModel @Inject constructor(
                 }
                 GiftCardProviderType.PiggyCards -> {
                     try {
-                        val orderResponse = piggyCardsRepository.purchaseGiftCard(
+                        piggyCardsRepository.orderGiftcard(
+                            cryptoCurrency = Constants.DASH_CURRENCY,
                             merchantId = provider!!.sourceId,
                             fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                             fiatCurrency = Constants.USD_CURRENCY
-                        )
-                        delay(250)
-                        val response = piggyCardsRepository.getGiftCardById(orderResponse.id)
-                        if (response == null) {
-                            throw Exception("invalid order number ${orderResponse.id}")
-                        }
-                        //val giftCardData = response.data
-                        // val firstCardData = response.data.cards.first()
-                        val uri = BitcoinURI(orderResponse.payTo)
-                        // return value
-                        GiftCardInfo(
-                            id = orderResponse.id,
-                            status = response.status,
-                            cryptoAmount = uri.amount.toPlainString(),
-                            cryptoCurrency = "DASH", // need a constant
-                            paymentCryptoNetwork = "DASH",
-                            // percentDiscount = giftCardMerchant.savingsPercentage.toString(),
-                            rate = usdExchangeRate.value?.rate.toString(),
-                            fiatAmount = giftCardPaymentValue.value.toPlainString(),
-                            fiatCurrency = "USD",
-                            paymentUrls = hashMapOf("DASH.DASH" to orderResponse.payTo)
                         )
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error", e)
@@ -224,8 +192,7 @@ class DashSpendViewModel @Inject constructor(
                     throw IllegalArgumentException("no giftcard provider")
                 }
             }
-        }
-        throw CTXSpendException("purchaseGiftCard error: merchantId is null")
+        } ?: throw CTXSpendException("purchaseGiftCard error: merchantId is null")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
@@ -303,12 +270,7 @@ class DashSpendViewModel @Inject constructor(
                 merchant.savingsPercentage = this.first.maxOf { it.savingsPercentage } // differs between providers
                 // TODO: re-enable fixed denoms
                 merchant.active = this.first.any { it.enabled }
-                merchant.giftCardProviders = this.second.mapIndexed { index, giftCardProvider ->
-                    giftCardProvider.copy(
-                        savingsPercentage = this.first[index].savingsPercentage,
-                        active = this.first[index].enabled
-                    )
-                }
+                merchant.giftCardProviders = this.second
 
             }
         } catch (e: Exception) {
@@ -316,38 +278,16 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getMerchant(merchant: Merchant, provider: String): GetMerchantResponse? {
+    private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
-        return if (giftCardProvider != null ) {
-            when (giftCardProvider.provider) {
-                "CTX" -> {
-                    if (ctxSpendRepository.isUserSignedIn()) {
-                        ctxSpendRepository.getMerchant(giftCardProvider.sourceId)
-                    } else {
-                        null
-                    }
-                }
-
-                "PiggyCards" -> {
-                    if (piggyCardsRepository.isUserSignedIn()) {
-                        piggyCardsRepository.getMerchant(giftCardProvider.sourceId)
-                    } else {
-                        null
-                    }
-                }
-
-                else -> {
-                    null
-                }
-            }
-        } else {
-            null
+        return giftCardProvider?.let {
+            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(giftCardProvider.sourceId)
         }
     }
 
-    private suspend fun getMerchants(merchant: Merchant): Pair<List<GetMerchantResponse>, List<GiftCardProvider>> {
+    private suspend fun getMerchants(merchant: Merchant): Pair<List<UpdatedMerchantDetails>, List<GiftCardProvider>> {
         val providers = giftCardProviderDao.getProvidersByMerchantId(merchant.merchantId!!)
-        val merchantResponseList = arrayListOf<GetMerchantResponse>()
+        val merchantResponseList = arrayListOf<UpdatedMerchantDetails>()
         val providerResponseList = arrayListOf<GiftCardProvider>()
         providers.forEach { provider ->
             when (provider.provider) {
@@ -358,9 +298,12 @@ class DashSpendViewModel @Inject constructor(
                             providerResponseList.add(
                                 provider.copy(
                                     savingsPercentage = it.savingsPercentage,
+                                    active = it.enabled
                                 )
                             )
                         }
+                    } else {
+                        providerResponseList.add(provider)
                     }
                 }
 
@@ -371,9 +314,12 @@ class DashSpendViewModel @Inject constructor(
                             providerResponseList.add(
                                 provider.copy(
                                     savingsPercentage = it.savingsPercentage,
+                                    active = it.enabled
                                 )
                             )
                         }
+                    } else {
+                        providerResponseList.add(provider)
                     }
                 }
 

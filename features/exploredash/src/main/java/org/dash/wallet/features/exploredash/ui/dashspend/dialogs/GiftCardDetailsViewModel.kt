@@ -36,6 +36,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
@@ -152,18 +153,18 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val giftCard = getGiftCardByTxid(txid.toStringBase58())
+                    val giftCard = ctxSpendRepository.getGiftCard(txid.toStringBase58())
                     if (giftCard != null) {
                         when (giftCard.status) {
-                            "unpaid" -> {
+                            GiftCardStatus.UNPAID -> {
                                 // TODO: handle
                             }
 
-                            "paid" -> {
+                            GiftCardStatus.PAID -> {
                                 // TODO: handle
                             }
 
-                            "fulfilled" -> {
+                            GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
                                     cancelTicker()
                                     updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
@@ -176,7 +177,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             error = CTXSpendException(
                                                 ResourceString(
                                                     R.string.gift_card_redeem_url_not_supported,
-                                                    listOf(giftCard.id, giftCard.paymentId, txid)
+                                                    listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId, txid)
                                                 )
                                             )
                                         )
@@ -184,7 +185,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 }
                             }
 
-                            "rejected" -> {
+                            GiftCardStatus.REJECTED -> {
                                 // TODO: handle
                                 log.error("CTXSpend returned error: rejected")
                                 _uiState.update {
