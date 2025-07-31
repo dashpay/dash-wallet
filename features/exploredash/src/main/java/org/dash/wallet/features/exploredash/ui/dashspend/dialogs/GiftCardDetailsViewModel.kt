@@ -250,7 +250,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
 
                 try {
-                    val giftCard = piggyCardsRepository.getGiftCardById(orderId)
+                    val giftCard = piggyCardsRepository.getGiftCard(orderId)
                     if (giftCard != null) {
                         when (giftCard.status) {
                             GiftCardStatus.UNPAID -> {
@@ -272,12 +272,13 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     }
                                 } else if (giftCard.redeemUrl.isNotEmpty()) {
                                     log.error("PiggyCards returned a redeem url card: not supported")
+                                    updateGiftCard(giftCard.redeemUrl)
                                     _uiState.update {
                                         it.copy(
                                             error = CTXSpendException(
                                                 ResourceString(
                                                     R.string.gift_card_redeem_url_not_supported,
-                                                    listOf(giftCard.id, giftCard.paymentId, txid)
+                                                    listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
                                                 )
                                             )
                                         )
@@ -334,10 +335,6 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private suspend fun getGiftCardByTxid(txid: String): GiftCardResponse? {
-        return ctxSpendRepository.getGiftCardByTxid(txid = txid)
-    }
-
     private fun updateGiftCard(number: String, pinCode: String?) {
         val giftCard = uiState.value.giftCard ?: return
 
@@ -346,6 +343,21 @@ class GiftCardDetailsViewModel @Inject constructor(
                 giftCard.copy(
                     number = number,
                     pin = pinCode,
+                    note = null
+                )
+            )
+        }
+
+        logOnPurchaseEvents(giftCard)
+    }
+
+    private fun updateGiftCard(merchantUrl: String) {
+        val giftCard = uiState.value.giftCard ?: return
+
+        viewModelScope.launch {
+            metadataProvider.updateGiftCardMetadata(
+                giftCard.copy(
+                    merchantUrl = merchantUrl,
                     note = null
                 )
             )
@@ -393,7 +405,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 if (decodeResult != null) {
                     metadataProvider.updateGiftCardBarcode(
                         transactionId,
-                        decodeResult.first.replace(" ", ""),
+                        decodeResult.first.replace(" ", "").replace("-", ""),
                         decodeResult.second
                     )
                 } else {
