@@ -565,8 +565,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
                                 val merchant = viewModel.selectedItem.value as Merchant
-                                dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
-                                updateIsEnabled(merchant)
+                                val updatedMerchant = dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
+                                updateIsEnabled(updatedMerchant)
                             }
                         }
                         transitToDetails()
@@ -887,12 +887,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private suspend fun updateIsEnabled(merchant: Merchant) {
-        val wasEnabled = merchant.active
-        dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
-
-        if (merchant.active != wasEnabled) {
-            viewModel.updateSelectedItem(merchant)
-        }
+        val updatedMerchant = dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
+        viewModel.updateSelectedItem(updatedMerchant)
     }
 
     private fun openMaps(item: SearchResult) {

@@ -210,7 +210,9 @@ class DashSpendViewModel @Inject constructor(
         transaction.txId
     }
 
-    // needs to get all data, but each provider may have different limites
+    /** updates merchant details according to the currently selected provider [selectedProvider]
+     *
+     */
     suspend fun updateMerchantDetails(merchant: Merchant) {
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
@@ -253,11 +255,13 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
-    // needs to get all data, but each provider may have different limites
-    suspend fun updateMerchantDetailsForAllProviders(merchant: Merchant) {
-        // previously this API call would only be made if we didn't have the min and max card values,
-        // but now we need to call this every time to get an updated savings percentage and to see if
-        // the merchant is enabled
+    /**
+     * obtains updated merchant data from all providers
+     *
+     * returns a new [Merchant] object
+      */
+
+    suspend fun updateMerchantDetailsForAllProviders(merchant: Merchant): Merchant {
         val response = try {
             getMerchants(merchant)
         } catch (ex: Exception) {
@@ -265,17 +269,17 @@ class DashSpendViewModel @Inject constructor(
             null
         }
 
-        try {
+         try {
             response?.apply {
-                merchant.savingsPercentage = this.first.maxOf { it.savingsPercentage } // differs between providers
-                // TODO: re-enable fixed denoms
-                merchant.active = this.first.any { it.enabled }
-                merchant.giftCardProviders = this.second
-
+                return merchant.deepCopy(
+                    savingsPercentage = this.first.maxOf { it.savingsPercentage },
+                    giftCardProviders = this.second
+                )
             }
         } catch (e: Exception) {
             log.warn("updated merchant details contains unexpected data:", e)
         }
+        return merchant
     }
 
     private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
