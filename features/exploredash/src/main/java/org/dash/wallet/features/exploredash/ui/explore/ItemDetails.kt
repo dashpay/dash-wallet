@@ -196,6 +196,7 @@ private fun MerchantDetailsContent(
 
                 ActionButton(
                     merchant = merchant,
+                    selectedProvider = selectedProvider,
                     isDash = isDash,
                     onSendDashClicked = onSendDashClicked,
                     onBuyGiftCardButtonClicked = onBuyGiftCardButtonClicked
@@ -303,6 +304,7 @@ private fun MultipleProvidersSection(
                     },
                     discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%",
                     isSelected = provider.provider == selectedProvider.name,
+                    isEnabled = provider.active,
                     onSelected = { onProviderSelected(provider) }
                 )
 
@@ -316,86 +318,146 @@ private fun MultipleProvidersSection(
 private fun SingleProviderSection(
     provider: GiftCardProvider
 ) {
+    val discountFormat = remember {
+        DecimalFormat().apply {
+            maximumFractionDigits = 2
+            minimumFractionDigits = 0
+        }
+    }
+    val subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+        stringResource(R.string.flexible_amounts)
+    } else {
+        stringResource(R.string.fixed_amounts)
+    }
+    val discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%"
+    val isSelected = false
+    val isEnabled = provider.active
+    val onSelected = {  }
+
+    val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
+    val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
+    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
+            .height(46.dp)
+            .background(backgroundColor, shape = RoundedCornerShape(12.dp))
+            //.border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Provider section
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_gift_card_black),
-                    contentDescription = null,
-                    tint = MyTheme.Colors.textPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(10.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.provider),
-                        style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                    Text(
-                        text = provider.provider,
-                        style = MyTheme.Caption,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                }
-            }
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = provider.provider,
+                style = MyTheme.CaptionMedium,
+                color = textColor,
+            )
+            Text(
+                text = subtitle,
+                style = MyTheme.Overline,
+                color = subtitleColor
+            )
         }
-        
-        // Savings section
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Save icon
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_percentage),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(18.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(10.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.save),
-                        style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                    val format = DecimalFormat("0.0") // TODO: where should this go
-                    Text(
-                        text = "${format.format(provider.savingsPercentage / 100.0)}%",
-                        style = MyTheme.Caption,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                }
-            }
-        }
+
+        Text(
+            text = discount,
+            style = MyTheme.Caption,
+            color = textColor
+        )
+
+//        RadioButton(
+//            selected = isSelected,
+//            onClick = onSelected,
+//            colors = RadioButtonDefaults.colors(
+//                selectedColor = MyTheme.Colors.dashBlue,
+//                unselectedColor = MyTheme.Colors.gray
+//            ),
+//            enabled = isEnabled,
+//        )
     }
+//    Row(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(vertical = 8.dp),
+//        horizontalArrangement = Arrangement.spacedBy(20.dp)
+//    ) {
+//        // Provider section
+//        Card(
+//            modifier = Modifier.weight(1f),
+//            shape = RoundedCornerShape(10.dp),
+//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 10.dp, vertical = 6.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_gift_card_black),
+//                    contentDescription = null,
+//                    tint = MyTheme.Colors.textPrimary,
+//                    modifier = Modifier.size(18.dp)
+//                )
+//
+//                Spacer(modifier = Modifier.width(10.dp))
+//
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text(
+//                        text = stringResource(R.string.provider),
+//                        style = MyTheme.CaptionMedium,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                    Text(
+//                        text = provider.provider,
+//                        style = MyTheme.Caption,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                }
+//            }
+//        }
+//
+//        // Savings section
+//        Card(
+//            modifier = Modifier.weight(1f),
+//            shape = RoundedCornerShape(10.dp),
+//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 10.dp, vertical = 6.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                // Save icon
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_percentage),
+//                    contentDescription = null,
+//                    tint = Color.Unspecified,
+//                    modifier = Modifier.size(18.dp)
+//                )
+//
+//                Spacer(modifier = Modifier.width(10.dp))
+//
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text(
+//                        text = stringResource(R.string.save),
+//                        style = MyTheme.CaptionMedium,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                    val format = DecimalFormat("0.0") // TODO: where should this go
+//                    Text(
+//                        text = "${format.format(provider.savingsPercentage / 100.0)}%",
+//                        style = MyTheme.Caption,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                }
+//            }
+//        }
+//    }
 }
 
 @Composable
@@ -404,37 +466,40 @@ private fun ProviderOption(
     subtitle: String,
     discount: String,
     isSelected: Boolean,
+    isEnabled: Boolean,
     onSelected: () -> Unit
 ) {
     val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
     val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
+    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor, shape = RoundedCornerShape(12.dp))
             .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
-            .clickable { onSelected() }
+            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
             .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = providerName,
                 style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = textColor,
             )
             Text(
                 text = subtitle,
                 style = MyTheme.Overline,
-                color = MyTheme.Colors.textTertiary
+                color = subtitleColor
             )
         }
 
         Text(
             text = discount,
             style = MyTheme.Caption,
-            color = MyTheme.Colors.textPrimary
+            color = textColor
         )
 
         RadioButton(
@@ -443,7 +508,8 @@ private fun ProviderOption(
             colors = RadioButtonDefaults.colors(
                 selectedColor = MyTheme.Colors.dashBlue,
                 unselectedColor = MyTheme.Colors.gray
-            )
+            ),
+            enabled = isEnabled
         )
     }
 }
@@ -451,11 +517,14 @@ private fun ProviderOption(
 @Composable
 private fun ActionButton(
     merchant: Merchant,
+    selectedProvider: GiftCardProviderType,
     isDash: Boolean,
     onSendDashClicked: (Boolean) -> Unit,
     onBuyGiftCardButtonClicked: () -> Unit
 ) {
-    val isEnabled = merchant.active ?: true
+    val isEnabled = merchant.giftCardProviders.find {
+        it.provider == selectedProvider.name
+    }?.active  ?: true
     
     Column {
         if (!isEnabled) {
@@ -926,6 +995,15 @@ private fun PreviewMerchantDetails() {
         denominationsType = "fixed",
         sourceId = "123"
     )
+    val piggyCardsProvider = GiftCardProvider(
+        merchantId = UUID.randomUUID().toString(),
+        provider = "PiggyCards",
+        redeemType = "gift card",
+        savingsPercentage = 900,
+        active = false,
+        denominationsType = "fixed",
+        sourceId = "124"
+    )
     val merchant = Merchant().apply {
         name = "Burger King"
         type = MerchantType.PHYSICAL
@@ -939,7 +1017,8 @@ private fun PreviewMerchantDetails() {
         longitude = 0.0
         physicalAmount = 10
         giftCardProviders = listOf(
-            ctxProvider
+            ctxProvider,
+            //piggyCardsProvider
         )
     }
 
