@@ -26,7 +26,6 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -51,19 +50,15 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
-import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
-import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -80,8 +75,6 @@ class DashSpendViewModel @Inject constructor(
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
     private val repositoryFactory: DashSpendRepositoryFactory,
-    // private val ctxSpendRepository: CTXSpendRepository,
-    // private val piggyCardsRepository: PiggyCardsRepository,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
     private val giftCardProviderDao: GiftCardProviderDao,
@@ -199,9 +192,6 @@ class DashSpendViewModel @Inject constructor(
         val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, giftCardMerchant.logoLocation)
-//        transaction.memo?.let { memo ->
-//            transactionMetadata.setTransactionMemo(transaction.txId, memo)
-//        }
         BitcoinURI(paymentUri).message?.let { memo ->
             if (memo.isNotBlank()) {
                 transactionMetadata.setTransactionMemo(transaction.txId, memo)
@@ -465,7 +455,7 @@ class DashSpendViewModel @Inject constructor(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         if (this::giftCardMerchant.isInitialized) {
