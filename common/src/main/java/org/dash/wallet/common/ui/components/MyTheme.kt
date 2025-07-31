@@ -79,6 +79,13 @@ object MyTheme {
         textAlign = TextAlign.Center
     )
 
+    val OverlineCaptionMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
     val Body2Regular = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -118,5 +125,7 @@ object MyTheme {
         val gray = Color(0xFFB0B6BC)
         val gray300 = Color(0xFFB0B6BC)
         val gray400 = Color(0xFF75808A)
+        val red = Color(0xFFEA3943)
+        val red5 = Color(0x0DEA3943)
     }
 }
