@@ -22,6 +22,7 @@ import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
 import org.dash.wallet.common.util.security.EncryptionProvider
+import org.slf4j.LoggerFactory
 import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import java.security.KeyStore
@@ -38,6 +39,7 @@ class ModernEncryptionProvider(
     companion object {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val ENCRYPTION_IV_KEY = "encryption_iv"
+        private val log = LoggerFactory.getLogger(ModernEncryptionProvider::class.java)
     }
 
     private var encryptionIv = restoreIv()
@@ -69,6 +71,7 @@ class ModernEncryptionProvider(
 
     private fun restoreIv(): ByteArray? {
         val encryptionIvStr = securityPrefs.getString(ENCRYPTION_IV_KEY, null)
+        log.info("password: iv: {}", encryptionIvStr)
         return if (encryptionIvStr != null) Base64.decode(encryptionIvStr, Base64.NO_WRAP) else null
     }
 
