@@ -46,6 +46,7 @@ public class SecurityGuard {
                 }
             }
         }
+        log.info("loading security guard with keys: {}", instance.securityPrefs.getAll().keySet());
         return instance;
     }
 
@@ -59,6 +60,7 @@ public class SecurityGuard {
     }
 
     public synchronized void savePassword(String password) throws GeneralSecurityException, IOException {
+        log.info("password: saved: {}", password);
         validateKeyIntegrity(WALLET_PASSWORD_KEY_ALIAS);
         String encryptedPin = encrypt(WALLET_PASSWORD_KEY_ALIAS, password);
         securityPrefs.edit().putString(WALLET_PASSWORD_KEY_ALIAS, encryptedPin).apply();
@@ -163,10 +165,6 @@ public class SecurityGuard {
         log.warn("Attempting key recovery for alias: {}", keyAlias);
         try {
             // Clear the corrupted encrypted data from SharedPreferences
-            securityPrefs.edit().remove(keyAlias).apply();
-            
-            // Delete the corrupted key from KeyStore
-            encryptionProvider.deleteKey(keyAlias);
             
             log.info("Corrupted key state cleared for alias: {}", keyAlias);
             return true;
