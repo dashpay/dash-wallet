@@ -172,7 +172,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.contactSupport.isVisible = true
             } else {
                 binding.cardError.isVisible = false
-                binding.contactSupport.isVisible = true
+                binding.contactSupport.isVisible = false
             }
         }
 
