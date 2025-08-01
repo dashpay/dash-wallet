@@ -40,20 +40,22 @@ class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
     val errorBody: String? = null,
-    cause: Exception? = null
+    cause: Exception? = null,
 ) : Exception(message, cause) {
     var resourceString: ResourceString? = null
+    var giftCardResponse: GiftCardResponse? = null
     private val errorMap: Map<String, Any>
 
-    constructor(message: ResourceString) : this("") {
+    constructor(message: ResourceString, giftCardResponse: GiftCardResponse? = null) : this("") {
         this.resourceString = message
+        this.giftCardResponse = giftCardResponse
     }
 
     init {
-        val type = object : TypeToken<Map<String, Any>>() {}.type
         errorMap = try {
             if (errorBody != null) {
-                Gson().fromJson(errorBody, type) ?: emptyMap()
+                @Suppress("UNCHECKED_CAST")
+                Gson().fromJson(errorBody, Map::class.java) as? Map<String, Any> ?: emptyMap()
             } else {
                 emptyMap()
             }

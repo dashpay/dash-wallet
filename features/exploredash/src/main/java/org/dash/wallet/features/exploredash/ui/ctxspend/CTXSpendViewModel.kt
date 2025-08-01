@@ -148,11 +148,11 @@ class CTXSpendViewModel @Inject constructor(
     suspend fun purchaseGiftCard(): GiftCardResponse {
         giftCardMerchant?.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
-
+            val fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString()
             val response = try {
                 repository.purchaseGiftCard(
                     merchantId = it,
-                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatAmount = fiatAmount,
                     fiatCurrency = "USD",
                     cryptoCurrency = Constants.DASH_CURRENCY
                 )
@@ -173,7 +173,7 @@ class CTXSpendViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
                     throw CTXSpendException(
-                        "purchaseGiftCard error ${response.errorCode}: ${response.errorBody}",
+                        "/gift-cards POST { fiatAmount=$fiatAmount, merchantId = $it}",
                         response.errorCode,
                         response.errorBody
                     )
@@ -329,7 +329,7 @@ class CTXSpendViewModel @Inject constructor(
 
     fun createEmailIntent(
         subject: String,
-        ex: CTXSpendException
+        ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(CTXSpendConstants.REPORT_EMAIL))
@@ -342,7 +342,7 @@ class CTXSpendViewModel @Inject constructor(
         return savedStateHandle.get<String>(MERCHANT_ID_KEY)
     }
 
-    private fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException?): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         giftCardMerchant?.let { merchant ->
@@ -358,15 +358,39 @@ class CTXSpendViewModel @Inject constructor(
         } ?: run {
             report.append("No merchant selected").append("\n")
         }
+
+//        report.append("\n")
+//        report.append("Purchase Details").append("\n")
+//        report.append("amount: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
         report.append("\n")
-        report.append("Purchase Details").append("\n")
-        report.append("amount: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
-        report.append("\n")
-        ex.errorCode?.let {
-            report.append("code: ").append(it).append("\n")
-        }
-        ex.errorBody?.let {
-            report.append("body:\n").append(it).append("\n")
+        ex?.let { exception ->
+            exception.message?.let {
+                report.append(it).append("\n")
+            }
+            exception.errorCode?.let {
+                report.append("code: ").append(it).append("\n")
+            }
+            exception.errorBody?.let {
+                report.append("body:\n").append(it).append("\n")
+            }
+            exception.giftCardResponse?.let { giftCard ->
+                report.append("Gift Card Information: ").append("\n")
+                    .append("id: ").append(giftCard.id).append("\n")
+                    .append("status: ").append(giftCard.status).append("\n")
+                    .append("barcodeUrl: ").append(giftCard.barcodeUrl ?: "N/A").append("\n")
+                    .append("cardNumber: ").append(giftCard.cardNumber ?: "N/A").append("\n")
+                    .append("cardPin: ").append(giftCard.cardPin ?: "N/A").append("\n")
+                    .append("cryptoAmount: ").append(giftCard.cryptoAmount ?: "N/A").append("\n")
+                    .append("cryptoCurrency: ").append(giftCard.cryptoCurrency ?: "N/A").append("\n")
+                    .append("paymentCryptoNetwork: ").append(giftCard.paymentCryptoNetwork).append("\n")
+                    .append("paymentId: ").append(giftCard.paymentId).append("\n")
+                    .append("percentDiscount: ").append(giftCard.percentDiscount).append("\n")
+                    .append("rate: ").append(giftCard.rate).append("\n")
+                    .append("redeemUrl: ").append(giftCard.redeemUrl).append("\n")
+                    .append("fiatAmount: ").append(giftCard.fiatAmount ?: "N/A").append("\n")
+                    .append("fiatCurrency: ").append(giftCard.fiatCurrency ?: "N/A").append("\n")
+                    .append("paymentUrls: ").append(giftCard.paymentUrls?.toString() ?: "N/A").append("\n")
+            }
         }
         return report.toString()
     }
