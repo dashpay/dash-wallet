@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.util.Base64;
 
+import androidx.annotation.VisibleForTesting;
+
 import org.dash.wallet.common.util.security.EncryptionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +74,8 @@ public class SecurityGuard {
         return instance;
     }
 
-    public static SecurityGuard getTestInstance(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
+    @VisibleForTesting
+    static SecurityGuard getTestInstance(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
         return new SecurityGuard(securityPrefs);
     }
 
@@ -203,6 +206,16 @@ public class SecurityGuard {
         // Run migration after backup config is set
         migrateExistingDataToBackups();
     }
+
+    @VisibleForTesting
+    void setBackupConfigForTesting(SecurityConfig backupConfig) {
+        this.backupConfig = backupConfig;
+        if (this.encryptionProvider instanceof ModernEncryptionProvider) {
+            ((ModernEncryptionProvider) encryptionProvider).setBackupConfig(backupConfig);
+        }
+        // Run migration after backup config is set
+        migrateExistingDataToBackups();
+    }
     
     public synchronized void removeKeys() {
         log.warn("removing security keys");
@@ -294,6 +307,18 @@ public class SecurityGuard {
             return data;
         }
         
+        // If primary data is invalid, try IV recovery first (common cause of decryption failures)
+        if (data != null && !data.isEmpty()) {
+            log.info("Primary data exists but validation failed for {}, attempting IV recovery", keyAlias);
+            if (tryIvRecovery()) {
+                // Re-validate after IV recovery
+                if (isValidEncryptedData(keyAlias, data)) {
+                    log.info("Successfully recovered {} after IV recovery", keyAlias);
+                    return data;
+                }
+            }
+        }
+        
         // Try DataStore backup
         if (backupConfig != null) {
             try {
@@ -364,6 +389,47 @@ public class SecurityGuard {
             return true;
         } catch (Exception e) {
             log.debug("Invalid encrypted data for {}: {}", keyAlias, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Validate encrypted data by attempting decryption
+     */
+    @VisibleForTesting
+    boolean isValidEncryptedDataThrows(String keyAlias, String encryptedData) throws GeneralSecurityException, IOException {
+        if (encryptedData == null || encryptedData.isEmpty()) {
+            return false;
+        }
+
+        byte[] encrypted = Base64.decode(encryptedData, Base64.NO_WRAP);
+        encryptionProvider.decrypt(keyAlias, encrypted);
+        return true;
+
+    }
+
+    /**
+     * Attempt to recover IV from backups when decryption failures occur
+     * This handles the case where IV corruption causes AEADBadTagException
+     */
+    private boolean tryIvRecovery() {
+        try {
+            if (encryptionProvider instanceof ModernEncryptionProvider) {
+                ModernEncryptionProvider modernProvider = (ModernEncryptionProvider) encryptionProvider;
+                boolean recovered = modernProvider.recoverIvFromBackups();
+                if (recovered) {
+                    log.info("Successfully recovered IV from backups");
+                    return true;
+                } else {
+                    log.warn("IV recovery failed - no valid IV found in backups");
+                    return false;
+                }
+            } else {
+                log.debug("EncryptionProvider is not ModernEncryptionProvider, skipping IV recovery");
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("IV recovery attempt failed", e);
             return false;
         }
     }

@@ -34,12 +34,15 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 import androidx.core.content.edit
 
+/** This class provides GCM encryption via the KeyStore
+ *  It uses a common IV
+ */
 class ModernEncryptionProvider(
     private val keyStore: KeyStore,
     private val securityPrefs: SharedPreferences
 ): EncryptionProvider {
     
-    private var backupConfig: SecurityBackupConfig? = null
+    private var backupConfig: SecurityConfig? = null
     companion object {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val ENCRYPTION_IV_KEY = "encryption_iv"
@@ -54,7 +57,7 @@ class ModernEncryptionProvider(
     /**
      * Set the backup config (called by dependency injection)
      */
-    fun setBackupConfig(backupConfig: SecurityBackupConfig) {
+    fun setBackupConfig(backupConfig: SecurityConfig) {
         this.backupConfig = backupConfig
         // Run migration after backup config is set
         migrateExistingIvToBackups()
@@ -201,6 +204,57 @@ class ModernEncryptionProvider(
     @Throws(KeyStoreException::class)
     override fun deleteKey(keyAlias: String) {
         keyStore.deleteEntry(keyAlias)
+    }
+
+    /**
+     * Force IV recovery from backup sources when corruption is detected
+     * This allows SecurityGuard to trigger IV recovery after initialization
+     */
+    fun recoverIvFromBackups(): Boolean {
+        try {
+            log.info("Attempting to recover IV from backup sources...")
+            var recoveredIv: String? = null
+            // Try DataStore backup
+            backupConfig?.let { config ->
+                try {
+                    recoveredIv = kotlinx.coroutines.runBlocking {
+                        config.getEncryptionIv()
+                    }
+                    if (recoveredIv != null) {
+                        log.info("Recovered IV from DataStore backup")
+                        log.info("password: get iv: {}", recoveredIv)
+                        // Restore to primary SharedPreferences
+                        securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
+                    }
+                } catch (e: Exception) {
+                    log.warn("Failed to recover IV from DataStore backup", e)
+                }
+            }
+
+            if (recoveredIv == null) {
+                // Try file backups
+                recoveredIv = recoverIvFromFiles()
+                if (recoveredIv != null) {
+                    log.info("Recovered IV from file backup")
+                    log.info("password: get iv: {}", recoveredIv)
+                    // Restore to primary SharedPreferences and re-backup to all locations
+                    securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
+                    // backupIv(fileRecoveredIv)  // Re-backup to all locations
+                }
+            }
+
+            if (recoveredIv != null) {
+                encryptionIv = Base64.decode(recoveredIv, Base64.NO_PADDING)
+                log.info("Successfully recovered IV from backups")
+                return true
+            } else {
+                log.warn("No valid IV found in any backup source")
+                return false
+            }
+        } catch (e: Exception) {
+            log.error("Failed to recover IV from backups", e)
+            return false
+        }
     }
 
     @Throws(GeneralSecurityException::class)
