@@ -91,6 +91,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
+import de.schildbach.wallet.security.SecurityInitializer;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
@@ -218,6 +219,8 @@ public class WalletApplication extends MultiDexApplication
     DashSystemService dashSystemService;
     @Inject
     WalletUIConfig walletUIConfig;
+    @Inject
+    SecurityInitializer securityInitializer;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
 
