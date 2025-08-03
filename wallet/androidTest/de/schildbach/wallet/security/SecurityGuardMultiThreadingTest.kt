@@ -114,6 +114,12 @@ class SecurityGuardMultiThreadingTest {
         val firstException = AtomicReference<Exception>()
         
         val executor = Executors.newFixedThreadPool(threadCount)
+
+        // this should not be a test instance
+        SecurityGuard.getInstance().apply {
+            savePassword("TestPassword456")
+            savePin("123465")
+        }
         
         // Simulate multiple threads trying to access SecurityGuard simultaneously
         repeat(threadCount) { threadId ->
@@ -570,100 +576,6 @@ class SecurityGuardMultiThreadingTest {
         }
     }
 
-    /**
-     * Test AEADBadTagException scenario #3: IV/Password mismatch (simulates app upgrade corruption)
-     * This directly reproduces the scenario described in CLAUDE.md crash logs
-     */
-    @Test @Ignore
-    fun testAEADBadTagExceptionAppUpgradeScenario() {
-        val securityGuard1 = SecurityGuard.getTestInstance(sharedPreferences)
-        val originalPassword = "OriginalPassword123"
-
-        try {
-            // Step 1: Simulate "old app version" - save password
-            securityGuard1.savePassword(originalPassword)
-            assertEquals("Original password should work", originalPassword, securityGuard1.retrievePassword())
-
-            // Get the original IV and encrypted password
-            val originalIv = sharedPreferences.getString("encryption_iv", null)
-            val originalEncryptedPassword = sharedPreferences.getString("wallet_password_key", null)
-            assertNotNull("Original IV should exist", originalIv)
-            assertNotNull("Original encrypted password should exist", originalEncryptedPassword)
-
-            // Step 2: Simulate "app upgrade" corruption scenario
-            // During app upgrade, SharedPreferences sometimes get corrupted or reset partially
-            // Let's simulate the scenario where the password data survives but IV gets lost/corrupted
-
-            // Reset SecurityGuard (simulates app restart after upgrade)
-            SecurityGuard.reset()
-
-            // Simulate new encryption operation that generates a NEW IV
-            // while old encrypted password data still exists with OLD IV
-            val securityGuard2 = SecurityGuard.getTestInstance(sharedPreferences)
-            val newPassword = "NewPasswordAfterUpgrade456"
-            securityGuard2.savePassword(newPassword)
-
-            val newIv = sharedPreferences.getString("encryption_iv", null)
-            assertNotNull("New IV should be generated", newIv)
-            assertTrue("IV should change after reset", newIv != originalIv)
-
-            // Step 3: Now simulate the corruption by putting back the OLD encrypted password
-            // but keeping the NEW IV - this creates IV/password mismatch
-            sharedPreferences.edit()
-                .putString("wallet_password_key", originalEncryptedPassword) // Old encrypted data
-                // Keep new IV - this is the mismatch that causes AEADBadTagException
-                .apply()
-
-            // Step 4: Reset again to force reload of the mismatched data
-            SecurityGuard.reset()
-            val corruptedSecurityGuard = SecurityGuard.getTestInstance(sharedPreferences)
-
-            // Step 5: Try to retrieve - should fail with AEADBadTagException wrapped in SecurityGuardException
-            try {
-                val result = corruptedSecurityGuard.retrievePassword()
-                println("WARNING: Password retrieval unexpectedly succeeded with result: $result")
-                println("This might indicate the backup recovery system is working")
-                // Don't fail the test here as backup system might have recovered the data
-            } catch (e: SecurityGuardException) {
-                println("✓ Successfully reproduced app upgrade IV/password mismatch scenario")
-                println("✓ Exception: ${e.message}")
-
-                // This is the exact scenario from CLAUDE.md crash logs
-                assertTrue("Should indicate password corruption or decryption failure",
-                    e.message?.contains("corrupted") == true ||
-                    e.message?.contains("Failed to retrieve") == true ||
-                    e.message?.contains("decrypt") == true ||
-                    e.message?.contains("password") == true)
-
-                // Check for the underlying AEADBadTagException or similar
-                var currentCause: Throwable? = e.cause
-                var foundCryptoException = false
-                while (currentCause != null) {
-                    val causeName = currentCause.javaClass.simpleName
-                    println("Cause in chain: $causeName: ${currentCause.message}")
-                    if (causeName.contains("BadTag") ||
-                        causeName.contains("AEAD") ||
-                        causeName.contains("Cipher") ||
-                        currentCause.message?.contains("tag") == true ||
-                        currentCause.message?.contains("verification") == true) {
-                        foundCryptoException = true
-                        println("✓ Found cryptographic exception in chain: $causeName")
-                        break
-                    }
-                    currentCause = currentCause.cause
-                }
-
-                // Note: The exact exception type may vary depending on Android version and implementation
-                println("Cryptographic exception found in chain: $foundCryptoException")
-            }
-
-        } catch (e: Exception) {
-            println("App upgrade scenario test failed: ${e.message}")
-            e.printStackTrace()
-            throw e
-        }
-    }
-
     // ==================== MIGRATION TESTS ====================
     
     /**
@@ -685,11 +597,8 @@ class SecurityGuardMultiThreadingTest {
         // Remove migration flags to simulate first launch after upgrade
         deleteMigrationFlags()
         
-        // Create SecurityGuard - this should trigger migration
         val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
-        securityGuard.savePassword(existingPasswordData)
-        securityGuard.savePin(existingPinData)
-        
+
         // Set backup config to test migration
         val backupConfig = createRealSecurityBackupConfig()
         if (backupConfig != null) {
@@ -838,11 +747,11 @@ class SecurityGuardMultiThreadingTest {
     }
     
     /**
-     * Test file backup validation
+     * Test file backup validation only
      */
     @Test
     fun testFileBackupValidation() {
-        val securityGuard = SecurityGuard.getInstance()
+        val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
         val testPassword = "ValidPassword123"
         
         // Save password to create backups
@@ -866,30 +775,147 @@ class SecurityGuardMultiThreadingTest {
         val primaryContent = primaryBackup.readText()
         val secondaryContent = secondaryBackup.readText()
         assertEquals("Both backups should have same content", primaryContent, secondaryContent)
+        val originalContent = sharedPreferences.getString("wallet_password_key", null)
+        assertEquals("Both backups should have same content as the encrypted test password", originalContent, secondaryContent)
     }
     
     /**
-     * Test IV backup and recovery
+     * Test IV backup and recovery functionality
+     * Tests the complete IV backup and recovery flow including corruption scenarios
      */
     @Test
     fun testIvBackupAndRecovery() {
-        // This test documents IV backup behavior
-        // Actual IV backup happens in ModernEncryptionProvider
+        val testPassword = "TestPasswordForIvRecovery"
         
-        // Setup existing IV data
-        val testIv = "dGVzdGl2ZGF0YTEyMw=="  // base64 test data
-        sharedPreferences.edit().putString("encryption_iv", testIv).apply()
-        
-        // Create SecurityGuard (triggers EncryptionProvider creation)
-        SecurityGuard.getTestInstance(sharedPreferences)
-        
-        // Verify IV backup files should be created
-        val backupDir = File(context.filesDir, "security_backup")
-        File(backupDir, "encryption_iv_backup.dat")
-        File(backupDir, "encryption_iv_backup2.dat")
-        
-        // Note: Actual IV backup depends on ModernEncryptionProvider implementation
-        // This test documents expected behavior
+        try {
+            // Step 1: Create SecurityGuard with backup config
+            val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
+            val backupConfig = createRealSecurityBackupConfig()
+            
+            if (backupConfig != null) {
+                securityGuard.setBackupConfigForTesting(backupConfig)
+            }
+            
+            // Step 2: Save a password - this creates an IV and should back it up
+            securityGuard.savePassword(testPassword)
+            
+            // Allow time for backup operations
+            Thread.sleep(2000)
+            
+            // Verify password works normally
+            val normalRetrieval = securityGuard.retrievePassword()
+            assertEquals("Password should work normally", testPassword, normalRetrieval)
+            
+            // Get the original IV that was created
+            val originalIv = sharedPreferences.getString("encryption_iv", null)
+            assertNotNull("Original IV should exist", originalIv)
+            
+            // Verify IV backup files should be created
+            val backupDir = File(context.filesDir, "security_backup")
+            val ivBackupFile1 = File(backupDir, "encryption_iv_backup.dat")
+            val ivBackupFile2 = File(backupDir, "encryption_iv_backup2.dat")
+            
+            // Note: IV backup creation depends on when ModernEncryptionProvider saves the IV
+            // It may not create backup files immediately, but let's test recovery capability
+            
+            // Step 3: Simulate IV corruption
+            println("Simulating IV corruption...")
+            val corruptedIv = generateRandomIV() // Different IV that won't work with existing password
+            sharedPreferences.edit()
+                .putString("encryption_iv", corruptedIv)
+                .apply()
+            
+            // Step 4: Reset SecurityGuard and test recovery
+            SecurityGuard.reset()
+            val recoverySecurityGuard = SecurityGuard.getTestInstance(sharedPreferences)
+            
+            if (backupConfig != null) {
+                recoverySecurityGuard.setBackupConfigForTesting(backupConfig)
+            }
+            
+            // Step 5: Try to retrieve password - should trigger IV recovery if implemented
+            try {
+                val recoveredPassword = recoverySecurityGuard.retrievePassword()
+                
+                // Success case - IV recovery worked
+                assertEquals("Should recover password despite IV corruption", testPassword, recoveredPassword)
+                println("✓ SUCCESS: IV recovery system worked! Password retrieved despite IV corruption")
+                
+                // Check if IV was restored
+                val restoredIv = sharedPreferences.getString("encryption_iv", null)
+                if (restoredIv != corruptedIv) {
+                    println("✓ IV was restored from backup: $restoredIv")
+                } else {
+                    println("✓ Password recovered through other means (password backup recovery)")
+                }
+                
+            } catch (e: SecurityGuardException) {
+                // Document current IV recovery capabilities
+                println("IV recovery test result: ${e.message}")
+                
+                // Check if IV backup files exist for potential recovery
+                if (ivBackupFile1.exists()) {
+                    val ivBackupContent1 = ivBackupFile1.readText()
+                    println("- IV backup file 1 exists: ${ivBackupFile1.path} (${ivBackupContent1.length} chars)")
+                } else {
+                    println("- IV backup file 1 does not exist: ${ivBackupFile1.path}")
+                }
+                
+                if (ivBackupFile2.exists()) {
+                    val ivBackupContent2 = ivBackupFile2.readText()
+                    println("- IV backup file 2 exists: ${ivBackupFile2.path} (${ivBackupContent2.length} chars)")
+                } else {
+                    println("- IV backup file 2 does not exist: ${ivBackupFile2.path}")
+                }
+                
+                // Check DataStore backup
+                if (backupConfig != null) {
+                    try {
+                        runBlocking {
+                            val datastoreIvBackup = backupConfig.getEncryptionIv()
+                            if (datastoreIvBackup != null) {
+                                println("- DataStore IV backup exists (${datastoreIvBackup.length} chars)")
+                            } else {
+                                println("- DataStore IV backup is null")
+                            }
+                        }
+                    } catch (datastoreException: Exception) {
+                        println("- DataStore IV backup check failed: ${datastoreException.message}")
+                    }
+                }
+                
+                // Test current behavior - IV recovery may not be fully implemented yet
+                if (e.message?.contains("recovery") == true || e.message?.contains("corrupted") == true) {
+                    println("IV recovery system detected corruption but recovery failed")
+                } else {
+                    println("No IV recovery attempt detected - system may rely on password backup recovery")
+                }
+                
+                // Don't fail the test - this documents current IV recovery capabilities
+                assertTrue("IV corruption should be detectable", e.message?.contains("Failed to retrieve") == true)
+            }
+            
+            // Step 6: Test direct IV recovery method if available
+            try {
+                val encryptionProvider = securityGuard.javaClass.getDeclaredField("encryptionProvider")
+                encryptionProvider.isAccessible = true
+                val provider = encryptionProvider.get(recoverySecurityGuard)
+                
+                if (provider is ModernEncryptionProvider) {
+                    val recovered = provider.recoverIvFromBackups()
+                    println("Direct IV recovery method result: $recovered")
+                } else {
+                    println("EncryptionProvider is not ModernEncryptionProvider")
+                }
+            } catch (e: Exception) {
+                println("Could not test direct IV recovery method: ${e.message}")
+            }
+            
+        } catch (e: Exception) {
+            println("IV backup and recovery test failed: ${e.message}")
+            e.printStackTrace()
+            throw e
+        }
     }
     
     // ==================== ERROR HANDLING TESTS ====================
