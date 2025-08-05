@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.util.Arrays;
@@ -34,17 +35,24 @@ public class SecurityGuard {
 
     public static final String SECURITY_PREFS_NAME = "security";
 
-    private static final String UI_PIN_KEY_ALIAS = "ui_pin_key";
-    private static final String WALLET_PASSWORD_KEY_ALIAS = "wallet_password_key";
+    static final String UI_PIN_KEY_ALIAS = "ui_pin_key";
+    static final String WALLET_PASSWORD_KEY_ALIAS = "wallet_password_key";
 
+    static final String SECURITY_BACKUP_DIR = "security_backup";
+    static final String MIGRATION_FLAGS_DIR = "migration_flags";
+    static final String MIGRATION_COMPLETED_FILE = "backup_migration_completed";
+
+    static final String BACKUP_FILE_SUFFIX = "_backup.dat";
+    static final String BACKUP2_FILE_SUFFIX = "_backup2.dat";
+    static final String FLAG_FILE_EXTENSION = ".flag";
     // Singleton implementation
     private static volatile SecurityGuard instance;
     private static final Object LOCK = new Object();
     @Inject
     AnalyticsService analyticsService;
 
-    private SharedPreferences securityPrefs;
-    private EncryptionProvider encryptionProvider;
+    private final SharedPreferences securityPrefs;
+    private final EncryptionProvider encryptionProvider;
     private SecurityConfig backupConfig;
 
     private SecurityGuard() throws GeneralSecurityException, IOException {
@@ -187,21 +195,6 @@ public class SecurityGuard {
         } catch (Exception e) {
             log.error("Key validation failed for alias: {}", keyAlias, e);
             throw new GeneralSecurityException("Key validation failed", e);
-        }
-    }
-    
-    /**
-     * Checks if the security state is recoverable after corruption
-     * @return true if keys can be regenerated safely
-     */
-    public boolean isRecoverable() {
-        try {
-            // If we can create a new encryption provider, recovery is possible
-            EncryptionProviderFactory.create(securityPrefs);
-            return true;
-        } catch (Exception e) {
-            log.error("Security state is not recoverable", e);
-            return false;
         }
     }
 
@@ -444,7 +437,8 @@ public class SecurityGuard {
     /**
      * Clear all backup data
      */
-    private void clearBackups() {
+    @VisibleForTesting
+    void clearBackups() {
         // Clear DataStore backup
         if (backupConfig != null) {
             try {
@@ -486,6 +480,9 @@ public class SecurityGuard {
                 log.info("Backup migration already completed");
                 return;
             }
+            log.info("check that the password and pin can be decrypted");
+            retrievePassword();
+            retrievePin();
             
             log.info("Starting backup migration for existing data");
             
