@@ -283,11 +283,11 @@ public class SecurityGuard {
             }
             
             // Primary backup
-            File backupFile = new File(backupDir, keyAlias + "_backup.dat");
+            File backupFile = new File(backupDir, keyAlias + BACKUP_FILE_SUFFIX);
             writeToFile(backupFile, data);
             
             // Secondary backup
-            File backup2File = new File(backupDir, keyAlias + "_backup2.dat");
+            File backup2File = new File(backupDir, keyAlias + BACKUP2_FILE_SUFFIX);
             writeToFile(backup2File, data);
             
             log.info("Successfully backed up {} to files", keyAlias);
@@ -348,8 +348,8 @@ public class SecurityGuard {
         
         // Try file backups
         List<String> fileNames = Arrays.asList(
-            keyAlias + "_backup.dat",
-            keyAlias + "_backup2.dat"
+            keyAlias + BACKUP_FILE_SUFFIX,
+            keyAlias + BACKUP2_FILE_SUFFIX
         );
         
         for (String fileName : fileNames) {
@@ -475,7 +475,7 @@ public class SecurityGuard {
     private void migrateExistingDataToBackups() {
         try {
             // Check if migration has already been done using file flag
-            if (isMigrationCompleted("backup_migration_completed")) {
+            if (isMigrationCompleted(MIGRATION_COMPLETED_FILE)) {
                 log.info("Backup migration already completed");
                 return;
             }
@@ -497,7 +497,7 @@ public class SecurityGuard {
             }
             
             // Mark migration as completed using file flag
-            setMigrationCompleted("backup_migration_completed");
+            setMigrationCompleted(MIGRATION_COMPLETED_FILE);
             log.info("Backup migration completed successfully");
             
         } catch (Exception e) {
@@ -512,7 +512,7 @@ public class SecurityGuard {
         FileOutputStream fos = null;
         try {
             fos = new FileOutputStream(file);
-            fos.write(data.getBytes("UTF-8"));
+            fos.write(data.getBytes(StandardCharsets.UTF_8));
             fos.flush();
         } finally {
             if (fos != null) {
@@ -534,7 +534,7 @@ public class SecurityGuard {
             fis = new FileInputStream(file);
             byte[] buffer = new byte[(int) file.length()];
             fis.read(buffer);
-            return new String(buffer, "UTF-8");
+            return new String(buffer, StandardCharsets.UTF_8);
         } catch (IOException e) {
             log.warn("Failed to read from file: {}", file.getName(), e);
             return null;
@@ -554,8 +554,8 @@ public class SecurityGuard {
      */
     private boolean isMigrationCompleted(String migrationName) {
         try {
-            File migrationDir = new File(WalletApplication.getInstance().getFilesDir(), "migration_flags");
-            File migrationFile = new File(migrationDir, migrationName + ".flag");
+            File migrationDir = new File(WalletApplication.getInstance().getFilesDir(), MIGRATION_FLAGS_DIR);
+            File migrationFile = new File(migrationDir, migrationName + FLAG_FILE_EXTENSION);
             return migrationFile.exists();
         } catch (Exception e) {
             log.warn("Failed to check migration flag: {}", migrationName, e);
@@ -573,7 +573,7 @@ public class SecurityGuard {
                 migrationDir.mkdirs();
             }
             
-            File migrationFile = new File(migrationDir, migrationName + ".flag");
+            File migrationFile = new File(migrationDir, migrationName + FLAG_FILE_EXTENSION);
             migrationFile.createNewFile();
             log.info("Migration flag set: {}", migrationName);
         } catch (Exception e) {

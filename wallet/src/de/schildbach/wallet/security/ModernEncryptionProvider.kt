@@ -45,7 +45,7 @@ class ModernEncryptionProvider(
     private var backupConfig: SecurityConfig? = null
     companion object {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val ENCRYPTION_IV_KEY = "encryption_iv"
+        const val ENCRYPTION_IV_KEY = "encryption_iv"
         private val log = LoggerFactory.getLogger(ModernEncryptionProvider::class.java)
     }
 

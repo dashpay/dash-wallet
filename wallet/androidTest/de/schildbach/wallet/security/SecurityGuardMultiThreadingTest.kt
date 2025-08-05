@@ -368,8 +368,8 @@ class SecurityGuardMultiThreadingTest {
             assertTrue("SecurityGuard should be configured", securityGuard.isConfigured)
 
             // Verify backup files exist
-            assertBackupFilesExist("wallet_password_key")
-            assertBackupFilesExist("ui_pin_key")
+            assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
+            assertBackupFilesExist(SecurityGuard.UI_PIN_KEY_ALIAS)
 
             // Now remove all keys
             securityGuard.removeKeys()
@@ -398,9 +398,9 @@ class SecurityGuardMultiThreadingTest {
 
             // Verify SharedPreferences are cleared
             assertNull("Password should be removed from SharedPreferences", 
-                sharedPreferences.getString("wallet_password_key", null))
+                sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null))
             assertNull("PIN should be removed from SharedPreferences", 
-                sharedPreferences.getString("ui_pin_key", null))
+                sharedPreferences.getString(SecurityGuard.UI_PIN_KEY_ALIAS, null))
 
             // Note: Backup files may or may not be cleared depending on implementation
             // The test documents the expected behavior
@@ -511,8 +511,8 @@ class SecurityGuardMultiThreadingTest {
             
             try {
                 // manually corrupt the password and use the v11.3.1 SecurityGuard
-                val encryptedData = sharedPreferences.getString("wallet_password_key", null)
-                corruptedSecurityGuard.isValidEncryptedDataThrows("wallet_password_key", encryptedData)
+                val encryptedData = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
+                corruptedSecurityGuard.isValidEncryptedDataThrows(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, encryptedData)
                 throw AssertionError("Expected SecurityGuardException due to wrong IV length")
             } catch (e: AEADBadTagException) {
                 println("✓ Successfully generated exception from wrong IV length: ${e.message}")
@@ -549,7 +549,7 @@ class SecurityGuardMultiThreadingTest {
             // Corrupt the IV with wrong length (GCM needs exactly 12 bytes, encoded as base64)
             val corruptedPassword = UUID.randomUUID().toString() // "test" in base64 - only 4 bytes, not 12
             sharedPreferences.edit()
-                .putString("wallet_password_key", corruptedPassword)
+                .putString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, corruptedPassword)
                 .apply()
 
             // Reset and try to decrypt
@@ -560,8 +560,8 @@ class SecurityGuardMultiThreadingTest {
                 // corruptedSecurityGuard.retrievePassword()
 
                 // Try primary SharedPreferences first
-                val encryptedData = sharedPreferences.getString("wallet_password_key", null)
-                corruptedSecurityGuard.isValidEncryptedDataThrows("wallet_password_key", encryptedData)
+                val encryptedData = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
+                corruptedSecurityGuard.isValidEncryptedDataThrows(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, encryptedData)
                 throw AssertionError("Expected SecurityGuardException due to wrong IV length")
             } catch (e: AEADBadTagException) {
                 println("✓ Successfully generated exception from wrong password: ${e.message}")
@@ -607,14 +607,14 @@ class SecurityGuardMultiThreadingTest {
         }
         
         // Verify migration flags were created
-        assertTrue("Migration flag should be created", isMigrationCompleted("backup_migration_completed"))
+        assertTrue("Migration flag should be created", isMigrationCompleted(SecurityGuard.MIGRATION_COMPLETED_FILE))
         
         // Allow time for async backup operations
         Thread.sleep(2000)
         
         // Verify backup files were created
-        assertBackupFilesExist("wallet_password_key")
-        assertBackupFilesExist("ui_pin_key")
+        assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
+        assertBackupFilesExist(SecurityGuard.UI_PIN_KEY_ALIAS)
         // Note: encryption_iv backup files are created by ModernEncryptionProvider when it's initialized
     }
     
@@ -640,7 +640,7 @@ class SecurityGuardMultiThreadingTest {
         // Allow time for migration to complete
         Thread.sleep(1000)
         
-        assertTrue("Migration should complete", isMigrationCompleted("backup_migration_completed"))
+        assertTrue("Migration should complete", isMigrationCompleted(SecurityGuard.MIGRATION_COMPLETED_FILE))
         
         // Reset SecurityGuard
         SecurityGuard.reset()
@@ -656,7 +656,7 @@ class SecurityGuardMultiThreadingTest {
         Thread.sleep(500)
         
         // Migration flag should still exist (not recreated)
-        assertTrue("Migration flag should still exist", isMigrationCompleted("backup_migration_completed"))
+        assertTrue("Migration flag should still exist", isMigrationCompleted(SecurityGuard.MIGRATION_COMPLETED_FILE))
     }
 
     /**
@@ -673,8 +673,8 @@ class SecurityGuardMultiThreadingTest {
             // Step 1: Simulate corrupted SharedPreferences from previous app version
             println("Setting up corrupted SharedPreferences to simulate upgrade scenario...")
             sharedPreferences.edit()
-                .putString("wallet_password_key", corruptedPasswordData)
-                .putString("ui_pin_key", corruptedPinData)
+                .putString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, corruptedPasswordData)
+                .putString(SecurityGuard.UI_PIN_KEY_ALIAS, corruptedPinData)
                 .putString("encryption_iv", corruptedIvData)
                 .apply()
             
@@ -695,14 +695,14 @@ class SecurityGuardMultiThreadingTest {
             
             // Step 3: Verify migration completed (even with corrupted data)
             assertFalse("Migration should not complete due to corrupted data",
-                isMigrationCompleted("backup_migration_completed"))
+                isMigrationCompleted(SecurityGuard.MIGRATION_COMPLETED_FILE))
             
             // Step 4: Verify corrupted data was NOT backed up to file system
-            val backupDir = File(context.filesDir, "security_backup")
+            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
             
             // Check password backup files
-            val passwordBackup1 = File(backupDir, "wallet_password_key_backup.dat")
-            val passwordBackup2 = File(backupDir, "wallet_password_key_backup2.dat")
+            val passwordBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+            val passwordBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
             
             if (passwordBackup1.exists()) {
                 val backupContent1 = passwordBackup1.readText()
@@ -723,8 +723,8 @@ class SecurityGuardMultiThreadingTest {
             }
             
             // Check PIN backup files
-            val pinBackup1 = File(backupDir, "ui_pin_key_backup.dat")
-            val pinBackup2 = File(backupDir, "ui_pin_key_backup2.dat")
+            val pinBackup1 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+            val pinBackup2 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
             
             if (pinBackup1.exists()) {
                 val backupContent1 = pinBackup1.readText()
@@ -812,16 +812,16 @@ class SecurityGuardMultiThreadingTest {
         securityGuard.savePassword(testPassword)
         
         // Verify primary storage
-        val primaryData = sharedPreferences.getString("wallet_password_key", null)
+        val primaryData = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
         assertNotNull("Primary data should exist", primaryData)
         
         // Verify backup files exist
-        assertBackupFilesExist("wallet_password_key")
+        assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
         
         // Verify backup files contain the same data as primary storage
-        val backupDir = File(context.filesDir, "security_backup")
-        val primaryBackup = File(backupDir, "wallet_password_key_backup.dat")
-        val secondaryBackup = File(backupDir, "wallet_password_key_backup2.dat")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
         
         val primaryBackupContent = primaryBackup.readText()
         val secondaryBackupContent = secondaryBackup.readText()
@@ -830,7 +830,7 @@ class SecurityGuardMultiThreadingTest {
         assertEquals("Secondary backup should match primary backup", primaryBackupContent, secondaryBackupContent)
         
         // Simulate primary storage corruption
-        sharedPreferences.edit().remove("wallet_password_key").apply()
+        sharedPreferences.edit().remove(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS).apply()
         
         // Create new SecurityGuard instance (simulates app restart)
         SecurityGuard.reset()
@@ -842,7 +842,7 @@ class SecurityGuardMultiThreadingTest {
             assertEquals("Should recover exact password from backups", testPassword, recoveredPassword)
             
             // Verify primary storage was restored from backup
-            val restoredPrimary = sharedPreferences.getString("wallet_password_key", null)
+            val restoredPrimary = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
             assertNotNull("Primary storage should be restored", restoredPrimary)
             assertEquals("Restored primary should match backup", primaryBackupContent, restoredPrimary)
             
@@ -871,11 +871,11 @@ class SecurityGuardMultiThreadingTest {
         securityGuard.savePassword(testPassword)
         
         // Verify backup files were created
-        val backupDir = File(context.filesDir, "security_backup")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
         assertTrue("Backup directory should exist", backupDir.exists())
         
-        val primaryBackup = File(backupDir, "wallet_password_key_backup.dat")
-        val secondaryBackup = File(backupDir, "wallet_password_key_backup2.dat")
+        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
         
         assertTrue("Primary backup should exist", primaryBackup.exists())
         assertTrue("Secondary backup should exist", secondaryBackup.exists())
@@ -888,7 +888,7 @@ class SecurityGuardMultiThreadingTest {
         val primaryContent = primaryBackup.readText()
         val secondaryContent = secondaryBackup.readText()
         assertEquals("Both backups should have same content", primaryContent, secondaryContent)
-        val originalContent = sharedPreferences.getString("wallet_password_key", null)
+        val originalContent = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
         assertEquals("Both backups should have same content as the encrypted test password", originalContent, secondaryContent)
     }
     
@@ -924,9 +924,9 @@ class SecurityGuardMultiThreadingTest {
             assertNotNull("Original IV should exist", originalIv)
             
             // Verify IV backup files should be created
-            val backupDir = File(context.filesDir, "security_backup")
-            val ivBackupFile1 = File(backupDir, "encryption_iv_backup.dat")
-            val ivBackupFile2 = File(backupDir, "encryption_iv_backup2.dat")
+            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+            val ivBackupFile1 = File(backupDir, "encryption_iv" + SecurityGuard.BACKUP_FILE_SUFFIX)
+            val ivBackupFile2 = File(backupDir, "encryption_iv" + SecurityGuard.BACKUP2_FILE_SUFFIX)
             
             // Note: IV backup creation depends on when ModernEncryptionProvider saves the IV
             // It may not create backup files immediately, but let's test recovery capability
@@ -1041,11 +1041,13 @@ class SecurityGuardMultiThreadingTest {
         val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
         
         // Create corrupted backup files
-        val backupDir = File(context.filesDir, "security_backup")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
         val corruptedBackup1 = File(backupDir, "wallet_password_key_backup.dat")
         val corruptedBackup2 = File(backupDir, "wallet_password_key_backup2.dat")
+        val corruptedBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+        val corruptedBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
         
         corruptedBackup1.writeText("corrupted_data_123")
         corruptedBackup2.writeText("different_corrupted_data_456")
@@ -1109,28 +1111,28 @@ class SecurityGuardMultiThreadingTest {
         println("Concurrent backup test - Success: ${successCount.get()}/$threadCount threads")
         
         // Verify backup files exist after concurrent operations
-        assertBackupFilesExist("wallet_password_key")
+        assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
     }
     
     // ==================== HELPER METHODS ====================
     
     private fun deleteMigrationFlags() {
-        val migrationDir = File(context.filesDir, "migration_flags")
+        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
         if (migrationDir.exists()) {
             migrationDir.deleteRecursively()
         }
     }
     
     private fun isMigrationCompleted(migrationName: String): Boolean {
-        val migrationDir = File(context.filesDir, "migration_flags")
-        val migrationFile = File(migrationDir, "$migrationName.flag")
+        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
+        val migrationFile = File(migrationDir, migrationName + SecurityGuard.FLAG_FILE_EXTENSION)
         return migrationFile.exists()
     }
     
     private fun assertBackupFilesExist(keyAlias: String) {
-        val backupDir = File(context.filesDir, "security_backup")
-        val primaryBackup = File(backupDir, "${keyAlias}_backup.dat")
-        val secondaryBackup = File(backupDir, "${keyAlias}_backup2.dat")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val primaryBackup = File(backupDir, keyAlias + SecurityGuard.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, keyAlias + SecurityGuard.BACKUP2_FILE_SUFFIX)
         
         assertTrue("Primary backup file should exist: ${primaryBackup.path}", primaryBackup.exists())
         assertTrue("Secondary backup file should exist: ${secondaryBackup.path}", secondaryBackup.exists())
@@ -1329,10 +1331,10 @@ class SecurityGuardMultiThreadingTest {
         assertEquals("Password should match", testPassword, retrievedPassword)
         
         // Verify file backups were created (SecurityGuard creates these regardless of DataStore config)
-        assertBackupFilesExist("wallet_password_key")
+        assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
         
         // Test file backup recovery by clearing primary SharedPreferences
-        sharedPreferences.edit().remove("wallet_password_key").apply()
+        sharedPreferences.edit().remove(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS).apply()
         
         // Reset SecurityGuard to simulate app restart
         SecurityGuard.reset()
@@ -1344,9 +1346,9 @@ class SecurityGuardMultiThreadingTest {
             assertEquals("Should recover password from file backup", testPassword, recoveredPassword)
         } catch (e: SecurityGuardException) {
             // If recovery fails, verify backup files exist and contain data
-            val backupDir = File(context.filesDir, "security_backup")
-            val primaryBackup = File(backupDir, "wallet_password_key_backup.dat")
-            val secondaryBackup = File(backupDir, "wallet_password_key_backup2.dat")
+            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+            val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
+            val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
             
             assertTrue("Primary backup should exist for recovery", primaryBackup.exists())
             assertTrue("Secondary backup should exist for recovery", secondaryBackup.exists())
@@ -1369,9 +1371,9 @@ class SecurityGuardMultiThreadingTest {
         assertFalse("Migration flag should not exist initially", isMigrationCompleted(migrationName))
         
         // Create migration flag manually to simulate completed migration
-        val migrationDir = File(context.filesDir, "migration_flags")
+        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
         migrationDir.mkdirs()
-        val flagFile = File(migrationDir, "$migrationName.flag")
+        val flagFile = File(migrationDir, migrationName + SecurityGuard.FLAG_FILE_EXTENSION)
         flagFile.createNewFile()
         
         // Should now exist
@@ -1395,7 +1397,7 @@ class SecurityGuardMultiThreadingTest {
      */
     @Test
     fun testBackupFileOperations() {
-        val backupDir = File(context.filesDir, "security_backup")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
         val testData = "test_backup_data_123"
@@ -1423,7 +1425,7 @@ class SecurityGuardMultiThreadingTest {
         val finishLatch = CountDownLatch(threadCount)
         val successCount = AtomicInteger(0)
         
-        val backupDir = File(context.filesDir, "security_backup")
+        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
         val executor = Executors.newFixedThreadPool(threadCount)
@@ -1555,7 +1557,7 @@ class SecurityGuardMultiThreadingTest {
             assertEquals("Pin should work normally after save", originalPin, normalPin)
 
             // Verify backup files were created
-            assertBackupFilesExist("wallet_password_key")
+            assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
             
             // Step 3: Corrupt the primary data sources (simulating app upgrade corruption)
             println("Corrupting primary data sources...")
@@ -1569,13 +1571,13 @@ class SecurityGuardMultiThreadingTest {
             // Option B: Also corrupt the password data in SharedPreferences
             val corruptedPassword = "CORRUPTED_PASSWORD_DATA_XYZ789"
             sharedPreferences.edit()
-                .putString("wallet_password_key", corruptedPassword)
+                .putString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, corruptedPassword)
                 .apply()
 
             // Option C: Also corrupt the password data in SharedPreferences
             val corruptedPin = "CORRUPTED_PIN_2345"
             sharedPreferences.edit()
-                .putString("ui_pin_key", corruptedPassword)
+                .putString(SecurityGuard.UI_PIN_KEY_ALIAS, corruptedPassword)
                 .apply()
             
             // Step 4: Reset SecurityGuard to force re-initialization with corrupted data
@@ -1606,7 +1608,7 @@ class SecurityGuardMultiThreadingTest {
                 println("✓ Recovered password: $recoveredPin")
                 
                 // Verify that primary SharedPreferences was restored from backup
-                val restoredPrimary = sharedPreferences.getString("wallet_password_key", null)
+                val restoredPrimary = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)
                 assertNotNull("Primary SharedPreferences should be restored from backup", restoredPrimary)
                 assertTrue("Restored primary should not be the corrupted data", restoredPrimary != corruptedPassword)
                 
