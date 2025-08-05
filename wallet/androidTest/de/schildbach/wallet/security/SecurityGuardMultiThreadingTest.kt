@@ -26,6 +26,7 @@ import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.TransactionWrapperFactory
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.common.util.security.EncryptionProvider
+import org.dash.wallet.common.util.security.SecurityFileUtils
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -708,11 +709,11 @@ class SecurityGuardMultiThreadingTest {
                 isMigrationCompleted(SecurityGuard.MIGRATION_COMPLETED_FILE))
             
             // Step 4: Verify corrupted data was NOT backed up to file system
-            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+            val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
             
             // Check password backup files
-            val passwordBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-            val passwordBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+            val passwordBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+            val passwordBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
             
             if (passwordBackup1.exists()) {
                 val backupContent1 = passwordBackup1.readText()
@@ -733,8 +734,8 @@ class SecurityGuardMultiThreadingTest {
             }
             
             // Check PIN backup files
-            val pinBackup1 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-            val pinBackup2 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+            val pinBackup1 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+            val pinBackup2 = File(backupDir, SecurityGuard.UI_PIN_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
             
             if (pinBackup1.exists()) {
                 val backupContent1 = pinBackup1.readText()
@@ -829,9 +830,9 @@ class SecurityGuardMultiThreadingTest {
         assertBackupFilesExist(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
         
         // Verify backup files contain the same data as primary storage
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
-        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
+        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
         
         val primaryBackupContent = primaryBackup.readText()
         val secondaryBackupContent = secondaryBackup.readText()
@@ -881,11 +882,11 @@ class SecurityGuardMultiThreadingTest {
         securityGuard.savePassword(testPassword)
         
         // Verify backup files were created
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
         assertTrue("Backup directory should exist", backupDir.exists())
         
-        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+        val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
         
         assertTrue("Primary backup should exist", primaryBackup.exists())
         assertTrue("Secondary backup should exist", secondaryBackup.exists())
@@ -934,9 +935,9 @@ class SecurityGuardMultiThreadingTest {
             assertNotNull("Original IV should exist", originalIv)
             
             // Verify IV backup files should be created
-            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
-            val ivBackupFile1 = File(backupDir, "encryption_iv" + SecurityGuard.BACKUP_FILE_SUFFIX)
-            val ivBackupFile2 = File(backupDir, "encryption_iv" + SecurityGuard.BACKUP2_FILE_SUFFIX)
+            val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
+            val ivBackupFile1 = File(backupDir, "encryption_iv" + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+            val ivBackupFile2 = File(backupDir, "encryption_iv" + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
             
             // Note: IV backup creation depends on when ModernEncryptionProvider saves the IV
             // It may not create backup files immediately, but let's test recovery capability
@@ -1051,11 +1052,11 @@ class SecurityGuardMultiThreadingTest {
         val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
         
         // Create corrupted backup files
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
-        val corruptedBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-        val corruptedBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+        val corruptedBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+        val corruptedBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
         
         corruptedBackup1.writeText("corrupted_data_123")
         corruptedBackup2.writeText("different_corrupted_data_456")
@@ -1125,22 +1126,22 @@ class SecurityGuardMultiThreadingTest {
     // ==================== HELPER METHODS ====================
     
     private fun deleteMigrationFlags() {
-        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
+        val migrationDir = File(context.filesDir, SecurityFileUtils.MIGRATION_FLAGS_DIR)
         if (migrationDir.exists()) {
             migrationDir.deleteRecursively()
         }
     }
     
     private fun isMigrationCompleted(migrationName: String): Boolean {
-        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
-        val migrationFile = File(migrationDir, migrationName + SecurityGuard.FLAG_FILE_EXTENSION)
+        val migrationDir = File(context.filesDir, SecurityFileUtils.MIGRATION_FLAGS_DIR)
+        val migrationFile = File(migrationDir, migrationName + SecurityFileUtils.FLAG_FILE_EXTENSION)
         return migrationFile.exists()
     }
     
     private fun assertBackupFilesExist(keyAlias: String) {
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
-        val primaryBackup = File(backupDir, keyAlias + SecurityGuard.BACKUP_FILE_SUFFIX)
-        val secondaryBackup = File(backupDir, keyAlias + SecurityGuard.BACKUP2_FILE_SUFFIX)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
+        val primaryBackup = File(backupDir, keyAlias + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+        val secondaryBackup = File(backupDir, keyAlias + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
         
         assertTrue("Primary backup file should exist: ${primaryBackup.path}", primaryBackup.exists())
         assertTrue("Secondary backup file should exist: ${secondaryBackup.path}", secondaryBackup.exists())
@@ -1354,9 +1355,9 @@ class SecurityGuardMultiThreadingTest {
             assertEquals("Should recover password from file backup", testPassword, recoveredPassword)
         } catch (e: SecurityGuardException) {
             // If recovery fails, verify backup files exist and contain data
-            val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
-            val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
-            val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
+            val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
+            val primaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP_FILE_SUFFIX)
+            val secondaryBackup = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
             
             assertTrue("Primary backup should exist for recovery", primaryBackup.exists())
             assertTrue("Secondary backup should exist for recovery", secondaryBackup.exists())
@@ -1379,9 +1380,9 @@ class SecurityGuardMultiThreadingTest {
         assertFalse("Migration flag should not exist initially", isMigrationCompleted(migrationName))
         
         // Create migration flag manually to simulate completed migration
-        val migrationDir = File(context.filesDir, SecurityGuard.MIGRATION_FLAGS_DIR)
+        val migrationDir = File(context.filesDir, SecurityFileUtils.MIGRATION_FLAGS_DIR)
         migrationDir.mkdirs()
-        val flagFile = File(migrationDir, migrationName + SecurityGuard.FLAG_FILE_EXTENSION)
+        val flagFile = File(migrationDir, migrationName + SecurityFileUtils.FLAG_FILE_EXTENSION)
         flagFile.createNewFile()
         
         // Should now exist
@@ -1405,7 +1406,7 @@ class SecurityGuardMultiThreadingTest {
      */
     @Test
     fun testBackupFileOperations() {
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
         val testData = "test_backup_data_123"
@@ -1433,7 +1434,7 @@ class SecurityGuardMultiThreadingTest {
         val finishLatch = CountDownLatch(threadCount)
         val successCount = AtomicInteger(0)
         
-        val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
+        val backupDir = File(context.filesDir, SecurityFileUtils.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
         val executor = Executors.newFixedThreadPool(threadCount)

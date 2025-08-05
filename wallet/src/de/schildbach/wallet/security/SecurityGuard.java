@@ -12,14 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,6 +23,7 @@ import javax.inject.Inject;
 import de.schildbach.wallet.WalletApplication;
 import kotlinx.coroutines.BuildersKt;
 import kotlinx.coroutines.Dispatchers;
+import org.dash.wallet.common.util.security.SecurityFileUtils;
 
 public class SecurityGuard {
 
@@ -38,13 +34,7 @@ public class SecurityGuard {
     static final String UI_PIN_KEY_ALIAS = "ui_pin_key";
     static final String WALLET_PASSWORD_KEY_ALIAS = "wallet_password_key";
 
-    static final String SECURITY_BACKUP_DIR = "security_backup";
-    static final String MIGRATION_FLAGS_DIR = "migration_flags";
     static final String MIGRATION_COMPLETED_FILE = "backup_migration_completed";
-
-    static final String BACKUP_FILE_SUFFIX = "_backup.dat";
-    static final String BACKUP2_FILE_SUFFIX = "_backup2.dat";
-    static final String FLAG_FILE_EXTENSION = ".flag";
     // Singleton implementation
     private static volatile SecurityGuard instance;
     private static final Object LOCK = new Object();
@@ -53,9 +43,11 @@ public class SecurityGuard {
 
     private final SharedPreferences securityPrefs;
     private final EncryptionProvider encryptionProvider;
+    private final File backupDir;
     private SecurityConfig backupConfig;
 
     private SecurityGuard() throws GeneralSecurityException, IOException {
+        backupDir = WalletApplication.getInstance().getFilesDir();
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
         log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
@@ -66,6 +58,7 @@ public class SecurityGuard {
     }
 
     private SecurityGuard(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
+        backupDir = WalletApplication.getInstance().getFilesDir();
         this.securityPrefs = securityPrefs;
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
         log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
@@ -125,7 +118,7 @@ public class SecurityGuard {
         try {
             String encryptedPasswordStr = recoverEncryptedData(WALLET_PASSWORD_KEY_ALIAS);
             if (encryptedPasswordStr == null) {
-                throw new SecurityGuardException("No valid encrypted password found. backups: " + isMigrationCompleted(MIGRATION_COMPLETED_FILE));
+                throw new SecurityGuardException("No valid encrypted password found. backups: " + SecurityFileUtils.INSTANCE.isMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE));
             }
             
             byte[] encryptedPassword = Base64.decode(encryptedPasswordStr, Base64.NO_WRAP);
@@ -145,7 +138,7 @@ public class SecurityGuard {
         try {
             String savedPinStr = recoverEncryptedData(UI_PIN_KEY_ALIAS);
             if (savedPinStr == null || savedPinStr.isEmpty()) {
-                throw new SecurityGuardException("No valid encrypted PIN found. backups: " + isMigrationCompleted(MIGRATION_COMPLETED_FILE));
+                throw new SecurityGuardException("No valid encrypted PIN found. backups: " + SecurityFileUtils.INSTANCE.isMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE));
             }
             
             byte[] savedPin = Base64.decode(savedPinStr, Base64.NO_WRAP);
@@ -277,18 +270,15 @@ public class SecurityGuard {
      */
     private void backupToFile(String keyAlias, String data) {
         try {
-            File backupDir = new File(WalletApplication.getInstance().getFilesDir(), "security_backup");
-            if (!backupDir.exists()) {
-                backupDir.mkdirs();
-            }
+            File filesDir = backupDir;
             
             // Primary backup
-            File backupFile = new File(backupDir, keyAlias + BACKUP_FILE_SUFFIX);
-            writeToFile(backupFile, data);
+            File backupFile = SecurityFileUtils.INSTANCE.getBackupFile(filesDir, keyAlias, true);
+            SecurityFileUtils.INSTANCE.writeToFile(backupFile, data);
             
             // Secondary backup
-            File backup2File = new File(backupDir, keyAlias + BACKUP2_FILE_SUFFIX);
-            writeToFile(backup2File, data);
+            File backup2File = SecurityFileUtils.INSTANCE.getBackupFile(filesDir, keyAlias, false);
+            SecurityFileUtils.INSTANCE.writeToFile(backup2File, data);
             
             log.info("Successfully backed up {} to files", keyAlias);
         } catch (Exception e) {
@@ -347,18 +337,18 @@ public class SecurityGuard {
         }
         
         // Try file backups
-        List<String> fileNames = Arrays.asList(
-            keyAlias + BACKUP_FILE_SUFFIX,
-            keyAlias + BACKUP2_FILE_SUFFIX
-        );
+        File filesDir = backupDir;
+        File[] backupFiles = {
+            SecurityFileUtils.INSTANCE.getBackupFile(filesDir, keyAlias, true),
+            SecurityFileUtils.INSTANCE.getBackupFile(filesDir, keyAlias, false)
+        };
         
-        for (String fileName : fileNames) {
+        for (File backupFile : backupFiles) {
             try {
-                File backupFile = new File(new File(WalletApplication.getInstance().getFilesDir(), "security_backup"), fileName);
                 if (backupFile.exists()) {
-                    String fileData = readFromFile(backupFile);
+                    String fileData = SecurityFileUtils.INSTANCE.readFromFile(backupFile);
                     if (fileData != null && isValidEncryptedData(keyAlias, fileData)) {
-                        log.info("Recovered {} from file backup: {}", keyAlias, fileName);
+                        log.info("Recovered {} from file backup: {}", keyAlias, backupFile.getName());
                         // Restore to primary SharedPreferences
                         securityPrefs.edit().putString(keyAlias, fileData).apply();
                         // Re-backup to all locations
@@ -367,7 +357,7 @@ public class SecurityGuard {
                     }
                 }
             } catch (Exception e) {
-                log.warn("Failed to recover {} from file backup: {}", keyAlias, fileName, e);
+                log.warn("Failed to recover {} from file backup: {}", keyAlias, backupFile.getName(), e);
             }
         }
         
@@ -453,21 +443,7 @@ public class SecurityGuard {
         }
         
         // Clear file backups
-        try {
-            File backupDir = new File(WalletApplication.getInstance().getFilesDir(), "security_backup");
-            if (backupDir.exists()) {
-                File[] backupFiles = backupDir.listFiles();
-                if (backupFiles != null) {
-                    for (File file : backupFiles) {
-                        file.delete();
-                    }
-                }
-                backupDir.delete();
-                log.info("Cleared file backups");
-            }
-        } catch (Exception e) {
-            log.error("Failed to clear file backups", e);
-        }
+        SecurityFileUtils.INSTANCE.clearBackupDirectory(backupDir);
     }
     
     /**
@@ -476,7 +452,7 @@ public class SecurityGuard {
     private void migrateExistingDataToBackups() {
         try {
             // Check if migration has already been done using file flag
-            if (isMigrationCompleted(MIGRATION_COMPLETED_FILE)) {
+            if (SecurityFileUtils.INSTANCE.isMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE)) {
                 log.info("Backup migration already completed");
                 return;
             }
@@ -501,7 +477,7 @@ public class SecurityGuard {
             }
             
             // Mark migration as completed using file flag
-            setMigrationCompleted(MIGRATION_COMPLETED_FILE);
+            SecurityFileUtils.INSTANCE.setMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE);
             log.info("Backup migration completed successfully");
             
         } catch (Exception e) {
@@ -509,79 +485,4 @@ public class SecurityGuard {
         }
     }
     
-    /**
-     * Write string to file (API 24 compatible)
-     */
-    private void writeToFile(File file, String data) throws IOException {
-        FileOutputStream fos = null;
-        try {
-            fos = new FileOutputStream(file);
-            fos.write(data.getBytes(StandardCharsets.UTF_8));
-            fos.flush();
-        } finally {
-            if (fos != null) {
-                try {
-                    fos.close();
-                } catch (IOException e) {
-                    log.warn("Failed to close file output stream", e);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Read string from file (API 24 compatible)
-     */
-    private String readFromFile(File file) {
-        FileInputStream fis = null;
-        try {
-            fis = new FileInputStream(file);
-            byte[] buffer = new byte[(int) file.length()];
-            fis.read(buffer);
-            return new String(buffer, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            log.warn("Failed to read from file: {}", file.getName(), e);
-            return null;
-        } finally {
-            if (fis != null) {
-                try {
-                    fis.close();
-                } catch (IOException e) {
-                    log.warn("Failed to close file input stream", e);
-                }
-            }
-        }
-    }
-    
-    /**
-     * Check if migration is completed using file-based flag (more reliable than SharedPreferences)
-     */
-    private boolean isMigrationCompleted(String migrationName) {
-        try {
-            File migrationDir = new File(WalletApplication.getInstance().getFilesDir(), MIGRATION_FLAGS_DIR);
-            File migrationFile = new File(migrationDir, migrationName + FLAG_FILE_EXTENSION);
-            return migrationFile.exists();
-        } catch (Exception e) {
-            log.warn("Failed to check migration flag: {}", migrationName, e);
-            return false;
-        }
-    }
-    
-    /**
-     * Mark migration as completed using file-based flag
-     */
-    private void setMigrationCompleted(String migrationName) {
-        try {
-            File migrationDir = new File(WalletApplication.getInstance().getFilesDir(), "migration_flags");
-            if (!migrationDir.exists()) {
-                migrationDir.mkdirs();
-            }
-            
-            File migrationFile = new File(migrationDir, migrationName + FLAG_FILE_EXTENSION);
-            migrationFile.createNewFile();
-            log.info("Migration flag set: {}", migrationName);
-        } catch (Exception e) {
-            log.error("Failed to set migration flag: {}", migrationName, e);
-        }
-    }
 }
