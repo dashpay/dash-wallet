@@ -584,20 +584,8 @@ class SecurityGuardMultiThreadingTest {
      */
     @Test
     fun testMigrationFromExistingData() {
-        // Setup: Simulate existing encrypted data in SharedPreferences (pre-backup version)
-        val existingPasswordData = UUID.randomUUID().toString()
-        val existingPinData = "4834"
-        val existingIvData = generateRandomIV() // base64 encoded test data
-        
-        sharedPreferences.edit()
-            .putString("wallet_password_key", existingPasswordData)
-            .putString("ui_pin_key", existingPinData)
-            .putString("encryption_iv", existingIvData)
-            .commit()
-        
-        // Remove migration flags to simulate first launch after upgrade
-        deleteMigrationFlags()
-        
+        setupPreviousStateWithoutBackups()
+
         val securityGuard = SecurityGuard.getTestInstance(sharedPreferences)
 
         // Set backup config to test migration
@@ -617,20 +605,42 @@ class SecurityGuardMultiThreadingTest {
         assertBackupFilesExist(SecurityGuard.UI_PIN_KEY_ALIAS)
         // Note: encryption_iv backup files are created by ModernEncryptionProvider when it's initialized
     }
-    
+
+    private fun setupPreviousStateWithoutBackups() {
+        // Setup: Simulate existing encrypted data in SharedPreferences (pre-backup version)
+        val existingPasswordData = UUID.randomUUID().toString()
+        val existingPinData = "4834"
+        val existingIvData: String // = generateRandomIV() // base64 encoded test data
+        val existingWalletPasswordKey: String
+        val existingUIPinKey: String
+        // get the IV and remove all backups
+        SecurityGuard.getTestInstance(sharedPreferences).apply {
+            savePassword(existingPasswordData)
+            savePin(existingPinData)
+            existingIvData = sharedPreferences.getString(ModernEncryptionProvider.ENCRYPTION_IV_KEY, null)!!
+            existingWalletPasswordKey = sharedPreferences.getString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, null)!!
+            existingUIPinKey = sharedPreferences.getString(SecurityGuard.UI_PIN_KEY_ALIAS, null)!!
+            isValidEncryptedDataThrows(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, existingWalletPasswordKey)
+            clearBackups()
+        }
+        // recreate the data from the previous version
+        sharedPreferences.edit()
+            .putString(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, existingWalletPasswordKey)
+            .putString(SecurityGuard.UI_PIN_KEY_ALIAS, existingUIPinKey)
+            .putString("encryption_iv", existingIvData)
+            .commit()
+
+        // Remove migration flags to simulate first launch after upgrade
+        deleteMigrationFlags()
+    }
+
     /**
      * Test that migration doesn't run twice
      */
     @Test
     fun testMigrationOnlyRunsOnce() {
-        // Setup existing data
-        sharedPreferences.edit()
-            .putString("wallet_password_key", "testdata1")
-            .putString("ui_pin_key", "testdata2")
-            .apply()
-        
-        // First run - should migrate
-        deleteMigrationFlags()
+        setupPreviousStateWithoutBackups()
+
         val securityGuard1 = SecurityGuard.getTestInstance(sharedPreferences)
         val backupConfig1 = createRealSecurityBackupConfig()
         if (backupConfig1 != null) {
@@ -1044,8 +1054,6 @@ class SecurityGuardMultiThreadingTest {
         val backupDir = File(context.filesDir, SecurityGuard.SECURITY_BACKUP_DIR)
         backupDir.mkdirs()
         
-        val corruptedBackup1 = File(backupDir, "wallet_password_key_backup.dat")
-        val corruptedBackup2 = File(backupDir, "wallet_password_key_backup2.dat")
         val corruptedBackup1 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP_FILE_SUFFIX)
         val corruptedBackup2 = File(backupDir, SecurityGuard.WALLET_PASSWORD_KEY_ALIAS + SecurityGuard.BACKUP2_FILE_SUFFIX)
         
