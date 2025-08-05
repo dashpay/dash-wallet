@@ -6,6 +6,7 @@ import android.util.Base64;
 
 import androidx.annotation.VisibleForTesting;
 
+import org.dash.wallet.common.services.analytics.AnalyticsService;
 import org.dash.wallet.common.util.security.EncryptionProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+
+import javax.inject.Inject;
 
 import de.schildbach.wallet.WalletApplication;
 import kotlinx.coroutines.BuildersKt;
@@ -37,6 +40,8 @@ public class SecurityGuard {
     // Singleton implementation
     private static volatile SecurityGuard instance;
     private static final Object LOCK = new Object();
+    @Inject
+    AnalyticsService analyticsService;
 
     private SharedPreferences securityPrefs;
     private EncryptionProvider encryptionProvider;
@@ -112,7 +117,7 @@ public class SecurityGuard {
         try {
             String encryptedPasswordStr = recoverEncryptedData(WALLET_PASSWORD_KEY_ALIAS);
             if (encryptedPasswordStr == null) {
-                throw new SecurityGuardException("No encrypted password found");
+                throw new SecurityGuardException("No valid encrypted password found. backups: " + isMigrationCompleted(MIGRATION_COMPLETED_FILE));
             }
             
             byte[] encryptedPassword = Base64.decode(encryptedPasswordStr, Base64.NO_WRAP);
@@ -123,6 +128,7 @@ public class SecurityGuard {
             return password;
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve password", e);
+            analyticsService.logError(e, "Failed to retrieve password");
             throw new SecurityGuardException("Failed to retrieve password", e);
         }
     }
@@ -131,13 +137,14 @@ public class SecurityGuard {
         try {
             String savedPinStr = recoverEncryptedData(UI_PIN_KEY_ALIAS);
             if (savedPinStr == null || savedPinStr.isEmpty()) {
-                throw new SecurityGuardException("No encrypted PIN found");
+                throw new SecurityGuardException("No valid encrypted PIN found. backups: " + isMigrationCompleted(MIGRATION_COMPLETED_FILE));
             }
             
             byte[] savedPin = Base64.decode(savedPinStr, Base64.NO_WRAP);
             return encryptionProvider.decrypt(UI_PIN_KEY_ALIAS, savedPin);
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve PIN", e);
+            analyticsService.logError(e, "Failed to retrieve PIN");
             throw new SecurityGuardException("Failed to retrieve PIN", e);
         }
     }
