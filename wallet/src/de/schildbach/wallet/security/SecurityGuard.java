@@ -121,10 +121,8 @@ public class SecurityGuard {
             }
             
             byte[] encryptedPassword = Base64.decode(encryptedPasswordStr, Base64.NO_WRAP);
-            log.info("encrypted password: {}", encryptedPasswordStr);
-            
+
             String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, encryptedPassword);
-            log.info("decrypted password: {}", password);
             return password;
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve password", e);
