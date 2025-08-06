@@ -41,6 +41,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
@@ -186,7 +187,7 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentUri)
+        val transaction = sendPaymentService.payWithDashUrl(paymentUri, giftCardMerchant?.source ?: ServiceName.CTXSpend)
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant?.logoLocation)
 
