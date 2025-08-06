@@ -40,7 +40,7 @@ class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
     val errorBody: String? = null,
-    cause: Exception? = null,
+    cause: Throwable? = null,
 ) : Exception(message, cause) {
     var resourceString: ResourceString? = null
     var giftCardResponse: GiftCardResponse? = null

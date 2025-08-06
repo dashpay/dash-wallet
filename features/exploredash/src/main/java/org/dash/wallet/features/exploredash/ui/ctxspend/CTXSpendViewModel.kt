@@ -175,13 +175,14 @@ class CTXSpendViewModel @Inject constructor(
                     throw CTXSpendException(
                         "/gift-cards POST { fiatAmount=$fiatAmount, merchantId = $it}",
                         response.errorCode,
-                        response.errorBody
+                        response.errorBody,
+                        response.throwable
                     )
                 }
                 // else -> {}
             }
         }
-        throw CTXSpendException("purchaseGiftCard error")
+        throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
@@ -329,10 +330,11 @@ class CTXSpendViewModel @Inject constructor(
 
     fun createEmailIntent(
         subject: String,
+        sentToCTX: Boolean,
         ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
-        putExtra(Intent.EXTRA_EMAIL, arrayOf(CTXSpendConstants.REPORT_EMAIL))
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(if (sentToCTX) CTXSpendConstants.REPORT_EMAIL else "support@dash.org"))
         putExtra(Intent.EXTRA_SUBJECT, subject)
         putExtra(Intent.EXTRA_TEXT, createReportEmail(ex))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -390,6 +392,9 @@ class CTXSpendViewModel @Inject constructor(
                     .append("fiatAmount: ").append(giftCard.fiatAmount ?: "N/A").append("\n")
                     .append("fiatCurrency: ").append(giftCard.fiatCurrency ?: "N/A").append("\n")
                     .append("paymentUrls: ").append(giftCard.paymentUrls?.toString() ?: "N/A").append("\n")
+            }
+            exception.cause?.let {
+                report.append("Stack trace\n").append(exception.stackTraceToString())
             }
         }
         return report.toString()

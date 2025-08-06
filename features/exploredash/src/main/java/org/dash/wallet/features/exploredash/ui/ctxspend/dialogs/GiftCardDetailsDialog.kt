@@ -186,6 +186,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.contactSupport.setOnClickListener {
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
+                sentToCTX = true,
                 viewModel.uiState.value.error as? CTXSpendException
             )
 
