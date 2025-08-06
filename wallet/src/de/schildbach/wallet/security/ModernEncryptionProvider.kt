@@ -163,7 +163,7 @@ class ModernEncryptionProvider(
     private fun recoverIvFromFiles(): String? {
         val fileNames = listOf(
             BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP_FILE_SUFFIX,
-            BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP_FILE_SUFFIX
+            BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP2_FILE_SUFFIX
         )
         
         for (fileName in fileNames) {
