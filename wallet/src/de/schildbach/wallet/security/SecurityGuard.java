@@ -95,7 +95,6 @@ public class SecurityGuard {
     }
 
     public synchronized void savePassword(String password) throws GeneralSecurityException, IOException {
-        log.info("password: saved: {}", password);
         validateKeyIntegrity(WALLET_PASSWORD_KEY_ALIAS);
         String encryptedPin = encrypt(WALLET_PASSWORD_KEY_ALIAS, password);
         securityPrefs.edit().putString(WALLET_PASSWORD_KEY_ALIAS, encryptedPin).apply();

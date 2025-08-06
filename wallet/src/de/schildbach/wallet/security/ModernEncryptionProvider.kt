@@ -85,7 +85,6 @@ class ModernEncryptionProvider(
     private fun saveIv(encryptionIv: ByteArray) {
         this.encryptionIv = encryptionIv
         val encryptionIvStr = Base64.encodeToString(encryptionIv, Base64.NO_WRAP)
-        log.info("password: save iv: {}", encryptionIvStr)
         securityPrefs.edit { putString(ENCRYPTION_IV_KEY, encryptionIvStr) }
         
         // Backup IV to multiple locations
@@ -127,7 +126,6 @@ class ModernEncryptionProvider(
         
         if (encryptionIvStr != null) {
             log.info("Retrieved IV from primary SharedPreferences")
-            log.info("password: get iv: {}", encryptionIvStr)  //TODO: remove
             return Base64.decode(encryptionIvStr, Base64.NO_WRAP)
         }
         
@@ -139,7 +137,6 @@ class ModernEncryptionProvider(
                 }
                 if (encryptionIvStr != null) {
                     log.info("Recovered IV from DataStore backup")
-                    log.info("password: get iv: {}", encryptionIvStr) //TODO: remove
                     // Restore to primary SharedPreferences
                     securityPrefs.edit { putString(ENCRYPTION_IV_KEY, encryptionIvStr) }
                     return Base64.decode(encryptionIvStr, Base64.NO_WRAP)
@@ -153,7 +150,6 @@ class ModernEncryptionProvider(
         val fileRecoveredIv = recoverIvFromFiles()
         if (fileRecoveredIv != null) {
             log.info("Recovered IV from file backup")
-            log.info("password: get iv: {}", fileRecoveredIv)
             // Restore to primary SharedPreferences and re-backup to all locations
             securityPrefs.edit { putString(ENCRYPTION_IV_KEY, fileRecoveredIv) }
             backupIv(fileRecoveredIv)  // Re-backup to all locations
@@ -221,7 +217,6 @@ class ModernEncryptionProvider(
                     }
                     if (recoveredIv != null) {
                         log.info("Recovered IV from DataStore backup")
-                        log.info("password: get iv: {}", recoveredIv)
                         // Restore to primary SharedPreferences
                         securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
                     }
@@ -235,7 +230,6 @@ class ModernEncryptionProvider(
                 recoveredIv = recoverIvFromFiles()
                 if (recoveredIv != null) {
                     log.info("Recovered IV from file backup")
-                    log.info("password: get iv: {}", recoveredIv)
                     // Restore to primary SharedPreferences and re-backup to all locations
                     securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
                 }
