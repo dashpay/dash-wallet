@@ -187,7 +187,7 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentUri, giftCardMerchant?.source ?: ServiceName.CTXSpend)
+        val transaction = sendPaymentService.payWithDashUrl(paymentUri, giftCardMerchant?.source?.lowercase() ?: ServiceName.CTXSpend)
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant?.logoLocation)
 
@@ -275,13 +275,13 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun logout() = repository.logout()
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardResponse) {
         val giftCard = GiftCard(
             txId = txId,
             merchantName = giftCardMerchant?.name ?: "",
-            price = giftCardPaymentValue.value.toBigDecimal().toDouble(),
+            price = giftCardResponse.cardFiatAmount?.toDouble() ?: 0.0,
             merchantUrl = giftCardMerchant?.website,
-            note = giftCardId
+            note = giftCardResponse.id
         )
         viewModelScope.launch {
             giftCardDao.insertGiftCard(giftCard)

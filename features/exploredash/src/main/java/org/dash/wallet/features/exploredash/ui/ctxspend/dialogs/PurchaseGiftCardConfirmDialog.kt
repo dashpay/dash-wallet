@@ -229,7 +229,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             val transactionId = createSendingRequestFromDashUri(data.paymentUrls?.get("DASH.DASH")!!)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
-                viewModel.saveGiftCardDummy(transactionId, data.id)
+                viewModel.saveGiftCardDummy(transactionId, data)
                 showGiftCardDetailsDialog(transactionId, data.id)
             }
         }
