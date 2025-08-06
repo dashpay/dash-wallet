@@ -56,7 +56,13 @@ object SecurityFileUtils {
         return try {
             fis = FileInputStream(file)
             val buffer = ByteArray(file.length().toInt())
-            fis.read(buffer)
+            var totalRead = 0
+            var bytesRead: Int
+            while (totalRead < buffer.size) {
+                bytesRead = fis.read(buffer, totalRead, buffer.size - totalRead)
+                if (bytesRead == -1) break
+                totalRead += bytesRead
+            }
             String(buffer, StandardCharsets.UTF_8)
         } catch (e: IOException) {
             log.warn("Failed to read from file: {}", file.name, e)

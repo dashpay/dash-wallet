@@ -17,8 +17,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-
-import javax.inject.Inject;
+import java.util.concurrent.TimeUnit;
 
 import de.schildbach.wallet.WalletApplication;
 import kotlinx.coroutines.BuildersKt;
@@ -38,8 +37,7 @@ public class SecurityGuard {
     // Singleton implementation
     private static volatile SecurityGuard instance;
     private static final Object LOCK = new Object();
-    @Inject
-    AnalyticsService analyticsService;
+    private AnalyticsService analyticsService;
 
     private final SharedPreferences securityPrefs;
     private final EncryptionProvider encryptionProvider;
@@ -55,6 +53,7 @@ public class SecurityGuard {
         
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
+        analyticsService = WalletApplication.getInstance().getAnalyticsService();
     }
 
     private SecurityGuard(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
@@ -66,6 +65,7 @@ public class SecurityGuard {
 
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
+        analyticsService = WalletApplication.getInstance().getAnalyticsService();
     }
 
     public static SecurityGuard getInstance() throws GeneralSecurityException, IOException {
@@ -236,31 +236,35 @@ public class SecurityGuard {
     private void backupEncryptedData(String keyAlias, String encryptedData) {
         // DataStore backup
         if (backupConfig != null) {
-            try {
-                CompletableFuture.runAsync(() -> {
-                    try {
-                        if (WALLET_PASSWORD_KEY_ALIAS.equals(keyAlias)) {
-                            BuildersKt.runBlocking(
+            CompletableFuture<Void> backupFuture = CompletableFuture.runAsync(() -> {
+                try {
+                    if (WALLET_PASSWORD_KEY_ALIAS.equals(keyAlias)) {
+                        BuildersKt.runBlocking(
                                 Dispatchers.getIO(),
                                 (scope, continuation) -> backupConfig.backupWalletPassword(encryptedData, continuation)
-                            );
-                        } else if (UI_PIN_KEY_ALIAS.equals(keyAlias)) {
-                            BuildersKt.runBlocking(
+                        );
+                    } else if (UI_PIN_KEY_ALIAS.equals(keyAlias)) {
+                        BuildersKt.runBlocking(
                                 Dispatchers.getIO(),
                                 (scope, continuation) -> backupConfig.backupUiPin(encryptedData, continuation)
-                            );
-                        }
-                        log.info("Successfully backed up {} to DataStore", keyAlias);
-                    } catch (Exception e) {
-                        log.error("Failed to backup {} to DataStore", keyAlias, e);
+                        );
                     }
-                });
+                    log.info("Successfully backed up {} to DataStore", keyAlias);
+                } catch (Exception e) {
+                    log.error("Failed to backup {} to DataStore", keyAlias, e);
+                    throw new RuntimeException(e); // Propagate for monitoring
+                }
+            });
+
+            // Optional: Add timeout and error handling
+            try {
+                backupFuture.get(5, TimeUnit.SECONDS); // Wait max 5 seconds
             } catch (Exception e) {
-                log.error("Failed to initiate DataStore backup for {}", keyAlias, e);
+                log.warn("DataStore backup timed out or failed for {}, continuing with file backup", keyAlias, e);
             }
         }
-        
-        // File backup
+
+        // File backup (always execute)
         backupToFile(keyAlias, encryptedData);
     }
 
