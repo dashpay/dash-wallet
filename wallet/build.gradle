@@ -293,7 +293,7 @@ android {
             res.srcDirs = ["staging/res"]
         }
         devnet {
-            res.srcDirs = ["schnapps/res"]
+            res.srcDirs = ["devnet/res"]
         }
     }
     flavorDimensions "default"
@@ -363,7 +363,7 @@ android {
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
         }
         devnet {
-            applicationId = "org.dash.dashpay.schnapps"
+            applicationId = "org.dash.dashpay.devnet"
             def imgurClientId = props.getProperty("UPHOLD_CLIENT_ID_SANDBOX")
             def imgurClientSecret = props.getProperty("UPHOLD_CLIENT_SECRET_SANDBOX")
             if (imgurClientId == null) {
@@ -372,9 +372,14 @@ android {
             if (imgurClientSecret == null) {
                 imgurClientSecret = "\"UPHOLD_CLIENT_SECRET\""
             }
-            applicationId = "org.dash.wallet.devnet"
             buildConfigField("String", "UPHOLD_CLIENT_ID", "\"UPHOLD_CLIENT_ID\"")
             buildConfigField("String", "UPHOLD_CLIENT_SECRET", "\"UPHOLD_CLIENT_SECRET\"")
+            def topperKeyId = props.getProperty("TOPPER_KEY_ID_SANDBOX", "\"TOPPER_KEY_ID\"")
+            def topperWidgetId = props.getProperty("TOPPER_WIDGET_ID_SANDBOX", "\"TOPPER_WIDGET_ID\"")
+            def topperPrivateKey = props.getProperty("TOPPER_PRIVATE_KEY_SANDBOX", "\"TOPPER_PRIVATE_KEY\"")
+            buildConfigField("String", "TOPPER_KEY_ID", topperKeyId)
+            buildConfigField("String", "TOPPER_WIDGET_ID", topperWidgetId)
+            buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
         }
