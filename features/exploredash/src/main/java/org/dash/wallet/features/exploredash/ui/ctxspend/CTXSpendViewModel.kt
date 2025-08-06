@@ -362,9 +362,9 @@ class CTXSpendViewModel @Inject constructor(
             report.append("No merchant selected").append("\n")
         }
 
-//        report.append("\n")
-//        report.append("Purchase Details").append("\n")
-//        report.append("amount: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
+        report.append("\n")
+        report.append("Purchase Details").append("\n")
+        report.append("amount entered: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
         report.append("\n")
         ex?.let { exception ->
             exception.message?.let {

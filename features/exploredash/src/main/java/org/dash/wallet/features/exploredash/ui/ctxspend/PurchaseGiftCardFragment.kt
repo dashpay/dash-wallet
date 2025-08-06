@@ -353,20 +353,20 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun exceedsBalance(): Boolean {
-        val rate = viewModel.usdExchangeRate.value
+        val rate = viewModel.usdExchangeRate.value ?: return false
 
-        if (rate == null) {
-            return false
-        }
+        val balanceWithDiscount = viewModel.balanceWithDiscount ?: return false
 
-        val balanceWithDiscount = viewModel.balanceWithDiscount
-
-        if (balanceWithDiscount == null) {
-            return false
-        }
-
+        var paymentValue = viewModel.giftCardPaymentValue.value
         val myRate = ExchangeRate(rate.fiat)
-        val amountDash = myRate.fiatToCoin(viewModel.giftCardPaymentValue.value)
+        // this is called when the after a purchase with the user's selected currency, not USD
+        if (paymentValue.currencyCode != Constants.USD_CURRENCY) {
+            paymentValue = Fiat.valueOf(
+                Constants.USD_CURRENCY,
+                paymentValue.value
+            )
+        }
+        val amountDash = myRate.fiatToCoin(paymentValue)
 
         return amountDash.isGreaterThan(balanceWithDiscount)
     }
