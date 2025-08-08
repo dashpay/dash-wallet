@@ -312,18 +312,14 @@ class SendCoinsTaskRunner @Inject constructor(
     private fun isTransactionOnNetwork(transaction: Transaction): Boolean {
         return try {
             val wallet = walletData.wallet ?: return false
-            // Check if we received the transaction from the network (not just locally created)
-            val tx = wallet.getTransaction(transaction.txId)
-            if (tx != null) {
-                // Transaction exists in wallet, check if it was received from network and it is building or pending
-                val confidence = tx.confidence
-                return confidence.source == TransactionConfidence.Source.NETWORK ||
-                        confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
-                        (confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING && confidence.numBroadcastPeers() > 0)
-            } else {
-                val confidence = transaction.confidence
-                return confidence?.isTransactionLocked == true
-            }
+            val inWalletTx = wallet.getTransaction(transaction.txId)
+            val confidence = (inWalletTx ?: transaction).confidence ?: return false
+
+            // If we have the wallet’s instance, also accept network source as proof
+            (inWalletTx != null && confidence.source == TransactionConfidence.Source.NETWORK) ||
+                    confidence.isChainLocked ||
+                    confidence.isTransactionLocked ||
+                    confidence.numBroadcastPeers() > 0
         } catch (e: Exception) {
             log.debug("Error checking transaction network status: ${e.message}")
             false
