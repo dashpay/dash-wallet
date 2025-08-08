@@ -24,7 +24,9 @@ data class GiftCardResponse(
     @SerializedName("barcodeUrl") val barcodeUrl: String? = "",
     @SerializedName("number") val cardNumber: String? = "",
     @SerializedName("pin") val cardPin: String? = "",
-
+    val cardFiatAmount: String? = "",
+    val cardFiatCurrency: String? = "",
+    val merchantName: String? = "",
     @SerializedName("paymentCryptoAmount") val cryptoAmount: String? = "",
     @SerializedName("paymentCryptoCurrency") val cryptoCurrency: String? = "",
     val paymentCryptoNetwork: String = "",

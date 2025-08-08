@@ -112,9 +112,10 @@ abstract class AppModule {
             identityConfig: BlockchainIdentityConfig,
             coinJoinConfig: CoinJoinConfig,
             coinJoinService: CoinJoinService,
-            platformRepo: PlatformRepo
+            platformRepo: PlatformRepo,
+            transactionMetadataProvider: TransactionMetadataProvider
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, platformRepo)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, platformRepo, transactionMetadataProvider)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

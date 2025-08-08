@@ -129,7 +129,21 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_error),
                             getString(R.string.button_close)
-                        ).show(requireActivity())
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "DashPay DashSpend Issue: Network Error",
+                                    sentToCTX = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
                         AdaptiveDialog.create(
@@ -140,9 +154,32 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_contact_ctx)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
-                                // TODO: share
                                 val intent = viewModel.createEmailIntent(
                                     "CTX Issue: Spending Limit Problem",
+                                    sentToCTX = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
+                    ex.errorCode == 500 -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_server_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_ctx)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "CTX Issue: Purchase, Internal Server Error",
+                                    sentToCTX = true,
                                     ex
                                 )
 
@@ -160,7 +197,21 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             ex.message ?: getString(R.string.gift_card_error),
                             getString(R.string.button_close)
-                        ).show(requireActivity())
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    subject = "DashPay DashSpend Issue: Purchase Error",
+                                    sentToCTX = false,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
                     }
                 }
                 return@launch
@@ -178,7 +229,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             val transactionId = createSendingRequestFromDashUri(data.paymentUrls?.get("DASH.DASH")!!)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
-                viewModel.saveGiftCardDummy(transactionId, data.id)
+                viewModel.saveGiftCardDummy(transactionId, data)
                 showGiftCardDetailsDialog(transactionId, data.id)
             }
         }

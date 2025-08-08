@@ -64,6 +64,7 @@ class RemoteDataSource @Inject constructor(private val config: CTXSpendConfig) {
                 authenticator?.let { client.authenticator(it) }
                 //                if (BuildConfig.DEBUG) { TODO
                 val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                logging.redactHeader("Authorization")
                 logging.level = HttpLoggingInterceptor.Level.BODY
                 client.addInterceptor(logging)
                 //                }
