@@ -45,7 +45,7 @@ class BroadcastIdentityVerifyOperation(val application: Application) {
     @SuppressLint("EnqueueWork")
     fun create(username: String, url: String): WorkContinuation {
 
-        val password = SecurityGuard().retrievePassword()
+        val password = SecurityGuard.getInstance().retrievePassword()
         val verifyIdentityWorker = OneTimeWorkRequestBuilder<BroadcastIdentityVerifyWorker>()
                 .setInputData(workDataOf(
                         BroadcastIdentityVerifyWorker.KEY_PASSWORD to password,

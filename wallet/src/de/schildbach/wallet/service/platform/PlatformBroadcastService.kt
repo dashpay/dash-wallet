@@ -74,7 +74,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
     override suspend fun sendContactRequest(toUserId: String): DashPayContactRequest {
         if (walletDataProvider.wallet!!.isEncrypted) {
             // always create a SecurityGuard when it is required
-            val securityGuard = SecurityGuard()
+            val securityGuard = SecurityGuard.getInstance()
             val password = securityGuard.retrievePassword()
             // Don't bother with DeriveKeyTask here, just call deriveKey
             val encryptionKey = walletDataProvider.wallet!!.keyCrypter!!.deriveKey(password)

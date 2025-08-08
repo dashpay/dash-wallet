@@ -40,6 +40,7 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -182,9 +183,9 @@ class PlatformRepo @Inject constructor(
         return if (walletApplication.wallet!!.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null
@@ -201,9 +202,9 @@ class PlatformRepo @Inject constructor(
         return if (wallet.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null

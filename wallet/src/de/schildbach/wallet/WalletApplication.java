@@ -91,6 +91,7 @@ import org.dash.wallet.integrations.coinbase.service.CoinBaseClientConstants;
 
 import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
+import de.schildbach.wallet.security.SecurityInitializer;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
@@ -218,6 +219,8 @@ public class WalletApplication extends MultiDexApplication
     DashSystemService dashSystemService;
     @Inject
     WalletUIConfig walletUIConfig;
+    @Inject
+    SecurityInitializer securityInitializer;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
 
@@ -1059,7 +1062,7 @@ public class WalletApplication extends MultiDexApplication
         getSharedPreferences(HistoryHeaderAdapter.PREFS_FILE_NAME, MODE_PRIVATE).edit().clear().apply();
         WorkManager.getInstance(this).pruneWork();
         try {
-            new SecurityGuard().removeKeys();
+            SecurityGuard.getInstance().removeKeys();
         } catch (GeneralSecurityException | IOException e) {
             e.printStackTrace();
             log.warn("error occurred when removing security keys", e);
@@ -1194,7 +1197,7 @@ public class WalletApplication extends MultiDexApplication
     @NonNull
     @Override
     public Flow<Coin> observeSpendableBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
+        if (wallet == null || walletBalanceObserver == null || coinJoinService == null) {
             return FlowKt.emptyFlow();
         }
 

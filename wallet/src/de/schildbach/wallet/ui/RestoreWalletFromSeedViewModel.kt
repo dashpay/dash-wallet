@@ -50,7 +50,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
 
     internal val startActivityAction = SingleLiveEvent<Intent>()
-    private val securityGuard = SecurityGuard()
+    private val securityGuard = SecurityGuard.getInstance()
 
     private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
         try {
