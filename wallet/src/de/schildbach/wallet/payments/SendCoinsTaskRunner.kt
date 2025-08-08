@@ -315,10 +315,11 @@ class SendCoinsTaskRunner @Inject constructor(
             // Check if we received the transaction from the network (not just locally created)
             val tx = wallet.getTransaction(transaction.txId)
             if (tx != null) {
-                // Transaction exists in wallet, check if it was received from network
+                // Transaction exists in wallet, check if it was received from network and it is building or pending
                 val confidence = tx.confidence
                 return confidence.source == TransactionConfidence.Source.NETWORK ||
-                       confidence.numBroadcastPeers() > 0
+                        confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
+                        (confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING && confidence.numBroadcastPeers() > 0)
             } else {
                 val confidence = transaction.confidence
                 return confidence?.isTransactionLocked == true
