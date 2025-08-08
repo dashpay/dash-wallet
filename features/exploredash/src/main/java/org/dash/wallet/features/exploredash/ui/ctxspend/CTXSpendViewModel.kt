@@ -47,7 +47,6 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
@@ -187,7 +186,10 @@ class CTXSpendViewModel @Inject constructor(
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentUri, giftCardMerchant?.source?.lowercase() ?: ServiceName.CTXSpend)
+        val transaction = sendPaymentService.payWithDashUrl(
+            paymentUri,
+            giftCardMerchant?.source?.lowercase() ?: ServiceName.CTXSpend
+        )
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant?.logoLocation)
 

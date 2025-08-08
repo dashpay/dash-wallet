@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -40,7 +39,7 @@ class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
     val errorBody: String? = null,
-    cause: Throwable? = null,
+    cause: Throwable? = null
 ) : Exception(message, cause) {
     var resourceString: ResourceString? = null
     var giftCardResponse: GiftCardResponse? = null

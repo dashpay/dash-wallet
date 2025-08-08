@@ -77,7 +77,7 @@ class CTXSpendExceptionTest {
             ),
             GiftCardResponse(
                 "giftcard-1",
-                "rejected",
+                "rejected"
             )
         )
         assertEquals(null, exception.errorCode)
