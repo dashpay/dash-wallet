@@ -46,7 +46,6 @@ import androidx.lifecycle.lifecycleScope
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
-import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
@@ -57,6 +56,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -337,13 +337,7 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun authorizeGoogleDrive() {
-        val authorizationRequest = AuthorizationRequest
-            .builder()
-            .setRequestedScopes(
-                listOf(Scope(DriveScopes.DRIVE))
-                       // listOf(Scope(DriveScopes.DRIVE_FILE))
-
-            ).build()
+        val authorizationRequest = editProfileViewModel.getGoogleDriveAuthRequest()
 
         Identity.getAuthorizationClient(this@EditProfileActivity)
             .authorize(authorizationRequest)
