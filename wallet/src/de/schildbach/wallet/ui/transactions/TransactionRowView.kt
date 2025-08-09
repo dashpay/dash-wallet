@@ -128,11 +128,11 @@ data class TransactionRowView(
                 icon = R.drawable.ic_transaction_failed
                 iconBackground = R.style.TxErrorBackground
                 title = ResourceString(resourceMapper.getErrorName(tx))
-            } else if (metadata?.service == ServiceName.CTXSpend) {
+            } else if (ServiceName.isDashSpend(metadata?.service)) {
                 icon = R.drawable.ic_gift_card_tx
                 iconBackground = R.style.TxOrangeBackground
                 title = ResourceString(
-                    if (metadata.title.isNullOrEmpty()) {
+                    if (metadata!!.title.isNullOrEmpty()) {
                         R.string.explore_payment_gift_card
                     } else {
                         R.string.gift_card_tx_title

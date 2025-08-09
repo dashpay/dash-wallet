@@ -15,22 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.data.explore.model
+package org.dash.wallet.features.exploredash.data.dashspend.piggycards.model
 
-import androidx.room.Entity
-import androidx.room.ForeignKey
-import androidx.room.Index
-import androidx.room.PrimaryKey
+import com.google.gson.annotations.SerializedName
 
-@Entity(tableName = "gift_card_providers")
-data class GiftCardProvider(
-    @PrimaryKey(autoGenerate = true)
-    val id: Long = 0,
-    val merchantId: Long,
-    val provider: String,
-    val redeemType: String,
-    val savingsPercentage: Int,
-    val active: Boolean,
-    val denominationsType: String,
-    val sourceId: String
+data class ExchangeRateResult(
+    val currency: String,
+    @SerializedName("exchange_rate") val exchangeRate: Double,
+    @SerializedName("date_modified") val dateModified: String
 )

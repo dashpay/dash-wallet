@@ -25,7 +25,9 @@ import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import javax.inject.Inject
 import javax.inject.Singleton
 

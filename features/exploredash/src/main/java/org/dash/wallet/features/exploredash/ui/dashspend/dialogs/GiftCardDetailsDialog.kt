@@ -23,6 +23,7 @@ import android.util.Size
 import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StyleRes
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnLayout
@@ -41,6 +42,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -164,6 +166,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
             } else {
                 binding.cardError.isVisible = false
+            }
+
+            if (state.serviceName == ServiceName.CTXSpend) {
+                binding.poweredByIcon.setImageDrawable(AppCompatResources.getDrawable(requireContext(), R.drawable.ic_ctx_logo_blue))
+            } else {
+                binding.poweredByIcon.setImageDrawable(AppCompatResources.getDrawable(requireContext(), R.drawable.ic_piggycards_logo))
             }
         }
 

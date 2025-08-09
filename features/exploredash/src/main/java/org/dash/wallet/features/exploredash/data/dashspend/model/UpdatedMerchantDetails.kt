@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2025 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,29 +14,12 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package org.dash.wallet.features.exploredash.data.dashspend.ctx.model
 
-sealed class DenominationType(val value: String) {
-    object MinMax : DenominationType("min-max")
-    object MinMaxMajor : DenominationType("min-max-major")
-    object Fixed : DenominationType("fixed")
+package org.dash.wallet.features.exploredash.data.dashspend.model
 
-    companion object {
-        fun fromString(value: String): DenominationType {
-            return when (value) {
-                MinMax.value -> MinMax
-                MinMaxMajor.value -> MinMaxMajor
-                Fixed.value -> Fixed
-                else -> throw IllegalArgumentException("Unknown denomination type: $value")
-            }
-        }
-    }
-}
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 
-/**
- * denominations handling for merchant response
- */
-data class GetMerchantResponse(
+data class UpdatedMerchantDetails(
     val id: String,
     val denominations: List<String>,
     val denominationsType: String,

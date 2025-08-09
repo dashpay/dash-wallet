@@ -18,17 +18,40 @@ package org.dash.wallet.features.exploredash.data.dashspend.piggycards.model
 
 import com.google.gson.annotations.SerializedName
 
-data class OrderRequest(
-    @SerializedName("merchantId")
-    val merchantId: String,
-    @SerializedName("amount")
-    val amount: Double,
-    @SerializedName("email")
-    val email: String,
+data class Order(
+    @SerializedName("productId")
+    val productId: Int,
+    @SerializedName("quantity")
+    val quantity: Int,
+    @SerializedName("denomination")
+    val denomination: Double,
+    @SerializedName("currency")
+    val currency: String
+)
+
+data class UserMetadata(
+    @SerializedName("registeredSince")
+    val registeredSince: String,
+    @SerializedName("country")
+    val country: String,
+    @SerializedName("state")
+    val state: String
+)
+
+data class User(
     @SerializedName("name")
     val name: String,
-    @SerializedName("ipAddress")
-    val ipAddress: String?,
-    @SerializedName("location")
-    val location: String?
+    @SerializedName("ip")
+    val ip: String,
+    @SerializedName("metadata")
+    val metadata: UserMetadata
+)
+
+data class OrderRequest(
+    @SerializedName("orders")
+    val orders: List<Order>,
+    @SerializedName("recipientEmail")
+    val recipientEmail: String,
+    @SerializedName("user")
+    val user: User
 )

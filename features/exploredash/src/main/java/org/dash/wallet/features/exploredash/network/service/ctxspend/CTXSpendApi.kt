@@ -37,7 +37,7 @@ interface CTXSpendApi {
     suspend fun verifyEmail(@Body verifyEmailRequest: VerifyEmailRequest): RefreshTokenResponse?
 
     @POST("gift-cards")
-    suspend fun purchaseGiftCard(@Body purchaseGiftCardRequest: PurchaseGiftCardRequest): GiftCardResponse?
+    suspend fun purchaseGiftCard(@Body purchaseGiftCardRequest: PurchaseGiftCardRequest): GiftCardResponse
 
     @GET("gift-cards")
     suspend fun getGiftCard(@Query("txid") txid: String): GiftCardResponse?

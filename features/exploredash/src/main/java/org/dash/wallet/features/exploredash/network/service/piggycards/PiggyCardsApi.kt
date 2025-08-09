@@ -16,11 +16,11 @@
  */
 package org.dash.wallet.features.exploredash.network.service.piggycards
 
-import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Location
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Brand
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.ExchangeRateResult
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.GiftcardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
-import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Merchant
-import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.MerchantDetails
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderRequest
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderResponse
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.OrderStatusResponse
@@ -29,6 +29,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Sign
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpResponse
 import retrofit2.http.*
+
 
 interface PiggyCardsApi {
     @POST("signup")
@@ -40,18 +41,21 @@ interface PiggyCardsApi {
     @POST("login")
     suspend fun login(@Body loginRequest: LoginRequest): LoginResponse
 
-    @GET("merchants")
-    suspend fun getMerchants(@Query("country") country: String): List<Merchant>
+    @GET("brands/{country}")
+    suspend fun getBrands(@Path("country") country: String): List<Brand>
 
-    @GET("merchants/{id}")
-    suspend fun getMerchant(@Path("id") id: String): MerchantDetails
-
-    @GET("merchants/{id}/locations")
-    suspend fun getMerchantLocations(@Path("id") id: String): List<Location>
+    @GET("giftcards/{country}")
+    suspend fun getGiftCards(
+        @Path("country") country: String,
+        @Query("brandId") brandId: String?
+    ): GiftcardResponse?
 
     @POST("orders")
     suspend fun createOrder(@Body orderRequest: OrderRequest): OrderResponse
 
     @GET("orders/{id}")
     suspend fun getOrderStatus(@Path("id") orderId: String): OrderStatusResponse
+
+    @GET("exchange-rate")
+    suspend fun getExchangeRate(@Query("currency") currency: String): ExchangeRateResult
 }

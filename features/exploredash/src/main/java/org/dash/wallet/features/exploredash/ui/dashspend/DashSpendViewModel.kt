@@ -24,6 +24,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -32,9 +33,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -45,14 +48,15 @@ import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
+import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
@@ -71,9 +75,9 @@ class DashSpendViewModel @Inject constructor(
     var configuration: Configuration,
     private val sendPaymentService: SendPaymentService,
     private val repositoryFactory: DashSpendRepositoryFactory,
-    private val ctxSpendRepository: CTXSpendRepository,
     private val transactionMetadata: TransactionMetadataProvider,
     private val giftCardDao: GiftCardDao,
+    private val giftCardProviderDao: GiftCardProviderDao,
     networkState: NetworkStateInt,
     private val analytics: AnalyticsService
 ) : ViewModel() {
@@ -82,6 +86,7 @@ class DashSpendViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
     }
 
+    var selectedProvider: GiftCardProviderType? = null
     private var stateTrackingJob: Job? = null
 
     private val providers: Map<GiftCardProviderType, DashSpendRepository> by lazy {
@@ -90,6 +95,8 @@ class DashSpendViewModel @Inject constructor(
             GiftCardProviderType.PiggyCards to repositoryFactory.create(GiftCardProviderType.PiggyCards)
         )
     }
+    private val ctxSpendRepository = providers[GiftCardProviderType.CTX]!!
+    private val piggyCardsRepository = providers[GiftCardProviderType.PiggyCards]!!
 
     val dashFormat: MonetaryFormat
         get() = configuration.format
@@ -142,40 +149,66 @@ class DashSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    suspend fun purchaseGiftCard(): GiftCardResponse {
+    suspend fun purchaseGiftCard(): GiftCardInfo = withContext(Dispatchers.IO) {
         giftCardMerchant.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
+            val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
+            when (selectedProvider) {
+                GiftCardProviderType.CTX -> {
+                    try {
+                        ctxSpendRepository.orderGiftcard(
+                            merchantId = provider!!.sourceId,
+                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            fiatCurrency = Constants.USD_CURRENCY,
+                            cryptoCurrency = Constants.DASH_CURRENCY
+                        )
+                    } catch (e: Exception) {
+                        log.error("purchaseGiftCard error", e)
+                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null)
+                    }
+                }
+                GiftCardProviderType.PiggyCards -> {
+                    try {
+                        piggyCardsRepository.orderGiftcard(
+                            cryptoCurrency = Constants.DASH_CURRENCY,
+                            merchantId = provider!!.sourceId,
+                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            fiatCurrency = Constants.USD_CURRENCY
+                        )
+                    } catch (e: Exception) {
+                        log.error("purchaseGiftCard error", e)
+                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null)
+                    }
+                }
 
-            try {
-                val response = ctxSpendRepository.purchaseGiftCard(
-                    merchantId = it,
-                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                    fiatCurrency = "USD",
-                    cryptoCurrency = Constants.DASH_CURRENCY
-                )
-                return response!!
-            } catch (e: Exception) {
-                log.error("purchaseGiftCard error", e)
-                throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null)
+                null -> {
+                    throw IllegalArgumentException("no giftcard provider")
+                }
             }
-        }
-        throw CTXSpendException("purchaseGiftCard error: merchantId is null")
+        } ?: throw CTXSpendException("purchaseGiftCard error: merchantId is null")
     }
 
-    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
+    suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
         val transaction = sendPaymentService.payWithDashUrl(paymentUri)
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant.logoLocation)
-
-        return transaction.txId
+        transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, giftCardMerchant.logoLocation)
+        BitcoinURI(paymentUri).message?.let { memo ->
+            if (memo.isNotBlank()) {
+                transactionMetadata.setTransactionMemo(transaction.txId, memo)
+            }
+        }
+        transaction.txId
     }
 
+    /** updates merchant details according to the currently selected provider [selectedProvider]
+     *
+     */
     suspend fun updateMerchantDetails(merchant: Merchant) {
         // previously this API call would only be made if we didn't have the min and max card values,
         // but now we need to call this every time to get an updated savings percentage and to see if
         // the merchant is enabled
         val response = try {
-            getMerchant(merchant.merchantId!!)
+            getMerchant(merchant, selectedProvider!!.name)
         } catch (ex: Exception) {
             log.error("failed to get merchant ${merchant.merchantId}", ex)
             null
@@ -183,25 +216,113 @@ class DashSpendViewModel @Inject constructor(
 
         try {
             response?.apply {
-                merchant.savingsPercentage = this.savingsPercentage
-                merchant.minCardPurchase = this.minimumCardPurchase
-                merchant.maxCardPurchase = this.maximumCardPurchase
+                merchant.savingsPercentage = this.savingsPercentage // differs between providers
+                merchant.minCardPurchase = this.minimumCardPurchase // might differ between providers
+                merchant.maxCardPurchase = this.maximumCardPurchase // might differ between providers
                 // TODO: re-enable fixed denoms
-                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed
-                merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
-                merchant.denominations = this.denominations.map { it.toInt() }
+                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed // might differ between providers
+                merchant.fixedDenomination = this.denominationType == DenominationType.Fixed // might differ between providers
+                merchant.denominations = this.denominations.map { it.toInt() } // might differ between providers
+                merchant.giftCardProviders = merchant.giftCardProviders.mapIndexed { index, giftCardProvider ->
+                    if (index == 0 && selectedProvider?.name == "CTX") {
+                        giftCardProvider.copy(
+                            savingsPercentage = this.savingsPercentage,
+                            active = this.enabled
+                        )
+                    } else if (index == 0 && selectedProvider?.name == "PiggyCards") {
+                        giftCardProvider.copy(
+                            savingsPercentage = this.savingsPercentage,
+                            active = this.enabled
+                        )
+                    } else {
+                        giftCardProvider
+                    }
+
+                }
             }
         } catch (e: Exception) {
             log.warn("updated merchant details contains unexpected data:", e)
         }
     }
 
-    private suspend fun getMerchant(merchantId: String): GetMerchantResponse? {
-        return if (ctxSpendRepository.isUserSignedIn()) {
-            ctxSpendRepository.getMerchant(merchantId)
-        } else {
+    /**
+     * obtains updated merchant data from all providers
+     *
+     * returns a new [Merchant] object
+      */
+
+    suspend fun updateMerchantDetailsForAllProviders(merchant: Merchant): Merchant {
+        val response = try {
+            getMerchants(merchant)
+        } catch (ex: Exception) {
+            log.error("failed to get merchant ${merchant.merchantId}", ex)
             null
         }
+
+         try {
+            response?.apply {
+                return merchant.deepCopy(
+                    savingsPercentage = this.first.maxOf { it.savingsPercentage },
+                    giftCardProviders = this.second
+                )
+            }
+        } catch (e: Exception) {
+            log.warn("updated merchant details contains unexpected data:", e)
+        }
+        return merchant
+    }
+
+    private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
+        val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
+        return giftCardProvider?.let {
+            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(giftCardProvider.sourceId)
+        }
+    }
+
+    private suspend fun getMerchants(merchant: Merchant): Pair<List<UpdatedMerchantDetails>, List<GiftCardProvider>> {
+        val providers = giftCardProviderDao.getProvidersByMerchantId(merchant.merchantId!!)
+        val merchantResponseList = arrayListOf<UpdatedMerchantDetails>()
+        val providerResponseList = arrayListOf<GiftCardProvider>()
+        providers.forEach { provider ->
+            when (provider.provider) {
+                "CTX" -> {
+                    if (ctxSpendRepository.isUserSignedIn()) {
+                        ctxSpendRepository.getMerchant(provider.sourceId)?.let {
+                            merchantResponseList.add(it)
+                            providerResponseList.add(
+                                provider.copy(
+                                    savingsPercentage = it.savingsPercentage,
+                                    active = it.enabled
+                                )
+                            )
+                        }
+                    } else {
+                        providerResponseList.add(provider)
+                    }
+                }
+
+                "PiggyCards" -> {
+                    if (piggyCardsRepository.isUserSignedIn()) {
+                        piggyCardsRepository.getMerchant(provider.sourceId)?.let {
+                            merchantResponseList.add(it)
+                            providerResponseList.add(
+                                provider.copy(
+                                    savingsPercentage = it.savingsPercentage,
+                                    active = it.enabled
+                                )
+                            )
+                        }
+                    } else {
+                        providerResponseList.add(provider)
+                    }
+                }
+
+                else -> {
+
+                }
+            }
+        }
+        return Pair(merchantResponseList, providerResponseList)
     }
 
     fun refreshMinMaxCardPurchaseValues() {
@@ -334,7 +455,7 @@ class DashSpendViewModel @Inject constructor(
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
     }
 
-    fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         if (this::giftCardMerchant.isInitialized) {

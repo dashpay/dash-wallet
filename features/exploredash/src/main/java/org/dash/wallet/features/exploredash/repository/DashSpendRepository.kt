@@ -18,6 +18,8 @@
 package org.dash.wallet.features.exploredash.repository
 
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
+import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 
 interface DashSpendRepository {
     val userEmail: Flow<String?>
@@ -27,5 +29,14 @@ interface DashSpendRepository {
     suspend fun verifyEmail(code: String): Boolean
     suspend fun isUserSignedIn(): Boolean
     suspend fun logout()
-//    suspend fun refreshToken(): Boolean TODO
+    suspend fun refreshToken(): Boolean //TODO
+    /** obtain up-to-date information about the merchant from the service */
+    suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails?
+    suspend fun orderGiftcard(
+        cryptoCurrency: String,
+        fiatCurrency: String,
+        fiatAmount: String,
+        merchantId: String
+    ): GiftCardInfo
+    suspend fun getGiftCard(giftCardId: String): GiftCardInfo?
 }

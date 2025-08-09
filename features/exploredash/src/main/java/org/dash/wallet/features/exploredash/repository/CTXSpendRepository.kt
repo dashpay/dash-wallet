@@ -21,11 +21,13 @@ import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
+import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
@@ -105,7 +107,7 @@ class CTXSpendRepository @Inject constructor(
         fiatCurrency: String,
         fiatAmount: String,
         merchantId: String
-    ): GiftCardResponse? {
+    ): GiftCardResponse {
         return api.purchaseGiftCard(
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 cryptoCurrency = "DASH",
@@ -116,8 +118,72 @@ class CTXSpendRepository @Inject constructor(
         )
     }
 
-    override suspend fun getMerchant(merchantId: String): GetMerchantResponse? =
-        api.getMerchant(merchantId)
+    override suspend fun orderGiftcard(
+        cryptoCurrency: String,
+        fiatCurrency: String,
+        fiatAmount: String,
+        merchantId: String
+    ): GiftCardInfo {
+        val response = purchaseGiftCard(
+            merchantId = merchantId,
+            fiatAmount = fiatAmount,
+            fiatCurrency = fiatCurrency,
+            cryptoCurrency = cryptoCurrency
+        )
+
+        return GiftCardInfo(
+            response.id,
+            status = GiftCardStatus.valueOf(response.status.uppercase()),
+            cryptoAmount = response.cryptoAmount,
+            cryptoCurrency = response.cryptoCurrency,
+            paymentCryptoNetwork = response.paymentCryptoNetwork,
+            paymentId = response.paymentId,
+            percentDiscount = response.percentDiscount,
+            rate = response.rate,
+            redeemUrl = response.redeemUrl,
+            fiatAmount = response.fiatAmount,
+            fiatCurrency = response.fiatCurrency,
+            paymentUrls = response.paymentUrls,
+        )
+    }
+
+    override suspend fun getGiftCard(giftCardId: String): GiftCardInfo? {
+        val response = getGiftCardByTxid(giftCardId)
+
+        return response?.let {
+            GiftCardInfo(
+                response.id,
+                status = GiftCardStatus.valueOf(response.status.uppercase()),
+                cryptoAmount = response.cryptoAmount,
+                cryptoCurrency = response.cryptoCurrency,
+                paymentCryptoNetwork = response.paymentCryptoNetwork,
+                paymentId = response.paymentId,
+                percentDiscount = response.percentDiscount,
+                rate = response.rate,
+                redeemUrl = response.redeemUrl,
+                fiatAmount = response.fiatAmount,
+                fiatCurrency = response.fiatCurrency,
+                paymentUrls = response.paymentUrls,
+            )
+        }
+    }
+
+    override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
+        val response = api.getMerchant(merchantId)
+        return response?.let {
+            UpdatedMerchantDetails(
+                id = response.id,
+                savingsPercentage = response.savingsPercentage,
+                denominationsType = response.denominationsType,
+                denominations = response.denominations,
+                redeemType = response.redeemType,
+                enabled = response.enabled
+            )
+        }
+    }
+
+//    override suspend fun getMerchant(merchantId: String): GetMerchantResponse? =
+//        api.getMerchant(merchantId)
 
     override suspend fun getGiftCardByTxid(txid: String): GiftCardResponse? {
         return api.getGiftCard(txid)
@@ -151,7 +217,6 @@ interface CTXSpendRepositoryInt {
         merchantId: String
     ): GiftCardResponse?
 
-    suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): GiftCardResponse?
     suspend fun refreshToken(): Boolean
 }

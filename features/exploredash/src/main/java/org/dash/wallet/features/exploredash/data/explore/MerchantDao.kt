@@ -77,7 +77,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND longitude > :westLng
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
@@ -141,7 +141,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND longitude > :westLng
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
@@ -204,7 +204,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY 
             CASE type
@@ -263,7 +263,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE type
@@ -323,7 +323,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN name END COLLATE NOCASE ASC,
@@ -365,7 +365,7 @@ interface MerchantDao : BaseDao<Merchant> {
             AND type IN (:types)
             AND redeemType <> 'url'
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
-        GROUP BY source, merchantId
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN merchant.name END COLLATE NOCASE ASC,

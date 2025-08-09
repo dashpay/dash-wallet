@@ -28,10 +28,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -43,7 +45,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashRadioButton
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
@@ -196,6 +202,7 @@ private fun MerchantDetailsContent(
 
                 ActionButton(
                     merchant = merchant,
+                    selectedProvider = selectedProvider,
                     isDash = isDash,
                     onSendDashClicked = onSendDashClicked,
                     onBuyGiftCardButtonClicked = onBuyGiftCardButtonClicked
@@ -303,6 +310,7 @@ private fun MultipleProvidersSection(
                     },
                     discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%",
                     isSelected = provider.provider == selectedProvider.name,
+                    isEnabled = provider.active,
                     onSelected = { onProviderSelected(provider) }
                 )
 
@@ -316,85 +324,160 @@ private fun MultipleProvidersSection(
 private fun SingleProviderSection(
     provider: GiftCardProvider
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        // Provider section
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_gift_card_black),
-                    contentDescription = null,
-                    tint = MyTheme.Colors.textPrimary,
-                    modifier = Modifier.size(18.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(10.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.provider),
-                        style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                    Text(
-                        text = provider.provider,
-                        style = MyTheme.Caption,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                }
-            }
-        }
-        
-        // Savings section
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Save icon
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_percentage),
-                    contentDescription = null,
-                    tint = Color.Unspecified,
-                    modifier = Modifier.size(18.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(10.dp))
-                
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.save),
-                        style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                    Text(
-                        text = "${provider.savingsPercentage / 100}%",
-                        style = MyTheme.Caption,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                }
-            }
+    val discountFormat = remember {
+        DecimalFormat().apply {
+            maximumFractionDigits = 2
+            minimumFractionDigits = 0
         }
     }
+    val subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
+        stringResource(R.string.flexible_amounts)
+    } else {
+        stringResource(R.string.fixed_amounts)
+    }
+    val discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%"
+    val isSelected = false
+    val isEnabled = provider.active
+    val onSelected = {  }
+
+    val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
+    val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
+    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
+    DashRadioButton(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(backgroundColor, shape = RoundedCornerShape(12.dp))
+            //.border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+        text = provider.provider,
+        helpText = subtitle,
+        selected = false,
+        onClick = { },
+        trailingText = discount,
+        enabled = provider.active,
+        onlyOption = true
+    )
+//    Row(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .height(46.dp)
+//            .background(backgroundColor, shape = RoundedCornerShape(12.dp))
+//            //.border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+//            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
+//            .padding(horizontal = 10.dp, vertical = 4.dp),
+//        verticalAlignment = Alignment.CenterVertically
+//    ) {
+//        Column(modifier = Modifier.weight(1f)) {
+//            Text(
+//                text = provider.provider,
+//                style = MyTheme.CaptionMedium,
+//                color = textColor,
+//            )
+//            Text(
+//                text = subtitle,
+//                style = MyTheme.Overline,
+//                color = subtitleColor
+//            )
+//        }
+//
+//        Text(
+//            text = discount,
+//            style = MyTheme.Caption,
+//            color = textColor
+//        )
+//
+////        RadioButton(
+////            selected = isSelected,
+////            onClick = onSelected,
+////            colors = RadioButtonDefaults.colors(
+////                selectedColor = MyTheme.Colors.dashBlue,
+////                unselectedColor = MyTheme.Colors.gray
+////            ),
+////            enabled = isEnabled,
+////        )
+//    }
+//    Row(
+//        modifier = Modifier
+//            .fillMaxWidth()
+//            .padding(vertical = 8.dp),
+//        horizontalArrangement = Arrangement.spacedBy(20.dp)
+//    ) {
+//        // Provider section
+//        Card(
+//            modifier = Modifier.weight(1f),
+//            shape = RoundedCornerShape(10.dp),
+//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 10.dp, vertical = 6.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_gift_card_black),
+//                    contentDescription = null,
+//                    tint = MyTheme.Colors.textPrimary,
+//                    modifier = Modifier.size(18.dp)
+//                )
+//
+//                Spacer(modifier = Modifier.width(10.dp))
+//
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text(
+//                        text = stringResource(R.string.provider),
+//                        style = MyTheme.CaptionMedium,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                    Text(
+//                        text = provider.provider,
+//                        style = MyTheme.Caption,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                }
+//            }
+//        }
+//
+//        // Savings section
+//        Card(
+//            modifier = Modifier.weight(1f),
+//            shape = RoundedCornerShape(10.dp),
+//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
+//        ) {
+//            Row(
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(horizontal = 10.dp, vertical = 6.dp),
+//                verticalAlignment = Alignment.CenterVertically
+//            ) {
+//                // Save icon
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_percentage),
+//                    contentDescription = null,
+//                    tint = Color.Unspecified,
+//                    modifier = Modifier.size(18.dp)
+//                )
+//
+//                Spacer(modifier = Modifier.width(10.dp))
+//
+//                Column(modifier = Modifier.weight(1f)) {
+//                    Text(
+//                        text = stringResource(R.string.save),
+//                        style = MyTheme.CaptionMedium,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                    val format = DecimalFormat("0.0") // TODO: where should this go
+//                    Text(
+//                        text = "${format.format(provider.savingsPercentage / 100.0)}%",
+//                        style = MyTheme.Caption,
+//                        color = MyTheme.Colors.textPrimary
+//                    )
+//                }
+//            }
+//        }
+//    }
 }
 
 @Composable
@@ -403,58 +486,74 @@ private fun ProviderOption(
     subtitle: String,
     discount: String,
     isSelected: Boolean,
+    isEnabled: Boolean,
     onSelected: () -> Unit
 ) {
     val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
     val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
+    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor, shape = RoundedCornerShape(12.dp))
             .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
-            .clickable { onSelected() }
+            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
             .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = providerName,
-                style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textPrimary,
-            )
-            Text(
-                text = subtitle,
-                style = MyTheme.Overline,
-                color = MyTheme.Colors.textTertiary
-            )
-        }
-
-        Text(
-            text = discount,
-            style = MyTheme.Caption,
-            color = MyTheme.Colors.textPrimary
-        )
-
-        RadioButton(
+        DashRadioButton(
+            text = providerName,
+            helpText = subtitle,
             selected = isSelected,
             onClick = onSelected,
-            colors = RadioButtonDefaults.colors(
-                selectedColor = MyTheme.Colors.dashBlue,
-                unselectedColor = MyTheme.Colors.gray
-            )
+            trailingText = discount,
+            enabled = isEnabled,
         )
+
+//        Column(modifier = Modifier.weight(1f)) {
+//            Text(
+//                text = providerName,
+//                style = MyTheme.CaptionMedium,
+//                color = textColor,
+//            )
+//            Text(
+//                text = subtitle,
+//                style = MyTheme.Overline,
+//                color = subtitleColor
+//            )
+//        }
+//
+//        Text(
+//            text = discount,
+//            style = MyTheme.Caption,
+//            color = textColor
+//        )
+//
+//        RadioButton(
+//            selected = isSelected,
+//            onClick = onSelected,
+//            colors = RadioButtonDefaults.colors(
+//                selectedColor = MyTheme.Colors.dashBlue,
+//                unselectedColor = MyTheme.Colors.gray
+//            ),
+//            enabled = isEnabled
+//        )
     }
 }
 
 @Composable
 private fun ActionButton(
     merchant: Merchant,
+    selectedProvider: GiftCardProviderType,
     isDash: Boolean,
     onSendDashClicked: (Boolean) -> Unit,
     onBuyGiftCardButtonClicked: () -> Unit
 ) {
-    val isEnabled = merchant.active ?: true
+    val isEnabled = merchant.giftCardProviders.find {
+        it.provider == selectedProvider.name
+    }?.active  ?: true
     
     Column {
         if (!isEnabled) {
@@ -469,7 +568,19 @@ private fun ActionButton(
             )
         }
 
-        Button(
+        DashButton(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp),
+            text = stringResource(
+                if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
+            ),
+            leadingIcon = ImageVector.vectorResource(if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card),
+            style = if (isDash) Style.FilledBlue else Style.FilledOrange,
+            size = Size.Medium,
+            stretch = true,
+            isEnabled = isEnabled,
+            isLoading = false,
             onClick = {
                 if (isDash) {
                     onSendDashClicked(true)
@@ -477,34 +588,44 @@ private fun ActionButton(
                     onBuyGiftCardButtonClicked()
                 }
             },
-            enabled = isEnabled,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(40.dp),
-            shape = RoundedCornerShape(10.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isDash) MyTheme.Colors.dashBlue else MyTheme.Colors.orange,
-                disabledContainerColor = MyTheme.Colors.gray
-            )
-        ) {
-            Icon(
-                painter = painterResource(
-                    id = if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card
-                ),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = stringResource(
-                    if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
-                ),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        }
+        )
+
+//        Button(
+//            onClick = {
+//                if (isDash) {
+//                    onSendDashClicked(true)
+//                } else {
+//                    onBuyGiftCardButtonClicked()
+//                }
+//            },
+//            enabled = isEnabled,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .height(40.dp),
+//            shape = RoundedCornerShape(10.dp),
+//            colors = ButtonDefaults.buttonColors(
+//                containerColor = if (isDash) MyTheme.Colors.dashBlue else MyTheme.Colors.orange,
+//                disabledContainerColor = MyTheme.Colors.gray
+//            )
+//        ) {
+//            Icon(
+//                painter = painterResource(
+//                    id = if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card
+//                ),
+//                contentDescription = null,
+//                tint = Color.White,
+//                modifier = Modifier.size(20.dp)
+//            )
+//            Spacer(modifier = Modifier.width(8.dp))
+//            Text(
+//                text = stringResource(
+//                    if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
+//                ),
+//                fontSize = 14.sp,
+//                fontWeight = FontWeight.SemiBold,
+//                color = Color.White
+//            )
+//        }
 
         // Discount badge for Dash payments
         if (isDash && merchant.savingsFraction != 0.0) {
@@ -925,6 +1046,15 @@ private fun PreviewMerchantDetails() {
         denominationsType = "fixed",
         sourceId = "123"
     )
+    val piggyCardsProvider = GiftCardProvider(
+        merchantId = UUID.randomUUID().toString(),
+        provider = "PiggyCards",
+        redeemType = "gift card",
+        savingsPercentage = 900,
+        active = false,
+        denominationsType = "fixed",
+        sourceId = "124"
+    )
     val merchant = Merchant().apply {
         name = "Burger King"
         type = MerchantType.PHYSICAL
@@ -938,7 +1068,8 @@ private fun PreviewMerchantDetails() {
         longitude = 0.0
         physicalAmount = 10
         giftCardProviders = listOf(
-            ctxProvider
+            ctxProvider,
+            piggyCardsProvider
         )
     }
 

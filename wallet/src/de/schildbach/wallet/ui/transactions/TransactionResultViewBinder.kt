@@ -234,7 +234,7 @@ class TransactionResultViewBinder(
 
         binding.taxCategory.text = context.getString(strResource!!)
 
-        if (transactionMetadata.service == ServiceName.CTXSpend) {
+        if (ServiceName.isDashSpend(transactionMetadata.service)) {
             iconRes = R.drawable.ic_gift_card_tx
         }
 

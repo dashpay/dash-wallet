@@ -13,4 +13,7 @@ interface GiftCardProviderDao {
 
     @Query("SELECT * FROM gift_card_providers")
     suspend fun getAllProviders(): List<GiftCardProvider>
+
+    @Query("SELECT * FROM gift_card_providers WHERE merchantId = :merchantId AND provider = :provider")
+    suspend fun getProviderByMerchantId(merchantId: String, provider: String): GiftCardProvider?
 }
