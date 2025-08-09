@@ -210,9 +210,9 @@ android {
     namespace "de.schildbach.wallet_test"
 
     defaultConfig {
-        compileSdk 34
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
         versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11030101
         versionName project.hasProperty('versionName') ? project.property('versionName') : "11.3.1"
