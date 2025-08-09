@@ -57,7 +57,7 @@ class WalletFactoryTest {
     fun createTest() {
         val walletFactory = DashWalletFactory(application)
         val context = Context(MainNetParams.get())
-        walletFactory.create(context.params)
+        walletFactory.create(context.params, 12)
     }
 
     @Test

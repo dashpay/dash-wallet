@@ -212,6 +212,7 @@ class CoinJoinMixingService @Inject constructor(
     override fun observeMixingProgress(): Flow<Double> = _progressFlow
 
     init {
+        walletApplication.setCoinJoinService(this)
         //initLogging()
         blockchainStateProvider.observeNetworkStatus()
             .filterNot { it == NetworkStatus.UNKNOWN }
@@ -459,7 +460,6 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun updateMode(mode: CoinJoinMode) {
-        walletApplication.setCoinJoinService(this)
         if (mode != CoinJoinMode.NONE && this.mode == CoinJoinMode.NONE) {
             configureMixing()
         }

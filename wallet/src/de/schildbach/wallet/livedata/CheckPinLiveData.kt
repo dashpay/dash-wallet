@@ -23,10 +23,14 @@ import androidx.lifecycle.MutableLiveData
 import de.schildbach.wallet.ui.CheckWalletPasswordTask
 import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.wallet.Wallet
+import org.slf4j.LoggerFactory
 
 class CheckPinLiveData(
     private val wallet: Wallet
 ) : MutableLiveData<Resource<String>>() {
+    companion object {
+        private val log = LoggerFactory.getLogger(CheckPinLiveData::class.java)
+    }
 
     val backgroundHandler: Handler
 
@@ -37,16 +41,21 @@ class CheckPinLiveData(
     }
 
     private var checkPinTask: CheckWalletPasswordTask? = null
-    private val securityGuard = SecurityGuard()
 
     fun checkPin(pin: String) {
-        if (securityGuard.isConfigured) {
-            value = if (securityGuard.checkPin(pin))
-                Resource.success(pin)
-            else
-                Resource.error("", pin)
-        } else {
-            setupSecurityGuard(pin)
+        try {
+            val securityGuard = SecurityGuard.getInstance()
+            if (securityGuard.isConfigured) {
+                value = if (securityGuard.checkPin(pin))
+                    Resource.success(pin)
+                else
+                    Resource.error("", pin)
+            } else {
+                setupSecurityGuard(pin)
+            }
+        } catch (e: Exception) {
+            log.error("Failed to check PIN", e)
+            value = Resource.error("Security system error", pin)
         }
     }
 
@@ -60,9 +69,15 @@ class CheckPinLiveData(
                 }
 
                 override fun onSuccess() {
-                    securityGuard.savePin(pin)
-                    securityGuard.savePassword(pin)
-                    value = Resource.success(pin)
+                    try {
+                        val securityGuard = SecurityGuard.getInstance()
+                        securityGuard.savePin(pin)
+                        securityGuard.savePassword(pin)
+                        value = Resource.success(pin)
+                    } catch (e: Exception) {
+                        log.error("Failed to save security credentials", e)
+                        value = Resource.error("Failed to save credentials", pin)
+                    }
                     checkPinTask = null
                 }
             }
