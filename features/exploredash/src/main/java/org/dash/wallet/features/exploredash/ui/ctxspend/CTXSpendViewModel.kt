@@ -41,12 +41,12 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.ctxspend.model.DenominationType
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
@@ -148,11 +148,11 @@ class CTXSpendViewModel @Inject constructor(
     suspend fun purchaseGiftCard(): GiftCardResponse {
         giftCardMerchant?.merchantId?.let {
             val amountValue = giftCardPaymentValue.value
-
+            val fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString()
             val response = try {
                 repository.purchaseGiftCard(
                     merchantId = it,
-                    fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                    fiatAmount = fiatAmount,
                     fiatCurrency = "USD",
                     cryptoCurrency = Constants.DASH_CURRENCY
                 )
@@ -173,19 +173,23 @@ class CTXSpendViewModel @Inject constructor(
                 is ResponseResource.Failure -> {
                     log.error("purchaseGiftCard error ${response.errorCode}: ${response.errorBody}")
                     throw CTXSpendException(
-                        "purchaseGiftCard error ${response.errorCode}: ${response.errorBody}",
+                        "/gift-cards POST { fiatAmount=$fiatAmount, merchantId = $it}",
                         response.errorCode,
-                        response.errorBody
+                        response.errorBody,
+                        response.throwable
                     )
                 }
                 // else -> {}
             }
         }
-        throw CTXSpendException("purchaseGiftCard error")
+        throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash {
-        val transaction = sendPaymentService.payWithDashUrl(paymentUri)
+        val transaction = sendPaymentService.payWithDashUrl(
+            paymentUri,
+            giftCardMerchant?.source?.lowercase() ?: ServiceName.CTXSpend
+        )
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, giftCardMerchant?.logoLocation)
 
@@ -273,13 +277,13 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun logout() = repository.logout()
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardId: String) {
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardResponse) {
         val giftCard = GiftCard(
             txId = txId,
             merchantName = giftCardMerchant?.name ?: "",
-            price = giftCardPaymentValue.value.toBigDecimal().toDouble(),
+            price = giftCardResponse.cardFiatAmount?.toDouble() ?: 0.0,
             merchantUrl = giftCardMerchant?.website,
-            note = giftCardId
+            note = giftCardResponse.id
         )
         viewModelScope.launch {
             giftCardDao.insertGiftCard(giftCard)
@@ -329,10 +333,11 @@ class CTXSpendViewModel @Inject constructor(
 
     fun createEmailIntent(
         subject: String,
-        ex: CTXSpendException
+        sentToCTX: Boolean,
+        ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
-        putExtra(Intent.EXTRA_EMAIL, arrayOf(CTXSpendConstants.REPORT_EMAIL))
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(if (sentToCTX) CTXSpendConstants.REPORT_EMAIL else "support@dash.org"))
         putExtra(Intent.EXTRA_SUBJECT, subject)
         putExtra(Intent.EXTRA_TEXT, createReportEmail(ex))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -342,7 +347,7 @@ class CTXSpendViewModel @Inject constructor(
         return savedStateHandle.get<String>(MERCHANT_ID_KEY)
     }
 
-    private fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException?): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         giftCardMerchant?.let { merchant ->
@@ -358,15 +363,42 @@ class CTXSpendViewModel @Inject constructor(
         } ?: run {
             report.append("No merchant selected").append("\n")
         }
+
         report.append("\n")
         report.append("Purchase Details").append("\n")
-        report.append("amount: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
+        report.append("amount entered: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
         report.append("\n")
-        ex.errorCode?.let {
-            report.append("code: ").append(it).append("\n")
-        }
-        ex.errorBody?.let {
-            report.append("body:\n").append(it).append("\n")
+        ex?.let { exception ->
+            exception.message?.let {
+                report.append(it).append("\n")
+            }
+            exception.errorCode?.let {
+                report.append("code: ").append(it).append("\n")
+            }
+            exception.errorBody?.let {
+                report.append("body:\n").append(it).append("\n")
+            }
+            exception.giftCardResponse?.let { giftCard ->
+                report.append("Gift Card Information: ").append("\n")
+                    .append("id: ").append(giftCard.id).append("\n")
+                    .append("status: ").append(giftCard.status).append("\n")
+                    .append("barcodeUrl: ").append(giftCard.barcodeUrl ?: "N/A").append("\n")
+                    .append("cardNumber: ").append(giftCard.cardNumber ?: "N/A").append("\n")
+                    .append("cardPin: ").append(giftCard.cardPin ?: "N/A").append("\n")
+                    .append("cryptoAmount: ").append(giftCard.cryptoAmount ?: "N/A").append("\n")
+                    .append("cryptoCurrency: ").append(giftCard.cryptoCurrency ?: "N/A").append("\n")
+                    .append("paymentCryptoNetwork: ").append(giftCard.paymentCryptoNetwork).append("\n")
+                    .append("paymentId: ").append(giftCard.paymentId).append("\n")
+                    .append("percentDiscount: ").append(giftCard.percentDiscount).append("\n")
+                    .append("rate: ").append(giftCard.rate).append("\n")
+                    .append("redeemUrl: ").append(giftCard.redeemUrl).append("\n")
+                    .append("fiatAmount: ").append(giftCard.fiatAmount ?: "N/A").append("\n")
+                    .append("fiatCurrency: ").append(giftCard.fiatCurrency ?: "N/A").append("\n")
+                    .append("paymentUrls: ").append(giftCard.paymentUrls?.toString() ?: "N/A").append("\n")
+            }
+            exception.cause?.let {
+                report.append("Stack trace\n").append(exception.stackTraceToString())
+            }
         }
         return report.toString()
     }
