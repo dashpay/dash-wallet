@@ -39,7 +39,7 @@
     <string name="wallet_options_encrypt_keys_change">Modificare PIN</string>
     <string name="wallet_options_safety">Note di sicurezza</string>
     <string name="wallet_low_storage_dialog_title">Lo spazio interno del dispositivo è basso!</string>
-    <string name="wallet_low_storage_dialog_msg">Dash Wallet usa lo spazio interno per tenere traccia delle transizioni e i blocchi. Se non hai più spazio, l\'applicazione smetterà di funzionare e i tuoi Dash saranno a rischio!\n\nVuoi aprire il gestore delle applicazioni per disinstallare le applicazioni inutili/non necessarie?</string>
+    <string name="wallet_low_storage_dialog_msg">Il Portafoglio Dash usa lo spazio interno per tenere traccia delle transizioni e dei blocchi. Se non hai più spazio, l\'applicazione smetterà di funzionare e i tuoi Dash saranno a rischio!\n\nVuoi aprire il gestore delle applicazioni per disinstallare le applicazioni inutili/non necessarie?</string>
     <string name="wallet_low_storage_dialog_button_apps">Gestisci applicazioni</string>
     <string name="wallet_timeskew_dialog_title">Controlla data &amp; impostazioni di tempo</string>
     <string name="wallet_timeskew_dialog_msg">Il tuo dispositivo è spento da %d minuti. Probabilmente non puoi inviare ne ricevere Dash per via di questo problema.\n\nDevi controllare e correggere l\'ora e il fuso orario del tuo dispositivo.</string>
@@ -211,7 +211,7 @@
     <string name="export_keys_dialog_success"><![CDATA[1<p>È stato eseguito il backup del tuo portafoglio su <tt>%s</tt></p><p><b>Se l\'unico posto in cui esiste il tuo backup è sul tuo dispositivo, corri il rischio di perderli entrambi contemporaneamente!</b></p><p>In ogni caso, assicurati di ricordare la password di backup.</p>]]></string>
     <string name="export_keys_dialog_failure">Non è stato possibile effettuare il backup del tuo portafoglio:\n%s</string>
     <string name="export_keys_dialog_button_archive">Archivio</string>
-    <string name="export_keys_dialog_mail_subject">Dash Wallet backup</string>
+    <string name="export_keys_dialog_mail_subject">Backup Portafoglio Dash</string>
     <string name="export_keys_dialog_mail_text">Il file cifrato allegato contiene chiavi private Dash e dovrebbe essere mantenuto sicuro in ogni momento. Non dimenticarti la password per la crittografia!</string>
     <string name="export_keys_dialog_mail_intent_chooser">Archiviare portafoglio usando…</string>
     <string name="export_keys_dialog_mail_intent_failed">Archiviazione portafoglio non riuscita.</string>
@@ -222,7 +222,7 @@
     <string name="import_export_keys_dialog_failure_title">Errore</string>
     <string name="import_keys_intent_filter_action">Ripristina portafoglio</string>
     <string name="encrypt_keys_dialog_title">Modificare PIN</string>
-    <string name="encrypt_keys_dialog_message">La spesa dal tuo wallet verrà protetta con il PIN scelto.</string>
+    <string name="encrypt_keys_dialog_message">La spesa dal tuo portafoglio verrà protetta con il PIN scelto.</string>
     <string name="encrypt_keys_dialog_warning">Importante: Dovrai ricordarti il tuo PIN! Non usare numeri comuni (come il tuo compleanno).</string>
     <string name="encrypt_keys_dialog_password_old">Vecchio PIN</string>
     <string name="encrypt_keys_dialog_password_strength_weak">debole</string>
@@ -276,8 +276,8 @@
     <string name="preferences_show_disclaimer_summary">Sei sicuro di aver letto le note sulla sicurezza? Hai già eseguito il backup del tuo portafoglio in un luogo sicuro?</string>
     <string name="preferences_report_issue_title">Segnala un problema</string>
     <string name="preferences_initiate_reset_title">Riscansione blockchain</string>
-    <string name="preferences_initiate_reset_summary">Riscansiona Blockchain, transazioni e saldo del Wallet. La riproduzione richiederà un po\' di tempo, quindi fallo solo se sai perché.</string>
-    <string name="preferences_initiate_reset_dialog_message">Vuoi ripetere la scansione della Blockchain?\n\nQuesto nasconderà temporaneamente il saldo del tuo Wallet e rimuoverà le transazioni. Entrambi si riprenderanno man mano che la sincronizzazione Blockchain procede. Assicurati di avere una connessione affidabile a Internet.</string>
+    <string name="preferences_initiate_reset_summary">Riscansiona Blockchain, transazioni e saldo del Portafoglio. La riproduzione richiederà un po\' di tempo, quindi fallo solo se sai perché.</string>
+    <string name="preferences_initiate_reset_dialog_message">Vuoi ripetere la scansione della Blockchain?\n\nQuesto nasconderà temporaneamente il saldo del tuo Portafoglio e rimuoverà le transazioni. Entrambi si riprenderanno man mano che la sincronizzazione Blockchain procede. Assicurati di avere una connessione affidabile a Internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Riscansiona</string>
     <string name="preferences_extended_public_key_title">Mostra xpub</string>
     <string name="preferences_extended_public_key_summary">Mostra la chiave pubblica estesa del tuo portafoglio, in modo tale che possa essere importata su altre applicazioni e servizi. Fai attenzione: facendo ciò ti priverai della tua privacy monetaria nei confronti dell\'applicazione.</string>
@@ -309,9 +309,9 @@
     <string name="zenledger_export_title">ZenLedger</string>
     <string name="zenledger_export_subtitle">Semplifica le tue tasse sulle criptovalute</string>
     <string name="zenledger_export_all_tx">Esporta tutte le transazioni</string>
-    <string name="zenledger_export_description">Collega i tuoi portafogli crittografici alla piattaforma ZenLedger. Scopri di più e inizia con le transazioni del tuo Dash Wallet.</string>
+    <string name="zenledger_export_description">Collega i tuoi portafogli crittografici alla piattaforma ZenLedger. Scopri di più e inizia con le transazioni del tuo Portafoglio Dash.</string>
     <string name="chain_syncing_default_message">Attendi fino a quando la catena non sarà completamente sincronizzata, in modo da poter rivedere la cronologia delle transazioni.</string>
-    <string name="zenledger_export_permission">Consentire l\'invio di tutte le transazioni da Dash Wallet a Zenledger?</string>
+    <string name="zenledger_export_permission">Consentire l\'invio di tutte le transazioni dal Portafoglio Dash a Zenledger?</string>
     <string name="zenledger_export_error">Si è verificato un errore durante l\'esportazione della cronologia delle transazioni su ZenLedger.</string>
 
 
@@ -334,7 +334,7 @@
     <string name="notification_coins_received_msg">Ricevuti %s</string>
     <string name="notification_peers_connected_msg">Connesso a %d peers</string>
     <string name="notification_inactivity_title">Hai ancora Dash su questo dispositivo!</string>
-    <string name="notification_inactivity_message">Hai ancora Dash su questo dispositivo! Assicurati di annotare la tua frase di recupero prima di disinstallare il Dash Wallet o perderai il tuo saldo di %s.</string>
+    <string name="notification_inactivity_message">Hai ancora Dash su questo dispositivo! Assicurati di annotare la tua frase di recupero prima di disinstallare il Portafoglio Dash o perderai il tuo saldo di %s.</string>
     <string name="notification_inactivity_action_dismiss">Ricordamelo in seguito</string>
     <string name="notification_inactivity_action_dismiss_forever">Non ricordarmelo</string>
     <string name="notification_bluetooth_service_listening">Pronto per ricevere pagamenti tramite Bluetooth</string>
@@ -377,7 +377,7 @@
     <string name="transaction_fragment_confirmations_label">Conferme</string>
 
     <string name="dash_slogan">Immediato - Privato - Sicuro</string>
-    <string name="dash_wallet">Wallet</string>
+    <string name="dash_wallet">Portafoglio</string>
 
     <string name="activity_security_backup_wallet">Eseguire il backup del portafoglio su file</string>
     <string name="activity_security_view_recovery_phrase">Visualizza la frase di recupero</string>
@@ -408,7 +408,7 @@
     <string name="battery_optimization_subtitle_optimized">Ottimizzata</string>
     <string name="battery_optimization_subtitle_unrestricted">Senza restrizioni</string>
 
-    <string name="battery_optimization_dialog_optimized_title">Lasciare che Dash Wallet funzioni in background?</string>
+    <string name="battery_optimization_dialog_optimized_title">Lasciare che il Portafoglio Dash funzioni in background?</string>
     <string name="battery_optimization_dialog_message_optimized">Questa app è configurata per interrompere l\'esecuzione dopo non essere stata visibile per un po\' di tempo.\n\nCiò comporterà la mancata ricezione delle notifiche di pagamento finché l\'app non torna in primo piano.\n\nSi consiglia di consentire l\'esecuzione di questa app in background spuntando ottimizzazione batteria su \"Non ottimizzato\" o \"Illimitato\".\n\nMa non preoccuparti, ci occuperemo sempre di monitorare il consumo della batteria.</string>
     <string name="battery_optimization_dialog_unrestricted_title">Vuoi ricevere pagamenti in background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Questa app è configurata per continuare a funzionare anche dopo non essere stata visibile per un po\' di tempo.\n\nSuggeriamo di consentire a questa app di rimanere sempre aggiornata con la blockchain, anche in background.\n\nNon preoccuparti,  faremo sempre attenzione al consumo della batteria.</string>
