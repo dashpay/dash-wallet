@@ -1,4 +1,10 @@
 Dash Wallet / DashPay
+v11.3.2
+* Improve security model for PIN's and wallet encryption
+* Improve DashSpend error handling
+* Fix crashes related to DashSpend
+* Fix issues related to saving profile images to Google Drive
+* Improve wallet security model
 
 v11.3.1
 * fix bug re: refreshing CTX tokens
