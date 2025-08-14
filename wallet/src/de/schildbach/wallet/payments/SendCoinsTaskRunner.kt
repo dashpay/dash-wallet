@@ -208,7 +208,7 @@ class SendCoinsTaskRunner @Inject constructor(
         } else {
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
             val sendRequestForSigning = SendRequest.forTx(sendRequest.tx)
-            return sendCoins(sendRequestForSigning, serviceName)
+            return sendCoins(sendRequestForSigning, serviceName = serviceName)
         }
     }
 
@@ -418,7 +418,8 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
         checkBalanceConditions: Boolean = true,
-        beforeSending: Consumer<Transaction>? = null
+        beforeSending: Consumer<Transaction>? = null,
+        serviceName: String? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -439,6 +440,9 @@ class SendCoinsTaskRunner @Inject constructor(
 
             val transaction = sendRequest.tx
             beforeSending?.accept(transaction)
+            serviceName?.let {
+                metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
+            }
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)

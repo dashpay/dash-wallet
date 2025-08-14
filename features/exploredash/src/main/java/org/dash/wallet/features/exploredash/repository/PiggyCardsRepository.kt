@@ -39,6 +39,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Veri
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
+import retrofit2.Response
 import java.text.DecimalFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter

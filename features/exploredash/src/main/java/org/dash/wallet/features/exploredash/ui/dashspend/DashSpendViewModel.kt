@@ -57,6 +57,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
+import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
@@ -172,42 +173,56 @@ class DashSpendViewModel @Inject constructor(
     }
 
     suspend fun purchaseGiftCard(): GiftCardInfo = withContext(Dispatchers.IO) {
-            giftCardMerchant.merchantId?.let {
-                val amountValue = giftCardPaymentValue.value
-                val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
-                when (selectedProvider) {
-                    GiftCardProviderType.CTX -> {
-                        try {
-                            ctxSpendRepository.orderGiftcard(
-                                merchantId = provider!!.sourceId,
-                                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                                fiatCurrency = Constants.USD_CURRENCY,
-                                cryptoCurrency = Constants.DASH_CURRENCY
-                            )
-                        } catch (e: Exception) {
-                            log.error("purchaseGiftCard error", e)
-                            throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null, e)
+        giftCardMerchant?.merchantId?.let {
+            val amountValue = giftCardPaymentValue.value
+            val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
+            when (selectedProvider) {
+                GiftCardProviderType.CTX -> {
+                    try {
+                        ctxSpendRepository.orderGiftcard(
+                            merchantId = provider!!.sourceId,
+                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            fiatCurrency = Constants.USD_CURRENCY,
+                            cryptoCurrency = Constants.DASH_CURRENCY
+                        )
+                    } catch (e: Exception) {
+                        log.error("purchaseGiftCard error", e)
+                        if (e is CTXSpendException) {
+                            throw e
+                        } else {
+                            throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.CTXSpend, null, null, e)
                         }
-                    }
-                    GiftCardProviderType.PiggyCards -> {
-                        try {
-                            piggyCardsRepository.orderGiftcard(
-                                cryptoCurrency = Constants.DASH_CURRENCY,
-                                merchantId = provider!!.sourceId,
-                                fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                                fiatCurrency = Constants.USD_CURRENCY
-                            )
-                        } catch (e: Exception) {
-                            log.error("purchaseGiftCard error", e)
-                            throw CTXSpendException("purchaseGiftCard error: ${e.message}", null, null, e)
-                        }
-                    }
-
-                    null -> {
-                        throw IllegalArgumentException("no giftcard provider")
                     }
                 }
-           } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
+                GiftCardProviderType.PiggyCards -> {
+                    try {
+                        piggyCardsRepository.orderGiftcard(
+                            cryptoCurrency = Constants.DASH_CURRENCY,
+                            merchantId = provider!!.sourceId,
+                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            fiatCurrency = Constants.USD_CURRENCY
+                        )
+                    } catch (e: Exception) {
+                        log.error("purchaseGiftCard error", e)
+                        if (e is CTXSpendException) {
+                            throw e
+                        } else {
+                            throw CTXSpendException(
+                                "purchaseGiftCard error: ${e.message}",
+                                ServiceName.PiggyCards,
+                                null,
+                                null,
+                                e
+                            )
+                        }
+                    }
+                }
+
+                null -> {
+                    throw IllegalArgumentException("no giftcard provider")
+                }
+            }
+        } ?: throw CTXSpendException("purchaseGiftCard error: no merchant")
     }
 
     suspend fun createSendingRequestFromDashUri(paymentUri: String): Sha256Hash = withContext(Dispatchers.IO) {
@@ -216,7 +231,7 @@ class DashSpendViewModel @Inject constructor(
             giftCardMerchant?.source?.lowercase() ?: ServiceName.CTXSpend
         )
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, giftCardMerchant.logoLocation)
+        transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, giftCardMerchant?.logoLocation)
         BitcoinURI(paymentUri).message?.let { memo ->
             if (memo.isNotBlank()) {
                 transactionMetadata.setTransactionMemo(transaction.txId, memo)
@@ -421,11 +436,11 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardResponse) {
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardInfo) {
         val giftCard = GiftCard(
             txId = txId,
             merchantName = giftCardMerchant?.name ?: "",
-            price = giftCardResponse.cardFiatAmount?.toDouble() ?: 0.0,
+            price = giftCardResponse.fiatAmount?.toDouble() ?: 0.0,
             merchantUrl = giftCardMerchant?.website,
             note = giftCardResponse.id
         )
@@ -478,7 +493,7 @@ class DashSpendViewModel @Inject constructor(
     fun createEmailIntent(
         subject: String,
         sentToCTX: Boolean,
-        ex: CTXSpendException?
+        ex: CTXSpendException
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(if (sentToCTX) CTXSpendConstants.REPORT_EMAIL else "support@dash.org"))

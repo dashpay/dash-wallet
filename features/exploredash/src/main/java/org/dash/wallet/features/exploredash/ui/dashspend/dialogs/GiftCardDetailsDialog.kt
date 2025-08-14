@@ -58,7 +58,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -83,7 +83,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     override val forceExpand = true
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
-    private val ctxSpendViewModel by viewModels<CTXSpendViewModel>()
+    private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
     private var originalBrightness: Float = -1f
 
     private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
@@ -195,7 +195,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sentToCTX = true,
-                viewModel.uiState.value.error as? CTXSpendException
+                viewModel.uiState.value.error as CTXSpendException
             )
 
             val chooser = Intent.createChooser(

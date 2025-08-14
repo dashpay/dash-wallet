@@ -36,15 +36,16 @@ import javax.net.ssl.SSLHandshakeException
 
 class CTXSpendException(
     message: String,
+    val serviceName: String? = null,
     val errorCode: Int? = null,
     val errorBody: String? = null,
     cause: Throwable? = null
 ) : Exception(message, cause) {
     var resourceString: ResourceString? = null
-    var giftCardResponse: GiftCardResponse? = null
+    var giftCardResponse: GiftCardInfo? = null
     private val errorMap: Map<String, Any>
 
-    constructor(message: ResourceString, giftCardResponse: GiftCardResponse? = null) : this("") {
+    constructor(message: ResourceString, giftCardResponse: GiftCardInfo? = null) : this("") {
         this.resourceString = message
         this.giftCardResponse = giftCardResponse
     }

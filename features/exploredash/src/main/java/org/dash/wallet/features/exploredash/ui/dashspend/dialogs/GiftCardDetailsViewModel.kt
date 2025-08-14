@@ -178,7 +178,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                                 ResourceString(
                                                     R.string.gift_card_redeem_url_not_supported,
                                                     listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId, txid)
-                                                )
+                                                ),
+                                                giftCard
                                             )
                                         )
                                     }
@@ -194,7 +195,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             ResourceString(
                                                 R.string.gift_card_rejected,
                                                 listOf(giftCard.id, giftCard.paymentId, txid)
-                                            )
+                                            ),
+                                            giftCard
                                         )
                                     )
                                 }
@@ -279,7 +281,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                                 ResourceString(
                                                     R.string.gift_card_redeem_url_not_supported,
                                                     listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
-                                                )
+                                                ),
+                                                giftCard
                                             )
                                         )
                                     }
@@ -295,7 +298,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             ResourceString(
                                                 R.string.gift_card_rejected,
                                                 listOf(giftCard.id, giftCard.paymentId, txid)
-                                            )
+                                            ),
+                                            giftCard
                                         )
                                     )
                                 }

@@ -18,6 +18,8 @@ package org.dash.wallet.features.exploredash.network
 
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.PiggyCardsHeadersInterceptor
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
@@ -44,14 +46,16 @@ class PiggyCardsRemoteDataSource @Inject constructor(private val config: PiggyCa
 
     private fun getOkHttpClient(): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
-            log.info("HttpLogging: $message")
+            log.info(message)
         }
         loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY)
+        loggingInterceptor.redactHeader("Authorization")
 
         return OkHttpClient.Builder()
             .connectTimeout(60.seconds.toJavaDuration())
             .readTimeout(60.seconds.toJavaDuration())
             .addInterceptor(PiggyCardsHeadersInterceptor(config))
+            .addInterceptor(ErrorHandlingInterceptor(ServiceName.CTXSpend))
             .addInterceptor(loggingInterceptor)
             .build()
     }
