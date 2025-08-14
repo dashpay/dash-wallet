@@ -1,11 +1,14 @@
 package de.schildbach.wallet.ui.dashpay.utils
 
 import android.content.Context
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
+import com.google.android.gms.common.api.Scope
 import com.google.api.client.http.ByteArrayContent
 import com.google.api.client.http.HttpRequestInitializer
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
+import com.google.api.services.drive.DriveScopes
 import com.google.api.services.drive.model.File
 import com.google.api.services.drive.model.Permission
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -91,4 +94,10 @@ class GoogleDriveService(
             }
         }
     }
+
+    fun getAuthRequest() = AuthorizationRequest
+        .builder()
+        .setRequestedScopes(
+            listOf(Scope(DriveScopes.DRIVE_FILE))
+        ).build()
 }

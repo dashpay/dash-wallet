@@ -51,12 +51,22 @@ abstract class SecurityModule {
         )
 
         @Provides
+        @Singleton
         fun provideEncryptionProvider(@ApplicationContext context: Context): EncryptionProvider {
             val securityPrefs = context.getSharedPreferences(SecurityGuard.SECURITY_PREFS_NAME, Context.MODE_PRIVATE)
             val keyStore = KeyStore.getInstance(ANDROID_KEY_STORE)
             keyStore.load(null)
 
             return ModernEncryptionProvider(keyStore, securityPrefs)
+        }
+        
+        @Provides
+        @Singleton
+        fun provideSecurityInitializer(
+            encryptionProvider: EncryptionProvider,
+            backupConfig: SecurityBackupConfig
+        ): SecurityInitializer {
+            return SecurityInitializer(encryptionProvider, backupConfig)
         }
     }
 

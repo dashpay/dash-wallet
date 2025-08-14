@@ -87,6 +87,7 @@ interface ExploreDataSource {
     suspend fun getMerchantTerritories(): List<String>
     suspend fun getAtmTerritories(): List<String>
     fun sanitizeQuery(query: String): String
+    suspend fun getMerchantById(merchantId: String): Merchant?
     suspend fun getGiftCardProvidersFor(merchantId: String): List<GiftCardProvider>
 }
 
@@ -537,5 +538,9 @@ open class MerchantAtmDataSource @Inject constructor(
     override fun sanitizeQuery(query: String): String {
         val escapedQuotes = query.replace(Regex.fromLiteral("\""), "\"\"")
         return "\"$escapedQuotes*\""
+    }
+
+    override suspend fun getMerchantById(merchantId: String): Merchant? {
+        return merchantDao.getMerchantById(merchantId)
     }
 }

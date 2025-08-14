@@ -421,4 +421,8 @@
 
     <string name="block_explorer_selection_title">Виберіть оглядач блоків</string>
 
-    </resources>
+    <!-- Shortcuts -->
+    <string name="select_option">Виберіть опцію</string>
+    <string name="customize_shortcuts">Налаштуйте панель швидкого доступу</string>
+    <string name="customize_shortcuts_description">Утримуйте будь-яку кнопку вище, щоб замінити її на потрібну вам функцію.</string>
+</resources>

@@ -43,7 +43,7 @@ class RestoreIdentityOperation(val application: Application) {
 
     @SuppressLint("EnqueueWork")
     fun create(identity: String, retry: Boolean = false): WorkContinuation {
-        val password = SecurityGuard().retrievePassword()
+        val password = SecurityGuard.getInstance().retrievePassword()
         val verifyIdentityWorker = OneTimeWorkRequestBuilder<RestoreIdentityWorker>()
                 .setInputData(
                     workDataOf(

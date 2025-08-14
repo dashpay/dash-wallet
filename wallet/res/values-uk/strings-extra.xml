@@ -120,6 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Адреса скопійована в буфер обміну</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Показати</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не є словом з фрази для відновлення</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фраза для відновлення повинна містити 12 або 24 слова</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Некоректна фраза відновлення</string>
     <string name="restore_wallet_from_invalid_seed_failure">Гаманець не може бути відновлений:\n\n%s\n\nПеревірте правильність фрази відновлення.</string>
 
@@ -220,6 +221,7 @@
     <string name="verify_info_title_1">Dash Core Group НЕ зберігає цю фразу відновлення.</string>
     <string name="verify_info_subtitle_1">Кожен, хто має вашу фразу відновлення, може отримати доступ до ваших коштів.</string>
     <string name="verify_info_title_2">Ви НЕ зможете відновити гаманець без фрази відновлення</string>
+    <string name="verify_info_subtitle_2">Запишіть її в безпечне місце і нікому не показуйте.</string>
     <string name="verify_seed_buttons_tip">Будь ласка, торкніться слів з вашої фрази відновлення в правильному порядку</string>
     <string name="verify_seed_success_title">Успішно верифіковано</string>
     <string name="verify_seed_success_message">Тепер ваш гаманець у безпеці. Ви можете будь-коли використати свою фразу відновлення, щоб відновити обліковий запис на іншому пристрої.</string>
@@ -467,4 +469,10 @@
     <string name="stale_exchange_rates_error">Ціни не отримано. Фіатні значення можуть бути неправильними.</string>
     <string name="stale_exchange_rates_stale">Цінам що найменше 30 хвилин. Фіатні значення можуть бути неправильними.</string>
     <string name="stale_exchange_rates_volatile">З часу останнього оновлення ціни коливалися більш ніж на 50%.</string>
-    </resources>
+    <string name="select_security_level_title">Оберіть рівень безпеки</string>
+    <string name="select_security_level_message">Ви можете захистити свій гаманець за допомогою фрази для відновлення з 12 або 24 слів.</string>
+    <string name="select_security_level_12_words_title">Безпечно</string>
+    <string name="select_security_level_12_words_message">Фраза для відновлення з 12 слів</string>
+    <string name="select_security_level_24_words_title">Дуже безпечно</string>
+    <string name="select_security_level_24_words_message">Фраза для відновлення з 24 слів</string>
+</resources>

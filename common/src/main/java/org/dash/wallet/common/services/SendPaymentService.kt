@@ -54,5 +54,5 @@ interface SendPaymentService {
         val totalAmount: String
     )
 
-    suspend fun payWithDashUrl(dashUri: String): Transaction
+    suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
 }

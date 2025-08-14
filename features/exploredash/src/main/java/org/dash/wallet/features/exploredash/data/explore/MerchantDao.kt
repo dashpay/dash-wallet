@@ -522,4 +522,7 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount(): Int
+
+    @Query("SELECT * FROM merchant where merchantId = :merchantId")
+    suspend fun getMerchantById(merchantId: String): Merchant?
 }

@@ -61,9 +61,9 @@ object Constants {
     val HTTP_CLIENT: OkHttpClient = OkHttpClient.Builder()
         .followRedirects(false)
         .followSslRedirects(true)
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(
             HttpLoggingInterceptor { log.debug(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
         )

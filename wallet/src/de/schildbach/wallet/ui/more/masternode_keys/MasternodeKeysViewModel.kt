@@ -177,7 +177,7 @@ class MasternodeKeysViewModel @Inject constructor(
         val keyChain = getKeyChain(type)
         val key = keyChain.getKey(index, keyChain.hasHardenedKeysOnly())
 
-        val securityGuard = SecurityGuard()
+        val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
 
@@ -201,7 +201,7 @@ class MasternodeKeysViewModel @Inject constructor(
 
     fun addKeyChains(pin: String) {
         if (authenticationGroup.missingAnyKeyChainTypes(masternodeKeyChainTypes)) {
-            val securityGuard = SecurityGuard()
+            val securityGuard = SecurityGuard.getInstance()
             val password = securityGuard.retrievePassword()
             val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
 
@@ -253,7 +253,7 @@ class MasternodeKeysViewModel @Inject constructor(
             )
         } else {
             if (keyChainInfo.masternodeKeyChain.hasHardenedKeysOnly()) {
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 val password = securityGuard.retrievePassword()
                 val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
                 val keyCrypter = walletData.wallet!!.keyCrypter
@@ -298,7 +298,7 @@ class MasternodeKeysViewModel @Inject constructor(
     }
 
     fun getDecryptedKey(key: IKey): MasternodeKeyInfo {
-        val securityGuard = SecurityGuard()
+        val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val encryptionKey = securityFunctions.deriveKey(walletData.wallet!!, password)
 

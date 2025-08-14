@@ -313,7 +313,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.onExitSearch()
+        try {
+            viewModel.onExitSearch()
+        } catch (e: IllegalArgumentException) {
+            // Handle case where nav graph is no longer on back stack after process death
+        }
         // clear this listener
         requireActivity().window?.decorView?.let { decor ->
             ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->

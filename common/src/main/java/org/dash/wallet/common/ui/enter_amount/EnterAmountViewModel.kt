@@ -18,6 +18,7 @@
 package org.dash.wallet.common.ui.enter_amount
 
 import androidx.lifecycle.*
+import androidx.lifecycle.SavedStateHandle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -34,14 +35,24 @@ import javax.inject.Inject
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class EnterAmountViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     val exchangeRates: ExchangeRatesProvider,
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
-    private val _selectedCurrencyCode = MutableStateFlow(Constants.DEFAULT_EXCHANGE_CURRENCY)
+    companion object {
+        private const val KEY_SELECTED_CURRENCY = "selected_currency_code"
+        private const val KEY_AMOUNT = "amount"
+        private const val KEY_FIAT_AMOUNT = "fiat_amount"
+    }
+
+    private val _selectedCurrencyCode = MutableStateFlow(
+        savedStateHandle.get<String>(KEY_SELECTED_CURRENCY) ?: Constants.DEFAULT_EXCHANGE_CURRENCY
+    )
     var selectedCurrencyCode: String
         get() = _selectedCurrencyCode.value
         set(value) {
             _selectedCurrencyCode.value = value
+            savedStateHandle[KEY_SELECTED_CURRENCY] = value
         }
 
     private val _selectedExchangeRate = MutableLiveData<ExchangeRate?>()
@@ -62,11 +73,23 @@ class EnterAmountViewModel @Inject constructor(
     val maxAmount: LiveData<Coin>
         get() = _maxAmount
 
-    internal val _amount = MutableLiveData<Coin>()
+    internal val _amount = MutableLiveData<Coin>().apply {
+        savedStateHandle.get<Long>(KEY_AMOUNT)?.let {
+            value = Coin.valueOf(it)
+        }
+    }
     val amount: LiveData<Coin>
         get() = _amount
 
-    internal val _fiatAmount = MutableLiveData<Fiat>()
+    internal val _fiatAmount = MutableLiveData<Fiat>().apply {
+        savedStateHandle.get<String>(KEY_FIAT_AMOUNT)?.let { fiatString ->
+            try {
+                value = Fiat.parseFiat(selectedCurrencyCode, fiatString)
+            } catch (_: Exception) {
+                // Ignore parsing errors for saved state
+            }
+        }
+    }
     val fiatAmount: LiveData<Fiat>
         get() = _fiatAmount
 
@@ -115,6 +138,16 @@ class EnterAmountViewModel @Inject constructor(
                 _selectedCurrencyCode.value = it
             }
             .launchIn(viewModelScope)
+
+        // Save amount changes to SavedStateHandle
+        _amount.observeForever { coin ->
+            savedStateHandle[KEY_AMOUNT] = coin?.value
+        }
+
+        // Save fiat amount changes to SavedStateHandle
+        _fiatAmount.observeForever { fiat ->
+            savedStateHandle[KEY_FIAT_AMOUNT] = fiat?.toPlainString()
+        }
     }
 
     fun setMaxAmount(coin: Coin) {
@@ -134,5 +167,13 @@ class EnterAmountViewModel @Inject constructor(
         viewModelScope.launch {
             _selectedCurrencyCode.value = walletUIConfig.getExchangeCurrencyCode()
         }
+    }
+
+    fun clearSavedState() {
+        _amount.value = Coin.ZERO
+        _fiatAmount.value = Fiat.valueOf(selectedCurrencyCode, 0)
+        savedStateHandle.remove<String>(KEY_SELECTED_CURRENCY)
+        savedStateHandle.remove<Long>(KEY_AMOUNT)
+        savedStateHandle.remove<String>(KEY_FIAT_AMOUNT)
     }
 }

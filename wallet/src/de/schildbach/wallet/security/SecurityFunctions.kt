@@ -143,7 +143,7 @@ class SecurityFunctions @Inject constructor(
     }
 
     override suspend fun signMessage(address: Address, message: String): String {
-        val securityGuard = SecurityGuard()
+        val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
         val keyParameter = deriveKey(walletData.wallet!!, password)
         val key = walletData.wallet?.findKeyFromAddress(address)

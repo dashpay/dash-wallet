@@ -12,8 +12,8 @@
     <string name="set_pin_enter_pin">Inserisci il vecchio PIN</string>
     <string name="set_pin_set_pin">Imposta PIN</string>
     <string name="set_pin_confirm_pin">Conferma PIN</string>
-    <string name="set_pin_encrypting">Cripta wallet</string>
-    <string name="set_pin_decrypting">Decriptazione wallet</string>
+    <string name="set_pin_encrypting">Cripta portafoglio</string>
+    <string name="set_pin_decrypting">Decriptazione portafoglio</string>
     <string name="set_pin_verifying_pin">Verificando PIN</string>
     <string name="set_pin_message">Questo PIN ti sarà richiesto per sbloccare l\'app ogni volta che la usi.</string>
     <string name="set_pin_confirm_pin_incorrect">PIN non valido</string>
@@ -55,7 +55,7 @@
     <string name="lock_enter_pin">Immetti il PIN</string>
     <string name="lock_unlock_with_fingerprint">Usa la tua impronta digitale per sbloccare</string>
 
-    <string name="perm_lock_info">Wallet permanentemente bloccato</string>
+    <string name="perm_lock_info">Portafoglio permanentemente bloccato</string>
     <string name="perm_lock_wipe_wallet">Pulisci il portafoglio</string>
     <string name="perm_lock_close_app">Chiudi</string>
 
@@ -71,7 +71,7 @@
     <string name="more_title">Di Più</string>
     <string name="settings_title">Impostazioni</string>
     <string name="security_title">Sicurezza</string>
-    <string name="recover_wallet_title">Ripristina Wallet</string>
+    <string name="recover_wallet_title">Ripristina Portafoglio</string>
     <string name="tools_title">Strumenti</string>
 
     <string name="payments_title">Pagamenti</string>
@@ -185,11 +185,11 @@
     <string name="notification_synchronization_channel_name">Sincronizzazione</string>
     <string name="notification_synchronization_channel_description">Notifica quando la "app" è sincronizzata con la rete.</string>
     <string name="notification_generic_channel_name">Notifiche generiche</string>
-    <string name="notification_generic_channel_description">Altri eventi Dash Wallet</string>
+    <string name="notification_generic_channel_description">Altri eventi del Portafoglio Dash</string>
     <string name="notification_push_channel_name">Notifiche Push</string>
     <string name="notification_push_channel_description">Mostra le notifiche push inviate da Dash</string>
     <string name="notification_settings_title">Notifiche</string>
-    <string name="notification_explainer_title">Dash Wallet vorrebbe inviarti notifiche</string>
+    <string name="notification_explainer_title">Il Portafoglio Dash vorrebbe inviarti notifiche</string>
     <string name="notification_explainer_message">Le notifiche possono includere avvisi, suoni e badge con icone. Questi possono essere configurati nelle Impostazioni del telefono.</string>
     <string name="notification_dashpay_channel_name">DashPay</string>
     <string name="notification_dashpay_channel_description">Stato delle operazioni DashPay in corso.</string>
@@ -214,14 +214,14 @@
     <string name="verify_backup_wallet"> Backup del Portafoglio</string>
     <string name="verify_show_recovery_phrase">Mostra la frase di recupero</string>
     <string name="verify_info_title">Eseguire il backup della frase di recupero</string>
-    <string name="verify_info_subtitle">Avrai bisogno di questa frase di recupero per accedere ai tuoi fondi se questo dispositivo viene smarrito, danneggiato o se Dash Wallet viene disinstallato da questo dispositivo.</string>
+    <string name="verify_info_subtitle">Avrai bisogno di questa frase di recupero per accedere ai tuoi fondi se questo dispositivo viene smarrito, danneggiato o se il Portafoglio Dash viene disinstallato da questo dispositivo.</string>
     <string name="verify_info_title_1">Dash Core Group NON memorizza questa frase di recupero</string>
     <string name="verify_info_subtitle_1">Chiunque abbia la tua frase di recupero può accedere ai tuoi fondi.</string>
     <string name="verify_info_title_2">NON sarai in grado di ripristinare il portafoglio senza una frase di recupero</string>
     <string name="verify_info_subtitle_2">Scrivilo in un posto sicuro e non mostrarlo a nessuno.</string>
     <string name="verify_seed_buttons_tip">Si prega di toccare le parole dalla frase di recupero nel giusto ordine</string>
     <string name="verify_seed_success_title">Verifica effettuata con Successo</string>
-    <string name="verify_seed_success_message">Il tuo Wallet ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
+    <string name="verify_seed_success_message">Il tuo Portafoglio ora è protetto. Puoi utilizzare la frase di recupero in qualsiasi momento per ripristinare il tuo account su un altro dispositivo.</string>
     <string name="verify_no_screenshot_title">Non scattare screenshot</string>
     <string name="verify_no_screenshot_message">Scrivi la frase di recupero in un luogo sicuro.</string>
     <string name="verify_why_no_screenshot">Perché non devo scattare screenshot?</string>
@@ -268,7 +268,7 @@
     <string name="menu_invite_subtitle">Aiuta i tuoi amici e la tua famiglia a unirsi a Dash</string>
     <string name="menu_buy_and_sell_title">Compra &amp; Vendi Dash</string>
     <string name="menu_buy_and_sell_subtitle">Connetti a Exchanges esterni</string>
-    <string name="liquid_unavailable">L\'integrazione Liquid con Dash Wallet non è più disponibile</string>
+    <string name="liquid_unavailable">L\'integrazione Liquid con il Portafoglio Dash non è più disponibile</string>
     <string name="liquid_unavailable_details">In caso di domande relative alle partecipazioni in Dash presso Liquid, contattare il centro di assistenza Liquid</string>
     <string name="menu_security_title">Sicurezza</string>
     <string name="menu_security_subtitle">Visualizza frase di recupero, portafoglio di backup</string>
@@ -291,10 +291,10 @@
     <string name="about_help_us_improve">Aiutaci a migliorare raccontaci tua esperienza</string>
     <string name="about_review_and_rate">Recensisci e valuta l\'app</string>
     <string name="about_contact_support">Contatta il Supporto</string>
-    <string name="about_fork_disclaimer">This is an open source app forked from Bitcoin Wallet</string>
+    <string name="about_fork_disclaimer">Questa è un\'app open source forcata dal Portafoglio Bitcoin</string>
     <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">DashPay Wallet %s</string>
+    <string name="about_version_name">Portafoglio DashPay %s</string>
     <string name="about_last_explore_device_sync">Verifica l\'ultima sincronizzazione del dispositivo</string>
     <string name="about_last_explore_server_update">Verifica l\'ultimo aggiornamento del server</string>
     <string name="about_firebase_installation_id">ID di installazione di Firebase</string>
@@ -384,7 +384,7 @@
     <string name="onboard_from_invite_step3">Passaggio 3</string>
     <string name="onboard_from_invite_step1_title">Scegli il tuo Username</string>
     <string name="onboard_from_invite_step2_title">Imposta il tuo PIN</string>
-    <string name="onboard_from_invite_step3_title">Proteggi il tuo Wallet</string>
+    <string name="onboard_from_invite_step3_title">Proteggi il tuo Portafoglio</string>
 
     <string name="restore_wallet_please_wait">Attendere prego</string>
     <string name="restore_wallet_restoring">Il tuo portafoglio è in fase di ripristino</string>
@@ -416,11 +416,11 @@
     <string name="wallet_encryption_error_message">Si è verificato un problema durante la creazione del portafoglio. Si prega di segnalarlo al Support Desk.</string>
     <string name="wallet_not_encrypted_error_message">Si è verificato un problema con il tuo portafoglio.\n\nSe non hai Dash in questo portafoglio, disinstalla e reinstalla questa app. Quindi crea un nuovo portafoglio.\n\nSe hai una frase di ripristino o un file di backup, disinstalla questa app e reinstallala.\n\nAltrimenti, segnalalo al Support Desk.</string>
 
-    <string name="reset_wallet_title">Sei sicuro di voler resettare il wallet?</string>
-    <string name="reset_wallet_message">Resettando il tuo wallet, l\'unico modo per accedervi successivamente è con l\'utilizzo della frase di ripristino.</string>
-    <string name="positive_reset_text">Sì, Resetta il wallet</string>
+    <string name="reset_wallet_title">Sei sicuro di voler resettare il portafoglio?</string>
+    <string name="reset_wallet_message">Resettando il tuo portafoglio, l\'unico modo per accedervi successivamente è con l\'utilizzo della frase di ripristino.</string>
+    <string name="positive_reset_text">Sì, Resetta il Portafoglio</string>
     <string name="launch_reset_wallet_title">Hai un saldo positivo</string>
-    <string name="launch_reset_wallet_message">Resettando il wallet perderai tutti i tuoi fondi se non hai eseguito il backup della tua frase di recupero.</string>
+    <string name="launch_reset_wallet_message">Resettando il portafoglio perderai tutti i tuoi fondi se non hai eseguito il backup della tua frase di recupero.</string>
     <string name="continue_reset">Continua</string>
     <string name="launch_reset_wallet_extra_message">Eseguire il backup della frase di recupero</string>
     <string name="start_reset_wallet_title">Potresti perdere %s</string>
@@ -467,7 +467,7 @@
     <string name="stale_exchange_rates_stale">I prezzi risalgono ad almeno 30 minuti. I valori Fiat potrebbero essere errati.</string>
     <string name="stale_exchange_rates_volatile">I prezzi hanno oscillato di oltre il 50% dall\'ultimo aggiornamento.</string>
     <string name="select_security_level_title">Seleziona il Livello di Sicurezza</string>
-    <string name="select_security_level_message">Puoi proteggere il tuo wallet con una frase di recupero composta da 12 o 24 parole.</string>
+    <string name="select_security_level_message">Puoi proteggere il tuo portafoglio con una frase di recupero composta da 12 o 24 parole.</string>
     <string name="select_security_level_12_words_title">Sicura</string>
     <string name="select_security_level_12_words_message">Frase di recupero di 12 parole</string>
     <string name="select_security_level_24_words_title">Molto sicura</string>

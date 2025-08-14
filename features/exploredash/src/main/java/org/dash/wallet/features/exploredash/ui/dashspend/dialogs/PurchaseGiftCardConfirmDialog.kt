@@ -25,6 +25,7 @@ import androidx.annotation.StyleRes
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.transition.TransitionManager
@@ -41,6 +42,7 @@ import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
@@ -65,6 +67,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private val binding by viewBinding(DialogConfirmPurchaseGiftCardBinding::bind)
     private val viewModel by exploreViewModels<DashSpendViewModel>()
+    private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
 
     @Inject
     lateinit var authManager: AuthenticationManager
@@ -77,6 +80,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         super.onViewCreated(view, savedInstanceState)
 
         val merchant = viewModel.giftCardMerchant
+        if (merchant == null) {
+            log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
+            dismiss()
+            return
+        }
         val paymentValue = viewModel.giftCardPaymentValue.value
         val savingsFraction = merchant.savingsFraction
         binding.merchantName.text = merchant.name
@@ -100,6 +108,13 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
     private fun onConfirmButtonClicked() {
         lifecycleScope.launch {
+            // Double-check merchant is still available before proceeding
+            if (viewModel.giftCardMerchant == null) {
+                log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
+                dismiss()
+                return@launch
+            }
+
             if (authManager.authenticate(requireActivity()) == null) {
                 return@launch
             }
@@ -111,6 +126,28 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             } catch (ex: CTXSpendException) {
                 hideLoading()
                 when {
+                    ex.isNetworkError -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_error),
+                            getString(R.string.button_close)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "DashPay DashSpend Issue: Network Error",
+                                    sentToCTX = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
                     ex.errorCode == 400 && ex.isLimitError -> {
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
@@ -120,9 +157,32 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_contact_ctx)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
-                                // TODO: share
                                 val intent = viewModel.createEmailIntent(
                                     "CTX Issue: Spending Limit Problem",
+                                    sentToCTX = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
+                    ex.errorCode == 500 -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_server_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_ctx)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "CTX Issue: Purchase, Internal Server Error",
+                                    sentToCTX = true,
                                     ex
                                 )
 
@@ -140,7 +200,21 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             ex.message ?: getString(R.string.gift_card_error),
                             getString(R.string.button_close)
-                        ).show(requireActivity())
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    subject = "DashPay DashSpend Issue: Purchase Error",
+                                    sentToCTX = false,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
                     }
                 }
                 return@launch
@@ -157,7 +231,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
             val transactionId = createSendingRequestFromDashUri(data.paymentUrls?.get("DASH.DASH")!!)
             transactionId?.let {
-                viewModel.saveGiftCardDummy(transactionId, data.id)
+                enterAmountViewModel.clearSavedState()
+                viewModel.saveGiftCardDummy(transactionId, data)
                 showGiftCardDetailsDialog(transactionId, data.id)
             }
         }
@@ -214,7 +289,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             val navController = findNavController()
             navController.popBackStack(navController.graph.startDestinationId, false)
 
-            this@PurchaseGiftCardConfirmDialog.dismiss()
+            this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
         }
     }
 

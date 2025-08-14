@@ -22,6 +22,7 @@ import android.os.Environment
 import android.provider.Settings
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
+import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.api.client.googleapis.auth.oauth2.GoogleCredential
 import com.google.api.client.http.HttpRequestInitializer
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -283,5 +284,9 @@ class EditProfileViewModel @Inject constructor(
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo {
         return platformRepo.getIdentityBalance()
+    }
+
+    fun getGoogleDriveAuthRequest(): AuthorizationRequest {
+        return googleDriveService.getAuthRequest()
     }
 }

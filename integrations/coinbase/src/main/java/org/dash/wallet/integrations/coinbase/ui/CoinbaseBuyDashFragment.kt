@@ -52,26 +52,31 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
     private val sharedViewModel by coinbaseViewModels<CoinbaseViewModel>()
     private val viewModel by coinbaseViewModels<CoinbaseBuyDashViewModel>()
     private val amountViewModel by activityViewModels<EnterAmountViewModel>()
-    private lateinit var fragment: EnterAmountFragment
+    private var fragment: EnterAmountFragment? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         if (savedInstanceState == null) {
-            fragment = EnterAmountFragment.newInstance(
+            val newFragment = EnterAmountFragment.newInstance(
                 isMaxButtonVisible = false,
                 showCurrencySelector = false
             )
             val headerBinding = KeyboardHeaderViewBinding.inflate(layoutInflater, null, false)
-            fragment.setViewDetails(getString(R.string.button_continue), headerBinding.root)
+            newFragment.setViewDetails(getString(R.string.button_continue), headerBinding.root)
 
             parentFragmentManager.commit {
                 setReorderingAllowed(true)
-                add(R.id.enter_amount_fragment_placeholder, fragment)
+                add(R.id.enter_amount_fragment_placeholder, newFragment)
             }
+            fragment = newFragment
+        } else {
+            // Fragment was recreated, find the existing fragment
+            fragment = parentFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder) as? EnterAmountFragment
         }
 
         binding.toolbar.setNavigationOnClickListener {
+            amountViewModel.clearSavedState()
             findNavController().popBackStack()
         }
 
@@ -93,6 +98,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
 
                 if (validated) {
                     viewModel.logContinue(amountViewModel.dashToFiatDirection.value ?: false)
+                    amountViewModel.clearSavedState()
                     safeNavigate(CoinbaseBuyDashFragmentDirections.buyDashToOrderReview())
                 }
             }
@@ -107,7 +113,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             if (it.isSessionExpired) {
                 findNavController().popBackStack()
             } else {
-                fragment.handleNetworkState(it.isNetworkAvailable)
+                fragment?.handleNetworkState(it.isNetworkAvailable)
             }
         }
     }

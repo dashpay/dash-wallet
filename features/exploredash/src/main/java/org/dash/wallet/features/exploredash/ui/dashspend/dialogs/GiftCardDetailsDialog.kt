@@ -22,6 +22,7 @@ import android.os.Bundle
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StyleRes
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.net.toUri
@@ -57,6 +58,7 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
+import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
 import org.slf4j.LoggerFactory
 import java.text.DecimalFormat
 import java.text.NumberFormat
@@ -81,6 +83,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     override val forceExpand = true
     private val binding by viewBinding(DialogGiftCardDetailsBinding::bind)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
+    private val ctxSpendViewModel by viewModels<CTXSpendViewModel>()
     private var originalBrightness: Float = -1f
 
     private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
@@ -92,6 +95,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 setMaxBrightness(false)
             }
         }
+    }
+
+    private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+        // Optionally handle result here
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -164,8 +171,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+                binding.contactSupport.isVisible = true
             } else {
                 binding.cardError.isVisible = false
+                binding.contactSupport.isVisible = false
             }
 
             if (state.serviceName == ServiceName.CTXSpend) {
@@ -181,6 +190,19 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
         binding.viewTransactionDetailsCard.setOnClickListener {
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+        }
+        binding.contactSupport.setOnClickListener {
+            val intent = ctxSpendViewModel.createEmailIntent(
+                "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
+                sentToCTX = true,
+                viewModel.uiState.value.error as? CTXSpendException
+            )
+
+            val chooser = Intent.createChooser(
+                intent,
+                getString(R.string.report_issue_dialog_mail_intent_chooser)
+            )
+            launcher.launch(chooser)
         }
 
         subscribeToBottomSheetCallback()
