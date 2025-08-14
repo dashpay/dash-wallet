@@ -38,7 +38,7 @@ import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
-import de.schildbach.wallet.util.WalletUtils
+import de.schildbach.wallet.ui.util.viewOnBlockExplorer
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySuccessfulTransactionBinding
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
@@ -225,7 +225,7 @@ class TransactionResultActivity : LockScreenActivity() {
     private fun viewOnExplorer(tx: Transaction) {
         ComposeBottomSheet(R.style.PrimaryBackground) { dialog ->
             BlockExplorerSelectionView(viewModel.analytics) { explorer ->
-                WalletUtils.viewOnBlockExplorer(this, tx.purpose, tx.txId.toString(), explorer)
+                viewOnBlockExplorer(explorer, "tx/${tx.txId}")
                 dialog.dismiss()
             }
         }.show(this)
