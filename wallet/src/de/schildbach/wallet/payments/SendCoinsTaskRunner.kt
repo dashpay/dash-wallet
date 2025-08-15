@@ -184,9 +184,15 @@ class SendCoinsTaskRunner @Inject constructor(
         val requestUrl = basePaymentIntent.paymentRequestUrl
             ?: throw InvalidPaymentRequestURL("Payment request URL is null")
 
+        log.info("requesting payment request from {}", requestUrl)
+        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
         val request = buildOkHttpPaymentRequest(requestUrl)
         val response = Constants.HTTP_CLIENT.call(request)
         response.ensureSuccessful()
+        requestUrl.toUri().host?.let {
+            timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+        }
+        log.info("payment request received")
 
         val contentType = response.header("Content-Type")
         val byteStream = response.body?.byteStream()
@@ -235,6 +241,7 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest: SendRequest,
         serviceName: String?
     ): Transaction {
+        log.info("creating final sendRequest({}, ..., {}", finalPaymentIntent.paymentUrl, serviceName)
         val finalSendRequest = createSendRequest(
             false,
             finalPaymentIntent,
@@ -242,7 +249,7 @@ class SendCoinsTaskRunner @Inject constructor(
             sendRequest.ensureMinRequiredFee
         )
         signSendRequest(finalSendRequest)
-
+        log.info("created final send Request")
         return directPay(finalSendRequest, finalPaymentIntent, serviceName)
     }
 
@@ -251,8 +258,10 @@ class SendCoinsTaskRunner @Inject constructor(
         finalPaymentIntent: PaymentIntent,
         serviceName: String?
     ): Transaction {
+        log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         wallet.completeTx(sendRequest)
+        log.info("completed sendRequest transaction")
         serviceName?.let {
             metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
         }
@@ -268,10 +277,14 @@ class SendCoinsTaskRunner @Inject constructor(
         val requestUrl = finalPaymentIntent.paymentUrl
             ?: throw InvalidPaymentRequestURL("Final payment intent URL is null")
         log.info("trying to send tx to {}", requestUrl)
+        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_SEND_PAYMENT)
         val request = buildOkHttpDirectPayRequest(requestUrl, payment)
         try {
             val response = Constants.HTTP_CLIENT.call(request)
             response.ensureSuccessful()
+            requestUrl.toUri().host?.let {
+                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+            }
             log.info("tx sent via http")
 
             val byteStream = response.body?.byteStream()

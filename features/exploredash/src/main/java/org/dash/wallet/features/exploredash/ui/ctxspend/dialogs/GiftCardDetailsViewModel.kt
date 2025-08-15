@@ -41,6 +41,7 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -63,7 +64,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private val metadataProvider: TransactionMetadataProvider,
     private val analyticsService: AnalyticsService,
     private val repository: CTXSpendRepository,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val ctxSpendConfig: CTXSpendConfig
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
@@ -160,6 +162,18 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                 log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                 saveBarcode(giftCard.cardNumber)
+                                val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                if (startPurchaseTime != -1L) {
+                                    analyticsService.logEvent(
+                                        AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
+                                        hashMapOf(
+                                            AnalyticsConstants.Parameter.TIME to System.currentTimeMillis() - startPurchaseTime,
+                                            AnalyticsConstants.Parameter.ARG1 to "CTX"
+                                        )
+                                    )
+                                    ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                }
+
                             } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
                                 _uiState.update {

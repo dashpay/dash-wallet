@@ -55,6 +55,7 @@ import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -71,7 +72,8 @@ class CTXSpendViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analytics: AnalyticsService,
     private val savedStateHandle: SavedStateHandle,
-    private val exploreDao: MerchantDao
+    private val exploreDao: MerchantDao,
+    private val ctxSpendConfig: CTXSpendConfig
 ) : ViewModel() {
 
     companion object {
@@ -147,6 +149,7 @@ class CTXSpendViewModel @Inject constructor(
 
     suspend fun purchaseGiftCard(): GiftCardResponse {
         giftCardMerchant?.merchantId?.let {
+            ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
             val amountValue = giftCardPaymentValue.value
             val fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString()
             val response = try {
