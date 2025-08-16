@@ -61,7 +61,7 @@ class AboutActivity : LockScreenActivity() {
         binding.buildNumber.text = getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
         binding.libraryVersionName.text = getString(
             R.string.about_credits_bitcoinj_title,
-            VersionMessage.BITCOINJ_VERSION
+            BuildConfig.DASHJ_VERSION
         )
         binding.platformVersionName.text = getString(
             R.string.about_credits_platform_title,
