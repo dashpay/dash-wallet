@@ -59,6 +59,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.ByAddressCoinSelector
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.call
