@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.transactions
 
+import com.google.common.base.Stopwatch
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
@@ -39,6 +40,7 @@ import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.data.WalletUIConfig
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 class WalletBalanceObserver(
     private val wallet: Wallet,
@@ -114,7 +116,7 @@ class WalletBalanceObserver(
         fun emitBalance() {
             emitterScope.launch {
                 //log.info("emitting balance {}", this@WalletBalanceObserver)
-                //val watch = Stopwatch.createStarted()
+                val watch = Stopwatch.createStarted()
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
 
                 trySend(
@@ -124,7 +126,7 @@ class WalletBalanceObserver(
                         wallet.getBalance(balanceType)
                     }
                 )
-                //log.info("emit balance time: {} ms", watch.elapsed(TimeUnit.MILLISECONDS))
+                log.info("process emit balance time: {} ms, selector {}", watch.elapsed(TimeUnit.MILLISECONDS), coinSelector?.javaClass?.simpleName)
             }
         }
 

@@ -403,7 +403,7 @@ class SendCoinsViewModel @Inject constructor(
             _dryRunSuccessful.postValue(false)
             return
         }
-
+        log.info("executeDryRun started")
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
 
@@ -416,6 +416,7 @@ class SendCoinsViewModel @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = false
             )
+            log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
             if (checkDust(sendRequest)) {
@@ -425,10 +426,12 @@ class SendCoinsViewModel @Inject constructor(
                     signInputs = false,
                     forceEnsureMinRequiredFee = true
                 )
+                log.info("  start completeTx again")
                 wallet.completeTx(sendRequest)
             }
 
             dryrunSendRequest = sendRequest
+            log.info("executeDryRun finished")
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
             dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
