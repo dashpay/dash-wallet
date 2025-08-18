@@ -452,6 +452,10 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="de.schildbach.wallet.service.DelayedServiceStartReceiver"
+            android:exported="false" />
+
         <service
             android:name="de.schildbach.wallet.service.BlockchainSyncJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
