@@ -449,13 +449,13 @@ public class WalletApplication extends MultiDexApplication
     public void finalizeInitialization() {
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
-        if (config.versionCodeCrossed(packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
+        if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
             log.info("showing backup reminder once, because of imported keys being present");
             config.armBackupReminder();
         }
 
-        config.updateLastVersionCode(packageInfoProvider.getVersionCode());
+        config.updateLastVersionCode((int)packageInfoProvider.getVersionCode());
 
         if (config.getTaxCategoryInstallTime() == 0) {
             config.setTaxCategoryInstallTime(System.currentTimeMillis());
