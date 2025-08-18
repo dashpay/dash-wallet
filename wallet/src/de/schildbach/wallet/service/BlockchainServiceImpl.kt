@@ -35,6 +35,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.PowerManager
 import android.text.format.DateUtils
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
@@ -1386,6 +1387,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             log.warn("low memory detected, stopping service")
             stopSelf()
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        log.warn("Foreground service timeout reached for startId: $startId, fgsType: $fgsType")
+        log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
+        
+        // Android 15 requires us to call stopSelf() within a few seconds
+        // when onTimeout is called for dataSync services
+        try {
+            stopSelf()
+        } catch (e: Exception) {
+            log.error("Error stopping service on timeout", e)
+        }
+        
+        super.onTimeout(startId, fgsType)
     }
 
     private fun createNetworkSyncNotification(blockchainState: BlockchainState? = null): Notification {
