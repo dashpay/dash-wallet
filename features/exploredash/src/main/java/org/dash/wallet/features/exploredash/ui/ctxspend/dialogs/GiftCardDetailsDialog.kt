@@ -156,6 +156,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.barcodeLoadingError.isVisible = false
             }
 
+            val status = state.status
+            when (status) {
+                "fulfilled" -> binding.contactSupport.isVisible = false
+                else -> binding.contactSupport.isVisible = true
+            }
+
             val error = state.error
 
             if (error != null) {
@@ -169,10 +175,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
-                binding.contactSupport.isVisible = true
+                binding.contactSupport.isVisible = true // force visible, thought it may be visible based on status
             } else {
                 binding.cardError.isVisible = false
-                binding.contactSupport.isVisible = false
             }
         }
 

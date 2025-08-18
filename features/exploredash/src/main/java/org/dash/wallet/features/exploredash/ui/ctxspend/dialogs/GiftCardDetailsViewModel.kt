@@ -54,7 +54,8 @@ data class GiftCardUIState(
     val icon: Bitmap? = null,
     val barcode: Barcode? = null,
     val date: LocalDateTime? = null,
-    val error: Exception? = null
+    val error: Exception? = null,
+    val status: String? = null
 )
 
 @HiltViewModel
@@ -149,6 +150,9 @@ class GiftCardDetailsViewModel @Inject constructor(
             when (val response = getGiftCardByTxid(txid)) {
                 is ResponseResource.Success -> {
                     val giftCard = response.value!!
+                    _uiState.update {
+                        it.copy(status = giftCard.status)
+                    }
                     when (giftCard.status) {
                         "unpaid" -> {
                             // TODO: handle
