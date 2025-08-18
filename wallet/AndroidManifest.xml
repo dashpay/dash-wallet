@@ -265,7 +265,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.SetPinActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
