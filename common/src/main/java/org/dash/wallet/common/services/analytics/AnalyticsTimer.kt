@@ -11,8 +11,7 @@ class AnalyticsTimer(val analyticsService: AnalyticsService, val logger: Logger,
         analyticsService.logEvent(
             event,
             mapOf(
-                AnalyticsConstants.Parameter.TIME to
-                    stopWatch.elapsed(TimeUnit.MILLISECONDS).toDouble() / 1000
+                AnalyticsConstants.Parameter.TIME to timeElapsed()
             )
         )
         logger.info("event:$event: $stopWatch")
@@ -20,8 +19,10 @@ class AnalyticsTimer(val analyticsService: AnalyticsService, val logger: Logger,
 
     fun logTiming(args: Map<AnalyticsConstants.Parameter, Any>) {
         val mutable = args.toMutableMap()
-        mutable[AnalyticsConstants.Parameter.TIME] = stopWatch.elapsed(TimeUnit.MILLISECONDS).toDouble() / 1000
-        analyticsService.logEvent(event, args)
+        mutable[AnalyticsConstants.Parameter.TIME] = timeElapsed()
+        analyticsService.logEvent(event, mutable)
         logger.info("event:$event: $stopWatch; ${args.map { "${it.key}:${it.value}"} }")
     }
+
+    private fun timeElapsed() = stopWatch.elapsed(TimeUnit.MILLISECONDS).toDouble() / 1000
 }
