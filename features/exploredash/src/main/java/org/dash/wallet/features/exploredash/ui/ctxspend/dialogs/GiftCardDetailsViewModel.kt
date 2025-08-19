@@ -54,8 +54,7 @@ data class GiftCardUIState(
     val icon: Bitmap? = null,
     val barcode: Barcode? = null,
     val date: LocalDateTime? = null,
-    val error: Exception? = null,
-    val status: String? = null
+    val error: Exception? = null
 )
 
 @HiltViewModel
@@ -150,15 +149,18 @@ class GiftCardDetailsViewModel @Inject constructor(
             when (val response = getGiftCardByTxid(txid)) {
                 is ResponseResource.Success -> {
                     val giftCard = response.value!!
-                    _uiState.update {
-                        it.copy(status = giftCard.status)
-                    }
                     when (giftCard.status) {
                         "unpaid" -> {
                             // TODO: handle
+                            _uiState.update {
+                                it.copy(error = CTXSpendException("gift card status unpaid, but transaction sent", response.value, txid))
+                            }
                         }
                         "paid" -> {
                             // TODO: handle
+                            _uiState.update {
+                                it.copy(error = CTXSpendException("gift card status paid, not fulfilled", response.value, txid))
+                            }
                         }
                         "fulfilled" -> {
                             if (!giftCard.cardNumber.isNullOrEmpty()) {
@@ -177,7 +179,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     )
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
-
+                                _uiState.update {
+                                    it.copy(error = null)
+                                }
                             } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
                                 _uiState.update {

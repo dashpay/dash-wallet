@@ -156,12 +156,6 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.barcodeLoadingError.isVisible = false
             }
 
-            val status = state.status
-            when (status) {
-                "fulfilled" -> binding.contactSupport.isVisible = false
-                else -> binding.contactSupport.isVisible = true
-            }
-
             val error = state.error
 
             if (error != null) {
@@ -178,6 +172,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.contactSupport.isVisible = true // force visible, thought it may be visible based on status
             } else {
                 binding.cardError.isVisible = false
+                binding.contactSupport.isVisible = false
             }
         }
 
@@ -189,10 +184,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
         binding.contactSupport.setOnClickListener {
+            val error = viewModel.uiState.value.error as? CTXSpendException
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sentToCTX = true,
-                viewModel.uiState.value.error as? CTXSpendException
+                error
             )
 
             val chooser = Intent.createChooser(

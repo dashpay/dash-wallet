@@ -367,6 +367,11 @@ class CTXSpendViewModel @Inject constructor(
             report.append("No merchant selected").append("\n")
         }
 
+        ex?.txId?.let {
+            report.append("\n")
+            report.append("Transaction (base58): ").append(it).append("\n")
+        }
+
         report.append("\n")
         report.append("Purchase Details").append("\n")
         report.append("amount entered: ").append(giftCardPaymentValue.value.toFriendlyString()).append("\n")
