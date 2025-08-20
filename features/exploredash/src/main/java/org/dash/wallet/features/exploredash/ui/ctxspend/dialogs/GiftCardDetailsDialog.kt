@@ -157,8 +157,14 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             val error = state.error
+            val shouldShowError = when (state.status) {
+                "unpaid", "paid" -> state.queries > 5
+                "rejected" -> true
+                "fulfilled" -> false
+                else -> false
+            }
 
-            if (error != null) {
+            if (error != null && shouldShowError) {
                 binding.infoLoadingIndicator.isVisible = false
 
                 val message = if (error is CTXSpendException && error.resourceString != null) {
