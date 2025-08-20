@@ -99,13 +99,15 @@ public class BootstrapReceiver extends BroadcastReceiver {
                 maybeUpgradeWallet(walletDataProvider.getWallet());
 
             // make sure there is always a blockchain sync scheduled
-            if (bootCompleted && Build.VERSION.SDK_INT >= 35) { // Android 15+ (VANILLA_ICE_CREAM)
-                // Android 15+ restricts BOOT_COMPLETED from launching dataSync foreground services
-                // Schedule service start with a short delay using AlarmManager
-                scheduleDelayedBlockchainServiceStart(context);
-            } else {
-                // For package replacement or older Android versions, start normally
-                application.startBlockchainService(false);
+            if (application.getWallet() != null) {
+                if (bootCompleted && Build.VERSION.SDK_INT >= 35) { // Android 15+ (VANILLA_ICE_CREAM)
+                    // Android 15+ restricts BOOT_COMPLETED from launching dataSync foreground services
+                    // Schedule service start with a short delay using AlarmManager
+                    scheduleDelayedBlockchainServiceStart(context);
+                } else {
+                    // For package replacement or older Android versions, start normally
+                    application.startBlockchainService(false);
+                }
             }
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
