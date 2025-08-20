@@ -52,6 +52,7 @@ import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
@@ -1394,6 +1395,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.warn("Foreground service timeout reached for startId: $startId, fgsType: $fgsType")
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
         
+        // Show notification about the timeout
+        showTimeoutNotification()
+        
         // Android 15 requires us to call stopSelf() within a few seconds
         // when onTimeout is called for dataSync services
         try {
@@ -1403,6 +1407,37 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         
         super.onTimeout(startId, fgsType)
+    }
+
+    private fun showTimeoutNotification() {
+        val mainActivityIntent = MainActivity.createIntent(this).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            mainActivityIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = when {
+            coinJoinService.isMixing() -> getString(R.string.coinjoin_paused)
+            blockchainState?.replaying == true -> getString(R.string.notification_sync_paused)
+            else -> getString(R.string.notification_background_processes_paused)
+        }
+        val text = getString(R.string.notification_background_processes_paused_text)
+        
+        val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
+            .setSmallIcon(R.drawable.ic_dash_d_white)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        
+        nm?.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
     }
 
     private fun createNetworkSyncNotification(blockchainState: BlockchainState? = null): Notification {

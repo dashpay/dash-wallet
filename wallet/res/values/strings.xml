@@ -350,6 +350,9 @@
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
     <string name="notification_bluetooth_service_listening">Ready to receive payments via Bluetooth</string>
+    <string name="notification_sync_paused">Blockchain sync paused</string>
+    <string name="notification_background_processes_paused">Background processing paused</string>
+    <string name="notification_background_processes_paused_text">You\'ve reached the Android 6-hour foreground service limit for mixing or blockchain sync. Tap to reset…</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
 
     <!-- generic buttons -->
