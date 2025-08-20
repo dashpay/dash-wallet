@@ -270,7 +270,7 @@
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
+            android:theme="@style/LockScreenActivity.Child.Theme"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
