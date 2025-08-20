@@ -100,12 +100,12 @@
         <activity
             android:name="de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.verify.VerifySeedActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"  />
+            android:theme="@style/LockScreenActivity.Child.Theme"  />
 
         <activity
             android:name="de.schildbach.wallet.ui.main.MainActivity"
