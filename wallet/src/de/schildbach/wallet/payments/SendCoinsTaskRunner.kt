@@ -17,6 +17,7 @@
 package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
+import androidx.core.net.toUri
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
