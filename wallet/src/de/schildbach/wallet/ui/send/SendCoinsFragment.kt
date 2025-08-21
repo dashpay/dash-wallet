@@ -261,6 +261,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
+                if (!isAdded) {
+                    return
+                }
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
                 if (shouldContinue == true) {
@@ -403,6 +406,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showInsufficientMoneyDialog(missing: Coin) {
+        if (!isAdded) {
+            return
+        }
         val msg = StringBuilder(
             getString(
                 R.string.send_coins_fragment_insufficient_money_msg1,
@@ -448,6 +454,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showEmptyWalletFailedDialog() {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_fragment_empty_wallet_failed_title),
@@ -458,6 +467,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showFailureDialog(exception: Exception) {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),
