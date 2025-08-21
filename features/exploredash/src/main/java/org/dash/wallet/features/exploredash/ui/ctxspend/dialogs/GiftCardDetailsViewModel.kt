@@ -28,6 +28,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.entity.GiftCard
@@ -175,10 +176,13 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 saveBarcode(giftCard.cardNumber)
                                 val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
                                 if (startPurchaseTime != -1L) {
+                                    if (BuildConfig.DEBUG) {
+                                        log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                    }
                                     analyticsService.logEvent(
                                         AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
                                         hashMapOf(
-                                            AnalyticsConstants.Parameter.TIME to System.currentTimeMillis() - startPurchaseTime,
+                                            AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
                                             AnalyticsConstants.Parameter.ARG1 to "CTX"
                                         )
                                     )
