@@ -30,6 +30,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchant
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import javax.net.ssl.SSLHandshakeException
@@ -40,14 +41,20 @@ class CTXSpendException(
     val errorCode: Int? = null,
     val errorBody: String? = null,
     cause: Throwable? = null
-) : Exception(message, cause) {
+) : IOException(message, cause) {
     var resourceString: ResourceString? = null
     var giftCardResponse: GiftCardInfo? = null
+    var txId: String? = null
     private val errorMap: Map<String, Any>
 
     constructor(message: ResourceString, giftCardResponse: GiftCardInfo? = null) : this("") {
         this.resourceString = message
         this.giftCardResponse = giftCardResponse
+    }
+
+    constructor(message: String, giftCardResponse: GiftCardInfo?, txId: String) : this(message) {
+        this.giftCardResponse = giftCardResponse
+        this.txId = txId
     }
 
     init {

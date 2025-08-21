@@ -28,6 +28,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
 import org.dash.wallet.features.exploredash.network.PiggyCardsRemoteDataSource
@@ -73,9 +74,10 @@ abstract class ExploreDashModule {
         @Provides
         fun provideDashSpendFactory(
             ctxSpendConfig: CTXSpendConfig,
-            piggyCardsConfig: PiggyCardsConfig
+            piggyCardsConfig: PiggyCardsConfig,
+            walletDataProvider: WalletDataProvider
         ): DashSpendRepositoryFactory {
-            return DashSpendRepositoryFactory(ctxSpendConfig, piggyCardsConfig)
+            return DashSpendRepositoryFactory(ctxSpendConfig, piggyCardsConfig, walletDataProvider)
         }
 
         @Provides

@@ -16,11 +16,16 @@
  */
 package org.dash.wallet.features.exploredash.network
 
+import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.features.exploredash.network.authenticator.PiggyCardsAuthenticator
 import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.PiggyCardsHeadersInterceptor
+import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsTokenApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.slf4j.LoggerFactory
@@ -30,21 +35,45 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class PiggyCardsRemoteDataSource @Inject constructor(private val config: PiggyCardsConfig) {
+class PiggyCardsRemoteDataSource @Inject constructor(
+    private val config: PiggyCardsConfig,
+    private val walletData: WalletDataProvider
+) {
     companion object {
         private val log = LoggerFactory.getLogger(PiggyCardsRemoteDataSource::class.java)
     }
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(PiggyCardsConstants.BASE_URL)
-            .client(getOkHttpClient())
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    PiggyCardsConstants.BASE_URL_PROD
+                } else {
+                    PiggyCardsConstants.BASE_URL_DEV
+                }
+            )
+            .client(getOkHttpClient(PiggyCardsAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(api)
     }
 
-    private fun getOkHttpClient(): OkHttpClient {
+    private fun buildTokenApi(): PiggyCardsTokenApi {
+        return Retrofit.Builder()
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    PiggyCardsConstants.BASE_URL_PROD
+                } else {
+                    PiggyCardsConstants.BASE_URL_DEV
+                }
+            )
+            .client(getOkHttpClient())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(PiggyCardsTokenApi::class.java)
+    }
+
+    private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         val loggingInterceptor = HttpLoggingInterceptor { message ->
             log.info(message)
         }
@@ -55,7 +84,10 @@ class PiggyCardsRemoteDataSource @Inject constructor(private val config: PiggyCa
             .connectTimeout(60.seconds.toJavaDuration())
             .readTimeout(60.seconds.toJavaDuration())
             .addInterceptor(PiggyCardsHeadersInterceptor(config))
-            .addInterceptor(ErrorHandlingInterceptor(ServiceName.CTXSpend))
+            .addInterceptor(ErrorHandlingInterceptor(ServiceName.PiggyCards))
+            .also { client ->
+                authenticator?.let { client.authenticator(it) }
+            }
             .addInterceptor(loggingInterceptor)
             .build()
     }

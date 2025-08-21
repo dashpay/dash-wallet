@@ -57,7 +57,9 @@ data class GiftCardUIState(
     val barcode: Barcode? = null,
     val date: LocalDateTime? = null,
     val error: Exception? = null,
-    val serviceName: String? = null
+    val serviceName: String? = null,
+    val status: GiftCardStatus? = null,
+    val queries: Int = 0
 )
 
 @HiltViewModel
@@ -125,7 +127,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (giftCard.number == null && giftCard.note != null) {
+                if (giftCard.number == null && giftCard.merchantUrl == null && giftCard.note != null) {
                     tickerJob = TickerFlow(period = 1.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(giftCard.txId) }
@@ -154,14 +156,23 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                 try {
                     val giftCard = ctxSpendRepository.getGiftCard(txid.toStringBase58())
+                    _uiState.update {
+                        it.copy(status = giftCard?.status, queries = it.queries + 1)
+                    }
                     if (giftCard != null) {
                         when (giftCard.status) {
                             GiftCardStatus.UNPAID -> {
                                 // TODO: handle
+                                _uiState.update {
+                                    it.copy(error = CTXSpendException("gift card status unpaid, but transaction sent", giftCard, txid.toStringBase58()))
+                                }
                             }
 
                             GiftCardStatus.PAID -> {
                                 // TODO: handle
+                                _uiState.update {
+                                    it.copy(error = CTXSpendException("gift card status paid, not fulfilled", giftCard, txid.toStringBase58()))
+                                }
                             }
 
                             GiftCardStatus.FULFILLED -> {
@@ -253,14 +264,23 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                 try {
                     val giftCard = piggyCardsRepository.getGiftCard(orderId)
+                    _uiState.update {
+                        it.copy(status = giftCard?.status, queries = it.queries + 1)
+                    }
                     if (giftCard != null) {
                         when (giftCard.status) {
                             GiftCardStatus.UNPAID -> {
                                 // TODO: handle
+                                _uiState.update {
+                                    it.copy(error = CTXSpendException("gift card status unpaid, but transaction sent", giftCard, txid.toString()))
+                                }
                             }
 
                             GiftCardStatus.PAID -> {
                                 // TODO: handle
+                                _uiState.update {
+                                    it.copy(error = CTXSpendException("gift card status paid, not fulfilled", giftCard, txid.toString()))
+                                }
                             }
 
                             GiftCardStatus.FULFILLED -> {
@@ -275,17 +295,17 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 } else if (giftCard.redeemUrl.isNotEmpty()) {
                                     log.error("PiggyCards returned a redeem url card: not supported")
                                     updateGiftCard(giftCard.redeemUrl)
-                                    _uiState.update {
-                                        it.copy(
-                                            error = CTXSpendException(
-                                                ResourceString(
-                                                    R.string.gift_card_redeem_url_not_supported,
-                                                    listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
-                                                ),
-                                                giftCard
-                                            )
-                                        )
-                                    }
+//                                    _uiState.update {
+//                                        it.copy(
+//                                            error = CTXSpendException(
+//                                                ResourceString(
+//                                                    R.string.gift_card_redeem_url_not_supported,
+//                                                    listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
+//                                                ),
+//                                                giftCard
+//                                            )
+//                                        )
+//                                    }
                                 }
                             }
 

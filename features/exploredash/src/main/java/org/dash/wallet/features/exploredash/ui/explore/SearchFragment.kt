@@ -527,7 +527,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (item != null) {
                 binding.toolbarTitle.text = item.name
 
-                if (item is Merchant && item.giftCardProviders.size == 1) {
+                if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
                     selectedProvider = GiftCardProviderType.fromProviderName(item.giftCardProviders.first().provider)
                     dashSpendViewModel.observeDashSpendState(selectedProvider)
                 }
@@ -935,64 +935,68 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @Composable
     private fun ItemDetailsComposable(item: SearchResult) {
         val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
-        ItemDetails(
-            item = item,
-            isLoggedIn = state.isLoggedIn,
-            userEmail = state.email,
-            selectedProvider = selectedProvider,
-            onProviderSelected = { provider ->
-                selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
-                dashSpendViewModel.observeDashSpendState(selectedProvider)
-            },
-            onSendDashClicked = { isPayingWithDash ->
-                if (isPayingWithDash) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-                }
-                deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-            },
-            onReceiveDashClicked = {
-                deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
-            },
-            onShowAllLocationsClicked = {
-                viewModel.selectedItem.value?.let { merchant ->
-                    if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                        viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+        val currentItem by viewModel.selectedItem.collectAsStateWithLifecycle()
+        
+        currentItem?.let {
+            ItemDetails(
+                item = it,
+                isLoggedIn = state.isLoggedIn,
+                userEmail = state.email,
+                selectedProvider = selectedProvider,
+                onProviderSelected = { provider ->
+                    selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                },
+                onSendDashClicked = { isPayingWithDash ->
+                    if (isPayingWithDash) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                    }
+                    deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+                },
+                onReceiveDashClicked = {
+                    deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+                },
+                onShowAllLocationsClicked = {
+                    viewModel.selectedItem.value?.let { merchant ->
+                        if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                            viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                        }
+                    }
+                },
+                onBackButtonClicked = {
+                    viewModel.backFromMerchantLocation()
+                },
+                onNavigationButtonClicked = {
+                    openMaps(item)
+                },
+                onDialPhoneButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                    }
+                    it.phone?.let { phone -> dialPhone(phone) }
+                },
+                onOpenWebsiteButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                    }
+                    it.website?.let { website -> openWebsite(website) }
+                },
+                onBuyGiftCardButtonClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.selectedProvider = selectedProvider
+                        if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
+                            showLoginDialog(selectedProvider)
+                        } else {
+                            openPurchaseGiftCardFragment() // TODO: service
+                        }
+                    }
+                },
+                onExploreLogOutClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.logout(selectedProvider)
                     }
                 }
-            },
-            onBackButtonClicked = {
-                viewModel.backFromMerchantLocation()
-            },
-            onNavigationButtonClicked = {
-                openMaps(item)
-            },
-            onDialPhoneButtonClicked = {
-                if (isMerchantTopic) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-                }
-                item.phone?.let { phone -> dialPhone(phone) }
-            },
-            onOpenWebsiteButtonClicked = {
-                if (isMerchantTopic) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-                }
-                item.website?.let { website -> openWebsite(website) }
-            },
-            onBuyGiftCardButtonClicked = {
-                lifecycleScope.launch {
-                    dashSpendViewModel.selectedProvider = selectedProvider
-                    if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
-                        showLoginDialog(selectedProvider)
-                    } else {
-                        openPurchaseGiftCardFragment() // TODO: service
-                    }
-                }
-            },
-            onExploreLogOutClicked = {
-                lifecycleScope.launch {
-                    dashSpendViewModel.logout(selectedProvider)
-                }
-            }
-        )
+            )
+        }
     }
 }

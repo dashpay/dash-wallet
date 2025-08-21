@@ -56,6 +56,7 @@ import org.dash.wallet.common.util.deepLinkNavigate
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
@@ -158,9 +159,24 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.barcodeLoadingError.isVisible = false
             }
 
-            val error = state.error
+            val merchantUrl = state.giftCard?.merchantUrl
+            binding.checkCurrentBalance.isVisible = merchantUrl != null
+            if (merchantUrl != null) {
+                binding.purchaseCardBarcode.isVisible = false
+                binding.barcodePlaceholder.isVisible = false
+                binding.barcodePlaceholderText.isVisible = false
+                binding.barcodeLoadingError.isVisible = false
+                //binding.infoLoadingIndicator.isVisible = false
+            }
 
-            if (error != null) {
+            val error = state.error
+            val shouldShowError = when (state.status) {
+                GiftCardStatus.UNPAID, GiftCardStatus.PAID -> state.queries > 5
+                GiftCardStatus.REJECTED -> true
+                GiftCardStatus.FULFILLED -> false
+                null -> false
+            }
+            if (error != null && shouldShowError) {
                 binding.infoLoadingIndicator.isVisible = false
 
                 val message = if (error is CTXSpendException && error.resourceString != null) {
@@ -184,6 +200,12 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
         }
 
+        binding.checkCurrentBalance.setOnClickListener {
+            viewModel.uiState.value.giftCard?.merchantUrl?.let {
+                startActivity(Intent(Intent.ACTION_VIEW, it.toUri()))
+            }
+        }
+
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
             viewModel.init(transactionId)
         }
@@ -194,7 +216,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.contactSupport.setOnClickListener {
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
-                sentToCTX = true,
+                sendToService = true,
                 viewModel.uiState.value.error as CTXSpendException
             )
 
@@ -218,7 +240,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
         binding.purchaseCardPin.text = giftCard.pin
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
-        binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty()
+        binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty() && giftCard.merchantUrl.isNullOrEmpty()
 
         binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
         binding.checkCurrentBalance.setOnClickListener {

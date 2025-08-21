@@ -25,6 +25,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Brand
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.ExchangeRateResult
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Giftcard
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
@@ -46,6 +47,8 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.math.max
 
+
+
 class PiggyCardsRepository @Inject constructor(
     private val api: PiggyCardsApi,
     private val config: PiggyCardsConfig
@@ -59,6 +62,8 @@ class PiggyCardsRepository @Inject constructor(
             "Petco",
             "AutoZone"
         )
+        private const val INSTANT_DELIVERY = "(instant delivery)"
+        private const val DASH_DASH_KEY = "DASH.DASH"
     }
     private val giftCardMap = hashMapOf<String, List<Giftcard>>()
     private val exchangeRateMap = hashMapOf<String, ExchangeRateResult>()
@@ -94,14 +99,20 @@ class PiggyCardsRepository @Inject constructor(
     }
 
     private suspend fun performAutoLogin(): Boolean {
-        val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
-        val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
-        
-        if (userId != null && password != null) {
-            val response = api.login(LoginRequest(userId = userId, password = password))
-            return handleLoginResponse(response)
+        return try {
+            val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
+            val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
+            
+            if (userId != null && password != null) {
+                val response = api.login(LoginRequest(userId = userId, password = password))
+                handleLoginResponse(response)
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            log.error("Failed to perform auto login: ${e.message}", e)
+            false
         }
-        return false
     }
 
     private suspend fun handleLoginResponse(response: LoginResponse): Boolean {
@@ -146,10 +157,16 @@ class PiggyCardsRepository @Inject constructor(
         brandWithMerchantId?.let { it ->
             val giftcards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
 
+            val immediateDeliveryCards = giftcards?.data?.filter {
+                it.name.lowercase().contains(INSTANT_DELIVERY)
+            }
+
             // do we have a range card, use it first
             val rangeGiftCard = giftcards?.data?.find { !it.isFixed }
 
-            if (rangeGiftCard != null) {
+            if (!immediateDeliveryCards.isNullOrEmpty()) {
+                return updatedMerchantDetails(immediateDeliveryCards, brandWithMerchantId)
+            } else if (rangeGiftCard != null) {
                 val denominations = listOf(
                     rangeGiftCard.minDenomination.toString(),
                     rangeGiftCard.maxDenomination.toString()
@@ -167,27 +184,7 @@ class PiggyCardsRepository @Inject constructor(
                     productId = rangeGiftCard.id.toString()
                 )
             } else if (giftcards != null && giftcards.data?.isNotEmpty() == true) {
-                val denominations = arrayListOf<Double>()
-                var discountPercentage = 0.0
-                val activeGiftCards = arrayListOf<Giftcard>()
-                giftcards.data.forEach { card ->
-                    if (card.quantity > 0) {
-                        denominations.add(card.denomination.toDouble())
-                        discountPercentage = max(card.discountPercentage, discountPercentage)
-                        activeGiftCards.add(card)
-                    }
-                }
-                val denominationsType = "fixed"
-                giftCardMap[it.id] = activeGiftCards
-                val format = DecimalFormat("0.##")
-                return UpdatedMerchantDetails(
-                    it.id,
-                    denominations.sorted().map { format.format(it) },
-                    denominationsType,
-                    (discountPercentage * 100).toInt(),
-                    redeemType = "barcode",
-                    enabled = denominations.isNotEmpty() && !disabledMerchants.contains(giftcards.data.first().name)
-                )
+                return updatedMerchantDetails(giftcards.data, it)
             } else {
                 return UpdatedMerchantDetails(
                     it.id,
@@ -209,32 +206,59 @@ class PiggyCardsRepository @Inject constructor(
         )
     }
 
+    private fun updatedMerchantDetails(
+        data: List<Giftcard>,
+        it: Brand
+    ): UpdatedMerchantDetails {
+        val denominations = arrayListOf<Double>()
+        var discountPercentage = 0.0
+        val activeGiftCards = arrayListOf<Giftcard>()
+        data.forEach { card ->
+            if (card.quantity > 0) {
+                denominations.add(card.denomination.toDouble())
+                discountPercentage = max(card.discountPercentage, discountPercentage)
+                activeGiftCards.add(card)
+            }
+        }
+        val denominationsType = "fixed"
+        giftCardMap[it.id] = activeGiftCards
+        val format = DecimalFormat("0.##")
+        return UpdatedMerchantDetails(
+            it.id,
+            denominations.sorted().map { format.format(it) },
+            denominationsType,
+            (discountPercentage * 100).toInt(),
+            redeemType = "barcode",
+            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(data.first().name)
+        )
+    }
+
     private suspend fun purchaseGiftCard(
         merchantId: String,
         fiatAmount: String,
         fiatCurrency: String,
     ): OrderResponse {
         val userEmail = userEmail.first()!!
-        val giftcards = giftCardMap[merchantId]
-        if (!giftcards.isNullOrEmpty()) {
-            val rangeGiftCard = giftcards.find { !it.isFixed }
+        val giftCards = giftCardMap[merchantId]
+        if (!giftCards.isNullOrEmpty()) {
+            val rangeGiftCard = giftCards.find { !it.isFixed }
             val productId = if (rangeGiftCard != null) {
                 rangeGiftCard.id
             } else {
-                val card = giftcards.find {
+                val card = giftCards.find {
                     it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
                 }
                 card?.id ?: throw IllegalStateException("cannot find the selected fixed card $fiatAmount for brand $merchantId")
             }
             return api.createOrder(
-                OrderRequest(
-                    listOf(
-                        Order(
-                            productId = productId,
-                            quantity = 1,
-                            denomination = fiatAmount.toDouble(), // TODO format?
-                            currency = fiatCurrency,
-                        )
+                    OrderRequest(
+                        listOf(
+                            Order(
+                                productId = productId,
+                                quantity = 1,
+                                denomination = fiatAmount.toDouble(),
+                                currency = fiatCurrency,
+                            )
                     ),
                     recipientEmail = userEmail,
                     user = User(
@@ -245,9 +269,9 @@ class PiggyCardsRepository @Inject constructor(
                             country = DEFAULT_COUNTRY,
                             state = DEFAULT_STATE
                         )
+                        )
                     )
                 )
-            )
         } else {
             throw IllegalStateException("card data not found: $merchantId")
         }
@@ -271,12 +295,12 @@ class PiggyCardsRepository @Inject constructor(
             id = orderResponse.id,
             status = response.status,
             cryptoAmount = uri.amount.toPlainString(),
-            cryptoCurrency = "DASH", // need a constant
-            paymentCryptoNetwork = "DASH",
+            cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
+            paymentCryptoNetwork = Constants.DASH_CURRENCY,
             rate = rate.exchangeRate.toString(),
             fiatAmount = fiatAmount,
             fiatCurrency = Constants.USD_CURRENCY,
-            paymentUrls = hashMapOf("DASH.DASH" to orderResponse.payTo)
+            paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
         )
     }
 
@@ -301,7 +325,7 @@ class PiggyCardsRepository @Inject constructor(
                 "Cancelled" -> GiftCardStatus.REJECTED
                 else -> GiftCardStatus.UNPAID
             },
-            barcodeUrl = giftCard.barcodeLink, //TODO: need to display this and/or determine the format of it
+            barcodeUrl = giftCard.barcodeLink,
             cardNumber = giftCard.claimCode,
             cardPin = giftCard.claimPin,
             cryptoAmount = "0.0",
@@ -313,7 +337,7 @@ class PiggyCardsRepository @Inject constructor(
             redeemUrl = giftCard.claimLink ?: "",
             fiatAmount = "0.0",
             fiatCurrency = Constants.USD_CURRENCY,
-            paymentUrls = hashMapOf("DASH.DASH" to data.payTo)
+            paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
         )
     }
 

@@ -63,6 +63,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -185,13 +186,12 @@ class DashSpendViewModel @Inject constructor(
                             fiatCurrency = Constants.USD_CURRENCY,
                             cryptoCurrency = Constants.DASH_CURRENCY
                         )
+                    } catch (e: CTXSpendException) {
+                        log.error("purchaseGiftCard error", e)
+                        throw e
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error", e)
-                        if (e is CTXSpendException) {
-                            throw e
-                        } else {
-                            throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.CTXSpend, null, null, e)
-                        }
+                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.CTXSpend, null, null, e)
                     }
                 }
                 GiftCardProviderType.PiggyCards -> {
@@ -202,19 +202,12 @@ class DashSpendViewModel @Inject constructor(
                             fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                             fiatCurrency = Constants.USD_CURRENCY
                         )
+                    } catch (e: CTXSpendException) {
+                        log.error("purchaseGiftCard error", e)
+                        throw e
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error", e)
-                        if (e is CTXSpendException) {
-                            throw e
-                        } else {
-                            throw CTXSpendException(
-                                "purchaseGiftCard error: ${e.message}",
-                                ServiceName.PiggyCards,
-                                null,
-                                null,
-                                e
-                            )
-                        }
+                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.PiggyCards, null, null, e)
                     }
                 }
 
@@ -232,11 +225,11 @@ class DashSpendViewModel @Inject constructor(
         )
         log.info("ctx spend transaction: ${transaction.txId}")
         transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, giftCardMerchant?.logoLocation)
-        BitcoinURI(paymentUri).message?.let { memo ->
-            if (memo.isNotBlank()) {
-                transactionMetadata.setTransactionMemo(transaction.txId, memo)
-            }
-        }
+//        BitcoinURI(paymentUri).message?.let { memo ->
+//            if (memo.isNotBlank()) {
+//                transactionMetadata.setTransactionMemo(transaction.txId, memo)
+//            }
+//        }
         transaction.txId
     }
 
@@ -490,13 +483,21 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
+    private fun getSupportEmail(sendToService: Boolean, serviceName: String) {
+        when {
+            !sendToService -> "support@dash.org"
+            serviceName == ServiceName.CTXSpend -> CTXSpendConstants.REPORT_EMAIL
+            serviceName == ServiceName.PiggyCards -> PiggyCardsConstants.REPORT_EMAIL
+        }
+    }
+
     fun createEmailIntent(
         subject: String,
-        sentToCTX: Boolean,
+        sendToService: Boolean,
         ex: CTXSpendException
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
-        putExtra(Intent.EXTRA_EMAIL, arrayOf(if (sentToCTX) CTXSpendConstants.REPORT_EMAIL else "support@dash.org"))
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(getSupportEmail(sendToService, ex.serviceName ?: "")))
         putExtra(Intent.EXTRA_SUBJECT, subject)
         putExtra(Intent.EXTRA_TEXT, createReportEmail(ex))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
