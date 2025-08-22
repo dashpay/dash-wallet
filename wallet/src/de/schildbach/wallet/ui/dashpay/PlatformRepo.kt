@@ -966,8 +966,13 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+    fun getNextContactAddress(userId: String, accountReference: Int): Address? {
+        return try {
+            blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+        } catch (e: NullPointerException) {
+            log.error("Failed to get contact address due to null key chain", e)
+            null
+        }
     }
 
     var counterForReport = 0

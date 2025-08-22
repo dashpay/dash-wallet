@@ -523,11 +523,15 @@ class SendCoinsViewModel @Inject constructor(
             dashPayProfile.userId,
             mostRecentContactRequest!!.accountReference
         )
-        return PaymentIntent.fromAddressWithIdentity(
-            Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
-            dashPayProfile.userId,
-            paymentIntent.amount
-        )
+        return if (address != null) {
+            PaymentIntent.fromAddressWithIdentity(
+                Address.fromBase58(Constants.NETWORK_PARAMETERS, address.toBase58()),
+                dashPayProfile.userId,
+                paymentIntent.amount
+            )
+        } else {
+            throw SendException("Failed to get contact address for ${dashPayProfile.userId}")
+        }
     }
 
     fun getNextTopupKey(): ECKey {
