@@ -170,7 +170,6 @@ class GiftCardDetailsViewModel @Inject constructor(
                         }
                         "fulfilled" -> {
                             if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                cancelTicker()
                                 updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                 log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                 saveBarcode(giftCard.cardNumber)
@@ -191,6 +190,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 _uiState.update {
                                     it.copy(error = null)
                                 }
+                                cancelTicker()
                             } else if (giftCard.redeemUrl.isNotEmpty()) {
                                 log.error("CTXSpend returned a redeem url card: not supported")
                                 _uiState.update {
