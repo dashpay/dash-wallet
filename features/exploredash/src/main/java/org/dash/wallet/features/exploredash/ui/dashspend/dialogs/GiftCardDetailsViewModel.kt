@@ -28,6 +28,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
@@ -44,6 +45,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -70,7 +72,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val ctxSpendRepository: CTXSpendRepository,
     private val piggyCardsRepository: PiggyCardsRepository,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val ctxSpendConfig: CTXSpendConfig
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
@@ -177,10 +180,24 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                             GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    cancelTicker()
                                     updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                     log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                     saveBarcode(giftCard.cardNumber)
+                                    val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                    if (startPurchaseTime != -1L) {
+                                        if (BuildConfig.DEBUG) {
+                                            log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                        }
+                                        analyticsService.logEvent(
+                                            AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
+                                            hashMapOf(
+                                                AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
+                                                AnalyticsConstants.Parameter.ARG1 to "CTX"
+                                            )
+                                        )
+                                        ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                    }
+                                    cancelTicker()
                                 } else if (giftCard.redeemUrl.isNotEmpty()) {
                                     log.error("CTXSpend returned a redeem url card: not supported")
                                     _uiState.update {
@@ -211,6 +228,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         )
                                     )
                                 }
+                                cancelTicker()
                             }
                         }
                     } else {
@@ -284,16 +302,29 @@ class GiftCardDetailsViewModel @Inject constructor(
                             }
 
                             GiftCardStatus.FULFILLED -> {
+                                val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                if (startPurchaseTime != -1L) {
+                                    if (BuildConfig.DEBUG) {
+                                        log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                    }
+                                    analyticsService.logEvent(
+                                        AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
+                                        hashMapOf(
+                                            AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
+                                            AnalyticsConstants.Parameter.ARG1 to "CTX"
+                                        )
+                                    )
+                                    ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                }
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    cancelTicker()
                                     updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                     log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                     // saveBarcode(giftCard.cardNumber)
                                     giftCard.barcodeUrl?.let {
                                         saveBarcodeUrl(it)
                                     }
+                                    cancelTicker()
                                 } else if (giftCard.redeemUrl.isNotEmpty()) {
-                                    log.error("PiggyCards returned a redeem url card: not supported")
                                     updateGiftCard(giftCard.redeemUrl)
 //                                    _uiState.update {
 //                                        it.copy(
@@ -306,6 +337,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 //                                            )
 //                                        )
 //                                    }
+                                    cancelTicker()
                                 }
                             }
 
@@ -323,6 +355,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         )
                                     )
                                 }
+                                cancelTicker()
                             }
                         }
                     } else {
