@@ -79,7 +79,7 @@ dependencies {
     // Tests
     testImplementation "junit:junit:$junitVersion"
     testImplementation "androidx.test:core-ktx:1.5.0"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test$coroutinesVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"
