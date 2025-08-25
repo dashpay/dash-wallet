@@ -159,13 +159,25 @@ class GiftCardDetailsViewModel @Inject constructor(
                         "unpaid" -> {
                             // TODO: handle
                             _uiState.update {
-                                it.copy(error = CTXSpendException("gift card status unpaid, but transaction sent", response.value, txid))
+                                it.copy(
+                                    error = CTXSpendException(
+                                        "gift card status unpaid, but transaction sent",
+                                        response.value,
+                                        txid
+                                    )
+                                )
                             }
                         }
                         "paid" -> {
                             // TODO: handle
                             _uiState.update {
-                                it.copy(error = CTXSpendException("gift card status paid, not fulfilled", response.value, txid))
+                                it.copy(
+                                    error = CTXSpendException(
+                                        "gift card status paid, not fulfilled",
+                                        response.value,
+                                        txid
+                                    )
+                                )
                             }
                         }
                         "fulfilled" -> {
@@ -173,15 +185,20 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                 log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                 saveBarcode(giftCard.cardNumber)
-                                val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START)
+                                    ?: -1
                                 if (startPurchaseTime != -1L) {
+                                    val timeElapsed = (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000
                                     if (BuildConfig.DEBUG) {
-                                        log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                        log.info(
+                                            "event:process_gift_card_purchase: {} ms",
+                                            timeElapsed
+                                        )
                                     }
                                     analyticsService.logEvent(
                                         AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
                                         hashMapOf(
-                                            AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
+                                            AnalyticsConstants.Parameter.TIME to timeElapsed,
                                             AnalyticsConstants.Parameter.ARG1 to "CTX"
                                         )
                                     )
