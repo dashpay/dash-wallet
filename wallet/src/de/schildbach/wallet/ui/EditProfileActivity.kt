@@ -424,7 +424,7 @@ class EditProfileActivity : LockScreenActivity() {
                 ).showAsync(this@EditProfileActivity)
             } else {
                 val shouldWarn = enough.isBalanceWarning()
-                val isEmpty = enough.isBalanceWarning()
+                val isEmpty = enough.isBalanceEmpty()
 
                 if (shouldWarn || isEmpty) {
                     val answer = AdaptiveDialog.create(

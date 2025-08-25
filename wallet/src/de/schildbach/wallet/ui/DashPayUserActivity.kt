@@ -202,7 +202,7 @@ class DashPayUserActivity : LockScreenActivity() {
                 ).showAsync(this@DashPayUserActivity)
             } else {
                 val shouldWarn = enough.isBalanceWarning()
-                val isEmpty = enough.isBalanceWarning()
+                val isEmpty = enough.isBalanceEmpty()
 
                 if (shouldWarn || isEmpty) {
                     val answer = AdaptiveDialog.create(
