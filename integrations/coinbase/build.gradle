@@ -50,6 +50,11 @@ hilt {
     enableAggregatingTask = true
 }
 
+kotlin {
+    jvmToolchain(17)
+}
+
+
 dependencies {
 
     // Core
