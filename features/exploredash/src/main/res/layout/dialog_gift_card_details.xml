@@ -321,7 +321,9 @@
                     android:layout_marginVertical="22dp"
                     android:layout_marginHorizontal="22dp"
                     android:layout_marginStart="15dp"
+                    android:text="@string/gift_card_details_error"
                     android:visibility="gone"
+                    tools:visibility="visible"
                     app:layout_constraintTop_toBottomOf="@+id/copy_card_pin"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent" />
@@ -348,6 +350,38 @@
                     android:layout_height="wrap_content"
                     android:paddingVertical="17dp"
                     android:text="@string/purchase_view_transaction"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@drawable/ic_light_gray_arrow_right"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/contact_support"
+                style="@style/ViewRaised"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/rounded_ripple_background"
+                android:clickable="true"
+                android:focusable="true"
+                android:paddingHorizontal="15dp"
+                android:theme="@style/ListViewButtonBackground"
+                app:layout_constraintTop_toBottomOf="@id/purchase_card_info">
+
+                <androidx.appcompat.widget.AppCompatTextView
+                    android:id="@+id/contact_support_label"
+                    style="@style/Caption.Medium"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:paddingVertical="17dp"
+                    android:text="@string/gift_card_contact_ctx"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 

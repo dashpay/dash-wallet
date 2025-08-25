@@ -65,7 +65,7 @@ class FakeDashSpendService @Inject constructor(
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String): Transaction {
+    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction {
         return if (dashUri.startsWith(DASH_SPEND_SCHEMA)) {
             val uri = Uri.parse(dashUri)
             val amount = Coin.valueOf(uri.getQueryParameter("amount")?.toLong() ?: 0)
@@ -74,7 +74,7 @@ class FakeDashSpendService @Inject constructor(
                 amount
             )
         } else {
-            realService.payWithDashUrl(dashUri)
+            realService.payWithDashUrl(dashUri, serviceName)
         }
     }
 }

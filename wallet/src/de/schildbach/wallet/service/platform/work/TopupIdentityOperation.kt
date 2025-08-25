@@ -150,7 +150,7 @@ class TopupIdentityOperation(val application: Application) {
 
     @SuppressLint("EnqueueWork")
     fun create(identity: String, txId: Sha256Hash): WorkContinuation {
-        val password = SecurityGuard().retrievePassword()
+        val password = SecurityGuard.getInstance().retrievePassword()
         val topUpIdentityWorker = OneTimeWorkRequestBuilder<TopupIdentityWorker>()
             .setInputData(
                 workDataOf(
