@@ -21,6 +21,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import org.bitcoinj.uri.BitcoinURI
+import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
@@ -259,16 +261,16 @@ class PiggyCardsRepository @Inject constructor(
                                 denomination = fiatAmount.toDouble(),
                                 currency = fiatCurrency,
                             )
-                    ),
-                    recipientEmail = userEmail,
-                    user = User(
-                        name = "none",
-                        ip = "192.168.100.1",
-                        UserMetadata(
-                            "2025-07-01",
-                            country = DEFAULT_COUNTRY,
-                            state = DEFAULT_STATE
-                        )
+                        ),
+                        recipientEmail = userEmail,
+                        user = User(
+                            name = "none",
+                            ip = "192.168.100.1",
+                            UserMetadata(
+                                "2025-07-01",
+                                country = DEFAULT_COUNTRY,
+                                state = DEFAULT_STATE
+                            )
                         )
                     )
                 )
@@ -289,19 +291,26 @@ class PiggyCardsRepository @Inject constructor(
         delay(250)
         val response = getGiftCard(orderResponse.id) ?: throw Exception("invalid order number ${orderResponse.id}")
 
-        val uri = BitcoinURI(orderResponse.payTo)
-        // return value
-        return GiftCardInfo(
-            id = orderResponse.id,
-            status = response.status,
-            cryptoAmount = uri.amount.toPlainString(),
-            cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
-            paymentCryptoNetwork = Constants.DASH_CURRENCY,
-            rate = rate.exchangeRate.toString(),
-            fiatAmount = fiatAmount,
-            fiatCurrency = Constants.USD_CURRENCY,
-            paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
-        )
+        return try {
+            val uri = BitcoinURI(orderResponse.payTo)
+            // return value
+            GiftCardInfo(
+                id = orderResponse.id,
+                status = response.status,
+                cryptoAmount = uri.amount.toPlainString(),
+                cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
+                paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                rate = rate.exchangeRate.toString(),
+                fiatAmount = fiatAmount,
+                fiatCurrency = Constants.USD_CURRENCY,
+                paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
+            )
+        } catch (e: BitcoinURIParseException) {
+            if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
+                throw CTXSpendException(orderResponse.payMessage, serviceName = ServiceName.PiggyCards, 200, orderResponse.payMessage, cause = e)
+            }
+            throw CTXSpendException(e.message ?: "Unknown URI error", serviceName = ServiceName.PiggyCards, 200, "", cause = e)
+        }
     }
 
     override suspend fun getGiftCard(giftCardId: String): GiftCardInfo? {

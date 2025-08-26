@@ -77,6 +77,8 @@ class CTXSpendException(
         }
     val isNetworkError: Boolean
         get() = cause?.let { it is SSLHandshakeException } ?: false
+    val isRegionNotAllowed: Boolean
+        get() = errorBody == "Client Transactions Not Allowed For This Region"
 }
 
 class CTXSpendRepository @Inject constructor(

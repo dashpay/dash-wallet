@@ -487,12 +487,10 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
-    private fun getSupportEmail(sendToService: Boolean, serviceName: String) {
-        when {
-            !sendToService -> "support@dash.org"
-            serviceName == ServiceName.CTXSpend -> CTXSpendConstants.REPORT_EMAIL
-            serviceName == ServiceName.PiggyCards -> PiggyCardsConstants.REPORT_EMAIL
-        }
+    private fun getSupportEmail(sendToService: Boolean, serviceName: String) = when {
+            sendToService && serviceName == ServiceName.CTXSpend -> CTXSpendConstants.REPORT_EMAIL
+            sendToService && serviceName == ServiceName.PiggyCards -> PiggyCardsConstants.REPORT_EMAIL
+            else -> "support@dash.org"
     }
 
     fun createEmailIntent(

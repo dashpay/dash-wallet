@@ -156,7 +156,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_limit_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
@@ -179,12 +179,35 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_server_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
                                     "CTX Issue: Purchase, Internal Server Error",
                                     sendToService = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
+                    ex.isRegionNotAllowed -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_server_region_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_ctx)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "DashSpend Issue: Purchase, Region Not Allowed",
+                                    sendToService = false,
                                     ex
                                 )
 
@@ -202,7 +225,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             ex.message ?: getString(R.string.gift_card_error),
                             getString(R.string.button_close),
-                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
+                            getString(R.string.gift_card_contact_support)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(

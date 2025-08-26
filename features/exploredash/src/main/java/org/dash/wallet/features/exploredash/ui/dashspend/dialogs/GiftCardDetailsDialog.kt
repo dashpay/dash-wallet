@@ -71,6 +71,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsDialog::class.java)
         private const val ARG_TRANSACTION_ID = "transactionId"
+        private const val WAIT_LIMIT_FOR_ERROR = 10
 
         fun newInstance(transactionId: Sha256Hash) =
             GiftCardDetailsDialog().apply {
@@ -171,7 +172,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
             val error = state.error
             val shouldShowError = when (state.status) {
-                GiftCardStatus.UNPAID, GiftCardStatus.PAID -> state.queries > 5
+                GiftCardStatus.UNPAID, GiftCardStatus.PAID -> state.queries > WAIT_LIMIT_FOR_ERROR
                 GiftCardStatus.REJECTED -> true
                 GiftCardStatus.FULFILLED -> false
                 null -> false
