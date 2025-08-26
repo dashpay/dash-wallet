@@ -157,8 +157,14 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             val error = state.error
+            val shouldShowError = when (state.status) {
+                "unpaid", "paid" -> state.queries > 5
+                "rejected" -> true
+                "fulfilled" -> false
+                else -> false
+            }
 
-            if (error != null) {
+            if (error != null && shouldShowError) {
                 binding.infoLoadingIndicator.isVisible = false
 
                 val message = if (error is CTXSpendException && error.resourceString != null) {
@@ -169,7 +175,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
-                binding.contactSupport.isVisible = true
+                binding.contactSupport.isVisible = true // force visible, thought it may be visible based on status
             } else {
                 binding.cardError.isVisible = false
                 binding.contactSupport.isVisible = false
@@ -184,10 +190,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
         binding.contactSupport.setOnClickListener {
+            val error = viewModel.uiState.value.error as? CTXSpendException
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sentToCTX = true,
-                viewModel.uiState.value.error as? CTXSpendException
+                error
             )
 
             val chooser = Intent.createChooser(
