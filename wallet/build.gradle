@@ -237,6 +237,7 @@ android {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
         buildConfigField("String", "DPP_VERSION", "\"$dppVersion\"")
+        buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
     }
 
     buildTypes {
