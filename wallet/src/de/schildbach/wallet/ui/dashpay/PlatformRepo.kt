@@ -1336,9 +1336,14 @@ class PlatformRepo @Inject constructor(
         return report.toString()
     }
 
-    suspend fun getIdentityBalance(): CreditBalanceInfo {
+    suspend fun getIdentityBalance(): CreditBalanceInfo? {
         return withContext(Dispatchers.IO) {
-            CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            try {
+                CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            } catch (e: Exception) {
+                log.error("Failed to get identity balance", e)
+                null
+            }
         }
     }
 

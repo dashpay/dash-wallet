@@ -282,7 +282,7 @@ class EditProfileViewModel @Inject constructor(
         }
     }
 
-    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+    suspend fun hasEnoughCredits(): CreditBalanceInfo? {
         return platformRepo.getIdentityBalance()
     }
 
