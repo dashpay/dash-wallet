@@ -198,7 +198,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                     }
                                     cancelTicker()
-                                } else if (giftCard.redeemUrl.isNotEmpty()) {
+                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     log.error("CTXSpend returned a redeem url card: not supported")
                                     _uiState.update {
                                         it.copy(
@@ -324,19 +324,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         saveBarcodeUrl(it)
                                     }
                                     cancelTicker()
-                                } else if (giftCard.redeemUrl.isNotEmpty()) {
+                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     updateGiftCard(giftCard.redeemUrl)
-//                                    _uiState.update {
-//                                        it.copy(
-//                                            error = CTXSpendException(
-//                                                ResourceString(
-//                                                    R.string.gift_card_redeem_url_not_supported,
-//                                                    listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
-//                                                ),
-//                                                giftCard
-//                                            )
-//                                        )
-//                                    }
                                     cancelTicker()
                                 }
                             }
