@@ -100,6 +100,13 @@ object MyTheme {
         fontWeight = FontWeight(600)
     )
 
+    val H5Bold = TextStyle(
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        fontFamily = interBold,
+        fontWeight = FontWeight(700)
+    )
+
     val H6Bold = TextStyle(
         fontSize = 20.sp,
         lineHeight = 26.sp,
