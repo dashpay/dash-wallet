@@ -416,7 +416,7 @@
     <string name="coinjoin_mixing_finishing">Finishing</string>
     <string name="coinjoin_paused">Paused</string>
     <string name="coinjoin_not_started">Not Started</string>
-    <string name="coinjoin_progress_status_percentage" translatable="false">$%s · %d%%</string>
+    <string name="coinjoin_progress_status_percentage" translatable="false">%s · %d%%</string>
     <string name="coinjoin_progress_amount_hidden" translatable="false">****</string>
     <string name="coinjoin_progress" translatable="false">%s (%.1f%%) %s / %s</string>
     <string name="coinjoin_progress_balance">%1$s of %2$s</string>

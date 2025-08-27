@@ -64,22 +64,22 @@
                             layout="@layout/sync_status_pane"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="14dp" />
+                            android:layout_marginBottom="10dp" />
 
                         <androidx.compose.ui.platform.ComposeView
                             android:id="@+id/compose_mixing_status_pane"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:visibility="visible"
+                            android:visibility="gone"
                             tools:visibility="visible"
-                            android:layout_marginBottom="14dp"
+                            android:layout_marginBottom="10dp"
                             />
 
                         <androidx.compose.ui.platform.ComposeView
                             android:id="@+id/info_panel"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="14dp" />
+                            android:layout_marginBottom="10dp" />
                     </LinearLayout>
                 </LinearLayout>
 
