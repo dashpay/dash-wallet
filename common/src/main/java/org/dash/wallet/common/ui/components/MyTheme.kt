@@ -86,6 +86,13 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
+    val Subtitle2Semibold = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(600)
+    )
+
     val SubtitleSemibold = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
