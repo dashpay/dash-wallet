@@ -74,6 +74,7 @@ public final class AddressBookActivity extends AbstractBindServiceActivity {
 		Toolbar toolbar = findViewById(R.id.toolbar);
 		toolbar.setTitle(getString(R.string.address_book_activity_title));
 		toolbar.setNavigationOnClickListener(v -> finish());
+		setSupportActionBar(toolbar);
 
 		final FragmentManager fragmentManager = getSupportFragmentManager();
 
