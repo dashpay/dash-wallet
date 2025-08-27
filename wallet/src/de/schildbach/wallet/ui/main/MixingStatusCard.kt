@@ -1,0 +1,223 @@
+package de.schildbach.wallet.ui.main
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.LottieConstants
+import com.airbnb.lottie.compose.animateLottieCompositionAsState
+import com.airbnb.lottie.compose.rememberLottieComposition
+import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet_test.R
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import org.bitcoinj.core.Coin
+import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.util.toBigDecimal
+import java.math.BigDecimal
+import java.text.DecimalFormat
+
+@Composable
+fun MixingAnimation(loop: Boolean) {
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.RawRes(R.raw.mixing_anim)
+    )
+    val progress by animateLottieCompositionAsState(
+        composition = composition,
+        iterations = LottieConstants.IterateForever,
+        isPlaying = loop
+    )
+    LottieAnimation(
+        composition = composition,
+        progress = progress,
+        modifier = Modifier.size(32.dp)
+    )
+}
+
+@Composable
+fun MixingStatusCard(
+    statusFlow: Flow<MixingStatus>,
+    percentageFlow: Flow<Double>,
+    mixedBalanceFlow: Flow<Coin>,
+    totalBalanceFlow: Flow<Coin>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
+    val status by statusFlow.collectAsState(MixingStatus.NOT_STARTED)
+    val isVisible = when (status) {
+        MixingStatus.NOT_STARTED,
+        MixingStatus.ERROR,
+        MixingStatus.FINISHED -> false
+        else -> true
+    }
+    val mixingNow = when (status) {
+        MixingStatus.MIXING, MixingStatus.FINISHING -> true
+        else -> false
+    }
+    val statusTextId = when (status) {
+        MixingStatus.MIXING -> {
+            R.string.coinjoin_mixing
+        }
+        MixingStatus.FINISHING -> {
+            R.string.coinjoin_mixing_finishing
+        }
+        MixingStatus.PAUSED -> {
+            R.string.coinjoin_paused
+        }
+        else -> {
+            R.string.error
+        }
+    }
+    val percentageDouble by percentageFlow.collectAsState(0.0)
+    val percentageInt = percentageDouble.toInt()
+    val mixedBalance by mixedBalanceFlow.collectAsState(Coin.ZERO)
+    val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
+    val decimalFormat = DecimalFormat("0.0000")
+    val totalBalanceString = decimalFormat.format(totalBalance.toBigDecimal() ?: BigDecimal.ZERO)
+    val mixedBalanceString = decimalFormat.format(mixedBalance.toBigDecimal() ?: BigDecimal.ZERO)
+
+    if (isVisible) {
+        Card(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(60.dp)
+                .shadow(
+                    elevation = 8.dp,
+                    shape = RoundedCornerShape(12.dp),
+                    ambientColor = Color(0xFFB8C1CC).copy(alpha = 0.15f),
+                    spotColor = Color(0xFFB8C1CC).copy(alpha = 0.15f)
+                ),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            onClick = onClick
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MixingAnimation(mixingNow)
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Status and balance row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        // Status & percentage
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "${stringResource(statusTextId)} · $percentageInt%",
+                                style = MyTheme.Caption,
+                                color = MyTheme.Colors.textPrimary,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                        }
+
+                        // Balance with logo
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = stringResource(R.string.coinjoin_progress_balance, mixedBalanceString, totalBalanceString),
+                                style = MyTheme.Caption,
+                                color = MyTheme.Colors.textPrimary,
+                                textAlign = TextAlign.End
+                            )
+
+                            Icon(
+                                painter = painterResource(id = R.drawable.ic_dash_d_black),
+                                contentDescription = "Dash logo",
+                                modifier = Modifier.size(10.47.dp),
+                                tint = Color(0xFF0C0C0D)
+                            )
+                        }
+                    }
+
+                    // Progress bar
+                    Column {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .background(
+                                    color = MyTheme.Colors.extraLightGray,
+                                    shape = RoundedCornerShape(4.dp)
+                                )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(percentageDouble.toFloat() / 100)
+                                    .fillMaxHeight()
+                                    .background(
+                                        color = MyTheme.Colors.dashBlue,
+                                        shape = RoundedCornerShape(4.dp)
+                                    )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Preview
+@Preview(showBackground = true)
+@Composable
+fun MixingBalanceCardPreview() {
+    MaterialTheme {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            val totalBalance = MutableStateFlow(Coin.valueOf(522994000))
+            val totalBalanceValue by totalBalance.collectAsState()
+            MixingStatusCard(
+                MutableStateFlow(MixingStatus.MIXING),
+                percentageFlow = MutableStateFlow(10.0),
+                mixedBalanceFlow = MutableStateFlow(totalBalanceValue.div(10)),
+                totalBalanceFlow = totalBalance
+            )
+
+            MixingStatusCard(
+                MutableStateFlow(MixingStatus.FINISHING),
+                percentageFlow = MutableStateFlow(99.9),
+                mixedBalanceFlow = MutableStateFlow(totalBalanceValue.multiply(99).div(100)),
+                totalBalanceFlow = totalBalance
+            )
+
+            MixingStatusCard(
+                MutableStateFlow(MixingStatus.PAUSED),
+                percentageFlow = MutableStateFlow(45.0),
+                mixedBalanceFlow = MutableStateFlow(totalBalanceValue.div(2)),
+                totalBalanceFlow = totalBalance
+            )
+        }
+    }
+}

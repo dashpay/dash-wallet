@@ -35,6 +35,7 @@ import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
@@ -48,6 +49,7 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
@@ -177,6 +179,19 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 ) {
                     shortcutViewModel.hideShortcutInfo()
                 }
+            }
+        }
+
+        binding.composeMixingStatusPane.setContent {
+            MixingStatusCard(
+                viewModel.mixingState,
+                viewModel.mixingProgress,
+                viewModel.mixedBalance.asFlow(),
+                viewModel.totalBalance.asFlow()
+            ) {
+                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
+                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
+                })
             }
         }
 
