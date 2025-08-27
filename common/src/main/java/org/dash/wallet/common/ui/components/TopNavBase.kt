@@ -69,33 +69,36 @@ fun TopNavBase(
             .fillMaxWidth()
             .height(64.dp)
             .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Leading Touch Area
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (leadingPart) {
-                if (leadingText != null) {
-                    Box(
-                        modifier = if (onLeadingClick != null) {
+        // Leading Area - always present when leadingPart = true
+        if (leadingText != null) {
+            // Flexible width for text
+            Box(
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .then(
+                        if (onLeadingClick != null) {
                             Modifier.clickable { onLeadingClick() }
                         } else {
                             Modifier
-                        },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = leadingText,
-                            style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.textPrimary
-                        )
-                    }
-                } else {
+                        }
+                    ),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = leadingText,
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.textPrimary
+                )
+            }
+        } else {
+            // Fixed 44dp box for icons or empty space (when leadingPart = true)
+            Box(
+                modifier = Modifier.size(44.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (leadingPart && leadingIcon != null) {
                     Template(
                         modifier = Modifier
                             .size(34.dp)
@@ -110,10 +113,11 @@ fun TopNavBase(
                         contentDescription = leadingContentDescription
                     )
                 }
+                // Always takes 44dp space whether leadingPart is true/false
             }
         }
 
-        // Central Area
+        // Central Area - takes remaining space
         if (centralPart) {
             Box(
                 modifier = Modifier.weight(1f),
@@ -121,32 +125,39 @@ fun TopNavBase(
             ) {
                 Label(text = title)
             }
+        } else if (leadingPart && trailingPart) {
+            // Spacer when no central content but both leading and trailing exist
+            Box(modifier = Modifier.weight(1f))
         }
 
-        // Trailing Touch Area
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .padding(4.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            if (trailingPart) {
-                if (trailingText != null) {
-                    Box(
-                        modifier = if (onTrailingClick != null) {
+        // Trailing Area - always present to balance layout
+        if (trailingText != null) {
+            // Flexible width for text
+            Box(
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    .then(
+                        if (onTrailingClick != null) {
                             Modifier.clickable { onTrailingClick() }
                         } else {
                             Modifier
-                        },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = trailingText,
-                            style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.dashBlue
-                        )
-                    }
-                } else {
+                        }
+                    ),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Text(
+                    text = trailingText,
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.dashBlue
+                )
+            }
+        } else {
+            // Fixed 44dp box for icons or empty space
+            Box(
+                modifier = Modifier.size(44.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                if (trailingPart && trailingIcon != null) {
                     Template(
                         modifier = Modifier
                             .size(34.dp)
@@ -161,6 +172,7 @@ fun TopNavBase(
                         contentDescription = trailingContentDescription
                     )
                 }
+                // Always takes 44dp space whether trailingPart is true/false
             }
         }
     }
