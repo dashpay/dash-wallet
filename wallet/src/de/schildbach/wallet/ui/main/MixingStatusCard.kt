@@ -21,6 +21,7 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.Flow
@@ -28,7 +29,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.util.toBigDecimal
-import java.math.BigDecimal
 import java.text.DecimalFormat
 
 @Composable
@@ -43,22 +43,25 @@ fun MixingAnimation(loop: Boolean) {
     )
     LottieAnimation(
         composition = composition,
-        progress = progress,
+        progress = { progress },
         modifier = Modifier.size(32.dp)
     )
 }
 
 @Composable
 fun MixingStatusCard(
+    coinJoinModeFlow: Flow<CoinJoinMode>,
     statusFlow: Flow<MixingStatus>,
     percentageFlow: Flow<Double>,
     mixedBalanceFlow: Flow<Coin>,
     totalBalanceFlow: Flow<Coin>,
+    hideBalanceFlow: Flow<Boolean>,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
+    val mode by coinJoinModeFlow.collectAsState(CoinJoinMode.NONE)
     val status by statusFlow.collectAsState(MixingStatus.NOT_STARTED)
-    val isVisible = when (status) {
+    val isVisible = mode != CoinJoinMode.NONE && when (status) {
         MixingStatus.NOT_STARTED,
         MixingStatus.ERROR,
         MixingStatus.FINISHED -> false
@@ -86,9 +89,18 @@ fun MixingStatusCard(
     val percentageInt = percentageDouble.toInt()
     val mixedBalance by mixedBalanceFlow.collectAsState(Coin.ZERO)
     val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
+    val hideBalance by hideBalanceFlow.collectAsState(false)
     val decimalFormat = DecimalFormat("0.0000")
-    val totalBalanceString = decimalFormat.format(totalBalance.toBigDecimal() ?: BigDecimal.ZERO)
-    val mixedBalanceString = decimalFormat.format(mixedBalance.toBigDecimal() ?: BigDecimal.ZERO)
+    val totalBalanceString = if (hideBalance) {
+        stringResource(R.string.coinjoin_progress_amount_hidden)
+    } else {
+        decimalFormat.format(totalBalance.toBigDecimal())
+    }
+    val mixedBalanceString = if (hideBalance) {
+        stringResource(R.string.coinjoin_progress_amount_hidden)
+    } else {
+        decimalFormat.format(mixedBalance.toBigDecimal())
+    }
 
     if (isVisible) {
         Card(
@@ -131,7 +143,7 @@ fun MixingStatusCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "${stringResource(statusTextId)} · $percentageInt%",
+                                text = stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusTextId), percentageInt),
                                 style = MyTheme.Caption,
                                 color = MyTheme.Colors.textPrimary,
                                 modifier = Modifier.weight(1f, fill = false)
@@ -196,27 +208,36 @@ fun MixingBalanceCardPreview() {
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            val trueFlow = MutableStateFlow(true)
+            val falseFlow = MutableStateFlow(false)
+            val coinJoinMode = MutableStateFlow(CoinJoinMode.INTERMEDIATE)
             val totalBalance = MutableStateFlow(Coin.valueOf(522994000))
             val totalBalanceValue by totalBalance.collectAsState()
             MixingStatusCard(
+                coinJoinMode,
                 MutableStateFlow(MixingStatus.MIXING),
                 percentageFlow = MutableStateFlow(10.0),
                 mixedBalanceFlow = MutableStateFlow(totalBalanceValue.div(10)),
-                totalBalanceFlow = totalBalance
+                totalBalanceFlow = totalBalance,
+                hideBalanceFlow = falseFlow
             )
 
             MixingStatusCard(
+                coinJoinMode,
                 MutableStateFlow(MixingStatus.FINISHING),
                 percentageFlow = MutableStateFlow(99.9),
                 mixedBalanceFlow = MutableStateFlow(totalBalanceValue.multiply(99).div(100)),
-                totalBalanceFlow = totalBalance
+                totalBalanceFlow = totalBalance,
+                hideBalanceFlow = trueFlow
             )
 
             MixingStatusCard(
+                coinJoinMode,
                 MutableStateFlow(MixingStatus.PAUSED),
                 percentageFlow = MutableStateFlow(45.0),
                 mixedBalanceFlow = MutableStateFlow(totalBalanceValue.div(2)),
-                totalBalanceFlow = totalBalance
+                totalBalanceFlow = totalBalance,
+                hideBalanceFlow = falseFlow
             )
         }
     }
