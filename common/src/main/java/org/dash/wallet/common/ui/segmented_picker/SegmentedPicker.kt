@@ -332,7 +332,7 @@ fun SegmentedPickerPreview() {
             
             Text(
                 text = "Vertical Picker",
-                style = MyTheme.OverlineMedium,
+                style = MyTheme.OverlineMedium.copy(textAlign = TextAlign.Center),
                 modifier = Modifier.padding(vertical = 8.dp)
             )
 
