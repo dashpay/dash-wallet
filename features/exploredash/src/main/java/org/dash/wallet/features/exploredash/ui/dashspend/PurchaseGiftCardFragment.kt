@@ -44,6 +44,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
+import org.dash.wallet.common.util.getPublicIPAddress
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
@@ -55,6 +56,7 @@ import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.PurchaseGiftCar
 import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
 import java.text.NumberFormat
 import java.util.Currency
 
@@ -64,6 +66,9 @@ fun min(a: Coin, b: Coin?): Coin {
 
 @AndroidEntryPoint
 class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gift_card) {
+    companion object {
+        private val log = LoggerFactory.getLogger(PurchaseGiftCardFragment::class.java)
+    }
     private val binding by viewBinding(FragmentPurchaseCtxspendGiftCardBinding::bind)
     private var enterAmountFragment: EnterAmountFragment? = null
     private val viewModel by exploreViewModels<DashSpendViewModel>()
@@ -85,16 +90,18 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         // Try to restore from saved state first
         val savedMerchantId = viewModel.getSavedMerchantId()
+        val savedProvider = viewModel.getSavedProvider()
         val currentMerchant = exploreViewModel.selectedItem.value
+        val currentProvider = viewModel.selectedProvider
 
         viewLifecycleOwner.lifecycleScope.launch {
-            if (savedMerchantId != null && currentMerchant == null) {
+            if (savedMerchantId != null && currentMerchant == null && savedProvider != null && currentProvider == null) {
                 // restore state if saved merchant exists
-                if (!setupMerchant(savedMerchantId)) {
+                if (!setupMerchant(savedMerchantId, savedProvider)) {
                     findNavController().popBackStack()
                 }
             } else if (currentMerchant is Merchant && currentMerchant.merchantId != null &&
-                !currentMerchant.source.isNullOrEmpty()
+                !currentMerchant.source.isNullOrEmpty() && currentProvider != null
             ) {
                 setupMerchant(currentMerchant)
             } else {
@@ -330,9 +337,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
-    private suspend fun setupMerchant(merchantId: String): Boolean {
+    private suspend fun setupMerchant(merchantId: String, provider: String): Boolean {
         val merchant = viewModel.getMerchantById(merchantId)
         return if (merchant != null) {
+            viewModel.selectedProvider = GiftCardProviderType.fromProviderName(provider)
             setupMerchant(merchant)
             true
         } else {
@@ -340,6 +348,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
     }
 
+    /** [DashSpendViewModel.selectedProvider] must already be set */
     private suspend fun setupMerchant(merchant: Merchant) {
         viewModel.giftCardMerchant = merchant
         binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
