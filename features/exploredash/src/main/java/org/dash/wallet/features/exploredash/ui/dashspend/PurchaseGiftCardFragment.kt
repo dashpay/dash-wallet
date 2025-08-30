@@ -154,6 +154,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         viewLifecycleOwner.observeOnDestroy {
             viewModel.resetSelectedDenomination()
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            log.info("purchase from IP:  {}", getPublicIPAddress())
+        }
     }
 
     private fun setupEnterAmountFragment() {
