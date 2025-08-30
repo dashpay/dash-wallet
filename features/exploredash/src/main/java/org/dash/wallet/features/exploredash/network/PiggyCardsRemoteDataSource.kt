@@ -81,8 +81,8 @@ class PiggyCardsRemoteDataSource @Inject constructor(
         loggingInterceptor.redactHeader("Authorization")
 
         return OkHttpClient.Builder()
-            .connectTimeout(60.seconds.toJavaDuration())
-            .readTimeout(60.seconds.toJavaDuration())
+            .connectTimeout(20.seconds.toJavaDuration())
+            .readTimeout(20.seconds.toJavaDuration())
             .addInterceptor(PiggyCardsHeadersInterceptor(config))
             .addInterceptor(ErrorHandlingInterceptor(ServiceName.PiggyCards))
             .also { client ->
