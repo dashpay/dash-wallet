@@ -95,9 +95,14 @@ class DashSpendViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(DashSpendViewModel::class.java)
         private const val MERCHANT_ID_KEY = "merchant_id"
         private const val BALANCE_KEY = "balance"
+        private const val SELECTED_PROVIDER_KEY = "selected_provider"
     }
 
     var selectedProvider: GiftCardProviderType? = null
+        set(value) {
+            field = value
+            savedStateHandle[SELECTED_PROVIDER_KEY] = value?.name
+        }
     private var stateTrackingJob: Job? = null
 
     private val providers: Map<GiftCardProviderType, DashSpendRepository> by lazy {
@@ -507,6 +512,10 @@ class DashSpendViewModel @Inject constructor(
 
     fun getSavedMerchantId(): String? {
         return savedStateHandle.get<String>(MERCHANT_ID_KEY)
+    }
+
+    fun getSavedProvider(): String? {
+        return savedStateHandle.get<String>(SELECTED_PROVIDER_KEY)
     }
 
     private fun createReportEmail(ex: CTXSpendException): String {
