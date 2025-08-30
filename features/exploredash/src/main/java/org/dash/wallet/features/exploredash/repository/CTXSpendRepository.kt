@@ -79,6 +79,9 @@ class CTXSpendException(
         get() = cause?.let { it is SSLHandshakeException } ?: false
     val isRegionNotAllowed: Boolean
         get() = errorBody == "Client Transactions Not Allowed For This Region"
+    override fun toString(): String {
+        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
+    }
 }
 
 class CTXSpendRepository @Inject constructor(

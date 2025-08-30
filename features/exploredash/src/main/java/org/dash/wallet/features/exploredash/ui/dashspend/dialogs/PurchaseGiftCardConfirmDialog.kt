@@ -151,6 +151,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
+                        viewModel.logError(ex,"${ex.serviceName} returned error: limits")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
@@ -174,6 +175,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 500 -> {
+                        viewModel.logError(ex,"${ex.serviceName} returned error: Error 500")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
@@ -288,12 +290,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             ).show(requireActivity())
             null
         } catch (ex: Exception) {
+            log.error("purchaseGiftCard error", ex)
+            hideLoading()
             val message = getString(when {
                 ex.cause is BitcoinURIParseException && ex.message?.contains("mismatched network") == true -> R.string.gift_card_error_wrong_network
                 else -> R.string.gift_card_error
             })
-            log.error("purchaseGiftCard error", ex)
-            hideLoading()
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),

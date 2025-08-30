@@ -189,6 +189,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
                 binding.contactSupport.isVisible = true
+                if (state.queries == WAIT_LIMIT_FOR_ERROR) {
+                    ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
+                }
             } else {
                 binding.cardError.isVisible = false
                 binding.contactSupport.isVisible = false

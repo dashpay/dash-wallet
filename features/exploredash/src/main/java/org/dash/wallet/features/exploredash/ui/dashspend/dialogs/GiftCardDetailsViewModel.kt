@@ -186,7 +186,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
                                     if (startPurchaseTime != -1L) {
                                         if (BuildConfig.DEBUG) {
-                                            log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                            log.info("event:process_gift_card_purchase: {} s", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
                                         }
                                         analyticsService.logEvent(
                                             AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
@@ -217,6 +217,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             GiftCardStatus.REJECTED -> {
                                 // TODO: handle
                                 log.error("CTXSpend returned error: rejected")
+                                analyticsService.logError(CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),"CTX returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}")
                                 _uiState.update {
                                     it.copy(
                                         error = CTXSpendException(
@@ -305,7 +306,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
                                 if (startPurchaseTime != -1L) {
                                     if (BuildConfig.DEBUG) {
-                                        log.info("event:process_gift_card_purchase: {} ms", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                        log.info("event:process_gift_card_purchase: {} s", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
                                     }
                                     analyticsService.logEvent(
                                         AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
@@ -333,6 +334,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             GiftCardStatus.REJECTED -> {
                                 // TODO: handle
                                 log.error("PiggyCards returned error: rejected")
+                                analyticsService.logError(CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),"CTX returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}")
                                 _uiState.update {
                                     it.copy(
                                         error = CTXSpendException(

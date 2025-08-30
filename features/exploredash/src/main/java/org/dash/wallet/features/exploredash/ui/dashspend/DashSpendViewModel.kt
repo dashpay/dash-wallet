@@ -191,10 +191,10 @@ class DashSpendViewModel @Inject constructor(
                             cryptoCurrency = Constants.DASH_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
-                        log.error("purchaseGiftCard error", e)
+                        log.error("purchaseGiftCard error: CTXSpendException", e)
                         throw e
                     } catch (e: Exception) {
-                        log.error("purchaseGiftCard error", e)
+                        log.error("purchaseGiftCard error: {}", e::class.java.simpleName, e)
                         throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.CTXSpend, null, null, e)
                     }
                 }
@@ -207,10 +207,10 @@ class DashSpendViewModel @Inject constructor(
                             fiatCurrency = Constants.USD_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
-                        log.error("purchaseGiftCard error", e)
+                        log.error("purchaseGiftCard error: CTXSpendException", e)
                         throw e
                     } catch (e: Exception) {
-                        log.error("purchaseGiftCard error", e)
+                        log.error("purchaseGiftCard error: {}", e::class.java.simpleName, e)
                         throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.PiggyCards, null, null, e)
                     }
                 }
@@ -575,5 +575,9 @@ class DashSpendViewModel @Inject constructor(
             minCardPurchaseCoin = myRate.fiatToCoin(minCardPurchaseFiat)
             maxCardPurchaseCoin = myRate.fiatToCoin(maxCardPurchaseFiat)
         }
+    }
+
+    fun logError(ctxSpendException: Throwable, message: String) {
+        analytics.logError(ctxSpendException, message)
     }
 }
