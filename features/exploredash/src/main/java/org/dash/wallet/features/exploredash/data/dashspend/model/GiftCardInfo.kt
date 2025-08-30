@@ -9,7 +9,8 @@ enum class GiftCardStatus {
 
 data class GiftCardInfo(
     val id: String,
-    val status: GiftCardStatus, // unpaid, paid, fulfilled, rejected
+    val merchantName: String? = "",
+    val status: GiftCardStatus = GiftCardStatus.UNPAID, // unpaid, paid, fulfilled, rejected
     val barcodeUrl: String? = "",
     // val barcodeFormat: String? = "",
     val cardNumber: String? = "",

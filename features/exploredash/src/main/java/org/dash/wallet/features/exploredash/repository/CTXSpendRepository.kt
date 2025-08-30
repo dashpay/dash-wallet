@@ -151,6 +151,7 @@ class CTXSpendRepository @Inject constructor(
 
         return GiftCardInfo(
             response.id,
+            response.merchantName,
             status = GiftCardStatus.valueOf(response.status.uppercase()),
             cryptoAmount = response.cryptoAmount,
             cryptoCurrency = response.cryptoCurrency,
@@ -171,6 +172,7 @@ class CTXSpendRepository @Inject constructor(
         return response?.let {
             GiftCardInfo(
                 response.id,
+                merchantName = response.merchantName,
                 status = GiftCardStatus.valueOf(response.status.uppercase()),
                 barcodeUrl = response.barcodeUrl,
                 cardNumber = response.cardNumber,

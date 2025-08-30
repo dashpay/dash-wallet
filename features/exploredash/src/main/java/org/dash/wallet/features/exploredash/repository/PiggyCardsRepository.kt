@@ -296,6 +296,7 @@ class PiggyCardsRepository @Inject constructor(
             // return value
             GiftCardInfo(
                 id = orderResponse.id,
+                merchantName = response.merchantName,
                 status = response.status,
                 cryptoAmount = uri.amount.toPlainString(),
                 cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
@@ -326,6 +327,7 @@ class PiggyCardsRepository @Inject constructor(
 
         return GiftCardInfo(
             id = data.orderId,
+            merchantName = giftCard.name,
             status = when (data.status) {
                 "Payment pending" -> GiftCardStatus.UNPAID
                 "Paid" -> GiftCardStatus.PAID
