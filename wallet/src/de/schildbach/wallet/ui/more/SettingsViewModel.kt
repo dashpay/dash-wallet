@@ -26,13 +26,18 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.toBigDecimal
 import java.text.DecimalFormat
 import javax.inject.Inject
@@ -43,33 +48,59 @@ class SettingsViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
-    private val walletDataProvider: WalletDataProvider,
-    private val analytics: AnalyticsService
+    walletDataProvider: WalletDataProvider,
+    private val analytics: AnalyticsService,
 ) : ViewModel() {
+    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE).filterNotNull()
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
-    val isIgnoringBatteryOptimizations: Boolean
-        get() = powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
+    private val _ignoringBatteryOptimizations = MutableStateFlow(isIgnoringBatteryOptimizations())
+    val ignoringBatteryOptimizations = _ignoringBatteryOptimizations.asStateFlow()
+
+    private fun isIgnoringBatteryOptimizations() = powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
+    fun updateIgnoringBatteryOptimizations() {
+        _ignoringBatteryOptimizations.value = isIgnoringBatteryOptimizations()
+    }
     val coinJoinMixingMode: Flow<CoinJoinMode>
         get() = coinJoinConfig.observeMode()
-    var mixingProgress: Double = 0.0
+    private val _mixingProgress = MutableStateFlow(0.0)
+    val mixingProgress = _mixingProgress.asStateFlow()
 
-    var coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED
+    private val _localCurrencySymbol = MutableStateFlow(Constants.USD_CURRENCY)
+    val localCurrencySymbol = _localCurrencySymbol.asStateFlow()
+
+    private val _coinJoinMixingStatus = MutableStateFlow(MixingStatus.NOT_STARTED)
+    val coinJoinMixingStatus = _coinJoinMixingStatus.asStateFlow()
+    //private var decimalFormat: DecimalFormat = DecimalFormat("0.000")
+    private val _totalBalance = MutableStateFlow(Coin.ZERO)
+    val totalBalance = _totalBalance.asStateFlow()
+    //get() = decimalFormat.format(walletDataProvider.getWalletBalance().toBigDecimal())
+
+    private val _mixedBalance = MutableStateFlow(Coin.ZERO)
+    val mixedBalance =  _mixedBalance.asStateFlow()
+    //get() = decimalFormat.format(walletDataProvider.getMixedBalance().toBigDecimal())
+
     init {
         coinJoinService.observeMixingState()
-            .onEach { coinJoinMixingStatus = it }
+            .onEach { _coinJoinMixingStatus.value = it }
             .launchIn(viewModelScope)
         coinJoinService.observeMixingProgress()
-            .onEach { mixingProgress = it }
+            .onEach { _mixingProgress.value = it }
+            .launchIn(viewModelScope)
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { _localCurrencySymbol.value = it }
+            .launchIn(viewModelScope)
+        walletDataProvider.observeMixedBalance()
+            .filterNotNull()
+            .onEach { _mixedBalance.value = it }
+            .launchIn(viewModelScope)
+        walletDataProvider.observeTotalBalance()
+            .filterNotNull()
+            .onEach { _totalBalance.value = it }
             .launchIn(viewModelScope)
     }
 
-    private var decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    val walletBalance: String
-        get() = decimalFormat.format(walletDataProvider.getWalletBalance().toBigDecimal())
-
-    val mixedBalance: String
-        get() = decimalFormat.format(walletDataProvider.getMixedBalance().toBigDecimal())
 
     suspend fun shouldShowCoinJoinInfo(): Boolean {
         return coinJoinConfig.get(CoinJoinConfig.FIRST_TIME_INFO_SHOWN) != true
