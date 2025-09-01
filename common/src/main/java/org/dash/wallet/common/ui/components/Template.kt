@@ -28,7 +28,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.R
 
 @Composable
 fun Template(
@@ -45,7 +48,7 @@ fun Template(
             )
             .border(
                 width = 1.5.dp,
-                color = MyTheme.Colors.gray300.copy(alpha = 0.09f),
+                color = MyTheme.Colors.gray300.copy(alpha = 0.30f),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -54,7 +57,7 @@ fun Template(
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier,
                 tint = MyTheme.Colors.textPrimary
             )
         } else {
@@ -67,5 +70,20 @@ fun Template(
                     )
             )
         }
+    }
+}
+
+@Composable
+@Preview
+private fun TemplatePreview() {
+    Box(Modifier
+        .size(44.dp)
+        .background(MyTheme.Colors.backgroundPrimary),
+        contentAlignment = Alignment.Center
+    ) {
+        Template(
+            Modifier,
+            ImageVector.vectorResource(R.drawable.ic_menu_chevron)
+        )
     }
 }

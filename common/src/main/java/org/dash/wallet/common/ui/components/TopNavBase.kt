@@ -189,7 +189,7 @@ fun TopNavBasePreview() {
         // Variant 1: Back button with trailing dot
         TopNavBase(
             title = "Label",
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             trailingPart = true,
             onTrailingClick = { /* handle trailing */ }
@@ -198,7 +198,7 @@ fun TopNavBasePreview() {
         // Variant 2: Back button only
         TopNavBase(
             title = "Label",
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             trailingPart = false
         )
@@ -206,7 +206,7 @@ fun TopNavBasePreview() {
         // Variant 3: Back button with info icon
         TopNavBase(
             title = "Label",
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             trailingIcon = Icons.Default.Info,
             onTrailingClick = { /* handle info */ }
@@ -223,7 +223,7 @@ fun TopNavBasePreview() {
         // Variant 5: Back button with add icon
         TopNavBase(
             title = "Label",
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             trailingIcon = Icons.Default.Add,
             onTrailingClick = { /* handle add */ }
@@ -241,7 +241,7 @@ fun TopNavBasePreview() {
         // Variant 7: Back with text button
         TopNavBase(
             title = "Label",
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             trailingText = "Quick voting"
         )
@@ -255,7 +255,7 @@ fun TopNavBasePreview() {
 
         // Variant 9: Back button only, no title
         TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_chevron),
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
             onLeadingClick = { /* handle back */ },
             centralPart = false,
             trailingPart = false
