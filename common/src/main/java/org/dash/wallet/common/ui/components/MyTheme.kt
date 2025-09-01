@@ -133,7 +133,6 @@ object MyTheme {
     )
 
     object Colors {
-        val backgroundLight = Color(0xFFF0F0F0)
         val backgroundPrimary = Color(0xFFF5F6F7)
         val textPrimary = Color(0xFF191C1F)
         val backgroundSecondary = Color(0xFFFFFFFF)
