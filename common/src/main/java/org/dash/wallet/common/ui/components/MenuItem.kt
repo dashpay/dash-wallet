@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontWeight.Companion.W600
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,6 +54,7 @@ fun MenuItem(
     onToggleChanged: ((Boolean) -> Unit)? = null,
     // Balance/Amount display
     dashAmount: String? = null,
+    dashIcon: Int? = R.drawable.ic_dash_blue_filled,
     fiatAmount: String? = null,
     // Trailing button
     trailingButtonText: String? = null,
@@ -64,7 +66,7 @@ fun MenuItem(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 46.dp)
+            .heightIn(min = 56.dp)
             .background(Color.Transparent, RoundedCornerShape(8.dp))
             .clickable { action?.invoke() }
             .padding(horizontal = 10.dp, vertical = 12.dp),
@@ -128,7 +130,7 @@ fun MenuItem(
                 ) {
                     Text(
                         text = title,
-                        style = MyTheme.Body2Medium,
+                        style = MyTheme.Body2Medium.copy(fontWeight = W600),
                         color = MyTheme.Colors.textPrimary
                     )
 
@@ -197,13 +199,15 @@ fun MenuItem(
                             style = MyTheme.CaptionMedium,
                             color = MyTheme.Colors.textPrimary
                         )
-                        // Dash logo (you'll need to add the actual resource)
-                        Icon(
-                            painter = painterResource(id = R.drawable.ic_dash_blue_filled),
-                            contentDescription = "Dash",
-                            tint = Color.Unspecified,
-                            modifier = Modifier.size(12.dp)
-                        )
+                        // Dash logo
+                        dashIcon?.let { dashIcon ->
+                            Icon(
+                                painter = painterResource(id = dashIcon),
+                                contentDescription = "Dash",
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
                     }
                     
                     // Fiat amount
@@ -219,23 +223,24 @@ fun MenuItem(
 
             // Trailing small button
             if (trailingButtonText != null && onTrailingButtonClick != null) {
-                TextButton(
+                DashButton(
+                    modifier = Modifier,
                     onClick = onTrailingButtonClick,
-                    colors = ButtonDefaults.textButtonColors(
-                        contentColor = MyTheme.Colors.textPrimary
-                    ),
-                    contentPadding = PaddingValues(0.dp),
-                    modifier = Modifier.height(18.dp)
-                ) {
-                    Text(
-                        text = trailingButtonText,
-                        style = MyTheme.SubtitleSemibold.copy(
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                    )
-                }
+                    text = trailingButtonText,
+                    style = Style.Plain,
+                    size = Size.Small,
+                    stretch = false
+                )
+            //                {
+//                    Text(
+//                        text = trailingButtonText,
+//                        style = MyTheme.SubtitleSemibold.copy(
+//                            fontSize = 13.sp,
+//                            lineHeight = 18.sp,
+//                            fontWeight = FontWeight.Medium
+//                        )
+//                    )
+//                }
             }
 
             if (showChevron) {
@@ -289,7 +294,7 @@ fun PreviewMenuItem() {
 
         // With trailing button
         MenuItem(
-            title = "More Action Item",
+            title = "Action Item w/ Chevron",
             icon = R.drawable.ic_dash_blue_filled,
             onTrailingButtonClick = { },
             showChevron = true
@@ -319,6 +324,15 @@ fun PreviewMenuItem() {
             fiatAmount = "0.00 US$",
             trailingButtonText = "Label",
             onTrailingButtonClick = { }
+        )
+
+        // Complex example matching Figma
+        MenuItem(
+            title = "CoinJoin",
+            subtitle = "Mixing",
+            icon = R.drawable.ic_dash_blue_filled,
+            dashAmount = "0.0011 of 1.0000",
+            //fiatAmount = "0.0011 of 1.0000"
         )
     }
 }

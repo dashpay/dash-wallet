@@ -19,21 +19,27 @@ import org.dash.wallet.common.R
 fun Menu(
     menuItems: @Composable () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .background(MyTheme.Colors.backgroundPrimary, RoundedCornerShape(12.dp)),
+            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(12.dp)),
+    ) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .padding(6.dp)
+            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(12.dp)),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         menuItems.invoke()
     }
+        }
 }
 
 @Composable
 @Preview
 fun MenuPreview() {
     Column(Modifier.fillMaxWidth()
-        .background(MyTheme.Colors.backgroundLight)) {
+        .background(MyTheme.Colors.backgroundPrimary)) {
         Spacer(Modifier.fillMaxWidth().height(20.dp))
         Menu {
             // With balance display
