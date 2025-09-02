@@ -155,6 +155,7 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     ksp "com.google.dagger:hilt-compiler:$hiltVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
+    implementation "androidx.hilt:hilt-navigation-compose:$hiltCompilerVersion"
     ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
     // Unit tests
