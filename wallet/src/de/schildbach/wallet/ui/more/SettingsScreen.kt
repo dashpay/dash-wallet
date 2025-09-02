@@ -34,7 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
@@ -50,7 +51,6 @@ import java.text.DecimalFormat
 
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel? = null,
     onBackClick: () -> Unit = {},
     onLocalCurrencyClick: () -> Unit = {},
     onRescanBlockchainClick: () -> Unit = {},
@@ -60,7 +60,34 @@ fun SettingsScreen(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
-    val uiState by (viewModel?.uiState ?: MutableStateFlow(SettingsUIState())).collectAsState()
+    val viewModel: SettingsViewModel = hiltViewModel()
+    
+    SettingsScreen(
+        uiStateFlow = viewModel.uiState,
+        onBackClick = onBackClick,
+        onLocalCurrencyClick = onLocalCurrencyClick,
+        onRescanBlockchainClick = onRescanBlockchainClick,
+        onAboutDashClick = onAboutDashClick,
+        onNotificationsClick = onNotificationsClick,
+        onCoinJoinClick = onCoinJoinClick,
+        onTransactionMetadataClick = onTransactionMetadataClick,
+        onBatteryOptimizationClick = onBatteryOptimizationClick
+    )
+}
+
+@Composable
+fun SettingsScreen(
+    uiStateFlow: StateFlow<SettingsUIState>,
+    onBackClick: () -> Unit = {},
+    onLocalCurrencyClick: () -> Unit = {},
+    onRescanBlockchainClick: () -> Unit = {},
+    onAboutDashClick: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
+    onCoinJoinClick: () -> Unit = {},
+    onTransactionMetadataClick: () -> Unit = {},
+    onBatteryOptimizationClick: () -> Unit = {}
+) {
+    val uiState by uiStateFlow.collectAsState()
     
     SettingsScreenContent(
         uiState = uiState,
@@ -219,9 +246,7 @@ private fun SettingsScreenContent(
 @Composable
 @Preview
 fun MoreScreenPreview() {
-    SettingsScreen(
-        viewModel = null // This will use the fallback MutableStateFlow with default SettingsUIState
-    )
+    SettingsScreenContent(uiState = SettingsUIState())
 }
 
 @Composable
@@ -237,6 +262,5 @@ fun MoreScreenPreviewWithCoinJoin() {
         hideBalance = false,
         ignoringBatteryOptimizations = true
     )
-    
     SettingsScreenContent(uiState = customState)
 }

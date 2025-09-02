@@ -68,7 +68,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         return ComposeView(requireContext()).apply {
             setContent {
                 SettingsScreen(
-                    viewModel,
                     onBackClick = {
                         findNavController().popBackStack()
                     },
