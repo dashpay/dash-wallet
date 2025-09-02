@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -73,7 +74,8 @@ class CTXSpendViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val savedStateHandle: SavedStateHandle,
     private val exploreDao: MerchantDao,
-    private val ctxSpendConfig: CTXSpendConfig
+    private val ctxSpendConfig: CTXSpendConfig,
+    private val blockchainStateProvider: BlockchainStateProvider
 ) : ViewModel() {
 
     companion object {
@@ -128,6 +130,8 @@ class CTXSpendViewModel @Inject constructor(
     var maxCardPurchaseFiat: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
     var openedCTXSpendTermsAndConditions = false
+    private val _isBlockchainReplaying = MutableStateFlow(false)
+    val isBlockchainReplaying = _isBlockchainReplaying.asStateFlow()
 
     init {
         exchangeRates
@@ -145,6 +149,13 @@ class CTXSpendViewModel @Inject constructor(
         _balance.observeForever { coin ->
             savedStateHandle[BALANCE_KEY] = coin?.value
         }
+
+        blockchainStateProvider.observeState()
+            .filterNotNull()
+            .onEach { state ->
+                _isBlockchainReplaying.value = state.replaying
+            }
+            .launchIn(viewModelScope)
     }
 
     suspend fun purchaseGiftCard(): GiftCardResponse {

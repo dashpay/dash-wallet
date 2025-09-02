@@ -151,6 +151,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             enterAmountFragment?.handleNetworkState(isConnected)
         }
 
+        viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) {
+            updateView()
+        }
+
         viewLifecycleOwner.observeOnDestroy {
             viewModel.resetSelectedDenomination()
         }
@@ -178,6 +182,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.enterAmountFragmentPlaceholder.isVisible = true
         binding.composeContainer.isVisible = false
         binding.fixedDenomText.isVisible = false
+        updateView()
     }
 
     private fun setupMerchantDenominations() {
@@ -221,13 +226,15 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         val amountFiat = enterAmountViewModel.fiatAmount.value
         amountFiat?.let {
+            val isBlockchainReplaying = viewModel.isBlockchainReplaying.value
             if (!viewModel.withinLimits(amountFiat)) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
                     getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toFormattedString())
-                binding.minValue.isVisible = true
-                binding.maxValue.isVisible = true
+                // don't show min/max values if blockchain is replaying
+                binding.minValue.isVisible = !isBlockchainReplaying
+                binding.maxValue.isVisible = !isBlockchainReplaying
                 binding.discountValue.isVisible = false
                 return
             }
@@ -258,7 +265,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        binding.discountValue.isVisible = true
+        // only show the discount
+        binding.discountValue.isVisible = !viewModel.isBlockchainReplaying.value
         val selectedRate = viewModel.usdExchangeRate.value
 
         if (selectedRate == null) {
@@ -404,5 +412,19 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 }
             )
         }
+    }
+
+    // taken from SendCoinsFragment.updateView
+    private fun updateView() {
+        val isReplaying = viewModel.isBlockchainReplaying.value
+        val errorMessage = if (isReplaying) {
+            getString(R.string.send_coins_fragment_hint_replaying)
+        } else {
+            ""
+        }
+
+        enterAmountFragment?.setError(errorMessage)
+        enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
+                viewModel.isBlockchainReplaying.value
     }
 }
