@@ -34,12 +34,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.MutableStateFlow
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
@@ -51,53 +50,66 @@ import java.text.DecimalFormat
 
 @Composable
 fun SettingsScreen(
+    viewModel: SettingsViewModel? = null,
     onBackClick: () -> Unit = {},
-    localCurrencySymbolFlow: Flow<String>,
     onLocalCurrencyClick: () -> Unit = {},
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {},
-    coinJoinModeFlow: Flow<CoinJoinMode>,
-    coinJoinStatusFlow: Flow<MixingStatus>,
-    mixingProgressFlow: Flow<Double>,
-    mixingBalanceFlow: Flow<Coin>,
-    totalBalanceFlow: Flow<Coin>,
-    hideBalanceFlow: Flow<Boolean>,
-    isIgnoringBatteryOptimizationsFlow: Flow<Boolean>
+    onBatteryOptimizationClick: () -> Unit = {}
 ) {
-    val localCurrencySymbol by localCurrencySymbolFlow.collectAsState(org.dash.wallet.common.util.Constants.USD_CURRENCY)
-    val mode by coinJoinModeFlow.collectAsState(CoinJoinMode.NONE)
-    val mixingStatus by coinJoinStatusFlow.collectAsState(MixingStatus.NOT_STARTED)
-    val mixingProgress by mixingProgressFlow.collectAsState(0.0)
-    val mixedBalance by mixingBalanceFlow.collectAsState(Coin.ZERO)
-    val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
-    val hideBalance by hideBalanceFlow.collectAsState(false)
-    val isIgnoringBatteryOptimizations by isIgnoringBatteryOptimizationsFlow.collectAsState(false)
+    val uiState by (viewModel?.uiState ?: MutableStateFlow(SettingsUIState())).collectAsState()
+    
+    SettingsScreenContent(
+        uiState = uiState,
+        onBackClick = onBackClick,
+        onLocalCurrencyClick = onLocalCurrencyClick,
+        onRescanBlockchainClick = onRescanBlockchainClick,
+        onAboutDashClick = onAboutDashClick,
+        onNotificationsClick = onNotificationsClick,
+        onCoinJoinClick = onCoinJoinClick,
+        onTransactionMetadataClick = onTransactionMetadataClick,
+        onBatteryOptimizationClick = onBatteryOptimizationClick
+    )
+}
+
+@Composable
+private fun SettingsScreenContent(
+    uiState: SettingsUIState,
+    onBackClick: () -> Unit = {},
+    onLocalCurrencyClick: () -> Unit = {},
+    onRescanBlockchainClick: () -> Unit = {},
+    onAboutDashClick: () -> Unit = {},
+    onNotificationsClick: () -> Unit = {},
+    onCoinJoinClick: () -> Unit = {},
+    onTransactionMetadataClick: () -> Unit = {},
+    onBatteryOptimizationClick: () -> Unit = {}
+) {
     @StringRes val statusId: Int
     var balance: String? = null
     var balanceIcon: Int? = null
-    val decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    if (mode == CoinJoinMode.NONE) {
+    val decimalFormat = DecimalFormat("0.000")
+    
+    if (uiState.coinJoinMixingMode == CoinJoinMode.NONE) {
         statusId = R.string.turned_off
    } else {
-        if (mixingStatus == MixingStatus.FINISHED) {
+        if (uiState.coinJoinMixingStatus == MixingStatus.FINISHED) {
             statusId = R.string.coinjoin_progress_finished
         } else {
-            statusId = when(mixingStatus) {
+            statusId = when(uiState.coinJoinMixingStatus) {
                 MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
                 MixingStatus.MIXING -> R.string.coinjoin_mixing
                 MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
                 MixingStatus.PAUSED -> R.string.coinjoin_paused
                 else -> R.string.error
             }
-            if (!hideBalance) {
+            if (!uiState.hideBalance) {
                 balance = stringResource(
                     R.string.coinjoin_progress_balance,
-                    decimalFormat.format(mixedBalance.toBigDecimal()),
-                    decimalFormat.format(totalBalance.toBigDecimal())
+                    decimalFormat.format(uiState.mixedBalance.toBigDecimal()),
+                    decimalFormat.format(uiState.totalBalance.toBigDecimal())
                 )
                 balanceIcon = R.drawable.ic_dash_d_black
             } else {
@@ -106,10 +118,11 @@ fun SettingsScreen(
         }
     }
     val coinJoinStatusText = when {
-        mode != CoinJoinMode.NONE && (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.FINISHING) ->
-            stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusId), mixingProgress.toInt())
+        uiState.coinJoinMixingMode != CoinJoinMode.NONE && (uiState.coinJoinMixingStatus == MixingStatus.MIXING || uiState.coinJoinMixingStatus == MixingStatus.FINISHING) ->
+            stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusId), uiState.mixingProgress.toInt())
         else -> stringResource(statusId)
     }
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -140,29 +153,29 @@ fun SettingsScreen(
                 // Local Currency
                 MenuItem(
                     title = stringResource(R.string.menu_local_currency),
-                    subtitle = localCurrencySymbol,
-                    icon = R.drawable.ic_local_currency, // You'll need the correct currency icon
+                    subtitle = uiState.localCurrencySymbol,
+                    icon = R.drawable.ic_local_currency,
                     action = onLocalCurrencyClick
                 )
 
                 // Rescan Blockchain
                 MenuItem(
                     title = "Rescan blockchain",
-                    icon = R.drawable.ic_rescan_blockchain, // You'll need the correct rescan icon
+                    icon = R.drawable.ic_rescan_blockchain,
                     action = onRescanBlockchainClick
                 )
 
                 // About Dash
                 MenuItem(
                     title = "About Dash",
-                    icon = R.drawable.ic_dash_blue_filled, // You'll need the correct about icon
+                    icon = R.drawable.ic_dash_blue_filled,
                     action = onAboutDashClick
                 )
 
                 // Notifications
                 MenuItem(
                     title = "Notifications",
-                    icon = R.drawable.ic_notification, // You'll need the correct notifications icon
+                    icon = R.drawable.ic_notification,
                     action = onNotificationsClick
                 )
 
@@ -189,7 +202,7 @@ fun SettingsScreen(
                 MenuItem(
                     title = "Battery optimization",
                     subtitle = stringResource(
-                        if (isIgnoringBatteryOptimizations) {
+                        if (uiState.ignoringBatteryOptimizations) {
                             R.string.battery_optimization_subtitle_unrestricted
                         } else {
                             R.string.battery_optimization_subtitle_optimized
@@ -207,13 +220,23 @@ fun SettingsScreen(
 @Preview
 fun MoreScreenPreview() {
     SettingsScreen(
-        localCurrencySymbolFlow = MutableStateFlow("USD"),
-        coinJoinModeFlow = MutableStateFlow(CoinJoinMode.INTERMEDIATE),
-        coinJoinStatusFlow = MutableStateFlow(MixingStatus.MIXING),
-        mixingProgressFlow = MutableStateFlow(50.0),
-        mixingBalanceFlow = MutableStateFlow(Coin.COIN),
-        totalBalanceFlow = MutableStateFlow(Coin.COIN.multiply(2L)),
-        hideBalanceFlow = MutableStateFlow(false),
-        isIgnoringBatteryOptimizationsFlow = MutableStateFlow(true)
+        viewModel = null // This will use the fallback MutableStateFlow with default SettingsUIState
     )
+}
+
+@Composable
+@Preview(name = "Settings with CoinJoin Active")
+fun MoreScreenPreviewWithCoinJoin() {
+    val customState = SettingsUIState(
+        localCurrencySymbol = "USD",
+        coinJoinMixingMode = CoinJoinMode.INTERMEDIATE,
+        coinJoinMixingStatus = MixingStatus.MIXING,
+        mixingProgress = 50.0,
+        mixedBalance = Coin.COIN,
+        totalBalance = Coin.COIN.multiply(2L),
+        hideBalance = false,
+        ignoringBatteryOptimizations = true
+    )
+    
+    SettingsScreenContent(uiState = customState)
 }

@@ -68,10 +68,10 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         return ComposeView(requireContext()).apply {
             setContent {
                 SettingsScreen(
+                    viewModel,
                     onBackClick = {
                         findNavController().popBackStack()
                     },
-                    viewModel.localCurrencySymbol,
                     onLocalCurrencyClick = {
                         lifecycleScope.launch {
                             viewModel.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY)
@@ -103,14 +103,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                         }
                     },
                     onTransactionMetadataClick = { /* blank for now */ },
-                    onBatteryOptimizationClick = { batteryOptimization() },
-                    viewModel.coinJoinMixingMode,
-                    viewModel.coinJoinMixingStatus,
-                    viewModel.mixingProgress,
-                    viewModel.mixedBalance,
-                    viewModel.totalBalance,
-                    viewModel.hideBalance,
-                    viewModel.ignoringBatteryOptimizations
+                    onBatteryOptimizationClick = { batteryOptimization() }
                 )
             }
         }
@@ -254,7 +247,7 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                 walletApplication,
                 Manifest.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
             ) == PackageManager.PERMISSION_GRANTED &&
-            !viewModel.ignoringBatteryOptimizations.value
+            !viewModel.uiState.value.ignoringBatteryOptimizations
         ) {
             AdaptiveDialog.create(
                 R.drawable.ic_bolt_border,
