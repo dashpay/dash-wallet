@@ -62,6 +62,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -84,7 +85,8 @@ class DashSpendViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analytics: AnalyticsService,
     private val savedStateHandle: SavedStateHandle,
-    private val exploreDao: MerchantDao
+    private val exploreDao: MerchantDao,
+    private val ctxSpendConfig: CTXSpendConfig
 ) : ViewModel() {
 
     companion object {
@@ -174,6 +176,7 @@ class DashSpendViewModel @Inject constructor(
 
     suspend fun purchaseGiftCard(): GiftCardInfo = withContext(Dispatchers.IO) {
         giftCardMerchant?.merchantId?.let {
+            ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
             val amountValue = giftCardPaymentValue.value
             val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
             when (selectedProvider) {
@@ -493,7 +496,7 @@ class DashSpendViewModel @Inject constructor(
     fun createEmailIntent(
         subject: String,
         sentToCTX: Boolean,
-        ex: CTXSpendException
+        ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(if (sentToCTX) CTXSpendConstants.REPORT_EMAIL else "support@dash.org"))
@@ -506,7 +509,7 @@ class DashSpendViewModel @Inject constructor(
         return savedStateHandle.get<String>(MERCHANT_ID_KEY)
     }
 
-    private fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException?): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         giftCardMerchant?.let { merchant ->
@@ -521,6 +524,11 @@ class DashSpendViewModel @Inject constructor(
                 .append("\n")
         } ?: run {
             report.append("No merchant selected").append("\n")
+        }
+
+        ex?.txId?.let {
+            report.append("\n")
+            report.append("Transaction (base58): ").append(it).append("\n")
         }
 
         report.append("\n")

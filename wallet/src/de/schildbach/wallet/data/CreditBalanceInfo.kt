@@ -22,4 +22,6 @@ data class CreditBalanceInfo(
     fun isBalanceWarning(): Boolean {
         return balance <= LOW_BALANCE
     }
+
+    fun isBalanceEmpty() = !isBalanceEnough()
 }

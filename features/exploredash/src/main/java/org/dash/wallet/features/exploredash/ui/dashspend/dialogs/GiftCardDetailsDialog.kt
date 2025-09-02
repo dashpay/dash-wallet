@@ -56,6 +56,7 @@ import org.dash.wallet.common.util.deepLinkNavigate
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.databinding.DialogGiftCardDetailsBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
@@ -159,8 +160,14 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             val error = state.error
+            val shouldShowError = when (state.status) {
+                GiftCardStatus.UNPAID, GiftCardStatus.PAID -> state.queries > 5
+                GiftCardStatus.REJECTED -> true
+                GiftCardStatus.FULFILLED -> false
+                else -> false
+            }
 
-            if (error != null) {
+            if (error != null && shouldShowError) {
                 binding.infoLoadingIndicator.isVisible = false
 
                 val message = if (error is CTXSpendException && error.resourceString != null) {
@@ -171,7 +178,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
-                binding.contactSupport.isVisible = true
+                binding.contactSupport.isVisible = true // force visible, thought it may be visible based on status
             } else {
                 binding.cardError.isVisible = false
                 binding.contactSupport.isVisible = false
@@ -192,10 +199,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
         binding.contactSupport.setOnClickListener {
+            val error = viewModel.uiState.value.error as? CTXSpendException
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sentToCTX = true,
-                viewModel.uiState.value.error as CTXSpendException
+                error
             )
 
             val chooser = Intent.createChooser(

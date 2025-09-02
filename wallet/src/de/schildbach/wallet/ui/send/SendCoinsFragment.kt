@@ -36,6 +36,7 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
+import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
 import kotlinx.coroutines.launch
@@ -172,7 +173,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
     }
-
+    private var debug = true
     protected open fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
         val dryRunException = viewModel.dryRunException
@@ -196,6 +197,11 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             !viewModel.everythingPlausible() ||
             viewModel.dryRunSuccessful.value != true ||
             viewModel.isBlockchainReplaying.value ?: false
+        if (viewModel.dryRunSuccessful.value != true && debug) {
+            AnrException(Thread.currentThread()).logProcessMap()
+            debug = false
+        }
+        log.info("enterAmountViewModel.blockContinue = {}, viewModel.dryRunSuccessful.value = {}", enterAmountViewModel.blockContinue, viewModel.dryRunSuccessful.value)
 
         enterAmountFragment?.setViewDetails(
             getString(
@@ -255,6 +261,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
                 onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
+                if (!isAdded) {
+                    return
+                }
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
                 if (shouldContinue == true) {
@@ -397,6 +406,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showInsufficientMoneyDialog(missing: Coin) {
+        if (!isAdded) {
+            return
+        }
         val msg = StringBuilder(
             getString(
                 R.string.send_coins_fragment_insufficient_money_msg1,
@@ -442,6 +454,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showEmptyWalletFailedDialog() {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_fragment_empty_wallet_failed_title),
@@ -452,6 +467,9 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     }
 
     protected suspend fun showFailureDialog(exception: Exception) {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),

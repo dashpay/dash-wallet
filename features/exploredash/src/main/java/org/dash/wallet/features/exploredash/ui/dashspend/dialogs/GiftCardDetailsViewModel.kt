@@ -57,7 +57,9 @@ data class GiftCardUIState(
     val barcode: Barcode? = null,
     val date: LocalDateTime? = null,
     val error: Exception? = null,
-    val serviceName: String? = null
+    val serviceName: String? = null,
+    val status: GiftCardStatus? = null,
+    val queries: Int = 0
 )
 
 @HiltViewModel

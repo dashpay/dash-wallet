@@ -43,11 +43,17 @@ class CTXSpendException(
 ) : Exception(message, cause) {
     var resourceString: ResourceString? = null
     var giftCardResponse: GiftCardInfo? = null
+    var txId: String? = null
     private val errorMap: Map<String, Any>
 
     constructor(message: ResourceString, giftCardResponse: GiftCardInfo? = null) : this("") {
         this.resourceString = message
         this.giftCardResponse = giftCardResponse
+    }
+
+    constructor(message: String, giftCardResponse: GiftCardInfo?, txId: String) : this(message) {
+        this.giftCardResponse = giftCardResponse
+        this.txId = txId
     }
 
     init {

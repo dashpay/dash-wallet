@@ -100,12 +100,12 @@
         <activity
             android:name="de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.verify.VerifySeedActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"  />
+            android:theme="@style/LockScreenActivity.Child.Theme"  />
 
         <activity
             android:name="de.schildbach.wallet.ui.main.MainActivity"
@@ -265,12 +265,12 @@
         <activity
             android:name="de.schildbach.wallet.ui.SetPinActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity" />
+            android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
             android:name="de.schildbach.wallet.ui.RestoreWalletFromSeedActivity"
             android:screenOrientation="portrait"
-            android:theme="@style/My.Theme.ChildActivity"
+            android:theme="@style/LockScreenActivity.Child.Theme"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
@@ -451,6 +451,10 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+
+        <receiver
+            android:name="de.schildbach.wallet.service.DelayedServiceStartReceiver"
+            android:exported="false" />
 
         <service
             android:name="de.schildbach.wallet.service.BlockchainSyncJobService"

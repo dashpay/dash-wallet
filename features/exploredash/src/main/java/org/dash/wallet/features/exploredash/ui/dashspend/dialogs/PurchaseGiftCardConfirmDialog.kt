@@ -199,7 +199,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
                             ex.message ?: getString(R.string.gift_card_error),
-                            getString(R.string.button_close)
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_ctx)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
@@ -259,7 +260,19 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 getString(R.string.payment_request_problem_title),
                 getString(R.string.payment_request_problem_message),
                 getString(R.string.button_close)
-            ).show(requireActivity())
+            ).show(requireActivity()) {
+                val intent = viewModel.createEmailIntent(
+                    subject = "DashPay DashSpend Issue: DirectPay Error",
+                    sentToCTX = false,
+                    CTXSpendException(ex.message ?: "purchase gift card error: direct pay", cause = ex)
+                )
+
+                val chooser = Intent.createChooser(
+                    intent,
+                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                )
+                launcher.launch(chooser)
+            }
             null
         } catch (ex: Exception) {
             log.error("purchaseGiftCard error", ex)
@@ -269,7 +282,19 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 getString(R.string.send_coins_error_msg),
                 getString(R.string.gift_card_error),
                 getString(R.string.button_close)
-            ).show(requireActivity())
+            ).show(requireActivity()) {
+                val intent = viewModel.createEmailIntent(
+                    subject = "DashPay DashSpend Issue: Purchase Error",
+                    sentToCTX = false,
+                    CTXSpendException(ex.message ?: "purchase gift card error: sending payment", cause = ex)
+                )
+
+                val chooser = Intent.createChooser(
+                    intent,
+                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                )
+                launcher.launch(chooser)
+            }
             null
         }
     }
