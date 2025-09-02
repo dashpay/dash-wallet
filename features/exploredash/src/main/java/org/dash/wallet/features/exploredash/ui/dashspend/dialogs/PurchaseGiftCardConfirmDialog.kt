@@ -109,15 +109,16 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     }
 
     private fun onConfirmButtonClicked() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             // Double-check merchant is still available before proceeding
             if (viewModel.giftCardMerchant == null) {
                 log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
                 dismiss()
                 return@launch
             }
-
+            showLoading()
             if (authManager.authenticate(requireActivity()) == null) {
+                hideLoading()
                 return@launch
             }
 
