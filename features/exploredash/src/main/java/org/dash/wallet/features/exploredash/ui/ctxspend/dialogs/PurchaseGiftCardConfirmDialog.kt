@@ -112,11 +112,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 return@launch
             }
 
+            showLoading()
             if (authManager.authenticate(requireActivity()) == null) {
+                hideLoading()
                 return@launch
             }
-
-            showLoading()
 
             val data = try {
                 viewModel.purchaseGiftCard()
