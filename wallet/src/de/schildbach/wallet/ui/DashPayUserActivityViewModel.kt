@@ -137,7 +137,7 @@ class DashPayUserActivityViewModel @Inject constructor(
         }.launchIn(viewModelScope)
     }
 
-    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+    suspend fun hasEnoughCredits(): CreditBalanceInfo? {
         return platformRepo.getIdentityBalance()
     }
 

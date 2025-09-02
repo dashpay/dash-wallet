@@ -513,7 +513,7 @@ class DashSpendViewModel @Inject constructor(
     fun createEmailIntent(
         subject: String,
         sendToService: Boolean,
-        ex: CTXSpendException
+        ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
         putExtra(Intent.EXTRA_EMAIL, arrayOf(getSupportEmail(sendToService, ex.serviceName ?: "")))
@@ -530,7 +530,7 @@ class DashSpendViewModel @Inject constructor(
         return savedStateHandle.get<String>(SELECTED_PROVIDER_KEY)
     }
 
-    private fun createReportEmail(ex: CTXSpendException): String {
+    private fun createReportEmail(ex: CTXSpendException?): String {
         val report = StringBuilder()
         report.append("CTX Issue Report").append("\n")
         giftCardMerchant?.let { merchant ->
@@ -545,6 +545,11 @@ class DashSpendViewModel @Inject constructor(
                 .append("\n")
         } ?: run {
             report.append("No merchant selected").append("\n")
+        }
+
+        ex?.txId?.let {
+            report.append("\n")
+            report.append("Transaction (base58): ").append(it).append("\n")
         }
 
         report.append("\n")

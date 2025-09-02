@@ -288,7 +288,19 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 getString(R.string.payment_request_problem_title),
                 getString(R.string.payment_request_problem_message),
                 getString(R.string.button_close)
-            ).show(requireActivity())
+            ).show(requireActivity()) {
+                val intent = viewModel.createEmailIntent(
+                    subject = "DashPay DashSpend Issue: DirectPay Error",
+                    sentToCTX = false,
+                    CTXSpendException(ex.message ?: "purchase gift card error: direct pay", cause = ex)
+                )
+
+                val chooser = Intent.createChooser(
+                    intent,
+                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                )
+                launcher.launch(chooser)
+            }
             null
         } catch (ex: Exception) {
             log.error("purchaseGiftCard error", ex)

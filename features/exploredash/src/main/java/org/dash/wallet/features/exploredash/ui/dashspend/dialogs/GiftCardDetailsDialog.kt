@@ -177,6 +177,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 GiftCardStatus.FULFILLED -> false
                 null -> false
             }
+
             if (error != null && shouldShowError) {
                 binding.infoLoadingIndicator.isVisible = false
 
@@ -218,10 +219,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
         binding.contactSupport.setOnClickListener {
+            val error = viewModel.uiState.value.error as? CTXSpendException
             val intent = ctxSpendViewModel.createEmailIntent(
                 "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sendToService = true,
-                viewModel.uiState.value.error as CTXSpendException
+                error
             )
 
             val chooser = Intent.createChooser(

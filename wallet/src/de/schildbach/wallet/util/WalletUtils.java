@@ -175,20 +175,6 @@ public class WalletUtils {
         return addressBuilder.toString();
     }
 
-    public static void viewOnBlockExplorer(Context context, Transaction.Purpose txPurpose,
-                                           String txHash, BlockExplorer explorer) {
-        Uri blockExplorer = Uri.parse(context.getResources().getStringArray(R.array.preferences_block_explorer_values)[explorer.getIndex()]);
-        Uri keyRotationUri = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
-        boolean txRotation = txPurpose == Transaction.Purpose.KEY_ROTATION;
-        if (!txRotation) {
-            context.startActivity(new Intent(Intent.ACTION_VIEW,
-                    Uri.withAppendedPath(blockExplorer, "tx/" + txHash)));
-        } else {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, keyRotationUri));
-        }
-    }
-
-
     public static @androidx.annotation.Nullable
     String uriToProvider(final Uri uri) {
         if (uri == null || !uri.getScheme().equals("content"))

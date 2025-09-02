@@ -469,6 +469,7 @@ class PlatformSynchronizationService @Inject constructor(
             contactRequest.accountReference
         )
         try {
+            Context.propagate(platformRepo.walletApplication.wallet!!.context)
             if (!platformRepo.walletApplication.wallet!!.hasSendingKeyChain(contact)) {
                 log.info("adding received request: ${contactRequest.ownerId} to wallet")
                 val contactIdentity = platform.identities.get(contactRequest.ownerId)
