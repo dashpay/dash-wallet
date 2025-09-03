@@ -249,6 +249,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
+    private var pendingForegroundNotification: Notification? = null
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
@@ -1207,7 +1208,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
         serviceScope.launch {
+            log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
+            log.info("onCreate completed, processing onStartCommand")
             if (intent != null) {
                 propagateContext()
                 //Restart service as a Foreground Service if it's synchronizing the blockchain
@@ -1237,20 +1240,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
+                    log.info("broadcast transaction requested for hash: {}", hash)
                     val wallet = application.wallet
                     if (wallet != null) {
                         val tx = wallet.getTransaction(hash)
-                        if (peerGroup != null) {
-                            log.info("broadcasting transaction " + tx!!.hashAsString)
-                            val count = peerGroup!!.numConnectedPeers()
-                            var minimum = peerGroup!!.minBroadcastConnections
-                            // if the number of peers is <= 3, then only require that number of peers to send
-                            // if the number of peers is 0, then require 3 peers (default min connections)
-                            if (count in 1..3) minimum = count
-                            peerGroup!!.broadcastTransaction(tx, minimum, true)
+                        if (tx != null) {
+                            log.info("found transaction {} in wallet", tx.txId)
+                            if (peerGroup != null) {
+                                val count = peerGroup!!.numConnectedPeers()
+                                log.info("broadcasting transaction {} with {} connected peers", tx.txId, count)
+                                var minimum = peerGroup!!.minBroadcastConnections
+                                // if the number of peers is <= 3, then only require that number of peers to send
+                                // if the number of peers is 0, then require 3 peers (default min connections)
+                                if (count in 1..3) minimum = count
+                                peerGroup!!.broadcastTransaction(tx, minimum, true)
+                                log.info("transaction {} broadcast initiated", tx.txId)
+                            } else {
+                                log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
+                                tx.confidence.setPeerInfo(0, 1)
+                            }
                         } else {
-                            log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
-                            tx.confidence.setPeerInfo(0, 1)
+                            log.error("transaction {} not found in wallet", hash)
                         }
                     } else {
                         log.error("wallet is null, cannot broadcast transaction")
@@ -1290,11 +1300,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 startForeground(notification)
             } catch (e: ForegroundServiceStartNotAllowedException) {
-                log.info("failed to start in foreground", e)
+                log.info("failed to start in foreground, try again", e)
+                // On Android 15+, we'll retry later when the app is in foreground
+                // For now, continue running as a regular service
+                scheduleRetryForegroundService(notification)
             }
         } else {
             startForeground(notification)
         }
+    }
+
+    private fun scheduleRetryForegroundService(notification: Notification) {
+        pendingForegroundNotification = notification
+        // Schedule a retry after a few seconds to see if the app comes to foreground
+        handler.postDelayed({
+            if (pendingForegroundNotification != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    startForeground(pendingForegroundNotification!!)
+                    pendingForegroundNotification = null
+                    log.info("Successfully started foreground service on retry")
+                } catch (e: ForegroundServiceStartNotAllowedException) {
+                    log.info("Foreground service start still not allowed, will continue as background service")
+                    pendingForegroundNotification = null
+                }
+            }
+        }, 5000) // Retry after 5 seconds
     }
 
     override fun onDestroy() {

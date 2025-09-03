@@ -158,7 +158,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
             val error = state.error
             val shouldShowError = when (state.status) {
-                "unpaid", "paid" -> state.queries > 5
+                "unpaid", "paid" -> state.queries > 10
                 "rejected" -> true
                 "fulfilled" -> false
                 else -> false
@@ -176,6 +176,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
                 binding.contactSupport.isVisible = true // force visible, thought it may be visible based on status
+                if (state.queries == 10) {
+                    ctxSpendViewModel.logError(state.error, "CTX did not deliver the card after 10 tries")
+                }
             } else {
                 binding.cardError.isVisible = false
                 binding.contactSupport.isVisible = false

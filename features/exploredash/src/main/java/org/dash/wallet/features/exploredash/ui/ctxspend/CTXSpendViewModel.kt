@@ -425,4 +425,8 @@ class CTXSpendViewModel @Inject constructor(
     suspend fun getMerchantById(merchantId: String): Merchant? = withContext(Dispatchers.IO) {
         exploreDao.getMerchantById(merchantId)
     }
+
+    fun logError(ctxSpendException: Throwable, message: String) {
+        analytics.logError(ctxSpendException, message)
+    }
 }
