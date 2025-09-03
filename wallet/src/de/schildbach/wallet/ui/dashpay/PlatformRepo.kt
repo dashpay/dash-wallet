@@ -191,7 +191,7 @@ class PlatformRepo @Inject constructor(
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
-            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+            password?.let { walletApplication.wallet!!.keyCrypter!!.deriveKey(it) }
         } else {
             null
         }
@@ -1058,15 +1058,14 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
-
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
-
         return try {
-            platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            getWalletEncryptionKey()?.let {
+                val firstIdentityKey = getBlockchainIdentityKey(0, it) ?: return null
+                platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            }
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {
