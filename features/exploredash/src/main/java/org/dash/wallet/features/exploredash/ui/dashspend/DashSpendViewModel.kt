@@ -516,7 +516,7 @@ class DashSpendViewModel @Inject constructor(
         ex: CTXSpendException?
     ) = Intent(Intent.ACTION_SEND).apply {
         setType("message/rfc822")
-        putExtra(Intent.EXTRA_EMAIL, arrayOf(getSupportEmail(sendToService, ex.serviceName ?: "")))
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(getSupportEmail(sendToService, ex?.serviceName ?: "")))
         putExtra(Intent.EXTRA_SUBJECT, subject)
         putExtra(Intent.EXTRA_TEXT, createReportEmail(ex))
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
