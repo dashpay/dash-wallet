@@ -25,17 +25,30 @@ import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import org.bitcoinj.wallet.Wallet
-import org.bitcoinj.wallet.WalletEx
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.util.toBigDecimal
-import java.text.DecimalFormat
+import org.dash.wallet.common.util.Constants
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+
+data class SettingsUIState(
+    val hideBalance: Boolean = false,
+    val ignoringBatteryOptimizations: Boolean = false,
+    val coinJoinMixingMode: CoinJoinMode = CoinJoinMode.NONE,
+    val mixingProgress: Double = 0.0,
+    val localCurrencySymbol: String = Constants.USD_CURRENCY,
+    val coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED,
+    val totalBalance: Coin = Coin.ZERO,
+    val mixedBalance: Coin = Coin.ZERO,
+)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
@@ -44,32 +57,92 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(SettingsViewModel::class.java)
+    }
+
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
 
-    val isIgnoringBatteryOptimizations: Boolean
-        get() = powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
-    val coinJoinMixingMode: Flow<CoinJoinMode>
-        get() = coinJoinConfig.observeMode()
-    var mixingProgress: Double = 0.0
+    private val _uiState = MutableStateFlow(SettingsUIState())
+    val uiState: StateFlow<SettingsUIState> = _uiState.asStateFlow()
 
-    var coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED
     init {
-        coinJoinService.observeMixingState()
-            .onEach { coinJoinMixingStatus = it }
+        // Initialize with current battery optimization status
+        updateIgnoringBatteryOptimizations()
+        
+        // Observe all data sources and update UI state
+        observeDataSources()
+    }
+
+    private fun observeDataSources() {
+        // Observe hide balance setting
+        walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
+            .filterNotNull()
+            .onEach { hideBalance ->
+                _uiState.value = _uiState.value.copy(hideBalance = hideBalance)
+            }
             .launchIn(viewModelScope)
+
+        // Observe CoinJoin mixing mode
+        coinJoinConfig.observeMode()
+            .onEach { mode ->
+                _uiState.value = _uiState.value.copy(coinJoinMixingMode = mode)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe mixing state
+        coinJoinService.observeMixingState()
+            .onEach { status ->
+                _uiState.value = _uiState.value.copy(coinJoinMixingStatus = status)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe mixing progress
         coinJoinService.observeMixingProgress()
-            .onEach { mixingProgress = it }
+            .onEach { progress ->
+                _uiState.value = _uiState.value.copy(mixingProgress = progress)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe selected currency
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .onEach { currency ->
+                _uiState.value = _uiState.value.copy(localCurrencySymbol = currency)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe mixed balance
+        walletDataProvider.observeMixedBalance()
+            .filterNotNull()
+            .onEach { balance ->
+                _uiState.value = _uiState.value.copy(mixedBalance = balance)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe total balance
+        walletDataProvider.observeTotalBalance()
+            .filterNotNull()
+            .onEach { balance ->
+                _uiState.value = _uiState.value.copy(totalBalance = balance)
+            }
             .launchIn(viewModelScope)
     }
 
-    private var decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    val walletBalance: String
-        get() = decimalFormat.format(walletDataProvider.getWalletBalance().toBigDecimal())
+    private fun isIgnoringBatteryOptimizations(): Boolean {
+        return powerManager.isIgnoringBatteryOptimizations(walletApplication.packageName)
+    }
 
-    val mixedBalance: String
-        get() = decimalFormat.format(walletDataProvider.getMixedBalance().toBigDecimal())
+    fun updateIgnoringBatteryOptimizations() {
+        try {
+            val isIgnoring = isIgnoringBatteryOptimizations()
+            _uiState.value = _uiState.value.copy(ignoringBatteryOptimizations = isIgnoring)
+        } catch (e: Exception) {
+            log.error("Error updating battery optimization status", e)
+        }
+    }
 
     suspend fun shouldShowCoinJoinInfo(): Boolean {
         return coinJoinConfig.get(CoinJoinConfig.FIRST_TIME_INFO_SHOWN) != true
@@ -80,6 +153,10 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun logEvent(event: String) {
-        analytics.logEvent(event, mapOf())
+        try {
+            analytics.logEvent(event, mapOf())
+        } catch (e: Exception) {
+            log.error("Error logging analytics event: $event", e)
+        }
     }
 }

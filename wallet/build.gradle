@@ -103,6 +103,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
+    implementation "com.airbnb.android:lottie-compose:6.6.7"
 
     // Navigation
     implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
@@ -154,6 +155,7 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     ksp "com.google.dagger:hilt-compiler:$hiltVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
+    implementation "androidx.hilt:hilt-navigation-compose:$hiltCompilerVersion"
     ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
     // Unit tests

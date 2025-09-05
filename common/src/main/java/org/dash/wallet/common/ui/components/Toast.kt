@@ -102,7 +102,7 @@ fun Toast(
                     text = actionText,
                     style = MyTheme.OverlineSemibold,
                     color = Color.White,
-                    textAlign = TextAlign.End
+                    textAlign = TextAlign.Center
                 )
             }
         }
