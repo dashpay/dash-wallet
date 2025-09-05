@@ -227,7 +227,8 @@ private fun SettingsScreenContent(
 
                 // Battery Optimization
                 MenuItem(
-                    title = "Battery optimization",
+                MenuItem(
+                    title = stringResource(R.string.battery_optimization_title),
                     subtitle = stringResource(
                         if (uiState.ignoringBatteryOptimizations) {
                             R.string.battery_optimization_subtitle_unrestricted
