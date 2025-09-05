@@ -3,6 +3,7 @@ package org.dash.wallet.common.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -276,7 +277,7 @@ fun RadioGroup(
     onOptionSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.selectableGroup()) {
         options.forEach { option ->
             DashRadioButton(
                 text = option,

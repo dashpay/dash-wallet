@@ -26,7 +26,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -35,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.components.MyTheme.OverlineSemibold
-import org.dash.wallet.common.ui.components.MyTheme.SubtitleSemibold
 
 @Composable
 fun DashButton(
@@ -52,8 +50,8 @@ fun DashButton(
 ) {
     val backgroundColor = when {
         !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.05f)
-        style == Style.Filled -> DashBlue
-        style == Style.FilledBlue -> DashBlue
+        style == Style.Filled -> MyTheme.Colors.dashBlue
+        style == Style.FilledBlue -> MyTheme.Colors.dashBlue
         style == Style.FilledOrange -> MyTheme.Colors.orange
         style == Style.FilledRed -> MyTheme.Colors.red
         style == Style.TintedBlue -> MyTheme.Colors.dashBlue5
@@ -71,22 +69,22 @@ fun DashButton(
         style == Style.FilledBlue -> Color.White
         style == Style.FilledOrange -> Color.White
         style == Style.FilledRed -> Color.White
-        style == Style.TintedBlue -> DashBlue
-        style == Style.PlainBlue -> DashBlue
+        style == Style.TintedBlue -> MyTheme.Colors.dashBlue
+        style == Style.PlainBlue -> MyTheme.Colors.dashBlue
         style == Style.PlainBlack -> MyTheme.Colors.textPrimary
         style == Style.PlainRed -> MyTheme.Colors.red
         style == Style.TintedRed -> MyTheme.Colors.red
         style == Style.TintedGray -> MyTheme.Colors.textPrimary
         style == Style.StrokeGray -> MyTheme.Colors.textPrimary
-        style == Style.FilledWhiteBlue -> DashBlue
+        style == Style.FilledWhiteBlue -> MyTheme.Colors.dashBlue
         style == Style.TintedWhite -> Color.White
 
-        else -> PrimaryText
+        else -> MyTheme.Colors.textPrimary
     }
 
     val borderColor = when {
         !isEnabled -> Color.Transparent
-        style == Style.Outlined -> TertiaryText.copy(alpha = 0.25f)
+        style == Style.Outlined -> MyTheme.Colors.textTertiary.copy(alpha = 0.25f)
         style == Style.StrokeGray -> Color(0x4DB3BDC7)
         else -> Color.Transparent
     }
@@ -189,10 +187,6 @@ enum class Size(
     ExtraSmall(12.sp, 16.sp,13.dp, 6.dp, 8.dp, 4.dp, 6.dp, 28.dp)
 }
 
-val DashBlue = Color(0xFF008DE4)
-val PrimaryText = Color(0xFF000000)
-val TertiaryText = Color(0xFF888888)
-
 @Composable
 @Preview
 fun DashButtonPreview() {
@@ -261,7 +255,7 @@ fun DashButtonPreview() {
             onClick = { }
         )
         Column(modifier = Modifier
-            .background(DashBlue)
+            .background(MyTheme.Colors.dashBlue)
             .padding(10.dp, 20.dp)) {
             DashButton(
                 text = "TintedWhite",

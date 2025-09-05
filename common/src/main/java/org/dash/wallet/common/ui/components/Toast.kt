@@ -100,9 +100,9 @@ fun Toast(
             ) {
                 Text(
                     text = actionText,
-                    style = MyTheme.OverlineSemibold.copy(textAlign = TextAlign.Center),
+                    style = MyTheme.OverlineSemibold,
                     color = Color.White,
-                    textAlign = TextAlign.End
+                    textAlign = TextAlign.Center
                 )
             }
         }

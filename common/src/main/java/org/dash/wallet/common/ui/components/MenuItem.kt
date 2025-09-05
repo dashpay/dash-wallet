@@ -33,11 +33,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight.Companion.W600
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
 
 @Composable
@@ -50,7 +51,12 @@ fun MenuItem(
     showDirectionIndicator: Boolean = false,
     showInfo: Boolean = false,
     showChevron: Boolean = false,
+    // New controlled props
+    checked: Boolean? = null,
+    onCheckedChange: ((Boolean) -> Unit)? = null,
+    // @Deprecated("Use `checked` and `onCheckedChange`")
     isToggled: (() -> Boolean)? = null,
+    // @Deprecated("Use `checked` and `onCheckedChange`")
     onToggleChanged: ((Boolean) -> Unit)? = null,
     // Balance/Amount display
     dashAmount: String? = null,
@@ -61,14 +67,15 @@ fun MenuItem(
     onTrailingButtonClick: (() -> Unit)? = null,
     action: (() -> Unit)? = null
 ) {
-    var toggleState by remember { mutableStateOf(isToggled?.invoke() ?: false) }
-
+    var internalChecked by remember(checked) { mutableStateOf(checked ?: isToggled?.invoke() ?: false) }
+    val effectiveChecked = checked ?: internalChecked
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
             .background(Color.Transparent, RoundedCornerShape(8.dp))
-            .clickable { action?.invoke() }
+            .then(if (action != null) Modifier.clickable { action() } else Modifier)
+            .semantics { if (action != null) role = Role.Button }
             .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -130,7 +137,7 @@ fun MenuItem(
                 ) {
                     Text(
                         text = title,
-                        style = MyTheme.Body2Medium.copy(fontWeight = W600),
+                        style = MyTheme.Body2Medium,//.copy(fontWeight = W600),
                         color = MyTheme.Colors.textPrimary
                     )
 
@@ -148,7 +155,7 @@ fun MenuItem(
                 subtitle?.let {
                     Text(
                         text = it,
-                        style = MyTheme.OverlineCaptainRegular,
+                        style = MyTheme.OverlineCaptionRegular,
                         color = MyTheme.Colors.textTertiary,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -158,36 +165,31 @@ fun MenuItem(
                 subtitle2?.let {
                     Text(
                         text = it,
-                        style = MyTheme.OverlineCaptainRegular,
+                        style = MyTheme.OverlineCaptionRegular,
                         color = MyTheme.Colors.textTertiary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
 
-// At top of file, add this import:
-import androidx.compose.material3.minimumInteractiveComponentSize
-
-// …later, around lines 168–184…
-
-// Toggle switch
-if (isToggled != null || checked != null) {
-    Switch(
-        checked = effectiveChecked,
-        onCheckedChange = { newState ->
-            if (checked == null) internalChecked = newState
-            (onCheckedChange ?: onToggleChanged)?.invoke(newState)
-        },
-        colors = SwitchDefaults.colors(
-            checkedThumbColor   = MyTheme.Colors.backgroundSecondary,
-            checkedTrackColor   = MyTheme.Colors.dashBlue,
-            uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
-            uncheckedTrackColor = MyTheme.Colors.gray300
-        ),
-        modifier = Modifier
-            .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
-    )
-}
+            // Toggle switch
+            if (isToggled != null || checked != null) {
+                Switch(
+                    checked = effectiveChecked,
+                    onCheckedChange = { newState ->
+                        if (checked == null) internalChecked = newState
+                        (onCheckedChange ?: onToggleChanged)?.invoke(newState)
+                    },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor   = MyTheme.Colors.backgroundSecondary,
+                        checkedTrackColor   = MyTheme.Colors.dashBlue,
+                        uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
+                        uncheckedTrackColor = MyTheme.Colors.gray300
+                    ),
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
+                )
+            }
 
             // Balance/Amount display
             if (dashAmount != null) {
@@ -220,7 +222,7 @@ if (isToggled != null || checked != null) {
                     fiatAmount?.let {
                         Text(
                             text = it,
-                            style = MyTheme.OverlineCaptainRegular,
+                            style = MyTheme.OverlineCaptionRegular,
                             color = MyTheme.Colors.textSecondary
                         )
                     }

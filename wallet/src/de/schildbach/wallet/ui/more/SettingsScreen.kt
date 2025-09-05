@@ -187,21 +187,21 @@ private fun SettingsScreenContent(
 
                 // Rescan Blockchain
                 MenuItem(
-                    title = "Rescan blockchain",
+                    title = stringResource(R.string.menu_rescan_blockchain),
                     icon = R.drawable.ic_rescan_blockchain,
                     action = onRescanBlockchainClick
                 )
 
                 // About Dash
                 MenuItem(
-                    title = "About Dash",
+                    title = stringResource(R.string.about_dash_title),
                     icon = R.drawable.ic_dash_blue_filled,
                     action = onAboutDashClick
                 )
 
                 // Notifications
                 MenuItem(
-                    title = "Notifications",
+                    title = stringResource(R.string.notifications_title),
                     icon = R.drawable.ic_notification,
                     action = onNotificationsClick
                 )
@@ -226,7 +226,6 @@ private fun SettingsScreenContent(
                 }
 
                 // Battery Optimization
-                MenuItem(
                 MenuItem(
                     title = stringResource(R.string.battery_optimization_title),
                     subtitle = stringResource(

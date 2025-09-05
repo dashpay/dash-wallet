@@ -180,9 +180,11 @@ fun MixingStatusCard(
                                     shape = RoundedCornerShape(4.dp)
                                 )
                         ) {
+                            val progressFraction = (percentageDouble.toFloat())
+                                .coerceIn(0f, 100f) / 100f
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(percentageDouble.toFloat() / 100)
+                                    .fillMaxWidth(progressFraction)
                                     .fillMaxHeight()
                                     .background(
                                         color = MyTheme.Colors.dashBlue,
