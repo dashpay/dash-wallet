@@ -61,11 +61,17 @@ fun MixingStatusCard(
 ) {
     val mode by coinJoinModeFlow.collectAsState(CoinJoinMode.NONE)
     val status by statusFlow.collectAsState(MixingStatus.NOT_STARTED)
-    val isVisible = mode != CoinJoinMode.NONE && when (status) {
-        MixingStatus.NOT_STARTED,
-        MixingStatus.ERROR,
-        MixingStatus.FINISHED -> false
-        else -> true
+    val isVisible = when (mode) {
+        CoinJoinMode.NONE -> when (status) {
+            MixingStatus.FINISHING -> true
+            else -> false
+        }
+        else -> when (status) {
+            MixingStatus.NOT_STARTED,
+            MixingStatus.ERROR,
+            MixingStatus.FINISHED -> false
+            else -> true
+        }
     }
     val mixingNow = when (status) {
         MixingStatus.MIXING, MixingStatus.FINISHING -> true
@@ -91,16 +97,8 @@ fun MixingStatusCard(
     val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
     val hideBalance by hideBalanceFlow.collectAsState(false)
     val decimalFormat = DecimalFormat("0.0000")
-    val totalBalanceString = if (hideBalance) {
-        stringResource(R.string.coinjoin_progress_amount_hidden)
-    } else {
-        decimalFormat.format(totalBalance.toBigDecimal())
-    }
-    val mixedBalanceString = if (hideBalance) {
-        stringResource(R.string.coinjoin_progress_amount_hidden)
-    } else {
-        decimalFormat.format(mixedBalance.toBigDecimal())
-    }
+    val totalBalanceString = decimalFormat.format(totalBalance.toBigDecimal())
+    val mixedBalanceString = decimalFormat.format(mixedBalance.toBigDecimal())
 
     if (isVisible) {
         Card(
@@ -156,7 +154,7 @@ fun MixingStatusCard(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = stringResource(R.string.coinjoin_progress_balance, mixedBalanceString, totalBalanceString),
+                                text = if (hideBalance) stringResource(R.string.coinjoin_progress_amount_hidden) else stringResource(R.string.coinjoin_progress_balance, mixedBalanceString, totalBalanceString),
                                 style = MyTheme.Caption,
                                 color = MyTheme.Colors.textPrimary,
                                 textAlign = TextAlign.End
