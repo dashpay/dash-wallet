@@ -165,23 +165,29 @@ fun MenuItem(
                 }
             }
 
-            // Toggle switch
-            isToggled?.let {
-                Switch(
-                    checked = toggleState,
-                    onCheckedChange = { newState ->
-                        toggleState = newState
-                        onToggleChanged?.invoke(newState)
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = MyTheme.Colors.backgroundSecondary,
-                        checkedTrackColor = MyTheme.Colors.dashBlue,
-                        uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
-                        uncheckedTrackColor = MyTheme.Colors.gray300
-                    ),
-                    modifier = Modifier.size(width = 32.dp, height = 20.dp)
-                )
-            }
+// At top of file, add this import:
+import androidx.compose.material3.minimumInteractiveComponentSize
+
+// …later, around lines 168–184…
+
+// Toggle switch
+if (isToggled != null || checked != null) {
+    Switch(
+        checked = effectiveChecked,
+        onCheckedChange = { newState ->
+            if (checked == null) internalChecked = newState
+            (onCheckedChange ?: onToggleChanged)?.invoke(newState)
+        },
+        colors = SwitchDefaults.colors(
+            checkedThumbColor   = MyTheme.Colors.backgroundSecondary,
+            checkedTrackColor   = MyTheme.Colors.dashBlue,
+            uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
+            uncheckedTrackColor = MyTheme.Colors.gray300
+        ),
+        modifier = Modifier
+            .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
+    )
+}
 
             // Balance/Amount display
             if (dashAmount != null) {
