@@ -171,6 +171,10 @@ fun MixingStatusCard(
 
                     // Progress bar
                     Column {
+                        val progressFraction = percentageDouble.let { raw ->
+                            val safe = if (raw.isNaN()) 0.0 else raw.coerceIn(0.0, 100.0)
+                            (safe / 100.0).toFloat()
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -182,7 +186,7 @@ fun MixingStatusCard(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(percentageDouble.toFloat() / 100)
+                                    .fillMaxWidth(progressFraction)
                                     .fillMaxHeight()
                                     .background(
                                         color = MyTheme.Colors.dashBlue,

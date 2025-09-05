@@ -178,7 +178,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
             }
         }
-
+        binding.composeMixingStatusPane.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
         binding.composeMixingStatusPane.setContent {
             MixingStatusCard(
                 viewModel.coinJoinMode,
