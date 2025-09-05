@@ -70,7 +70,7 @@
                             android:id="@+id/compose_mixing_status_pane"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:visibility="gone"
+                            android:visibility="visible"
                             tools:visibility="visible"
                             android:layout_marginBottom="10dp"
                             />
