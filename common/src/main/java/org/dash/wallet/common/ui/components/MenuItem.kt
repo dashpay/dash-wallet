@@ -36,7 +36,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight.Companion.W600
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -174,7 +173,7 @@ fun MenuItem(
 
             // Toggle switch
             if (isToggled != null || checked != null) {
-                DashToggle(
+                DashSwitch(
                     checked = effectiveChecked,
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
