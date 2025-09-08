@@ -32,7 +32,6 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
@@ -173,7 +172,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
     }
-    private var debug = true
+
     protected open fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
         val dryRunException = viewModel.dryRunException
@@ -197,10 +196,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             !viewModel.everythingPlausible() ||
             viewModel.dryRunSuccessful.value != true ||
             viewModel.isBlockchainReplaying.value ?: false
-        if (viewModel.dryRunSuccessful.value != true && debug) {
-            AnrException(Thread.currentThread()).logProcessMap()
-            debug = false
-        }
+
         log.info("enterAmountViewModel.blockContinue = {}, viewModel.dryRunSuccessful.value = {}", enterAmountViewModel.blockContinue, viewModel.dryRunSuccessful.value)
 
         enterAmountFragment?.setViewDetails(
