@@ -395,7 +395,8 @@
     <string name="dash_slogan">Instant - Private - Secure</string>
     <string name="dash_wallet">Wallet</string>
 
-    <string name="activity_security_backup_wallet">Back Up Wallet to File</string>
+    <string name="activity_security_backup_wallet">Back up wallet</string>
+    <string name="activity_security_backup_wallet_to_file">Back up wallet to file</string>
     <string name="activity_security_view_recovery_phrase">View Recovery Phrase</string>
     <string name="activity_security_advanced">Advanced Security</string>
     <string name="activity_security_biometric_auth">Fingerprint Authentication</string>

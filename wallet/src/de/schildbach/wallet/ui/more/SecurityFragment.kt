@@ -19,18 +19,21 @@ package de.schildbach.wallet.ui.more
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.backup.BackupWalletDialogFragment
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentSecurityBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.BuildConfig
@@ -39,65 +42,82 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.goBack
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SecurityFragment : Fragment(R.layout.fragment_security) {
+class SecurityFragment : Fragment() {
     private val viewModel: SecurityViewModel by viewModels()
-    private val binding by viewBinding(FragmentSecurityBinding::bind)
     @Inject lateinit var authManager: SecurityFunctions
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        binding.appBar.toolbar.setTitle(R.string.security_title)
-        binding.appBar.toolbar.setNavigationOnClickListener { goBack() }
-
-        viewModel.hideBalance.observe(viewLifecycleOwner) {
-            binding.hideBalanceSwitch.isChecked =  it ?: false
-        }
-
-        viewModel.fingerprintIsAvailable.observe(viewLifecycleOwner) {
-            binding.fingerprintAuthGroup.isVisible = it
-        }
-
-        viewModel.fingerprintIsEnabled.observe(viewLifecycleOwner) {
-            binding.fingerprintAuthSwitch.isChecked = it
-        }
-
-        binding.hideBalanceSwitch.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setHideBalanceOnLaunch(isChecked)
-        }
-
-        binding.fingerprintAuthSwitch.setOnCheckedChangeListener { _, isChecked ->
-            lifecycleScope.launch {
-                if (isChecked) {
-                    if (viewModel.fingerprintIsEnabled.value == true) {
-                        return@launch
-                    }
-
-                    if (setupBiometric()) {
-                        viewModel.setEnableFingerprint(true)
-                        return@launch
-                    }
-                }
-
-                viewModel.setEnableFingerprint(false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                SecurityScreen(
+                    onBackClick = { findNavController().popBackStack() },
+                    onBackupWalletClick = { },
+                    onViewRecoveryPhraseClick = { viewRecoveryPhrase() },
+                    onChangePinClick = { changePin() },
+                    onFingerprintAuthClick = { checked -> onFingerPrintAuthChanged(checked) },
+                    onFaceIdClick = { },
+                    onAutohideBalanceClick = { hideBalance -> viewModel.setHideBalanceOnLaunch(hideBalance) },
+                    onAdvancedSecurityClick = { openAdvancedSecurity() },
+                    onResetWalletClick = { resetWallet() },
+                    onBackupWalletToFileClick = { backupWalletToFile() }
+                )
             }
         }
-
-        binding.changePin.setOnClickListener { changePin() }
-        binding.viewRecoveryPhrase.setOnClickListener { viewRecoveryPhrase() }
-        binding.advancedSecurity.setOnClickListener { openAdvancedSecurity() }
-        binding.resetWallet.setOnClickListener { resetWallet() }
-        binding.backupWallet.setOnClickListener { backupWallet() }
-        binding.backupWallet.isVisible = BuildConfig.DEBUG
-
-        viewModel.init()
     }
 
-    private fun backupWallet() {
+//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+//        super.onViewCreated(view, savedInstanceState)
+//
+//        binding.appBar.toolbar.setTitle(R.string.security_title)
+//        binding.appBar.toolbar.setNavigationOnClickListener { goBack() }
+//
+//        viewModel.uiState.observe(viewLifecycleOwner) { state ->
+//            binding.hideBalanceSwitch.isChecked =  state.hideBalance ?: false
+//            binding.fingerprintAuthGroup.isVisible = state.fingerprintIsAvailable
+//            binding.fingerprintAuthSwitch.isChecked = state.fingerprintIsEnabled
+//        }
+//
+//        binding.hideBalanceSwitch.setOnCheckedChangeListener { _, isChecked ->
+//            viewModel.setHideBalanceOnLaunch(isChecked)
+//        }
+//
+//        binding.fingerprintAuthSwitch.setOnCheckedChangeListener { _, isChecked ->
+//            onFingerPrintAuthChanged(isChecked)
+//        }
+//
+//        binding.changePin.setOnClickListener { changePin() }
+//        binding.viewRecoveryPhrase.setOnClickListener { viewRecoveryPhrase() }
+//        binding.advancedSecurity.setOnClickListener { openAdvancedSecurity() }
+//        binding.resetWallet.setOnClickListener { resetWallet() }
+//        binding.backupWallet.setOnClickListener { backupWalletToFile() }
+//        binding.backupWallet.isVisible = BuildConfig.DEBUG
+//
+//        // viewModel.init()
+//    }
+
+    private fun onFingerPrintAuthChanged(isChecked: Boolean) {
+        lifecycleScope.launch {
+            if (isChecked) {
+                if (viewModel.uiState.value.fingerprintIsEnabled) {
+                    return@launch
+                }
+
+                if (setupBiometric()) {
+                    viewModel.setEnableFingerprint(true)
+                    return@launch
+                }
+            }
+
+            viewModel.setEnableFingerprint(false)
+        }
+    }
+
+    private fun backupWalletToFile() {
         lifecycleScope.launch {
             val pin = authManager.authenticate(requireActivity(), true)
             pin?.let { BackupWalletDialogFragment.show(requireActivity()) }
@@ -135,10 +155,11 @@ class SecurityFragment : Fragment(R.layout.fragment_security) {
 
     // TODO: tests
     private fun resetWallet() {
-        val walletBalance = viewModel.balance
-        val fiatBalanceStr = viewModel.getBalanceInLocalFormat()
+        val state = viewModel.uiState.value
+        val walletBalance = state.balance
+        val fiatBalanceStr = state.balanceInLocalFormat
 
-        if (walletBalance.isGreaterThan(Coin.ZERO) && viewModel.needPassphraseBackUp) {
+        if (walletBalance.isGreaterThan(Coin.ZERO) && state.needPassphraseBackup) {
             val resetWalletDialog = ExtraActionDialog.create(
                 R.drawable.ic_warning,
                 getString(R.string.launch_reset_wallet_title),

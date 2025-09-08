@@ -17,11 +17,15 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.lifecycle.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.BiometricHelper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -37,7 +41,19 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toFormattedString
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+
+data class SecurityUIState(
+    val needPassphraseBackup: Boolean = false,
+    val fingerprintIsAvailable: Boolean = false,
+    val fingerprintIsEnabled: Boolean = false,
+    val hideBalance: Boolean = false,
+    val balance: Coin = Coin.ZERO,
+    val balanceInLocalFormat: String = "",
+    val error: Exception? = null,
+    val isLoading: Boolean = false
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -50,43 +66,68 @@ class SecurityViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     val biometricHelper: BiometricHelper
 ): ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(SecurityViewModel::class.java)
+    }
+
     private var selectedExchangeRate: ExchangeRate? = null
 
-    val needPassphraseBackUp
-        get() = configuration.remindBackupSeed
+    private val _uiState = MutableStateFlow(SecurityUIState())
+    val uiState: StateFlow<SecurityUIState> = _uiState.asStateFlow()
 
-    val balance: Coin
-        get() = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
+    init {
+        observeDataSources()
+        updateInitialState()
+    }
 
-    val hideBalance = walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE).asLiveData()
-
-    private var _fingerprintIsAvailable = MutableLiveData(false)
-    val fingerprintIsAvailable: LiveData<Boolean>
-        get() = _fingerprintIsAvailable
-
-    private var _fingerprintIsEnabled = MutableLiveData(false)
-    val fingerprintIsEnabled: LiveData<Boolean>
-        get() = _fingerprintIsEnabled
-
-    fun init() {
+    private fun observeDataSources() {
+        // Observe selected currency and exchange rate
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest(exchangeRates::observeExchangeRate)
-            .onEach { selectedExchangeRate = it }
+            .onEach { exchangeRate ->
+                selectedExchangeRate = exchangeRate
+                updateBalanceInLocalFormat()
+            }
             .launchIn(viewModelScope)
 
-        _fingerprintIsAvailable.value = biometricHelper.isAvailable
-        _fingerprintIsEnabled.value = biometricHelper.isEnabled
+        // Observe hide balance setting
+        walletUIConfig.observe(WalletUIConfig.AUTO_HIDE_BALANCE)
+            .filterNotNull()
+            .onEach { hideBalance ->
+                _uiState.value = _uiState.value.copy(hideBalance = hideBalance)
+            }
+            .launchIn(viewModelScope)
+
+        // Observe wallet balance
+        walletData.observeTotalBalance()
+            .filterNotNull()
+            .onEach { balance ->
+                _uiState.value = _uiState.value.copy(balance = balance)
+                updateBalanceInLocalFormat()
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun updateInitialState() {
+        _uiState.value = _uiState.value.copy(
+            needPassphraseBackup = configuration.remindBackupSeed,
+            fingerprintIsAvailable = biometricHelper.isAvailable,
+            fingerprintIsEnabled = biometricHelper.isEnabled,
+            balance = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
+        )
+        
+        // Ensure configuration is in sync
         configuration.enableFingerprint = biometricHelper.isEnabled
     }
 
-    fun getBalanceInLocalFormat(): String {
-        selectedExchangeRate?.fiat?.let {
-            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, it)
-            return exchangeRate.coinToFiat(balance).toFormattedString()
-        }
-
-        return ""
+    private fun updateBalanceInLocalFormat() {
+        val balanceInLocalFormat = selectedExchangeRate?.fiat?.let { fiat ->
+            val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
+            exchangeRate.coinToFiat(_uiState.value.balance).toFormattedString()
+        } ?: ""
+        
+        _uiState.value = _uiState.value.copy(balanceInLocalFormat = balanceInLocalFormat)
     }
 
     fun logEvent(event: String) {
@@ -99,7 +140,8 @@ class SecurityViewModel @Inject constructor(
 
     fun setEnableFingerprint(enable: Boolean) {
         val isEnabled = enable && biometricHelper.isEnabled
-        _fingerprintIsEnabled.value = isEnabled
+        
+        _uiState.value = _uiState.value.copy(fingerprintIsEnabled = isEnabled)
 
         if (configuration.enableFingerprint != isEnabled) {
             analytics.logEvent(
