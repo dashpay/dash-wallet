@@ -23,7 +23,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -36,13 +35,9 @@ import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ExtraActionDialog
-import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.goBack
-import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import javax.inject.Inject
 
@@ -69,36 +64,6 @@ class SecurityFragment : Fragment() {
             }
         }
     }
-
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//
-//        binding.appBar.toolbar.setTitle(R.string.security_title)
-//        binding.appBar.toolbar.setNavigationOnClickListener { goBack() }
-//
-//        viewModel.uiState.observe(viewLifecycleOwner) { state ->
-//            binding.hideBalanceSwitch.isChecked =  state.hideBalance ?: false
-//            binding.fingerprintAuthGroup.isVisible = state.fingerprintIsAvailable
-//            binding.fingerprintAuthSwitch.isChecked = state.fingerprintIsEnabled
-//        }
-//
-//        binding.hideBalanceSwitch.setOnCheckedChangeListener { _, isChecked ->
-//            viewModel.setHideBalanceOnLaunch(isChecked)
-//        }
-//
-//        binding.fingerprintAuthSwitch.setOnCheckedChangeListener { _, isChecked ->
-//            onFingerPrintAuthChanged(isChecked)
-//        }
-//
-//        binding.changePin.setOnClickListener { changePin() }
-//        binding.viewRecoveryPhrase.setOnClickListener { viewRecoveryPhrase() }
-//        binding.advancedSecurity.setOnClickListener { openAdvancedSecurity() }
-//        binding.resetWallet.setOnClickListener { resetWallet() }
-//        binding.backupWallet.setOnClickListener { backupWalletToFile() }
-//        binding.backupWallet.isVisible = BuildConfig.DEBUG
-//
-//        // viewModel.init()
-//    }
 
     private fun onFingerPrintAuthChanged(isChecked: Boolean) {
         lifecycleScope.launch {
