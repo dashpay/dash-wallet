@@ -53,7 +53,6 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interMedium,
         fontWeight = FontWeight(500),
-        textAlign = TextAlign.Center
     )
 
     val OverlineSemibold = TextStyle(
@@ -61,7 +60,6 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interSemibold,
         fontWeight = FontWeight(600),
-        textAlign = TextAlign.Center
     )
 
     val Caption = TextStyle(
@@ -75,8 +73,21 @@ object MyTheme {
         fontSize = 12.sp,
         lineHeight = 16.sp,
         fontFamily = interMedium,
-        fontWeight = FontWeight(500),
-        textAlign = TextAlign.Center
+        fontWeight = FontWeight(500)
+    )
+
+    val OverlineCaptionMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
+    val OverlineCaptionRegular = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
     )
 
     val Body2Regular = TextStyle(
@@ -86,11 +97,32 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
+    val Body2Medium = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
+    )
+
+    val Subtitle2Semibold = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interSemibold,
+        fontWeight = FontWeight(600)
+    )
+
     val SubtitleSemibold = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
         fontFamily = interSemibold,
         fontWeight = FontWeight(600)
+    )
+
+    val H5Bold = TextStyle(
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        fontFamily = interBold,
+        fontWeight = FontWeight(700)
     )
 
     val H6Bold = TextStyle(

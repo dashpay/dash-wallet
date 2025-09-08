@@ -196,6 +196,21 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
+        binding.composeMixingStatusPane.setContent {
+            MixingStatusCard(
+                viewModel.coinJoinMode,
+                viewModel.mixingState,
+                viewModel.mixingProgress,
+                viewModel.mixedBalance.asFlow(),
+                viewModel.totalBalance.asFlow(),
+                viewModel.hideBalance
+            ) {
+                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
+                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
+                })
+            }
+        }
+
         viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
