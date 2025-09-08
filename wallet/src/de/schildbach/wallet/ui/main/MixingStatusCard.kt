@@ -171,6 +171,10 @@ fun MixingStatusCard(
 
                     // Progress bar
                     Column {
+                        val progressFraction = percentageDouble.let { raw ->
+                            val safe = if (raw.isNaN()) 0.0 else raw.coerceIn(0.0, 100.0)
+                            (safe / 100.0).toFloat()
+                        }
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -180,8 +184,6 @@ fun MixingStatusCard(
                                     shape = RoundedCornerShape(4.dp)
                                 )
                         ) {
-                            val progressFraction = (percentageDouble.toFloat())
-                                .coerceIn(0f, 100f) / 100f
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth(progressFraction)

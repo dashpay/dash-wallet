@@ -178,6 +178,23 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
             }
         }
+        binding.composeMixingStatusPane.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.composeMixingStatusPane.setContent {
+            MixingStatusCard(
+                viewModel.coinJoinMode,
+                viewModel.mixingState,
+                viewModel.mixingProgress,
+                viewModel.mixedBalance.asFlow(),
+                viewModel.totalBalance.asFlow(),
+                viewModel.hideBalance
+            ) {
+                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
+                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
+                })
+            }
+        }
 
         binding.composeMixingStatusPane.setContent {
             MixingStatusCard(
