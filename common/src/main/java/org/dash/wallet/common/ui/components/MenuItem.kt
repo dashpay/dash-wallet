@@ -174,20 +174,12 @@ fun MenuItem(
 
             // Toggle switch
             if (isToggled != null || checked != null) {
-                Switch(
+                DashToggle(
                     checked = effectiveChecked,
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
                         (onCheckedChange ?: onToggleChanged)?.invoke(newState)
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor   = MyTheme.Colors.backgroundSecondary,
-                        checkedTrackColor   = MyTheme.Colors.dashBlue,
-                        uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
-                        uncheckedTrackColor = MyTheme.Colors.gray300
-                    ),
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
+                    }
                 )
             }
 
@@ -282,12 +274,21 @@ fun PreviewMenuItem() {
             showDirectionIndicator = true
         )
 
-        // With toggle
+        // With toggle ON
         MenuItem(
-            title = "Toggle Setting",
+            title = "Toggle Setting ON",
             subtitle = "Enable this feature",
             icon = R.drawable.ic_dash_blue_filled,
             isToggled = { true },
+            onToggleChanged = { }
+        )
+
+        // With toggle OFF
+        MenuItem(
+            title = "Toggle Setting OFF",
+            subtitle = "Enable this feature",
+            icon = R.drawable.ic_dash_blue_filled,
+            isToggled = { false },
             onToggleChanged = { }
         )
 
