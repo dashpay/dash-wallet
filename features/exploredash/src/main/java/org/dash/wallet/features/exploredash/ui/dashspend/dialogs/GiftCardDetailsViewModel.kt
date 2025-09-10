@@ -131,7 +131,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 if (giftCard.number == null && giftCard.merchantUrl == null && giftCard.note != null) {
-                    tickerJob = TickerFlow(period = 1.5.seconds, initialDelay = 1.seconds)
+                    tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(giftCard.txId) }
                         .launchIn(viewModelScope)
