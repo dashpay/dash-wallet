@@ -59,11 +59,7 @@ class PiggyCardsRepository @Inject constructor(
         const val DEFAULT_COUNTRY = "US"
         const val DEFAULT_STATE = "CA"
         private val log = LoggerFactory.getLogger(PiggyCardsRepository::class.java)
-        private val disabledMerchants = listOf(
-            "PetSmart",
-            "Petco",
-            "AutoZone"
-        )
+        private val disabledMerchants = listOf<String>()
         private const val INSTANT_DELIVERY = "(instant delivery)"
         private const val DASH_DASH_KEY = "DASH.DASH"
     }
@@ -159,13 +155,17 @@ class PiggyCardsRepository @Inject constructor(
         brandWithMerchantId?.let { it ->
             val giftcards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
 
-            val immediateDeliveryCards = giftcards?.data?.filter {
-                it.name.lowercase().contains(INSTANT_DELIVERY)
+            val immediateDeliveryCards = giftcards?.data?.filter { giftCard ->
+                giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
             }
 
-            // do we have a range card, use it first
+            // do we have a range card
             val rangeGiftCard = giftcards?.data?.find { !it.isFixed }
 
+            // priority:
+            // 1. Instant Delivery Fixed Value Cards
+            // 2. Flexible Value Cards
+            // 3. Fixed value cards
             if (!immediateDeliveryCards.isNullOrEmpty()) {
                 return updatedMerchantDetails(immediateDeliveryCards, brandWithMerchantId)
             } else if (rangeGiftCard != null) {
@@ -186,7 +186,10 @@ class PiggyCardsRepository @Inject constructor(
                     productId = rangeGiftCard.id.toString()
                 )
             } else if (giftcards != null && giftcards.data?.isNotEmpty() == true) {
-                return updatedMerchantDetails(giftcards.data, it)
+                return updatedMerchantDetails(
+                    giftcards.data.filter { giftCard -> giftCard.name.contains(INSTANT_DELIVERY) },
+                    it
+                )
             } else {
                 return UpdatedMerchantDetails(
                     it.id,
@@ -248,7 +251,10 @@ class PiggyCardsRepository @Inject constructor(
                 rangeGiftCard.id
             } else {
                 val card = giftCards.find {
+                    it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
                     it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
+                } ?: giftCards.find {
+                    it.quantity > 0 && it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
                 }
                 card?.id ?: throw IllegalStateException("cannot find the selected fixed card $fiatAmount for brand $merchantId")
             }
