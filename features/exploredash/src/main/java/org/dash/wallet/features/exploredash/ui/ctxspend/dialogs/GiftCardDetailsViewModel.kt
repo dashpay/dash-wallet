@@ -191,7 +191,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     val timeElapsed = (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000
                                     if (BuildConfig.DEBUG) {
                                         log.info(
-                                            "event:process_gift_card_purchase: {} ms",
+                                            "event:process_gift_card_purchase: {} s",
                                             timeElapsed
                                         )
                                     }
