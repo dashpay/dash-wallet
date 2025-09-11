@@ -161,13 +161,13 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
 
             val merchantUrl = state.giftCard?.merchantUrl
-            binding.checkCurrentBalance.isVisible = merchantUrl != null
-            if (merchantUrl != null) {
+            binding.checkCurrentBalance.isVisible = !merchantUrl.isNullOrEmpty()
+            if (!merchantUrl.isNullOrEmpty()) {
                 binding.purchaseCardBarcode.isVisible = false
                 binding.barcodePlaceholder.isVisible = false
                 binding.barcodePlaceholderText.isVisible = false
                 binding.barcodeLoadingError.isVisible = false
-                //binding.infoLoadingIndicator.isVisible = false
+                binding.infoLoadingIndicator.isVisible = false
             }
 
             val error = state.error
@@ -248,11 +248,13 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
         binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty() && giftCard.merchantUrl.isNullOrEmpty()
 
-        binding.checkCurrentBalance.isVisible = giftCard.merchantUrl?.isNotEmpty() == true
+        binding.checkCurrentBalance.isVisible = !giftCard.merchantUrl.isNullOrEmpty()
         binding.checkCurrentBalance.setOnClickListener {
             giftCard.merchantUrl?.let {
-                val intent = Intent(Intent.ACTION_VIEW, it.toUri())
-                requireContext().startActivity(intent)
+                if (it.isNotEmpty()) {
+                    val intent = Intent(Intent.ACTION_VIEW, it.toUri())
+                    requireContext().startActivity(intent)
+                }
             }
         }
     }

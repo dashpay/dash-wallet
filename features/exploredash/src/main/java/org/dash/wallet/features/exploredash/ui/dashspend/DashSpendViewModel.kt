@@ -455,7 +455,7 @@ class DashSpendViewModel @Inject constructor(
             txId = txId,
             merchantName = giftCardMerchant?.name ?: "",
             price = giftCardResponse.fiatAmount?.toDouble() ?: 0.0,
-            merchantUrl = giftCardMerchant?.website,
+            merchantUrl = giftCardResponse.redeemUrl,
             note = giftCardResponse.id
         )
         viewModelScope.launch {

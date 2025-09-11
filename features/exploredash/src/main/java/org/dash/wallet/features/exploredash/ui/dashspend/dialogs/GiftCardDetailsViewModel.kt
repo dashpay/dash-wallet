@@ -130,7 +130,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (giftCard.number == null && giftCard.merchantUrl == null && giftCard.note != null) {
+                if (giftCard.number == null && giftCard.merchantUrl.isNullOrEmpty() && giftCard.note != null) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(giftCard.txId) }

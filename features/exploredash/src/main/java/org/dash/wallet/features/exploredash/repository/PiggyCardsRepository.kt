@@ -351,7 +351,7 @@ class PiggyCardsRepository @Inject constructor(
             paymentId = data.orderId,
             percentDiscount = "0.0",
             rate = exchangeRateMap[data.orderId]?.toString() ?: "0.0",
-            redeemUrl = giftCard.claimLink ?: "",
+            redeemUrl = giftCard.claimLink,
             fiatAmount = "0.0",
             fiatCurrency = Constants.USD_CURRENCY,
             paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
