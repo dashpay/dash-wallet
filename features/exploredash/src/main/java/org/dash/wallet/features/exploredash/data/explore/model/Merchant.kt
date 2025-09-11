@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.data.explore.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
@@ -49,7 +50,7 @@ data class Merchant(
     var paymentMethod: String? = "",
     var merchantId: String? = null,
     var redeemType: String? = "",
-    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.01%
     var denominationsType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
