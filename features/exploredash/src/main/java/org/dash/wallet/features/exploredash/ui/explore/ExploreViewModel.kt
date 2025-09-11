@@ -337,7 +337,31 @@ class ExploreViewModel @Inject constructor(
         logFilterChange(mode)
 
         if (_filterMode.value != mode) {
+            val previousMode = _filterMode.value
             _filterMode.value = mode
+            
+            // Only set default sort option if switching from a different mode type
+            // and user hasn't already set a custom sort for this mode
+            val shouldSetDefaultSort = when {
+                // Switching to Nearby from Online - set Distance as default
+                previousMode == FilterMode.Online && mode == FilterMode.Nearby -> true
+                // Switching to Online from Nearby - set Name as default  
+                previousMode == FilterMode.Nearby && mode == FilterMode.Online -> true
+                // For other transitions, preserve current sort
+                else -> false
+            }
+            
+            if (shouldSetDefaultSort) {
+                val defaultSortOption = when (mode) {
+                    FilterMode.Online -> SortOption.Name
+                    FilterMode.Nearby -> SortOption.Distance
+                    else -> SortOption.Name
+                }
+                
+                _appliedFilters.update { current -> 
+                    current.copy(sortOption = defaultSortOption)
+                }
+            }
         }
     }
 
