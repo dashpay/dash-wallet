@@ -162,7 +162,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
-                                    "CTX Issue: Spending Limit Problem",
+                                    "${ex.serviceName} Issue: Spending Limit Problem",
                                     sendToService = true,
                                     ex
                                 )
@@ -186,7 +186,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
-                                    "CTX Issue: Purchase, Internal Server Error",
+                                     "${ex.serviceName} Issue: Purchase, Internal Server Error",
                                     sendToService = true,
                                     ex
                                 )
@@ -205,7 +205,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_server_region_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            getString(R.string.gift_card_contact_support)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(

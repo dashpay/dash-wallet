@@ -190,6 +190,18 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.cardError.isVisible = true
                 binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
                 binding.contactSupport.isVisible = true
+                val service = if (error is CTXSpendException) {
+                    error.serviceName
+                } else {
+                    ""
+                }
+                binding.contactSupportLabel.text = getString(
+                    when (service) {
+                        ServiceName.CTXSpend -> R.string.gift_card_contact_ctx
+                        ServiceName.PiggyCards -> R.string.gift_card_contact_piggycards
+                        else -> R.string.gift_card_contact_support
+                    }
+                )
                 if (state.queries == WAIT_LIMIT_FOR_ERROR) {
                     ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
                 }
@@ -221,7 +233,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.contactSupport.setOnClickListener {
             val error = viewModel.uiState.value.error as? CTXSpendException
             val intent = ctxSpendViewModel.createEmailIntent(
-                "CTX Issue with tx: ${viewModel.transactionId.toStringBase58()}",
+                "${error?.serviceName ?: "DashSpend"} Issue with tx: ${viewModel.transactionId.toStringBase58()}",
                 sendToService = true,
                 error
             )
