@@ -78,10 +78,11 @@ data class FilterOptions(
     val denominationType: DenomOption,
     val sortOption: SortOption,
     val radius: Int, // Can be miles or kilometers, see isMetric
-    val provider: String = ""
+    val provider: String = "",
+    val isUserSetSort: Boolean = false // Track if sort was explicitly set by user
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION, "")
+        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION, "", false)
     }
 }
 
@@ -341,13 +342,17 @@ class ExploreViewModel @Inject constructor(
             _filterMode.value = mode
             
             // Only set default sort option if switching from a different mode type
-            // and user hasn't already set a custom sort for this mode
+            // and user hasn't explicitly set a custom sort
             val shouldSetDefaultSort = when {
-                // Switching to Nearby from Online - set Distance as default
-                previousMode == FilterMode.Online && mode == FilterMode.Nearby -> true
-                // Switching to Online from Nearby - set Name as default  
-                previousMode == FilterMode.Nearby && mode == FilterMode.Online -> true
-                // For other transitions, preserve current sort
+                // Don't override user-set sorts
+                _appliedFilters.value.isUserSetSort -> false
+                // Switching to Nearby from any other mode - set Distance as default
+                mode == FilterMode.Nearby && previousMode != FilterMode.Nearby -> true
+                // Switching to Online from any other mode - set Name as default  
+                mode == FilterMode.Online && previousMode != FilterMode.Online -> true
+                // Switching to All from any other mode - set Name as default
+                mode == FilterMode.All && previousMode != FilterMode.All -> true
+                // Same mode, preserve current sort
                 else -> false
             }
             
@@ -359,7 +364,7 @@ class ExploreViewModel @Inject constructor(
                 }
                 
                 _appliedFilters.update { current -> 
-                    current.copy(sortOption = defaultSortOption)
+                    current.copy(sortOption = defaultSortOption, isUserSetSort = false)
                 }
             }
         }
@@ -384,7 +389,8 @@ class ExploreViewModel @Inject constructor(
                 denominationType = denomOption,
                 sortOption = sortOption,
                 radius = selectedRadiusOption,
-                provider = providerFilter
+                provider = providerFilter,
+                isUserSetSort = true // Mark as user-set since this comes from the filters screen
             )
         }
     }
