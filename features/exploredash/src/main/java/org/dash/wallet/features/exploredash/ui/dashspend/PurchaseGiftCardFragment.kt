@@ -23,6 +23,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
@@ -130,11 +131,38 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         enterAmountViewModel.fiatAmount.observe(viewLifecycleOwner) {
-            viewModel.giftCardMerchant?.let { merchant ->
+            viewModel.giftCardMerchant.value?.let { merchant ->
                 if (!merchant.fixedDenomination) {
                     showCardPurchaseLimits()
                     viewModel.setGiftCardPaymentValue(it)
                 }
+            }
+        }
+
+        // Observe giftCardMerchant StateFlow changes
+        viewModel.giftCardMerchant.observe(viewLifecycleOwner) { merchant ->
+            merchant?.let {
+                // Update UI elements that depend on the merchant
+                binding.paymentHeaderView.setSubtitle(it.name.orEmpty())
+                binding.paymentHeaderView.setPaymentAddressViewIcon(
+                    it.logoLocation,
+                    R.drawable.ic_image_placeholder
+                )
+                
+                // Refresh merchant-dependent values
+                if (viewModel.isFixedDenomination.value != null) {
+                    if (it.fixedDenomination) {
+                        setupMerchantDenominations()
+                    } else {
+                        setCardPurchaseLimits()
+                    }
+                }
+                
+                // Update discount display
+                setDiscountHint()
+                
+                // Check if merchant is still active
+                setMerchantEnabled()
             }
         }
 
@@ -209,7 +237,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     /** if the merchant is not active, then close this fragment */
     private fun setMerchantEnabled(): Boolean {
-        if (viewModel.giftCardMerchant?.active != true) {
+        if (viewModel.giftCardMerchant.value?.active != true) {
             findNavController().popBackStack()
             return false
         }
@@ -229,7 +257,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        viewModel.giftCardMerchant?.let { merchant ->
+        viewModel.giftCardMerchant.value?.let { merchant ->
             if (merchant.fixedDenomination) {
                 return
             }
@@ -263,7 +291,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        val merchant = viewModel.giftCardMerchant ?: run {
+        val merchant = viewModel.giftCardMerchant.value ?: run {
             binding.discountValue.isVisible = false
             return
         }
@@ -359,17 +387,15 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     /** [DashSpendViewModel.selectedProvider] must already be set */
     private suspend fun setupMerchant(merchant: Merchant) {
-        viewModel.giftCardMerchant = merchant
-        binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
-        binding.paymentHeaderView.setPaymentAddressViewIcon(
-            merchant.logoLocation,
-            R.drawable.ic_image_placeholder
-        )
-        viewModel.updateMerchantDetails(merchant)
-
-        if (setMerchantEnabled()) {
-            viewModel.setIsFixedDenomination(merchant.fixedDenomination)
-            setCardPurchaseLimits()
+        viewModel.setGiftCardMerchant(merchant)
+        
+        lifecycleScope.launch {
+            val updatedMerchant = viewModel.updateMerchantDetails(merchant)
+            
+            if (setMerchantEnabled()) {
+                viewModel.setGiftCardMerchant(updatedMerchant)
+                viewModel.setIsFixedDenomination(updatedMerchant.fixedDenomination)
+            }
         }
     }
 
@@ -394,7 +420,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     @Composable
     private fun DenominationsBottomContainer() {
-        val merchant = viewModel.giftCardMerchant ?: return
+        val merchant = viewModel.giftCardMerchant.collectAsState().value ?: return
+        log.info("DenominationsBottomContainer recomposing with merchant: ${merchant.name}, denominations: ${merchant.denominations}")
 
         Box(
             modifier = Modifier.background(

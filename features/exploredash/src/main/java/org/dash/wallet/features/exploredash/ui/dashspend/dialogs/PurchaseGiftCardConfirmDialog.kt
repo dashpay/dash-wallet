@@ -81,7 +81,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val merchant = viewModel.giftCardMerchant
+        val merchant = viewModel.giftCardMerchant.value
         if (merchant == null) {
             log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
             dismiss()
@@ -111,7 +111,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     private fun onConfirmButtonClicked() {
         viewLifecycleOwner.lifecycleScope.launch {
             // Double-check merchant is still available before proceeding
-            if (viewModel.giftCardMerchant == null) {
+            if (viewModel.giftCardMerchant.value == null) {
                 log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
                 dismiss()
                 return@launch
@@ -320,7 +320,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                     val intent = viewModel.createEmailIntent(
                         subject = "DashPay DashSpend Issue: Purchase Error",
                         sendToService = false,
-                        CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant?.source, cause = ex)
+                        CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant.value?.source, cause = ex)
                     )
 
                     val chooser = Intent.createChooser(
