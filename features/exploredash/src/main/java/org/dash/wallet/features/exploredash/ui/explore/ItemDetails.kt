@@ -237,6 +237,9 @@ private fun MerchantDetailsContent(
                 onOpenWebsiteButtonClicked = onOpenWebsiteButtonClicked
             )
         }
+        
+        // Bottom spacer to ensure content doesn't get cut off by navigation bars
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
