@@ -173,6 +173,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.barcodeLoadingError.isVisible = false
                 binding.infoLoadingIndicator.isVisible = false
             }
+            binding.contactSupportLabel
 
             val error = state.error
             val shouldShowError = when (state.status) {
@@ -182,36 +183,43 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 null -> false
             }
 
-            if (error != null && shouldShowError) {
-                binding.infoLoadingIndicator.isVisible = false
+            // Only update error visibility if the state actually changed to prevent flickering
+            val showError = error != null && shouldShowError
+            if (binding.cardError.isVisible != showError) {
+                if (showError) {
+                    binding.infoLoadingIndicator.isVisible = false
 
-                val message = if (error is CTXSpendException && error.resourceString != null) {
-                    getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
-                } else {
-                    null // This message is not localized so don't display it.  It will be in the logs
-                }
-
-                binding.cardError.isVisible = true
-                binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
-                binding.contactSupport.isVisible = true
-                val service = if (error is CTXSpendException) {
-                    error.serviceName
-                } else {
-                    ""
-                }
-                binding.contactSupportLabel.text = getString(
-                    when (service) {
-                        ServiceName.CTXSpend -> R.string.gift_card_contact_ctx
-                        ServiceName.PiggyCards -> R.string.gift_card_contact_piggycards
-                        else -> R.string.gift_card_contact_support
+                    val message = if (error is CTXSpendException && error.resourceString != null) {
+                        getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
+                    } else {
+                        null // This message is not localized so don't display it.  It will be in the logs
                     }
-                )
-                if (state.queries == WAIT_LIMIT_FOR_ERROR) {
-                    ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
+
+                    binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+                    binding.cardError.isVisible = true
+                    binding.contactSupport.isVisible = true
+                    
+                    val service = if (error is CTXSpendException) {
+                        error.serviceName
+                    } else {
+                        ""
+                    }
+                    binding.contactSupportLabel.text = getString(
+                        when (service) {
+                            ServiceName.CTXSpend -> R.string.gift_card_contact_ctx
+                            ServiceName.PiggyCards -> R.string.gift_card_contact_piggycards
+                            else -> R.string.gift_card_contact_support
+                        }
+                    )
+                } else {
+                    binding.cardError.isVisible = false
+                    binding.contactSupport.isVisible = false
                 }
-            } else {
-                binding.cardError.isVisible = false
-                binding.contactSupport.isVisible = false
+            }
+            
+            // Log error only when reaching the wait limit, regardless of visibility changes
+            if (error != null && state.queries == WAIT_LIMIT_FOR_ERROR) {
+                ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
             }
 
             if (state.serviceName == ServiceName.CTXSpend) {
