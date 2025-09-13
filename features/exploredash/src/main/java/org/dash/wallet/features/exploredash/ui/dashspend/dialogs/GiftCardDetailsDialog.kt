@@ -71,7 +71,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsDialog::class.java)
         private const val ARG_TRANSACTION_ID = "transactionId"
-        private const val WAIT_LIMIT_FOR_ERROR = 10
+        private const val WAIT_LIMIT_FOR_ERROR = 60 // queries
 
         fun newInstance(transactionId: Sha256Hash) =
             GiftCardDetailsDialog().apply {
@@ -87,6 +87,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
     private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
     private var originalBrightness: Float = -1f
+    private var merchantLogoSet = false
 
     private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
         override fun onStateChanged(bottomSheet: View, newState: Int) { }
@@ -129,16 +130,19 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
 
             if (bitmap != null) {
-                binding.merchantLogo.load(bitmap) {
-                    crossfade(true)
-                    scale(Scale.FILL)
-                    transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
-                    placeholder(R.drawable.ic_gift_card_tx)
-                    error(R.drawable.ic_gift_card_tx)
-                }
+                if (!merchantLogoSet) {
+                    binding.merchantLogo.load(bitmap) {
+                        crossfade(true)
+                        scale(Scale.FILL)
+                        transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
+                        placeholder(R.drawable.ic_gift_card_tx)
+                        error(R.drawable.ic_gift_card_tx)
+                    }
 
-                binding.secondaryIcon.isVisible = true
-                binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
+                    binding.secondaryIcon.isVisible = true
+                    binding.secondaryIcon.setImageResource(R.drawable.ic_gift_card_tx)
+                    merchantLogoSet = true
+                }
             } else {
                 binding.secondaryIcon.isVisible = false
                 binding.merchantLogo.setImageResource(R.drawable.ic_gift_card_tx)
