@@ -267,6 +267,19 @@
             app:layout_constraintBottom_toTopOf="@id/pay_btn"
             />
 
+        <TextView
+            android:id="@+id/country_availability_text"
+            style="@style/Overline.Secondary"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/country_availability"
+            android:layout_marginBottom="16dp"
+            android:visibility="visible"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/temporary_unavailable_text"
+            />
+
         <androidx.appcompat.widget.LinearLayoutCompat
             android:layout_width="match_parent"
             android:id="@+id/pay_btn"
