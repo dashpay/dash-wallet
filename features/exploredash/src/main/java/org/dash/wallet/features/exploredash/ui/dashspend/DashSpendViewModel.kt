@@ -541,7 +541,7 @@ class DashSpendViewModel @Inject constructor(
 
     private fun createReportEmail(ex: CTXSpendException?): String {
         val report = StringBuilder()
-        report.append("CTX Issue Report").append("\n")
+        report.append("${ex?.serviceName ?: "DashSpend"} Issue Report").append("\n")
         _giftCardMerchant.value?.let { merchant ->
             report.append("Merchant details").append("\n")
                 .append("name: ").append(merchant.name).append("\n")
