@@ -227,9 +227,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         // Note: NO visibility management for loading/error indicators here
     }
     
-    private fun updateDialogVisibility(state: Any) {
-        // Cast to proper state type - replace with actual state class
-        val uiState = state as? Any // Replace with proper type
+    private fun updateDialogVisibility(state: GiftCardUIState) {
         val giftCard = viewModel.uiState.value.giftCard
         val error = viewModel.uiState.value.error
         val merchantUrl = giftCard?.merchantUrl
