@@ -425,6 +425,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
-                viewModel.isBlockchainReplaying.value
+            viewModel.isBlockchainReplaying.value
     }
 }

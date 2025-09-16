@@ -146,7 +146,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
-                        viewModel.logError(ex,"CTX returned error: limits")
+                        viewModel.logError(ex, "CTX returned error: limits")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
@@ -170,7 +170,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 500 -> {
-                        viewModel.logError(ex,"CTX returned error: Error 500")
+                        viewModel.logError(ex, "CTX returned error: Error 500")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
