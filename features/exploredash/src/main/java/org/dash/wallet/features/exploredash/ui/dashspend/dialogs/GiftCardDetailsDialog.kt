@@ -124,7 +124,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
-            state.giftCard?.let { bindGiftCardDetails(binding, it) }
+            // Update card details without affecting loading/error visibility
+            state.giftCard?.let { bindGiftCardDetailsOnly(binding, it) }
 
             val bitmap = state.icon
             val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
@@ -153,72 +154,17 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 binding.purchaseDate.text = it.format(formatter)
             }
 
+            // Handle barcode decoding separately from visibility management
             val barcode = state.barcode
-
             if (barcode != null) {
                 decodeBarcode(barcode)
-            } else {
-                binding.purchaseCardBarcode.isVisible = false
-                binding.barcodePlaceholder.isVisible = true
-                binding.barcodePlaceholderText.isVisible = true
-                binding.barcodeLoadingError.isVisible = false
             }
 
-            val merchantUrl = state.giftCard?.merchantUrl
-            binding.checkCurrentBalance.isVisible = !merchantUrl.isNullOrEmpty()
-            if (!merchantUrl.isNullOrEmpty()) {
-                binding.purchaseCardBarcode.isVisible = false
-                binding.barcodePlaceholder.isVisible = false
-                binding.barcodePlaceholderText.isVisible = false
-                binding.barcodeLoadingError.isVisible = false
-                binding.infoLoadingIndicator.isVisible = false
-            }
-            binding.contactSupportLabel
-
-            val error = state.error
-            val shouldShowError = when (state.status) {
-                GiftCardStatus.UNPAID, GiftCardStatus.PAID -> state.queries > WAIT_LIMIT_FOR_ERROR
-                GiftCardStatus.REJECTED -> true
-                GiftCardStatus.FULFILLED -> false
-                null -> false
-            }
-
-            // Only update error visibility if the state actually changed to prevent flickering
-            val showError = error != null && shouldShowError
-            if (binding.cardError.isVisible != showError) {
-                if (showError) {
-                    binding.infoLoadingIndicator.isVisible = false
-
-                    val message = if (error is CTXSpendException && error.resourceString != null) {
-                        getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
-                    } else {
-                        null // This message is not localized so don't display it.  It will be in the logs
-                    }
-
-                    binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
-                    binding.cardError.isVisible = true
-                    binding.contactSupport.isVisible = true
-                    
-                    val service = if (error is CTXSpendException) {
-                        error.serviceName
-                    } else {
-                        ""
-                    }
-                    binding.contactSupportLabel.text = getString(
-                        when (service) {
-                            ServiceName.CTXSpend -> R.string.gift_card_contact_ctx
-                            ServiceName.PiggyCards -> R.string.gift_card_contact_piggycards
-                            else -> R.string.gift_card_contact_support
-                        }
-                    )
-                } else {
-                    binding.cardError.isVisible = false
-                    binding.contactSupport.isVisible = false
-                }
-            }
+            // UNIFIED VISIBILITY MANAGEMENT - Single source of truth
+            updateDialogVisibility(state)
             
-            // Log error only when reaching the wait limit, regardless of visibility changes
-            if (error != null && state.queries == WAIT_LIMIT_FOR_ERROR) {
+            // Log error only when reaching the wait limit exactly
+            if (state.error != null && state.queries == WAIT_LIMIT_FOR_ERROR) {
                 ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
             }
 
@@ -260,7 +206,8 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         subscribeToBottomSheetCallback()
     }
 
-    private fun bindGiftCardDetails(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
+    private fun bindGiftCardDetailsOnly(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
+        // Only update card content, NO visibility management here
         binding.merchantName.text = giftCard.merchantName
         val currencyFormat = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
             this.currency = Currency.getInstance(Constants.USD_CURRENCY)
@@ -270,16 +217,79 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
         binding.purchaseCardPin.text = giftCard.pin
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
-        binding.infoLoadingIndicator.isVisible = giftCard.number.isNullOrEmpty() && giftCard.merchantUrl.isNullOrEmpty()
-
-        binding.checkCurrentBalance.isVisible = !giftCard.merchantUrl.isNullOrEmpty()
-        binding.checkCurrentBalance.setOnClickListener {
-            giftCard.merchantUrl?.let {
-                if (it.isNotEmpty()) {
-                    val intent = Intent(Intent.ACTION_VIEW, it.toUri())
-                    requireContext().startActivity(intent)
+        
+        // Note: NO visibility management for loading/error indicators here
+    }
+    
+    private fun updateDialogVisibility(state: Any) {
+        // Cast to proper state type - replace with actual state class
+        val uiState = state as? Any // Replace with proper type
+        val giftCard = viewModel.uiState.value.giftCard
+        val error = viewModel.uiState.value.error
+        val merchantUrl = giftCard?.merchantUrl
+        val barcode = viewModel.uiState.value.barcode
+        val status = viewModel.uiState.value.status
+        val queries = viewModel.uiState.value.queries
+        
+        // Determine error conditions
+        val hasExceededWaitLimit = queries > WAIT_LIMIT_FOR_ERROR
+        val shouldShowTimeoutError = when (status) {
+            GiftCardStatus.UNPAID, GiftCardStatus.PAID -> hasExceededWaitLimit
+            else -> false
+        }
+        val shouldShowImmediateError = status == GiftCardStatus.REJECTED
+        val shouldShowError = (shouldShowTimeoutError || shouldShowImmediateError) && error != null
+        
+        // Determine content availability
+        val hasCardInfo = !merchantUrl.isNullOrEmpty() || barcode != null
+        val hasCardDetails = !giftCard?.number.isNullOrEmpty()
+        
+        // Priority: error > balance check > barcode > loading > empty
+        val shouldShowErrorUI = shouldShowError
+        val shouldShowBalanceCheck = !shouldShowError && !merchantUrl.isNullOrEmpty()
+        val shouldShowBarcode = !shouldShowError && !shouldShowBalanceCheck && barcode != null
+        val shouldShowLoading = !shouldShowError && !shouldShowBalanceCheck && !shouldShowBarcode && !hasCardDetails
+        
+        // Apply all visibility changes atomically to prevent flickering
+        updateVisibilityIfChanged(binding.cardError, shouldShowErrorUI)
+        updateVisibilityIfChanged(binding.contactSupport, shouldShowErrorUI)
+        updateVisibilityIfChanged(binding.checkCurrentBalance, shouldShowBalanceCheck)
+        updateVisibilityIfChanged(binding.infoLoadingIndicator, shouldShowLoading)
+        
+        // Handle barcode placeholder visibility
+        if (barcode == null) {
+            updateVisibilityIfChanged(binding.purchaseCardBarcode, false)
+            updateVisibilityIfChanged(binding.barcodePlaceholder, shouldShowBarcode)
+            updateVisibilityIfChanged(binding.barcodePlaceholderText, shouldShowBarcode)
+            updateVisibilityIfChanged(binding.barcodeLoadingError, false)
+        }
+        
+        // Update error message and support text only when showing error
+        if (shouldShowErrorUI) {
+            val message = when {
+                shouldShowTimeoutError -> getString(R.string.gift_card_error)
+                error is CTXSpendException && error.resourceString != null -> {
+                    getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
                 }
+                else -> null
             }
+            
+            binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            
+            val service = if (error is CTXSpendException) error.serviceName else ""
+            binding.contactSupportLabel.text = getString(
+                when (service) {
+                    ServiceName.CTXSpend -> R.string.gift_card_contact_ctx
+                    ServiceName.PiggyCards -> R.string.gift_card_contact_piggycards
+                    else -> R.string.gift_card_contact_support
+                }
+            )
+        }
+    }
+    
+    private fun updateVisibilityIfChanged(view: View, shouldBeVisible: Boolean) {
+        if (view.isVisible != shouldBeVisible) {
+            view.isVisible = shouldBeVisible
         }
     }
 
