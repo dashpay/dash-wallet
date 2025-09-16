@@ -222,7 +222,7 @@ class PiggyCardsRepository @Inject constructor(
         it: Brand
     ): UpdatedMerchantDetails {
         val denominations = arrayListOf<Double>()
-        var discountPercentage = 0.0
+        var discountPercentage = -100.0
         val activeGiftCards = arrayListOf<Giftcard>()
         data.forEach { card ->
             if (card.quantity > 0) {
