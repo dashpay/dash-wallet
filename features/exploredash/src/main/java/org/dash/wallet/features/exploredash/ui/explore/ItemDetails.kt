@@ -362,125 +362,6 @@ private fun SingleProviderSection(
         enabled = provider.active,
         onlyOption = true
     )
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .height(46.dp)
-//            .background(backgroundColor, shape = RoundedCornerShape(12.dp))
-//            //.border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
-//            .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
-//            .padding(horizontal = 10.dp, vertical = 4.dp),
-//        verticalAlignment = Alignment.CenterVertically
-//    ) {
-//        Column(modifier = Modifier.weight(1f)) {
-//            Text(
-//                text = provider.provider,
-//                style = MyTheme.CaptionMedium,
-//                color = textColor,
-//            )
-//            Text(
-//                text = subtitle,
-//                style = MyTheme.Overline,
-//                color = subtitleColor
-//            )
-//        }
-//
-//        Text(
-//            text = discount,
-//            style = MyTheme.Caption,
-//            color = textColor
-//        )
-//
-////        RadioButton(
-////            selected = isSelected,
-////            onClick = onSelected,
-////            colors = RadioButtonDefaults.colors(
-////                selectedColor = MyTheme.Colors.dashBlue,
-////                unselectedColor = MyTheme.Colors.gray
-////            ),
-////            enabled = isEnabled,
-////        )
-//    }
-//    Row(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(vertical = 8.dp),
-//        horizontalArrangement = Arrangement.spacedBy(20.dp)
-//    ) {
-//        // Provider section
-//        Card(
-//            modifier = Modifier.weight(1f),
-//            shape = RoundedCornerShape(10.dp),
-//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.gray300.copy(alpha = 0.1f))
-//        ) {
-//            Row(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(horizontal = 10.dp, vertical = 6.dp),
-//                verticalAlignment = Alignment.CenterVertically
-//            ) {
-//                Icon(
-//                    painter = painterResource(id = R.drawable.ic_gift_card_black),
-//                    contentDescription = null,
-//                    tint = MyTheme.Colors.textPrimary,
-//                    modifier = Modifier.size(18.dp)
-//                )
-//
-//                Spacer(modifier = Modifier.width(10.dp))
-//
-//                Column(modifier = Modifier.weight(1f)) {
-//                    Text(
-//                        text = stringResource(R.string.provider),
-//                        style = MyTheme.CaptionMedium,
-//                        color = MyTheme.Colors.textPrimary
-//                    )
-//                    Text(
-//                        text = provider.provider,
-//                        style = MyTheme.Caption,
-//                        color = MyTheme.Colors.textPrimary
-//                    )
-//                }
-//            }
-//        }
-//
-//        // Savings section
-//        Card(
-//            modifier = Modifier.weight(1f),
-//            shape = RoundedCornerShape(10.dp),
-//            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.yellow.copy(alpha = 0.1f))
-//        ) {
-//            Row(
-//                modifier = Modifier
-//                    .fillMaxWidth()
-//                    .padding(horizontal = 10.dp, vertical = 6.dp),
-//                verticalAlignment = Alignment.CenterVertically
-//            ) {
-//                // Save icon
-//                Icon(
-//                    painter = painterResource(id = R.drawable.ic_percentage),
-//                    contentDescription = null,
-//                    tint = Color.Unspecified,
-//                    modifier = Modifier.size(18.dp)
-//                )
-//
-//                Spacer(modifier = Modifier.width(10.dp))
-//
-//                Column(modifier = Modifier.weight(1f)) {
-//                    Text(
-//                        text = stringResource(R.string.save),
-//                        style = MyTheme.CaptionMedium,
-//                        color = MyTheme.Colors.textPrimary
-//                    )
-//                    val format = DecimalFormat("0.0") // TODO: where should this go
-//                    Text(
-//                        text = "${format.format(provider.savingsPercentage / 100.0)}%",
-//                        style = MyTheme.Caption,
-//                        color = MyTheme.Colors.textPrimary
-//                    )
-//                }
-//            }
-//        }
-//    }
 }
 
 @Composable
@@ -514,35 +395,6 @@ private fun ProviderOption(
             trailingText = discount,
             enabled = isEnabled,
         )
-
-//        Column(modifier = Modifier.weight(1f)) {
-//            Text(
-//                text = providerName,
-//                style = MyTheme.CaptionMedium,
-//                color = textColor,
-//            )
-//            Text(
-//                text = subtitle,
-//                style = MyTheme.Overline,
-//                color = subtitleColor
-//            )
-//        }
-//
-//        Text(
-//            text = discount,
-//            style = MyTheme.Caption,
-//            color = textColor
-//        )
-//
-//        RadioButton(
-//            selected = isSelected,
-//            onClick = onSelected,
-//            colors = RadioButtonDefaults.colors(
-//                selectedColor = MyTheme.Colors.dashBlue,
-//                unselectedColor = MyTheme.Colors.gray
-//            ),
-//            enabled = isEnabled
-//        )
     }
 }
 
@@ -602,43 +454,6 @@ private fun ActionButton(
                 }
             },
         )
-
-//        Button(
-//            onClick = {
-//                if (isDash) {
-//                    onSendDashClicked(true)
-//                } else {
-//                    onBuyGiftCardButtonClicked()
-//                }
-//            },
-//            enabled = isEnabled,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .height(40.dp),
-//            shape = RoundedCornerShape(10.dp),
-//            colors = ButtonDefaults.buttonColors(
-//                containerColor = if (isDash) MyTheme.Colors.dashBlue else MyTheme.Colors.orange,
-//                disabledContainerColor = MyTheme.Colors.gray
-//            )
-//        ) {
-//            Icon(
-//                painter = painterResource(
-//                    id = if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card
-//                ),
-//                contentDescription = null,
-//                tint = Color.White,
-//                modifier = Modifier.size(20.dp)
-//            )
-//            Spacer(modifier = Modifier.width(8.dp))
-//            Text(
-//                text = stringResource(
-//                    if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
-//                ),
-//                fontSize = 14.sp,
-//                fontWeight = FontWeight.SemiBold,
-//                color = Color.White
-//            )
-//        }
 
         // Discount badge for Dash payments
         if (isDash && merchant.savingsFraction != 0.0) {
