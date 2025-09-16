@@ -61,6 +61,7 @@ class PiggyCardsRepository @Inject constructor(
         private val log = LoggerFactory.getLogger(PiggyCardsRepository::class.java)
         private val disabledMerchants = listOf<String>()
         private const val INSTANT_DELIVERY = "(instant delivery)"
+        private const val SERVICE_FEE = 150
         private const val DASH_DASH_KEY = "DASH.DASH"
     }
     private val giftCardMap = hashMapOf<String, List<Giftcard>>()
@@ -159,22 +160,27 @@ class PiggyCardsRepository @Inject constructor(
                 giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
             }
 
+            val nonImmediateDeliveryFixedCards = giftcards?.data?.filter { giftCard ->
+                !giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0 && giftCard.isFixed
+            } ?: listOf()
+
             // do we have a range card
             val rangeGiftCard = giftcards?.data?.find { !it.isFixed }
 
             // priority:
-            // 1. Instant Delivery Fixed Value Cards
+            // 1. Instant Delivery Fixed Value Cards and all other fixed delivery
             // 2. Flexible Value Cards
             // 3. Fixed value cards
             if (!immediateDeliveryCards.isNullOrEmpty()) {
-                return updatedMerchantDetails(immediateDeliveryCards, brandWithMerchantId)
+                val allFixedCards = immediateDeliveryCards.plus(nonImmediateDeliveryFixedCards)
+                return updatedMerchantDetails(allFixedCards, brandWithMerchantId)
             } else if (rangeGiftCard != null) {
                 val denominations = listOf(
                     rangeGiftCard.minDenomination.toString(),
                     rangeGiftCard.maxDenomination.toString()
                 )
                 val denominationsType = "min-max"
-                val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt()
+                val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt()  - SERVICE_FEE
                 giftCardMap[it.id] = listOf(rangeGiftCard)
                 return UpdatedMerchantDetails(
                     rangeGiftCard.brandId.toString(),
@@ -187,7 +193,7 @@ class PiggyCardsRepository @Inject constructor(
                 )
             } else if (giftcards != null && giftcards.data?.isNotEmpty() == true) {
                 return updatedMerchantDetails(
-                    giftcards.data.filter { giftCard -> giftCard.name.contains(INSTANT_DELIVERY) },
+                    nonImmediateDeliveryFixedCards,
                     it
                 )
             } else {
@@ -232,7 +238,7 @@ class PiggyCardsRepository @Inject constructor(
             it.id,
             denominations.sorted().map { format.format(it) },
             denominationsType,
-            (discountPercentage * 100).toInt(),
+            (discountPercentage * 100).toInt() - SERVICE_FEE,
             redeemType = "barcode",
             enabled = denominations.isNotEmpty() && !disabledMerchants.contains(data.first().name)
         )
