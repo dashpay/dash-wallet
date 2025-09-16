@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.text.Html
+import android.text.method.LinkMovementMethod
 import android.util.Size
 import android.view.View
 import android.view.ViewGroup
@@ -189,21 +191,25 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
         }
         binding.contactSupport.setOnClickListener {
-            val error = viewModel.uiState.value.error as? CTXSpendException
-            val intent = ctxSpendViewModel.createEmailIntent(
-                "${error?.serviceName ?: "DashSpend"} Issue with tx: ${viewModel.transactionId.toStringBase58()}",
-                sendToService = true,
-                error
-            )
-
-            val chooser = Intent.createChooser(
-                intent,
-                getString(R.string.report_issue_dialog_mail_intent_chooser)
-            )
-            launcher.launch(chooser)
+            contactSupport()
         }
 
         subscribeToBottomSheetCallback()
+    }
+
+    private fun contactSupport() {
+        val error = viewModel.uiState.value.error as? CTXSpendException
+        val intent = ctxSpendViewModel.createEmailIntent(
+            "${error?.serviceName ?: "DashSpend"} Issue with tx: ${viewModel.transactionId.toStringBase58()}",
+            sendToService = true,
+            error
+        )
+
+        val chooser = Intent.createChooser(
+            intent,
+            getString(R.string.report_issue_dialog_mail_intent_chooser)
+        )
+        launcher.launch(chooser)
     }
 
     private fun bindGiftCardDetailsOnly(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
@@ -241,8 +247,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         val shouldShowError = (shouldShowTimeoutError || shouldShowImmediateError) && error != null
         
         // Determine content availability
-        val hasCardInfo = !merchantUrl.isNullOrEmpty() || barcode != null
-        val hasCardDetails = !giftCard?.number.isNullOrEmpty()
+        val hasCardDetails = !giftCard?.number.isNullOrEmpty() || !merchantUrl.isNullOrEmpty() || barcode != null
         
         // Priority: error > balance check > barcode > loading > empty
         val shouldShowErrorUI = shouldShowError
@@ -267,14 +272,36 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         // Update error message and support text only when showing error
         if (shouldShowErrorUI) {
             val message = when {
-                shouldShowTimeoutError -> getString(R.string.gift_card_error)
+                shouldShowTimeoutError -> getString(R.string.gift_card_delay)
                 error is CTXSpendException && error.resourceString != null -> {
                     getString(error.resourceString!!.resourceId, *error.resourceString!!.args.toTypedArray())
                 }
                 else -> null
             }
             
-            binding.cardError.text = message ?: getString(R.string.gift_card_details_error)
+            val errorText = message ?: getString(R.string.gift_card_details_error)
+            binding.cardError.text = Html.fromHtml(errorText, Html.FROM_HTML_MODE_COMPACT)
+            binding.cardError.movementMethod = object : LinkMovementMethod() {
+                override fun onTouchEvent(widget: android.widget.TextView, buffer: android.text.Spannable, event: android.view.MotionEvent): Boolean {
+                    val action = event.action
+                    if (action == android.view.MotionEvent.ACTION_UP) {
+                        val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX
+                        val y = event.y.toInt() - widget.totalPaddingTop + widget.scrollY
+                        val layout = widget.layout
+                        val line = layout.getLineForVertical(y)
+                        val off = layout.getOffsetForHorizontal(line, x.toFloat())
+                        val links = buffer.getSpans(off, off, android.text.style.URLSpan::class.java)
+                        if (links.isNotEmpty()) {
+                            val url = links[0].url
+                            if (url.startsWith("contact:")) {
+                                contactSupport()
+                                return true
+                            }
+                        }
+                    }
+                    return super.onTouchEvent(widget, buffer, event)
+                }
+            }
             
             val service = if (error is CTXSpendException) error.serviceName else ""
             binding.contactSupportLabel.text = getString(
