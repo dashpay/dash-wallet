@@ -196,15 +196,16 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         )
                                         ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                     }
-                                    cancelTicker()
-                                    uiState.value.copy(
+                                    val state = uiState.value.copy(
                                         status = giftCard.status,
                                         queries = uiState.value.queries + 1,
                                         error = null
                                     )
+                                    cancelTicker()
+                                    state
                                 } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     log.error("CTXSpend returned a redeem url card: not supported")
-                                    uiState.value.copy(
+                                    val state = uiState.value.copy(
                                         status = giftCard.status,
                                         queries = uiState.value.queries + 1,
                                         error = CTXSpendException(
@@ -215,6 +216,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             giftCard
                                         )
                                     )
+                                    cancelTicker()
+                                    state
                                 } else {
                                     uiState.value.copy(
                                         status = giftCard.status,
@@ -232,8 +235,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         giftCard.merchantName
                                     } for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
                                 )
-                                cancelTicker()
-                                uiState.value.copy(
+                                val state = uiState.value.copy(
                                     status = giftCard.status,
                                     queries = uiState.value.queries + 1,
                                     error = CTXSpendException(
@@ -244,6 +246,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         giftCard
                                     )
                                 )
+                                cancelTicker()
+                                state
                             }
 
                             else -> {
