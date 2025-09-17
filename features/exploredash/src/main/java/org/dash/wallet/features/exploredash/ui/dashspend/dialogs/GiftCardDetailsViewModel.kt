@@ -339,7 +339,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
                                         hashMapOf(
                                             AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
-                                            AnalyticsConstants.Parameter.ARG1 to "CTX"
+                                            AnalyticsConstants.Parameter.ARG1 to "PiggyCards"
                                         )
                                     )
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
