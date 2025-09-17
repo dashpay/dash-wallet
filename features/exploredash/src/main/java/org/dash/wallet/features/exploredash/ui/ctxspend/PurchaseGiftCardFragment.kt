@@ -382,6 +382,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     @Composable
     private fun DenominationsBottomContainer() {
         val merchant = viewModel.giftCardMerchant ?: return
+        val isReplaying = viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
 
         Box(
             modifier = Modifier.background(
@@ -400,7 +401,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
                 selectedDenomination = selectedDenomination.value.toBigDecimal().toInt(),
-                canContinue = !exceedsBalance(),
+                canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
                     viewModel.setGiftCardPaymentValue(fiat)
@@ -417,14 +418,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     // taken from SendCoinsFragment.updateView
     private fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
-        val errorMessage = if (isReplaying) {
-            getString(R.string.send_coins_fragment_hint_replaying)
-        } else {
-            ""
-        }
-
-        enterAmountFragment?.setError(errorMessage)
-        enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
-            viewModel.isBlockchainReplaying.value
+        enterAmountFragment?.setError(
+            if (isReplaying) getString(R.string.send_coins_fragment_hint_replaying) else ""
+        )
+        enterAmountViewModel.blockContinue = isReplaying
     }
 }
