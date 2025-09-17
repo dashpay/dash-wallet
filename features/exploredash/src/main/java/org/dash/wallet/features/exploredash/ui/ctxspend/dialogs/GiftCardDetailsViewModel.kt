@@ -229,7 +229,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                             analyticsService.logError(
                                 CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),
                                 "CTX returned error: rejected ${
-                                    giftCard.merchantName
+                                giftCard.merchantName
                                 } for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
                             )
                             _uiState.update {
