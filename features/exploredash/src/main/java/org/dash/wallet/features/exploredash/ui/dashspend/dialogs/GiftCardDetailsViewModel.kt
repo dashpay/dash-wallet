@@ -191,7 +191,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
                                             hashMapOf(
                                                 AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
-                                                AnalyticsConstants.Parameter.ARG1 to "CTX"
+                                                AnalyticsConstants.Parameter.ARG1 to "CTX",
+                                                AnalyticsConstants.Parameter.ARG2 to (giftCard.merchantName ?: "unknown merchant")
                                             )
                                         )
                                         ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
@@ -339,7 +340,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
                                         hashMapOf(
                                             AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
-                                            AnalyticsConstants.Parameter.ARG1 to "PiggyCards"
+                                            AnalyticsConstants.Parameter.ARG1 to "PiggyCards",
+                                            AnalyticsConstants.Parameter.ARG2 to (giftCard.merchantName ?: "unknown merchant")
                                         )
                                     )
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
