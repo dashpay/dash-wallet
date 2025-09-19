@@ -420,16 +420,17 @@ private fun ActionButton(
             )
         }
         // where can the user spend the gift card
-        Text(
-            text = stringResource(R.string.country_availability),
-            style = MyTheme.Overline,
-            color = MyTheme.Colors.gray400,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
-            textAlign = TextAlign.Center
-        )
-
+        if (!isDash) {
+            Text(
+                text = stringResource(R.string.country_availability),
+                style = MyTheme.Overline,
+                color = MyTheme.Colors.gray400,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                textAlign = TextAlign.Center
+            )
+        }
         DashButton(
             modifier = Modifier
                 .fillMaxWidth()
