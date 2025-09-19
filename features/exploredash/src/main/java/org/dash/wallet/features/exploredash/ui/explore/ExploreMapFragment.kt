@@ -157,7 +157,7 @@ class ExploreMapFragment : SupportMapFragment() {
             }
 
         viewModel.appliedFilters
-            .distinctUntilChangedBy { "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}" }
+            .distinctUntilChangedBy { "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}-${it.query}" }
             .observe(viewLifecycleOwner) { filters ->
                 googleMap?.let { map ->
                     if (viewModel.screenState.value == ScreenState.SearchResults && 
