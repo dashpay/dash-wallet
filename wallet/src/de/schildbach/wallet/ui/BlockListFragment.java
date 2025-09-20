@@ -171,7 +171,11 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 	@Override
     public void onDestroy() {
 		if (serviceIsBound) {
-			activity.unbindService(serviceConnection);
+			try {
+				activity.unbindService(serviceConnection);
+			} catch (IllegalArgumentException e) {
+				log.warn("Service not registered when unbinding", e);
+			}
 			serviceIsBound = false;
 		}
 
