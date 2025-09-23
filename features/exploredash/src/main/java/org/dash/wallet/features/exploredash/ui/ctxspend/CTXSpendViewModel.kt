@@ -226,8 +226,7 @@ class CTXSpendViewModel @Inject constructor(
                 merchant.savingsPercentage = this.savingsPercentage
                 merchant.minCardPurchase = this.minimumCardPurchase
                 merchant.maxCardPurchase = this.maximumCardPurchase
-                // TODO: re-enable fixed denoms
-                merchant.active = this.enabled || this.denominationType == DenominationType.Fixed
+                merchant.active = this.enabled
                 merchant.fixedDenomination = this.denominationType == DenominationType.Fixed
                 merchant.denominations = this.denominations.map { it.toInt() }
             }
