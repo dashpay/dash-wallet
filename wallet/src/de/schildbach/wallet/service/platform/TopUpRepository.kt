@@ -44,6 +44,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
@@ -271,7 +272,7 @@ class TopUpRepositoryImpl @Inject constructor(
             if (confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
                 try {
                     withTimeout(TimeUnit.SECONDS.toMillis(30)) {
-                        suspendCoroutine { continuation ->
+                        suspendCancellableCoroutine { continuation ->
                             val listener = object : TransactionConfidence.Listener {
                                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                                     when (reason) {
@@ -294,6 +295,13 @@ class TopUpRepositoryImpl @Inject constructor(
                                     }
                                 }
                             }
+                            
+                            // Register cancellation handler to clean up listener
+                            continuation.invokeOnCancellation {
+                                confidence.removeEventListener(listener)
+                                log.info("topup: listener removed due to cancellation")
+                            }
+                            
                             confidence.addEventListener(listener)
                         }
                     }
