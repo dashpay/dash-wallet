@@ -1165,10 +1165,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
 
-                onCreateCompleted.complete(Unit) // Signal completion of onCreate
+                onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
-            } finally {
-                log.error(".onCreate() failed")
+            } catch (t: Throwable) {
+                log.error(".onCreate() failed", t)
                 if (onCreateCompleted.isActive) {
                     onCreateCompleted.complete(Unit)
                 }

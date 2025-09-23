@@ -1397,9 +1397,13 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    private var hasCheckedTopups = false // only run once
     private suspend fun checkTopUps() {
-        platformRepo.getWalletEncryptionKey()?.let {
-            topUpRepository.checkTopUps(it)
+        if (!hasCheckedTopups) {
+            platformRepo.getWalletEncryptionKey()?.let {
+                topUpRepository.checkTopUps(it)
+                hasCheckedTopups = true
+            }
         }
     }
 }

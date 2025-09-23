@@ -158,7 +158,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
             val error = state.error
             val shouldShowError = when (state.status) {
-                "unpaid", "paid" -> state.queries > 10
+                "unpaid", "paid" -> state.queries >= 20
                 "rejected" -> true
                 "fulfilled" -> false
                 else -> false
