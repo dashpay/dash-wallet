@@ -216,6 +216,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtn.setOnClickListener { onSendDashClicked?.invoke(true) }
                 payBtn.isEnabled = merchant.active ?: true
                 temporaryUnavailableText.isVisible = merchant.active == false
+                countryAvailabilityText.isVisible = false
             } else if (merchant.source!!.lowercase() == ServiceName.CTXSpend.lowercase()) {
                 payBtn.isVisible = true
                 payBtnTxt.text = context.getText(R.string.explore_buy_gift_card)
@@ -223,6 +224,7 @@ class ItemDetails(context: Context, attrs: AttributeSet) : LinearLayout(context,
                 payBtn.setOnClickListener { onBuyGiftCardButtonClicked?.invoke() }
                 payBtn.isEnabled = merchant.active ?: true
                 temporaryUnavailableText.isVisible = merchant.active == false
+                countryAvailabilityText.isVisible = true
             }
 
             showAllBtn.setOnClickListener { onShowAllLocationsClicked?.invoke() }
