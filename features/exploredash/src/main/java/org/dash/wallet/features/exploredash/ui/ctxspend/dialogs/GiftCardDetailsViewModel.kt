@@ -226,6 +226,12 @@ class GiftCardDetailsViewModel @Inject constructor(
                         "rejected" -> {
                             // TODO: handle
                             log.error("CTXSpend returned error: rejected")
+                            analyticsService.logError(
+                                CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),
+                                "CTX returned error: rejected ${
+                                giftCard.merchantName
+                                } for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
+                            )
                             _uiState.update {
                                 it.copy(
                                     error = CTXSpendException(
