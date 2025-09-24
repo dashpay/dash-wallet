@@ -140,6 +140,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                         transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                         placeholder(R.drawable.ic_gift_card_tx)
                         error(R.drawable.ic_gift_card_tx)
+                        listener(
+                            onError = { _, result ->
+                                log.error("Image load error for bitmap: ${result.throwable.message}", result.throwable)
+                            }
+                        )
                     }
 
                     binding.secondaryIcon.isVisible = true
@@ -364,12 +369,13 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 onSuccess = { _, _ ->
                     setMaxBrightness(true)
                 },
-                onError = { _, _ ->
+                onError = { _, result ->
                     binding.purchaseCardBarcode.isVisible = false
                     binding.barcodePlaceholder.isVisible = true
                     binding.barcodePlaceholderText.isVisible = false
                     binding.barcodeLoadingError.isVisible = true
                     setMaxBrightness(false)
+                    log.error("Image load error for barcode: ${result.throwable.message}", result.throwable)
                 }
             )
         }

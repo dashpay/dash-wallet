@@ -96,6 +96,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 scale(Scale.FILL)
                 placeholder(R.drawable.ic_image_placeholder)
                 error(R.drawable.ic_image_placeholder)
+                listener(
+                    onError = { _, result ->
+                        log.error("Image load error for ${merchant?.name}: ${merchant?.logoLocation}: ${result.throwable.message}", result.throwable)
+                    }
+                )
             }
         }
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsFraction)
