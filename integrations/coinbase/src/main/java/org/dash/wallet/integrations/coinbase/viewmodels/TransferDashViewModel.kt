@@ -51,6 +51,7 @@ class TransferDashViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
+    val minimumFee: Coin = Coin.valueOf(226)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState

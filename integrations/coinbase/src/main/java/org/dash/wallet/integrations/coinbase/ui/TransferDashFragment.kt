@@ -162,7 +162,15 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                             else -> {}
                         }
                     } else {
-                        transferDashViewModel.reviewTransfer(dashValue.toPlainString())
+                        val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected
+
+                        transferDashViewModel.reviewTransfer(
+                            if (isEmptyWallet) {
+                                dashValue - transferDashViewModel.minimumFee
+                            } else {
+                                dashValue
+                            }.toPlainString()
+                        )
                     }
                 }
             }
