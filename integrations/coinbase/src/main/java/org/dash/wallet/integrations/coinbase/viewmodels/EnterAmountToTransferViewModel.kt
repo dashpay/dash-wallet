@@ -158,10 +158,22 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 "$fiatBalance $localCurrencySymbol"
             }
         } else {
-            formattedValue = if (inputValue.contains("E")) {
+            val rawFormattedValue = if (inputValue.contains("E")) {
                 DecimalFormat("########.########").format(inputValue.toDouble())
             } else {
                 inputValue
+            }
+            
+            // Limit to 8 decimal places max
+            formattedValue = if (rawFormattedValue.contains(".")) {
+                val decimalIndex = rawFormattedValue.indexOf(".")
+                if (rawFormattedValue.length - decimalIndex - 1 > 8) {
+                    rawFormattedValue.substring(0, decimalIndex + 9)
+                } else {
+                    rawFormattedValue
+                }
+            } else {
+                rawFormattedValue
             }
             "$formattedValue $monetaryCode"
         }
