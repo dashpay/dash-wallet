@@ -318,12 +318,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } catch (e: IllegalArgumentException) {
             // Handle case where nav graph is no longer on back stack after process death
         }
-        // clear this listener
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->
-                WindowInsetsCompat.CONSUMED
-            }
-        }
         onBackPressedCallback?.remove()
     }
 
