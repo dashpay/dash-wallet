@@ -449,16 +449,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         searchHeaderAdapter.setOnSearchQuerySubmitted { hideKeyboard() }
 
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
-                val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
-                this.isKeyboardShowing = showingKeyboard
-
-                if (showingKeyboard) {
+        // Set up keyboard detection using view height changes
+        setupKeyboardDetection(bottomSheet)
+    }
+    
+    private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
+        val rootView = requireActivity().findViewById<View>(android.R.id.content)
+        var isKeyboardCurrentlyVisible = false
+        
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            val heightDiff = rootView.rootView.height - rootView.height
+            val isKeyboardVisible = heightDiff > 200 // Threshold for keyboard detection
+            
+            if (isKeyboardVisible != isKeyboardCurrentlyVisible) {
+                isKeyboardCurrentlyVisible = isKeyboardVisible
+                this.isKeyboardShowing = isKeyboardVisible
+                
+                if (isKeyboardVisible) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 }
-
-                insets
             }
         }
     }
@@ -609,7 +618,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            hardBackAction.invoke()
+            if (isKeyboardVisible()) {
+                // If keyboard is visible, hide it first and clear focus
+                requireActivity().currentFocus?.clearFocus()
+                hideKeyboard()
+                
+                // Add small delay to ensure keyboard is hidden and layout adjusts
+                lifecycleScope.launch {
+                    delay(150)
+                    // Force window to adjust after keyboard is hidden
+                    requireActivity().window?.setSoftInputMode(
+                        android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                    )
+                }
+            } else {
+                // Normal back behavior
+                hardBackAction.invoke()
+            }
         }
     }
 
@@ -857,6 +882,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun hideKeyboard() {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
+    }
+    
+    private fun isKeyboardVisible(): Boolean {
+        return isKeyboardShowing
     }
 
     private fun shouldShowUpButton(): Boolean {
