@@ -164,16 +164,17 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 inputValue
             }
             
-            // Limit to 8 decimal places max
-            formattedValue = if (rawFormattedValue.contains(".")) {
-                val decimalIndex = rawFormattedValue.indexOf(".")
-                if (rawFormattedValue.length - decimalIndex - 1 > 8) {
-                    rawFormattedValue.substring(0, decimalIndex + 9)
-                } else {
+            // Limit to 8 decimal places max using BigDecimal for proper rounding
+            formattedValue = if (rawFormattedValue.endsWith(".") || rawFormattedValue.isEmpty()) {
+                // Don't process incomplete decimal entries
+                rawFormattedValue
+            } else {
+                try {
+                    val bigDecimal = rawFormattedValue.toBigDecimal()
+                    bigDecimal.setScale(8, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+                } catch (e: Exception) {
                     rawFormattedValue
                 }
-            } else {
-                rawFormattedValue
             }
             "$formattedValue $monetaryCode"
         }
