@@ -112,10 +112,13 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
                     shadowElevation = 0
                 )
             ) { _, index ->
+                val changed = pickedCurrencyIndex != index
                 pickedCurrencyIndex = index
                 viewModel.isFiatSelected = index == 1
-                val cleanedValue = viewModel.formatInput
-                formatTransferredAmount(cleanedValue)
+                if (changed) {
+                    val cleanedValue = viewModel.formatInput
+                    formatTransferredAmount(cleanedValue)
+                }
             }
         }
 
