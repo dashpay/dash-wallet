@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -34,24 +33,34 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.net.ssl.SSLHandshakeException
 
 class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
-    val errorBody: String? = null
-) : Exception(message) {
+    val errorBody: String? = null,
+    cause: Throwable? = null
+) : Exception(message, cause) {
     var resourceString: ResourceString? = null
+    var giftCardResponse: GiftCardResponse? = null
+    var txId: String? = null
     private val errorMap: Map<String, Any>
 
-    constructor(message: ResourceString) : this("") {
+    constructor(message: ResourceString, giftCardResponse: GiftCardResponse? = null) : this("") {
         this.resourceString = message
+        this.giftCardResponse = giftCardResponse
+    }
+
+    constructor(message: String, giftCardResponse: GiftCardResponse?, txId: String) : this(message) {
+        this.giftCardResponse = giftCardResponse
+        this.txId = txId
     }
 
     init {
-        val type = object : TypeToken<Map<String, Any>>() {}.type
         errorMap = try {
             if (errorBody != null) {
-                Gson().fromJson(errorBody, type) ?: emptyMap()
+                @Suppress("UNCHECKED_CAST")
+                Gson().fromJson(errorBody, Map::class.java) as? Map<String, Any> ?: emptyMap()
             } else {
                 emptyMap()
             }
@@ -60,11 +69,17 @@ class CTXSpendException(
         }
     }
 
+    override fun toString(): String {
+        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
+    }
+
     val isLimitError: Boolean
         get() {
             val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
             return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
         }
+    val isNetworkError: Boolean
+        get() = cause?.let { it is SSLHandshakeException } ?: false
 }
 
 class CTXSpendRepository @Inject constructor(

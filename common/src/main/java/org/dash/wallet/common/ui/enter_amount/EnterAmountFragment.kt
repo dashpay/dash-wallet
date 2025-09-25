@@ -130,9 +130,13 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
 
         if (args.containsKey(ARG_INITIAL_AMOUNT)) {
             val initialAmount = args.getSerializable(ARG_INITIAL_AMOUNT)
-            binding.amountView.input = when {
-                initialAmount is Coin && dashToFiat -> initialAmount.toPlainString()
-                initialAmount is Fiat && !dashToFiat -> initialAmount.toPlainString()
+            when {
+                initialAmount is Coin && dashToFiat -> {
+                    viewModel._amount.value = initialAmount
+                }
+                initialAmount is Fiat && !dashToFiat -> {
+                    viewModel._fiatAmount.value = initialAmount
+                }
                 else -> throw IllegalArgumentException("dashToFiat argument and type of initialAmount do not match")
             }
         }
@@ -199,6 +203,15 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
         }
     }
 
+    private fun setAmountFromSavedState() {
+        if (binding.amountView.dashToFiat) {
+            binding.amountView.input = viewModel.amount.value?.toPlainString() ?: Coin.ZERO.toPlainString()
+        } else {
+            binding.amountView.input = viewModel.fiatAmount.value?.toPlainString()
+                ?: Fiat.valueOf(viewModel.selectedCurrencyCode, 0).toPlainString()
+        }
+    }
+
     private fun setupAmountView(dashToFiat: Boolean) {
         pickedCurrencyOption = if (dashToFiat) 1 else 0
         binding.currencyOptions.setViewCompositionStrategy(
@@ -223,6 +236,8 @@ class EnterAmountFragment : Fragment(R.layout.fragment_enter_amount) {
                 binding.amountView.dashToFiat = currency.title == Constants.DASH_CURRENCY
             }
         }
+
+        setAmountFromSavedState()
 
         binding.maxButton.setOnClickListener {
             lifecycleScope.launch { onMaxAmountButtonClick() }

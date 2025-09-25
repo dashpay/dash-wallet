@@ -323,7 +323,7 @@ open class DashPayViewModel @Inject constructor(
         val excludeIds: ArrayList<String> = arrayListOf()
     )
 
-    suspend fun hasEnoughCredits(): CreditBalanceInfo {
+    suspend fun hasEnoughCredits(): CreditBalanceInfo? {
         return platformRepo.getIdentityBalance()
     }
 }

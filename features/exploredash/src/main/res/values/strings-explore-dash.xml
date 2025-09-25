@@ -229,6 +229,7 @@
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
     <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
+    <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact CTX support to report the problem.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>
     <string name="gift_card_rejected">The payment has been rejected.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
@@ -248,6 +249,7 @@
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="ctx_terms_url" translatable="false">https://ctx.com/gift-card-agreement/</string>
     <string name="temporarily_unavailable">Temporarily unavailable</string>
+    <string name="country_availability">This card works only in the United States</string>
     <string name="token_expired_title">Your session expired</string>
     <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
 </resources>

@@ -81,6 +81,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 	private LoaderManager loaderManager;
 
 	private BlockchainService service;
+	private boolean serviceIsBound = false;
 
 	private ViewAnimator viewGroup;
 	private RecyclerView recyclerView;
@@ -111,7 +112,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
     public void onActivityCreated(final Bundle savedInstanceState) {
 		super.onActivityCreated(savedInstanceState);
 
-        activity.bindService(new Intent(activity, BlockchainServiceImpl.class), serviceConnection,
+        serviceIsBound = activity.bindService(new Intent(activity, BlockchainServiceImpl.class), serviceConnection,
                 Context.BIND_AUTO_CREATE);
 	}
 
@@ -169,7 +170,14 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 
 	@Override
     public void onDestroy() {
-		activity.unbindService(serviceConnection);
+		if (serviceIsBound) {
+			try {
+				activity.unbindService(serviceConnection);
+			} catch (IllegalArgumentException e) {
+				log.warn("Service not registered when unbinding", e);
+			}
+			serviceIsBound = false;
+		}
 
 		super.onDestroy();
 	}
@@ -209,6 +217,7 @@ public final class BlockListFragment extends Fragment implements BlockListAdapte
 			loaderManager.destroyLoader(ID_BLOCK_LOADER);
 
 			service = null;
+			serviceIsBound = false;
 		}
 	};
 

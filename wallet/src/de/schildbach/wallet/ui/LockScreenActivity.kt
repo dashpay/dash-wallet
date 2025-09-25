@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -550,6 +551,23 @@ open class LockScreenActivity : SecureActivity() {
         val inputManager = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         currentFocus?.windowToken?.let { token ->
             inputManager?.hideSoftInputFromWindow(token, 0)
+        }
+    }
+
+    @SuppressLint("MissingSuperCall")
+    override fun onSaveInstanceState(outState: Bundle) {
+        // Prevent TransactionTooLargeException by limiting saved state size
+        try {
+            super.onSaveInstanceState(outState)
+        } catch (e: RuntimeException) {
+            if (e.cause is android.os.TransactionTooLargeException) {
+                // Clear the bundle to prevent the crash and call super with empty bundle
+                outState.clear()
+                log.warn("Cleared saved state to prevent TransactionTooLargeException", e)
+                super.onSaveInstanceState(outState)
+            } else {
+                throw e
+            }
         }
     }
 

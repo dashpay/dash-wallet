@@ -315,6 +315,10 @@ public final class PaymentIntent implements Parcelable {
         return payeeName != null;
     }
 
+    public boolean hasPayeeUserId() {
+        return payeeUserId != null;
+    }
+
     public boolean hasOutputs() {
         return outputs != null && outputs.length > 0;
     }
@@ -468,6 +472,12 @@ public final class PaymentIntent implements Parcelable {
         if (paymentRequestHash != null) {
             builder.append(",paymentRequestHash=");
             builder.append(Constants.HEX.encode(paymentRequestHash));
+        }
+        if (payeeUsername != null) {
+            builder.append(",username=").append(payeeUsername);
+        }
+        if (hasPayeeUserId()) {
+            builder.append(",userId=").append(payeeUserId);
         }
         builder.append(']');
 

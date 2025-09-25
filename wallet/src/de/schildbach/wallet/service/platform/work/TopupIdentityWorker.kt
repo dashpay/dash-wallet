@@ -88,7 +88,7 @@ class TopupIdentityWorker @AssistedInject constructor(
                     workDataOf(
                         KEY_IDENTITY to identity,
                         KEY_TOPUP_TX to existingTopup.txId.toString(),
-                        KEY_BALANCE to platformRepo.getIdentityBalance().balance
+                        KEY_BALANCE to platformRepo.getIdentityBalance()?.balance
                     )
                 )
             } else {

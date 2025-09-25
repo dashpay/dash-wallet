@@ -35,6 +35,7 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.PowerManager
 import android.text.format.DateUtils
+import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleService
@@ -52,6 +53,7 @@ import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddress
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
@@ -249,6 +251,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
+    private var pendingForegroundNotification: Notification? = null
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
@@ -692,11 +695,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             serviceScope.launch {
                 // make sure that onCreate is finished
                 onCreateCompleted.await()
+                log.info("acquiring check() mutex")
                 checkMutex.lock()
                 try {
                     checkService()
                 } finally {
                     checkMutex.unlock()
+                    log.info("releasing check() mutex")
                 }
             }
         }
@@ -1043,120 +1048,132 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
-        val wallet = application.wallet
         serviceScope.launch {
-            cleanupDeferred?.await()
-            propagateContext()
-            peerConnectivityListener = PeerConnectivityListener()
-            broadcastPeerState(0)
-            blockChainFile =
-                File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME)
-            val blockChainFileExists = blockChainFile!!.exists()
-            headerChainFile = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.HEADERS_FILENAME)
-            mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME)
-            qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
-            if (!blockChainFileExists) {
-                log.info("blockchain does not exist, resetting wallet")
+            try {
+                log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
+                cleanupDeferred?.await()
                 propagateContext()
-                wallet?.reset()
-                resetMNLists(false)
-                resetMNListsOnPeerGroupStart = true
-            }
-            try {
-                blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
-                blockStore?.chainHead // detect corruptions as early as possible
-                headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
-                headerStore?.chainHead // detect corruptions as early as possible
-                withContext(Dispatchers.Main) { verifyBlockStores() }
-                val earliestKeyCreationTime = wallet!!.earliestKeyCreationTime
-                if (!blockChainFileExists && earliestKeyCreationTime > 0) {
-                    try {
-                        val watch = Stopwatch.createStarted()
-                        var checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
-                        CheckpointManager.checkpoint(
-                            Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore,
-                            earliestKeyCreationTime
-                        )
-                        //the headerStore should be set to the most recent checkpoint
-                        checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
-                        CheckpointManager.checkpoint(
-                            Constants.NETWORK_PARAMETERS, checkpointsInputStream, headerStore,
-                            System.currentTimeMillis() / 1000
-                        )
-                        watch.stop()
-                        log.info(
-                            "checkpoints loaded from '{}', took {}",
-                            Constants.Files.CHECKPOINTS_FILENAME,
-                            watch
-                        )
-                    } catch (x: IOException) {
-                        log.error("problem reading checkpoints, continuing without", x)
-                    }
+                val wallet = application.wallet
+                if (wallet == null) {
+                    log.error("onCreate: wallet is null after cleanup, service cannot continue")
+                    return@launch
                 }
-            } catch (x: BlockStoreException) {
-                blockChainFile!!.delete()
-                headerChainFile!!.delete()
-                resetMNLists(false)
-                val msg = "blockstore cannot be created"
-                log.error(msg, x)
-                throw Error(msg, x)
-            }
-            try {
-                blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
-                headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
-                blockchainStateDataProvider.setBlockChain(blockChain)
-            } catch (x: BlockStoreException) {
-                throw Error("blockchain cannot be created", x)
-            }
-            // register receivers on the main thread
-            withContext(Dispatchers.Main) {
-                val intentFilter = IntentFilter()
-                intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-                intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
-                intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
-                registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
-                connectivityReceiverRegistered = true
-                log.info("receiver register: connectivityReceiver, {}", connectivityReceiver)
-            }
-            application.wallet!!.addCoinsReceivedEventListener(
-                Threading.SAME_THREAD,
-                walletEventListener
-            )
-            application.wallet!!.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
-            application.wallet!!.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
-            config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
-            withContext(Dispatchers.Main) {
-                registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
-                tickRecieverRegistered = true
-                log.info("receiver register: tickReceiver, {}", tickReceiver)
-            }
-            peerDiscoveryList.add(dnsDiscovery)
-            updateAppWidget()
-            blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
-                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-            }
-            apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
-            coinJoinService.observeMixingState().observe(this@BlockchainServiceImpl) { mixingStatus ->
-                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-            }
-            coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
-                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-            }
+                peerConnectivityListener = PeerConnectivityListener()
+                broadcastPeerState(0)
+                blockChainFile =
+                    File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME)
+                val blockChainFileExists = blockChainFile!!.exists()
+                headerChainFile = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.HEADERS_FILENAME)
+                mnlistinfoBootStrapStream = loadStream(Constants.Files.MNLIST_BOOTSTRAP_FILENAME)
+                qrinfoBootStrapStream = loadStream(Constants.Files.QRINFO_BOOTSTRAP_FILENAME)
+                if (!blockChainFileExists) {
+                    log.info("blockchain does not exist, resetting wallet")
+                    propagateContext()
+                    wallet.reset()
+                    resetMNLists(false)
+                    resetMNListsOnPeerGroupStart = true
+                }
+                try {
+                    blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                    blockStore?.chainHead // detect corruptions as early as possible
+                    headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                    headerStore?.chainHead // detect corruptions as early as possible
+                    withContext(Dispatchers.Main) { verifyBlockStores() }
+                    val earliestKeyCreationTime = wallet.earliestKeyCreationTime
+                    if (!blockChainFileExists && earliestKeyCreationTime > 0) {
+                        try {
+                            val watch = Stopwatch.createStarted()
+                            var checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+                            CheckpointManager.checkpoint(
+                                Constants.NETWORK_PARAMETERS, checkpointsInputStream, blockStore,
+                                earliestKeyCreationTime
+                            )
+                            //the headerStore should be set to the most recent checkpoint
+                            checkpointsInputStream = assets.open(Constants.Files.CHECKPOINTS_FILENAME)
+                            CheckpointManager.checkpoint(
+                                Constants.NETWORK_PARAMETERS, checkpointsInputStream, headerStore,
+                                System.currentTimeMillis() / 1000
+                            )
+                            watch.stop()
+                            log.info(
+                                "checkpoints loaded from '{}', took {}",
+                                Constants.Files.CHECKPOINTS_FILENAME,
+                                watch
+                            )
+                        } catch (x: IOException) {
+                            log.error("problem reading checkpoints, continuing without", x)
+                        }
+                    }
+                } catch (x: BlockStoreException) {
+                    blockChainFile!!.delete()
+                    headerChainFile!!.delete()
+                    resetMNLists(false)
+                    val msg = "blockstore cannot be created"
+                    log.error(msg, x)
+                    throw Error(msg, x)
+                }
+                try {
+                    blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
+                    headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
+                    blockchainStateDataProvider.setBlockChain(blockChain)
+                } catch (x: BlockStoreException) {
+                    throw Error("blockchain cannot be created", x)
+                }
+                // register receivers on the main thread
+                withContext(Dispatchers.Main) {
+                    val intentFilter = IntentFilter()
+                    intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
+                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
+                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
+                    registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
+                    connectivityReceiverRegistered = true
+                    log.info("receiver register: connectivityReceiver, {}", connectivityReceiver)
+                }
+                wallet.addCoinsReceivedEventListener(
+                    Threading.SAME_THREAD,
+                    walletEventListener
+                )
+                wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
+                wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
+                config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
+                withContext(Dispatchers.Main) {
+                    registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
+                    tickRecieverRegistered = true
+                    log.info("receiver register: tickReceiver, {}", tickReceiver)
+                }
+                peerDiscoveryList.add(dnsDiscovery)
+                updateAppWidget()
+                blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
+                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                }
+                apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
+                coinJoinService.observeMixingState().observe(this@BlockchainServiceImpl) { mixingStatus ->
+                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                }
+                coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
+                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                }
 
-            // we need the total wallet balance for the CoinJoin notification
-            application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
-                balance = it
-                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-            }
+                // we need the total wallet balance for the CoinJoin notification
+                application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
+                    balance = it
+                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                }
 
-            // we need the mixed balance for the CoinJoin notification
-            application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
-                mixedBalance = it
-                handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-            }
+                // we need the mixed balance for the CoinJoin notification
+                application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
+                    mixedBalance = it
+                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                }
 
-            onCreateCompleted.complete(Unit) // Signal completion of onCreate
-            log.info(".onCreate() finished")
+                onCreateCompleted.complete(Unit)
+                log.info(".onCreate() finished")
+            } catch (t: Throwable) {
+                log.error(".onCreate() failed", t)
+                if (onCreateCompleted.isActive) {
+                    onCreateCompleted.complete(Unit)
+                }
+            }
         }
     }
 
@@ -1202,7 +1219,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         log.info(".onStartCommand($intent)")
         super.onStartCommand(intent, flags, startId)
         serviceScope.launch {
+            log.info("onStartCommand waiting for onCreate to complete...")
             onCreateCompleted.await() // wait until onCreate is finished
+            log.info("onCreate completed, processing onStartCommand")
             if (intent != null) {
                 propagateContext()
                 //Restart service as a Foreground Service if it's synchronizing the blockchain
@@ -1232,18 +1251,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } else if (BlockchainService.ACTION_BROADCAST_TRANSACTION == action) {
                     val hash = Sha256Hash
                         .wrap(intent.getByteArrayExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH))
-                    val tx = application.wallet!!.getTransaction(hash)
-                    if (peerGroup != null) {
-                        log.info("broadcasting transaction " + tx!!.hashAsString)
-                        val count = peerGroup!!.numConnectedPeers()
-                        var minimum = peerGroup!!.minBroadcastConnections
-                        // if the number of peers is <= 3, then only require that number of peers to send
-                        // if the number of peers is 0, then require 3 peers (default min connections)
-                        if (count in 1..3) minimum = count
-                        peerGroup!!.broadcastTransaction(tx, minimum, true)
+                    log.info("broadcast transaction requested for hash: {}", hash)
+                    val wallet = application.wallet
+                    if (wallet != null) {
+                        val tx = wallet.getTransaction(hash)
+                        if (tx != null) {
+                            log.info("found transaction {} in wallet", tx.txId)
+                            if (peerGroup != null) {
+                                val count = peerGroup!!.numConnectedPeers()
+                                log.info("broadcasting transaction {} with {} connected peers", tx.txId, count)
+                                var minimum = peerGroup!!.minBroadcastConnections
+                                // if the number of peers is <= 3, then only require that number of peers to send
+                                // if the number of peers is 0, then require 3 peers (default min connections)
+                                if (count in 1..3) minimum = count
+                                peerGroup!!.broadcastTransaction(tx, minimum, true)
+                                log.info("transaction {} broadcast initiated", tx.txId)
+                            } else {
+                                log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
+                                tx.confidence.setPeerInfo(0, 1)
+                            }
+                        } else {
+                            log.error("transaction {} not found in wallet", hash)
+                        }
                     } else {
-                        log.info("peergroup not available, not broadcasting transaction {}", tx!!.txId)
-                        tx.confidence.setPeerInfo(0, 1)
+                        log.error("wallet is null, cannot broadcast transaction")
                     }
                 } else if (BlockchainService.ACTION_RESET_BLOOMFILTERS == action) {
                     if (peerGroup != null) {
@@ -1280,11 +1311,31 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             try {
                 startForeground(notification)
             } catch (e: ForegroundServiceStartNotAllowedException) {
-                log.info("failed to start in foreground", e)
+                log.info("failed to start in foreground, try again", e)
+                // On Android 15+, we'll retry later when the app is in foreground
+                // For now, continue running as a regular service
+                scheduleRetryForegroundService(notification)
             }
         } else {
             startForeground(notification)
         }
+    }
+
+    private fun scheduleRetryForegroundService(notification: Notification) {
+        pendingForegroundNotification = notification
+        // Schedule a retry after a few seconds to see if the app comes to foregrxound
+        handler.postDelayed({
+            if (pendingForegroundNotification != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    startForeground(pendingForegroundNotification!!)
+                    pendingForegroundNotification = null
+                    log.info("Successfully started foreground service on retry")
+                } catch (e: ForegroundServiceStartNotAllowedException) {
+                    log.info("Foreground service start still not allowed, will continue as background service")
+                    pendingForegroundNotification = null
+                }
+            }
+        }, 5000) // Retry after 5 seconds
     }
 
     override fun onDestroy() {
@@ -1300,15 +1351,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             unregisterReceiver(connectivityReceiver)
             connectivityReceiverRegistered = false
         }
-        cleanupDeferred = CompletableDeferred()
         serviceScope.launch {
             try {
+                log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
+                log.info("The check() mutex is locked: {}", checkMutex.isLocked)
+                cleanupDeferred = CompletableDeferred()
                 checkMutex.lock()
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
-                application.wallet!!.removeChangeEventListener(walletEventListener)
-                application.wallet!!.removeCoinsSentEventListener(walletEventListener)
-                application.wallet!!.removeCoinsReceivedEventListener(walletEventListener)
+                val wallet = application.wallet
+                if (wallet != null) {
+                    wallet.removeChangeEventListener(walletEventListener)
+                    wallet.removeCoinsSentEventListener(walletEventListener)
+                    wallet.removeCoinsReceivedEventListener(walletEventListener)
+                }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
@@ -1321,7 +1377,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
                     peerGroup!!.stop()
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
-                    application.wallet!!.riskAnalyzer = defaultRiskAnalyzer
+                    if (wallet != null) {
+                        wallet.riskAnalyzer = defaultRiskAnalyzer
+                    }
                     riskAnalyzer!!.shutdown()
                     log.info("peergroup stopped")
                 }
@@ -1378,6 +1436,56 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             log.warn("low memory detected, stopping service")
             stopSelf()
         }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        log.warn("Foreground service timeout reached for startId: $startId, fgsType: $fgsType")
+        log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
+        
+        // Show notification about the timeout
+        showTimeoutNotification()
+        
+        // Android 15 requires us to call stopSelf() within a few seconds
+        // when onTimeout is called for dataSync services
+        try {
+            stopSelf()
+        } catch (e: Exception) {
+            log.error("Error stopping service on timeout", e)
+        }
+        
+        super.onTimeout(startId, fgsType)
+    }
+
+    private fun showTimeoutNotification() {
+        val mainActivityIntent = MainActivity.createIntent(this).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            0,
+            mainActivityIntent,
+            PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = when {
+            coinJoinService.isMixing() -> getString(R.string.coinjoin_paused)
+            blockchainState?.replaying == true -> getString(R.string.notification_sync_paused)
+            else -> getString(R.string.notification_background_processes_paused)
+        }
+        val text = getString(R.string.notification_background_processes_paused_text)
+        
+        val notification = NotificationCompat.Builder(this, Constants.NOTIFICATION_CHANNEL_ID_ONGOING)
+            .setSmallIcon(R.drawable.ic_dash_d_white)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+        
+        nm?.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
     }
 
     private fun createNetworkSyncNotification(blockchainState: BlockchainState? = null): Notification {

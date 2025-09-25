@@ -93,6 +93,9 @@ open class SendCoinsActivity : LockScreenActivity() {
     }
 
     private lateinit var binding: ActivitySendCoinsBinding
+    private var paymentIntent: PaymentIntent? = null
+    private var buyCredits: Boolean = false
+    private var isQuickScan: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,8 +112,10 @@ open class SendCoinsActivity : LockScreenActivity() {
         if (savedInstanceState == null) {
             lifecycleScope.launch {
                 try {
-                    val paymentIntent = initPaymentIntentFromIntent(intent)
-                    initNavController(paymentIntent)
+                    paymentIntent = initPaymentIntentFromIntent(intent)
+                    buyCredits = intent.extras?.getBoolean(INTENT_EXTRA_BUY_CREDITS) ?: false
+                    isQuickScan = intent.extras?.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN) ?: false
+                    initNavController(paymentIntent!!)
                 } catch (ex: Exception) {
                     val message = if (ex is PaymentIntentParserException) {
                         ex.localizedMessage.format(resources)
@@ -127,6 +132,30 @@ open class SendCoinsActivity : LockScreenActivity() {
                 } finally {
                     binding.progressRing.isVisible = false
                 }
+            }
+        } else {
+            // Try to restore from intent extras first (should be preserved by Android)
+            val intentPaymentIntent = intent.getParcelableExtra(INTENT_EXTRA_PAYMENT_INTENT) as PaymentIntent?
+            val intentBuyCredits = intent.extras?.getBoolean(INTENT_EXTRA_BUY_CREDITS) ?: false
+            val intentIsQuickScan = intent.extras?.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN) ?: false
+            
+            if (intentPaymentIntent != null) {
+                // Intent extras are preserved, use them
+                paymentIntent = intentPaymentIntent
+                buyCredits = intentBuyCredits
+                isQuickScan = intentIsQuickScan
+            } else {
+                // Fallback to savedInstanceState
+                paymentIntent = savedInstanceState.getParcelable(INTENT_EXTRA_PAYMENT_INTENT)
+                buyCredits = savedInstanceState.getBoolean(INTENT_EXTRA_BUY_CREDITS, false)
+                isQuickScan = savedInstanceState.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN, false)
+            }
+            
+            binding.progressRing.isVisible = false
+            
+            // Re-initialize nav controller with restored state
+            if (paymentIntent != null) {
+                initNavController(paymentIntent!!)
             }
         }
     }
@@ -226,8 +255,6 @@ open class SendCoinsActivity : LockScreenActivity() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         val navController = navHostFragment.navController
         val navGraph = navController.navInflater.inflate(R.navigation.nav_send)
-        val buyCredits = intent.extras?.getBoolean(INTENT_EXTRA_BUY_CREDITS) ?: false
-        val isQuickScan = intent.extras?.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN) ?: false
 
         navGraph.setStartDestination(
             if (paymentIntent.hasPaymentRequestUrl()) {
@@ -247,6 +274,13 @@ open class SendCoinsActivity : LockScreenActivity() {
                 INTENT_EXTRA_IS_QUICK_SCAN to isQuickScan
             )
         )
+    }
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        paymentIntent?.let { outState.putParcelable(INTENT_EXTRA_PAYMENT_INTENT, it) }
+        outState.putBoolean(INTENT_EXTRA_BUY_CREDITS, buyCredits)
+        outState.putBoolean(INTENT_EXTRA_IS_QUICK_SCAN, isQuickScan)
     }
 
     private fun Uri.hasValidScheme() =

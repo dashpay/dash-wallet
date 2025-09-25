@@ -44,6 +44,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
@@ -429,9 +430,9 @@ class PlatformSynchronizationService @Inject constructor(
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
-                        val securityGuard = SecurityGuard()
+                        val securityGuard = SecurityGuard.getInstance()
                         securityGuard.retrievePassword()
-                    } catch (e: IllegalArgumentException) {
+                    } catch (e: SecurityGuardException) {
                         log.error("There was an error retrieving the wallet password", e)
                         analytics.logError(e, "There was an error retrieving the wallet password")
                         platformRepo.fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
@@ -470,6 +471,7 @@ class PlatformSynchronizationService @Inject constructor(
             contactRequest.accountReference
         )
         try {
+            Context.propagate(platformRepo.walletApplication.wallet!!.context)
             if (!platformRepo.walletApplication.wallet!!.hasSendingKeyChain(contact)) {
                 log.info("adding received request: ${contactRequest.ownerId} to wallet")
                 val contactIdentity = platform.identities.get(contactRequest.ownerId)
@@ -477,9 +479,9 @@ class PlatformSynchronizationService @Inject constructor(
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
                         // always create a SecurityGuard when it is required
-                        val securityGuard = SecurityGuard()
+                        val securityGuard = SecurityGuard.getInstance()
                         securityGuard.retrievePassword()
-                    } catch (e: IllegalArgumentException) {
+                    } catch (e: SecurityGuardException) {
                         log.error("There was an error retrieving the wallet password", e)
                         analytics.logError(e, "There was an error retrieving the wallet password")
                         platformRepo.fireSeriousErrorListeners(SeriousError.MissingEncryptionIV)
@@ -1379,9 +1381,13 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
+    private var hasCheckedTopups = false // only run once
     private suspend fun checkTopUps() {
-        platformRepo.getWalletEncryptionKey()?.let {
-            topUpRepository.checkTopUps(it)
+        if (!hasCheckedTopups) {
+            platformRepo.getWalletEncryptionKey()?.let {
+                topUpRepository.checkTopUps(it)
+                hasCheckedTopups = true
+            }
         }
     }
 

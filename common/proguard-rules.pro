@@ -3,3 +3,4 @@
     public protected *;
 }
 -keep public interface org.dash.wallet.common.** {*;}
+-dontwarn java.lang.invoke.StringConcatFactory

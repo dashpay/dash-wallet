@@ -125,7 +125,6 @@ public final class Constants {
                 break;
             }
             case "devnet": {
-                // Schnapps Devnet
                 BIP44_PATH = DeterministicKeyChain.BIP44_ACCOUNT_ZERO_PATH_TESTNET;
                 NETWORK_PARAMETERS = OuzoDevNetParams.get();
                 String devNetName = ((DevNetParams)NETWORK_PARAMETERS).getDevNetName();

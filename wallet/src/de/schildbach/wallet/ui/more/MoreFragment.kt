@@ -43,7 +43,6 @@ import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.SettingsActivity
 import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
@@ -123,7 +122,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         binding.settings.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.MoreMenu.SETTINGS, mapOf())
-            startActivity(Intent(requireContext(), SettingsActivity::class.java))
+            safeNavigate(MoreFragmentDirections.moreToSettings())
         }
         binding.tools.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.MoreMenu.TOOLS, mapOf())

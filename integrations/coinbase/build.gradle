@@ -11,9 +11,9 @@ plugins {
 android {
 
     defaultConfig {
-        compileSdk 34
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 34
+        targetSdkVersion 35
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -27,11 +27,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
@@ -49,6 +49,11 @@ android {
 hilt {
     enableAggregatingTask = true
 }
+
+kotlin {
+    jvmToolchain(17)
+}
+
 
 dependencies {
 
@@ -88,7 +93,7 @@ dependencies {
 
     // Tests
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "io.mockk:mockk:1.9.3"
+    testImplementation "io.mockk:mockk:1.13.8"
     testImplementation "androidx.test:core-ktx:1.4.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation 'org.hamcrest:hamcrest:2.2'

@@ -38,6 +38,7 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -177,15 +178,15 @@ class PlatformRepo @Inject constructor(
         return if (walletApplication.wallet!!.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
-            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+            password?.let { walletApplication.wallet!!.keyCrypter!!.deriveKey(it) }
         } else {
             null
         }
@@ -196,9 +197,9 @@ class PlatformRepo @Inject constructor(
         return if (wallet.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null
@@ -960,8 +961,13 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+    fun getNextContactAddress(userId: String, accountReference: Int): Address? {
+        return try {
+            blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+        } catch (e: NullPointerException) {
+            log.error("Failed to get contact address due to null key chain", e)
+            null
+        }
     }
 
     var counterForReport = 0
@@ -1047,15 +1053,14 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
-
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
-
         return try {
-            platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            getWalletEncryptionKey()?.let {
+                val firstIdentityKey = getBlockchainIdentityKey(0, it) ?: return null
+                platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            }
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {
@@ -1186,9 +1191,14 @@ class PlatformRepo @Inject constructor(
         return report.toString()
     }
 
-    suspend fun getIdentityBalance(): CreditBalanceInfo {
+    suspend fun getIdentityBalance(): CreditBalanceInfo? {
         return withContext(Dispatchers.IO) {
-            CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            try {
+                CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            } catch (e: Exception) {
+                log.error("Failed to get identity balance", e)
+                null
+            }
         }
     }
 

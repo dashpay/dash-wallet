@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.work.SendInviteWorker
@@ -69,7 +70,10 @@ import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.TimeoutCancellationException
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import java.util.concurrent.TimeUnit
 import org.dashj.platform.dapiclient.MaxRetriesReachedException
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
@@ -366,13 +370,66 @@ class TopUpRepositoryImpl @Inject constructor(
         ) ?: addTopUp(topUpTx.txId)
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
+        log.info("topup tx confidence: {}", confidence)
         val wasTxSent = confidence.isChainLocked ||
             confidence.isTransactionLocked ||
+                confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
             confidence.numBroadcastPeers() > 0
+
         if (!wasTxSent) {
             sendTransaction(topUpTx)
+        } else {
+            // wait for IX Lock or mining if the TX has been sent
+            // the transaction was probably sent previously
+            if (confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
+                try {
+                    withTimeout(TimeUnit.SECONDS.toMillis(30)) {
+                        suspendCancellableCoroutine { continuation ->
+                            val listener = object : TransactionConfidence.Listener {
+                                override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
+                                    when (reason) {
+                                        TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
+                                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
+                                                log.info("topup: observe ISLock")
+                                                confidence.removeEventListener(this)
+                                                continuation.resumeWith(Result.success(Unit))
+                                            }
+                                        }
+                                        TransactionConfidence.Listener.ChangeReason.DEPTH,
+                                        TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
+                                            if (confidence!!.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || confidence.isChainLocked) {
+                                                log.info("topup: observe block or chainlock")
+                                                confidence.removeEventListener(this)
+                                                continuation.resumeWith(Result.success(Unit))
+                                            }
+                                        }
+                                        else -> { /* ignore */ }
+                                    }
+                                }
+                            }
+
+                            // Register cancellation handler to clean up listener
+                            continuation.invokeOnCancellation {
+                                confidence.removeEventListener(listener)
+                                log.info("topup: listener removed due to cancellation")
+                            }
+
+                            confidence.addEventListener(listener)
+                        }
+                    }
+                } catch (e: TimeoutCancellationException) {
+                    // Timeout reached, continue with execution
+                    log.info("topup, timeout waiting for islock, continue...")
+                }
+            }
+
         }
-        log.info("topup tx sent: {}", topUpTx.txId)
+        val status = when (confidence.confidenceType) {
+            TransactionConfidence.ConfidenceType.BUILDING -> "mined in block ${confidence.appearedAtChainHeight}"
+            TransactionConfidence.ConfidenceType.PENDING -> "broadcast tx to ${confidence.numBroadcastPeers()} peers"
+            else -> confidence.toString()
+        }
+        log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
             platformRepo.blockchainIdentity.topUp(
                 topUpTx,
@@ -387,6 +444,7 @@ class TopUpRepositoryImpl @Inject constructor(
             if (e.message?.let { regex.matches(it) || it.contains("Object already exists: state transition already in chain")} == true) {
                 // the asset lock was already used
                 topUpsDao.insert(topUp.copy(creditedAt = System.currentTimeMillis()))
+                log.info("topup success, already submitted: {}", topUpTx.txId)
             } else {
                 throw e
             }
@@ -417,10 +475,14 @@ class TopUpRepositoryImpl @Inject constructor(
                     if (topUp == null) {
                         topUpsDao.insert(TopUp(assetLockTx.txId, identity))
                     }
-                    topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
+                    try {
+                        topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
 //                    TopupIdentityOperation(walletApplication)
 //                        .create(identity, assetLockTx.txId)
 //                        .enqueue()
+                    } catch (e: Exception) {
+                        // swallow
+                    }
                 }
             }
             checkedPreviousTopUps = true

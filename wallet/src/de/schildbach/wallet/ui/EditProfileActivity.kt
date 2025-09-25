@@ -46,7 +46,6 @@ import androidx.lifecycle.lifecycleScope
 import com.amulyakhare.textdrawable.TextDrawable
 import com.bumptech.glide.Glide
 import com.bumptech.glide.signature.ObjectKey
-import com.google.android.gms.auth.api.identity.AuthorizationRequest
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
 import com.google.android.gms.common.api.Scope
@@ -57,6 +56,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.*
+import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.dashpay.work.UpdateProfileError
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -337,11 +337,7 @@ class EditProfileActivity : LockScreenActivity() {
     }
 
     private fun authorizeGoogleDrive() {
-        val authorizationRequest = AuthorizationRequest
-            .builder()
-            .setRequestedScopes(
-                listOf(Scope(DriveScopes.DRIVE))
-            ).build()
+        val authorizationRequest = editProfileViewModel.getGoogleDriveAuthRequest()
 
         Identity.getAuthorizationClient(this@EditProfileActivity)
             .authorize(authorizationRequest)
@@ -419,26 +415,35 @@ class EditProfileActivity : LockScreenActivity() {
     private fun saveButton() {
         lifecycleScope.launch {
             val enough = editProfileViewModel.hasEnoughCredits()
-            val shouldWarn = enough.isBalanceWarning()
-            val isEmpty = enough.isBalanceWarning()
-
-            if (shouldWarn || isEmpty) {
-                val answer = AdaptiveDialog.create(
+            if (enough == null) {
+                AdaptiveDialog.create(
                     R.drawable.ic_warning_yellow_circle,
-                    if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
-                    if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
-                    getString(R.string.credit_balance_button_maybe_later),
-                    getString(R.string.credit_balance_button_buy)
+                    getString(R.string.platform_credits_error),
+                    getString(R.string.platform_communication_error),
+                    getString(R.string.button_ok),
                 ).showAsync(this@EditProfileActivity)
-
-                if (answer == true) {
-                    SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
-                } else {
-                    if (shouldWarn)
-                        save()
-                }
             } else {
-                save()
+                val shouldWarn = enough.isBalanceWarning()
+                val isEmpty = enough.isBalanceEmpty()
+
+                if (shouldWarn || isEmpty) {
+                    val answer = AdaptiveDialog.create(
+                        R.drawable.ic_warning_yellow_circle,
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_title) else getString(R.string.credit_balance_low_warning_title),
+                        if (isEmpty) getString(R.string.credit_balance_empty_warning_message) else getString(R.string.credit_balance_low_warning_message),
+                        getString(R.string.credit_balance_button_maybe_later),
+                        getString(R.string.credit_balance_button_buy)
+                    ).showAsync(this@EditProfileActivity)
+
+                    if (answer == true) {
+                        SendCoinsActivity.startBuyCredits(this@EditProfileActivity)
+                    } else {
+                        if (shouldWarn)
+                            save()
+                    }
+                } else {
+                    save()
+                }
             }
         }
     }

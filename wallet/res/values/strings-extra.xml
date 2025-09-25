@@ -276,8 +276,8 @@
     <string name="menu_settings_subtitle">Default currency, shortcuts, about…</string>
     <string name="menu_tools_title">Tools</string>
     <string name="menu_tools_subtitle">Import private key…</string>
-    <string name="menu_local_currency">Local Currency</string>
-    <string name="menu_rescan_blockchain">Rescan Blockchain</string>
+    <string name="menu_local_currency">Local currency</string>
+    <string name="menu_rescan_blockchain">Rescan blockchain</string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">Report an issue</string>
     <string name="menu_explore_title">Explore</string>

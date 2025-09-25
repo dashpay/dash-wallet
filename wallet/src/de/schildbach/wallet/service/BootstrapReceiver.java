@@ -36,11 +36,13 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet_test.R;
 
+import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.text.format.DateUtils;
 
 import androidx.annotation.WorkerThread;
@@ -76,7 +78,7 @@ public class BootstrapReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(final Context context, final Intent intent) {
-        log.info("got broadcast: " + intent);
+        log.info("got broadcast: {}", intent);
         final PendingResult result = goAsync();
         executor.execute(() -> {
             org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
@@ -97,8 +99,16 @@ public class BootstrapReceiver extends BroadcastReceiver {
                 maybeUpgradeWallet(walletDataProvider.getWallet());
 
             // make sure there is always a blockchain sync scheduled
-            application.startBlockchainService(false);
-
+            if (application.getWallet() != null) {
+                if (bootCompleted && Build.VERSION.SDK_INT >= 35) { // Android 15+ (VANILLA_ICE_CREAM)
+                    // Android 15+ restricts BOOT_COMPLETED from launching dataSync foreground services
+                    // Schedule service start with a short delay using AlarmManager
+                    scheduleDelayedBlockchainServiceStart(context);
+                } else {
+                    // For package replacement or older Android versions, start normally
+                    application.startBlockchainService(false);
+                }
+            }
 
             // if the app hasn't been used for a while and contains coins, maybe show reminder
             maybeShowInactivityNotification();
@@ -213,5 +223,17 @@ public class BootstrapReceiver extends BroadcastReceiver {
         config.setRemindBalance(false);
         final NotificationManager nm = context.getSystemService(NotificationManager.class);
         nm.cancel(Constants.NOTIFICATION_ID_INACTIVITY);
+    }
+
+    @WorkerThread
+    private void scheduleDelayedBlockchainServiceStart(final Context context) {
+        log.info("scheduling delayed blockchain service start for Android 15+");
+        final AlarmManager alarmManager = context.getSystemService(AlarmManager.class);
+        final Intent serviceIntent = new Intent(context, DelayedServiceStartReceiver.class);
+        final PendingIntent pendingIntent = PendingIntent.getBroadcast(context, 0, serviceIntent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        
+        // Schedule service start with a 5-second delay to avoid BOOT_COMPLETED restrictions
+        final long delayMs = 5000;
+        alarmManager.set(AlarmManager.RTC_WAKEUP, System.currentTimeMillis() + delayMs, pendingIntent);
     }
 }
