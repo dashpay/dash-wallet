@@ -298,7 +298,7 @@ class SearchUserFragment : Fragment(R.layout.activity_search_dashpay_profile_roo
                     getString(R.string.platform_credits_error),
                     getString(R.string.platform_communication_error),
                     getString(R.string.button_ok),
-                ).showAsync(this@SearchUserActivity)
+                ).showAsync(requireActivity())
             } else {
                 val shouldWarn = enough.isBalanceWarning()
                 val isEmpty = enough.isBalanceEmpty()
