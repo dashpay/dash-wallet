@@ -418,12 +418,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     val errorMessage = blockchainIdentityData.creationStateErrorMessage
                     val needsNewUsername =
                         blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
-                                (errorMessage.contains("Document transitions with duplicate unique properties") ||
-                                        errorMessage.contains("missing domain document for"))
+                                (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
+                                        errorMessage?.contains("missing domain document for") == true)
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
-                        !errorMessage.contains("invalid quorum: quorum not found")
+                        errorMessage?.contains("invalid quorum: quorum not found") != true
                     ) {
                         startActivity(
                             CreateUsernameActivity.createIntentReuseTransaction(

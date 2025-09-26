@@ -47,6 +47,8 @@ import org.dashj.platform.sdk.KeyType
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.net.toUri
+import org.slf4j.Logger
 
 enum class IdentityCreationState {
     NONE,   // this should always be the first value
@@ -76,17 +78,22 @@ enum class IdentityCreationState {
     DONE_AND_DISMISS // this should always be the last value
 }
 
-data class BlockchainIdentityData(
-    var creationState: IdentityCreationState = IdentityCreationState.NONE,
-    var creationStateErrorMessage: String?,
-    var username: String?,
-    var usernameSecondary: String?,
-    var userId: String?,
-    var restoring: Boolean,
+class BlockchainIdentityData(
+    creationState: IdentityCreationState = IdentityCreationState.NONE,
+    creationStateErrorMessage: String?,
+    username: String?,
+    usernameSecondary: String?,
+    userId: String?,
+    restoring: Boolean,
+    creditFundingTxId: Sha256Hash? = null,
+    usingInvite: Boolean = false,
+    invite: InvitationLinkData? = null,
+    verificationLink: String? = null,
+    cancelledVerificationLink: Boolean? = null,
+    usernameRequested: UsernameRequestStatus? = null,
+    votingPeriodStart: Long? = null,
+    // Extended properties specific to full identity data
     var identity: Identity? = null,
-    var creditFundingTxId: Sha256Hash? = null,
-    var usingInvite: Boolean = false,
-    var invite: InvitationLinkData? = null,
     var preorderSalt: ByteArray? = null,
     var registrationStatus: IdentityStatus? = null,
     var usernameStatus: UsernameStatus? = null,
@@ -96,25 +103,32 @@ data class BlockchainIdentityData(
     var totalKeyCount: Int? = null,
     var keysCreated: Long? = null,
     var currentMainKeyIndex: Int? = null,
-    var currentMainKeyType: KeyType? = null,
-    var verificationLink: String? = null,
-    val cancelledVerificationLink: Boolean? = null,
-    var usernameRequested: UsernameRequestStatus? = null,
-    var votingPeriodStart: Long? = null
-    ) {
+    var currentMainKeyType: KeyType? = null
+) : BlockchainIdentityBaseData(
+    creationState = creationState,
+    creationStateErrorMessage = creationStateErrorMessage,
+    username = username,
+    usernameSecondary = usernameSecondary,
+    userId = userId,
+    restoring = restoring,
+    creditFundingTxId = creditFundingTxId,
+    usingInvite = usingInvite,
+    invite = invite,
+    requestedUsername = username, // Map username to requestedUsername
+    verificationLink = verificationLink,
+    cancelledVerificationLink = cancelledVerificationLink,
+    usernameRequested = usernameRequested,
+    votingPeriodStart = votingPeriodStart
+) {
 
     companion object {
-        val log = LoggerFactory.getLogger(BlockchainIdentityData::class.java)
+        private val log: Logger = LoggerFactory.getLogger(BlockchainIdentityData::class.java)
     }
-    var id = 1
-        set(@Suppress("UNUSED_PARAMETER") value) {
-            field = 1
-        }
 
     private var creditFundingTransactionCache: AssetLockTransaction? = null
 
     fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {
-        if (creditFundingTxId == null) {
+        if (super.creditFundingTxId == null) {
             val authExtension =
                 wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
             val list = authExtension.assetLockTransactions
@@ -123,7 +137,7 @@ data class BlockchainIdentityData(
         }
         if (wallet != null) {
             val watch1 = Stopwatch.createStarted()
-            creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
+            creditFundingTransactionCache = wallet.getTransaction(super.creditFundingTxId)?.run {
                 log.info("loading wallet.getTransaction: {}", watch1)
                 val authExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                 val watch2 = Stopwatch.createStarted()
@@ -135,24 +149,26 @@ data class BlockchainIdentityData(
         return creditFundingTransactionCache
     }
 
-    fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.let { it.identityId.toStringBase58() }
+    fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.identityId?.toStringBase58()
 
-    fun getErrorMetadata() = creationStateErrorMessage?.let {
+    fun getErrorMetadata() = super.creationStateErrorMessage?.let {
             val metadataIndex = it.indexOf("Metadata(")
             it.substring(metadataIndex)
     }
 
-    fun finishRestoration() {
-        this.restoring = false
-        this.creationStateErrorMessage = null
-    }
+    // Note: These properties are now immutable in the parent class, 
+    // so this method needs to be reconsidered or removed
+     fun finishRestoration() {
+         this.restoring = false
+         this.creationStateErrorMessage = null
+     }
 }
 
 @Singleton
 open class BlockchainIdentityConfig @Inject constructor(
     private val context: Context,
     walletDataProvider: WalletDataProvider,
-    val platformService: PlatformService
+    private val platformService: PlatformService
 ) : BaseConfig(
     context,
     PREFERENCES_NAME,
@@ -213,7 +229,6 @@ open class BlockchainIdentityConfig @Inject constructor(
     private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
             BlockchainIdentityBaseData(
-                1,
                 creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
@@ -222,7 +237,7 @@ open class BlockchainIdentityConfig @Inject constructor(
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
                 usingInvite = prefs[USING_INVITE] ?: false,
-                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
+                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(it.toUri(), false) },
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
                 usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },

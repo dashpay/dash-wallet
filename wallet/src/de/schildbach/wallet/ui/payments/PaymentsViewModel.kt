@@ -67,8 +67,9 @@ class PaymentsViewModel @Inject constructor(
     init {
         identityConfig.observeBase()
             .flatMapLatest { identity ->
-                if (identity.userId != null && identity.creationComplete) {
-                    platformRepo.observeProfileByUserId(identity.userId)
+                val userId = identity.userId
+                if (userId != null && identity.creationComplete) {
+                    platformRepo.observeProfileByUserId(userId)
                 } else {
                     emptyFlow()
                 }
