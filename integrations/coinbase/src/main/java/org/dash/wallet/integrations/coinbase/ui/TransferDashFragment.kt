@@ -54,12 +54,14 @@ import org.dash.wallet.integrations.coinbase.viewmodels.EnterAmountToTransferVie
 import org.dash.wallet.integrations.coinbase.viewmodels.SendDashResponseState
 import org.dash.wallet.integrations.coinbase.viewmodels.TransferDashViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     companion object {
+        private val log = LoggerFactory.getLogger(TransferDashFragment::class.java)
         fun newInstance() = TransferDashFragment()
     }
 
@@ -226,6 +228,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             } else {
                 "$amountFiat $fiatSymbol"
             }
+            
+            // Log the values to debug zero amounts
+            log.info("Amount received - DASH: '{}', Fiat: '{}', exchangeRate: {}", 
+                formatDashValue, formatFiatValue, enterAmountToTransferViewModel.coinbaseExchangeRate != null)
+            log.info("Raw values - dashInStr: '{}', amountFiat: '{}', fiatSymbol: '{}', it.second: {}, it.first: {}", 
+                dashInStr, amountFiat, fiatSymbol, it.second, it.first)
+            
             // For initial load till coinbase exchange rate loaded
             if(enterAmountToTransferViewModel.coinbaseExchangeRate==null){
                 binding.amountReceived.text = getString(
