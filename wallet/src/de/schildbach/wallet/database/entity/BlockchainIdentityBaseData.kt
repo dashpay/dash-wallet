@@ -23,9 +23,10 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 
 data class BlockchainIdentityBaseData(
     val id: Int,
-    val creationState: BlockchainIdentityData.CreationState,
+    val creationState: IdentityCreationState,
     val creationStateErrorMessage: String?,
     val username: String?,
+    val usernameSecondary: String?,
     val userId: String?,
     val restoring: Boolean,
     val creditFundingTxId: Sha256Hash? = null,
@@ -39,18 +40,18 @@ data class BlockchainIdentityBaseData(
 ) {
 
     val creationInProgress: Boolean
-        get() = creationState > BlockchainIdentityData.CreationState.NONE &&
-                creationState < BlockchainIdentityData.CreationState.VOTING &&
+        get() = creationState > IdentityCreationState.NONE &&
+                creationState < IdentityCreationState.VOTING &&
                 creationStateErrorMessage == null && !restoring
 
     val votingInProgress: Boolean
-        get() = creationState == BlockchainIdentityData.CreationState.VOTING
+        get() = creationState == IdentityCreationState.VOTING
 
     val creationComplete: Boolean
-        get() = creationState >= BlockchainIdentityData.CreationState.DONE
+        get() = creationState >= IdentityCreationState.DONE
 
     val creationCompleteDismissed: Boolean
-        get() = creationState == BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+        get() = creationState == IdentityCreationState.DONE_AND_DISMISS
 
     val creationError: Boolean
         get() = creationStateErrorMessage != null

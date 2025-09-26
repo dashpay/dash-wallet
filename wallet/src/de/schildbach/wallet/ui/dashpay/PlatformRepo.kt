@@ -33,6 +33,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
@@ -40,7 +41,6 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.PlatformService
-import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -432,7 +432,7 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .filter { it.creationState >= BlockchainIdentityData.CreationState.DONE }
+            .filter { it.creationState >= IdentityCreationState.DONE }
             .flatMapLatest { identityData ->
                 val userId = identityData.userId!!
 
@@ -623,7 +623,7 @@ class PlatformRepo @Inject constructor(
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
+        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == IdentityCreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
         return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
     }
@@ -791,7 +791,7 @@ class PlatformRepo @Inject constructor(
             ?: throw IllegalStateException("AuthenticationGroupExtension is not initialised")
         val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authExt)
         log.info("loading BlockchainIdentity: {}", watch)
-        if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
+        if (blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
                 uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
                 identity = blockchainIdentityData.identity
@@ -809,7 +809,7 @@ class PlatformRepo @Inject constructor(
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_REGISTERING) {
                 var usernameStatus = UsernameInfo(
                     blockchainIdentityData.preorderSalt,
                     blockchainIdentityData.usernameStatus ?: UsernameStatus.NOT_PRESENT,
@@ -851,12 +851,12 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
-                                            state: BlockchainIdentityData.CreationState,
+                                            state: IdentityCreationState,
                                             exception: Throwable? = null) {
         val errorMessage = exception?.run {
             var message = "${exception.javaClass.simpleName}: ${exception.message}"
@@ -871,7 +871,7 @@ class PlatformRepo @Inject constructor(
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
         }
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityDataStorage.updateCreationState(state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
@@ -925,8 +925,8 @@ class PlatformRepo @Inject constructor(
 
     suspend fun doneAndDismiss() {
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
-            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+        if (blockchainIdentityData != null && blockchainIdentityData.creationState == IdentityCreationState.DONE) {
+            blockchainIdentityData.creationState = IdentityCreationState.DONE_AND_DISMISS
             blockchainIdentityDataStorage.insert(blockchainIdentityData)
         }
     }

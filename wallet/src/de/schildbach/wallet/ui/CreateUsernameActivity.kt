@@ -26,7 +26,7 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
@@ -130,7 +130,7 @@ class CreateUsernameActivity : LockScreenActivity() {
                 !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting() &&
                 (requestUserNameViewModel.identity?.creationState
-                    ?: BlockchainIdentityData.CreationState.NONE) >= BlockchainIdentityData.CreationState.VOTING
+                    ?: IdentityCreationState.NONE) >= IdentityCreationState.VOTING
             ) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {

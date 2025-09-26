@@ -12,7 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
@@ -255,7 +255,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             if (it?.creationStateErrorMessage != null) {
                 // why are we closing, we should allow the user to chose a new name
                 // requireActivity().finish()
-            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
+            } else if ((it?.creationState?.ordinal ?: 0) > IdentityCreationState.NONE.ordinal) {
                 // completeUsername = it.username ?: ""
                 // showCompleteState()
                 // for now, just go to the home screen

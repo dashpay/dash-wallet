@@ -48,10 +48,39 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
 
+enum class IdentityCreationState {
+    NONE,   // this should always be the first value
+    UPGRADING_WALLET,
+    CREDIT_FUNDING_TX_CREATING,
+    CREDIT_FUNDING_TX_SENDING,
+    CREDIT_FUNDING_TX_SENT,
+    CREDIT_FUNDING_TX_CONFIRMED,
+    IDENTITY_REGISTERING,
+    IDENTITY_REGISTERED,
+    PREORDER_REGISTERING,
+    PREORDER_REGISTERED,
+    USERNAME_REGISTERING,
+    USERNAME_REGISTERED,
+    PREORDER_SECONDARY_REGISTERING,
+    PREORDER_SECONDARY_REGISTERED,
+    USERNAME_SECONDARY_REGISTERING,
+    USERNAME_SECONDARY_REGISTERED,
+    DASHPAY_PROFILE_CREATING,
+    DASHPAY_PROFILE_CREATED,
+    REQUESTED_NAME_CHECKING,
+    REQUESTED_NAME_CHECKED,
+    REQUESTED_NAME_LINK_SAVING,
+    REQUESTED_NAME_LINK_SAVED,
+    VOTING,
+    DONE,
+    DONE_AND_DISMISS // this should always be the last value
+}
+
 data class BlockchainIdentityData(
-    var creationState: CreationState = CreationState.NONE,
+    var creationState: IdentityCreationState = IdentityCreationState.NONE,
     var creationStateErrorMessage: String?,
     var username: String?,
+    var usernameSecondary: String?,
     var userId: String?,
     var restoring: Boolean,
     var identity: Identity? = null,
@@ -113,30 +142,6 @@ data class BlockchainIdentityData(
             it.substring(metadataIndex)
     }
 
-    enum class CreationState {
-        NONE,   // this should always be the first value
-        UPGRADING_WALLET,
-        CREDIT_FUNDING_TX_CREATING,
-        CREDIT_FUNDING_TX_SENDING,
-        CREDIT_FUNDING_TX_SENT,
-        CREDIT_FUNDING_TX_CONFIRMED,
-        IDENTITY_REGISTERING,
-        IDENTITY_REGISTERED,
-        PREORDER_REGISTERING,
-        PREORDER_REGISTERED,
-        USERNAME_REGISTERING,
-        USERNAME_REGISTERED,
-        DASHPAY_PROFILE_CREATING,
-        DASHPAY_PROFILE_CREATED,
-        REQUESTED_NAME_CHECKING,
-        REQUESTED_NAME_CHECKED,
-        REQUESTED_NAME_LINK_SAVING,
-        REQUESTED_NAME_LINK_SAVED,
-        VOTING,
-        DONE,
-        DONE_AND_DISMISS // this should always be the last value
-    }
-
     fun finishRestoration() {
         this.restoring = false
         this.creationStateErrorMessage = null
@@ -160,6 +165,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CREATION_STATE = stringPreferencesKey("creation_state")
         val CREATION_STATE_ERROR_MESSAGE = stringPreferencesKey("creation_state_error_message")
         val USERNAME = stringPreferencesKey("username")
+        val USERNAME_SECONDARY = stringPreferencesKey("username_secondary")
         val IDENTITY_ID = stringPreferencesKey("identity_id")
         val RESTORING = booleanPreferencesKey("restoring")
         val ASSET_LOCK_TXID = stringPreferencesKey("asset_lock_txid")
@@ -182,9 +188,10 @@ open class BlockchainIdentityConfig @Inject constructor(
     private val identityData: Flow<BlockchainIdentityData> = data
         .map { prefs ->
             BlockchainIdentityData(
-                creationState = BlockchainIdentityData.CreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
+                usernameSecondary = prefs[USERNAME_SECONDARY],
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
@@ -207,9 +214,10 @@ open class BlockchainIdentityConfig @Inject constructor(
         .map { prefs ->
             BlockchainIdentityBaseData(
                 1,
-                creationState = BlockchainIdentityData.CreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
+                usernameSecondary = prefs[USERNAME_SECONDARY],
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
@@ -224,7 +232,7 @@ open class BlockchainIdentityConfig @Inject constructor(
 
     suspend fun load() : BlockchainIdentityData? {
         val data = identityData.first()
-        return if (data.creationState != BlockchainIdentityData.CreationState.NONE) {
+        return if (data.creationState != IdentityCreationState.NONE) {
             data
         } else {
             null
@@ -244,9 +252,10 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
-        updateCreationState(1, blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
+        updateCreationState(blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
             blockchainIdentityData.username?.let { prefs[USERNAME] = it }
+            blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
             blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityData.restoring
             blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
@@ -265,7 +274,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {
-        updateCreationState(1, blockchainIdentityBaseData.creationState, blockchainIdentityBaseData.creationStateErrorMessage)
+        updateCreationState(blockchainIdentityBaseData.creationState, blockchainIdentityBaseData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
             blockchainIdentityBaseData.username?.let { prefs[USERNAME] = it }
             blockchainIdentityBaseData.userId?.let { prefs[IDENTITY_ID] = it }
@@ -288,7 +297,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         saveIdentityBasePrefs(blockchainIdentityBaseData)
     }
 
-    suspend fun updateCreationState(id: Int, state: BlockchainIdentityData.CreationState, creationStateErrorMessage: String?) {
+    suspend fun updateCreationState(state: IdentityCreationState, creationStateErrorMessage: String?) {
         context.dataStore.edit { prefs ->
             prefs[CREATION_STATE] = state.name
             if (creationStateErrorMessage == null) {
