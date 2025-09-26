@@ -10,7 +10,7 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVerfiyIdentityBinding
@@ -62,15 +62,15 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: BlockchainIdentityData.CreationState.NONE
-                if (creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal) {
+                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: IdentityCreationState.NONE
+                if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
                         if (it?.creationStateErrorMessage != null) {
                             requireActivity().finish()
                         } else {
-                            val creationState = it?.creationState ?: BlockchainIdentityData.CreationState.NONE
-                            if (creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal) {
+                            val creationState = it?.creationState ?: IdentityCreationState.NONE
+                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
                                 safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
                             }
                         }

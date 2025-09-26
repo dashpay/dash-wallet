@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
@@ -29,7 +28,6 @@ import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
@@ -44,6 +42,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
@@ -418,12 +417,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     // Do we need to have the user request a new username
                     val errorMessage = blockchainIdentityData.creationStateErrorMessage
                     val needsNewUsername =
-                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
+                        blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
                                 (errorMessage.contains("Document transitions with duplicate unique properties") ||
                                         errorMessage.contains("missing domain document for"))
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
-                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING &&
+                        blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
                         !errorMessage.contains("invalid quorum: quorum not found")
                     ) {
                         startActivity(
@@ -441,7 +440,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         ).show()
                     }
                 }
-            } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
+            } else if (blockchainIdentityData.creationState == IdentityCreationState.DONE) {
                 safeNavigate(WalletFragmentDirections.homeToSearchUser())
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()

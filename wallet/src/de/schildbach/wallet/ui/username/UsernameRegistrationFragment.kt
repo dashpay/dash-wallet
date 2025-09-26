@@ -33,7 +33,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
@@ -108,12 +108,12 @@ class UsernameRegistrationFragment : Fragment(R.layout.fragment_username_registr
                     requireActivity().finish()
                 }
 
-                it?.creationState == BlockchainIdentityData.CreationState.DONE ||
-                        it?.creationState == BlockchainIdentityData.CreationState.VOTING -> {
+                it?.creationState == IdentityCreationState.DONE ||
+                        it?.creationState == IdentityCreationState.VOTING -> {
                     showCompleteState()
                 }
 
-                it?.creationState?.ordinal in BlockchainIdentityData.CreationState.UPGRADING_WALLET.ordinal until BlockchainIdentityData.CreationState.DONE.ordinal -> {
+                it?.creationState?.ordinal in IdentityCreationState.UPGRADING_WALLET.ordinal until IdentityCreationState.DONE.ordinal -> {
                     showProcessingState()
                 }
             }

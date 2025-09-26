@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
@@ -293,9 +294,9 @@ class PlatformSynchronizationService @Inject constructor(
 
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState < IdentityCreationState.DONE) {
                 // Is the Voting Period complete?
-                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                if (blockchainIdentityData.creationState == IdentityCreationState.VOTING) {
                     val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
                     val votingPeriodStart = blockchainIdentityData.votingPeriodStart ?: 0L
                     if (System.currentTimeMillis() - votingPeriodStart >= timeWindow) {
@@ -304,7 +305,7 @@ class PlatformSynchronizationService @Inject constructor(
                             val domainDocument = DomainDocument(resource.data)
                             if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
                                 blockchainIdentityData.creationState =
-                                    BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                                    IdentityCreationState.DONE_AND_DISMISS
                                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                             }
                         }
@@ -1528,7 +1529,7 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
-        if (identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+        if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
@@ -1557,7 +1558,7 @@ class PlatformSynchronizationService @Inject constructor(
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
                     if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
-                        identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                        identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
                         platformRepo.updateBlockchainIdentityData(identityData)
                     }
                 } else {

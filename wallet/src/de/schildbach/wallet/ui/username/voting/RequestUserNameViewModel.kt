@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.I
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
@@ -114,6 +115,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
+    var requestedUsernameSecondary: String? = null
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -143,10 +145,10 @@ class RequestUserNameViewModel @Inject constructor(
 
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
-        val creationState = BlockchainIdentityData.CreationState.valueOf(
-            identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
+        val creationState = IdentityCreationState.valueOf(
+            identityConfig.get(CREATION_STATE) ?: IdentityCreationState.NONE.name
         )
-        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE && creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+        return hasRequestedName && creationState != IdentityCreationState.NONE && creationState.ordinal <= IdentityCreationState.VOTING.ordinal
     }
 
     suspend fun isUsernameLocked(): Boolean {
@@ -261,13 +263,15 @@ class RequestUserNameViewModel @Inject constructor(
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
+        val usernameSecondary = requestedUsernameSecondary!!
         val isUsingInvite = isUsingInvite()
         when {
             isUsingInvite && reuseTransaction -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(
                         walletApplication,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
@@ -276,6 +280,7 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntentFromInvite(
                         walletApplication,
                         username,
+                        usernameSecondary,
                         createUsernameArgs!!.invite!!
                     )
                 )
@@ -284,6 +289,7 @@ class RequestUserNameViewModel @Inject constructor(
                 walletApplication.startService(
                     CreateIdentityService.createIntentForNewUsername(
                         walletApplication,
+                        usernameSecondary,
                         username
                     )
                 )
@@ -292,7 +298,8 @@ class RequestUserNameViewModel @Inject constructor(
                 walletApplication.startService(
                     CreateIdentityService.createIntent(
                         walletApplication,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
