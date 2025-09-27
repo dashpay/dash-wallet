@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.username
+package de.schildbach.wallet.ui.username.voting
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -42,7 +42,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -200,17 +199,17 @@ class UsernameRequestsViewModel @Inject constructor(
                         UsernameGroupOption.VotingPeriodSoonest -> groupViews.sortedWith(
                             when (_filterState.value.sortByOption) {
                                 UsernameSortOption.DateAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
-                                UsernameSortOption.DateDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
-                                UsernameSortOption.VotesAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
-                                UsernameSortOption.VotesDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.DateDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareBy<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending { group -> group.requests.maxOf { request -> request.votes } }
                             }
                         )
                         UsernameGroupOption.VotingPeriodLatest -> groupViews.sortedWith(
                             when (_filterState.value.sortByOption) {
                                 UsernameSortOption.DateAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.minOf { request -> request.createdAt } }
-                                UsernameSortOption.DateDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.minOf { request -> request.createdAt } }
-                                UsernameSortOption.VotesAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy {  group -> group.requests.maxOf { request -> request.votes } }
-                                UsernameSortOption.VotesDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending {  group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.DateDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending { group -> group.requests.minOf { request -> request.createdAt } }
+                                UsernameSortOption.VotesAscending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenBy { group -> group.requests.maxOf { request -> request.votes } }
+                                UsernameSortOption.VotesDescending -> compareByDescending<UsernameRequestGroupView> { group -> group.localDate }.thenByDescending { group -> group.requests.maxOf { request -> request.votes } }
                             }
                         )
                         else -> {

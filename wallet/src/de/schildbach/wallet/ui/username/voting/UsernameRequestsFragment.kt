@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.username
+package de.schildbach.wallet.ui.username.voting
 
 import android.os.Bundle
 import android.view.View
@@ -32,12 +32,10 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.dashpay.work.BroadcastUsernameVotesWorker
-import de.schildbach.wallet.ui.main.HistoryRowView
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupAdapter
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupView
 import de.schildbach.wallet.ui.username.adapters.UsernameRequestRowView
 import de.schildbach.wallet.ui.username.utils.votingViewModels
-import de.schildbach.wallet.ui.username.voting.OneVoteLeftDialogFragment
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameRequestsBinding
 import kotlinx.coroutines.Dispatchers
