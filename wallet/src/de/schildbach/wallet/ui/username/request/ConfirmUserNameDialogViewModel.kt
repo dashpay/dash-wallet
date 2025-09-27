@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

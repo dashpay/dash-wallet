@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -497,8 +497,10 @@ class RequestUserNameViewModel @Inject constructor(
         val enoughBalance = when {
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
-            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
+                CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
+                NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
             identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
             else -> false // how can we get here?

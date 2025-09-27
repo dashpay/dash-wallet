@@ -1,17 +1,14 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.view.View
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.username.CreateUsernameArgs
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameVotingInfoBinding
 import kotlinx.coroutines.launch

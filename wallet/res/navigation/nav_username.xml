@@ -7,7 +7,7 @@
 
     <fragment
         android:id="@+id/welcomeToDashPayFragment"
-        android:name="de.schildbach.wallet.ui.username.voting.WelcomeToDashPayFragment"
+        android:name="de.schildbach.wallet.ui.username.request.WelcomeToDashPayFragment"
         tools:layout="@layout/fragment_welcome_to_dashpay">
         <action
             android:id="@+id/welcomeToDashPayFragment_to_UsernameVotingInfoFragment"
@@ -19,7 +19,7 @@
 
     <fragment
         android:id="@+id/usernameVotingInfoFragment"
-        android:name="de.schildbach.wallet.ui.username.voting.UsernameVotingInfoFragment"
+        android:name="de.schildbach.wallet.ui.username.request.UsernameVotingInfoFragment"
         tools:layout="@layout/fragment_username_voting_info">
 
         <action
@@ -34,7 +34,7 @@
 
     <fragment
         android:id="@+id/requestUsernameFragment"
-        android:name="de.schildbach.wallet.ui.username.voting.RequestUsernameFragment"
+        android:name="de.schildbach.wallet.ui.username.request.RequestUsernameFragment"
         tools:layout="@layout/fragment_request_username">
         <action
             android:id="@+id/requestUsernameFragment_to_verifyIdentityFragment"
@@ -69,7 +69,7 @@
 
     <fragment
         android:id="@+id/votingRequestDetailsFragment"
-        android:name="de.schildbach.wallet.ui.username.voting.VotingRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.request.VotingRequestDetailsFragment"
         tools:layout="@layout/fragment_voting_request_details">
         <action
             android:id="@+id/votingRequestDetailsFragment_to_verifyIdentityFragment"
@@ -88,7 +88,7 @@
 
     <fragment
         android:id="@+id/verifyIdentityFragment"
-        android:name="de.schildbach.wallet.ui.username.voting.VerifyIdentityFragment"
+        android:name="de.schildbach.wallet.ui.username.request.VerifyIdentityFragment"
         tools:layout="@layout/fragment_verfiy_identity">
 
         <argument
@@ -119,7 +119,7 @@
 
     <dialog
         android:id="@+id/confirmUsernameRequestDialog"
-        android:name="de.schildbach.wallet.ui.username.voting.ConfirmUsernameRequestDialogFragment"
+        android:name="de.schildbach.wallet.ui.username.request.ConfirmUsernameRequestDialogFragment"
         android:label="ConfirmUsernameRequestDialogFragment"
         tools:layout="@layout/dialog_confirm_username_request">
         <argument android:name="username" app:argType="string" />
