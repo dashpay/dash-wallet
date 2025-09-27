@@ -21,7 +21,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_primary"
-    tools:context="de.schildbach.wallet.ui.username.UsernameRequestsFragment">
+    tools:context="de.schildbach.wallet.ui.username.voting.UsernameRequestsFragment">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar_layout"
