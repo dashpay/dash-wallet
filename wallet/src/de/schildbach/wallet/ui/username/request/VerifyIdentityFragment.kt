@@ -71,7 +71,8 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
                         } else {
                             val creationState = it?.creationState ?: IdentityCreationState.NONE
                             if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
-                                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
+                                // Navigate to MoreFragment instead of UsernameRegistrationFragment  
+                                requireActivity().finish()
                             }
                         }
                     }
