@@ -58,12 +58,6 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
-        <action
-            android:id="@+id/requests_toUsernameRegistrationFragment"
-            app:destination="@id/usernameRegistrationFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
 
     </fragment>
 
@@ -102,18 +96,6 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
-        <action
-            android:id="@+id/verify_toUsernameRegistrationFragment"
-            app:destination="@id/usernameRegistrationFragment"
-            app:enterAnim="@anim/slide_in_right"
-            app:exitAnim="@anim/activity_stay"
-            app:popExitAnim="@anim/slide_out_left" />
-    </fragment>
-
-    <fragment
-        android:id="@+id/usernameRegistrationFragment"
-        android:name="de.schildbach.wallet.ui.username.UsernameRegistrationFragment"
-        tools:layout="@layout/fragment_username_registration">
     </fragment>
 
 

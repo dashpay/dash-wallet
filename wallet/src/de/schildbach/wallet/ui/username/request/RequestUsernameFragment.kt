@@ -259,7 +259,8 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 // showCompleteState()
                 // for now, just go to the home screen
                 // requireActivity().finish()
-                safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameRegistrationFragment())
+                // Navigate to MoreFragment instead of UsernameRegistrationFragment
+                requireActivity().finish()
             }
         }
         binding.nonContestedNameInfoButton.setOnClickListener {

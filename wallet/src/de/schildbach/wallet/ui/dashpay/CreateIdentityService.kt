@@ -77,39 +77,47 @@ class CreateIdentityService : LifecycleService() {
         private const val EXTRA_INVITE = "org.dash.dashpay.extra.INVITE"
 
         @JvmStatic
-        fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String): Intent {
+        fun createIntentForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
-                putExtra(EXTRA_USERNAME_SECONDARY, usernameSecondary)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
             }
         }
 
         @JvmStatic
-        fun createIntent(context: Context, username: String, usernameSecondary: String): Intent {
+        fun createIntent(context: Context, username: String, usernameSecondary: String?): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY
                 putExtra(EXTRA_USERNAME, username)
-                putExtra(EXTRA_USERNAME_SECONDARY, usernameSecondary)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
             }
         }
 
         @JvmStatic
-        fun createIntentFromInvite(context: Context, username: String, usernameSecondary: String, invite: InvitationLinkData): Intent {
+        fun createIntentFromInvite(context: Context, username: String, usernameSecondary: String?, invite: InvitationLinkData): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_CREATE_IDENTITY_FROM_INVITATION
                 putExtra(EXTRA_USERNAME, username)
-                putExtra(EXTRA_USERNAME_SECONDARY, usernameSecondary)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
                 putExtra(EXTRA_INVITE, invite)
             }
         }
 
         @JvmStatic
-        fun createIntentFromInviteForNewUsername(context: Context, username: String, usernameSecondary: String): Intent {
+        fun createIntentFromInviteForNewUsername(context: Context, username: String, usernameSecondary: String?): Intent {
             return Intent(context, CreateIdentityService::class.java).apply {
                 action = ACTION_RETRY_INVITE_WITH_NEW_USERNAME
                 putExtra(EXTRA_USERNAME, username)
-                putExtra(EXTRA_USERNAME_SECONDARY, usernameSecondary)
+                usernameSecondary?.let {
+                    putExtra(EXTRA_USERNAME_SECONDARY, it)
+                }
             }
         }
 

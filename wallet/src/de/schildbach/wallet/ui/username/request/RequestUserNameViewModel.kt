@@ -263,7 +263,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
-        val usernameSecondary = requestedUsernameSecondary!!
+        val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
         when {
             isUsingInvite && reuseTransaction -> {
@@ -289,8 +289,8 @@ class RequestUserNameViewModel @Inject constructor(
                 walletApplication.startService(
                     CreateIdentityService.createIntentForNewUsername(
                         walletApplication,
-                        usernameSecondary,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
@@ -305,23 +305,6 @@ class RequestUserNameViewModel @Inject constructor(
             }
         }
     }
-
-//    fun triggerIdentityCreationFromInvite(
-//        reuseTransaction: Boolean,
-//        fromOnboarding: Boolean,
-//        inviteLinkData: InvitationLinkData
-//    ) {
-//        if (reuseTransaction) {
-//            walletApplication.startService(CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, requestedUserName!!))
-//        } else {
-//            if (fromOnboarding) {
-//                walletApplication.configuration.onboardingInviteUsername = requestedUserName
-//                return
-//            } else {
-//                walletApplication.startService(CreateIdentityService.createIntentFromInvite(walletApplication, requestedUserName!!, inviteLinkData))
-//            }
-//        }
-//    }
 
     fun submit() {
         // Reset ui state for retry if needed
