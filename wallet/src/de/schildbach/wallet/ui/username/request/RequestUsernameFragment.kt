@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.os.Handler
@@ -15,7 +15,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay

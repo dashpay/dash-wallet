@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.view.View

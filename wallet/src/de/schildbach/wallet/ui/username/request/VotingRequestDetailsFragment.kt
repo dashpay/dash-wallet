@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.content.Intent
 import android.net.Uri
@@ -25,19 +25,16 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
-import java.util.concurrent.TimeUnit
 
 
 class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_details) {

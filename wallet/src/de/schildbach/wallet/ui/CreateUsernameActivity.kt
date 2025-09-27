@@ -30,7 +30,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
-import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
+import de.schildbach.wallet.ui.username.request.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
