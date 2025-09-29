@@ -143,8 +143,12 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                 } else {
                     binding.dashWalletLimitBanner.isVisible = false
                     val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected
-                    val amount = if (isEmptyWallet) transferDashViewModel.maxForDashCoinBaseAccount else it.second
-                    val error = transferDashViewModel.checkEnteredAmountValue(amount)
+                    val amountToTransfer = if (isEmptyWallet) {
+                        transferDashViewModel.maxForDashCoinBaseAccount - transferDashViewModel.minimumFee
+                    } else {
+                        it.second
+                    }
+                    val error = transferDashViewModel.checkEnteredAmountValue(amountToTransfer)
                     binding.authLimitBanner.root.isVisible = error == SwapValueErrorType.UnAuthorizedValue
                     binding.dashWalletLimitBanner.isVisible = (error == SwapValueErrorType.MoreThanMax
                             || error == SwapValueErrorType.LessThanMin
@@ -166,13 +170,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                             else -> {}
                         }
                     } else {
-                        transferDashViewModel.reviewTransfer(
-                            if (isEmptyWallet) {
-                                dashValue - transferDashViewModel.minimumFee
-                            } else {
-                                dashValue
-                            }.toPlainString()
-                        )
+                        transferDashViewModel.reviewTransfer(amountToTransfer.toPlainString())
                     }
                 }
             }
