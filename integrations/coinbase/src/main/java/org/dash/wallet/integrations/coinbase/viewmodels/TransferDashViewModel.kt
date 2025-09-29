@@ -90,9 +90,10 @@ class TransferDashViewModel @Inject constructor(
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    var minFiatAmount = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var minFiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
-    private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+    var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+        private set
 
     init {
         getUserAccountAddress()
