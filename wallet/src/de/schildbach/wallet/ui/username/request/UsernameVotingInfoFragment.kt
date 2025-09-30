@@ -9,6 +9,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentUsernameVotingInfoBinding
 import kotlinx.coroutines.launch
@@ -32,7 +33,9 @@ class UsernameVotingInfoFragment : Fragment(R.layout.fragment_username_voting_in
         binding.usernameVotingInfoContinueBtn.setOnClickListener {
             if (!args.closeInstead) {
                 safeNavigate(
-                    UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment()
+                    UsernameVotingInfoFragmentDirections.usernameVotingInfoFragmentToRequestUsernameFragment(
+                        usernameType = UsernameType.Primary
+                    )
                 )
             } else {
                 findNavController().popBackStack()

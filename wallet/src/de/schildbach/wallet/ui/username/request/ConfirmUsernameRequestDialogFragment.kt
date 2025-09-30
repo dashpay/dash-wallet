@@ -24,12 +24,16 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.compose_views.createInstantUsernameDialog
+import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmUsernameRequestBinding
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.dialogSafeNavigate
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_username_request) {
@@ -42,14 +46,36 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
         viewModel.hasIdentity = requestUserNameViewModel.identity != null
+        val usernameType = args.usernameType
+        viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-            // go to the next screen, if using an invite
-            requestUserNameViewModel.submit()
-            dismiss()
+            if (usernameType == UsernameType.Primary) {
+                createInstantUsernameDialog(
+                    onCreateInstantUsername = {
+                        // Navigate to the instant username fragment
+                        dialogSafeNavigate(
+                            ConfirmUsernameRequestDialogFragmentDirections.toRequestUsernameFragmentForInstant(
+                                usernameType = UsernameType.Secondary
+                            )
+                        )
+                        dismiss()
+                    },
+                    onCancel = {
+                        requestUserNameViewModel.submit()
+                        dismiss()
+                    }
+                ).show(requireActivity())
+            } else {
+                requestUserNameViewModel.submit()
+                dismiss()
+            }
         }
         binding.confirmBtn.isEnabled = false
-        binding.confirmMessage.text = getString(R.string.new_account_confirm_message, args.username)
+        binding.confirmMessage.text = when (usernameType) {
+            UsernameType.Primary -> getString(R.string.new_account_confirm_message, args.username)
+            UsernameType.Secondary -> getString(R.string.new_account_secondary_confirm_message, args.username)
+        }
         binding.userAccepts.setOnClickListener {
             binding.confirmBtn.isEnabled = binding.userAccepts.isChecked
         }

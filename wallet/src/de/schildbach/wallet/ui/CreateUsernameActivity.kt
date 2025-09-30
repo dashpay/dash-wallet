@@ -112,7 +112,6 @@ class CreateUsernameActivity : LockScreenActivity() {
 
         val username = intent?.extras?.getString(EXTRA_USERNAME)
         val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-        val fromOnboardng = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
 
         lifecycleScope.launchWhenCreated {
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment

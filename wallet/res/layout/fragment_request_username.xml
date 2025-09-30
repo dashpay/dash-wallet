@@ -25,6 +25,7 @@
 
         <TextView
             style="@style/Headline4"
+            android:id="@+id/title"
             android:background="@color/background_secondary"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
