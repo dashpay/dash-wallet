@@ -38,6 +38,7 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
+import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -317,10 +318,6 @@ class RequestUserNameViewModel @Inject constructor(
             } ?: false
             triggerIdentityCreation(reuseTransaction)
         }
-        // if call success
-        // updateUiForApiSuccess()
-        // else if call failed
-        // updateUiForApiError()
     }
 
     fun reset() {
@@ -348,25 +345,6 @@ class RequestUserNameViewModel @Inject constructor(
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
         }
     }
-
-//    private fun updateUiForApiSuccess() {
-//        _uiState.update {
-//            it.copy(
-//                usernameCheckSuccess = true,
-//                usernameRequestSubmitting = false,
-//                usernameRequestSubmitted = true,
-//                usernameSubmittedError = false
-//            )
-//        }
-//    }
-//    private fun updateUiForApiError() {
-//        _uiState.update { it ->
-//            it.copy(
-//                usernameCheckSuccess = false,
-//                usernameSubmittedError = true
-//            )
-//        }
-//    }
 
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
@@ -451,8 +429,11 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun validateUsernameSize(uname: String): Boolean {
-        return uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+    private fun validateUsernameSize(uname: String, usernameType: UsernameType): Boolean {
+        return when (usernameType) {
+            UsernameType.Primary -> uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+            UsernameType.Secondary -> uname.length in Constants.USERNAME_MIN_LENGTH..(Constants.USERNAME_MAX_LENGTH + 4)
+        }
     }
 
     private fun validateNonContestedUsernameSize(uname: String): Boolean {
@@ -469,8 +450,8 @@ class RequestUserNameViewModel @Inject constructor(
         return Regex("[2-9]").containsMatchIn(uname)
     }
 
-    fun checkUsernameValid(username: String): Boolean {
-        val validLength = validateUsernameSize(username)
+    fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
+        val validLength = validateUsernameSize(username, usernameType)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 

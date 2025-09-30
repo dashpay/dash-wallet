@@ -9,6 +9,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
@@ -27,12 +28,14 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val viewModel by viewModels<VerifyIdentityViewModel>()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    private val args by navArgs<VerifyIdentityFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         arguments?.getString("username")?.let {
             binding.postText.text = getString(R.string.please_vote_to_approve, it)
         }
+
 
         binding.copyPostTextBtn.setOnClickListener {
             viewModel.copyPost(binding.postText.text.toString())
@@ -114,7 +117,8 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         } else {
             safeNavigate(
                 VerifyIdentityFragmentDirections.verifyIdentityFragmentToConfirmUsernameRequestDialog(
-                    requestUserNameViewModel.requestedUserName!!
+                    requestUserNameViewModel.requestedUserName!!,
+                    args.usernameType
                 )
             )
         }

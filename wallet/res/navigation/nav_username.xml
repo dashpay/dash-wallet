@@ -58,7 +58,42 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <argument
+            android:name="username_type"
+            app:argType="de.schildbach.wallet.ui.username.UsernameType"
+            android:defaultValue="Primary" />
+    </fragment>
 
+    <fragment
+        android:id="@+id/requestUsernameFragmentInstant"
+        android:name="de.schildbach.wallet.ui.username.request.RequestUsernameSecondaryFragment"
+        tools:layout="@layout/fragment_request_username">
+        <action
+            android:id="@+id/requestUsernameFragmentInstant_to_verifyIdentityFragment"
+            app:destination="@id/verifyIdentityFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragmentInstant" />
+
+        <action
+            android:id="@+id/requestsInstant_to_confirmUsernameRequestDialog"
+            app:destination="@id/confirmUsernameRequestDialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/requestsInstant_to_usernameVotingInfoFragment"
+            app:destination="@id/usernameVotingInfoFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <argument
+            android:name="username_type"
+            app:argType="de.schildbach.wallet.ui.username.UsernameType"
+            android:defaultValue="Secondary" />
     </fragment>
 
     <fragment
@@ -89,6 +124,10 @@
             android:name="username"
             app:argType="string" />
 
+        <argument
+            android:name="username_type"
+            app:argType="de.schildbach.wallet.ui.username.UsernameType" />
+
         <action
             android:id="@+id/verifyIdentityFragment_to_confirmUsernameRequestDialog"
             app:destination="@id/confirmUsernameRequestDialog"
@@ -105,5 +144,15 @@
         android:label="ConfirmUsernameRequestDialogFragment"
         tools:layout="@layout/dialog_confirm_username_request">
         <argument android:name="username" app:argType="string" />
+        <argument android:name="username_type" app:argType="de.schildbach.wallet.ui.username.UsernameType" />
+        <action
+            android:id="@+id/to_requestUsernameFragment_for_instant"
+            app:destination="@id/requestUsernameFragmentInstant"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"
+            app:popUpTo="@id/requestUsernameFragment"
+            app:popUpToInclusive="true">
+        </action>
     </dialog>
 </navigation>

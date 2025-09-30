@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVotingRequestDetailsBinding
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +52,10 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
         binding.verify.setOnClickListener {
             safeNavigate(
                 VotingRequestDetailsFragmentDirections
-                    .votingRequestDetailsFragmentToVerifyIdentityFragment(username = binding.username.text.toString())
+                    .votingRequestDetailsFragmentToVerifyIdentityFragment(
+                        username = binding.username.text.toString(),
+                        usernameType = UsernameType.Primary
+                    )
             )
         }
 
