@@ -63,16 +63,16 @@ enum class IdentityCreationState {
     PREORDER_REGISTERED,
     USERNAME_REGISTERING,
     USERNAME_REGISTERED,
-    PREORDER_SECONDARY_REGISTERING,
-    PREORDER_SECONDARY_REGISTERED,
-    USERNAME_SECONDARY_REGISTERING,
-    USERNAME_SECONDARY_REGISTERED,
     DASHPAY_PROFILE_CREATING,
     DASHPAY_PROFILE_CREATED,
     REQUESTED_NAME_CHECKING,
     REQUESTED_NAME_CHECKED,
     REQUESTED_NAME_LINK_SAVING,
     REQUESTED_NAME_LINK_SAVED,
+    PREORDER_SECONDARY_REGISTERING,
+    PREORDER_SECONDARY_REGISTERED,
+    USERNAME_SECONDARY_REGISTERING,
+    USERNAME_SECONDARY_REGISTERED,
     VOTING,
     DONE,
     DONE_AND_DISMISS // this should always be the last value
@@ -95,8 +95,10 @@ class BlockchainIdentityData(
     // Extended properties specific to full identity data
     var identity: Identity? = null,
     var preorderSalt: ByteArray? = null,
+    var preorderSaltSecondary: ByteArray? = null,
     var registrationStatus: IdentityStatus? = null,
     var usernameStatus: UsernameStatus? = null,
+    var usernameSecondaryStatus: UsernameStatus? = null,
     var privacyMode: CoinJoinMode? = null,
     var creditBalance: Coin? = null,
     var activeKeyCount: Int? = null,
@@ -188,8 +190,11 @@ open class BlockchainIdentityConfig @Inject constructor(
         val USING_INVITE = booleanPreferencesKey("using_invite")
         val INVITE_LINK = stringPreferencesKey("invite_link")
         val PREORDER_SALT = stringPreferencesKey("preorder_salt")
+        val PREORDER_SALT_SECONDARY = stringPreferencesKey("preorder_salt_secondary")
         val IDENTITY_REGISTRATION_STATUS = stringPreferencesKey("identity_registration_status")
         val USERNAME_REGISTRATION_STATUS = stringPreferencesKey("username_registration_status")
+        val USERNAME_SECONDARY_REGISTRATION_STATUS = stringPreferencesKey("username_secondary_registration_status")
+
         val IDENTITY = stringPreferencesKey("identity")
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
@@ -215,8 +220,10 @@ open class BlockchainIdentityConfig @Inject constructor(
                 usingInvite = prefs[USING_INVITE] ?: false,
                 invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
                 preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
+                preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
                 registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
                 usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+                usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
                 privacyMode = prefs[PRIVACY_MODE]?.let { CoinJoinMode.valueOf(it) },
                 creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
@@ -279,6 +286,7 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
             blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
+            blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.privacyMode?.let { prefs[PRIVACY_MODE] = it.name }
             blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
             blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}

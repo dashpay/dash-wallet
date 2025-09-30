@@ -27,6 +27,7 @@ import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATI
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_TEXT
 import de.schildbach.wallet.ui.dashpay.work.GetUsernameVotingResultOperation
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
+import de.schildbach.wallet.ui.username.UsernameType
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -467,7 +468,7 @@ class CreateIdentityService : LifecycleService() {
         }
         timerStep2.logTiming()
 
-        finishRegistration(blockchainIdentity, encryptionKey)
+        finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
         timerEntireProcess.logTiming()
     }
 
@@ -614,7 +615,7 @@ class CreateIdentityService : LifecycleService() {
 
         topUpRepository.clearInvitation()
 
-        finishRegistration(blockchainIdentity, encryptionKey)
+        finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
 
         invite?.apply {
             val results = platformRepo.getUser(user)
@@ -633,7 +634,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration with invite complete")
     }
 
-    private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter) {
+    private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter, usernameSecondary: String?) {
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= IdentityCreationState.IDENTITY_REGISTERED) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
@@ -644,44 +645,7 @@ class CreateIdentityService : LifecycleService() {
         }
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
-        if (blockchainIdentityData.creationState <= IdentityCreationState.PREORDER_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERING)
-            //
-            // Step 4: Preorder the username
-            if (!blockchainIdentity.getUsernames().contains(blockchainIdentityData.username!!)) {
-                blockchainIdentity.addUsername(blockchainIdentityData.username!!)
-            }
-            platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
-        if (blockchainIdentityData.creationState <= IdentityCreationState.PREORDER_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.PREORDER_REGISTERED)
-            //
-            // Step 4: Verify that the username was preordered
-            //
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        if (blockchainIdentityData.creationState <= IdentityCreationState.USERNAME_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
-            //
-            // Step 5: Register the username
-            //
-            platformRepo.registerNameAsync(blockchainIdentity, encryptionKey)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-        }
-
-        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
-        if (blockchainIdentityData.creationState <= IdentityCreationState.USERNAME_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
-            //
-            // Step 5: Verify that the username was registered
-            //
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
-        }
+        registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
 
         addInviteUserAlert()
 
@@ -776,6 +740,9 @@ class CreateIdentityService : LifecycleService() {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
+            if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
+                registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
+            }
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
         } else {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
@@ -799,6 +766,81 @@ class CreateIdentityService : LifecycleService() {
         timerStep3.logTiming()
         // aaaand we're done :)
         log.info("username registration complete")
+    }
+
+    private suspend fun registerUsername(
+        blockchainIdentity: BlockchainIdentity,
+        encryptionKey: KeyParameter,
+        usernameType: UsernameType
+    ) {
+        val preorderRegistering: IdentityCreationState
+        val preorderRegistered: IdentityCreationState
+        val domainRegistering: IdentityCreationState
+        val domainRegistered: IdentityCreationState
+
+        when (usernameType) {
+            UsernameType.Primary -> {
+                preorderRegistering = IdentityCreationState.PREORDER_REGISTERING
+                preorderRegistered = IdentityCreationState.PREORDER_REGISTERED
+                domainRegistering = IdentityCreationState.USERNAME_REGISTERING
+                domainRegistered = IdentityCreationState.USERNAME_REGISTERED
+            }
+            UsernameType.Secondary -> {
+                preorderRegistering = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
+                preorderRegistered = IdentityCreationState.PREORDER_SECONDARY_REGISTERED
+                domainRegistering = IdentityCreationState.USERNAME_SECONDARY_REGISTERING
+                domainRegistered = IdentityCreationState.USERNAME_SECONDARY_REGISTERED
+            }
+        }
+
+        val username = when (usernameType) {
+            UsernameType.Primary -> blockchainIdentityData.username
+            UsernameType.Secondary -> blockchainIdentityData.usernameSecondary
+        }!!
+
+        if (!blockchainIdentity.getUsernames().contains(username)) {
+            blockchainIdentity.addUsername(username)
+        }
+
+        if (blockchainIdentityData.creationState <= preorderRegistering) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
+            //
+            // Step 4: Preorder the username
+
+            platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey, username)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
+
+        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
+        if (blockchainIdentityData.creationState <= preorderRegistered) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, preorderRegistered)
+            //
+            // Step 4: Verify that the username was preordered
+            //
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
+
+        if (blockchainIdentityData.creationState <= domainRegistering) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
+            //
+            // Step 5: Register the username
+            //
+            platformRepo.registerNameAsync(blockchainIdentity, encryptionKey, username)
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+        }
+
+        // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
+        if (blockchainIdentityData.creationState <= domainRegistered) {
+            platformRepo.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
+            //
+            // Step 5: Verify that the username was registered
+            //
+            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            when (usernameType) {
+                UsernameType.Primary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
+                UsernameType.Secondary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_INSTANT, mapOf())
+            }
+        }
     }
 
     private suspend fun addInviteUserAlert() {

@@ -25,7 +25,7 @@ open class BlockchainIdentityBaseData(
     var creationState: IdentityCreationState,
     var creationStateErrorMessage: String?,
     var username: String?,
-    val usernameSecondary: String?,
+    var usernameSecondary: String?,
     var userId: String?,
     var restoring: Boolean,
     var creditFundingTxId: Sha256Hash? = null,

@@ -717,13 +717,11 @@ class PlatformRepo @Inject constructor(
     //
     // Step 4: Preorder the username
     //
-    suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.getUnregisteredUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
-            blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names, keyParameter)
-            timer.logTiming()
-        }
+    fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.getUnregisteredUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
+        blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(listOf(username), keyParameter)
+        timer.logTiming()
     }
 
     //
@@ -744,11 +742,11 @@ class PlatformRepo @Inject constructor(
     //
     // Step 5: Register the username
     //
-    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
         withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.preorderedUsernames()
+            // val names = blockchainIdentity.preorderedUsernames()
             val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter, false)
+            blockchainIdentity.registerUsernameDomainsForUsernames(listOf(username), keyParameter, false)
             timer.logTiming()
         }
     }
@@ -807,15 +805,35 @@ class PlatformRepo @Inject constructor(
         log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}")
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
+            blockchainIdentityData.username?.let {
+                addUsername(it)
+            }
+            blockchainIdentityData.usernameSecondary?.let {
+                addUsername(it)
+            }
+
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
             if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_REGISTERING) {
-                var usernameStatus = UsernameInfo(
+                val usernameStatus = UsernameInfo(
                     blockchainIdentityData.preorderSalt,
                     blockchainIdentityData.usernameStatus ?: UsernameStatus.NOT_PRESENT,
                     currentUsername,
                     blockchainIdentityData.usernameRequested,
                     blockchainIdentityData.votingPeriodStart
+                )
+                currentUsername ?.let {
+                    usernameStatuses[it] = usernameStatus
+                }
+            }
+
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_SECONDARY_REGISTERING) {
+                val usernameStatus = UsernameInfo(
+                    blockchainIdentityData.preorderSaltSecondary,
+                    blockchainIdentityData.usernameSecondaryStatus ?: UsernameStatus.NOT_PRESENT,
+                    blockchainIdentityData.usernameSecondary,
+                    null,
+                    null
                 )
                 currentUsername ?.let {
                     usernameStatuses[it] = usernameStatus
@@ -843,6 +861,15 @@ class PlatformRepo @Inject constructor(
                 }
                 usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
                 votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
+
+                val usernames = blockchainIdentity.getUsernames()
+                if (usernames.size > 1 && username != null) {
+                    usernames.find { it != username && it.contains(username!!) }?.let { name ->
+                        usernameSecondary = name
+                        usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
+                        preorderSalt = blockchainIdentity.saltForUsername(name, false)
+                    }
+                }
             }
             creditBalance = blockchainIdentity.creditBalance
 
