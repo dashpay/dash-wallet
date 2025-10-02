@@ -14,35 +14,42 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
     tools:context="org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendLoginInfoDialog">
 
     <ImageButton
         android:id="@+id/collapse_button"
-        style="@style/DialogCloseButton" />
+        style="@style/DialogCloseButton"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <ImageView
         android:id="@+id/dialog_icon"
         android:layout_width="180dp"
         android:layout_height="60dp"
-        android:layout_gravity="center_horizontal"
         android:layout_marginTop="20dp"
-        android:src="@drawable/ic_dashspend_logo" />
+        android:src="@drawable/ic_dashspend_logo"
+        app:layout_constraintTop_toBottomOf="@id/collapse_button"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <TextView
         android:id="@+id/dialog_title"
         style="@style/Headline5"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="60dp"
         android:layout_marginTop="22dp"
         android:gravity="center"
         android:textAlignment="gravity"
-        android:text="@string/dashspend_terms_conditions" />
+        android:text="@string/dashspend_terms_conditions"
+        app:layout_constraintTop_toBottomOf="@id/dialog_icon"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/terms_link"
@@ -51,32 +58,36 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="12dp"
         android:text="@string/view_terms_conditions"
-        android:layout_gravity="center"
         android:drawablePadding="8dp"
-        android:drawableEnd="@drawable/ic_open_link" />
-
-    <Space
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
-    <CheckBox
-        android:id="@+id/accept_terms_checkbox"
-        style="@style/CheckBoxSimple"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="18dp"
-        android:layout_marginBottom="14dp"
-        android:text="@string/accept_terms_conditions" />
+        android:drawableEnd="@drawable/ic_open_link"
+        app:layout_constraintTop_toBottomOf="@id/dialog_title"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <Button
         android:id="@+id/create_account_button"
         style="@style/Button.Primary.Large.Blue"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
         android:layout_marginBottom="40dp"
         android:text="@string/account_create"
-        android:enabled="false" />
+        android:enabled="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
-</LinearLayout>
+    <CheckBox
+        android:id="@+id/accept_terms_checkbox"
+        style="@style/CheckBoxSimple"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="18dp"
+        android:layout_marginBottom="12dp"
+        android:text="@string/accept_terms_conditions"
+        app:layout_constraintBottom_toTopOf="@id/create_account_button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.457"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>
