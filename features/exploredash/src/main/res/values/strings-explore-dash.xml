@@ -230,9 +230,10 @@
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="gift_card_out_of_stock_error">This gift card is out of stock. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
     <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
-    <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact CTX support to report the problem.</string>
+    <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact %s Support to report the problem.</string>
     <string name="gift_card_server_region_error">Purchases of this gift card cannot be made from your region.</string>
     <string name="gift_card_error_wrong_network">The payment request is for a different network. Please contact support.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>

@@ -79,6 +79,14 @@ class CTXSpendException(
         get() = cause?.let { it is SSLHandshakeException } ?: false
     val isRegionNotAllowed: Boolean
         get() = errorBody == "Client Transactions Not Allowed For This Region"
+
+    val isOutOfStock: Boolean
+        get() {
+            val message = errorMap["message"] as? String ?: ""
+            val outOfStockRegex = Regex("Gift card \\d+ is out of stock")
+            return errorCode == 500 && outOfStockRegex.matches(message) || outOfStockRegex.matches(errorBody ?: "")
+        }
+
     override fun toString(): String {
         return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
     }

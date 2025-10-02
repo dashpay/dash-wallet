@@ -32,9 +32,7 @@ import androidx.transition.TransitionManager
 import coil.load
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -51,7 +49,6 @@ import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
@@ -180,12 +177,36 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             }
                         }
                     }
+                    ex.isOutOfStock -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_out_of_stock_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_support)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "PiggyCards Issue: Out of Stock",
+                                    sendToService = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
                     ex.errorCode == 500 -> {
+                        val serviceName = if (ex.serviceName == ServiceName.CTXSpend) "CTX" else "PiggyCards"
                         viewModel.logError(ex,"${ex.serviceName} returned error: Error 500")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_server_error),
+                            getString(R.string.gift_card_server_error, serviceName),
                             getString(R.string.button_close),
                             if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
                         ).show(requireActivity()) { result ->
