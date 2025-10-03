@@ -86,7 +86,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
-            if (viewModel.filterMode.value != FilterMode.Online) {
+            if (viewModel.filterMode.value != FilterMode.Online && viewModel.filterMode.value != FilterMode.All) {
                 setupRadiusOptions()
                 setupTerritoryFilter()
                 setupLocationPermission()
@@ -242,19 +242,22 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         binding.giftCardTypesLabel.isVisible = hasGiftCardOptions && isMerchantScreen
         binding.giftCardTypes.isVisible = hasGiftCardOptions && isMerchantScreen
 
-        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !hasGiftCardOptions
+        val shouldHideSorting = (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All) && !hasGiftCardOptions
         binding.sortByCard.isVisible = !shouldHideSorting
         binding.sortByLabel.isVisible = !shouldHideSorting
     }
 
     private fun setupSortByOptions() {
-        sortOption = viewModel.appliedFilters.value.sortOption
+        val currentFilterMode = viewModel.filterMode.value ?: FilterMode.Online
+        sortOption = viewModel.appliedFilters.value.getSortOption(currentFilterMode)
 
         val sortOptions = mutableListOf(
             SortOption.Name
         )
 
-        if (viewModel.filterMode.value != FilterMode.Online && viewModel.isLocationEnabled.value == true) {
+        if (viewModel.filterMode.value != FilterMode.Online &&
+            viewModel.filterMode.value != FilterMode.All &&
+            viewModel.isLocationEnabled.value == true) {
             sortOptions.add(SortOption.Distance)
         }
 
@@ -275,7 +278,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
         this.sortOptions = sortOptions
 
-        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && 
+        val shouldHideSorting = (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All) && 
                                 viewModel.exploreTopic != ExploreTopic.ATMs && 
                                 !ctxPaymentOn && !piggyCardsPaymentOn
         binding.sortByCard.isVisible = !shouldHideSorting
@@ -488,7 +491,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             isEnabled = true
         }
 
-        if (sortOption != ExploreViewModel.DEFAULT_SORT_OPTION) {
+        val currentFilterMode = viewModel.filterMode.value ?: FilterMode.Online
+        val currentSortOption = viewModel.appliedFilters.value.getSortOption(currentFilterMode)
+        if (currentSortOption != ExploreViewModel.DEFAULT_SORT_OPTION) {
             isEnabled = true
         }
 

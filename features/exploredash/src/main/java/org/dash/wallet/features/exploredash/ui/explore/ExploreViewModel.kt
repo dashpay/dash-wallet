@@ -76,13 +76,29 @@ data class FilterOptions(
     val territory: String,
     val payment: String,
     val denominationType: DenomOption,
-    val sortOption: SortOption,
+    val sortOptionOnline: SortOption,
+    val sortOptionNearby: SortOption,
+    val sortOptionAll: SortOption,
     val radius: Int, // Can be miles or kilometers, see isMetric
     val provider: String = "",
     val isUserSetSort: Boolean = false // Track if sort was explicitly set by user
 ) {
+    // Helper property to get the sort option for the current filter mode
+    fun getSortOption(filterMode: FilterMode): SortOption {
+        return when (filterMode) {
+            FilterMode.Online -> sortOptionOnline
+            FilterMode.Nearby -> sortOptionNearby
+            FilterMode.All -> sortOptionAll
+            else -> sortOptionOnline // Default fallback for other modes
+        }
+    }
+    
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION, "", false)
+        val DEFAULT = FilterOptions(
+            "", "", "", DenomOption.Both, 
+            SortOption.Name, SortOption.Distance, SortOption.Name, 
+            DEFAULT_RADIUS_OPTION, "", false
+        )
     }
 }
 
@@ -250,17 +266,18 @@ class ExploreViewModel @Inject constructor(
                 }
         }
 
-    // Used for the map
+    // Used for the map - combine both _filterMode and _appliedFilters so either can restart the flow
     val boundedSearchFlow: Flow<List<SearchResult>> =
-        _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { filters ->
-            _searchBounds
-                .filterNotNull()
-                .filter { screenState.value == ScreenState.SearchResults }
-                .flatMapLatest { bounds ->
-                    _filterMode
-                        .filterNot { it == FilterMode.Online }
-                        .flatMapLatest { mode -> getBoundedFlow(filters, mode, bounds) }
-                }
+        combine(
+            _filterMode.filterNot { it == FilterMode.Online },
+            _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
+            _searchBounds.filterNotNull()
+        ) { mode, filters, bounds ->
+            Triple(mode, filters, bounds)
+        }.filter { (_, _, _) ->
+            screenState.value == ScreenState.SearchResults
+        }.flatMapLatest { (mode, filters, bounds) ->
+            getBoundedFlow(filters, mode, bounds)
         }
 
     fun init(exploreTopic: ExploreTopic) {
@@ -282,7 +299,7 @@ class ExploreViewModel @Inject constructor(
 
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
-                    .distinctUntilChanged()
+                    //.distinctUntilChanged()
                     .onEach { list ->
                         list.forEach {
                             if (it is Merchant) {
@@ -356,15 +373,15 @@ class ExploreViewModel @Inject constructor(
                 else -> false
             }
             
+            // Only update filters if we need to set default sort (combine() architecture handles tab switching)
             if (shouldSetDefaultSort) {
-                val defaultSortOption = when (mode) {
-                    FilterMode.Online -> SortOption.Name
-                    FilterMode.Nearby -> SortOption.Distance
-                    else -> SortOption.Name
-                }
-                
-                _appliedFilters.update { current -> 
-                    current.copy(sortOption = defaultSortOption, isUserSetSort = false)
+                _appliedFilters.update { current ->
+                    when (mode) {
+                        FilterMode.Online -> current.copy(sortOptionOnline = SortOption.Name, isUserSetSort = false)
+                        FilterMode.Nearby -> current.copy(sortOptionNearby = SortOption.Distance, isUserSetSort = false)
+                        FilterMode.All -> current.copy(sortOptionAll = SortOption.Name, isUserSetSort = false)
+                        else -> current.copy(sortOptionOnline = SortOption.Name, isUserSetSort = false)
+                    }
                 }
             }
         }
@@ -383,11 +400,18 @@ class ExploreViewModel @Inject constructor(
         providerFilter: String = ""
     ) {
         _appliedFilters.update { current ->
-            current.copy(
+            // Update the sort option for the current filter mode
+            val updatedFilters = when (_filterMode.value) {
+                FilterMode.Online -> current.copy(sortOptionOnline = sortOption)
+                FilterMode.Nearby -> current.copy(sortOptionNearby = sortOption)
+                FilterMode.All -> current.copy(sortOptionAll = sortOption)
+                else -> current.copy(sortOptionOnline = sortOption)
+            }
+            
+            updatedFilters.copy(
                 territory = selectedTerritory,
                 payment = paymentFilter,
                 denominationType = denomOption,
-                sortOption = sortOption,
                 radius = selectedRadiusOption,
                 provider = providerFilter,
                 isUserSetSort = true // Mark as user-set since this comes from the filters screen
@@ -571,8 +595,9 @@ class ExploreViewModel @Inject constructor(
             _isLocationEnabled.value == true &&
             userLat != null &&
             userLng != null
-        val sortOption = if (filters.sortOption != SortOption.Distance) {
-            filters.sortOption
+        val currentSortOption = filters.getSortOption(filterMode)
+        val sortOption = if (currentSortOption != SortOption.Distance) {
+            currentSortOption
         } else if (canSortByDistance) {
             SortOption.Distance
         } else {
@@ -616,7 +641,7 @@ class ExploreViewModel @Inject constructor(
                     filters.territory,
                     types,
                     bounds,
-                    canSortByDistance && filters.sortOption == SortOption.Distance,
+                    canSortByDistance && filters.getSortOption(filterMode) == SortOption.Distance,
                     userLat ?: 0.0,
                     userLng ?: 0.0
                 )
@@ -768,15 +793,16 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
+        val currentSortOption = _appliedFilters.value.getSortOption(_filterMode.value ?: FilterMode.Online)
         logEvent(
             if (exploreTopic == ExploreTopic.Merchants) {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                     SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                 }
             } else {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
                     SortOption.Discount -> ""
