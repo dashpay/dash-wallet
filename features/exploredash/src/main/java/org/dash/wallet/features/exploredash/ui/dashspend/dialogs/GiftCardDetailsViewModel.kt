@@ -379,7 +379,10 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                             GiftCardStatus.REJECTED -> {
                                 log.error("PiggyCards returned error: rejected")
-                                analyticsService.logError(CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),"CTX returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}")
+                                analyticsService.logError(
+                                    CTXSpendException("PiggyCards returned error: rejected", giftCard, ""),
+                                    "PiggyCards returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
+                                )
                                 val newState = uiState.value.copy(
                                     status = giftCard.status,
                                     queries = uiState.value.queries + 1,

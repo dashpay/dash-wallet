@@ -90,7 +90,7 @@ class CTXSpendException(
         }
 
     override fun toString(): String {
-        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
+        return "DashSpend error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
     }
 }
 

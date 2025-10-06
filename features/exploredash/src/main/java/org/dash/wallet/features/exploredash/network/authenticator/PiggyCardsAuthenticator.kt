@@ -69,7 +69,7 @@ class PiggyCardsAuthenticator @Inject constructor(
         val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
         val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
         
-        return if (userId != null && password != null) {
+        return if (!userId.isNullOrBlank() && !password.isNullOrBlank()) {
             tokenApi.login(LoginRequest(userId = userId, password = password))
         } else {
             null

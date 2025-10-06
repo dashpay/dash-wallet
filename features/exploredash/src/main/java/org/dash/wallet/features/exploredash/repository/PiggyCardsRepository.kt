@@ -223,7 +223,7 @@ class PiggyCardsRepository @Inject constructor(
         it: Brand
     ): UpdatedMerchantDetails {
         val denominations = arrayListOf<Double>()
-        var discountPercentage = -100.0
+        var discountPercentage = -100.0 // very low number for max
         val activeGiftCards = arrayListOf<Giftcard>()
         data.forEach { card ->
             if (card.quantity > 0) {
@@ -241,7 +241,7 @@ class PiggyCardsRepository @Inject constructor(
             denominationsType,
             (discountPercentage * 100).toInt() - SERVICE_FEE,
             redeemType = "barcode",
-            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(data.first().name)
+            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(activeGiftCards.firstOrNull()?.name ?: "")
         )
     }
 
@@ -357,7 +357,7 @@ class PiggyCardsRepository @Inject constructor(
             paymentCryptoNetwork = Constants.DASH_CURRENCY,
             paymentId = data.orderId,
             percentDiscount = "0.0",
-            rate = exchangeRateMap[data.orderId]?.toString() ?: "0.0",
+            rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
             redeemUrl = giftCard.claimLink,
             fiatAmount = "0.0",
             fiatCurrency = Constants.USD_CURRENCY,

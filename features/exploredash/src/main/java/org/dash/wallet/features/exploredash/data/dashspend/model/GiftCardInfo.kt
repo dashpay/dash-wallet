@@ -26,4 +26,16 @@ data class GiftCardInfo(
     val fiatAmount: String? = "",
     val fiatCurrency: String? = "",
     val paymentUrls: Map<String, String>? = buildMap { }
-)
+) {
+    override fun toString(): String {
+        return "GiftCardInfo(id='$id', merchantName='$merchantName', status=$status, " +
+                "cryptoAmount='$cryptoAmount', cryptoCurrency='$cryptoCurrency', " +
+                "paymentCryptoNetwork='$paymentCryptoNetwork', paymentId='$paymentId', " +
+                "percentDiscount='$percentDiscount', rate='$rate', " +
+                "fiatAmount='$fiatAmount', fiatCurrency='$fiatCurrency', " +
+                "paymentUrls=$paymentUrls, barcodeUrl=${if (barcodeUrl != null) "[REDACTED]" else null}, " +
+                "cardNumber=${if (cardNumber != null) "[REDACTED]" else null}, " +
+                "cardPin=${if (cardPin != null) "[REDACTED]" else null}, " +
+                "redeemUrl=${if (redeemUrl != null) "[REDACTED]" else null})"
+    }
+}

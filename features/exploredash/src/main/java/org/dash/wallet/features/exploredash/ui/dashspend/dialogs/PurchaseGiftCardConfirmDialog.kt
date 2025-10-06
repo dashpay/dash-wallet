@@ -340,7 +340,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 getString(R.string.send_coins_error_msg),
                 message,
                 getString(R.string.button_close),
-                getString(R.string.gift_card_contact_ctx)
+                getString(R.string.gift_card_contact_support)
             ).show(requireActivity()) { result ->
                 if (result == true) {
                     val intent = viewModel.createEmailIntent(
