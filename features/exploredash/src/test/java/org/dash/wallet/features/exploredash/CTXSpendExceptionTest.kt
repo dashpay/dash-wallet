@@ -17,8 +17,10 @@
 package org.dash.wallet.features.exploredash
 
 import org.bitcoinj.core.Sha256Hash
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,7 +40,7 @@ class CTXSpendExceptionTest {
               }
             }
         """
-        val exception = CTXSpendException("response error", 400, errorBody)
+        val exception = CTXSpendException("response error", ServiceName.CTXSpend, 400, errorBody)
         assertEquals(400, exception.errorCode)
         assertTrue(exception.isLimitError)
     }
@@ -46,8 +48,19 @@ class CTXSpendExceptionTest {
     @Test
     fun serverErrorTest() {
         val errorBody = "code=500, message=Internal Server Error"
-        val exception = CTXSpendException("response error", 500, errorBody)
+        val exception = CTXSpendException("response error", ServiceName.CTXSpend, 500, errorBody)
         assertEquals(500, exception.errorCode)
+        assertFalse(exception.isLimitError)
+        assertFalse(exception.isNetworkError)
+    }
+
+    @Test
+    fun noInventoryTest() {
+        val errorBody = "{\"code\":500,\"message\":\"Gift card 2626 is out of stock\"}"
+        val exception = CTXSpendException("response error", ServiceName.PiggyCards, 500, errorBody)
+        assertEquals(500, exception.errorCode)
+        assertEquals(ServiceName.PiggyCards, exception.serviceName)
+        assertTrue(exception.isOutOfStock)
         assertFalse(exception.isLimitError)
         assertFalse(exception.isNetworkError)
     }
@@ -62,7 +75,7 @@ class CTXSpendExceptionTest {
     @Test
     fun malformedJsonErrorTest() {
         val malformedErrorBody = "{ this is not valid json }"
-        val exception = CTXSpendException("response error", 400, malformedErrorBody)
+        val exception = CTXSpendException("response error", ServiceName.CTXSpend, 400, malformedErrorBody)
         assertEquals(400, exception.errorCode)
         // Verify that parsing errors don't cause the app to consider this a limit error
         assertFalse(exception.isLimitError)
@@ -75,9 +88,10 @@ class CTXSpendExceptionTest {
                 R.string.gift_card_rejected,
                 listOf("giftcard-1", "00000-0000000-00001", Sha256Hash.ZERO_HASH.toStringBase58())
             ),
-            GiftCardResponse(
+            GiftCardInfo(
                 "giftcard-1",
-                "rejected"
+                "netflix",
+                GiftCardStatus.REJECTED
             )
         )
         assertEquals(null, exception.errorCode)
