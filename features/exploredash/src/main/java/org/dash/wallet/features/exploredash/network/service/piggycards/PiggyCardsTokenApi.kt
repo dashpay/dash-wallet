@@ -14,14 +14,14 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package org.dash.wallet.features.exploredash.network.service.piggycards
 
-package org.dash.wallet.features.exploredash.utils
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
+import retrofit2.http.Body
+import retrofit2.http.POST
 
-object PiggyCardsConstants {
-    const val REPORT_EMAIL = "support@piggy.cards"
-    const val BASE_URL_DEV = "https://apidev.piggy.cards/dash/v1/"
-    const val BASE_URL_PROD = "https://api.piggy.cards/dash/v1/"
-    const val BASE_URL = BASE_URL_DEV  // TODO: Switch to PROD for production
-    
-    const val TOKEN_EXPIRES_IN_SECONDS = 3600
+interface PiggyCardsTokenApi {
+    @POST("login")
+    suspend fun login(@Body loginRequest: LoginRequest): LoginResponse
 }

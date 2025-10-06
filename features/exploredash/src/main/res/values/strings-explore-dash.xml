@@ -193,7 +193,7 @@
     <string name="purchase_gift_card_confirm">Confirm</string>
     <string name="purchase_gift_card_details">Gift card details</string>
     <string name="purchase_original_purchase">Original purchase</string>
-    <string name="purchase_check_current_balance">Check current balance</string>
+    <string name="purchase_check_current_balance">See card details</string>
     <string name="purchase_card_number">Card Number</string>
     <string name="purchase_card_pin">Card PIN</string>
     <string name="purchase_view_transaction">View Transaction Details</string>
@@ -233,7 +233,10 @@
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
     <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
     <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact CTX support to report the problem.</string>
+    <string name="gift_card_server_region_error">Purchases of this gift card cannot be made from your region.</string>
+    <string name="gift_card_error_wrong_network">The payment request is for a different network. Please contact support.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>
+    <string name="gift_card_delay">It is taking more time than usual to retrieve this card. Please contact <a href="contact:support">support@dash.org</a> if it takes much longer.</string>
     <string name="gift_card_rejected">The payment has been rejected.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact %s with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="dashspend_terms_conditions">Accept terms and conditions</string>
@@ -241,9 +244,10 @@
     <string name="tap_link_to_proceed">To create an account at DashSpend you must tap on the link below to proceed</string>
     <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">Terms &amp; conditions</string>
-    <string name="barcode_placeholder">As soon as your code is generated, it will be displayed here.</string>
+    <string name="barcode_placeholder">Please wait for the gift card details to be delivered.</string>
     <string name="gift_card_contact_ctx">Contact CTX Support</string>
-
+    <string name="gift_card_contact_piggycards">Contact PiggyCards Support</string>
+    <string name="gift_card_contact_support">Contact Support</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Create account</string>
     <string name="log_in_to_ctxspend_account">Log in to your account</string>
@@ -251,6 +255,7 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Buy a gift card with your DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Create a DashSpend account or log in to the existing one</string>
     <string name="temporarily_unavailable">Temporarily unavailable</string>
+    <string name="country_availability">This card works only in the United States</string>
     <string name="token_expired_title">Your session expired</string>
     <string name="token_expired_message">It looks like you haven’t used DashSpend in a while. For security reasons, you’ve been logged out.\n\nPlease sign in again to continue exploring where to spend your Dash.</string>
 

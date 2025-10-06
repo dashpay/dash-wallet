@@ -30,6 +30,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchant
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import java.io.IOException
 import java.util.UUID
 import javax.inject.Inject
 import javax.net.ssl.SSLHandshakeException
@@ -40,7 +41,7 @@ class CTXSpendException(
     val errorCode: Int? = null,
     val errorBody: String? = null,
     cause: Throwable? = null
-) : Exception(message, cause) {
+) : IOException(message, cause) {
     var resourceString: ResourceString? = null
     var giftCardResponse: GiftCardInfo? = null
     var txId: String? = null
@@ -76,6 +77,11 @@ class CTXSpendException(
         }
     val isNetworkError: Boolean
         get() = cause?.let { it is SSLHandshakeException } ?: false
+    val isRegionNotAllowed: Boolean
+        get() = errorBody == "Client Transactions Not Allowed For This Region"
+    override fun toString(): String {
+        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
+    }
 }
 
 class CTXSpendRepository @Inject constructor(
@@ -145,6 +151,7 @@ class CTXSpendRepository @Inject constructor(
 
         return GiftCardInfo(
             response.id,
+            response.merchantName,
             status = GiftCardStatus.valueOf(response.status.uppercase()),
             cryptoAmount = response.cryptoAmount,
             cryptoCurrency = response.cryptoCurrency,
@@ -165,7 +172,11 @@ class CTXSpendRepository @Inject constructor(
         return response?.let {
             GiftCardInfo(
                 response.id,
+                merchantName = response.merchantName,
                 status = GiftCardStatus.valueOf(response.status.uppercase()),
+                barcodeUrl = response.barcodeUrl,
+                cardNumber = response.cardNumber,
+                cardPin = response.cardPin,
                 cryptoAmount = response.cryptoAmount,
                 cryptoCurrency = response.cryptoCurrency,
                 paymentCryptoNetwork = response.paymentCryptoNetwork,

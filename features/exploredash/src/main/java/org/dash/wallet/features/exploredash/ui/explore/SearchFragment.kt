@@ -318,12 +318,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } catch (e: IllegalArgumentException) {
             // Handle case where nav graph is no longer on back stack after process death
         }
-        // clear this listener
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->
-                WindowInsetsCompat.CONSUMED
-            }
-        }
         onBackPressedCallback?.remove()
     }
 
@@ -449,16 +443,25 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         searchHeaderAdapter.setOnSearchQuerySubmitted { hideKeyboard() }
 
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
-                val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
-                this.isKeyboardShowing = showingKeyboard
-
-                if (showingKeyboard) {
+        // Set up keyboard detection using view height changes
+        setupKeyboardDetection(bottomSheet)
+    }
+    
+    private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
+        val rootView = requireActivity().findViewById<View>(android.R.id.content)
+        var isKeyboardCurrentlyVisible = false
+        
+        rootView.viewTreeObserver.addOnGlobalLayoutListener {
+            val heightDiff = rootView.rootView.height - rootView.height
+            val isKeyboardVisible = heightDiff > 200 // Threshold for keyboard detection
+            
+            if (isKeyboardVisible != isKeyboardCurrentlyVisible) {
+                isKeyboardCurrentlyVisible = isKeyboardVisible
+                this.isKeyboardShowing = isKeyboardVisible
+                
+                if (isKeyboardVisible) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 }
-
-                insets
             }
         }
     }
@@ -527,7 +530,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
             if (item != null) {
                 binding.toolbarTitle.text = item.name
 
-                if (item is Merchant && item.giftCardProviders.size == 1) {
+                if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
                     selectedProvider = GiftCardProviderType.fromProviderName(item.giftCardProviders.first().provider)
                     dashSpendViewModel.observeDashSpendState(selectedProvider)
                 }
@@ -609,7 +612,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            hardBackAction.invoke()
+            if (isKeyboardVisible()) {
+                // If keyboard is visible, hide it first and clear focus
+                requireActivity().currentFocus?.clearFocus()
+                hideKeyboard()
+                
+                // Add small delay to ensure keyboard is hidden and layout adjusts
+                lifecycleScope.launch {
+                    delay(150)
+                    // Force window to adjust after keyboard is hidden
+                    requireActivity().window?.setSoftInputMode(
+                        android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                    )
+                }
+            } else {
+                // Normal back behavior
+                hardBackAction.invoke()
+            }
         }
     }
 
@@ -858,6 +877,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
+    
+    private fun isKeyboardVisible(): Boolean {
+        return isKeyboardShowing
+    }
 
     private fun shouldShowUpButton(): Boolean {
         val offset = binding.searchResults.computeVerticalScrollOffset()
@@ -935,64 +958,68 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     @Composable
     private fun ItemDetailsComposable(item: SearchResult) {
         val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
-        ItemDetails(
-            item = item,
-            isLoggedIn = state.isLoggedIn,
-            userEmail = state.email,
-            selectedProvider = selectedProvider,
-            onProviderSelected = { provider ->
-                selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
-                dashSpendViewModel.observeDashSpendState(selectedProvider)
-            },
-            onSendDashClicked = { isPayingWithDash ->
-                if (isPayingWithDash) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-                }
-                deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-            },
-            onReceiveDashClicked = {
-                deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
-            },
-            onShowAllLocationsClicked = {
-                viewModel.selectedItem.value?.let { merchant ->
-                    if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                        viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+        val currentItem by viewModel.selectedItem.collectAsStateWithLifecycle()
+        
+        currentItem?.let {
+            ItemDetails(
+                item = it,
+                isLoggedIn = state.isLoggedIn,
+                userEmail = state.email,
+                selectedProvider = selectedProvider,
+                onProviderSelected = { provider ->
+                    selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                },
+                onSendDashClicked = { isPayingWithDash ->
+                    if (isPayingWithDash) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                    }
+                    deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+                },
+                onReceiveDashClicked = {
+                    deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+                },
+                onShowAllLocationsClicked = {
+                    viewModel.selectedItem.value?.let { merchant ->
+                        if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                            viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                        }
+                    }
+                },
+                onBackButtonClicked = {
+                    viewModel.backFromMerchantLocation()
+                },
+                onNavigationButtonClicked = {
+                    openMaps(item)
+                },
+                onDialPhoneButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                    }
+                    it.phone?.let { phone -> dialPhone(phone) }
+                },
+                onOpenWebsiteButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                    }
+                    it.website?.let { website -> openWebsite(website) }
+                },
+                onBuyGiftCardButtonClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.selectedProvider = selectedProvider
+                        if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
+                            showLoginDialog(selectedProvider)
+                        } else {
+                            openPurchaseGiftCardFragment() // TODO: service
+                        }
+                    }
+                },
+                onExploreLogOutClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.logout(selectedProvider)
                     }
                 }
-            },
-            onBackButtonClicked = {
-                viewModel.backFromMerchantLocation()
-            },
-            onNavigationButtonClicked = {
-                openMaps(item)
-            },
-            onDialPhoneButtonClicked = {
-                if (isMerchantTopic) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-                }
-                item.phone?.let { phone -> dialPhone(phone) }
-            },
-            onOpenWebsiteButtonClicked = {
-                if (isMerchantTopic) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-                }
-                item.website?.let { website -> openWebsite(website) }
-            },
-            onBuyGiftCardButtonClicked = {
-                lifecycleScope.launch {
-                    dashSpendViewModel.selectedProvider = selectedProvider
-                    if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
-                        showLoginDialog(selectedProvider)
-                    } else {
-                        openPurchaseGiftCardFragment() // TODO: service
-                    }
-                }
-            },
-            onExploreLogOutClicked = {
-                lifecycleScope.launch {
-                    dashSpendViewModel.logout(selectedProvider)
-                }
-            }
-        )
+            )
+        }
     }
 }

@@ -121,15 +121,60 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         val currentPayment = viewModel.appliedFilters.value.payment
         val currentProvider = viewModel.appliedFilters.value.provider
         
-        // Dash is always available
-        dashPaymentOn = currentPayment.isEmpty() || currentPayment == PaymentMethod.DASH
+        // Determine the current state based on saved filters
+        when {
+            currentPayment.isEmpty() && currentProvider.isEmpty() -> {
+                // No filters applied - show all options as selected
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = true
+            }
+            currentPayment.isEmpty() && currentProvider == "CTX" -> {
+                // Dash + CTX selected
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = false
+            }
+            currentPayment.isEmpty() && currentProvider == "PiggyCards" -> {
+                // Dash + PiggyCards selected
+                dashPaymentOn = true
+                ctxPaymentOn = false
+                piggyCardsPaymentOn = true
+            }
+            currentPayment == PaymentMethod.DASH -> {
+                // Only Dash is selected
+                dashPaymentOn = true
+                ctxPaymentOn = false
+                piggyCardsPaymentOn = false
+            }
+            currentPayment == PaymentMethod.GIFT_CARD -> {
+                // Gift card mode - check provider
+                dashPaymentOn = false
+                when (currentProvider) {
+                    "CTX" -> {
+                        ctxPaymentOn = true
+                        piggyCardsPaymentOn = false
+                    }
+                    "PiggyCards" -> {
+                        ctxPaymentOn = false
+                        piggyCardsPaymentOn = true
+                    }
+                    else -> {
+                        // No specific provider (both gift card providers selected)
+                        ctxPaymentOn = true
+                        piggyCardsPaymentOn = true
+                    }
+                }
+            }
+            else -> {
+                // Default fallback
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = true
+            }
+        }
+        
         binding.dashOption.isChecked = dashPaymentOn
-        
-        // CTX and PiggyCards are gift card providers
-        val isGiftCardMode = currentPayment.isEmpty() || currentPayment == PaymentMethod.GIFT_CARD
-        ctxPaymentOn = isGiftCardMode && (currentProvider.isEmpty() || currentProvider == "CTX")
-        piggyCardsPaymentOn = isGiftCardMode && (currentProvider.isEmpty() || currentProvider == "PiggyCards")
-        
         binding.ctxOption.isChecked = ctxPaymentOn
         binding.piggycardsOption.isChecked = piggyCardsPaymentOn
 
@@ -364,21 +409,48 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         // Only apply payment and denomination filters for merchants
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             // Determine payment method and provider based on selected options
-            val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
-            
-            if (dashPaymentOn && !hasGiftCardOptions) {
-                paymentFilter = PaymentMethod.DASH
-            } else if (!dashPaymentOn && hasGiftCardOptions) {
-                paymentFilter = PaymentMethod.GIFT_CARD
-                // Set provider filter for gift cards
-                if (ctxPaymentOn && !piggyCardsPaymentOn) {
+            when {
+                dashPaymentOn && !ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Only Dash selected
+                    paymentFilter = PaymentMethod.DASH
+                    providerFilter = ""
+                }
+                !dashPaymentOn && ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Only CTX selected
+                    paymentFilter = PaymentMethod.GIFT_CARD
                     providerFilter = "CTX"
-                } else if (!ctxPaymentOn && piggyCardsPaymentOn) {
+                }
+                !dashPaymentOn && !ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Only PiggyCards selected
+                    paymentFilter = PaymentMethod.GIFT_CARD
                     providerFilter = "PiggyCards"
                 }
-                // If both are selected, leave provider empty (show all)
+                !dashPaymentOn && ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Both gift card providers selected (no Dash)
+                    paymentFilter = PaymentMethod.GIFT_CARD
+                    providerFilter = "" // Empty means both providers
+                }
+                dashPaymentOn && ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Dash + CTX selected
+                    paymentFilter = ""
+                    providerFilter = "CTX"
+                }
+                dashPaymentOn && !ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Dash + PiggyCards selected
+                    paymentFilter = ""
+                    providerFilter = "PiggyCards"
+                }
+                dashPaymentOn && ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // All three selected
+                    paymentFilter = ""
+                    providerFilter = ""
+                }
+                else -> {
+                    // Fallback (should not happen)
+                    paymentFilter = ""
+                    providerFilter = ""
+                }
             }
-            // If both Dash and gift card options are selected, leave filters empty (show all)
 
             denomOption = if (binding.fixedDenomOption.isChecked && binding.flexibleAmountOption.isChecked) {
                 DenomOption.Both

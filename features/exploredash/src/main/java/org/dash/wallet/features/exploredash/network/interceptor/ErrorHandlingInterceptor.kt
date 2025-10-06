@@ -22,18 +22,25 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 
 class ErrorHandlingInterceptor(private val serviceName: String) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
-        val response = chain.proceed(chain.request())
-        
-        if (!response.isSuccessful) {
-            val errorBody = response.body?.string()
-            throw CTXSpendException(
-                "$serviceName api error with ${response.request.url}: ${response.code}; ${response.body}",
-                serviceName = serviceName,
-                errorCode = response.code,
-                errorBody = errorBody
-            )
-        }
-        
-        return response
+        val request = chain.request()
+        val response = chain.proceed(request)
+
+        val isRefresh401 =
+            response.code == 401 && request.url.encodedPath.contains("/refresh-token")
+
+        if (response.isSuccessful || isRefresh401) return response
+
+        // Read up to 256 KB without consuming the original stream
+        val snapshot = response.peekBody(256 * 1024)
+        val err = snapshot.string()
+
+        response.close() // release connection since we're throwing
+
+        throw CTXSpendException(
+            "$serviceName error ${response.code} ${request.method} ${request.url}",
+            serviceName = serviceName,
+            errorCode = response.code,
+            errorBody = err
+        )
     }
 }

@@ -37,6 +37,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.uri.BitcoinURIParseException
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
@@ -79,7 +81,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val merchant = viewModel.giftCardMerchant
+        val merchant = viewModel.giftCardMerchant.value
         if (merchant == null) {
             log.warn("PurchaseGiftCardConfirmDialog: No merchant available, dismissing dialog")
             dismiss()
@@ -94,6 +96,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 scale(Scale.FILL)
                 placeholder(R.drawable.ic_image_placeholder)
                 error(R.drawable.ic_image_placeholder)
+                listener(
+                    onError = { _, result ->
+                        log.error("Image load error for ${merchant?.name}: ${merchant?.logoLocation}: ${result.throwable.message}", result.throwable)
+                    }
+                )
             }
         }
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsFraction)
@@ -107,15 +114,16 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
     }
 
     private fun onConfirmButtonClicked() {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             // Double-check merchant is still available before proceeding
-            if (viewModel.giftCardMerchant == null) {
+            if (viewModel.giftCardMerchant.value == null) {
                 log.warn("PurchaseGiftCardConfirmDialog: Merchant became null during confirmation, dismissing")
                 dismiss()
                 return@launch
             }
-
+            showLoading()
             if (authManager.authenticate(requireActivity()) == null) {
+                hideLoading()
                 return@launch
             }
 
@@ -136,7 +144,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
                                     "DashPay DashSpend Issue: Network Error",
-                                    sentToCTX = true,
+                                    sendToService = true,
                                     ex
                                 )
 
@@ -149,17 +157,18 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
+                        viewModel.logError(ex,"${ex.serviceName} returned error: limits")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_limit_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
-                                    "CTX Issue: Spending Limit Problem",
-                                    sentToCTX = true,
+                                    "${ex.serviceName} Issue: Spending Limit Problem",
+                                    sendToService = true,
                                     ex
                                 )
 
@@ -172,17 +181,41 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 500 -> {
+                        viewModel.logError(ex,"${ex.serviceName} returned error: Error 500")
                         AdaptiveDialog.create(
                             R.drawable.ic_error,
                             getString(R.string.gift_card_purchase_failed),
                             getString(R.string.gift_card_server_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
-                                    "CTX Issue: Purchase, Internal Server Error",
-                                    sentToCTX = true,
+                                     "${ex.serviceName} Issue: Purchase, Internal Server Error",
+                                    sendToService = true,
+                                    ex
+                                )
+
+                                val chooser = Intent.createChooser(
+                                    intent,
+                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                )
+                                launcher.launch(chooser)
+                            }
+                        }
+                    }
+                    ex.isRegionNotAllowed -> {
+                        AdaptiveDialog.create(
+                            R.drawable.ic_error,
+                            getString(R.string.gift_card_purchase_failed),
+                            getString(R.string.gift_card_server_region_error),
+                            getString(R.string.button_close),
+                            getString(R.string.gift_card_contact_support)
+                        ).show(requireActivity()) { result ->
+                            if (result == true) {
+                                val intent = viewModel.createEmailIntent(
+                                    "DashSpend Issue: Purchase, Region Not Allowed",
+                                    sendToService = false,
                                     ex
                                 )
 
@@ -200,12 +233,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                             getString(R.string.gift_card_purchase_failed),
                             ex.message ?: getString(R.string.gift_card_error),
                             getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_ctx)
+                            getString(R.string.gift_card_contact_support)
                         ).show(requireActivity()) { result ->
                             if (result == true) {
                                 val intent = viewModel.createEmailIntent(
                                     subject = "DashPay DashSpend Issue: Purchase Error",
-                                    sentToCTX = false,
+                                    sendToService = false,
                                     ex
                                 )
 
@@ -263,7 +296,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             ).show(requireActivity()) {
                 val intent = viewModel.createEmailIntent(
                     subject = "DashPay DashSpend Issue: DirectPay Error",
-                    sentToCTX = false,
+                    sendToService = false,
                     CTXSpendException(ex.message ?: "purchase gift card error: direct pay", cause = ex)
                 )
 
@@ -277,23 +310,30 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         } catch (ex: Exception) {
             log.error("purchaseGiftCard error", ex)
             hideLoading()
+            val message = getString(when {
+                ex.cause is BitcoinURIParseException && ex.message?.contains("mismatched network") == true -> R.string.gift_card_error_wrong_network
+                else -> R.string.gift_card_error
+            })
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.send_coins_error_msg),
-                getString(R.string.gift_card_error),
-                getString(R.string.button_close)
-            ).show(requireActivity()) {
-                val intent = viewModel.createEmailIntent(
-                    subject = "DashPay DashSpend Issue: Purchase Error",
-                    sentToCTX = false,
-                    CTXSpendException(ex.message ?: "purchase gift card error: sending payment", cause = ex)
-                )
+                message,
+                getString(R.string.button_close),
+                getString(R.string.gift_card_contact_ctx)
+            ).show(requireActivity()) { result ->
+                if (result == true) {
+                    val intent = viewModel.createEmailIntent(
+                        subject = "DashPay DashSpend Issue: Purchase Error",
+                        sendToService = false,
+                        CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant.value?.source, cause = ex)
+                    )
 
-                val chooser = Intent.createChooser(
-                    intent,
-                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                )
-                launcher.launch(chooser)
+                    val chooser = Intent.createChooser(
+                        intent,
+                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                    )
+                    launcher.launch(chooser)
+                }
             }
             null
         }

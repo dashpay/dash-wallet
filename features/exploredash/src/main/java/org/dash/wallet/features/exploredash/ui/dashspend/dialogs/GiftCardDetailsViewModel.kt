@@ -28,6 +28,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
@@ -44,6 +45,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -70,7 +72,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private val analyticsService: AnalyticsService,
     private val ctxSpendRepository: CTXSpendRepository,
     private val piggyCardsRepository: PiggyCardsRepository,
-    private val walletData: WalletDataProvider
+    private val walletData: WalletDataProvider,
+    private val ctxSpendConfig: CTXSpendConfig
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(GiftCardDetailsViewModel::class.java)
@@ -127,8 +130,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (giftCard.number == null && giftCard.note != null) {
-                    tickerJob = TickerFlow(period = 1.5.seconds, initialDelay = 1.seconds)
+                if (giftCard.number == null && giftCard.merchantUrl.isNullOrEmpty() && giftCard.note != null) {
+                    tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(giftCard.txId) }
                         .launchIn(viewModelScope)
@@ -145,8 +148,6 @@ class GiftCardDetailsViewModel @Inject constructor(
             ServiceName.CTXSpend -> {
                 val email = ctxSpendRepository.getCTXSpendEmail()
 
-                _uiState.update { it.copy(error = null) }
-
                 if (!ctxSpendRepository.isUserSignedIn() || email.isNullOrEmpty()) {
                     log.error("not logged in to DashSpend (CTX) while attempting to fetch gift card info")
                     _uiState.update { it.copy(error = CTXSpendException(ResourceString(R.string.log_in_to_ctxspend_account))) }
@@ -156,52 +157,106 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                 try {
                     val giftCard = ctxSpendRepository.getGiftCard(txid.toStringBase58())
-                    if (giftCard != null) {
+                    
+                    // Single state update with all changes
+                    val newState = if (giftCard != null) {
                         when (giftCard.status) {
                             GiftCardStatus.UNPAID -> {
-                                // TODO: handle
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException("gift card status unpaid, but transaction sent", giftCard, txid.toStringBase58())
+                                )
                             }
 
                             GiftCardStatus.PAID -> {
-                                // TODO: handle
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException("gift card status paid, not fulfilled", giftCard, txid.toStringBase58())
+                                )
                             }
 
                             GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    cancelTicker()
                                     updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                     log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                     saveBarcode(giftCard.cardNumber)
-                                } else if (giftCard.redeemUrl.isNotEmpty()) {
-                                    log.error("CTXSpend returned a redeem url card: not supported")
-                                    _uiState.update {
-                                        it.copy(
-                                            error = CTXSpendException(
-                                                ResourceString(
-                                                    R.string.gift_card_redeem_url_not_supported,
-                                                    listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId, txid)
-                                                ),
-                                                giftCard
+                                    val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                    if (startPurchaseTime != -1L) {
+                                        if (BuildConfig.DEBUG) {
+                                            log.info("event:process_gift_card_purchase: {} s", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                        }
+                                        analyticsService.logEvent(
+                                            AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
+                                            hashMapOf(
+                                                AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
+                                                AnalyticsConstants.Parameter.ARG1 to "CTX",
+                                                AnalyticsConstants.Parameter.ARG2 to (giftCard.merchantName ?: "unknown merchant")
                                             )
                                         )
+                                        ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                     }
-                                }
-                            }
-
-                            GiftCardStatus.REJECTED -> {
-                                // TODO: handle
-                                log.error("CTXSpend returned error: rejected")
-                                _uiState.update {
-                                    it.copy(
+                                    val state = uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
+                                        error = null
+                                    )
+                                    cancelTicker()
+                                    state
+                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
+                                    log.error("CTXSpend returned a redeem url card: not supported")
+                                    val state = uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
                                         error = CTXSpendException(
                                             ResourceString(
-                                                R.string.gift_card_rejected,
-                                                listOf(giftCard.id, giftCard.paymentId, txid)
+                                                R.string.gift_card_redeem_url_not_supported,
+                                                listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId, txid)
                                             ),
                                             giftCard
                                         )
                                     )
+                                    cancelTicker()
+                                    state
+                                } else {
+                                    uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
+                                        error = null
+                                    )
                                 }
+                            }
+
+                            GiftCardStatus.REJECTED -> {
+                                log.error("CTXSpend returned error: rejected")
+                                analyticsService.logError(
+                                    CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),
+                                    "CTX returned error: rejected ${
+                                        giftCard.merchantName
+                                    } for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
+                                )
+                                val state = uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException(
+                                        ResourceString(
+                                            R.string.gift_card_rejected,
+                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                        ),
+                                        giftCard
+                                    )
+                                )
+                                cancelTicker()
+                                state
+                            }
+
+                            else -> {
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = null
+                                )
                             }
                         }
                     } else {
@@ -211,17 +266,19 @@ class GiftCardDetailsViewModel @Inject constructor(
                         }
                         cancelTicker()
                         log.error("CTXSpend returned null gift card")
-                        _uiState.update {
-                            it.copy(
-                                error = CTXSpendException(
-                                    ResourceString(
-                                        R.string.gift_card_unknown_error,
-                                        listOf(txid)
-                                    )
+                        uiState.value.copy(
+                            queries = uiState.value.queries + 1,
+                            error = CTXSpendException(
+                                ResourceString(
+                                    R.string.gift_card_unknown_error,
+                                    listOf(txid)
                                 )
                             )
-                        }
+                        )
                     }
+                    
+                    _uiState.update { newState }
+                    
                 } catch (ex: Exception) {
                     if (retries > 0) {
                         retries--
@@ -234,8 +291,6 @@ class GiftCardDetailsViewModel @Inject constructor(
             }
             ServiceName.PiggyCards -> {
                 val email = piggyCardsRepository.getAccountEmail()
-
-                _uiState.update { it.copy(error = null) }
 
                 if (!piggyCardsRepository.isUserSignedIn() || email.isNullOrEmpty()) {
                     log.error("not logged in to DashSpend (PiggyCards) while attempting to fetch gift card info")
@@ -255,56 +310,97 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                 try {
                     val giftCard = piggyCardsRepository.getGiftCard(orderId)
-                    if (giftCard != null) {
+                    
+                    // Single state update with all changes
+                    val newState = if (giftCard != null) {
                         when (giftCard.status) {
                             GiftCardStatus.UNPAID -> {
-                                // TODO: handle
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException("gift card status unpaid, but transaction sent", giftCard, txid.toString())
+                                )
                             }
 
                             GiftCardStatus.PAID -> {
-                                // TODO: handle
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException("gift card status paid, not fulfilled", giftCard, txid.toString())
+                                )
                             }
 
                             GiftCardStatus.FULFILLED -> {
+                                val startPurchaseTime = ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
+                                if (startPurchaseTime != -1L) {
+                                    if (BuildConfig.DEBUG) {
+                                        log.info("event:process_gift_card_purchase: {} s", (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000)
+                                    }
+                                    analyticsService.logEvent(
+                                        AnalyticsConstants.Process.PROCESS_GIFT_CARD_PURCHASE,
+                                        hashMapOf(
+                                            AnalyticsConstants.Parameter.TIME to (System.currentTimeMillis() - startPurchaseTime).toDouble() / 1000,
+                                            AnalyticsConstants.Parameter.ARG1 to "PiggyCards",
+                                            AnalyticsConstants.Parameter.ARG2 to (giftCard.merchantName ?: "unknown merchant")
+                                        )
+                                    )
+                                    ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                }
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    cancelTicker()
                                     updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
                                     log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
-                                    // saveBarcode(giftCard.cardNumber)
                                     giftCard.barcodeUrl?.let {
                                         saveBarcodeUrl(it)
                                     }
-                                } else if (giftCard.redeemUrl.isNotEmpty()) {
-                                    log.error("PiggyCards returned a redeem url card: not supported")
+                                    val newState = uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
+                                        error = null
+                                    )
+                                    cancelTicker()
+                                    newState
+                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     updateGiftCard(giftCard.redeemUrl)
-                                    _uiState.update {
-                                        it.copy(
-                                            error = CTXSpendException(
-                                                ResourceString(
-                                                    R.string.gift_card_redeem_url_not_supported,
-                                                    listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId, txid)
-                                                ),
-                                                giftCard
-                                            )
-                                        )
-                                    }
+                                    val newState = uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
+                                        error = null
+                                    )
+                                    cancelTicker()
+                                    newState
+                                } else {
+                                    uiState.value.copy(
+                                        status = giftCard.status,
+                                        queries = uiState.value.queries + 1,
+                                        error = null
+                                    )
                                 }
                             }
 
                             GiftCardStatus.REJECTED -> {
-                                // TODO: handle
                                 log.error("PiggyCards returned error: rejected")
-                                _uiState.update {
-                                    it.copy(
-                                        error = CTXSpendException(
-                                            ResourceString(
-                                                R.string.gift_card_rejected,
-                                                listOf(giftCard.id, giftCard.paymentId, txid)
-                                            ),
-                                            giftCard
-                                        )
+                                analyticsService.logError(CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),"CTX returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}")
+                                val newState = uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = CTXSpendException(
+                                        ResourceString(
+                                            R.string.gift_card_rejected,
+                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                        ),
+                                        giftCard
                                     )
-                                }
+                                )
+                                cancelTicker()
+                                newState
+                            }
+
+                            else -> {
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = null
+                                )
                             }
                         }
                     } else {
@@ -314,17 +410,19 @@ class GiftCardDetailsViewModel @Inject constructor(
                         }
                         cancelTicker()
                         log.error("PiggyCards returned null gift card")
-                        _uiState.update {
-                            it.copy(
-                                error = CTXSpendException(
-                                    ResourceString(
-                                        R.string.gift_card_unknown_error,
-                                        listOf(txid)
-                                    )
+                        uiState.value.copy(
+                            queries = uiState.value.queries + 1,
+                            error = CTXSpendException(
+                                ResourceString(
+                                    R.string.gift_card_unknown_error,
+                                    listOf(txid)
                                 )
                             )
-                        }
+                        )
                     }
+                    
+                    _uiState.update { newState }
+                    
                 } catch (ex: Exception) {
                     if (retries > 0) {
                         retries--

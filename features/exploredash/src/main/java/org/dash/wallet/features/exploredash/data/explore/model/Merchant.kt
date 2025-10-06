@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.data.explore.model
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
@@ -49,7 +50,7 @@ data class Merchant(
     var paymentMethod: String? = "",
     var merchantId: String? = null,
     var redeemType: String? = "",
-    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.01%
     var denominationsType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
@@ -74,6 +75,9 @@ data class Merchant(
         return id == other.id && 
            name == other.name &&
            active == other.active &&
+           denominations == other.denominations &&
+           fixedDenomination == other.fixedDenomination &&
+           savingsPercentage == other.savingsPercentage &&
            giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active }
     }
     
@@ -81,6 +85,9 @@ data class Merchant(
         var result = id.hashCode()
         result = 31 * result + (name?.hashCode() ?: 0)
         result = 31 * result + (active?.hashCode() ?: 0)
+        result = 31 * result + denominations.hashCode()
+        result = 31 * result + fixedDenomination.hashCode()
+        result = 31 * result + (savingsPercentage?.hashCode() ?: 0)
         result = 31 * result + giftCardProviders.map { it.active }.hashCode()
         return result
     }
