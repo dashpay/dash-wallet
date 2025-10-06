@@ -241,7 +241,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         val queries = viewModel.uiState.value.queries
         
         // Determine error conditions
-        val hasExceededWaitLimit = queries > WAIT_LIMIT_FOR_ERROR
+        val hasExceededWaitLimit = queries >= WAIT_LIMIT_FOR_ERROR
         val shouldShowTimeoutError = when (status) {
             GiftCardStatus.UNPAID, GiftCardStatus.PAID -> hasExceededWaitLimit
             else -> false
