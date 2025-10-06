@@ -24,6 +24,7 @@ import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.features.exploredash.R
+import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Currency
 
@@ -31,11 +32,11 @@ import java.util.Currency
 @Composable
 fun MerchantDenominations(
     modifier: Modifier = Modifier,
-    denominations: List<Int>,
+    denominations: List<Double>,
     currency: Currency,
-    selectedDenomination: Int? = null,
+    selectedDenomination: Double? = null,
     canContinue: Boolean = true,
-    onDenominationSelected: (Int) -> Unit = {},
+    onDenominationSelected: (Double) -> Unit = {},
     onContinue: () -> Unit = {}
 ) {
     val numberFormat = remember {
@@ -64,13 +65,15 @@ fun MerchantDenominations(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             denominations.forEach { denomination ->
+                val formattedText = numberFormat.format(denomination)
+                val chipWidth = if (formattedText.length > 4) 96.dp else 76.dp
                 FilterChip(
-                    modifier = Modifier.height(54.dp).width(76.dp),
+                    modifier = Modifier.height(54.dp).width(chipWidth),
                     selected = denomination == selectedDenomination,
                     onClick = { onDenominationSelected(denomination) },
                     label = {
                         Text(
-                            text = numberFormat.format(denomination),
+                            text = formattedText,
                             textAlign = TextAlign.Center,
                             style = MyTheme.SubtitleSemibold,
                             modifier = Modifier.fillMaxWidth()
@@ -102,7 +105,7 @@ fun MerchantDenominations(
                 .padding(top = 20.dp),
             colors = ButtonStyles.blueWithWhiteText(),
             textId = R.string.button_continue,
-            enabled = selectedDenomination != null && selectedDenomination != 0 && canContinue
+            enabled = selectedDenomination != null && selectedDenomination != 0.0 && canContinue
         )
     }
 }
@@ -110,12 +113,12 @@ fun MerchantDenominations(
 @Preview(showBackground = true)
 @Composable
 fun MerchantDenominationsPreview() {
-    val denominations = listOf(5, 10, 15, 20, 50, 75, 100, 200)
+    val denominations = listOf(5, 10, 15, 20, 50, 75, 100, 200).map { it.toDouble() }
     val currency = Currency.getInstance("USD")
     MerchantDenominations(
         modifier = Modifier.padding(20.dp).width(300.dp),
         denominations = denominations,
         currency = currency,
-        selectedDenomination = 20
+        selectedDenomination = 20.toDouble()
     )
 }

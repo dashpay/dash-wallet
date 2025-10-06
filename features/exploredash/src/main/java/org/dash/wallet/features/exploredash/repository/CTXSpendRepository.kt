@@ -211,7 +211,7 @@ class CTXSpendRepository @Inject constructor(
                 id = response.id,
                 savingsPercentage = response.savingsPercentage,
                 denominationsType = response.denominationsType,
-                denominations = response.denominations,
+                denominations = response.denominations.map { denom -> denom.toDouble() },
                 redeemType = response.redeemType,
                 enabled = response.enabled
             )

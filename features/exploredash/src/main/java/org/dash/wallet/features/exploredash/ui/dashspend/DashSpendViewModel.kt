@@ -297,7 +297,7 @@ class DashSpendViewModel @Inject constructor(
                     copy.maxCardPurchase = apiResponse.maximumCardPurchase
                     copy.active = apiResponse.enabled
                     copy.fixedDenomination = apiResponse.denominationType == DenominationType.Fixed
-                    copy.denominations = apiResponse.denominations.map { it.toInt() }
+                    copy.denominations = apiResponse.denominations
                     copy.denominationsType = apiResponse.denominationsType
                 }
             }

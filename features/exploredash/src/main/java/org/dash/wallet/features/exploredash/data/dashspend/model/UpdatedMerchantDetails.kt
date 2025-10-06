@@ -21,7 +21,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Denominatio
 
 data class UpdatedMerchantDetails(
     val id: String,
-    val denominations: List<String>,
+    val denominations: List<Double>,
     val denominationsType: String,
     val savingsPercentage: Int = 0,
     val redeemType: String = "",

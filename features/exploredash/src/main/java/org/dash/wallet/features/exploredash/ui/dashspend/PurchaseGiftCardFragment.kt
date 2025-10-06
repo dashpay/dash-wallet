@@ -444,7 +444,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 modifier = Modifier.padding(20.dp),
                 denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
-                selectedDenomination = selectedDenomination.value.toBigDecimal().toInt(),
+                selectedDenomination = selectedDenomination.value.toBigDecimal().toDouble(),
                 canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
