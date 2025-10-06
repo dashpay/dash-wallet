@@ -8,6 +8,10 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 import kotlinx.coroutines.Dispatchers
 
+import org.slf4j.LoggerFactory
+
+private val log = LoggerFactory.getLogger("Networks")
+
 fun getDeviceIPAddress(): String? {
     try {
         val interfaces = NetworkInterface.getNetworkInterfaces()
@@ -25,7 +29,7 @@ fun getDeviceIPAddress(): String? {
             }
         }
     } catch (e: Exception) {
-        e.printStackTrace()
+        log.warn("Failed to get device IP address", e)
     }
     return null
 }
@@ -40,6 +44,7 @@ suspend fun getPublicIPAddress(): String? = withContext(Dispatchers.IO) {
             reader.readText().trim()
         }
     } catch (e: Exception) {
+        log.warn("Failed to fetch public IP address", e)
         null
     }
 }
