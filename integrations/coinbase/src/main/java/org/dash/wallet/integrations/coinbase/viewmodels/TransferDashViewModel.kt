@@ -51,6 +51,7 @@ class TransferDashViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
+    val minimumFee: Coin = Coin.valueOf(226)
     private val _loadingState: MutableLiveData<Boolean> = MutableLiveData()
     val observeLoadingState: LiveData<Boolean>
         get() = _loadingState
@@ -89,9 +90,10 @@ class TransferDashViewModel @Inject constructor(
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
 
     var minAllowedSwapDashCoin: Coin = Coin.ZERO
-    var minFiatAmount = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+    var minFiatAmount: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0)
 
-    private var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+    var maxForDashCoinBaseAccount: Coin = Coin.ZERO
+        private set
 
     init {
         getUserAccountAddress()
