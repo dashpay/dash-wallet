@@ -295,8 +295,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             binding.discountValue.isVisible = false
             return
         }
-        val savingsFraction = merchant.savingsFraction
+        val savingsFraction = if (merchant.fixedDenomination) {
+            viewModel.getGiftCardDiscount(viewModel.giftCardPaymentValue.value.toBigDecimal().toInt())
+        } else {
+            merchant.savingsFraction
+        }
 
+        // do not show discount if the entered value is zero or the discount is zero
         if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
             viewModel.giftCardPaymentValue.value.isZero
         ) {

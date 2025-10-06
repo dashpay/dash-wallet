@@ -604,6 +604,18 @@ class DashSpendViewModel @Inject constructor(
         exploreDao.getMerchantById(merchantId)
     }
 
+    fun getGiftCardDiscount(denomination: Int): Double {
+        val merchantId = giftCardMerchant.value?.giftCardProviders?.find { it.provider == selectedProvider?.name}?.sourceId
+        return merchantId?.let {
+            when (selectedProvider) {
+                GiftCardProviderType.CTX -> ctxSpendRepository.getGiftCardDiscount(merchantId, denomination)
+                GiftCardProviderType.PiggyCards -> piggyCardsRepository.getGiftCardDiscount(merchantId, denomination)
+                else -> 0.0
+            }
+        } ?: 0.0
+    }
+
+
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)

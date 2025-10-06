@@ -19,7 +19,9 @@ package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.PurchaseGiftCardRequest
@@ -97,6 +99,8 @@ class CTXSpendRepository @Inject constructor(
     private val config: CTXSpendConfig,
     private val tokenAuthenticator: TokenAuthenticator
 ) : CTXSpendRepositoryInt, DashSpendRepository {
+    private val giftCardMap = hashMapOf<String, GetMerchantResponse>()
+
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun signup(email: String) = login(email)
@@ -202,6 +206,7 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {
         val response = api.getMerchant(merchantId)
         return response?.let {
+            giftCardMap[merchantId] = it
             UpdatedMerchantDetails(
                 id = response.id,
                 savingsPercentage = response.savingsPercentage,
@@ -237,6 +242,12 @@ class CTXSpendRepository @Inject constructor(
 
     suspend fun getCTXSpendEmail(): String? {
         return config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
+    }
+
+    override fun getGiftCardDiscount(merchantId: String, denomination: Int): Double {
+        return giftCardMap[merchantId]?.savingsPercentage?.let {
+            it.toDouble() / 10000.0
+        } ?: 0.0
     }
 }
 

@@ -62,6 +62,7 @@ class PiggyCardsRepository @Inject constructor(
         private val disabledMerchants = listOf<String>()
         private const val INSTANT_DELIVERY = "(instant delivery)"
         private const val SERVICE_FEE = 150
+        private const val SERVICE_FEE_PERCENT = 1.5
         private const val DASH_DASH_KEY = "DASH.DASH"
     }
     private val giftCardMap = hashMapOf<String, List<Giftcard>>()
@@ -366,5 +367,13 @@ class PiggyCardsRepository @Inject constructor(
 
     suspend fun getAccountEmail(): String? {
         return config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
+    }
+
+    override fun getGiftCardDiscount(merchantId: String, denomination: Int): Double {
+        return giftCardMap[merchantId]?.find {
+            it.isFixed && it.denomination == denomination.toString()
+        }?.discountPercentage?.let {
+            (it - SERVICE_FEE_PERCENT) / 100.0
+        } ?: 0.0
     }
 }
