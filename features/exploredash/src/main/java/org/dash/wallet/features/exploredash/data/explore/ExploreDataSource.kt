@@ -262,8 +262,8 @@ open class MerchantAtmDataSource @Inject constructor(
                     listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
                 }
 
-                val onlineOrder = if (onlineFirst) 0 else 2
-                val physicalOrder = if (onlineFirst) 2 else 1
+                val onlineOrder = if (type == MerchantType.BOTH) 1 else if (onlineFirst) 0 else 2
+                val physicalOrder = if (type == MerchantType.BOTH) 1 else if (onlineFirst) 2 else 1
 
                 if (query.isNotBlank()) {
                     merchantDao.pagingSearchByTerritory(
