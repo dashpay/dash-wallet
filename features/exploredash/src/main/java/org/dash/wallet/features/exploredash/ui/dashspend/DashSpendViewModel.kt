@@ -604,7 +604,7 @@ class DashSpendViewModel @Inject constructor(
         exploreDao.getMerchantById(merchantId)
     }
 
-    fun getGiftCardDiscount(denomination: Int): Double {
+    fun getGiftCardDiscount(denomination: Double): Double {
         val merchantId = giftCardMerchant.value?.giftCardProviders?.find { it.provider == selectedProvider?.name}?.sourceId
         return merchantId?.let {
             when (selectedProvider) {
