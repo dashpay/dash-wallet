@@ -296,7 +296,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
         val savingsFraction = if (merchant.fixedDenomination) {
-            viewModel.getGiftCardDiscount(viewModel.giftCardPaymentValue.value.toBigDecimal().toInt())
+            viewModel.getGiftCardDiscount(viewModel.giftCardPaymentValue.value.toBigDecimal().toDouble())
         } else {
             merchant.savingsFraction
         }

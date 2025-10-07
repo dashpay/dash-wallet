@@ -244,7 +244,7 @@ class CTXSpendRepository @Inject constructor(
         return config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
     }
 
-    override fun getGiftCardDiscount(merchantId: String, denomination: Int): Double {
+    override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
         return giftCardMap[merchantId]?.savingsPercentage?.let {
             it.toDouble() / 10000.0
         } ?: 0.0

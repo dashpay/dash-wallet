@@ -42,8 +42,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Veri
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
-import retrofit2.Response
-import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -401,9 +400,13 @@ class PiggyCardsRepository @Inject constructor(
         return config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
     }
 
-    override fun getGiftCardDiscount(merchantId: String, denomination: Int): Double {
+    private val numberFormat = NumberFormat.getNumberInstance().apply {
+        minimumFractionDigits = 0
+    }
+
+    override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
         return giftCardMap[merchantId]?.find {
-            it.isFixed && it.denomination == denomination.toString()
+            it.isFixed && it.denomination == numberFormat.format(denomination)
         }?.discountPercentage?.let {
             (it - SERVICE_FEE_PERCENT) / 100.0
         } ?: 0.0
