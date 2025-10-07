@@ -481,7 +481,9 @@ class ExploreViewModel @Inject constructor(
         this.allMerchantLocationsJob = _searchBounds
             .filterNotNull()
             .flatMapLatest { bounds ->
-                val radiusBounds = if (_isLocationEnabled.value == true) {
+                // Only apply radius bounds if we're in Nearby mode
+                // For All and Online tabs, show all locations globally
+                val radiusBounds = if (_isLocationEnabled.value == true && _filterMode.value == FilterMode.Nearby) {
                     locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
                 } else {
                     GeoBounds.noBounds

@@ -316,6 +316,7 @@ open class MerchantAtmDataSource @Inject constructor(
 
         return when {
             type == MerchantType.ONLINE -> {
+                // Online tab should show all online merchants without coordinate bounds filtering
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
@@ -325,6 +326,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 }
             }
             type == MerchantType.PHYSICAL && territory.isBlank() && bounds != GeoBounds.noBounds -> {
+                // Nearby tab should only show merchants within coordinate bounds
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
@@ -353,6 +355,7 @@ open class MerchantAtmDataSource @Inject constructor(
                 }
             }
             else -> {
+                // Fallback case for territory-based filtering
                 val types = listOf(MerchantType.PHYSICAL, MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
