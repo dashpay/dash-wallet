@@ -21,15 +21,24 @@ import android.os.Bundle
 import android.view.View
 import androidx.annotation.DrawableRes
 import androidx.annotation.StyleRes
+import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashSpendLoginInfoBinding
 
-class DashSpendLoginInfoDialog(
-    @DrawableRes val icon: Int
-) : OffsetDialogFragment(R.layout.dialog_dash_spend_login_info) {
+class DashSpendLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_dash_spend_login_info) {
+    
+    companion object {
+        private const val ARG_ICON = "arg_icon"
+        
+        fun newInstance(@DrawableRes icon: Int): DashSpendLoginInfoDialog {
+            return DashSpendLoginInfoDialog().apply {
+                arguments = bundleOf(ARG_ICON to icon)
+            }
+        }
+    }
 
     private var onExtraMessageListener: (() -> Unit)? = null
     private var onResultListener: ((Boolean?) -> Unit)? = null
@@ -42,6 +51,7 @@ class DashSpendLoginInfoDialog(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val icon = arguments?.getInt(ARG_ICON) ?: R.drawable.ic_dash_d_blue
         binding.dialogIcon.setImageResource(icon)
         binding.dialogPositiveButton.setOnClickListener { onPositiveAction() }
         binding.dialogNegativeButton.setOnClickListener { onNegativeAction() }

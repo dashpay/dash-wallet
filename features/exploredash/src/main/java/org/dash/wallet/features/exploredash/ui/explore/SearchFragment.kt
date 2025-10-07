@@ -399,11 +399,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog(provider: GiftCardProviderType) {
-        DashSpendLoginInfoDialog(provider.logo).show(
+        DashSpendLoginInfoDialog.newInstance(provider.logo).show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    DashSpendTermsDialog(provider.termsAndConditions).show(requireActivity()) {
+                    DashSpendTermsDialog.newInstance(provider.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(

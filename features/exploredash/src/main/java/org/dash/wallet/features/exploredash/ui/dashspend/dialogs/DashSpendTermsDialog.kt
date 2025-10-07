@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import android.os.Bundle
 import android.view.View
+import androidx.core.os.bundleOf
 import androidx.fragment.app.FragmentActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -29,9 +30,17 @@ import org.dash.wallet.features.exploredash.databinding.DialogDashspendTermsBind
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 
-class DashSpendTermsDialog(
-    val termsLink: String
-) : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
+class DashSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_terms) {
+
+    companion object {
+        private const val ARG_TERMS_LINK = "arg_terms_link"
+        
+        fun newInstance(termsLink: String): DashSpendTermsDialog {
+            return DashSpendTermsDialog().apply {
+                arguments = bundleOf(ARG_TERMS_LINK to termsLink)
+            }
+        }
+    }
     override val forceExpand: Boolean = true
     private val viewModel by exploreViewModels<DashSpendViewModel>()
     private val binding by viewBinding(DialogDashspendTermsBinding::bind)
@@ -47,6 +56,7 @@ class DashSpendTermsDialog(
 
         binding.termsLink.setOnClickListener {
             viewModel.openedCTXSpendTermsAndConditions = true
+            val termsLink = arguments?.getString(ARG_TERMS_LINK) ?: ""
             requireActivity().openCustomTab(termsLink)
         }
 

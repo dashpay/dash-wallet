@@ -119,7 +119,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 return@launch
             }
             showLoading()
-            if (authManager.authenticate(requireActivity()) == null) {
+            if (!isAdded || authManager.authenticate(requireActivity()) == null) {
                 hideLoading()
                 return@launch
             }
@@ -132,142 +132,154 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 hideLoading()
                 when {
                     ex.isNetworkError -> {
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_error),
-                            getString(R.string.button_close)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                    "DashPay DashSpend Issue: Network Error",
-                                    sendToService = true,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                getString(R.string.gift_card_error),
+                                getString(R.string.button_close)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                        "DashPay DashSpend Issue: Network Error",
+                                        sendToService = true,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
                         viewModel.logError(ex,"${ex.serviceName} returned error: limits")
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_limit_error),
-                            getString(R.string.button_close),
-                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                    "${ex.serviceName} Issue: Spending Limit Problem",
-                                    sendToService = true,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                getString(R.string.gift_card_limit_error),
+                                getString(R.string.button_close),
+                                if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                        "${ex.serviceName} Issue: Spending Limit Problem",
+                                        sendToService = true,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
                     ex.isOutOfStock -> {
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_out_of_stock_error),
-                            getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_support)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                    "PiggyCards Issue: Out of Stock",
-                                    sendToService = true,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                getString(R.string.gift_card_out_of_stock_error),
+                                getString(R.string.button_close),
+                                getString(R.string.gift_card_contact_support)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                        "PiggyCards Issue: Out of Stock",
+                                        sendToService = true,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
                     ex.errorCode == 500 -> {
                         val serviceName = if (ex.serviceName == ServiceName.CTXSpend) "CTX" else "PiggyCards"
                         viewModel.logError(ex,"${ex.serviceName} returned error: Error 500")
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_server_error, serviceName),
-                            getString(R.string.button_close),
-                            if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                     "${ex.serviceName} Issue: Purchase, Internal Server Error",
-                                    sendToService = true,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                getString(R.string.gift_card_server_error, serviceName),
+                                getString(R.string.button_close),
+                                if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                         "${ex.serviceName} Issue: Purchase, Internal Server Error",
+                                        sendToService = true,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
                     ex.isRegionNotAllowed -> {
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            getString(R.string.gift_card_server_region_error),
-                            getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_support)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                    "DashSpend Issue: Purchase, Region Not Allowed",
-                                    sendToService = false,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                getString(R.string.gift_card_server_region_error),
+                                getString(R.string.button_close),
+                                getString(R.string.gift_card_contact_support)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                        "DashSpend Issue: Purchase, Region Not Allowed",
+                                        sendToService = false,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
                     else -> {
-                        AdaptiveDialog.create(
-                            R.drawable.ic_error,
-                            getString(R.string.gift_card_purchase_failed),
-                            ex.message ?: getString(R.string.gift_card_error),
-                            getString(R.string.button_close),
-                            getString(R.string.gift_card_contact_support)
-                        ).show(requireActivity()) { result ->
-                            if (result == true) {
-                                val intent = viewModel.createEmailIntent(
-                                    subject = "DashPay DashSpend Issue: Purchase Error",
-                                    sendToService = false,
-                                    ex
-                                )
+                        if (isAdded) {
+                            AdaptiveDialog.create(
+                                R.drawable.ic_error,
+                                getString(R.string.gift_card_purchase_failed),
+                                ex.message ?: getString(R.string.gift_card_error),
+                                getString(R.string.button_close),
+                                getString(R.string.gift_card_contact_support)
+                            ).show(requireActivity()) { result ->
+                                if (result == true) {
+                                    val intent = viewModel.createEmailIntent(
+                                        subject = "DashPay DashSpend Issue: Purchase Error",
+                                        sendToService = false,
+                                        ex
+                                    )
 
-                                val chooser = Intent.createChooser(
-                                    intent,
-                                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                                )
-                                launcher.launch(chooser)
+                                    val chooser = Intent.createChooser(
+                                        intent,
+                                        getString(R.string.report_issue_dialog_mail_intent_chooser)
+                                    )
+                                    launcher.launch(chooser)
+                                }
                             }
                         }
                     }
@@ -276,6 +288,10 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             }
 
             if (!data.cryptoAmount.isNullOrEmpty() && viewModel.needsCrowdNodeWarning(data.cryptoAmount)) {
+                if (!isAdded) {
+                    hideLoading()
+                    return@launch
+                }
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
                 if (shouldContinue != true) {
@@ -299,54 +315,29 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         } catch (x: InsufficientMoneyException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.insufficient_money_title),
-                getString(R.string.insufficient_money_msg),
-                getString(R.string.button_close)
-            ).show(requireActivity())
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.insufficient_money_title),
+                    getString(R.string.insufficient_money_msg),
+                    getString(R.string.button_close)
+                ).show(requireActivity())
+            }
             null
         } catch (ex: DirectPayException) {
             log.error("purchaseGiftCard DirectPayException", ex)
             hideLoading()
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.payment_request_problem_title),
-                getString(R.string.payment_request_problem_message),
-                getString(R.string.button_close)
-            ).show(requireActivity()) {
-                val intent = viewModel.createEmailIntent(
-                    subject = "DashPay DashSpend Issue: DirectPay Error",
-                    sendToService = false,
-                    CTXSpendException(ex.message ?: "purchase gift card error: direct pay", cause = ex)
-                )
-
-                val chooser = Intent.createChooser(
-                    intent,
-                    getString(R.string.report_issue_dialog_mail_intent_chooser)
-                )
-                launcher.launch(chooser)
-            }
-            null
-        } catch (ex: Exception) {
-            log.error("purchaseGiftCard error", ex)
-            hideLoading()
-            val message = getString(when {
-                ex.cause is BitcoinURIParseException && ex.message?.contains("mismatched network") == true -> R.string.gift_card_error_wrong_network
-                else -> R.string.gift_card_error
-            })
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.send_coins_error_msg),
-                message,
-                getString(R.string.button_close),
-                getString(R.string.gift_card_contact_support)
-            ).show(requireActivity()) { result ->
-                if (result == true) {
+            if (isAdded) {
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.payment_request_problem_title),
+                    getString(R.string.payment_request_problem_message),
+                    getString(R.string.button_close)
+                ).show(requireActivity()) {
                     val intent = viewModel.createEmailIntent(
-                        subject = "DashPay DashSpend Issue: Purchase Error",
+                        subject = "DashPay DashSpend Issue: DirectPay Error",
                         sendToService = false,
-                        CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant.value?.source, cause = ex)
+                        CTXSpendException(ex.message ?: "purchase gift card error: direct pay", cause = ex)
                     )
 
                     val chooser = Intent.createChooser(
@@ -357,25 +348,60 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 }
             }
             null
+        } catch (ex: Exception) {
+            log.error("purchaseGiftCard error", ex)
+            hideLoading()
+            if (isAdded) {
+                val message = getString(when {
+                    ex.cause is BitcoinURIParseException && ex.message?.contains("mismatched network") == true -> R.string.gift_card_error_wrong_network
+                    else -> R.string.gift_card_error
+                })
+                AdaptiveDialog.create(
+                    R.drawable.ic_error,
+                    getString(R.string.send_coins_error_msg),
+                    message,
+                    getString(R.string.button_close),
+                    getString(R.string.gift_card_contact_support)
+                ).show(requireActivity()) { result ->
+                    if (result == true) {
+                        val intent = viewModel.createEmailIntent(
+                            subject = "DashPay DashSpend Issue: Purchase Error",
+                            sendToService = false,
+                            CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant.value?.source, cause = ex)
+                        )
+
+                        val chooser = Intent.createChooser(
+                            intent,
+                            getString(R.string.report_issue_dialog_mail_intent_chooser)
+                        )
+                        launcher.launch(chooser)
+                    }
+                }
+            }
+            null
         }
     }
 
     private fun showErrorRetryDialog(action: ((Boolean?) -> Unit)? = null) {
-        AdaptiveDialog.create(
-            R.drawable.ic_error,
-            getString(R.string.gift_card_purchase_failed),
-            getString(R.string.gift_card_error),
-            getString(R.string.cancel),
-            getString(R.string.try_again)
-        ).show(requireActivity()) { action?.invoke(it) }
+        if (isAdded) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.gift_card_purchase_failed),
+                getString(R.string.gift_card_error),
+                getString(R.string.cancel),
+                getString(R.string.try_again)
+            ).show(requireActivity()) { action?.invoke(it) }
+        }
     }
 
     private fun showGiftCardDetailsDialog(txId: Sha256Hash, giftCardId: String) {
-        GiftCardDetailsDialog.newInstance(txId).show(requireActivity()).also {
-            val navController = findNavController()
-            navController.popBackStack(navController.graph.startDestinationId, false)
+        if (isAdded) {
+            GiftCardDetailsDialog.newInstance(txId).show(requireActivity()).also {
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
 
-            this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+                this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+            }
         }
     }
 
