@@ -97,13 +97,6 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
-    val OverlineCaptionMedium = TextStyle(
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontFamily = interRegular,
-        fontWeight = FontWeight(400)
-    )
-
     val Body2Medium = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,

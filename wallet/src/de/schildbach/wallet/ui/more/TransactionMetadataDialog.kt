@@ -47,6 +47,7 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
     private val viewModel by viewModels<TransactionMetadataSettingsViewModel>()
     private val args by navArgs<TransactionMetadataDialogArgs>()
     private var onButtonClickListener: ((Boolean?) -> Unit)? = null
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.transactionMetadataCost.setOnClickListener {
