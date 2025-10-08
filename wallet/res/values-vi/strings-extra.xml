@@ -23,15 +23,11 @@
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Quét</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Nhập khoá riêng</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Thêm shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Nhận nhanh</string>
@@ -104,7 +100,6 @@
     <string name="request_coins_clipboard_address_msg">Địa chỉ Dash đã được copy vào bộ đệm</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Hiển thị</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" không phải là một cụm từ khôi phục</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Cụm từ phục hồi phải có 12 từ</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Câu phục hồi không đúng</string>
     <string name="restore_wallet_from_invalid_seed_failure">Ví không thể được phục hồi:\n\n%s\n\nCâu phục hồi không đúng?</string>
 

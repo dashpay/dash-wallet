@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">A network fee of %s will be paid.</string>
     <string name="send_coins_fragment_hint_fee_priority">A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">The amount of tiny payments in your wallet doesn\'t add up to a sendable value.</string>
-    <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>
     <string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
     <string name="send_coins_fragment_direct_payment_ack">Your payment was successfully sent directly.</string>
     <string name="send_coins_fragment_direct_payment_nack">Your payment was rejected via direct connection.</string>
@@ -297,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
     <string name="report_issue_dialog_generating_report">Generating report</string>
+    <string name="report_issue_dialog_status_device_info">device information</string>
+    <string name="report_issue_dialog_status_installed_packages">list of installed packages</string>
+    <string name="report_issue_dialog_status_application_log">application log</string>
+    <string name="report_issue_dialog_status_application_info">application info</string>
+    <string name="report_issue_dialog_status_wallet_dump">wallet dump (slow)</string>
+    <string name="report_issue_dialog_status_contextual_info">contextual info</string>
+    <string name="report_issue_dialog_status_background_traces">background traces</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">finishing</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -318,6 +326,7 @@
 
 
     <string name="about_title">About</string>
+    <string name="about_dash_title">About Dash</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">License</string>
@@ -341,6 +350,9 @@
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
     <string name="notification_bluetooth_service_listening">Ready to receive payments via Bluetooth</string>
+    <string name="notification_sync_paused">Blockchain sync paused</string>
+    <string name="notification_background_processes_paused">Background processing paused</string>
+    <string name="notification_background_processes_paused_text">You\'ve reached the Android 6-hour foreground service limit for mixing or blockchain sync. Tap to reset…</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
 
     <!-- generic buttons -->

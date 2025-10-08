@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">Backup</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Escanear</string>
+    <string name="shortcut_scan_to_pay">Digitalizar QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Enviar</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">Receber</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importar Chave Privada</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Adicionar atalho</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Receber</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">Endereço Dash copiado para a área de transferência</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Mostrar</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" não é uma frase de recuperação </string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frase de recuperação deve ter 12 palavras</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Frase de recuperação deve ter 12 ou 24 palavras</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Frase de recuperação incorreta</string>
     <string name="restore_wallet_from_invalid_seed_failure">A carteira não pôde ser restaurada:\n\n%s\n\nSenha incorreta?</string>
 
@@ -468,4 +466,10 @@
     <string name="stale_exchange_rates_error">Os preços não foram recuperados. Os valores em fiat podem estar incorretos.</string>
     <string name="stale_exchange_rates_stale">Os preços têm pelo menos 30 minutos de atraso. Os valores em fiat podem estar incorretos.</string>
     <string name="stale_exchange_rates_volatile">Os preços flutuaram mais de 50% desde a última atualização.</string>
+    <string name="select_security_level_title">Selecionar Nível de Segurança</string>
+    <string name="select_security_level_message">Você pode proteger sua carteira com uma frase de recuperação de 12 ou 24 palavras.</string>
+    <string name="select_security_level_12_words_title">Seguro</string>
+    <string name="select_security_level_12_words_message">Frase de recuperação de 12 palavras</string>
+    <string name="select_security_level_24_words_title">Muito seguro</string>
+    <string name="select_security_level_24_words_message">Frase de recuperação de 24 palavras</string>
 </resources>

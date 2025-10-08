@@ -61,6 +61,7 @@
     <string name="explore_back_to_nearest">Terug naar dichtsbijzijnde locatie</string>
     <string name="explore_select_location">Selecteer een locatie</string>
     <string name="explore_pay_with_dash">Betaal met Dash</string>
+    <string name="explore_pay_with_dash_save">Bespaar %.2f%%</string>
     <string name="explore_buy_gift_card">Koop een geschenkbon</string>
     <string name="explore_buy_dash">Koop Dash</string>
     <string name="explore_sell_dash">Verkoop Dash</string>
@@ -85,6 +86,10 @@
     <string name="explore_filtered_by">Gefilterd op:</string>
     <string name="explore_pay_gift_card">Betaal met geschenkbon</string>
     <string name="explore_sort_by">Sorteer op</string>
+    <string name="gift_card_types">Soorten cadeaubonnen</string>
+    <string name="flexible_amount_option">Flexibele bedragen</string>
+    <string name="fixed_denom_option"> Vastgestelde bedragen</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Dichtbij</item>
@@ -200,11 +205,16 @@
     <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
     <string name="gift_card_barcode_failed">Kan de streepjescode niet laden</string>
     <string name="gift_card_tx_title">Cadeaukaart · %s</string>
+    <string name="select_amount">selecteer bedrag</string>
+    <string name="select_fixed_amount"> Deze winkelier verkoopt cadeaubonnen tegen vaste prijzen</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Voer verificatiecode in</string>
     <string name="verification_check_email">Controleer je e-mail en voer de verificatiecode in</string>
     <string name="buy_gift_card">Koop een cadeaukaart met je DashSpend account</string>
+    <string name="dashspend_create_account"> Maak een account aan of log in op een bestaand account</string>
     <string name="create_new_account">Creëer een nieuw account</string>
+    <string name="login">Log in</string>
     <string name="password">Wachtwoord</string>
     <string name="logged_in_as">Ingelogd als %s</string>
     <string name="log_out">Uitloggen</string>
@@ -216,13 +226,23 @@
     <string name="cancel">Annuleer</string>
     <string name="gift_card_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Probeer het opnieuw.</string>
     <string name="gift_card_details_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning.</string>
+    <string name="gift_card_limit_error">De aankooplimieten voor deze winkelier zijn gewijzigd. Neem contact op met CTX Support voor meer informatie.</string>
     <string name="gift_card_unknown_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning met txid %s.</string>
     <string name="gift_card_rejected">De betaling is afgewezen. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie ID%s.</string>
     <string name="gift_card_redeem_url_not_supported">De betaling is gedaan voor een winkelier die een inwissel-URL levert, maar die wordt momenteel niet ondersteund. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie %s.</string>
+    <string name="dashspend_terms_conditions">accepteren algemene voorwaarden </string>
     <string name="accept_terms_conditions">Ik accepteer de algemene voorwaarden van DashSpend</string>
     <string name="tap_link_to_proceed">Om een ​​account bij DashSpend aan te maken, tik dan op de onderstaande link om verder te gaan</string>
     <string name="accept_to_proceed">Om een ​​account aan te maken bij DashSpend, accepteer de algemene voorwaarden van DashSpend</string>
+    <string name="view_terms_conditions">Terms &amp; voorwaarden</string>
+    <string name="barcode_placeholder">Zodra je code is gegenereerd, wordt deze hier weergegeven</string>
+    <string name="gift_card_contact_ctx">Neem contact op met CTX</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Maak account aan</string>
+    <string name="log_in_to_ctxspend_account">Log in op je account</string>
     <string name="log_in_to_ctxspend_account_desc">Het e-mailadres wordt alleen gebruikt om een ​​eenmalig wachtwoord te verzenden.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Koop een cadeaukaart met je DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Maak een DashSpend account aan of log in op een bestaand account</string>
-    </resources>
+    <string name="temporarily_unavailable"> Tijdelijk niet beschikbaar</string>
+</resources>

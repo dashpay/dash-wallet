@@ -31,7 +31,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">備份</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">掃描</string>
+    <string name="shortcut_scan_to_pay">掃描二維碼</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">付款</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -42,8 +42,6 @@
     <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">導入私鑰</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">添加捷徑</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>
@@ -122,7 +120,7 @@
     <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含12或24個單詞</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">錯誤恢復詞組</string>
     <string name="restore_wallet_from_invalid_seed_failure">錢包無法還原:\n\n%s\n\n錯誤的恢復詞組?</string>
 
@@ -214,7 +212,7 @@
     <string name="verify_info_title_1">Dash Core Group 不存儲恢復詞組</string>
     <string name="verify_info_subtitle_1">任何知道您的恢復詞組的人都可以使用您的資金。</string>
     <string name="verify_info_title_2">沒有恢復詞組，您將無法恢復錢包</string>
-    <string name="verify_info_subtitle_2">把它寫在安全的地方，不要給任何人看到。</string>
+    <string name="verify_info_subtitle_2">將其寫在安全的地方，不要向任何人展示。</string>
     <string name="verify_seed_buttons_tip">請以正確的順序點按您的恢復詞組中的單詞</string>
     <string name="verify_seed_success_title">已成功驗證</string>
     <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
@@ -288,6 +286,7 @@
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
+    <string name="about_copyright">版權所有 © 2025 Dash Core Group</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
     <string name="about_version_name">DashPay 錢包%s</string>
     <string name="about_last_explore_device_sync">上一次探索設備同步</string>
@@ -462,4 +461,10 @@ Zài hòumiàn</string>
     <string name="stale_exchange_rates_error">價格未被檢索到，所以相關的法幣的價值可能不正確。</string>
     <string name="stale_exchange_rates_stale">價格至少有 30 分鐘延遲，所以相關的法幣的價值可能不正確。</string>
     <string name="stale_exchange_rates_volatile">自上次更新以來，價格波動超過 50%。</string>
+    <string name="select_security_level_title">選擇安全級別</string>
+    <string name="select_security_level_message">您可以使用12或24個單詞的恢復詞組來保護錢包。</string>
+    <string name="select_security_level_12_words_title">安全</string>
+    <string name="select_security_level_12_words_message">12個單詞的恢復詞組</string>
+    <string name="select_security_level_24_words_title">非常安全</string>
+    <string name="select_security_level_24_words_message">24單詞的恢復詞組</string>
 </resources>

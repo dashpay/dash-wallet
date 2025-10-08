@@ -33,7 +33,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
@@ -48,6 +50,7 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
@@ -229,6 +232,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 }
             }
         }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                if (args.type == ExploreTopic.Merchants && !ctxSpendViewModel.checkToken()) {
+                    AdaptiveDialog.create(
+                        null,
+                        getString(R.string.token_expired_title),
+                        getString(R.string.token_expired_message),
+                        getString(R.string.button_okay)
+                    ).show(requireActivity()) {
+                        if (isAdded) {
+                            showLoginDialog()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun showError(binding: FragmentSearchBinding) {
@@ -276,7 +296,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     override fun onDestroy() {
         super.onDestroy()
-        viewModel.onExitSearch()
+        try {
+            viewModel.onExitSearch()
+        } catch (e: IllegalArgumentException) {
+            // Handle case where nav graph is no longer on back stack after process death
+        }
         // clear this listener
         requireActivity().window?.decorView?.let { decor ->
             ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->

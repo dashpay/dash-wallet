@@ -102,5 +102,6 @@
     <string name="log_in">تسجيل الدخول </string>
 
     <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">إرسال التقرير بواسطة…</string>
 
     </resources>

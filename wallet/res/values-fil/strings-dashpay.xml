@@ -413,6 +413,7 @@ Username</b></string>
     <string name="coinjoin_start">Simulan ang Paghahalo</string>
     <string name="coinjoin_stop">Itigil ang Paghahalo</string>
     <string name="coinjoin_mixing">Paghahalo</string>
+    <string name="coinjoin_mixing_finishing">Pagtatapos ng Paghahalo</string>
     <string name="coinjoin_paused">Nakahinto ang Paghahalo</string>
     <string name="coinjoin_not_started">Hindi Nagsimula</string>
     <string name="coinjoin_progress_balance">%1$s ng %2$s</string>

@@ -28,7 +28,7 @@
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">النسخ الاحتياطية</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">مسح</string>
+    <string name="shortcut_scan_to_pay">مسح QR</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">إرسال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
@@ -37,8 +37,6 @@
     <string name="shortcut_receive">إستقبال</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">استيراد مفتاح خاص</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">اضافة اختصار</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">إستقبال سريع</string>
@@ -114,7 +112,6 @@
     <string name="request_coins_clipboard_address_msg">تم نسخ عنوان داش الى الحافظة</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">إظهار</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" ليست كلمة عبارة استرداد</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">يجب أن تحتوي عبارة الاسترداد على 12 كلمة</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">عبارة استرداد سيئة</string>
     <string name="restore_wallet_from_invalid_seed_failure">تعذرت استعادة المحفظة:\n\n%s\n\nعبارة استرداد سيئة?</string>
 
@@ -218,7 +215,6 @@
     <string name="verify_info_title_1">لا تقوم مجموعة داش كور بتخزين عبارة الاسترداد هذه</string>
     <string name="verify_info_subtitle_1">يمكن لأي شخص لديه عبارة الاسترداد الخاصة بك الوصول إلى أموالك.</string>
     <string name="verify_info_title_2">لن تتمكن من استعادة المحفظة بدون عبارة استرداد</string>
-    <string name="verify_info_subtitle_2">اكتبه في مكان آمن ولا تعرضه لأي شخص.</string>
     <string name="verify_seed_buttons_tip">يرجى النقر على الكلمات من عبارة الاسترداد بالترتيب الصحيح</string>
     <string name="verify_seed_success_title">تم التحقق بنجاح</string>
     <string name="verify_seed_success_message">محفظتك مؤمنة الآن. يمكنك استخدام عبارة الاسترداد في أي وقت لاسترداد حسابك على جهاز آخر.</string>

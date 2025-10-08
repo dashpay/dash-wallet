@@ -18,6 +18,7 @@ package de.schildbach.wallet.ui.dashpay
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.Process
+import android.text.format.DateUtils
 import com.google.common.base.Preconditions
 import com.google.common.base.Stopwatch
 import dagger.hilt.EntryPoint
@@ -39,8 +40,10 @@ import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.Flow
@@ -90,7 +93,8 @@ class PlatformRepo @Inject constructor(
     val blockchainIdentityDataStorage: BlockchainIdentityConfig,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
-    val coinJoinConfig: CoinJoinConfig
+    val coinJoinConfig: CoinJoinConfig,
+    val dashPayConfig: DashPayConfig
 ) {
 
     @EntryPoint
@@ -101,6 +105,8 @@ class PlatformRepo @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(PlatformRepo::class.java)
+        const val TIMESPAN: Long = DateUtils.DAY_IN_MILLIS * 90 // 90 days
+        const val TOP_CONTACT_COUNT = 4
     }
 
     var onIdentityResolved: ((Identity?) -> Unit)? = {}
@@ -177,15 +183,15 @@ class PlatformRepo @Inject constructor(
         return if (walletApplication.wallet!!.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
-            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+            password?.let { walletApplication.wallet!!.keyCrypter!!.deriveKey(it) }
         } else {
             null
         }
@@ -196,9 +202,9 @@ class PlatformRepo @Inject constructor(
         return if (wallet.isEncrypted) {
             val password = try {
                 // always create a SecurityGuard when it is required
-                val securityGuard = SecurityGuard()
+                val securityGuard = SecurityGuard.getInstance()
                 securityGuard.retrievePassword()
-            } catch (e: IllegalArgumentException) {
+            } catch (e: SecurityGuardException) {
                 log.error("There was an error retrieving the wallet password", e)
                 analytics.logError(e, "There was an error retrieving the wallet password")
                 null
@@ -472,6 +478,88 @@ class PlatformRepo @Inject constructor(
                 }
             }
             .distinctUntilChanged()
+    }
+
+    suspend fun updateFrequentContacts(newTx: Transaction) {
+        if (hasIdentity() && blockchainIdentity.getContactForTransaction(newTx) != null) {
+            updateFrequentContacts()
+        }
+    }
+
+    suspend fun updateFrequentContacts() {
+        if (hasIdentity()) {
+            val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
+            val frequentContacts = when (contactRequests.status) {
+                Status.SUCCESS -> {
+                    if (!hasBlockchainIdentity) {
+                        return
+                    }
+
+                    val threeMonthsAgo = Date().time - TIMESPAN
+
+                    val results =
+                        getTopContacts(contactRequests.data!!, listOf(), blockchainIdentity, threeMonthsAgo, true)
+
+                    if (results.size < TOP_CONTACT_COUNT) {
+                        val moreResults =
+                            getTopContacts(contactRequests.data, results, blockchainIdentity, threeMonthsAgo, false)
+                        results.addAll(moreResults)
+                    }
+
+                    results
+                }
+
+                else -> listOf<UsernameSearchResult>()
+            }
+            dashPayConfig.set(DashPayConfig.FREQUENT_CONTACTS, frequentContacts.map { it.getIdentity() }.toSet())
+        }
+    }
+
+    private fun getTopContacts(items: List<UsernameSearchResult>,
+                               ignore: List<UsernameSearchResult>,
+                               blockchainIdentity: BlockchainIdentity,
+                               threeMonthsAgo: Long,
+                               sent: Boolean
+    ): ArrayList<UsernameSearchResult> {
+        val wholeWatch = Stopwatch.createStarted()
+        val results = arrayListOf<UsernameSearchResult>()
+        val contactScores = hashMapOf<String, Int>()
+        val contactIds = arrayListOf<String>()
+        // only include fully established contacts
+        val contacts = items.filter { it.requestSent && it.requestReceived }
+
+        contacts.forEach {
+            val watch = Stopwatch.createStarted()
+            val transactions = blockchainIdentity.getContactTransactions(it.fromContactRequest!!.userIdentifier, it.fromContactRequest!!.accountReference)
+            var count = 0
+
+            for (tx in transactions) {
+                val txValue = tx.getValue(walletApplication.wallet)
+                if ((sent && txValue.isNegative) || (!sent && txValue.isPositive)) {
+                    if (tx.updateTime.time > threeMonthsAgo) {
+                        count++
+                    }
+                }
+            }
+            contactScores[it.fromContactRequest!!.userId] = count
+            contactIds.add(it.fromContactRequest!!.userId)
+            log.info("contact: {}", watch)
+        }
+
+        // determine users with top TOP_CONTACT_COUNT non-zero scores
+        // if ignore has some items, then find TOP_CONTACT_COUNT - ignore.size
+        contactIds.sortByDescending { contactScores[it] }
+        var count = 0
+        for (id in contactIds) {
+            if (contactScores[id] != 0 && ignore.find { it.fromContactRequest!!.userId == id } == null) {
+                results.add(items.find { it.fromContactRequest!!.userId == id }!!)
+                count++
+                if (count == TOP_CONTACT_COUNT - ignore.size)
+                    break
+            }
+        }
+        log.info("frequent processing: {}", wholeWatch)
+        return results
     }
 
     private fun getFromProfiles(
@@ -878,8 +966,13 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun getNextContactAddress(userId: String, accountReference: Int): Address {
-        return blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+    fun getNextContactAddress(userId: String, accountReference: Int): Address? {
+        return try {
+            blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+        } catch (e: NullPointerException) {
+            log.error("Failed to get contact address due to null key chain", e)
+            null
+        }
     }
 
     var counterForReport = 0
@@ -965,15 +1058,14 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
-
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
-
         return try {
-            platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            getWalletEncryptionKey()?.let {
+                val firstIdentityKey = getBlockchainIdentityKey(0, it) ?: return null
+                platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            }
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {
@@ -1243,9 +1335,14 @@ class PlatformRepo @Inject constructor(
         return report.toString()
     }
 
-    suspend fun getIdentityBalance(): CreditBalanceInfo {
+    suspend fun getIdentityBalance(): CreditBalanceInfo? {
         return withContext(Dispatchers.IO) {
-            CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            try {
+                CreditBalanceInfo(platform.client.getIdentityBalance(blockchainIdentity.uniqueIdentifier))
+            } catch (e: Exception) {
+                log.error("Failed to get identity balance", e)
+                null
+            }
         }
     }
 

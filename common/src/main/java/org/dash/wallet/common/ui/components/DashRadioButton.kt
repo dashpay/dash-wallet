@@ -3,6 +3,7 @@ package org.dash.wallet.common.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,8 +41,8 @@ fun DashRadioButton(
     leadingIcon: Int? = null,
     trailingText: String? = null,
     trailingHelpText: String? = null,
-
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    onlyOption: Boolean = false
 ) {
     val primaryTextColor = MyTheme.Colors.textPrimary
     val secondaryTextColor = MyTheme.Colors.textSecondary
@@ -59,7 +60,8 @@ fun DashRadioButton(
                 role = Role.RadioButton
             )
             .padding(10.dp, 8.dp),
-        color = Color.Transparent
+        color = Color.Transparent,
+
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -103,11 +105,13 @@ fun DashRadioButton(
                 )
                 Spacer(modifier = Modifier.width(10.dp))
             }
-            RadioButtonIndicator(
-                selected = selected,
-                borderColor = borderColor.copy(alpha = contentAlpha),
-                radioButtonColor = radioButtonColor.copy(alpha = contentAlpha)
-            )
+            if (!onlyOption) {
+                RadioButtonIndicator(
+                    selected = selected,
+                    borderColor = borderColor.copy(alpha = contentAlpha),
+                    radioButtonColor = radioButtonColor.copy(alpha = contentAlpha)
+                )
+            }
         }
     }
 }
@@ -261,7 +265,8 @@ data class DashRadioGroupOption(
     val text: String,
     val helpText: String? = null,
     val trailingText: String? = null,
-    val trailingHelpText: String? = null
+    val trailingHelpText: String? = null,
+    val isEnabled: Boolean = true
 )
 
 // Usage example for a radio group
@@ -272,7 +277,7 @@ fun RadioGroup(
     onOptionSelected: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    Column(modifier = modifier.selectableGroup()) {
         options.forEach { option ->
             DashRadioButton(
                 text = option,
@@ -305,7 +310,8 @@ fun RadioGroup(
                 trailingHelpText = option.trailingHelpText,
                 selected = index == selectedOption,
                 onClick = { onOptionSelected(index) },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                enabled = option.isEnabled
             )
 
             if (option != options.last()) {

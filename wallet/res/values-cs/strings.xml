@@ -284,7 +284,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Připojit seznam nainstalovaných balíčků</string>
     <string name="report_issue_dialog_collect_application_log">Připojit log aplikace</string>
     <string name="report_issue_dialog_collect_wallet_dump">Připojit dump peněženky</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Odeslat hlášení pomocí…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odeslání hlášení selhalo.</string>
     <string name="report_transaction_history_export">Exportovat</string>
     <string name="report_transaction_history_title">Expertovat jako CSV</string>

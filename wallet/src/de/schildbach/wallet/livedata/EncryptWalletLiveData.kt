@@ -25,12 +25,9 @@ import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.SecurityGuard
 import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
-import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.slf4j.LoggerFactory
-import java.util.EnumSet
 
 class EncryptWalletLiveData(
     private val walletApplication: WalletApplication,
@@ -43,7 +40,7 @@ class EncryptWalletLiveData(
     private var decryptWalletTask: DecryptWalletTask? = null
 
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
-    private val securityGuard = SecurityGuard()
+    private val securityGuard = SecurityGuard.getInstance()
 
     fun savePin(pin: String) {
         securityGuard.savePin(pin)

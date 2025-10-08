@@ -27,7 +27,6 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogContactSupportBinding
 import kotlinx.coroutines.Dispatchers
@@ -36,6 +35,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 
 /**
@@ -78,6 +78,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        isCancelable = false
         arguments?.getString(TITLE)?.let {
             binding.title.text = it
         }
@@ -103,6 +104,22 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
         arguments?.getBoolean(IS_CRASH)?.let {
             viewModel.isCrash = it
         }
+        viewModel.status.observe(viewLifecycleOwner) {
+            val newStatus = when (it) {
+                ReportGenerationStatus.Logs -> getString(R.string.report_issue_dialog_status_application_log)
+                ReportGenerationStatus.Packages -> getString(R.string.report_issue_dialog_status_installed_packages)
+                ReportGenerationStatus.ApplicationInfo -> getString(R.string.report_issue_dialog_status_application_info)
+                ReportGenerationStatus.WalletDump -> getString(R.string.report_issue_dialog_status_wallet_dump)
+                ReportGenerationStatus.StackTrace -> getString(R.string.report_issue_dialog_status_stack_trace)
+                ReportGenerationStatus.DeviceInfo -> getString(R.string.report_issue_dialog_status_device_info)
+                ReportGenerationStatus.BackgroundTraces -> getString(R.string.report_issue_dialog_status_background_traces)
+                ReportGenerationStatus.ContextualInfo -> getString(R.string.report_issue_dialog_status_contextual_info)
+                ReportGenerationStatus.Finishing -> getString(R.string.report_issue_dialog_status_finishing)
+                else -> ""
+            }
+            binding.status.isVisible = newStatus.isNotEmpty()
+            binding.status.text = newStatus
+        }
     }
 
     private fun imitateUserInteraction() {
@@ -114,6 +131,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
             binding.reportGenerationProgressContainer.isVisible = true
             (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
             val (reportText, attachments) = withContext(Dispatchers.IO) {
+                log.info("createReport({})", binding.reportIssueDialogCollectWalletDump.isChecked)
                 viewModel.createReport(
                     binding.reportIssueDialogDescription.text.toString(),
                     binding.reportIssueDialogCollectDeviceInfo.isChecked,
@@ -128,6 +146,7 @@ class ContactSupportDialogFragment : OffsetDialogFragment(R.layout.dialog_contac
         }
     }
 
+    // must call this function when the dialog is dismissed
     override fun dismiss() {
         (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
         super.dismiss()

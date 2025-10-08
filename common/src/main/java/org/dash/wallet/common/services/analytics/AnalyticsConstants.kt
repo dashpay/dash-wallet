@@ -212,6 +212,9 @@ object AnalyticsConstants {
         const val PROCESS_CONTACT_REQUEST_RECEIVE = "process_contact_request_receive"
         const val PROCESS_PROFILE_CREATE = "process_profile_create"
         const val PROCESS_PROFILE_UPDATE = "process_profile_update"
+        const val PROCESS_BIP7O_GET_PAYMENT_REQUEST = "process_bip70_get_payment_request"
+        const val PROCESS_BIP7O_SEND_PAYMENT = "process_bip70_send_payment"
+        const val PROCESS_GIFT_CARD_PURCHASE = "process_gift_card_purchase"
     }
 
     object Explore {

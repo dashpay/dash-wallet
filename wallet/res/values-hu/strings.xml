@@ -220,7 +220,6 @@
     <string name="report_issue_dialog_collect_installed_packages">A telepített csomagok listájának csatolása</string>
     <string name="report_issue_dialog_collect_application_log">Alkalmazás napló csatolása</string>
     <string name="report_issue_dialog_collect_wallet_dump">Tárca információk csatolása</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Hiba küldése ezzel…</string>
     <string name="report_issue_dialog_mail_intent_failed">Jelentés küldése sikertelen.</string>
     <string name="about_title">Rólunk</string>
     <string name="about_version_title">Verzió</string>

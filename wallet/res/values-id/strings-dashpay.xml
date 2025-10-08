@@ -413,6 +413,7 @@ Dash</b> anda</string>
     <string name="coinjoin_start">Mulai Mixing</string>
     <string name="coinjoin_stop">Hentikan Mixing</string>
     <string name="coinjoin_mixing">Pencampuran</string>
+    <string name="coinjoin_mixing_finishing">Mixing Akhir</string>
     <string name="coinjoin_paused">Pencampuran Dijeda</string>
     <string name="coinjoin_not_started">Tidak Dimulai</string>
     <string name="coinjoin_progress_balance">%1$s dari %2$s</string>

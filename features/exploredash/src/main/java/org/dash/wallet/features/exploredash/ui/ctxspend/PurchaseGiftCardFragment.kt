@@ -76,28 +76,30 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.titleBar.setNavigationOnClickListener { findNavController().popBackStack() }
+        binding.titleBar.setNavigationOnClickListener {
+            enterAmountViewModel.clearSavedState()
+            findNavController().popBackStack()
+        }
 
         setPaymentHeader()
 
-        exploreViewModel.selectedItem.value?.let { merchant ->
-            if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                viewModel.giftCardMerchant = merchant
-                binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
-                binding.paymentHeaderView.setPaymentAddressViewIcon(
-                    merchant.logoLocation,
-                    R.drawable.ic_image_placeholder
-                )
-                viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+        // Try to restore from saved state first
+        val savedMerchantId = viewModel.getSavedMerchantId()
+        val currentMerchant = exploreViewModel.selectedItem.value
 
-                lifecycleScope.launch {
-                    viewModel.updateMerchantDetails(merchant)
-
-                    if (setMerchantEnabled()) {
-                        viewModel.setIsFixedDenomination(merchant.fixedDenomination)
-                        setCardPurchaseLimits()
-                    }
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (savedMerchantId != null && currentMerchant == null) {
+                // restore state if saved merchant exists
+                if (!setupMerchant(savedMerchantId)) {
+                    findNavController().popBackStack()
                 }
+            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null &&
+                !currentMerchant.source.isNullOrEmpty()
+            ) {
+                setupMerchant(currentMerchant)
+            } else {
+                // No valid merchant available
+                findNavController().popBackStack()
             }
         }
 
@@ -120,9 +122,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
 
         enterAmountViewModel.fiatAmount.observe(viewLifecycleOwner) {
-            if (!viewModel.giftCardMerchant.fixedDenomination) {
-                showCardPurchaseLimits()
-                viewModel.setGiftCardPaymentValue(it)
+            viewModel.giftCardMerchant?.let { merchant ->
+                if (!merchant.fixedDenomination) {
+                    showCardPurchaseLimits()
+                    viewModel.setGiftCardPaymentValue(it)
+                }
             }
         }
 
@@ -145,6 +149,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         viewModel.isNetworkAvailable.observe(viewLifecycleOwner) { isConnected ->
             enterAmountFragment?.handleNetworkState(isConnected)
+        }
+
+        viewModel.isBlockchainReplaying.observe(viewLifecycleOwner) {
+            updateView()
         }
 
         viewLifecycleOwner.observeOnDestroy {
@@ -174,6 +182,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.enterAmountFragmentPlaceholder.isVisible = true
         binding.composeContainer.isVisible = false
         binding.fixedDenomText.isVisible = false
+        updateView()
     }
 
     private fun setupMerchantDenominations() {
@@ -189,7 +198,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     /** if the merchant is not active, then close this fragment */
     private fun setMerchantEnabled(): Boolean {
-        if (viewModel.giftCardMerchant.active == false) {
+        if (viewModel.giftCardMerchant?.active != true) {
             findNavController().popBackStack()
             return false
         }
@@ -209,19 +218,23 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        if (viewModel.giftCardMerchant.fixedDenomination) {
-            return
-        }
+        viewModel.giftCardMerchant?.let { merchant ->
+            if (merchant.fixedDenomination) {
+                return
+            }
+        } ?: return
 
         val amountFiat = enterAmountViewModel.fiatAmount.value
         amountFiat?.let {
+            val isBlockchainReplaying = viewModel.isBlockchainReplaying.value
             if (!viewModel.withinLimits(amountFiat)) {
                 binding.minValue.text =
                     getString(R.string.purchase_gift_card_min, viewModel.minCardPurchaseFiat.toFormattedString())
                 binding.maxValue.text =
                     getString(R.string.purchase_gift_card_max, viewModel.maxCardPurchaseFiat.toFormattedString())
-                binding.minValue.isVisible = true
-                binding.maxValue.isVisible = true
+                // don't show min/max values if blockchain is replaying
+                binding.minValue.isVisible = !isBlockchainReplaying
+                binding.maxValue.isVisible = !isBlockchainReplaying
                 binding.discountValue.isVisible = false
                 return
             }
@@ -239,7 +252,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        val merchant = viewModel.giftCardMerchant
+        val merchant = viewModel.giftCardMerchant ?: run {
+            binding.discountValue.isVisible = false
+            return
+        }
         val savingsFraction = merchant.savingsFraction
 
         if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
@@ -249,7 +265,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        binding.discountValue.isVisible = true
+        // only show the discount
+        binding.discountValue.isVisible = !viewModel.isBlockchainReplaying.value
         val selectedRate = viewModel.usdExchangeRate.value
 
         if (selectedRate == null) {
@@ -318,27 +335,55 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
+    private suspend fun setupMerchant(merchantId: String): Boolean {
+        val merchant = viewModel.getMerchantById(merchantId)
+        return if (merchant != null) {
+            setupMerchant(merchant)
+            true
+        } else {
+            false
+        }
+    }
+
+    private suspend fun setupMerchant(merchant: Merchant) {
+        viewModel.giftCardMerchant = merchant
+        binding.paymentHeaderView.setSubtitle(merchant.name.orEmpty())
+        binding.paymentHeaderView.setPaymentAddressViewIcon(
+            merchant.logoLocation,
+            R.drawable.ic_image_placeholder
+        )
+        viewModel.updateMerchantDetails(merchant)
+
+        if (setMerchantEnabled()) {
+            viewModel.setIsFixedDenomination(merchant.fixedDenomination)
+            setCardPurchaseLimits()
+        }
+    }
+
     private fun exceedsBalance(): Boolean {
-        val rate = viewModel.usdExchangeRate.value
+        val rate = viewModel.usdExchangeRate.value ?: return false
 
-        if (rate == null) {
-            return false
-        }
+        val balanceWithDiscount = viewModel.balanceWithDiscount ?: return false
 
-        val balanceWithDiscount = viewModel.balanceWithDiscount
-
-        if (balanceWithDiscount == null) {
-            return false
-        }
-
+        var paymentValue = viewModel.giftCardPaymentValue.value
         val myRate = ExchangeRate(rate.fiat)
-        val amountDash = myRate.fiatToCoin(viewModel.giftCardPaymentValue.value)
+        // this is called when the after a purchase with the user's selected currency, not USD
+        if (paymentValue.currencyCode != Constants.USD_CURRENCY) {
+            paymentValue = Fiat.valueOf(
+                Constants.USD_CURRENCY,
+                paymentValue.value
+            )
+        }
+        val amountDash = myRate.fiatToCoin(paymentValue)
 
         return amountDash.isGreaterThan(balanceWithDiscount)
     }
 
     @Composable
     private fun DenominationsBottomContainer() {
+        val merchant = viewModel.giftCardMerchant ?: return
+        val isReplaying = viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
+
         Box(
             modifier = Modifier.background(
                 color = MyTheme.Colors.backgroundSecondary,
@@ -353,10 +398,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             val selectedDenomination = viewModel.giftCardPaymentValue.collectAsStateWithLifecycle()
             MerchantDenominations(
                 modifier = Modifier.padding(20.dp),
-                denominations = viewModel.giftCardMerchant.denominations,
+                denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
                 selectedDenomination = selectedDenomination.value.toBigDecimal().toInt(),
-                canContinue = !exceedsBalance(),
+                canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
                     viewModel.setGiftCardPaymentValue(fiat)
@@ -368,5 +413,14 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 }
             )
         }
+    }
+
+    // taken from SendCoinsFragment.updateView
+    private fun updateView() {
+        val isReplaying = viewModel.isBlockchainReplaying.value
+        enterAmountFragment?.setError(
+            if (isReplaying) getString(R.string.send_coins_fragment_hint_replaying) else ""
+        )
+        enterAmountViewModel.blockContinue = isReplaying
     }
 }

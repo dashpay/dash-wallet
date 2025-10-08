@@ -23,6 +23,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -107,6 +108,7 @@ open class DashPayConfig @Inject constructor(
         val TOPUP_COUNTER = intPreferencesKey("topup_counter")
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
+        val FREQUENT_CONTACTS = stringSetPreferencesKey("frequent_contacts")
         // transaction metadata settings
         val TRANSACTION_METADATA_FEATURE_INSTALLED = longPreferencesKey("transaction_metadata_feature_installed")
         val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")

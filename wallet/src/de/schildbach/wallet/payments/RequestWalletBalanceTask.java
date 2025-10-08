@@ -340,7 +340,7 @@ public final class RequestWalletBalanceTask {
 			blockExplorers.push(new Pair<>("https://insight.dash.org/insight-api/addr/", UnspentAPI.Insight));
 		} else if (BuildConfig.FLAVOR.equals("_testNet3") || BuildConfig.FLAVOR.equals("staging")) {
 			blockExplorers.push(new Pair<>("https://insight.testnet.networks.dash.org:3002/insight-api/addr/", UnspentAPI.Insight));
-		} else if (BuildConfig.FLAVOR.equals("schnapps")) {
+		} else if (BuildConfig.FLAVOR.equals("devnet")) {
 			blockExplorers.push(new Pair<>(String.format("http://insight.%s.networks.dash.org:3002/insight-api/addr/", Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())), UnspentAPI.Insight));
 		}
 

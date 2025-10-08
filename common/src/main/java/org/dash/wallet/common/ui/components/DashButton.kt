@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
+import org.dash.wallet.common.ui.components.MyTheme.OverlineSemibold
 
 @Composable
 fun DashButton(
@@ -50,8 +51,9 @@ fun DashButton(
 ) {
     val backgroundColor = when {
         !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.05f)
-        style == Style.Filled -> DashBlue
-        style == Style.FilledBlue -> DashBlue
+        style == Style.Filled -> MyTheme.Colors.dashBlue
+        style == Style.FilledBlue -> MyTheme.Colors.dashBlue
+        style == Style.FilledOrange -> MyTheme.Colors.orange
         style == Style.FilledRed -> MyTheme.Colors.red
         style == Style.TintedBlue -> MyTheme.Colors.dashBlue5
         style == Style.TintedGray -> Color(0x1AB0B6BC)
@@ -66,23 +68,24 @@ fun DashButton(
         !isEnabled -> MyTheme.Colors.textPrimary.copy(alpha = 0.40f)
         style == Style.Filled -> Color.White
         style == Style.FilledBlue -> Color.White
+        style == Style.FilledOrange -> Color.White
         style == Style.FilledRed -> Color.White
-        style == Style.TintedBlue -> DashBlue
-        style == Style.PlainBlue -> DashBlue
+        style == Style.TintedBlue -> MyTheme.Colors.dashBlue
+        style == Style.PlainBlue -> MyTheme.Colors.dashBlue
         style == Style.PlainBlack -> MyTheme.Colors.textPrimary
         style == Style.PlainRed -> MyTheme.Colors.red
         style == Style.TintedRed -> MyTheme.Colors.red
         style == Style.TintedGray -> MyTheme.Colors.textPrimary
         style == Style.StrokeGray -> MyTheme.Colors.textPrimary
-        style == Style.FilledWhiteBlue -> DashBlue
+        style == Style.FilledWhiteBlue -> MyTheme.Colors.dashBlue
         style == Style.TintedWhite -> Color.White
 
-        else -> PrimaryText
+        else -> MyTheme.Colors.textPrimary
     }
 
     val borderColor = when {
         !isEnabled -> Color.Transparent
-        style == Style.Outlined -> TertiaryText.copy(alpha = 0.25f)
+        style == Style.Outlined -> MyTheme.Colors.textTertiary.copy(alpha = 0.25f)
         style == Style.StrokeGray -> Color(0x4DB3BDC7)
         else -> Color.Transparent
     }
@@ -115,7 +118,7 @@ fun DashButton(
                 modifier = Modifier.size(size.iconSize),
                 tint = Color.Unspecified
             )
-            Spacer(modifier = Modifier.width(size.paddingHorizontal))
+            Spacer(modifier = Modifier.width(size.iconSpacing))
         }
 
         if (isLoading) {
@@ -125,15 +128,14 @@ fun DashButton(
                 modifier = Modifier
                     .size(size.iconSize)
             )
-            Spacer(modifier = Modifier.width(size.paddingHorizontal))
+            Spacer(modifier = Modifier.width(size.iconSpacing))
         }
         if (text != null) {
             Text(
                 text,
                 fontSize = size.fontSize,
                 lineHeight = size.lineSize,
-                fontFamily = MyTheme.interRegular,
-                fontWeight = FontWeight.SemiBold,
+                style = OverlineSemibold,
                 color = contentColor,
                 overflow = TextOverflow.Ellipsis,
                 // modifier = Modifier.padding(vertical = 2.dp)
@@ -141,7 +143,7 @@ fun DashButton(
         }
 
         if (trailingIcon != null) {
-            Spacer(modifier = Modifier.width(size.paddingHorizontal))
+            Spacer(modifier = Modifier.width(size.iconSpacing))
             Icon(
                 trailingIcon,
                 contentDescription = null,
@@ -157,6 +159,7 @@ enum class Style {
     Outlined,
     Filled,
     FilledBlue,
+    FilledOrange,
     TintedBlue,
     TintedGray,
     PlainBlue,
@@ -173,15 +176,16 @@ enum class Size(
     val fontSize: TextUnit,
     val lineSize: TextUnit,
     val iconSize: Dp,
+    val iconSpacing: Dp,
     val paddingHorizontal: Dp,
     val paddingVertical: Dp,
     val cornerRadius: Dp,
     val minHeight: Dp
 ) {
-    Large(16.sp, 22.sp, 22.dp, 20.dp, 12.dp, 12.dp, 48.dp),
-    Medium(14.sp, 20.sp, 20.dp, 16.dp, 10.dp, 10.dp, 42.dp),
-    Small(13.sp, 18.sp, 16.dp, 12.dp, 6.dp, 8.dp, 36.dp),
-    ExtraSmall(12.sp, 16.sp,13.dp, 8.dp, 4.dp, 6.dp, 28.dp)
+    Large(16.sp, 22.sp, 22.dp, 10.dp, 20.dp, 12.dp, 12.dp, 48.dp),
+    Medium(14.sp, 20.sp, 20.dp, 8.dp, 16.dp, 10.dp, 10.dp, 42.dp),
+    Small(13.sp, 18.sp, 16.dp, 6.dp, 12.dp, 6.dp, 8.dp, 36.dp),
+    ExtraSmall(12.sp, 16.sp,13.dp, 6.dp, 8.dp, 4.dp, 6.dp, 28.dp)
 }
 
 val DashBlue = Color(0xFF008DE4)
@@ -235,6 +239,13 @@ fun DashButtonPreview() {
             onClick = { }
         )
         DashButton(
+            text = "Filled Orange",
+            size = Size.Small,
+            style = Style.FilledOrange,
+            stretch = false,
+            onClick = { }
+        )
+        DashButton(
             text = "Plain Red",
             size = Size.Small,
             style = Style.PlainRed,
@@ -249,7 +260,7 @@ fun DashButtonPreview() {
             onClick = { }
         )
         Column(modifier = Modifier
-            .background(DashBlue)
+            .background(MyTheme.Colors.dashBlue)
             .padding(10.dp, 20.dp)) {
             DashButton(
                 text = "TintedWhite",
@@ -296,6 +307,46 @@ fun DashButtonPreview() {
             leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
             trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
             isLoading = true,
+            onClick = { }
+        )
+
+        DashButton(
+            text = "Large",
+            size = Size.Large,
+            stretch = true,
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
+            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            isLoading = false,
+            onClick = { }
+        )
+
+        DashButton(
+            text = "Medium",
+            size = Size.Medium,
+            stretch = true,
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
+            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            isLoading = false,
+            onClick = { }
+        )
+
+        DashButton(
+            text = "Small",
+            size = Size.Small,
+            stretch = false,
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
+            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            isLoading = false,
+            onClick = { }
+        )
+
+        DashButton(
+            text = "Extra Small",
+            size = Size.ExtraSmall,
+            stretch = false,
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
+            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            isLoading = false,
             onClick = { }
         )
     }

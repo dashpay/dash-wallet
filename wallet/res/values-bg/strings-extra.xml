@@ -22,15 +22,11 @@
     <string name="dialog_confirm_fee">Мрежова такса</string>
     <string name="dialog_confirm_total">Общо</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Сканирай</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_send">Изпрати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Получаване</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Импортиране на частен ключ.</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Добави пряк път</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Бързо получаване</string>
@@ -103,7 +99,6 @@
     <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Грешна възстановяваща фраза</string>
     <string name="restore_wallet_from_invalid_seed_failure">Портфейлът не може да бъде възстановен:\n\n%s\n\nГрешна фраза за възстановяване?</string>
 

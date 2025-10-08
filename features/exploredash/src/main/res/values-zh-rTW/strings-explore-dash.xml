@@ -59,6 +59,7 @@
     <string name="explore_back_to_nearest">返回最近的位置</string>
     <string name="explore_select_location">選擇位置</string>
     <string name="explore_pay_with_dash">用達世幣支付</string>
+    <string name="explore_pay_with_dash_save">保存%.2f%%</string>
     <string name="explore_buy_gift_card">購買禮品卡</string>
     <string name="explore_buy_dash">購買達世幣</string>
     <string name="explore_sell_dash">出售達世幣</string>
@@ -83,6 +84,10 @@
     <string name="explore_filtered_by">篩選條件:</string>
     <string name="explore_pay_gift_card">使用禮品卡付款</string>
     <string name="explore_sort_by">排序方式</string>
+    <string name="gift_card_types">禮品卡類型</string>
+    <string name="flexible_amount_option">彈性的金額</string>
+    <string name="fixed_denom_option">固定金額</string>
+
     <string-array name="merchants_filter_options">
         <item>在線的</item>
         <item>附近的</item>
@@ -196,11 +201,16 @@
     <string name="send_coins_error_msg">付款出現問題!</string>
     <string name="gift_card_barcode_failed">條碼載入失敗</string>
     <string name="gift_card_tx_title">禮物卡 · %s</string>
+    <string name="select_amount">選擇金額</string>
+    <string name="select_fixed_amount">這個商戶以固定價格出售禮品卡</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">輸入驗證碼</string>
     <string name="verification_check_email">檢查您的電子郵件並輸入驗證碼</string>
     <string name="buy_gift_card">使用您的 DashSpend 帳戶購買禮品卡</string>
+    <string name="dashspend_create_account">創建一個帳戶或登錄現有的帳戶</string>
     <string name="create_new_account">建立新帳戶</string>
+    <string name="login">登入</string>
     <string name="password">密碼</string>
     <string name="logged_in_as">登入為 %s</string>
     <string name="log_out">登出</string>
@@ -212,13 +222,23 @@
     <string name="cancel">取消</string>
     <string name="gift_card_error">由於某些原因，我們無法購買禮品卡。請再試一次。</string>
     <string name="gift_card_details_error">由於某些原因，我們無法購買禮品卡。請聯絡支援人員。</string>
+    <string name="gift_card_limit_error">該商人的購買限額已更改。請聯繫CTX客戶服務以獲取更多信息。</string>
     <string name="gift_card_unknown_error">由於某些原因，我們無法購買禮品卡。請透過 txid %s聯繫支援人員。</string>
     <string name="gift_card_rejected">付款已被拒絕。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s and 和交易 ID %s。</string>
     <string name="gift_card_redeem_url_not_supported">已向提供兌換 URL 的商家進行付款，但目前不支援。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s 和交易 ID %s。</string>
+    <string name="dashspend_terms_conditions">接受條款和條件</string>
     <string name="accept_terms_conditions">我接受 DashSpend 條款和條件</string>
     <string name="tap_link_to_proceed">要在 DashSpend 建立帳戶，您必須點擊下面的連結才能繼續</string>
     <string name="accept_to_proceed">要在 DashSpend 建立帳戶，您必須接受 DashSpend 條款和條件</string>
+    <string name="view_terms_conditions">條款 &amp; 條件</string>
+    <string name="barcode_placeholder">一旦生成代碼，它將在此處顯示。</string>
+    <string name="gift_card_contact_ctx">聯繫CTX客戶服務</string>
+
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">創建賬戶</string>
+    <string name="log_in_to_ctxspend_account">登錄到您的帳戶</string>
     <string name="log_in_to_ctxspend_account_desc">您的電子郵件僅用於發送一次性密碼。</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 帳戶購買禮品卡</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">建立 DashSpend 帳戶或登入現有帳戶</string>
-    </resources>
+    <string name="temporarily_unavailable">暫時不可用</string>
+</resources>

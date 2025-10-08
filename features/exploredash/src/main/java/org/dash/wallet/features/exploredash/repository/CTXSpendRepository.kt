@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.safeApiCall
@@ -28,28 +27,40 @@ import org.dash.wallet.features.exploredash.data.ctxspend.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.ctxspend.model.LoginRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.PurchaseGiftCardRequest
 import org.dash.wallet.features.exploredash.data.ctxspend.model.VerifyEmailRequest
+import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import javax.net.ssl.SSLHandshakeException
 
 class CTXSpendException(
     message: String,
     val errorCode: Int? = null,
-    val errorBody: String? = null
-) : Exception(message) {
+    val errorBody: String? = null,
+    cause: Throwable? = null
+) : Exception(message, cause) {
     var resourceString: ResourceString? = null
+    var giftCardResponse: GiftCardResponse? = null
+    var txId: String? = null
     private val errorMap: Map<String, Any>
 
-    constructor(message: ResourceString) : this("") {
+    constructor(message: ResourceString, giftCardResponse: GiftCardResponse? = null) : this("") {
         this.resourceString = message
+        this.giftCardResponse = giftCardResponse
+    }
+
+    constructor(message: String, giftCardResponse: GiftCardResponse?, txId: String) : this(message) {
+        this.giftCardResponse = giftCardResponse
+        this.txId = txId
     }
 
     init {
-        val type = object : TypeToken<Map<String, Any>>() {}.type
         errorMap = try {
             if (errorBody != null) {
-                Gson().fromJson(errorBody, type) ?: emptyMap()
+                @Suppress("UNCHECKED_CAST")
+                Gson().fromJson(errorBody, Map::class.java) as? Map<String, Any> ?: emptyMap()
             } else {
                 emptyMap()
             }
@@ -58,18 +69,27 @@ class CTXSpendException(
         }
     }
 
+    override fun toString(): String {
+        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
+    }
+
     val isLimitError: Boolean
         get() {
             val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
             return errorCode == 400 && (fiatAmount == "above threshold" || fiatAmount == "below threshold")
         }
+    val isNetworkError: Boolean
+        get() = cause?.let { it is SSLHandshakeException } ?: false
 }
 
 class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
-    private val config: CTXSpendConfig
+    private val config: CTXSpendConfig,
+    private val tokenAuthenticator: TokenAuthenticator
 ) : CTXSpendRepositoryInt {
-
+    companion object {
+        private val ONE_DAY = TimeUnit.DAYS.toMillis(1)
+    }
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
 
     override suspend fun login(email: String): ResponseResource<Boolean> = safeApiCall {
@@ -126,6 +146,24 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun getGiftCardByTxid(txid: String) = safeApiCall {
         api.getGiftCard(txid)
     }
+
+    override suspend fun refreshToken(): Boolean {
+        return when (val tokenResponse = tokenAuthenticator.getUpdatedToken()) {
+            is ResponseResource.Success -> {
+                tokenResponse.value?.let {
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                    true
+                } ?: false
+            }
+
+            else -> {
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                false
+            }
+        }
+    }
 }
 
 interface CTXSpendRepositoryInt {
@@ -144,4 +182,5 @@ interface CTXSpendRepositoryInt {
 
     suspend fun getMerchant(merchantId: String): GetMerchantResponse?
     suspend fun getGiftCardByTxid(txid: String): ResponseResource<GiftCardResponse?>
+    suspend fun refreshToken(): Boolean
 }

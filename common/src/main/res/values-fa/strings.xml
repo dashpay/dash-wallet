@@ -107,5 +107,6 @@
     <string name="log_in">ورود</string>
 
     <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">در حال ارسال گزارش...</string>
 
     </resources>

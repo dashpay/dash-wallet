@@ -3,8 +3,8 @@ buildscript {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
         ok_http_version = '4.9.1'
-        dashjVersion = '21.1.8'
-        dppVersion = "2.0.0-TX-SNAPSHOT"
+        dashjVersion = '21.1.12-SNAPSHOT'
+        dppVersion = "2.0.1-TX-SNAPSHOT"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
@@ -76,6 +76,5 @@ allprojects {
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
-        maven { url 'https://central.sonatype.com/repository/maven-snapshots/' }
     }
 }

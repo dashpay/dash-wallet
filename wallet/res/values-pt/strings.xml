@@ -295,7 +295,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Anexar lista de pacotes instalados</string>
     <string name="report_issue_dialog_collect_application_log">Anexar log do aplicativo</string>
     <string name="report_issue_dialog_collect_wallet_dump">Anexar "wallet dump"</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Enviar relatório usando…</string>
     <string name="report_issue_dialog_mail_intent_failed">Envio de relatório falhou.</string>
     <string name="report_issue_dialog_generating_report">Gerando relatório</string>
     <string name="report_transaction_history_export">Exportar</string>
@@ -417,4 +416,9 @@
     <string name="credits_profile_change_message">Atualizar informações de perfil</string>
 
     <string name="block_explorer_selection_title">Selecionar explorador de blocos</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Selecionar opção</string>
+    <string name="customize_shortcuts">Personalizar barra de atalho</string>
+    <string name="customize_shortcuts_description">Mantenha pressionado qualquer botão acima para substituí-lo pela função que você deseja</string>
 </resources>

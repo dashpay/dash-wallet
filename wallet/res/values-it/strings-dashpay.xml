@@ -138,7 +138,7 @@ Username</b></string>
     <string name="scan_to_pay_username_dialog_message">Non è un nome utente o un\'identità Dash valida\n\n%s</string>
     <string name="send_coins_to_username">Invio a</string>
     <string name="contact_history_disclaimer">Aggiungi % come contatto a <b> Paga Direttamente al nome utente </b> e <b>Conserva la cronologia delle transazioni reciproche</b></string>
-    <string name="contact_history_disclaimer_pending">Una volta che % avrà accettato la tua richiesta, potrai farlo <b> Paga direttamente usando Username</b></string>
+    <string name="contact_history_disclaimer_pending">Una volta che % avrà accettato la tua richiesta, potrai farlo <b> pagare utilizzando direttamente lo Username</b></string>
     <string name="stranger_activity_disclaimer_text">I pagamenti effettuati direttamente agli indirizzi non verranno mantenuti in attività.</string>
     <string name="error_loading_identity">Errore durante il caricamento dell\'identità</string>
 
@@ -163,7 +163,7 @@ Username</b></string>
     <string name="picture_upload_policy">Politica di caricamento delle immagini</string>
     <string name="imgur_policy_1">L\'immagine che selezioni verrà caricata su Imgur in forma anonima.</string>
     <string name="imgur_policy_2">L\'immagine caricata può essere visualizzata pubblicamente da chiunque.</string>
-    <string name="imgur_policy_3">Puoi sempre eliminare l\'immagine caricata, purché tu abbia accesso a questo Wallet.</string>
+    <string name="imgur_policy_3">Puoi sempre eliminare l\'immagine caricata, purché tu abbia accesso a questo Portafoglio.</string>
     <string name="profile_picture_delete_title">Sei sicuro\?\?</string>
     <string name="profile_picture_delete_message">Questa immagine non verrà più utilizzata sulla rete Dash</string>
     <string name="agree">Acconsento</string>
@@ -200,7 +200,7 @@ Username</b></string>
     <string name="gravatar_email_prompt">Inserisci il tuo ID Email Gravatar</string>
     <string name="gravatar_fetching">Recupero del tuo Gravatar</string>
     <string name="gravatar_email_sample">sample\@email.com</string>
-    <string name="gravatar_disclaimer">La tua Email non è memorizzata nel Wallet DashPay né su alcun server. Viene utilizzato una volta per ottenere i dettagli del tuo account Gravatar e quindi scartato.</string>
+    <string name="gravatar_disclaimer">La tua Email non è memorizzata nel Portafoglio DashPay né su alcun server. Viene utilizzata una volta per ottenere i dettagli del tuo account Gravatar e quindi scartata.</string>
     <string name="gravatar_email_error">Impossibile recuperare il tuo Gravatar. Inserisci un ID email Gravatar valido.</string>
 
     <string name="where_to_store_your_picture">Dove vorresti archiviare la tua foto\?</string>
@@ -398,7 +398,7 @@ Username</b></string>
     <string name="turned_off">Spento</string>
     <string name="coinjoin_info_subtitle">Mixare i tuoi Dash renderà le tue transazioni più private</string>
     <string name="coinjoin_description_1">Potrai spendere i Dash che sono stati mixati solo quando questa opzione è attiva. Questa può essere disattivata in qualsiasi momento.</string>
-    <string name="coinjoin_description_2">I Dash appena ricevuti verranno automaticamente mixati all\'apertura del wallet</string>
+    <string name="coinjoin_description_2">I Dash appena ricevuti verranno automaticamente mixati all\'apertura del portafoglio</string>
     <string name="coinjoin_description_3">L\'attivazione di questa funzione comporterà un maggiore utilizzo della batteria</string>
     <string name="coinjoin_mixing_level_title">Seleziona il livello di mixing</string>
     <string name="coinjoin_mixing_level_subtitle">Puoi modificare o interrompere il livello di miscelazione in qualsiasi momento</string>

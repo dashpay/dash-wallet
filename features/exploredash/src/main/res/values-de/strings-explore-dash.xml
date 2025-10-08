@@ -86,6 +86,10 @@
     <string name="explore_filtered_by">Gefiltert nach:</string>
     <string name="explore_pay_gift_card">Mit Gutscheinkarte bezahlen</string>
     <string name="explore_sort_by">Sortieren nach</string>
+    <string name="gift_card_types">Geschenkkarten-Typen</string>
+    <string name="flexible_amount_option">Flexible Beträge</string>
+    <string name="fixed_denom_option">Festgesetzte Beträge</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>In der Nähe</item>
@@ -201,6 +205,9 @@
     <string name="send_coins_error_msg">Problem beim Versenden der Dash!</string>
     <string name="gift_card_barcode_failed">Der Strichcode konnte nicht geladen werden.</string>
     <string name="gift_card_tx_title">Geschenkkarte · %s</string>
+    <string name="select_amount">Betrag auswählen</string>
+    <string name="select_fixed_amount">Dieser Händler verkauft seine Geschenkkarten zu festen Preisen.</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Verifizierungscode eingeben</string>
     <string name="verification_check_email">Kontrolliere deine E-Mail und deinen Verifizierungscode</string>
@@ -219,6 +226,7 @@
     <string name="cancel">Abbrechen</string>
     <string name="gift_card_error">Aus einem unerfindlichen Grund konnten wir deine Geschenkkarte nicht kaufen. Bitte versuche es später noch einmal.</string>
     <string name="gift_card_details_error">Aus einem unerfindlichen Grund konnten wir deine Geschenkkarte nicht kaufen. Bitte kontaktiere den Support.</string>
+    <string name="gift_card_limit_error">Die Kauflimits für diesen Händler haben sich geändert. Bitte kontaktiere den CTX-Support für mehr Informationen.</string>
     <string name="gift_card_unknown_error">Aus einem unerfindlichen Grund war es uns nicht möglich, eine Geschenkkarte zu kaufen. Bitte kontaktiere den Support mit der Transaktions-ID %s.</string>
     <string name="gift_card_rejected">Die Zahlung wurde abgewiesen. Bitte kontaktiere CTX mit der Geschenkkarten-ID %s , der Zahlungs-ID %s und der Transaktions-ID %s.</string>
     <string name="gift_card_redeem_url_not_supported">Die Zahlung wurde für einen Händler getätigt, der eine Einlöse-URL angibt. Dies wird aber derzeit nicht unterstützt. Bitte kontaktiere CTX mit der Geschenkkarten-ID %s , der Zahlungs-ID %s und der Transaktions-ID %s.</string>
@@ -228,6 +236,7 @@
     <string name="accept_to_proceed">Um Konto bei DashSpend zu erstellen, musst du die AGB von DashSpend akzeptieren.</string>
     <string name="view_terms_conditions">AGB</string>
     <string name="barcode_placeholder">Sobald der Code generiert wurde, wird er hier angezeigt.</string>
+    <string name="gift_card_contact_ctx">CTX-Support kontaktieren</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Konto erstellen</string>
@@ -235,4 +244,5 @@
     <string name="log_in_to_ctxspend_account_desc">Deine E-Mail wird nur benötigt, um dir ein einmaliges Password zu senden.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Kaufe eine Geschenkkarte mit deinem DashSpend Konto.</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Erstelle ein DashSpend Konto oder logge dich ein bestehendes Konto ein.</string>
-    </resources>
+    <string name="temporarily_unavailable">Zur Zeit nicht verfügbar</string>
+</resources>

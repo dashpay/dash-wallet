@@ -247,13 +247,6 @@ class MainViewModel @Inject constructor(
     val mixingSessions: Flow<Int>
         get() = coinJoinService.observeActiveSessions()
 
-    var decimalFormat: DecimalFormat = DecimalFormat("0.000")
-    val walletBalanceString: String
-        get() = decimalFormat.format(totalBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
-
-    val mixedBalanceString: String
-        get() = decimalFormat.format(mixedBalance.value?.toBigDecimal() ?: BigDecimal.ZERO)
-
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
 

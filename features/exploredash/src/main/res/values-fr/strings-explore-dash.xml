@@ -88,6 +88,10 @@
     <string name="explore_filtered_by">Filtré par :</string>
     <string name="explore_pay_gift_card">Payer avec une carte-cadeau</string>
     <string name="explore_sort_by">Trier par</string>
+    <string name="gift_card_types">Types de cartes-cadeau</string>
+    <string name="flexible_amount_option">Montants flexibles</string>
+    <string name="fixed_denom_option">Montants fixes</string>
+
     <string-array name="merchants_filter_options">
         <item>En ligne</item>
         <item>À proximité</item>
@@ -205,6 +209,9 @@
     <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
     <string name="gift_card_barcode_failed">Erreur de lecture du code-barres</string>
     <string name="gift_card_tx_title">Carte-cadeau · %s</string>
+    <string name="select_amount">Choisir le montant</string>
+    <string name="select_fixed_amount">Ce fournisseur vend des cartes-cadeau à prix fixe</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">Entrez le code de vérification</string>
     <string name="verification_check_email">Consultez votre e-mail et entrez le code de vérification</string>
@@ -223,6 +230,7 @@
     <string name="cancel">Annuler</string>
     <string name="gift_card_error">Pour quelque raison, nous n\'avons pas pu acheter une carte-cadeau. Veuillez réessayer.</string>
     <string name="gift_card_details_error">Pour quelque raison, nous n\'avons pas pu acheter une carte-cadeau. Veuillez contacter le support.</string>
+    <string name="gift_card_limit_error">Les limites d\'achat avec ce vendeur ont changé. Veuillez contacter le support de CTX pour en savoir plus.</string>
     <string name="gift_card_unknown_error">Pour quelque raison, nous n\'avons pas pu acheter une carte-cadeau. Veuillez contacter le support avec l\'identifiant de transaction %s.</string>
     <string name="gift_card_rejected">Le paiement a été rejeté.  Veuillez contacter CTX avec les identifiants de carte-cadeau %s, de paiement %s et de transaction %s.</string>
     <string name="gift_card_redeem_url_not_supported">Le paiement a été effectué pour le vendeur qui fournit une adresse d\'utilisation, mais ce n\'est pas supporté actuellement. Veuillez contacter CTX avec les identifiants de carte-cadeau %s, de paiement %s et de transaction %s.</string>
@@ -232,6 +240,7 @@
     <string name="accept_to_proceed">Pour créer un compte DashSpend, vous devez accepter les termes et conditions</string>
     <string name="view_terms_conditions">Termes &amp; conditions</string>
     <string name="barcode_placeholder">Dès que votre code sera généré, il sera affiché ici.</string>
+    <string name="gift_card_contact_ctx">Contacter le support de CTX</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Créer le compte</string>
@@ -239,4 +248,5 @@
     <string name="log_in_to_ctxspend_account_desc">Votre adresse e-mail n\'est utilisée que pour vous envoyer un mot de passe temporaire.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Acheter une carte-cadeau avec votre compte DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Créer un compte DashSpend ou se connecter à votre compte existant</string>
-    </resources>
+    <string name="temporarily_unavailable">Provisoirement indisponible</string>
+</resources>

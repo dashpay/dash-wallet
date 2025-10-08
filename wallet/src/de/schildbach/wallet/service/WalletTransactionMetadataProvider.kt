@@ -615,12 +615,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 response.body?.let {
                     syncScope.launch {
                         try {
-                            val bitmap = it.decodeBitmap()
-                            val icon = resizeIcon(bitmap)
-                            val imageData = getBitmapData(icon)
-                            val imageHash = Sha256Hash.of(imageData)
+                            val originalImageData = it.bytes()
+                            // Calculate hash from original image data to have it unified across platforms
+                            val imageHash = Sha256Hash.of(originalImageData)
 
-                            iconBitmapDao.addBitmap(IconBitmap(imageHash, imageData, iconUrl, icon.height, icon.width))
+                            val bitmap = BitmapFactory.decodeByteArray(originalImageData, 0, originalImageData.size)
+                            val icon = resizeIcon(bitmap)
+                            val resizedImageData = getBitmapData(icon)
+
+                            iconBitmapDao.addBitmap(IconBitmap(imageHash, resizedImageData, iconUrl, icon.height, icon.width))
                             transactionMetadataDao.updateIconId(txId, imageHash)
                         } catch (ex: Exception) {
                             log.error("Failed to resize and save the icon for url: $iconUrl", ex)

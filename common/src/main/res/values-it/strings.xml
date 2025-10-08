@@ -77,7 +77,7 @@
     <string name="max">Max</string>
     <string name="select_the_coin">Seleziona una coin</string>
     <string name="dash">Dash</string>
-    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="dash_wallet_name">Portafoglio Dash</string>
     <string name="from">da</string>
     <string name="to">a</string>
     <string name="select_currency">Seleziona Valuta</string>
@@ -89,7 +89,7 @@
     <string name="rate_not_available">Non disponibile</string>
 
     <!-- CrowdNode warning -->
-    <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Dash Wallet</string>
+    <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Portafoglio Dash</string>
     <string name="empty_wallet_crowdnode_warning">Attenzione: non potrai prelevare i tuoi fondi da CrowdNode su questo portafoglio finché non aumenterai il tuo saldo a 0,0003 Dash.</string>
 
     <!-- Send coins -->
@@ -99,7 +99,7 @@
     <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
 
     <!-- Integrations -->
-    <string name="buy_dash_subtitle">Ricevi direttamente in Dash Wallet</string>
+    <string name="buy_dash_subtitle">Ricevi direttamente nel Portafoglio Dash</string>
     <string name="convert_crypto">Converti criptovalute</string>
     <string name="last_known_balance" >Ultimo saldo noto</string>
     <string name="disconnected">Disconnesso</string>
@@ -108,5 +108,6 @@
     <string name="log_in">Accedi</string>
 
     <string name="chain_syncing">La catena si sta sincronizzando...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Invio della segnalazione…</string>
 
     </resources>

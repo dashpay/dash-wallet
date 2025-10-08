@@ -84,6 +84,10 @@
     <string name="explore_filtered_by">筛选条件:</string>
     <string name="explore_pay_gift_card">使用礼品卡付款</string>
     <string name="explore_sort_by">排序方式</string>
+    <string name="gift_card_types">礼品卡类型</string>
+    <string name="flexible_amount_option">可调面额</string>
+    <string name="fixed_denom_option">固定面额</string>
+
     <string-array name="merchants_filter_options">
         <item>线上</item>
         <item>附近的</item>
@@ -197,6 +201,9 @@
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
     <string name="gift_card_barcode_failed">条形码加载失败</string>
     <string name="gift_card_tx_title">礼品卡 · %s</string>
+    <string name="select_amount">选择面额</string>
+    <string name="select_fixed_amount">此商户以固定价格出售礼品卡</string>
+
     <!-- dash spend login-->
     <string name="enter_verification_code">输入验证码</string>
     <string name="verification_check_email">检查您的电子邮箱并输入验证码</string>
@@ -215,6 +222,7 @@
     <string name="cancel">取消</string>
     <string name="gift_card_error">由于某些原因, 我们无法购买礼品卡. 请再试一次.</string>
     <string name="gift_card_details_error">由于某些原因, 我们无法购买礼品卡. 请联系客服.</string>
+    <string name="gift_card_limit_error">该商户的购买限额已更改. 请联系CTX客服以获取更多信息.</string>
     <string name="gift_card_unknown_error">由于某些原因, 我们无法购买礼品卡. 请通过 txid %s与客服联系.</string>
     <string name="gift_card_rejected">付款已被拒绝. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
     <string name="gift_card_redeem_url_not_supported">已向提供兑换链接的商家进行付款, 但目前尚不受支持. 请联系 CTX, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
@@ -224,6 +232,7 @@
     <string name="accept_to_proceed">要在 DashSpend 创建账户, 您必须接受 DashSpend 条款和条件</string>
     <string name="view_terms_conditions">条款和条件</string>
     <string name="barcode_placeholder">一旦生成代码, 它将显示在此处.</string>
+    <string name="gift_card_contact_ctx">联系CTX客服</string>
 
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">创建账户</string>
@@ -231,4 +240,5 @@
     <string name="log_in_to_ctxspend_account_desc">您的电子邮箱仅用于发送一次性密码.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 账户购买礼品卡</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">创建 DashSpend 账户或登录现有账户</string>
-    </resources>
+    <string name="temporarily_unavailable">临时不可用</string>
+</resources>

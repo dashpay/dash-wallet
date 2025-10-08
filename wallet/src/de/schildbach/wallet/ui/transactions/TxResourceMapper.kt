@@ -33,8 +33,12 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
+import org.slf4j.LoggerFactory
 
 open class TxResourceMapper {
+    companion object {
+        private val log = LoggerFactory.getLogger(TxResourceMapper::class.java)
+    }
     open val dateTimeFormat: Int
         get() = DateUtils.FORMAT_SHOW_TIME
 
@@ -71,12 +75,17 @@ open class TxResourceMapper {
                         val authExtension = dashPayWallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                         val cftx = authExtension.getAssetLockTransaction(tx)
 
-                        val group = authExtension.keyChainGroup as AuthenticationKeyChainGroup
-                        typeId = when (group.getKeyChainType(cftx.assetLockPublicKeyId.bytes)) {
-                            AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING -> R.string.dashpay_invite_fee
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING -> R.string.dashpay_upgrade_fee
-                            AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP -> R.string.dashpay_topup_fee
-                            else -> R.string.transaction_row_status_sent
+                        typeId = if (cftx != null && cftx.assetLockPublicKeyId != null) {
+                            val group = authExtension.keyChainGroup as AuthenticationKeyChainGroup
+                            when (group.getKeyChainType(cftx.assetLockPublicKeyId.bytes)) {
+                                AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING -> R.string.dashpay_invite_fee
+                                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_FUNDING -> R.string.dashpay_upgrade_fee
+                                AuthenticationKeyChain.KeyChainType.BLOCKCHAIN_IDENTITY_TOPUP -> R.string.dashpay_topup_fee
+                                else -> R.string.transaction_row_status_sent
+                            }
+                        } else {
+                            log.info("transaction marked as asset lock, but not found (yet?)")
+                            R.string.transaction_row_status_sent
                         }
                     } else if (coinJoinType == CoinJoinTransactionType.Mixing) {
                         typeId = R.string.transaction_row_status_coinjoin_mixing

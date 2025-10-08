@@ -23,7 +23,7 @@
     android:animateLayoutChanges="true"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.more.SettingsFragment">
+    tools:context="de.schildbach.wallet.ui.SettingsFragment">
 
     <include
         android:id="@+id/app_bar"
@@ -136,7 +136,7 @@
 
         <TextView
             android:id="@+id/coinjoin_title"
-            style="@style/MenuRowTitle.Internal"
+            style="@style/Body2.Medium"
             android:layout_width="wrap_content"
             android:layout_height="27dp"
             android:layout_marginStart="22dp"
