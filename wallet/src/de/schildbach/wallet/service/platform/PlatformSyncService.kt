@@ -805,8 +805,9 @@ class PlatformSynchronizationService @Inject constructor(
                 log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                 list.forEach { metadata ->
                     if (metadata.isNotEmpty()) {
+                        val txIdAsHash = Sha256Hash.wrapReversed(metadata.txId)
                         val cachedItems = transactionMetadataChangeCacheDao.findAfter(
-                            Sha256Hash.wrap(metadata.txId),
+                            txIdAsHash, // tx hash is stored in LE
                             timestamp
                         )
                         log.info(
@@ -819,7 +820,6 @@ class PlatformSynchronizationService @Inject constructor(
 
                         // we need to find a new way -- how can we know that we should change something?
                         // should we save to the DB table?
-                        val txIdAsHash = Sha256Hash.wrap(metadata.txId)
                         val metadataDocumentRecord = TransactionMetadataDocument(
                             doc.id,
                             doc.updatedAt!!,
@@ -1042,7 +1042,7 @@ class PlatformSynchronizationService @Inject constructor(
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
-                it.txId.bytes,
+                it.txId.reversedBytes, // tx hash is stored in LE
                 it.sentTimestamp,
                 it.memo,
                 it.rate?.toDouble(),
