@@ -217,6 +217,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                         startService(CreateIdentityService.createIntentForRetry(this, false))
                     }
                 }
+                setupBottomNavigation(viewModel)
             }
         }
 

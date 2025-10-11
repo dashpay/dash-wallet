@@ -452,7 +452,7 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .filter { it.creationState >= IdentityCreationState.DONE }
+            .filter { it.hasUsername }
             .flatMapLatest { identityData ->
                 val userId = identityData.userId!!
 
