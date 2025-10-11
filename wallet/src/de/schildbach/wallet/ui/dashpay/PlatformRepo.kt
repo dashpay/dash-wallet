@@ -76,7 +76,6 @@ import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
@@ -680,16 +679,14 @@ class PlatformRepo @Inject constructor(
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
-    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter) {
-        withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet as WalletEx
-            // this will initialize any missing key chains
-            wallet.initializeCoinJoin(keyParameter, 0)
+    fun addWalletAuthenticationKeys(seed: DeterministicSeed, keyParameter: KeyParameter) {
+        val wallet = walletApplication.wallet as WalletEx
+        // this will initialize any missing key chains
+        wallet.initializeCoinJoin(keyParameter, 0)
 
-            var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
-            authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
-            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
-        }
+        var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+        authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
+        authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
     }
 
     //
@@ -700,22 +697,20 @@ class PlatformRepo @Inject constructor(
     //
     // Step 3: Register the identity
     //
-    suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            for (i in 0 until 3) {
-                try {
-                    val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                    blockchainIdentity.registerIdentity(keyParameter, true, true)
-                    timer.logTiming() // we won't log timing for failed registrations
-                    return@withContext
-                } catch (e: InvalidInstantAssetLockProofException) {
-                    log.info("instantSendLock error: retry registerIdentity again ($i)")
-                    delay(3000)
-                }
+    suspend fun registerIdentity(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        Context.propagate(walletApplication.wallet!!.context)
+        for (i in 0 until 3) {
+            try {
+                val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
+                blockchainIdentity.registerIdentity(keyParameter, true, true)
+                timer.logTiming() // we won't log timing for failed registrations
+                return
+            } catch (e: InvalidInstantAssetLockProofException) {
+                log.info("instantSendLock error: retry registerIdentity again ($i)")
+                delay(3000)
             }
-            throw InvalidInstantAssetLockProofException("failed after 3 tries")
         }
+        throw InvalidInstantAssetLockProofException("failed after 3 tries")
     }
 
     //
@@ -737,7 +732,7 @@ class PlatformRepo @Inject constructor(
     //
     // Step 4: Preorder the username
     //
-    fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+    fun preorderName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
         // val names = blockchainIdentity.getUnregisteredUsernames()
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
         blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(listOf(username), keyParameter)
@@ -745,43 +740,13 @@ class PlatformRepo @Inject constructor(
     }
 
     //
-    // Step 4: Verify that the username was preordered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val set = blockchainIdentity.getUsernamesWithStatus(UsernameStatus.PREORDER_REGISTRATION_PENDING)
-            val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
-            }
-        }
-    }
-
-    //
     // Step 5: Register the username
     //
-    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
-        withContext(Dispatchers.IO) {
-            // val names = blockchainIdentity.preorderedUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(listOf(username), keyParameter, false)
-            timer.logTiming()
-        }
-    }
-
-    //
-    // Step 5: Verify that the username was registered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
-            }
-        }
+    fun registerName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.preorderedUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
+        blockchainIdentity.registerUsernameDomainsForUsernames(listOf(username), keyParameter, false)
+        timer.logTiming()
     }
 
     //Step 6: Create DashPay Profile
@@ -981,7 +946,7 @@ class PlatformRepo @Inject constructor(
     //
     // Step 5: Find the usernames in the case of recovery
     //
-    suspend fun recoverUsernamesAsync(blockchainIdentity: BlockchainIdentity) {
+    suspend fun recoverUsernames(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.recoverUsernames()
         }
