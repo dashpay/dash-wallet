@@ -93,7 +93,7 @@ object MainActivityExt {
 
         viewModel.blockchainIdentity.observe(this) { identityData ->
 
-            if (identityData?.creationComplete == true) {
+            if (identityData?.hasUsername == true) {
                 navView.menu.getItem(CONTACTS_BUTTON_INDEX).isVisible = true
                 navView.menu.getItem(EXPLORE_BUTTON_INDEX).isVisible = true
             } else {

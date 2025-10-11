@@ -26,11 +26,11 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
-import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
+import de.schildbach.wallet.ui.username.request.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
@@ -112,7 +112,6 @@ class CreateUsernameActivity : LockScreenActivity() {
 
         val username = intent?.extras?.getString(EXTRA_USERNAME)
         val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-        val fromOnboardng = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
 
         lifecycleScope.launchWhenCreated {
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment
@@ -130,7 +129,7 @@ class CreateUsernameActivity : LockScreenActivity() {
                 !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting() &&
                 (requestUserNameViewModel.identity?.creationState
-                    ?: BlockchainIdentityData.CreationState.NONE) >= BlockchainIdentityData.CreationState.VOTING
+                    ?: IdentityCreationState.NONE) >= IdentityCreationState.VOTING
             ) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {
