@@ -77,6 +77,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -244,12 +245,14 @@ class PlatformSynchronizationService @Inject constructor(
                         }
                     }
                 }
-                log.info("update contacts not completed username registration/recovery is not complete")
-                // if username creation or request is not complete, then allow the sync process to finish
-                if (preDownloadBlocks.get()) {
-                    finishPreBlockDownload()
+                if (blockchainIdentityData.votingInProgress && !blockchainIdentityData.showSecondaryUsername) {
+                    log.info("update contacts not completed username registration/recovery is not complete")
+                    // if username creation or request is not complete, then allow the sync process to finish
+                    if (preDownloadBlocks.get()) {
+                        finishPreBlockDownload()
+                    }
+                    return
                 }
-                return
             }
 
             if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
@@ -557,8 +560,27 @@ class PlatformSynchronizationService @Inject constructor(
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
-                val nameById =
-                    nameDocuments.associateBy({ platformRepo.getIdentityForName(it) }, { it })
+                val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
+                val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
+
+                val nameById = hashMapOf<Identifier, DomainDocument>()
+
+                idByNameMap.forEach { (name, identifier) ->
+                    val otherNames = idByNameMap.filter { it.value == identifier && name != it.key }
+
+                    val shouldAddName = when {
+                        otherNames.isEmpty() -> true
+                        Names.isUsernameContestable(name) -> true
+                        else -> {
+                            otherNames.keys.find { name.contains(it)} == null
+                        }
+                    }
+                    if (shouldAddName) {
+                        documentsByName[name]?.let {
+                            nameById[it.ownerId] = it
+                        }
+                    }
+                }
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
@@ -1320,7 +1342,12 @@ class PlatformSynchronizationService @Inject constructor(
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch {
+                            platformRepo.updateBlockchainIdentityData(identityData)
+                            platformRepo.getLocalUserProfile()?.let {
+                                dashPayProfileDao.insert(it.copy(username = identityData.username!!))
+                            }
+                        }
                     }
 
                     winner.noWinner -> {

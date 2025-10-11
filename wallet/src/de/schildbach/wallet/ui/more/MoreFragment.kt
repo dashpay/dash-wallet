@@ -423,7 +423,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        if (createIdentityViewModel.creationState.value.ordinal >= IdentityCreationState.DONE.ordinal) {
+        val shouldShowProfileSection = createIdentityViewModel.creationState.value.ordinal >= IdentityCreationState.DONE.ordinal ||
+                createIdentityViewModel.blockchainIdentity.value?.showSecondaryUsername == true
+        if (shouldShowProfileSection) {
             binding.editUpdateSwitcher.visibility = View.VISIBLE
             binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
             if (profile.displayName.isNotEmpty()) {
