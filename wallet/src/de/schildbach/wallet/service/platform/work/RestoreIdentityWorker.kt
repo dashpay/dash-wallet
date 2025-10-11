@@ -152,7 +152,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
             val blockchainIdentity = BlockchainIdentity(platformRepo.platform.platform, 0, wallet, authExtension)
             // this process should have been done already, otherwise the credit funding transaction
             // will not have the credit burn keys associated with it
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
             platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
             //
@@ -186,7 +186,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // Step 5: Find the username
             //
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
-            platformRepo.recoverUsernamesAsync(blockchainIdentity)
+            platformRepo.recoverUsernames(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)

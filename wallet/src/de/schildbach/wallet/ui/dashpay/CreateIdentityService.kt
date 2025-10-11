@@ -466,7 +466,7 @@ class CreateIdentityService : LifecycleService() {
                     topUpRepository.topUpIdentity(assetLockTransaction, encryptionKey)
                 }
             } else {
-                platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+                platformRepo.registerIdentity(blockchainIdentity, encryptionKey)
             }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
@@ -551,7 +551,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= IdentityCreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
             val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
         }
 
         val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
@@ -592,7 +592,7 @@ class CreateIdentityService : LifecycleService() {
                     val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                     platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
                 } else {
-                    platformRepo.registerIdentityAsync(blockchainIdentity, encryptionKey)
+                    platformRepo.registerIdentity(blockchainIdentity, encryptionKey)
                 }
             } catch (e: StatusRuntimeException) {
                 //2021-03-26 10:08:08.411 28005-28085/hashengineering.darkcoin.wallet_test W/DapiClient: [DefaultDispatcher-worker-2] RPC failed with 54.187.224.80: Status{code=INVALID_ARGUMENT, description=State Transition is invalid, cause=null}: Metadata(server=nginx/1.19.7,date=Fri, 26 Mar 2021 17:08:09 GMT,content-type=application/grpc,content-length=0,errors=[{"name":"IdentityAssetLockTransactionOutPointAlreadyExistsError","message":"Asset lock transaction outPoint already exists","outPoint":{"type":"Buffer","data":[55,69,23,188,75,149,231,235,207,70,187,182,129,183,150,17,229,10,161,32,78,107,54,101,131,27,181,254,197,4,167,134,1,0,0,0]}}])
@@ -797,6 +797,7 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
+
         val username = when (usernameType) {
             UsernameType.Primary -> blockchainIdentityData.username
             UsernameType.Secondary -> blockchainIdentityData.usernameSecondary
@@ -806,12 +807,20 @@ class CreateIdentityService : LifecycleService() {
             blockchainIdentity.addUsername(username)
         }
 
+        when (usernameType) {
+            UsernameType.Primary -> {
+                blockchainIdentity.primaryUsername = username
+                blockchainIdentity.currentUsername = username
+            }
+            UsernameType.Secondary-> blockchainIdentity.secondaryUsername = username
+        }
+
         if (blockchainIdentityData.creationState <= preorderRegistering) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             //
             // Step 4: Preorder the username
 
-            platformRepo.preorderNameAsync(blockchainIdentity, encryptionKey, username)
+            platformRepo.preorderName(blockchainIdentity, encryptionKey, username)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -829,7 +838,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 5: Register the username
             //
-            platformRepo.registerNameAsync(blockchainIdentity, encryptionKey, username)
+            platformRepo.registerName(blockchainIdentity, encryptionKey, username)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
@@ -902,7 +911,7 @@ class CreateIdentityService : LifecycleService() {
             val blockchainIdentity = BlockchainIdentity(platformRepo.platform.platform, 0, wallet, authExtension)
             // this process should have been done already, otherwise the credit funding transaction
             // will not have the credit burn keys associated with it
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
             platformSyncService.updateSyncStatus(PreBlockStage.InitWallet)
 
             //
@@ -935,7 +944,7 @@ class CreateIdentityService : LifecycleService() {
             // Step 5: Find the username
             //
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
-            platformRepo.recoverUsernamesAsync(blockchainIdentity)
+            platformRepo.recoverUsernames(blockchainIdentity)
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
