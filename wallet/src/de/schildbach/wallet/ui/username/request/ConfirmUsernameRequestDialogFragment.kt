@@ -50,7 +50,7 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {
             requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-            if (usernameType == UsernameType.Primary) {
+            if (usernameType == UsernameType.Primary && viewModel.isContestableUsername) {
                 createInstantUsernameDialog(
                     onCreateInstantUsername = {
                         // Navigate to the instant username fragment
