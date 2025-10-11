@@ -52,7 +52,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
         
         // Get username type from arguments if provided
-        usernameType = args.usernameType ?: UsernameType.Primary
+        usernameType = args.usernameType
 
         binding.title.text = when (usernameType) {
             UsernameType.Primary -> getString(R.string.request_your_username)
@@ -109,17 +109,17 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                         return
                     }
                     
-                    // Check suffix for invalid characters (only allow digits 2-9)
-                    val suffix = currentText.substring(primaryUsername.length)
-                    val validSuffix = suffix.filter { it in '0'..'9' }
-                    
-                    if (suffix != validSuffix) {
-                        isUpdating = true
-                        s.clear()
-                        s.append(primaryUsername + validSuffix)
-                        binding.usernameInput.setSelection(primaryUsername.length + validSuffix.length)
-                        isUpdating = false
-                    }
+//                    // Check suffix for invalid characters (only allow digits 2-9)
+//                    val suffix = currentText.substring(primaryUsername.length)
+//                    val validSuffix = suffix.filter { it in '0'..'9' }
+//
+//                    if (suffix != validSuffix) {
+//                        isUpdating = true
+//                        s.clear()
+//                        s.append(primaryUsername + validSuffix)
+//                        binding.usernameInput.setSelection(primaryUsername.length + validSuffix.length)
+//                        isUpdating = false
+//                    }
                 }
             })
         }
