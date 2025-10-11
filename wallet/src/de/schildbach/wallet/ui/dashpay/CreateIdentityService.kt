@@ -359,7 +359,7 @@ class CreateIdentityService : LifecycleService() {
         if (blockchainIdentityData.creationState <= IdentityCreationState.UPGRADING_WALLET) {
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
             val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
-            platformRepo.addWalletAuthenticationKeysAsync(seed, encryptionKey)
+            platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
         }
 
         val authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
@@ -388,6 +388,7 @@ class CreateIdentityService : LifecycleService() {
                         useCoinJoin
                     )
                     assetLockTransaction = blockchainIdentity.assetLockTransaction
+                    walletApplication.broadcastTransaction(assetLockTransaction)
                 }
             } else {
                 // don't use platformRepo.getIdentityBalance() because platformRepo.blockchainIdentity is not initialized
@@ -426,6 +427,9 @@ class CreateIdentityService : LifecycleService() {
 
                 if (!sent) {
                     topUpRepository.sendTransaction(assetLockTransaction)
+                } else {
+                    // wait for tx
+                    topUpRepository.waitForTransaction(assetLockTransaction.getConfidence(wallet.context))
                 }
             }
             timerIsLock.logTiming()

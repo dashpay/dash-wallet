@@ -109,6 +109,9 @@ interface TopUpRepository {
     /** sends the transaction and waits for IS or CL */
     suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean
 
+    /** waits for IS or CL */
+    suspend fun waitForTransaction(confidence: TransactionConfidence)
+
     /** top up identity and save topup state to the db */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
@@ -291,6 +294,7 @@ class TopUpRepositoryImpl @Inject constructor(
             log.info("adding credit funding transaction listener for ${cftx.txId}")
             cftx.getConfidence(Constants.CONTEXT).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
+                    log.info("creation: confidence changed: {}", reason)
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.DEPTH -> {
@@ -381,48 +385,7 @@ class TopUpRepositoryImpl @Inject constructor(
         } else {
             // wait for IX Lock or mining if the TX has been sent
             // the transaction was probably sent previously
-            if (confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
-                try {
-                    withTimeout(TimeUnit.SECONDS.toMillis(30)) {
-                        suspendCancellableCoroutine { continuation ->
-                            val listener = object : TransactionConfidence.Listener {
-                                override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
-                                    when (reason) {
-                                        TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
-                                            if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
-                                                log.info("topup: observe ISLock")
-                                                confidence.removeEventListener(this)
-                                                continuation.resumeWith(Result.success(Unit))
-                                            }
-                                        }
-                                        TransactionConfidence.Listener.ChangeReason.DEPTH,
-                                        TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
-                                            if (confidence!!.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || confidence.isChainLocked) {
-                                                log.info("topup: observe block or chainlock")
-                                                confidence.removeEventListener(this)
-                                                continuation.resumeWith(Result.success(Unit))
-                                            }
-                                        }
-                                        else -> { /* ignore */ }
-                                    }
-                                }
-                            }
-
-                            // Register cancellation handler to clean up listener
-                            continuation.invokeOnCancellation {
-                                confidence.removeEventListener(listener)
-                                log.info("topup: listener removed due to cancellation")
-                            }
-
-                            confidence.addEventListener(listener)
-                        }
-                    }
-                } catch (e: TimeoutCancellationException) {
-                    // Timeout reached, continue with execution
-                    log.info("topup, timeout waiting for islock, continue...")
-                }
-            }
-
+            waitForTransaction(confidence)
         }
         val status = when (confidence.confidenceType) {
             TransactionConfidence.ConfidenceType.BUILDING -> "mined in block ${confidence.appearedAtChainHeight}"
@@ -447,6 +410,56 @@ class TopUpRepositoryImpl @Inject constructor(
                 log.info("topup success, already submitted: {}", topUpTx.txId)
             } else {
                 throw e
+            }
+        }
+    }
+
+    override suspend fun waitForTransaction(confidence: TransactionConfidence) {
+        if (!confidence.isTransactionLocked && confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
+            try {
+                withTimeout(TimeUnit.SECONDS.toMillis(30)) {
+                    suspendCancellableCoroutine { continuation ->
+                        val listener = object : TransactionConfidence.Listener {
+                            override fun onConfidenceChanged(
+                                confidence: TransactionConfidence?,
+                                reason: TransactionConfidence.Listener.ChangeReason?
+                            ) {
+                                when (reason) {
+                                    TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
+                                        if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
+                                            log.info("topup: observe ISLock")
+                                            confidence.removeEventListener(this)
+                                            continuation.resumeWith(Result.success(Unit))
+                                        }
+                                    }
+
+                                    TransactionConfidence.Listener.ChangeReason.DEPTH,
+                                    TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
+                                        if (confidence!!.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || confidence.isChainLocked) {
+                                            log.info("topup: observe block or chainlock")
+                                            confidence.removeEventListener(this)
+                                            continuation.resumeWith(Result.success(Unit))
+                                        }
+                                    }
+
+                                    else -> { /* ignore */
+                                    }
+                                }
+                            }
+                        }
+
+                        // Register cancellation handler to clean up listener
+                        continuation.invokeOnCancellation {
+                            confidence.removeEventListener(listener)
+                            log.info("topup: listener removed due to cancellation")
+                        }
+
+                        confidence.addEventListener(listener)
+                    }
+                }
+            } catch (e: TimeoutCancellationException) {
+                // Timeout reached, continue with execution
+                log.info("topup, timeout waiting for islock, continue...")
             }
         }
     }
