@@ -90,16 +90,13 @@ class ToolsViewModel @Inject constructor(
         }
     }
 
-    suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
-    }
-    suspend fun creditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
-    }
+    suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
 
-    suspend fun hasUsername(): Boolean = withContext(Dispatchers.IO) {
-        identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
-                IdentityCreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
-                    ?: "NONE") >= IdentityCreationState.DONE
+    suspend fun creditsExplained() = dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
+
+    suspend fun hasUsername(): Boolean {
+        return identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
+                (IdentityCreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
+                    ?: "NONE") >= IdentityCreationState.DONE)
     }
 }

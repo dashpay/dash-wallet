@@ -248,7 +248,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
-            if (identity?.creationComplete == true) {
+            if (identity?.hasUsername == true) {
                 ProfilePictureDisplay.display(binding.dashpayUserAvatar, viewModel.dashPayProfile.value, true)
                 setNotificationIndicator()
             }

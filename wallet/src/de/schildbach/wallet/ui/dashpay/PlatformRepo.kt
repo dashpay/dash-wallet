@@ -138,6 +138,26 @@ class PlatformRepo @Inject constructor(
         }
     }
 
+    suspend fun getActiveUsername(): String? {
+        return if (this::blockchainIdentity.isInitialized) {
+            blockchainIdentity.currentUsername
+        } else {
+            val username = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+            val creationState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (creationState == IdentityCreationState.VOTING.name) {
+                val usernameSecondary = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
+                if (usernameSecondary != null &&
+                    blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS) == UsernameStatus.CONFIRMED.name) {
+                    usernameSecondary
+                } else {
+                    username
+                }
+            } else {
+                username
+            }
+        }
+    }
+
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
     //getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as? AuthenticationGroupExtension
@@ -804,7 +824,8 @@ class PlatformRepo @Inject constructor(
         // Syncing complete
         log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}")
         return blockchainIdentity.apply {
-            currentUsername = blockchainIdentityData.username
+            primaryUsername = blockchainIdentityData.username
+            secondaryUsername = blockchainIdentityData.usernameSecondary
             blockchainIdentityData.username?.let {
                 addUsername(it)
             }
@@ -835,7 +856,7 @@ class PlatformRepo @Inject constructor(
                     null,
                     null
                 )
-                currentUsername ?.let {
+                secondaryUsername ?.let {
                     usernameStatuses[it] = usernameStatus
                 }
             }
@@ -854,7 +875,7 @@ class PlatformRepo @Inject constructor(
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
-                username = blockchainIdentity.currentUsername
+                username = blockchainIdentity.primaryUsername
                 if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
@@ -862,13 +883,12 @@ class PlatformRepo @Inject constructor(
                 usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
                 votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
 
-                val usernames = blockchainIdentity.getUsernames()
-                if (usernames.size > 1 && username != null) {
-                    usernames.find { it != username && it.contains(username!!) }?.let { name ->
-                        usernameSecondary = name
-                        usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
-                        preorderSalt = blockchainIdentity.saltForUsername(name, false)
-                    }
+                log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
+                blockchainIdentity.secondaryUsername?.let { name ->
+                    usernameSecondary = name
+                    usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
+                    log.info("creation: usernameSecondaryStatus = {}", blockchainIdentity.secondaryUsername)
+                    preorderSaltSecondary = blockchainIdentity.saltForUsername(name, false)
                 }
             }
             creditBalance = blockchainIdentity.creditBalance

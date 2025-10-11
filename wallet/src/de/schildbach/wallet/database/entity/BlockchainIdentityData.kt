@@ -129,6 +129,11 @@ class BlockchainIdentityData(
 
     private var creditFundingTransactionCache: AssetLockTransaction? = null
 
+    init {
+        // debug only
+        log.info("creation: {}", this)
+    }
+
     fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {
         if (super.creditFundingTxId == null) {
             val authExtension =
@@ -151,6 +156,7 @@ class BlockchainIdentityData(
         return creditFundingTransactionCache
     }
 
+    @Deprecated("use userId instead", ReplaceWith("userId"))
     fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.identityId?.toStringBase58()
 
     fun getErrorMetadata() = super.creationStateErrorMessage?.let {
@@ -164,6 +170,23 @@ class BlockchainIdentityData(
          this.restoring = false
          this.creationStateErrorMessage = null
      }
+
+    val activeUsername: String?
+        get() = if (showSecondaryUsername) {
+            usernameSecondary
+        } else {
+            username
+        }
+
+    val showSecondaryUsername: Boolean
+        get() = votingInProgress && usernameSecondary != null && usernameSecondaryStatus == UsernameStatus.CONFIRMED
+
+    val hasUsername: Boolean
+        get() = creationComplete || showSecondaryUsername
+
+    override fun toString(): String {
+        return "BlockchainIdentityData($creationState, $username, $usernameStatus, $usernameSecondary, $usernameSecondaryStatus, $userId)"
+    }
 }
 
 @Singleton
