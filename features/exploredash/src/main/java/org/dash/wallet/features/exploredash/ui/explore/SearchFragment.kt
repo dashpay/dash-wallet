@@ -340,12 +340,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        val defaultMode =
-            when {
-                topic == ExploreTopic.ATMs -> FilterMode.All
-                isLocationPermissionGranted -> FilterMode.Nearby
-                else -> FilterMode.Online
-            }
+        // Try to restore the last selected filter mode, otherwise use defaults
+        val savedFilterMode = viewModel.getLastSelectedFilterMode()
+        val defaultMode = savedFilterMode ?: when {
+            topic == ExploreTopic.ATMs -> FilterMode.All
+            isLocationPermissionGranted -> FilterMode.Nearby
+            else -> FilterMode.Online
+        }
 
         viewModel.setFilterMode(defaultMode)
 

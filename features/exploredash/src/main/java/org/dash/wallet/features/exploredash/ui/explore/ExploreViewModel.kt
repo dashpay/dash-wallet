@@ -120,6 +120,10 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+        
+        // Session-only memory for filter modes (not persisted)
+        private var lastSelectedMerchantFilterMode: FilterMode? = null
+        private var lastSelectedAtmFilterMode: FilterMode? = null
     }
 
     private val workerJob = SupervisorJob()
@@ -348,7 +352,13 @@ class ExploreViewModel @Inject constructor(
         this.pagingFilterJob?.cancel(CancellationException())
         clearFilters()
         resetFilterMode()
+        clearFilterModeMemory()
         _searchLocationName.value = ""
+    }
+
+    fun clearFilterModeMemory() {
+        lastSelectedMerchantFilterMode = null
+        lastSelectedAtmFilterMode = null
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -357,6 +367,9 @@ class ExploreViewModel @Inject constructor(
         if (_filterMode.value != mode) {
             val previousMode = _filterMode.value
             _filterMode.value = mode
+
+            // Save the selected filter mode in session memory
+            saveLastSelectedFilterMode(mode)
 
             // Only set default sort option if switching from a different mode type
             // and user hasn't explicitly set a custom sort
@@ -559,6 +572,22 @@ class ExploreViewModel @Inject constructor(
 
     suspend fun setIsInfoShown(isShown: Boolean) {
         exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
+    }
+
+    fun getLastSelectedFilterMode(): FilterMode? {
+        return when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode
+            else -> lastSelectedMerchantFilterMode // Default fallback
+        }
+    }
+
+    fun saveLastSelectedFilterMode(mode: FilterMode) {
+        when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode = mode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode = mode
+            else -> lastSelectedMerchantFilterMode = mode // Default fallback
+        }
     }
 
     private fun clearSearchResults() {
