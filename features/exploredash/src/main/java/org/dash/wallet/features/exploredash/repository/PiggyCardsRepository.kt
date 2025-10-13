@@ -60,7 +60,7 @@ class PiggyCardsRepository @Inject constructor(
         private val log = LoggerFactory.getLogger(PiggyCardsRepository::class.java)
         private val disabledMerchants = listOf<String>()
         val disabledGiftCards = mapOf(
-            174 to listOf("Xbox Live Gold", "Xbox Game Pass")
+            174 to listOf("Xbox Live", "Xbox Game Pass")
         )
         private const val INSTANT_DELIVERY = "(instant delivery)"
         private const val SERVICE_FEE = 150
