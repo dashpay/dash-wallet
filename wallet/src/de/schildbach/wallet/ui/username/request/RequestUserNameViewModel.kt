@@ -61,6 +61,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
@@ -524,7 +525,7 @@ class RequestUserNameViewModel @Inject constructor(
         inviteAssetLockTx.value
     }
 
-    fun getInvitationAmount(): Coin {
+    private fun getInvitationAmount(): Coin {
         return inviteAssetLockTx.value?.let {
             it.assetLockPayload.creditOutputs?.find { transactionOutput ->
                 if (ScriptPattern.isP2PKH(transactionOutput.scriptPubKey)) {
@@ -544,5 +545,13 @@ class RequestUserNameViewModel @Inject constructor(
         _isInviteMixed.value = inviteAssetLockTx.value?.let {
             topUpRepository.isInvitationMixed(it)
         } ?: false
+    }
+
+    suspend fun hasSecondaryName(): Boolean {
+        return identityConfig.get(IDENTITY_ID) != null &&
+                identityConfig.get(BlockchainIdentityConfig.USERNAME_SECONDARY) != null &&
+                identityConfig.get(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS)?.let {
+                    UsernameStatus.valueOf(it) == UsernameStatus.CONFIRMED
+                } == true
     }
 }
