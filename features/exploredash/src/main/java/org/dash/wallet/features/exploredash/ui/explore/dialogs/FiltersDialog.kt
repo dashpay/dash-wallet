@@ -248,8 +248,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupSortByOptions() {
-        val currentFilterMode = viewModel.filterMode.value ?: FilterMode.Online
-        sortOption = viewModel.appliedFilters.value.getSortOption(currentFilterMode)
+        sortOption = viewModel.appliedFilters.value.sortOption
 
         val sortOptions = mutableListOf(
             SortOption.Name
@@ -491,8 +490,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             isEnabled = true
         }
 
-        val currentFilterMode = viewModel.filterMode.value ?: FilterMode.Online
-        val currentSortOption = viewModel.appliedFilters.value.getSortOption(currentFilterMode)
+        val currentSortOption = viewModel.appliedFilters.value.sortOption
         if (currentSortOption != ExploreViewModel.DEFAULT_SORT_OPTION) {
             isEnabled = true
         }
