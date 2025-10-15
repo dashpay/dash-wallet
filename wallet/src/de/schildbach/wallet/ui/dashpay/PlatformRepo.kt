@@ -1042,7 +1042,6 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun clearDatabase(includeInvitations: Boolean) {
         log.info("clearing databases (includeInvitations = $includeInvitations)")
-        blockchainIdentityDataStorage.clear()
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
@@ -1161,10 +1160,8 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun clearBlockchainIdentityData() {
-        GlobalScope.launch(Dispatchers.IO) {
-            blockchainIdentityDataStorage.clear()
-        }
+    suspend fun clearBlockchainIdentityData() {
+        blockchainIdentityDataStorage.clear()
     }
 
     // current unused

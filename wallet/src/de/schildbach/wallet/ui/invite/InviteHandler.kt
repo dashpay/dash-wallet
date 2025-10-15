@@ -206,7 +206,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
      * handle non-recoverable errors from using an invite
      */
     // TODO: this needs to be updated to Platform SDK > 1.x
-    fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
+    suspend fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
         // handle errors
         var exception: ConcensusException
         if (blockchainIdentityData.creationStateErrorMessage.also {
