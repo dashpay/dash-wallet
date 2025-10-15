@@ -450,20 +450,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     
     private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         val rootView = requireActivity().findViewById<View>(android.R.id.content)
-        var isKeyboardCurrentlyVisible = false
-        
-        rootView.viewTreeObserver.addOnGlobalLayoutListener {
-            val heightDiff = rootView.rootView.height - rootView.height
-            val isKeyboardVisible = heightDiff > 200 // Threshold for keyboard detection
-            
-            if (isKeyboardVisible != isKeyboardCurrentlyVisible) {
-                isKeyboardCurrentlyVisible = isKeyboardVisible
-                this.isKeyboardShowing = isKeyboardVisible
-                
-                if (isKeyboardVisible) {
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeVisible != isKeyboardShowing) {
+                isKeyboardShowing = imeVisible
+                if (imeVisible) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 }
             }
+            insets
         }
     }
 
