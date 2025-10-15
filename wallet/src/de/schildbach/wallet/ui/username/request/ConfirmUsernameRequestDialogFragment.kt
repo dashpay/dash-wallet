@@ -35,7 +35,6 @@ import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.dialogSafeNavigate
 import org.dash.wallet.common.util.observe
-import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_username_request) {

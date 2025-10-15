@@ -157,7 +157,9 @@ import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
 import kotlin.Unit;
+import kotlin.coroutines.Continuation;
 import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
 
@@ -170,7 +172,7 @@ public class WalletApplication extends MultiDexApplication
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private final List<Function0<Unit>> wipeListeners = new ArrayList<>();
+    private final List<Function1<? super Continuation<? super Unit>, ? extends Object>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -1188,8 +1190,18 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void notifyWalletWipe() {
-        for (Function0<Unit> listener : wipeListeners) {
-            listener.invoke();
+        // Since these are now suspended listeners, we need to call them in a blocking way
+        // to ensure all clearing operations complete before proceeding
+        for (Function1<? super Continuation<? super Unit>, ? extends Object> listener : wipeListeners) {
+            try {
+                // Call the suspended function synchronously using runBlocking
+                kotlinx.coroutines.BuildersKt.runBlocking(
+                    kotlinx.coroutines.Dispatchers.getIO(),
+                    (scope, continuation) -> listener.invoke(continuation)
+                );
+            } catch (Exception e) {
+                log.error("Error in wallet wipe listener", e);
+            }
         }
     }
 
@@ -1410,12 +1422,12 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @Override
-    public void attachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+    public void attachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
         wipeListeners.add(listener);
     }
 
     @Override
-    public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+    public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
         wipeListeners.remove(listener);
     }
 

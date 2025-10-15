@@ -389,17 +389,19 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 )
             } else {
                 // handle errors from using an invite
-                val handler = InviteHandler(requireActivity(), viewModel.analytics)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val handler = InviteHandler(requireActivity(), viewModel.analytics)
 
-                if (handler.handleError(blockchainIdentityData)) {
-                    header.blockchainIdentityData = null
-                } else {
-                    requireActivity().startService(
-                        CreateIdentityService.createIntentForRetryFromInvite(
-                            requireActivity(),
-                            false
+                    if (handler.handleError(blockchainIdentityData)) {
+                        header.blockchainIdentityData = null
+                    } else {
+                        requireActivity().startService(
+                            CreateIdentityService.createIntentForRetryFromInvite(
+                                requireActivity(),
+                                false
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
