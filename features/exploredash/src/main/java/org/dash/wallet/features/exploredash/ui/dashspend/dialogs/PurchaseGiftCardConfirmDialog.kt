@@ -127,8 +127,6 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 return@launch
             }
 
-            showLoading()
-
             val data = try {
                 viewModel.purchaseGiftCard()
             } catch (ex: CTXSpendException) {

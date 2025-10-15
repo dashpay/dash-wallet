@@ -169,7 +169,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
             // UNIFIED VISIBILITY MANAGEMENT - Single source of truth
             updateDialogVisibility(state)
-            
+
             // Log error only when reaching the wait limit exactly
             if (state.error != null && state.queries == WAIT_LIMIT_FOR_ERROR) {
                 ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
@@ -228,10 +228,10 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         binding.cardNumberGroup.isVisible = !giftCard.number.isNullOrEmpty()
         binding.purchaseCardPin.text = giftCard.pin
         binding.cardPinGroup.isVisible = !giftCard.pin.isNullOrEmpty()
-        
+
         // Note: NO visibility management for loading/error indicators here
     }
-    
+
     private fun updateDialogVisibility(state: GiftCardUIState) {
         val giftCard = viewModel.uiState.value.giftCard
         val error = viewModel.uiState.value.error
@@ -239,7 +239,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         val barcode = viewModel.uiState.value.barcode
         val status = viewModel.uiState.value.status
         val queries = viewModel.uiState.value.queries
-        
+
         // Determine error conditions
         val hasExceededWaitLimit = queries > WAIT_LIMIT_FOR_ERROR
         val shouldShowTimeoutError = when (status) {
@@ -248,22 +248,22 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         }
         val shouldShowImmediateError = status == GiftCardStatus.REJECTED
         val shouldShowError = (shouldShowTimeoutError || shouldShowImmediateError) && error != null
-        
+
         // Determine content availability
         val hasCardDetails = !giftCard?.number.isNullOrEmpty() || !merchantUrl.isNullOrEmpty() || barcode != null
-        
+
         // Priority: error > balance check > barcode > loading > empty
         val shouldShowErrorUI = shouldShowError
         val shouldShowBalanceCheck = !shouldShowError && !merchantUrl.isNullOrEmpty()
         val shouldShowBarcode = !shouldShowError && !shouldShowBalanceCheck && barcode != null
         val shouldShowLoading = !shouldShowError && !shouldShowBalanceCheck && !shouldShowBarcode && !hasCardDetails
-        
+
         // Apply all visibility changes atomically to prevent flickering
         updateVisibilityIfChanged(binding.cardError, shouldShowErrorUI)
         updateVisibilityIfChanged(binding.contactSupport, shouldShowErrorUI)
         updateVisibilityIfChanged(binding.checkCurrentBalance, shouldShowBalanceCheck)
         updateVisibilityIfChanged(binding.infoLoadingIndicator, shouldShowLoading)
-        
+
         // Handle barcode placeholder visibility
         if (barcode == null) {
             updateVisibilityIfChanged(binding.purchaseCardBarcode, false)
@@ -271,7 +271,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             updateVisibilityIfChanged(binding.barcodePlaceholderText, shouldShowBarcode)
             updateVisibilityIfChanged(binding.barcodeLoadingError, false)
         }
-        
+
         // Update error message and support text only when showing error
         if (shouldShowErrorUI) {
             val message = when {
@@ -281,7 +281,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                 }
                 else -> null
             }
-            
+
             val errorText = message ?: getString(R.string.gift_card_details_error)
             binding.cardError.text = Html.fromHtml(errorText, Html.FROM_HTML_MODE_COMPACT)
             binding.cardError.movementMethod = object : LinkMovementMethod() {
@@ -305,7 +305,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
                     return super.onTouchEvent(widget, buffer, event)
                 }
             }
-            
+
             val service = if (error is CTXSpendException) error.serviceName else ""
             binding.contactSupportLabel.text = getString(
                 when (service) {
@@ -316,7 +316,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             )
         }
     }
-    
+
     private fun updateVisibilityIfChanged(view: View, shouldBeVisible: Boolean) {
         if (view.isVisible != shouldBeVisible) {
             view.isVisible = shouldBeVisible

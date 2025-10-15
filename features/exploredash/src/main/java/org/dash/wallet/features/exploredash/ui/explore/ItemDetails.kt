@@ -224,7 +224,7 @@ private fun MerchantDetailsContent(
         val hasPhone = !merchant.phone.isNullOrEmpty()
         val hasWebsite = !merchant.website.isNullOrEmpty()
         val hasShowAllLocations = !isOnline && isGrouped && merchant.physicalAmount > 1
-        
+
         if (hasAddress || hasPhone || hasWebsite || hasShowAllLocations) {
             Spacer(modifier = Modifier.height(16.dp))
             ItemContactDetails(
@@ -406,7 +406,7 @@ private fun ActionButton(
     val isEnabled = merchant.giftCardProviders.find {
         it.provider == selectedProvider.name
     }?.active  ?: true
-    
+
     Column {
         if (!isEnabled) {
             Text(
@@ -524,7 +524,7 @@ private fun ItemContactDetails(
     val hasAddress = !isOnline && item.getDisplayAddress("\n").isNotEmpty()
     val hasPhone = !item.phone.isNullOrEmpty()
     val hasWebsite = !item.website.isNullOrEmpty()
-    
+
     Column(modifier = Modifier.fillMaxWidth()) {
         // Only show card if there are details to display
         if (hasAddress || hasPhone || hasWebsite) {
@@ -794,10 +794,10 @@ private fun AtmDetailsContent(
         }
 
         // ATM details
-        val hasAtmDetails = atm.getDisplayAddress("\n").isNotEmpty() || 
-                           !atm.phone.isNullOrEmpty() || 
+        val hasAtmDetails = atm.getDisplayAddress("\n").isNotEmpty() ||
+                           !atm.phone.isNullOrEmpty() ||
                            !atm.website.isNullOrEmpty()
-        
+
         if (hasAtmDetails) {
             ItemContactDetails(
                 item = atm,
@@ -828,7 +828,7 @@ private fun getDistanceText(item: SearchResult): String {
     val context = LocalContext.current
     val isMetric = Locale.getDefault().isMetric
     val distanceStr = item.getDistanceStr(isMetric)
-    
+
     return when {
         distanceStr.isEmpty() -> ""
         isMetric -> context.getString(R.string.distance_kilometers, distanceStr)

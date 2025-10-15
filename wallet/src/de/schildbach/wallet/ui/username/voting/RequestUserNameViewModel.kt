@@ -343,14 +343,17 @@ class RequestUserNameViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, _requestedUserNameLink.value ?: "")
                 identityConfig.get(IDENTITY_ID)?.let { identityId ->
+                    // this may always return null because the request hasn't been added yet.
                     val usernameRequest = usernameRequestDao.getRequest(
                         UsernameRequest.getRequestId(
                             identityId,
                             requestedUserName!!
                         )
                     )
-                    usernameRequest!!.link = _requestedUserNameLink.value
-                    usernameRequestDao.update(usernameRequest)
+                    usernameRequest?.let { request ->
+                        request.link = _requestedUserNameLink.value
+                        usernameRequestDao.update(usernameRequest)
+                    }
                 }
             }
             _uiState.update {

@@ -52,8 +52,8 @@ fun DashButton(
 ) {
     val backgroundColor = when {
         !isEnabled -> Color(0xFF191C1F).copy(alpha = 0.05f)
-        style == Style.Filled -> DashBlue
-        style == Style.FilledBlue -> DashBlue
+        style == Style.Filled -> MyTheme.Colors.dashBlue
+        style == Style.FilledBlue -> MyTheme.Colors.dashBlue
         style == Style.FilledOrange -> MyTheme.Colors.orange
         style == Style.FilledRed -> MyTheme.Colors.red
         style == Style.TintedBlue -> MyTheme.Colors.dashBlue5
@@ -71,22 +71,22 @@ fun DashButton(
         style == Style.FilledBlue -> Color.White
         style == Style.FilledOrange -> Color.White
         style == Style.FilledRed -> Color.White
-        style == Style.TintedBlue -> DashBlue
-        style == Style.PlainBlue -> DashBlue
+        style == Style.TintedBlue -> MyTheme.Colors.dashBlue
+        style == Style.PlainBlue -> MyTheme.Colors.dashBlue
         style == Style.PlainBlack -> MyTheme.Colors.textPrimary
         style == Style.PlainRed -> MyTheme.Colors.red
         style == Style.TintedRed -> MyTheme.Colors.red
         style == Style.TintedGray -> MyTheme.Colors.textPrimary
         style == Style.StrokeGray -> MyTheme.Colors.textPrimary
-        style == Style.FilledWhiteBlue -> DashBlue
+        style == Style.FilledWhiteBlue -> MyTheme.Colors.dashBlue
         style == Style.TintedWhite -> Color.White
 
-        else -> PrimaryText
+        else -> MyTheme.Colors.textPrimary
     }
 
     val borderColor = when {
         !isEnabled -> Color.Transparent
-        style == Style.Outlined -> TertiaryText.copy(alpha = 0.25f)
+        style == Style.Outlined -> MyTheme.Colors.textTertiary.copy(alpha = 0.25f)
         style == Style.StrokeGray -> Color(0x4DB3BDC7)
         else -> Color.Transparent
     }
@@ -261,7 +261,7 @@ fun DashButtonPreview() {
             onClick = { }
         )
         Column(modifier = Modifier
-            .background(DashBlue)
+            .background(MyTheme.Colors.dashBlue)
             .padding(10.dp, 20.dp)) {
             DashButton(
                 text = "TintedWhite",

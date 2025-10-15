@@ -161,7 +161,7 @@ class TransactionResultViewBinder(
         } else {
             setInputs(inputAddresses, inflater)
             setOutputs(outputAddresses, inflater)
-            //setReturns(outputAssetLocks, inflater, false)
+            setReturns(outputAssetLocks, inflater, false, true)
         }
 
         // For displaying purposes only

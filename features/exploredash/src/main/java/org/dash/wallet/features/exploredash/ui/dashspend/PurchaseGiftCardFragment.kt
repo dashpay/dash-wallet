@@ -148,7 +148,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                     it.logoLocation,
                     R.drawable.ic_image_placeholder
                 )
-                
+
                 // Refresh merchant-dependent values
                 if (viewModel.isFixedDenomination.value != null) {
                     if (it.fixedDenomination) {
@@ -157,10 +157,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                         setCardPurchaseLimits()
                     }
                 }
-                
+
                 // Update discount display
                 setDiscountHint()
-                
+
                 // Check if merchant is still active
                 setMerchantEnabled()
             }
@@ -388,10 +388,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     /** [DashSpendViewModel.selectedProvider] must already be set */
     private suspend fun setupMerchant(merchant: Merchant) {
         viewModel.setGiftCardMerchant(merchant)
-        
+
         lifecycleScope.launch {
             val updatedMerchant = viewModel.updateMerchantDetails(merchant)
-            
+
             if (setMerchantEnabled()) {
                 viewModel.setGiftCardMerchant(updatedMerchant)
                 viewModel.setIsFixedDenomination(updatedMerchant.fixedDenomination)

@@ -72,11 +72,19 @@ object GenericUtils {
     fun formatFiatWithoutComma(fiatValue: String): String {
         val fiatValueContainsCommaWithDecimal = fiatValue.contains(".") && fiatValue.contains(",")
 
-        return if (fiatValueContainsCommaWithDecimal) {
+        val cleaned = if (fiatValueContainsCommaWithDecimal) {
             fiatValue.replace(",", "")
         } else {
             fiatValue.replace(",", ".")
                 .replace("٫", ".")
+        }
+        
+        // Limit to 8 decimal places to prevent rounding errors in Coin.parseCoin
+        val decimalIndex = cleaned.indexOf('.')
+        return if (decimalIndex != -1 && cleaned.length > decimalIndex + 9) {
+            cleaned.substring(0, decimalIndex + 9)
+        } else {
+            cleaned
         }
     }
 

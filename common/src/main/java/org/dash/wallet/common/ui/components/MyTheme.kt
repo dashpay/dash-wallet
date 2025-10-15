@@ -60,7 +60,6 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interMedium,
         fontWeight = FontWeight(500),
-        textAlign = TextAlign.Center
     )
 
     val OverlineSemibold = TextStyle(
@@ -68,15 +67,27 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interSemibold,
         fontWeight = FontWeight(600),
-        textAlign = TextAlign.Center
     )
 
     val OverlineMedium = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
         fontFamily = interMedium,
-        fontWeight = FontWeight(500),
-        textAlign = TextAlign.Center
+        fontWeight = FontWeight(500)
+    )
+
+    val OverlineCaptionMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
+    val OverlineCaptionRegular = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
     )
 
     val OverlineCaptionMedium = TextStyle(
@@ -93,11 +104,32 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
+    val Body2Medium = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
+    )
+
+    val Subtitle2Semibold = TextStyle(
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        fontFamily = interSemibold,
+        fontWeight = FontWeight(600)
+    )
+
     val SubtitleSemibold = TextStyle(
         fontSize = 16.sp,
         lineHeight = 22.sp,
         fontFamily = interSemibold,
         fontWeight = FontWeight(600)
+    )
+
+    val H5Bold = TextStyle(
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        fontFamily = interBold,
+        fontWeight = FontWeight(700)
     )
 
     val H6Bold = TextStyle(
@@ -114,6 +146,7 @@ object MyTheme {
         val textSecondary = Color(0xFF6E757C)
         val textTertiary = Color(0xff75808A)
         val divider = Color(0x1A191C1F)
+        val primary4 = Color(0x14191C1F)
         val primary8 = Color(0x14191C1F)
         val primary5 = Color(0x0D191C1F)
         val primary40 = Color(0x66191C1F)
@@ -127,5 +160,6 @@ object MyTheme {
         val gray400 = Color(0xFF75808A)
         val red = Color(0xFFEA3943)
         val red5 = Color(0x0DEA3943)
+        val extraLightGray = Color(0xFFEBEDEE)
     }
 }
