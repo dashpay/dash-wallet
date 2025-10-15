@@ -22,12 +22,14 @@ import android.view.View
 import androidx.core.view.isVisible
 import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.compose_views.createInstantUsernameDialog
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmUsernameRequestBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -49,26 +51,29 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         val usernameType = args.usernameType
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {
-            requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
-            if (usernameType == UsernameType.Primary && viewModel.isContestableUsername) {
-                createInstantUsernameDialog(
-                    onCreateInstantUsername = {
-                        // Navigate to the instant username fragment
-                        dialogSafeNavigate(
-                            ConfirmUsernameRequestDialogFragmentDirections.toRequestUsernameFragmentForInstant(
-                                usernameType = UsernameType.Secondary
+            viewLifecycleOwner.lifecycleScope.launch {
+                requestUserNameViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_CONFIRM)
+                if (usernameType == UsernameType.Primary && viewModel.isContestableUsername &&
+                    !requestUserNameViewModel.hasSecondaryName()) {
+                    createInstantUsernameDialog(
+                        onCreateInstantUsername = {
+                            // Navigate to the instant username fragment
+                            dialogSafeNavigate(
+                                ConfirmUsernameRequestDialogFragmentDirections.toRequestUsernameFragmentForInstant(
+                                    usernameType = UsernameType.Secondary
+                                )
                             )
-                        )
-                        dismiss()
-                    },
-                    onCancel = {
-                        requestUserNameViewModel.submit()
-                        dismiss()
-                    }
-                ).show(requireActivity())
-            } else {
-                requestUserNameViewModel.submit()
-                dismiss()
+                            dismiss()
+                        },
+                        onCancel = {
+                            requestUserNameViewModel.submit()
+                            dismiss()
+                        }
+                    ).show(requireActivity())
+                } else {
+                    requestUserNameViewModel.submit()
+                    dismiss()
+                }
             }
         }
         binding.confirmBtn.isEnabled = false
