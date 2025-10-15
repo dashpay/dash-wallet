@@ -421,15 +421,29 @@ class CreateIdentityService : LifecycleService() {
             // check to see if the funding transaction has been sent previously
             org.bitcoinj.core.Context.propagate(wallet.context)
             if (assetLockTransaction != null) {
-                val sent = assetLockTransaction.confidence?.let {
-                    it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
+                val confidence = assetLockTransaction.getConfidence(wallet.context)
+                val sent = confidence?.let {
+                    it.isSent || it.isIX || it.numBroadcastPeers() > 0
+                } ?: false
+                val confirmed = confidence?.let {
+                    it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || it.isChainLocked || it.isTransactionLocked
                 } ?: false
 
-                if (!sent) {
-                    topUpRepository.sendTransaction(assetLockTransaction)
-                } else {
-                    // wait for tx
-                    topUpRepository.waitForTransaction(assetLockTransaction.getConfidence(wallet.context))
+                when {
+                    confirmed -> {
+                        // Transaction is already confirmed, no need to wait
+                        log.info("Credit funding transaction already confirmed: ${assetLockTransaction.txId}")
+                    }
+                    sent -> {
+                        // Transaction was sent but not confirmed yet, wait for confirmation
+                        log.info("Credit funding transaction sent, waiting for confirmation: ${assetLockTransaction.txId}")
+                        topUpRepository.waitForTransaction(confidence)
+                    }
+                    else -> {
+                        // Transaction not sent yet, send it
+                        log.info("Sending credit funding transaction: ${assetLockTransaction.txId}")
+                        topUpRepository.sendTransaction(assetLockTransaction)
+                    }
                 }
             }
             timerIsLock.logTiming()
