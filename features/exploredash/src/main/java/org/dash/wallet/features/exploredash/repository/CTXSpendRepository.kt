@@ -70,10 +70,6 @@ class CTXSpendException(
         }
     }
 
-    override fun toString(): String {
-        return "CTX error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
-    }
-
     val isLimitError: Boolean
         get() {
             val fiatAmount = ((errorMap["fields"] as? Map<*, *>)?.get("fiatAmount") as? List<*>)?.firstOrNull()
