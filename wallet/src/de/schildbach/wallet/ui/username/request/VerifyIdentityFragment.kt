@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.view.View
@@ -9,8 +9,9 @@ import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentVerfiyIdentityBinding
@@ -27,12 +28,14 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val viewModel by viewModels<VerifyIdentityViewModel>()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    private val args by navArgs<VerifyIdentityFragmentArgs>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         arguments?.getString("username")?.let {
             binding.postText.text = getString(R.string.please_vote_to_approve, it)
         }
+
 
         binding.copyPostTextBtn.setOnClickListener {
             viewModel.copyPost(binding.postText.text.toString())
@@ -62,16 +65,17 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
             requestUserNameViewModel.setRequestedUserNameLink(binding.linkInput.text.toString())
             requestUserNameViewModel.verify()
             lifecycleScope.launch {
-                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: BlockchainIdentityData.CreationState.NONE
-                if (creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal) {
+                val creationState = dashPayViewModel.blockchainIdentity.value?.creationState ?: IdentityCreationState.NONE
+                if (creationState.ordinal < IdentityCreationState.VOTING.ordinal) {
                     checkViewConfirmDialog()
                     dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
                         if (it?.creationStateErrorMessage != null) {
                             requireActivity().finish()
                         } else {
-                            val creationState = it?.creationState ?: BlockchainIdentityData.CreationState.NONE
-                            if (creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal) {
-                                safeNavigate(VerifyIdentityFragmentDirections.verifyToUsernameRegistrationFragment())
+                            val creationState = it?.creationState ?: IdentityCreationState.NONE
+                            if (creationState.ordinal > IdentityCreationState.NONE.ordinal) {
+                                // Navigate to MoreFragment instead of UsernameRegistrationFragment  
+                                requireActivity().finish()
                             }
                         }
                     }
@@ -113,7 +117,8 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_verfiy_identity) {
         } else {
             safeNavigate(
                 VerifyIdentityFragmentDirections.verifyIdentityFragmentToConfirmUsernameRequestDialog(
-                    requestUserNameViewModel.requestedUserName!!
+                    requestUserNameViewModel.requestedUserName!!,
+                    args.usernameType
                 )
             )
         }

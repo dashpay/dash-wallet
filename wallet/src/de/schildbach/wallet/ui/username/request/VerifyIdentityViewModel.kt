@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.content.ClipData
 import android.content.ClipboardManager

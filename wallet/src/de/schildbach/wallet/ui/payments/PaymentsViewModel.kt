@@ -65,10 +65,11 @@ class PaymentsViewModel @Inject constructor(
         } ?: error("Wallet not yet initialised")
     }
     init {
-        identityConfig.observeBase()
+        identityConfig.observe()
             .flatMapLatest { identity ->
-                if (identity.userId != null && identity.creationComplete) {
-                    platformRepo.observeProfileByUserId(identity.userId)
+                val userId = identity.userId
+                if (userId != null && identity.hasUsername) {
+                    platformRepo.observeProfileByUserId(userId)
                 } else {
                     emptyFlow()
                 }

@@ -42,6 +42,8 @@ import java.io.File
 import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
+import androidx.core.net.toUri
+import java.math.BigInteger
 
 @HiltWorker
 class UpdateProfileWorker @AssistedInject constructor(
@@ -114,13 +116,47 @@ class UpdateProfileWorker @AssistedInject constructor(
             }
         }
 
+        // Recalculate avatarHash if missing but avatarUrl exists
+        val (finalAvatarHash, finalFingerprint) = if (avatarHash == null && avatarUrl.isNotEmpty()) {
+            try {
+                val uri = avatarUrl.toUri()
+                var computedHash: ByteArray? = null
+                var computedFingerprint: BigInteger? = null
+                val countDownLatch = java.util.concurrent.CountDownLatch(1)
+                
+                org.dash.wallet.common.ui.avatar.ProfilePictureHelper.avatarHashAndFingerprint(
+                    applicationContext, uri, null,
+                    object : org.dash.wallet.common.ui.avatar.ProfilePictureHelper.OnResourceReadyListener {
+                        override fun onResourceReady(avatarHash: org.bitcoinj.core.Sha256Hash?, avatarFingerprint: BigInteger?) {
+                            computedHash = avatarHash?.bytes
+                            computedFingerprint = avatarFingerprint
+                            countDownLatch.countDown()
+                        }
+                    }
+                )
+                
+                // Wait for hash computation (with timeout)
+                if (countDownLatch.await(10, java.util.concurrent.TimeUnit.SECONDS)) {
+                    Pair(computedHash, computedFingerprint?.toByteArray())
+                } else {
+                    log.warn("Timeout waiting for avatar hash computation")
+                    Pair(null, null)
+                }
+            } catch (ex: Exception) {
+                log.error("Failed to compute avatar hash", ex)
+                Pair(null, null)
+            }
+        } else {
+            Pair(avatarHash, avatarFingerprint)
+        }
+
         val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
                 blockchainIdentity.getUniqueUsername(),
                 displayName,
                 publicMessage,
                 avatarUrl,
-                avatarHash,
-                avatarFingerprint,
+                finalAvatarHash,
+                finalFingerprint,
                 createdAt
         )
 

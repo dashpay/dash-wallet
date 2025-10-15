@@ -47,45 +47,95 @@ import org.dashj.platform.sdk.KeyType
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
+import androidx.core.net.toUri
+import org.slf4j.Logger
 
-data class BlockchainIdentityData(
-    var creationState: CreationState = CreationState.NONE,
-    var creationStateErrorMessage: String?,
-    var username: String?,
-    var userId: String?,
-    var restoring: Boolean,
+enum class IdentityCreationState {
+    NONE,   // this should always be the first value
+    UPGRADING_WALLET,
+    CREDIT_FUNDING_TX_CREATING,
+    CREDIT_FUNDING_TX_SENDING,
+    CREDIT_FUNDING_TX_SENT,
+    CREDIT_FUNDING_TX_CONFIRMED,
+    IDENTITY_REGISTERING,
+    IDENTITY_REGISTERED,
+    PREORDER_SECONDARY_REGISTERING,
+    PREORDER_SECONDARY_REGISTERED,
+    USERNAME_SECONDARY_REGISTERING,
+    USERNAME_SECONDARY_REGISTERED,
+    PREORDER_REGISTERING,
+    PREORDER_REGISTERED,
+    USERNAME_REGISTERING,
+    USERNAME_REGISTERED,
+    DASHPAY_PROFILE_CREATING,
+    DASHPAY_PROFILE_CREATED,
+    REQUESTED_NAME_CHECKING,
+    REQUESTED_NAME_CHECKED,
+    REQUESTED_NAME_LINK_SAVING,
+    REQUESTED_NAME_LINK_SAVED,
+    VOTING,
+    DONE,
+    DONE_AND_DISMISS // this should always be the last value
+}
+
+class BlockchainIdentityData(
+    creationState: IdentityCreationState = IdentityCreationState.NONE,
+    creationStateErrorMessage: String?,
+    username: String?,
+    usernameSecondary: String?,
+    userId: String?,
+    restoring: Boolean,
+    creditFundingTxId: Sha256Hash? = null,
+    usingInvite: Boolean = false,
+    invite: InvitationLinkData? = null,
+    verificationLink: String? = null,
+    cancelledVerificationLink: Boolean? = null,
+    usernameRequested: UsernameRequestStatus? = null,
+    votingPeriodStart: Long? = null,
+    // Extended properties specific to full identity data
     var identity: Identity? = null,
-    var creditFundingTxId: Sha256Hash? = null,
-    var usingInvite: Boolean = false,
-    var invite: InvitationLinkData? = null,
     var preorderSalt: ByteArray? = null,
+    var preorderSaltSecondary: ByteArray? = null,
     var registrationStatus: IdentityStatus? = null,
     var usernameStatus: UsernameStatus? = null,
+    var usernameSecondaryStatus: UsernameStatus? = null,
     var privacyMode: CoinJoinMode? = null,
     var creditBalance: Coin? = null,
     var activeKeyCount: Int? = null,
     var totalKeyCount: Int? = null,
     var keysCreated: Long? = null,
     var currentMainKeyIndex: Int? = null,
-    var currentMainKeyType: KeyType? = null,
-    var verificationLink: String? = null,
-    val cancelledVerificationLink: Boolean? = null,
-    var usernameRequested: UsernameRequestStatus? = null,
-    var votingPeriodStart: Long? = null
-    ) {
+    var currentMainKeyType: KeyType? = null
+) : BlockchainIdentityBaseData(
+    creationState = creationState,
+    creationStateErrorMessage = creationStateErrorMessage,
+    username = username,
+    usernameSecondary = usernameSecondary,
+    userId = userId,
+    restoring = restoring,
+    creditFundingTxId = creditFundingTxId,
+    usingInvite = usingInvite,
+    invite = invite,
+    requestedUsername = username, // Map username to requestedUsername
+    verificationLink = verificationLink,
+    cancelledVerificationLink = cancelledVerificationLink,
+    usernameRequested = usernameRequested,
+    votingPeriodStart = votingPeriodStart
+) {
 
     companion object {
-        val log = LoggerFactory.getLogger(BlockchainIdentityData::class.java)
+        private val log: Logger = LoggerFactory.getLogger(BlockchainIdentityData::class.java)
     }
-    var id = 1
-        set(@Suppress("UNUSED_PARAMETER") value) {
-            field = 1
-        }
 
     private var creditFundingTransactionCache: AssetLockTransaction? = null
 
+    init {
+        // debug only
+        log.info("creation: {}", this)
+    }
+
     fun findAssetLockTransaction(wallet: Wallet?): AssetLockTransaction? {
-        if (creditFundingTxId == null) {
+        if (super.creditFundingTxId == null) {
             val authExtension =
                 wallet!!.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
             val list = authExtension.assetLockTransactions
@@ -94,7 +144,7 @@ data class BlockchainIdentityData(
         }
         if (wallet != null) {
             val watch1 = Stopwatch.createStarted()
-            creditFundingTransactionCache = wallet.getTransaction(creditFundingTxId)?.run {
+            creditFundingTransactionCache = wallet.getTransaction(super.creditFundingTxId)?.run {
                 log.info("loading wallet.getTransaction: {}", watch1)
                 val authExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                 val watch2 = Stopwatch.createStarted()
@@ -106,40 +156,36 @@ data class BlockchainIdentityData(
         return creditFundingTransactionCache
     }
 
-    fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.let { it.identityId.toStringBase58() }
+    @Deprecated("use userId instead", ReplaceWith("userId"))
+    fun getIdentity(wallet: Wallet?): String? = findAssetLockTransaction(wallet)?.identityId?.toStringBase58()
 
-    fun getErrorMetadata() = creationStateErrorMessage?.let {
+    fun getErrorMetadata() = super.creationStateErrorMessage?.let {
             val metadataIndex = it.indexOf("Metadata(")
             it.substring(metadataIndex)
     }
 
-    enum class CreationState {
-        NONE,   // this should always be the first value
-        UPGRADING_WALLET,
-        CREDIT_FUNDING_TX_CREATING,
-        CREDIT_FUNDING_TX_SENDING,
-        CREDIT_FUNDING_TX_SENT,
-        CREDIT_FUNDING_TX_CONFIRMED,
-        IDENTITY_REGISTERING,
-        IDENTITY_REGISTERED,
-        PREORDER_REGISTERING,
-        PREORDER_REGISTERED,
-        USERNAME_REGISTERING,
-        USERNAME_REGISTERED,
-        DASHPAY_PROFILE_CREATING,
-        DASHPAY_PROFILE_CREATED,
-        REQUESTED_NAME_CHECKING,
-        REQUESTED_NAME_CHECKED,
-        REQUESTED_NAME_LINK_SAVING,
-        REQUESTED_NAME_LINK_SAVED,
-        VOTING,
-        DONE,
-        DONE_AND_DISMISS // this should always be the last value
-    }
+    // Note: These properties are now immutable in the parent class, 
+    // so this method needs to be reconsidered or removed
+     fun finishRestoration() {
+         this.restoring = false
+         this.creationStateErrorMessage = null
+     }
 
-    fun finishRestoration() {
-        this.restoring = false
-        this.creationStateErrorMessage = null
+    val activeUsername: String?
+        get() = if (showSecondaryUsername) {
+            usernameSecondary
+        } else {
+            username
+        }
+
+    val showSecondaryUsername: Boolean
+        get() = votingInProgress && usernameSecondary != null && usernameSecondaryStatus == UsernameStatus.CONFIRMED
+
+    val hasUsername: Boolean
+        get() = creationComplete || showSecondaryUsername
+
+    override fun toString(): String {
+        return "BlockchainIdentityData($creationState, $username, $usernameStatus, $usernameSecondary, $usernameSecondaryStatus, $userId)"
     }
 }
 
@@ -147,7 +193,7 @@ data class BlockchainIdentityData(
 open class BlockchainIdentityConfig @Inject constructor(
     private val context: Context,
     walletDataProvider: WalletDataProvider,
-    val platformService: PlatformService
+    private val platformService: PlatformService
 ) : BaseConfig(
     context,
     PREFERENCES_NAME,
@@ -160,14 +206,18 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CREATION_STATE = stringPreferencesKey("creation_state")
         val CREATION_STATE_ERROR_MESSAGE = stringPreferencesKey("creation_state_error_message")
         val USERNAME = stringPreferencesKey("username")
+        val USERNAME_SECONDARY = stringPreferencesKey("username_secondary")
         val IDENTITY_ID = stringPreferencesKey("identity_id")
         val RESTORING = booleanPreferencesKey("restoring")
         val ASSET_LOCK_TXID = stringPreferencesKey("asset_lock_txid")
         val USING_INVITE = booleanPreferencesKey("using_invite")
         val INVITE_LINK = stringPreferencesKey("invite_link")
         val PREORDER_SALT = stringPreferencesKey("preorder_salt")
+        val PREORDER_SALT_SECONDARY = stringPreferencesKey("preorder_salt_secondary")
         val IDENTITY_REGISTRATION_STATUS = stringPreferencesKey("identity_registration_status")
         val USERNAME_REGISTRATION_STATUS = stringPreferencesKey("username_registration_status")
+        val USERNAME_SECONDARY_REGISTRATION_STATUS = stringPreferencesKey("username_secondary_registration_status")
+
         val IDENTITY = stringPreferencesKey("identity")
         val PRIVACY_MODE = stringPreferencesKey("privacy_mode")
         val BALANCE = longPreferencesKey("identity_balance")
@@ -176,15 +226,16 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
-
+        private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 
     private val identityData: Flow<BlockchainIdentityData> = data
         .map { prefs ->
             BlockchainIdentityData(
-                creationState = BlockchainIdentityData.CreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
+                usernameSecondary = prefs[USERNAME_SECONDARY],
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
@@ -192,8 +243,10 @@ open class BlockchainIdentityConfig @Inject constructor(
                 usingInvite = prefs[USING_INVITE] ?: false,
                 invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
                 preorderSalt = prefs[PREORDER_SALT]?.let { Converters.fromHex(it) },
+                preorderSaltSecondary = prefs[PREORDER_SALT_SECONDARY]?.let { Converters.fromHex(it) },
                 registrationStatus = prefs[IDENTITY_REGISTRATION_STATUS]?.let { IdentityStatus.valueOf(it) },
                 usernameStatus = prefs[USERNAME_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
+                usernameSecondaryStatus = prefs[USERNAME_SECONDARY_REGISTRATION_STATUS]?.let { UsernameStatus.valueOf(it) },
                 privacyMode = prefs[PRIVACY_MODE]?.let { CoinJoinMode.valueOf(it) },
                 creditBalance = prefs[BALANCE]?.let { Coin.valueOf(it) },
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
@@ -206,15 +259,15 @@ open class BlockchainIdentityConfig @Inject constructor(
     private val identityBaseData: Flow<BlockchainIdentityBaseData> = data
         .map { prefs ->
             BlockchainIdentityBaseData(
-                1,
-                creationState = BlockchainIdentityData.CreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
+                creationState = IdentityCreationState.valueOf(prefs[CREATION_STATE] ?: "NONE"),
                 creationStateErrorMessage = prefs[CREATION_STATE_ERROR_MESSAGE],
                 username = prefs[USERNAME],
+                usernameSecondary = prefs[USERNAME_SECONDARY],
                 userId = prefs[IDENTITY_ID],
                 restoring = prefs[RESTORING] ?: false,
                 creditFundingTxId = prefs[ASSET_LOCK_TXID]?.let { Sha256Hash.wrap(it) },
                 usingInvite = prefs[USING_INVITE] ?: false,
-                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(Uri.parse(it), false) },
+                invite = prefs[INVITE_LINK]?.let { InvitationLinkData(it.toUri(), false) },
                 verificationLink = prefs[REQUESTED_USERNAME_LINK],
                 cancelledVerificationLink = prefs[CANCELED_REQUESTED_USERNAME_LINK],
                 usernameRequested = prefs[USERNAME_REQUESTED]?.let { UsernameRequestStatus.valueOf(it) },
@@ -224,7 +277,7 @@ open class BlockchainIdentityConfig @Inject constructor(
 
     suspend fun load() : BlockchainIdentityData? {
         val data = identityData.first()
-        return if (data.creationState != BlockchainIdentityData.CreationState.NONE) {
+        return if (data.creationState != IdentityCreationState.NONE) {
             data
         } else {
             null
@@ -244,9 +297,10 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityPrefs(blockchainIdentityData: BlockchainIdentityData) {
-        updateCreationState(1, blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
+        updateCreationState(blockchainIdentityData.creationState, blockchainIdentityData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
             blockchainIdentityData.username?.let { prefs[USERNAME] = it }
+            blockchainIdentityData.usernameSecondary?.let { prefs[USERNAME_SECONDARY] = it }
             blockchainIdentityData.userId?.let { prefs[IDENTITY_ID] = it }
             prefs[RESTORING] = blockchainIdentityData.restoring
             blockchainIdentityData.creditFundingTxId?.let { prefs[ASSET_LOCK_TXID] = it.toString() }
@@ -255,6 +309,7 @@ open class BlockchainIdentityConfig @Inject constructor(
             blockchainIdentityData.invite?.let { prefs[INVITE_LINK] = it.link.toString() }
             blockchainIdentityData.registrationStatus?.let { prefs[IDENTITY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.usernameStatus?.let { prefs[USERNAME_REGISTRATION_STATUS] = it.name }
+            blockchainIdentityData.usernameSecondaryStatus?.let { prefs[USERNAME_SECONDARY_REGISTRATION_STATUS] = it.name }
             blockchainIdentityData.privacyMode?.let { prefs[PRIVACY_MODE] = it.name }
             blockchainIdentityData.creditBalance?.let { prefs[BALANCE] = it.value }
             blockchainIdentityData.usernameRequested?.let { prefs[USERNAME_REQUESTED] = it.name}
@@ -265,7 +320,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     private suspend fun saveIdentityBasePrefs(blockchainIdentityBaseData: BlockchainIdentityBaseData) {
-        updateCreationState(1, blockchainIdentityBaseData.creationState, blockchainIdentityBaseData.creationStateErrorMessage)
+        updateCreationState(blockchainIdentityBaseData.creationState, blockchainIdentityBaseData.creationStateErrorMessage)
         context.dataStore.edit { prefs ->
             blockchainIdentityBaseData.username?.let { prefs[USERNAME] = it }
             blockchainIdentityBaseData.userId?.let { prefs[IDENTITY_ID] = it }
@@ -288,7 +343,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         saveIdentityBasePrefs(blockchainIdentityBaseData)
     }
 
-    suspend fun updateCreationState(id: Int, state: BlockchainIdentityData.CreationState, creationStateErrorMessage: String?) {
+    suspend fun updateCreationState(state: IdentityCreationState, creationStateErrorMessage: String?) {
         context.dataStore.edit { prefs ->
             prefs[CREATION_STATE] = state.name
             if (creationStateErrorMessage == null) {
@@ -300,6 +355,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     suspend fun clear() {
+        log.info("clearing data")
         clearAll()
     }
 }
