@@ -415,10 +415,28 @@ class TopUpRepositoryImpl @Inject constructor(
     }
 
     override suspend fun waitForTransaction(confidence: TransactionConfidence) {
-        if (!confidence.isTransactionLocked && confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
+        // Check if transaction is already confirmed before waiting
+        if (confidence.isTransactionLocked || 
+            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || 
+            confidence.isChainLocked) {
+            log.info("topup: transaction already confirmed, no need to wait")
+            return
+        }
+
+        // Only wait if transaction is pending and has been broadcast
+        if (confidence.numBroadcastPeers() > 0 && confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
             try {
-                withTimeout(TimeUnit.SECONDS.toMillis(30)) {
+                withTimeout(TimeUnit.MINUTES.toMillis(5)) { // Increased timeout to 5 minutes
                     suspendCancellableCoroutine { continuation ->
+                        // Check again if transaction got confirmed while setting up the listener
+                        if (confidence.isTransactionLocked || 
+                            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || 
+                            confidence.isChainLocked) {
+                            log.info("topup: transaction confirmed during listener setup")
+                            continuation.resumeWith(Result.success(Unit))
+                            return@suspendCancellableCoroutine
+                        }
+
                         val listener = object : TransactionConfidence.Listener {
                             override fun onConfidenceChanged(
                                 confidence: TransactionConfidence?,
@@ -459,8 +477,10 @@ class TopUpRepositoryImpl @Inject constructor(
                 }
             } catch (e: TimeoutCancellationException) {
                 // Timeout reached, continue with execution
-                log.info("topup, timeout waiting for islock, continue...")
+                log.info("topup: timeout waiting for transaction confirmation after 5 minutes, continuing...")
             }
+        } else {
+            log.info("topup: transaction not broadcast or not pending, skipping wait")
         }
     }
 
