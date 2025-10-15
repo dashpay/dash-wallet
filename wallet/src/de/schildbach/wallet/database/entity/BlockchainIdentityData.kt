@@ -59,6 +59,10 @@ enum class IdentityCreationState {
     CREDIT_FUNDING_TX_CONFIRMED,
     IDENTITY_REGISTERING,
     IDENTITY_REGISTERED,
+    PREORDER_SECONDARY_REGISTERING,
+    PREORDER_SECONDARY_REGISTERED,
+    USERNAME_SECONDARY_REGISTERING,
+    USERNAME_SECONDARY_REGISTERED,
     PREORDER_REGISTERING,
     PREORDER_REGISTERED,
     USERNAME_REGISTERING,
@@ -69,10 +73,6 @@ enum class IdentityCreationState {
     REQUESTED_NAME_CHECKED,
     REQUESTED_NAME_LINK_SAVING,
     REQUESTED_NAME_LINK_SAVED,
-    PREORDER_SECONDARY_REGISTERING,
-    PREORDER_SECONDARY_REGISTERED,
-    USERNAME_SECONDARY_REGISTERING,
-    USERNAME_SECONDARY_REGISTERED,
     VOTING,
     DONE,
     DONE_AND_DISMISS // this should always be the last value
@@ -226,7 +226,7 @@ open class BlockchainIdentityConfig @Inject constructor(
         val CANCELED_REQUESTED_USERNAME_LINK = booleanPreferencesKey("cancelled_requested_username_link")
         val USERNAME_REQUESTED = stringPreferencesKey("username_requested")
         val VOTING_PERIOD_START = longPreferencesKey("voting_period_start")
-
+        private val log = LoggerFactory.getLogger(BlockchainIdentityConfig::class.java)
     }
 
     private val identityData: Flow<BlockchainIdentityData> = data
@@ -355,6 +355,7 @@ open class BlockchainIdentityConfig @Inject constructor(
     }
 
     suspend fun clear() {
+        log.info("clearing data")
         clearAll()
     }
 }

@@ -664,6 +664,9 @@ class CreateIdentityService : LifecycleService() {
         }
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
+        if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
+            registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
+        }
         registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
 
         addInviteUserAlert()
@@ -758,9 +761,6 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState <= IdentityCreationState.REQUESTED_NAME_LINK_SAVED) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            }
-            if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
-                registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
             }
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
         } else {
