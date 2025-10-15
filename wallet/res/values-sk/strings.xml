@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený sieťový poplatok %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte "prioritu" iba ak potrebujete rýchle potvrdenie.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Súčet malých platieb vo vašej peňaženke neumožňuje v súčte zaslanie platby.</string>
-    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože peňaženka nie je plne synchronizovaná so sieťou </string>
     <string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_ack">Platba bola úspešne odoslaná priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_nack">Platba cez priame spojenie bola zamietnutá.</string>

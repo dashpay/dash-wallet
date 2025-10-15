@@ -245,4 +245,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Δημιουργήστε έναν λογαριασμό στο DashSpend ή συνδεθείτε στον ήδη υπάρχοντα.</string>
     <string name="temporarily_unavailable">Προσωρινά μη διαθέσιμο</string>
-</resources>
+    <string name="token_expired_title">Η συνεδρία σας έληξε</string>
+    </resources>

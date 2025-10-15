@@ -274,7 +274,7 @@
     <string name="menu_tools_title">Kagamitan</string>
     <string name="menu_tools_subtitle">I-import ang private key</string>
     <string name="menu_local_currency">Lokal na pananalapi</string>
-    <string name="menu_rescan_blockchain">Muling i-scan ang blockchain </string>
+    <string name="menu_rescan_blockchain">muling i-scan ang blockchain </string>
     <string name="menu_contact_support_title">Contact Support</string>
     <string name="menu_contact_support_subtitle">I-report ang Isyu</string>
     <string name="menu_explore_title">Galugarin</string>

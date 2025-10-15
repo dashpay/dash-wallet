@@ -280,7 +280,7 @@
     <string name="menu_tools_title">Инструменты</string>
     <string name="menu_tools_subtitle">Импортировать приватный ключ…</string>
     <string name="menu_local_currency">Местная валюта</string>
-    <string name="menu_rescan_blockchain">Пересканировать блокчейн</string>
+    <string name="menu_rescan_blockchain">Пересканировать цепочку блоков</string>
     <string name="menu_contact_support_title">Связаться с поддержкой</string>
     <string name="menu_contact_support_subtitle">Сообщить о проблеме</string>
     <string name="menu_explore_title">Исследовать</string>

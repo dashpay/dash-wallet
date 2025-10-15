@@ -56,7 +56,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Мрежова такса от %s ще бъде платена.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетна такса от %s ще бъде платена. Ако се интересувате от ниски такси, използвайте \'приоритетна\' само ако се нуждаете от бързо потвърждение.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сумата на малките плащания във вашият портфейл не може да се добави към стойността за изпращане.</string>
-    <string name="send_coins_fragment_hint_replaying">В момента плащанията не са възможни, защото портфейлът не е напълно синхронизиран с мрежата</string>
     <string name="send_coins_fragment_direct_payment_enable">Изпратете плащането директно до получателя.</string>
     <string name="send_coins_fragment_direct_payment_ack">Вашето плащане беше успешно изпратено директно.</string>
     <string name="send_coins_fragment_direct_payment_nack">Вашето плащане беше отказано посредством директна връзка.</string>

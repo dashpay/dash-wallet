@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">지불 오류</string>
     <string name="payment_request_problem_message">서버가 귀하의 지불을 처리하지 못했습니다. 판매자에게 문의해주십시오.</string>
     <string name="exchange_rate_not_found">환율 정보를 찾지 못했습니다.</string>
+    <string name="send_coins_fragment_hint_replaying">지갑이 네트워크와 완전히 동기화되지 않아 현재 지불 할 수 없습니다</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">대시 지갑으로 직접 받기</string>
