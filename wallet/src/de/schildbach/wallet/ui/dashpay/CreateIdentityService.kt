@@ -36,6 +36,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
@@ -149,7 +150,13 @@ class CreateIdentityService : LifecycleService() {
     @Inject lateinit var securityFunctions: SecurityFunctions
     @Inject lateinit var coinJoinConfig: CoinJoinConfig
     @Inject lateinit var usernameRequestDao: UsernameRequestDao
+    @Inject lateinit var walletDataProvider: WalletDataProvider
     private lateinit var securityGuard: SecurityGuard
+    
+    private val walletWipeListener: suspend () -> Unit = {
+        log.info("Wallet wipe detected, stopping CreateIdentityService")
+        stopSelf()
+    }
 
     private val wakeLock by lazy {
         val lockName = "$packageName create identity"
@@ -201,6 +208,10 @@ class CreateIdentityService : LifecycleService() {
             stopSelf()
             return
         }
+        
+        // Add wallet wipe listener to stop service when wallet is wiped
+        walletDataProvider.attachOnWalletWipedListener(walletWipeListener)
+        
         createIdentityNotification.startServiceForeground()
         wakeLock.acquire(TimeUnit.MINUTES.toMillis(10))
     }
@@ -1116,6 +1127,9 @@ class CreateIdentityService : LifecycleService() {
     override fun onDestroy() {
         super.onDestroy()
         serviceJob.cancel()
+        
+        // Detach wallet wipe listener to prevent memory leaks
+        walletDataProvider.detachOnWalletWipedListener(walletWipeListener)
 
         if (wakeLock.isHeld) {
             log.debug("wakelock still held, releasing")
