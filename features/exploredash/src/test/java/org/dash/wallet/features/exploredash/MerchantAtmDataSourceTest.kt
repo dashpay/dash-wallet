@@ -205,7 +205,7 @@ class MerchantDaoTest {
             "", territory, MerchantType.BOTH, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false
         )
 
-        verify(merchantDaoMock).pagingGetByTerritory(territory, requiredAllTypes, "", "", "", 0, 0.0, 0.0, 2, 1)
+        verify(merchantDaoMock).pagingGetByTerritory(territory, requiredAllTypes, "", "", "", 0, 0.0, 0.0, 1, 1)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- Physical type with bounds, query and territory should call pagingSearchByTerritory
@@ -251,7 +251,7 @@ class MerchantDaoTest {
             SortOption.Name, 0.0, 0.0, false
         )
 
-        verify(merchantDaoMock).pagingGetByTerritory("", requiredAllTypes, "", "", "", 0, 0.0, 0.0, 2, 1)
+        verify(merchantDaoMock).pagingGetByTerritory("", requiredAllTypes, "", "", "", 0, 0.0, 0.0, 1, 1)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- All type with query should call pagingGetByTerritory method ---
@@ -283,7 +283,7 @@ class MerchantDaoTest {
             0,
             0.0,
             0.0,
-            2,
+            1,
             1
         )
         verifyNoMoreInteractions(merchantDaoMock)
