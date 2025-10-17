@@ -172,13 +172,20 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
             // Log error only when reaching the wait limit exactly
             if (state.error != null && state.queries == WAIT_LIMIT_FOR_ERROR) {
-                ctxSpendViewModel.logError(state.error, "${state.giftCard?.merchantName} did not deliver the card after 10 tries")
+                ctxSpendViewModel.logError(
+                    state.error,
+                    "${state.giftCard?.merchantName} did not deliver the card after 10 tries"
+                )
             }
 
             if (state.serviceName == ServiceName.CTXSpend) {
-                binding.poweredByIcon.setImageDrawable(AppCompatResources.getDrawable(requireContext(), R.drawable.ic_ctx_logo_blue))
+                binding.poweredByIcon.setImageDrawable(
+                    AppCompatResources.getDrawable(requireContext(), R.drawable.ic_ctx_logo_blue)
+                )
             } else {
-                binding.poweredByIcon.setImageDrawable(AppCompatResources.getDrawable(requireContext(), R.drawable.ic_piggycards_logo))
+                binding.poweredByIcon.setImageDrawable(
+                    AppCompatResources.getDrawable(requireContext(), R.drawable.ic_piggycards_logo)
+                )
             }
         }
 
@@ -285,7 +292,11 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             val errorText = message ?: getString(R.string.gift_card_details_error)
             binding.cardError.text = Html.fromHtml(errorText, Html.FROM_HTML_MODE_COMPACT)
             binding.cardError.movementMethod = object : LinkMovementMethod() {
-                override fun onTouchEvent(widget: android.widget.TextView, buffer: android.text.Spannable, event: android.view.MotionEvent): Boolean {
+                override fun onTouchEvent(
+                    widget: android.widget.TextView,
+                    buffer: android.text.Spannable,
+                    event: android.view.MotionEvent
+                ): Boolean {
                     val action = event.action
                     if (action == android.view.MotionEvent.ACTION_UP) {
                         val x = event.x.toInt() - widget.totalPaddingLeft + widget.scrollX

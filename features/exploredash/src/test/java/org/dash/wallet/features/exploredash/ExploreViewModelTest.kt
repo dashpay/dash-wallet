@@ -308,7 +308,9 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any()) } doReturn
+                    on {
+                        observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any())
+                    } doReturn
                         flow {
                             emit(
                                 merchants

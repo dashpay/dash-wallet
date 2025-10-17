@@ -48,8 +48,6 @@ import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import kotlin.math.max
 
-
-
 class PiggyCardsRepository @Inject constructor(
     private val api: PiggyCardsApi,
     private val config: PiggyCardsConfig
@@ -84,19 +82,19 @@ class PiggyCardsRepository @Inject constructor(
                 state = DEFAULT_STATE
             )
         )
-        
+
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID, response.userId)
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL, email)
-        
+
         return true
     }
 
     override suspend fun verifyEmail(code: String): Boolean {
         val email = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
         val response = api.verifyOtp(VerifyOtpRequest(email = email!!, otp = code))
-        
+
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD, response.generatedPassword)
-        
+
         return performAutoLogin()
     }
 
@@ -104,7 +102,7 @@ class PiggyCardsRepository @Inject constructor(
         return try {
             val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
             val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
-            
+
             if (userId != null && password != null) {
                 val response = api.login(LoginRequest(userId = userId, password = password))
                 handleLoginResponse(response)
@@ -119,25 +117,25 @@ class PiggyCardsRepository @Inject constructor(
 
     private suspend fun handleLoginResponse(response: LoginResponse): Boolean {
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_ACCESS_TOKEN, response.accessToken)
-        
+
         val expiresAt = LocalDateTime.now().plusSeconds(response.expiresIn.toLong())
         config.setSecuredData(
             PiggyCardsConfig.PREFS_KEY_TOKEN_EXPIRES_AT,
             expiresAt.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         )
-        
+
         return response.accessToken.isNotEmpty()
     }
 
     override suspend fun isUserSignedIn(): Boolean {
         val token = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_ACCESS_TOKEN)
         val expiresAt = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_TOKEN_EXPIRES_AT)
-        
+
         if (token.isNullOrEmpty() || expiresAt == null) return false
-        
+
         val expireTime = LocalDateTime.parse(expiresAt, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         val isExpired = LocalDateTime.now().isAfter(expireTime)
-        
+
         return if (isExpired) {
             refreshToken()
         } else {
@@ -167,7 +165,6 @@ class PiggyCardsRepository @Inject constructor(
                 }
             }
 
-
             val immediateDeliveryCards = giftcards?.filter { giftCard ->
                 giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
             }
@@ -195,7 +192,7 @@ class PiggyCardsRepository @Inject constructor(
                     rangeGiftCard.maxDenomination
                 )
                 val denominationsType = "min-max"
-                val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt()  - SERVICE_FEE
+                val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt() - SERVICE_FEE
                 giftCardMap[it.id] = listOf(rangeGiftCard)
                 return UpdatedMerchantDetails(
                     rangeGiftCard.brandId.toString(),
@@ -209,7 +206,7 @@ class PiggyCardsRepository @Inject constructor(
             } else if (optionCard != null) {
                 val denominations = optionCard.denomination.split(",").map { it.toDouble() }
                 val denominationsType = "fixed"
-                val discountPercentage = (optionCard.discountPercentage * 100).toInt()  - SERVICE_FEE
+                val discountPercentage = (optionCard.discountPercentage * 100).toInt() - SERVICE_FEE
                 giftCardMap[it.id] = listOf(optionCard)
                 return UpdatedMerchantDetails(
                     optionCard.brandId.toString(),
@@ -262,21 +259,23 @@ class PiggyCardsRepository @Inject constructor(
         }
         val denominationsType = "fixed"
         giftCardMap[it.id] = activeGiftCards
-        //val format = DecimalFormat("0.##")
+        // val format = DecimalFormat("0.##")
         return UpdatedMerchantDetails(
             it.id,
             denominations.sorted(),
             denominationsType,
             (discountPercentage * 100).toInt() - SERVICE_FEE,
             redeemType = "barcode",
-            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(activeGiftCards.firstOrNull()?.name ?: "")
+            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(
+                activeGiftCards.firstOrNull()?.name ?: ""
+            )
         )
     }
 
     private suspend fun purchaseGiftCard(
         merchantId: String,
         fiatAmount: String,
-        fiatCurrency: String,
+        fiatCurrency: String
     ): OrderResponse {
         val userEmail = userEmail.first()!!
         val giftCards = giftCardMap[merchantId]
@@ -290,34 +289,36 @@ class PiggyCardsRepository @Inject constructor(
             } else {
                 val card = giftCards.find {
                     it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
-                    it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
+                        it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
                 } ?: giftCards.find {
                     it.quantity > 0 && it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
                 }
-                card?.id ?: throw IllegalStateException("cannot find the selected fixed card $fiatAmount for brand $merchantId")
+                card?.id ?: throw IllegalStateException(
+                    "cannot find the selected fixed card $fiatAmount for brand $merchantId"
+                )
             }
             return api.createOrder(
-                    OrderRequest(
-                        listOf(
-                            Order(
-                                productId = productId,
-                                quantity = 1,
-                                denomination = fiatAmount.toDouble(),
-                                currency = fiatCurrency,
-                            )
-                        ),
-                        recipientEmail = userEmail,
-                        user = User(
-                            name = "none",
-                            ip = "192.168.100.1",
-                            UserMetadata(
-                                "2025-07-01",
-                                country = DEFAULT_COUNTRY,
-                                state = DEFAULT_STATE
-                            )
+                OrderRequest(
+                    listOf(
+                        Order(
+                            productId = productId,
+                            quantity = 1,
+                            denomination = fiatAmount.toDouble(),
+                            currency = fiatCurrency
+                        )
+                    ),
+                    recipientEmail = userEmail,
+                    user = User(
+                        name = "none",
+                        ip = "192.168.100.1",
+                        UserMetadata(
+                            "2025-07-01",
+                            country = DEFAULT_COUNTRY,
+                            state = DEFAULT_STATE
                         )
                     )
                 )
+            )
         } else {
             throw IllegalStateException("card data not found: $merchantId")
         }
@@ -352,9 +353,21 @@ class PiggyCardsRepository @Inject constructor(
             )
         } catch (e: BitcoinURIParseException) {
             if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
-                throw CTXSpendException(orderResponse.payMessage, serviceName = ServiceName.PiggyCards, 200, orderResponse.payMessage, cause = e)
+                throw CTXSpendException(
+                    orderResponse.payMessage,
+                    serviceName = ServiceName.PiggyCards,
+                    200,
+                    orderResponse.payMessage,
+                    cause = e
+                )
             }
-            throw CTXSpendException(e.message ?: "Unknown URI error", serviceName = ServiceName.PiggyCards, 200, "", cause = e)
+            throw CTXSpendException(
+                e.message ?: "Unknown URI error",
+                serviceName = ServiceName.PiggyCards,
+                200,
+                "",
+                cause = e
+            )
         }
     }
 

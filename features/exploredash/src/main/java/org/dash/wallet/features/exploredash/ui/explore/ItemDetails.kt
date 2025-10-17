@@ -53,12 +53,12 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.util.maskEmail
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import java.util.*
 import java.text.DecimalFormat
+import java.util.*
 import kotlin.String
 
 @Composable
@@ -192,7 +192,7 @@ private fun MerchantDetailsContent(
                     } else {
                         merchant.giftCardProviders.firstOrNull()?.let { provider ->
                             SingleProviderSection(
-                                provider = provider,
+                                provider = provider
                             )
                         }
                     }
@@ -338,7 +338,7 @@ private fun SingleProviderSection(
     val discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%"
     val isSelected = false
     val isEnabled = provider.active
-    val onSelected = {  }
+    val onSelected = { }
 
     val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
     val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
@@ -348,7 +348,7 @@ private fun SingleProviderSection(
         modifier = Modifier
             .fillMaxWidth()
             .background(backgroundColor, shape = RoundedCornerShape(12.dp))
-            //.border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
+            // .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
             .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
             .padding(horizontal = 10.dp, vertical = 4.dp),
         text = provider.provider,
@@ -382,7 +382,7 @@ private fun ProviderOption(
             .border(1.dp, borderColor, shape = RoundedCornerShape(12.dp))
             .clickable(enabled = isEnabled) { if (isEnabled) onSelected() }
             .padding(horizontal = 10.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         DashRadioButton(
             text = providerName,
@@ -390,7 +390,7 @@ private fun ProviderOption(
             selected = isSelected,
             onClick = onSelected,
             trailingText = discount,
-            enabled = isEnabled,
+            enabled = isEnabled
         )
     }
 }
@@ -405,7 +405,7 @@ private fun ActionButton(
 ) {
     val isEnabled = merchant.giftCardProviders.find {
         it.provider == selectedProvider.name
-    }?.active  ?: true
+    }?.active ?: true
 
     Column {
         if (!isEnabled) {
@@ -438,7 +438,9 @@ private fun ActionButton(
             text = stringResource(
                 if (isDash) R.string.explore_pay_with_dash else R.string.explore_buy_gift_card
             ),
-            leadingIcon = ImageVector.vectorResource(if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card),
+            leadingIcon = ImageVector.vectorResource(
+                if (isDash) R.drawable.ic_dash_inverted else R.drawable.ic_gift_card
+            ),
             style = if (isDash) Style.FilledBlue else Style.FilledOrange,
             size = Size.Medium,
             stretch = true,
@@ -450,7 +452,7 @@ private fun ActionButton(
                 } else {
                     onBuyGiftCardButtonClicked()
                 }
-            },
+            }
         )
 
         // Discount badge for Dash payments
@@ -795,8 +797,8 @@ private fun AtmDetailsContent(
 
         // ATM details
         val hasAtmDetails = atm.getDisplayAddress("\n").isNotEmpty() ||
-                           !atm.phone.isNullOrEmpty() ||
-                           !atm.website.isNullOrEmpty()
+            !atm.phone.isNullOrEmpty() ||
+            !atm.website.isNullOrEmpty()
 
         if (hasAtmDetails) {
             ItemContactDetails(
@@ -810,7 +812,6 @@ private fun AtmDetailsContent(
         }
     }
 }
-
 
 // Helper functions
 @Composable

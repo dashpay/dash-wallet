@@ -351,7 +351,12 @@ interface MerchantDao : BaseDao<Merchant> {
             AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
-    suspend fun getGroupedResultCount(types: List<String>, paymentMethod: String, denomType: String, provider: String): Int
+    suspend fun getGroupedResultCount(
+        types: List<String>,
+        paymentMethod: String,
+        denomType: String,
+        provider: String
+    ): Int
 
     @Transaction
     @Query(
@@ -523,6 +528,10 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount(): Int
 
-    @Query("SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type FROM merchant where merchantId = :merchantId")
+    @Query(
+        """
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type FROM merchant where merchantId = :merchantId
+        """
+    )
     suspend fun getMerchantById(merchantId: String): Merchant?
 }

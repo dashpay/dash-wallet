@@ -24,7 +24,6 @@ import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.features.exploredash.R
-import java.math.BigDecimal
 import java.text.NumberFormat
 import java.util.Currency
 

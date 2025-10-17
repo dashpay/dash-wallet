@@ -34,7 +34,7 @@ class DashSpendTermsDialog : OffsetDialogFragment(R.layout.dialog_dashspend_term
 
     companion object {
         private const val ARG_TERMS_LINK = "arg_terms_link"
-        
+
         fun newInstance(termsLink: String): DashSpendTermsDialog {
             return DashSpendTermsDialog().apply {
                 arguments = bundleOf(ARG_TERMS_LINK to termsLink)

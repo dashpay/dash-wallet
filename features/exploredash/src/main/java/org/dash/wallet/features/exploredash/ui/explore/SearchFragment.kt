@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,27 +28,26 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.net.toUri
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.compose.ui.platform.ViewCompositionStrategy
-import android.content.Intent
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.core.net.toUri
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.firebase.FirebaseNetworkException
 import dagger.hilt.android.AndroidEntryPoint
@@ -57,7 +57,6 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.applyStyle
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -65,7 +64,6 @@ import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -447,7 +445,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         // Set up keyboard detection using view height changes
         setupKeyboardDetection(bottomSheet)
     }
-    
+
     private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         val rootView = requireActivity().findViewById<View>(android.R.id.content)
         ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
@@ -612,7 +610,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 // If keyboard is visible, hide it first and clear focus
                 requireActivity().currentFocus?.clearFocus()
                 hideKeyboard()
-                
+
                 // Add small delay to ensure keyboard is hidden and layout adjusts
                 lifecycleScope.launch {
                     delay(150)
@@ -645,7 +643,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
         val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 0f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 1f)
-        
+
         // Keep drag indicator visible if bottom sheet is draggable
         if (bottomSheet.isDraggable) {
             AnimatorSet()
@@ -873,7 +871,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val inputManager = requireContext().getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager?
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
-    
+
     private fun isKeyboardVisible(): Boolean {
         return isKeyboardShowing
     }
@@ -955,7 +953,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun ItemDetailsComposable(item: SearchResult) {
         val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
         val currentItem by viewModel.selectedItem.collectAsStateWithLifecycle()
-        
+
         currentItem?.let {
             ItemDetails(
                 item = it,

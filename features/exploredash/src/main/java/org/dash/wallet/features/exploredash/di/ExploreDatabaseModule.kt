@@ -25,8 +25,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.features.exploredash.ExploreDatabase
-import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
+import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import javax.inject.Singleton

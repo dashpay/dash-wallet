@@ -40,9 +40,7 @@ import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
-import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
-import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 
 @Module
 @InstallIn(SingletonComponent::class)

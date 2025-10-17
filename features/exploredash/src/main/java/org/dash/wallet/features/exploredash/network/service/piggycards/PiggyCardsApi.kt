@@ -30,7 +30,6 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Veri
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpResponse
 import retrofit2.http.*
 
-
 interface PiggyCardsApi {
     @POST("signup")
     suspend fun signup(@Body signupRequest: SignupRequest): SignupResponse

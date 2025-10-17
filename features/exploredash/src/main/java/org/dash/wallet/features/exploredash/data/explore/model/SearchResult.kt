@@ -20,7 +20,6 @@ package org.dash.wallet.features.exploredash.data.explore.model
 import androidx.room.ColumnInfo
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 
@@ -64,7 +63,8 @@ open class SearchResult(
 
         // CTX records do not use address2, address3, address4
         if (source?.lowercase() == GiftCardProviderType.CTX.name.lowercase() ||
-            source?.lowercase() == GiftCardProviderType.PiggyCards.name.lowercase()) {
+            source?.lowercase() == GiftCardProviderType.PiggyCards.name.lowercase()
+        ) {
             addressBuilder.append("${separator}$city")
             territory?.let {
                 addressBuilder.append(", ")

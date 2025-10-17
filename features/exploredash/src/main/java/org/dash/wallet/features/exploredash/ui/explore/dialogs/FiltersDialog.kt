@@ -120,7 +120,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         // Initialize spending options based on current filter state
         val currentPayment = viewModel.appliedFilters.value.payment
         val currentProvider = viewModel.appliedFilters.value.provider
-        
+
         // Determine the current state based on saved filters
         when {
             currentPayment.isEmpty() && currentProvider.isEmpty() -> {
@@ -173,7 +173,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
                 piggyCardsPaymentOn = true
             }
         }
-        
+
         binding.dashOption.isChecked = dashPaymentOn
         binding.ctxOption.isChecked = ctxPaymentOn
         binding.piggycardsOption.isChecked = piggyCardsPaymentOn
@@ -237,12 +237,14 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private fun updateGiftCardVisibility() {
         val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
         val isMerchantScreen = viewModel.exploreTopic == ExploreTopic.Merchants
-        
+
         // Only show gift card types for Merchants screen
         binding.giftCardTypesLabel.isVisible = hasGiftCardOptions && isMerchantScreen
         binding.giftCardTypes.isVisible = hasGiftCardOptions && isMerchantScreen
 
-        val shouldHideSorting = (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All) && !hasGiftCardOptions
+        val shouldHideSorting = (
+            viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All
+            ) && !hasGiftCardOptions
         binding.sortByCard.isVisible = !shouldHideSorting
         binding.sortByLabel.isVisible = !shouldHideSorting
     }
@@ -256,7 +258,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
         if (viewModel.filterMode.value != FilterMode.Online &&
             viewModel.filterMode.value != FilterMode.All &&
-            viewModel.isLocationEnabled.value == true) {
+            viewModel.isLocationEnabled.value == true
+        ) {
             sortOptions.add(SortOption.Distance)
         }
 
@@ -277,9 +280,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
         this.sortOptions = sortOptions
 
-        val shouldHideSorting = (viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All) && 
-                                viewModel.exploreTopic != ExploreTopic.ATMs && 
-                                !ctxPaymentOn && !piggyCardsPaymentOn
+        val shouldHideSorting = (
+            viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All
+            ) && viewModel.exploreTopic != ExploreTopic.ATMs && !ctxPaymentOn && !piggyCardsPaymentOn
         binding.sortByCard.isVisible = !shouldHideSorting
         binding.sortByLabel.isVisible = !shouldHideSorting
 
@@ -463,8 +466,15 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             }
         }
 
-        viewModel.setFilters(paymentFilter, selectedTerritory, selectedRadiusOption, sortOption, denomOption, providerFilter)
-        
+        viewModel.setFilters(
+            paymentFilter,
+            selectedTerritory,
+            selectedRadiusOption,
+            sortOption,
+            denomOption,
+            providerFilter
+        )
+
         // Only track filter events for merchants
         if (viewModel.exploreTopic == ExploreTopic.Merchants) {
             val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn

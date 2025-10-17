@@ -29,10 +29,10 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogDashSpendLoginInfoBinding
 
 class DashSpendLoginInfoDialog : OffsetDialogFragment(R.layout.dialog_dash_spend_login_info) {
-    
+
     companion object {
         private const val ARG_ICON = "arg_icon"
-        
+
         fun newInstance(@DrawableRes icon: Int): DashSpendLoginInfoDialog {
             return DashSpendLoginInfoDialog().apply {
                 arguments = bundleOf(ARG_ICON to icon)

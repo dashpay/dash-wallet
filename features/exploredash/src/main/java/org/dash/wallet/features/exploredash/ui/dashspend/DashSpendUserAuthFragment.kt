@@ -74,10 +74,12 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
         val authType = args.authType
         binding.title.setText(authType.screenTitle)
         binding.inputWrapper.setHint(authType.textInputHint)
-        binding.descLabel.setText(when(authType) {
-            AuthType.OTP -> R.string.verification_check_email
-            else -> args.service.disclaimer
-        })
+        binding.descLabel.setText(
+            when (authType) {
+                AuthType.OTP -> R.string.verification_check_email
+                else -> args.service.disclaimer
+            }
+        )
 
         binding.input.doOnTextChanged { text, _, _, _ ->
             binding.inputWrapper.isErrorEnabled = false
@@ -211,7 +213,10 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                     errorMessage = getString(R.string.login_error_title, provider.name)
                 }
             } catch (e: Exception) {
-                log.error("DashSpend: error during signup/login to ${provider.name}: ${e::class.simpleName} - ${e.message}", e)
+                log.error(
+                    "DashSpend: error during signup/login to ${provider.name}: ${e::class.simpleName} - ${e.message}",
+                    e
+                )
 
                 val message = when (e) {
                     is HttpException -> e.response()?.errorBody()?.string()

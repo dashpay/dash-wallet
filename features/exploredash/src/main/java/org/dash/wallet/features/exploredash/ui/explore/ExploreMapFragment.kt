@@ -157,14 +157,18 @@ class ExploreMapFragment : SupportMapFragment() {
             }
 
         viewModel.appliedFilters
-            .distinctUntilChangedBy { "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}-${it.query}" }
+            .distinctUntilChangedBy {
+                "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}-${it.query}"
+            }
             .observe(viewLifecycleOwner) { filters ->
                 googleMap?.let { map ->
-                    if (viewModel.screenState.value == ScreenState.SearchResults && 
-                        viewModel.physicalSearchResults.value != null) {
+                    if (viewModel.screenState.value == ScreenState.SearchResults &&
+                        viewModel.physicalSearchResults.value != null
+                    ) {
                         setResults(viewModel.physicalSearchResults.value)
                     } else if (viewModel.screenState.value == ScreenState.MerchantLocations &&
-                        viewModel.allMerchantLocations.value?.isNotEmpty() == true) {
+                        viewModel.allMerchantLocations.value?.isNotEmpty() == true
+                    ) {
                         setResults(viewModel.allMerchantLocations.value)
                     }
                 }

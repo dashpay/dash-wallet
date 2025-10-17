@@ -97,7 +97,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val currentProvider = viewModel.selectedProvider
 
         viewLifecycleOwner.lifecycleScope.launch {
-            if (savedMerchantId != null && currentMerchant == null && savedProvider != null && currentProvider == null) {
+            if (savedMerchantId != null && currentMerchant == null &&
+                savedProvider != null && currentProvider == null
+            ) {
                 // restore state if saved merchant exists
                 if (!setupMerchant(savedMerchantId, savedProvider)) {
                     findNavController().popBackStack()

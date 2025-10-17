@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
@@ -50,10 +49,13 @@ class MerchantDaoTest {
             on { pagingGetGrouped(any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
             on { pagingGetByTerritory(any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
                 TestPagingSource()
-            on { pagingGetByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()) } doReturn
-                TestPagingSource()
+            on {
+                pagingGetByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+            } doReturn TestPagingSource()
 
-            on { pagingSearchGrouped(any(), any(), any(), any(), any(), any(), any(), any()) } doReturn TestPagingSource()
+            on {
+                pagingSearchGrouped(any(), any(), any(), any(), any(), any(), any(), any())
+            } doReturn TestPagingSource()
             on {
                 pagingSearchByTerritory(
                     any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any()
@@ -61,7 +63,20 @@ class MerchantDaoTest {
             } doReturn
                 TestPagingSource()
             on {
-                pagingSearchByCoordinates(any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+                pagingSearchByCoordinates(
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any(),
+                    any()
+                )
             } doReturn TestPagingSource()
         }
     private val giftCardProvidersMock = mock<GiftCardProviderDao>()
@@ -94,7 +109,7 @@ class MerchantDaoTest {
             false
         )
 
-        verify(merchantDaoMock).pagingGetGrouped(requiredOnlineTypes, "", "", "",false, 0.0, 0.0)
+        verify(merchantDaoMock).pagingGetGrouped(requiredOnlineTypes, "", "", "", false, 0.0, 0.0)
         verifyNoMoreInteractions(merchantDaoMock)
 
         // --- Online type with query should call sanitizeQuery and pagingSearchGrouped methods ---
@@ -116,7 +131,7 @@ class MerchantDaoTest {
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)
-        verify(merchantDaoMock).pagingSearchGrouped(sanitizedQuery, requiredOnlineTypes, "", "", "",false, 0.0, 0.0)
+        verify(merchantDaoMock).pagingSearchGrouped(sanitizedQuery, requiredOnlineTypes, "", "", "", false, 0.0, 0.0)
         verifyNoMoreInteractions(merchantDaoMock)
     }
 
@@ -134,7 +149,7 @@ class MerchantDaoTest {
         // pagingGetByCoordinates method ---
         val bounds = GeoBounds(20.0, 21.0, 22.0, 23.0, 0.0, 0.0)
         dataSourceSpy.observeMerchantsPaging(
-            "", "", MerchantType.PHYSICAL, "", DenomOption.Both, "",bounds, SortOption.Name, 0.0, 0.0, false
+            "", "", MerchantType.PHYSICAL, "", DenomOption.Both, "", bounds, SortOption.Name, 0.0, 0.0, false
         )
 
         verify(merchantDaoMock)
@@ -258,7 +273,19 @@ class MerchantDaoTest {
         )
 
         verify(dataSourceSpy).sanitizeQuery(query)
-        verify(merchantDaoMock).pagingSearchByTerritory(sanitizedQuery, "", requiredAllTypes, "", "", "", 0, 0.0, 0.0, 2, 1)
+        verify(merchantDaoMock).pagingSearchByTerritory(
+            sanitizedQuery,
+            "",
+            requiredAllTypes,
+            "",
+            "",
+            "",
+            0,
+            0.0,
+            0.0,
+            2,
+            1
+        )
         verifyNoMoreInteractions(merchantDaoMock)
     }
 }

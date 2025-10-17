@@ -320,7 +320,13 @@ open class MerchantAtmDataSource @Inject constructor(
                 val types = listOf(MerchantType.ONLINE, MerchantType.BOTH)
 
                 if (query.isNotBlank()) {
-                    merchantDao.searchGroupedResultCount(sanitizeQuery(query), types, paymentMethod, denominationType, provider)
+                    merchantDao.searchGroupedResultCount(
+                        sanitizeQuery(query),
+                        types,
+                        paymentMethod,
+                        denominationType,
+                        provider
+                    )
                 } else {
                     merchantDao.getGroupedResultCount(types, paymentMethod, denominationType, provider)
                 }

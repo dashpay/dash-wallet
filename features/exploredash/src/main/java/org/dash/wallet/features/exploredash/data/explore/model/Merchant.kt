@@ -17,7 +17,6 @@
 
 package org.dash.wallet.features.exploredash.data.explore.model
 
-import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
@@ -71,16 +70,15 @@ data class Merchant(
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Merchant) return false
-        
-        return id == other.id && 
-           name == other.name &&
-           active == other.active &&
-           denominations == other.denominations &&
-           fixedDenomination == other.fixedDenomination &&
-           savingsPercentage == other.savingsPercentage &&
-           giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active }
+
+        return id == other.id && name == other.name &&
+            active == other.active &&
+            denominations == other.denominations &&
+            fixedDenomination == other.fixedDenomination &&
+            savingsPercentage == other.savingsPercentage &&
+            giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active }
     }
-    
+
     override fun hashCode(): Int {
         var result = id.hashCode()
         result = 31 * result + (name?.hashCode() ?: 0)

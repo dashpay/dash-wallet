@@ -139,7 +139,12 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
             )
             listener(
                 onError = { _, result ->
-                    log.error("Image load error for ${merchant?.name}: ${merchant?.logoLocation}: ${result.throwable.message}", result.throwable)
+                    log.error(
+                        "Image load error for ${
+                        merchant?.name
+                        }: ${merchant?.logoLocation}: ${result.throwable.message}",
+                        result.throwable
+                    )
                 }
             )
         }

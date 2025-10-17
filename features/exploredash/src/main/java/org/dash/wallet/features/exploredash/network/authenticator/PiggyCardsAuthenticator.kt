@@ -24,6 +24,7 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginRequest
+import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsTokenApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
@@ -65,10 +66,10 @@ class PiggyCardsAuthenticator @Inject constructor(
         }
     }
 
-    private suspend fun refreshToken(): org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse? {
+    private suspend fun refreshToken(): LoginResponse? {
         val userId = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_USER_ID)
         val password = config.getSecuredData(PiggyCardsConfig.PREFS_KEY_PASSWORD)
-        
+
         return if (!userId.isNullOrBlank() && !password.isNullOrBlank()) {
             tokenApi.login(LoginRequest(userId = userId, password = password))
         } else {
@@ -76,9 +77,11 @@ class PiggyCardsAuthenticator @Inject constructor(
         }
     }
 
-    private suspend fun handleLoginResponse(response: org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.LoginResponse) {
+    private suspend fun handleLoginResponse(
+        response: LoginResponse
+    ) {
         config.setSecuredData(PiggyCardsConfig.PREFS_KEY_ACCESS_TOKEN, response.accessToken)
-        
+
         val expiresAt = LocalDateTime.now().plusSeconds(response.expiresIn.toLong())
         config.setSecuredData(
             PiggyCardsConfig.PREFS_KEY_TOKEN_EXPIRES_AT,

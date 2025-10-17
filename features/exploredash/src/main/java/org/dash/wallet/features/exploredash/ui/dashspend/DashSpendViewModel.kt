@@ -38,32 +38,28 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
-import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
-import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
-import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
+import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
+import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
-import org.dash.wallet.features.exploredash.repository.CTXSpendRepositoryInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
@@ -155,7 +151,9 @@ class DashSpendViewModel @Inject constructor(
     val giftCardMerchant: StateFlow<Merchant?> = _giftCardMerchant.asStateFlow()
 
     fun setGiftCardMerchant(merchant: Merchant?) {
-        log.info("setGiftCardMerchant called with merchant: ${merchant?.name}, denominations: ${merchant?.denominations}")
+        log.info(
+            "setGiftCardMerchant called with merchant: ${merchant?.name}, denominations: ${merchant?.denominations}"
+        )
         _giftCardMerchant.value = merchant
         // Save merchant ID to state handle for restoration
         savedStateHandle[MERCHANT_ID_KEY] = merchant?.merchantId
@@ -215,7 +213,13 @@ class DashSpendViewModel @Inject constructor(
                         throw e
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error: {}", e::class.java.simpleName, e)
-                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.CTXSpend, null, null, e)
+                        throw CTXSpendException(
+                            "purchaseGiftCard error: ${e.message}",
+                            ServiceName.CTXSpend,
+                            null,
+                            null,
+                            e
+                        )
                     }
                 }
                 GiftCardProviderType.PiggyCards -> {
@@ -231,7 +235,13 @@ class DashSpendViewModel @Inject constructor(
                         throw e
                     } catch (e: Exception) {
                         log.error("purchaseGiftCard error: {}", e::class.java.simpleName, e)
-                        throw CTXSpendException("purchaseGiftCard error: ${e.message}", ServiceName.PiggyCards, null, null, e)
+                        throw CTXSpendException(
+                            "purchaseGiftCard error: ${e.message}",
+                            ServiceName.PiggyCards,
+                            null,
+                            null,
+                            e
+                        )
                     }
                 }
 
@@ -248,7 +258,11 @@ class DashSpendViewModel @Inject constructor(
             _giftCardMerchant.value?.source?.lowercase() ?: ServiceName.CTXSpend
         )
         log.info("ctx spend transaction: ${transaction.txId}")
-        transactionMetadata.markGiftCardTransaction(transaction.txId, selectedProvider!!.serviceName, _giftCardMerchant.value?.logoLocation)
+        transactionMetadata.markGiftCardTransaction(
+            transaction.txId,
+            selectedProvider!!.serviceName,
+            _giftCardMerchant.value?.logoLocation
+        )
 //        BitcoinURI(paymentUri).message?.let { memo ->
 //            if (memo.isNotBlank()) {
 //                transactionMetadata.setTransactionMemo(transaction.txId, memo)
@@ -304,7 +318,7 @@ class DashSpendViewModel @Inject constructor(
         } catch (e: Exception) {
             log.warn("updated merchant details contains unexpected data:", e)
         }
-        
+
         return@withContext merchant
     }
 
@@ -312,7 +326,7 @@ class DashSpendViewModel @Inject constructor(
      * obtains updated merchant data from all providers
      *
      * returns a new [Merchant] object
-      */
+     */
 
     suspend fun updateMerchantDetailsForAllProviders(merchant: Merchant): Merchant {
         val response = try {
@@ -322,7 +336,7 @@ class DashSpendViewModel @Inject constructor(
             null
         }
 
-         try {
+        try {
             response?.apply {
                 return merchant.deepCopy(
                     savingsPercentage = this.first.maxOf { it.savingsPercentage },
@@ -338,7 +352,9 @@ class DashSpendViewModel @Inject constructor(
     private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
         return giftCardProvider?.let {
-            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(giftCardProvider.sourceId)
+            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(
+                giftCardProvider.sourceId
+            )
         }
     }
 
@@ -381,7 +397,6 @@ class DashSpendViewModel @Inject constructor(
                 }
 
                 else -> {
-
                 }
             }
         }
@@ -514,8 +529,14 @@ class DashSpendViewModel @Inject constructor(
     }
 
     private fun getSupportEmail(sendToService: Boolean, serviceName: String) = when {
-        sendToService && serviceName == ServiceName.CTXSpend -> arrayOf(CTXSpendConstants.REPORT_EMAIL, "support@dash.org")
-        sendToService && serviceName == ServiceName.PiggyCards -> arrayOf(PiggyCardsConstants.REPORT_EMAIL, "support@dash.org")
+        sendToService && serviceName == ServiceName.CTXSpend -> arrayOf(
+            CTXSpendConstants.REPORT_EMAIL,
+            "support@dash.org"
+        )
+        sendToService && serviceName == ServiceName.PiggyCards -> arrayOf(
+            PiggyCardsConstants.REPORT_EMAIL,
+            "support@dash.org"
+        )
         else -> arrayOf("support@dash.org")
     }
 
@@ -605,7 +626,9 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun getGiftCardDiscount(denomination: Double): Double {
-        val merchantId = giftCardMerchant.value?.giftCardProviders?.find { it.provider == selectedProvider?.name}?.sourceId
+        val merchantId = giftCardMerchant.value?.giftCardProviders?.find {
+            it.provider == selectedProvider?.name
+        }?.sourceId
         return merchantId?.let {
             when (selectedProvider) {
                 GiftCardProviderType.CTX -> ctxSpendRepository.getGiftCardDiscount(merchantId, denomination)
@@ -614,7 +637,6 @@ class DashSpendViewModel @Inject constructor(
             }
         } ?: 0.0
     }
-
 
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {

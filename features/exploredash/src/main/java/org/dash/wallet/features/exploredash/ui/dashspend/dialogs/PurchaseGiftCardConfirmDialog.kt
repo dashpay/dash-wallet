@@ -95,7 +95,12 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 error(R.drawable.ic_image_placeholder)
                 listener(
                     onError = { _, result ->
-                        log.error("Image load error for ${merchant?.name}: ${merchant?.logoLocation}: ${result.throwable.message}", result.throwable)
+                        log.error(
+                            "Image load error for ${
+                            merchant?.name
+                            }: ${merchant?.logoLocation}: ${result.throwable.message}",
+                            result.throwable
+                        )
                     }
                 )
             }
@@ -154,14 +159,20 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         }
                     }
                     ex.errorCode == 400 && ex.isLimitError -> {
-                        viewModel.logError(ex,"${ex.serviceName} returned error: limits")
+                        viewModel.logError(ex, "${ex.serviceName} returned error: limits")
                         if (isAdded) {
                             AdaptiveDialog.create(
                                 R.drawable.ic_error,
                                 getString(R.string.gift_card_purchase_failed),
                                 getString(R.string.gift_card_limit_error),
                                 getString(R.string.button_close),
-                                if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
+                                if (ex.serviceName == ServiceName.CTXSpend) {
+                                    getString(R.string.gift_card_contact_ctx)
+                                } else {
+                                    getString(
+                                        R.string.gift_card_contact_piggycards
+                                    )
+                                }
                             ).show(requireActivity()) { result ->
                                 if (result == true) {
                                     val intent = viewModel.createEmailIntent(
@@ -206,18 +217,24 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                     }
                     ex.errorCode == 500 -> {
                         val serviceName = if (ex.serviceName == ServiceName.CTXSpend) "CTX" else "PiggyCards"
-                        viewModel.logError(ex,"${ex.serviceName} returned error: Error 500")
+                        viewModel.logError(ex, "${ex.serviceName} returned error: Error 500")
                         if (isAdded) {
                             AdaptiveDialog.create(
                                 R.drawable.ic_error,
                                 getString(R.string.gift_card_purchase_failed),
                                 getString(R.string.gift_card_server_error, serviceName),
                                 getString(R.string.button_close),
-                                if (ex.serviceName == ServiceName.CTXSpend) getString(R.string.gift_card_contact_ctx) else getString(R.string.gift_card_contact_piggycards)
+                                if (ex.serviceName == ServiceName.CTXSpend) {
+                                    getString(R.string.gift_card_contact_ctx)
+                                } else {
+                                    getString(
+                                        R.string.gift_card_contact_piggycards
+                                    )
+                                }
                             ).show(requireActivity()) { result ->
                                 if (result == true) {
                                     val intent = viewModel.createEmailIntent(
-                                         "${ex.serviceName} Issue: Purchase, Internal Server Error",
+                                        "${ex.serviceName} Issue: Purchase, Internal Server Error",
                                         sendToService = true,
                                         ex
                                     )
@@ -350,10 +367,14 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             log.error("purchaseGiftCard error", ex)
             hideLoading()
             if (isAdded) {
-                val message = getString(when {
-                    ex.cause is BitcoinURIParseException && ex.message?.contains("mismatched network") == true -> R.string.gift_card_error_wrong_network
-                    else -> R.string.gift_card_error
-                })
+                val message = getString(
+                    when {
+                        ex.cause is BitcoinURIParseException &&
+                            ex.message?.contains("mismatched network") == true ->
+                            R.string.gift_card_error_wrong_network
+                        else -> R.string.gift_card_error
+                    }
+                )
                 AdaptiveDialog.create(
                     R.drawable.ic_error,
                     getString(R.string.send_coins_error_msg),
@@ -365,7 +386,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                         val intent = viewModel.createEmailIntent(
                             subject = "DashPay DashSpend Issue: Purchase Error",
                             sendToService = false,
-                            CTXSpendException(ex.message ?: "purchase gift card error: sending payment", viewModel.giftCardMerchant.value?.source, cause = ex)
+                            CTXSpendException(
+                                ex.message ?: "purchase gift card error: sending payment",
+                                viewModel.giftCardMerchant.value?.source,
+                                cause = ex
+                            )
                         )
 
                         val chooser = Intent.createChooser(

@@ -83,9 +83,14 @@ data class FilterOptions(
 ) {
     companion object {
         val DEFAULT = FilterOptions(
-            "", "", "", DenomOption.Both,
+            "",
+            "",
+            "",
+            DenomOption.Both,
             SortOption.Name,
-            DEFAULT_RADIUS_OPTION, "", false
+            DEFAULT_RADIUS_OPTION,
+            "",
+            false
         )
     }
 }
@@ -108,7 +113,7 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
-        
+
         // Session-only memory for filter modes (not persisted)
         private var lastSelectedMerchantFilterMode: FilterMode? = null
         private var lastSelectedAtmFilterMode: FilterMode? = null
@@ -192,7 +197,7 @@ class ExploreViewModel @Inject constructor(
 
     // Store separate FilterOptions for each FilterMode to preserve settings when switching
     private val filterOptionsMap = mutableMapOf<FilterMode, FilterOptions>()
-    
+
     private val _appliedFilters = MutableStateFlow(FilterOptions.DEFAULT)
     val appliedFilters: StateFlow<FilterOptions>
         get() = _appliedFilters
@@ -294,7 +299,7 @@ class ExploreViewModel @Inject constructor(
 
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
-                    //.distinctUntilChanged()
+                    // .distinctUntilChanged()
                     .onEach { list ->
                         list.forEach {
                             if (it is Merchant) {
@@ -359,10 +364,10 @@ class ExploreViewModel @Inject constructor(
         if (_filterMode.value != mode) {
             val previousMode = _filterMode.value
             val currentQuery = _appliedFilters.value.query // Preserve current query globally
-            
+
             // Save current FilterOptions for the previous mode
             filterOptionsMap[previousMode] = _appliedFilters.value
-            
+
             _filterMode.value = mode
 
             // Save the selected filter mode in session memory
@@ -381,14 +386,14 @@ class ExploreViewModel @Inject constructor(
                     FilterMode.All -> SortOption.Name
                     else -> SortOption.Name
                 }
-                
+
                 // Start with completely clean FilterOptions.DEFAULT and only preserve query and update sort
                 val cleanDefaults = FilterOptions.DEFAULT.copy(
                     query = currentQuery, // Preserve global query
                     sortOption = defaultSortOption,
                     isUserSetSort = false
                 )
-                
+
                 _appliedFilters.value = cleanDefaults
             }
         }
@@ -397,10 +402,10 @@ class ExploreViewModel @Inject constructor(
     fun submitSearchQuery(query: String) {
         _appliedFilters.update { current ->
             val newFilters = current.copy(query = query)
-            
+
             // Save the updated FilterOptions to the map for the current filter mode
             filterOptionsMap[_filterMode.value] = newFilters
-            
+
             newFilters
         }
     }
@@ -423,10 +428,10 @@ class ExploreViewModel @Inject constructor(
                 provider = providerFilter,
                 isUserSetSort = true // Mark as user-set since this comes from the filters screen
             )
-            
+
             // Save the updated FilterOptions to the map for the current filter mode
             filterOptionsMap[_filterMode.value] = newFilters
-            
+
             newFilters
         }
     }
@@ -442,7 +447,7 @@ class ExploreViewModel @Inject constructor(
     suspend fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         merchant.merchantId?.let { id ->
             val providers = exploreData.getGiftCardProvidersFor(id)
-                merchant.giftCardProviders = providers
+            merchant.giftCardProviders = providers
         }
 
         _selectedItem.value = merchant

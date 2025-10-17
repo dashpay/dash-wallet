@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.repository
 
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
-import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.ResourceString
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
@@ -174,7 +173,7 @@ class CTXSpendRepository @Inject constructor(
             redeemUrl = response.redeemUrl,
             fiatAmount = response.fiatAmount,
             fiatCurrency = response.fiatCurrency,
-            paymentUrls = response.paymentUrls,
+            paymentUrls = response.paymentUrls
         )
     }
 
@@ -198,7 +197,7 @@ class CTXSpendRepository @Inject constructor(
                 redeemUrl = response.redeemUrl,
                 fiatAmount = response.fiatAmount,
                 fiatCurrency = response.fiatCurrency,
-                paymentUrls = response.paymentUrls,
+                paymentUrls = response.paymentUrls
             )
         }
     }
