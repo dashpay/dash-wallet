@@ -21,13 +21,18 @@ data class Giftcard(
     @SerializedName("price_type") val priceType: String,
     val currency: String,
     @SerializedName("discount_percentage") val discountPercentage: Double,
-    @SerializedName("min_denomination") val minDenomination: Int,
-    @SerializedName("max_denomination") val maxDenomination: Int,
+    @SerializedName("min_denomination") val minDenomination: Double,
+    @SerializedName("max_denomination") val maxDenomination: Double,
     val denomination: String,
     val fee: Int,
     val quantity: Int,
     @SerializedName("brand_id") val brandId: Int
 ) {
-    val isFixed
+    // these must use get()
+    val isRange: Boolean
+        get() = priceType.trim().lowercase() == "range"
+    val isFixed: Boolean
         get() = priceType.trim().lowercase() == "fixed"
+    val isOption: Boolean
+        get() = priceType.trim().lowercase() == "option"
 }

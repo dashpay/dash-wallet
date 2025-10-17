@@ -39,4 +39,5 @@ interface DashSpendRepository {
         merchantId: String
     ): GiftCardInfo
     suspend fun getGiftCard(giftCardId: String): GiftCardInfo?
+    fun getGiftCardDiscount(merchantId: String, denomination: Double): Double
 }

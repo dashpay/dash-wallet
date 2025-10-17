@@ -212,7 +212,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         error = CTXSpendException(
                                             ResourceString(
                                                 R.string.gift_card_redeem_url_not_supported,
-                                                listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId, txid)
+                                                listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId ?: "", txid)
                                             ),
                                             giftCard
                                         )
@@ -242,7 +242,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     error = CTXSpendException(
                                         ResourceString(
                                             R.string.gift_card_rejected,
-                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                            listOf(GiftCardProviderType.CTX.name, giftCard.id, giftCard.paymentId ?: "", txid)
                                         ),
                                         giftCard
                                     )
@@ -379,14 +379,17 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                             GiftCardStatus.REJECTED -> {
                                 log.error("PiggyCards returned error: rejected")
-                                analyticsService.logError(CTXSpendException("CTXSpend returned error: rejected", giftCard, ""),"CTX returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}")
+                                analyticsService.logError(
+                                    CTXSpendException("PiggyCards returned error: rejected", giftCard, ""),
+                                    "PiggyCards returned error: rejected ${giftCard.merchantName} for ${giftCard.fiatAmount} ${giftCard.fiatCurrency}"
+                                )
                                 val newState = uiState.value.copy(
                                     status = giftCard.status,
                                     queries = uiState.value.queries + 1,
                                     error = CTXSpendException(
                                         ResourceString(
                                             R.string.gift_card_rejected,
-                                            listOf(giftCard.id, giftCard.paymentId, txid)
+                                            listOf(GiftCardProviderType.PiggyCards.name, giftCard.id, giftCard.paymentId ?: "", txid)
                                         ),
                                         giftCard
                                     )

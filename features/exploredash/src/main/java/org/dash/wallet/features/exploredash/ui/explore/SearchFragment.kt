@@ -340,12 +340,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        val defaultMode =
-            when {
-                topic == ExploreTopic.ATMs -> FilterMode.All
-                isLocationPermissionGranted -> FilterMode.Nearby
-                else -> FilterMode.Online
-            }
+        // Try to restore the last selected filter mode, otherwise use defaults
+        val savedFilterMode = viewModel.getLastSelectedFilterMode()
+        val defaultMode = savedFilterMode ?: when {
+            topic == ExploreTopic.ATMs -> FilterMode.All
+            isLocationPermissionGranted -> FilterMode.Nearby
+            else -> FilterMode.Online
+        }
 
         viewModel.setFilterMode(defaultMode)
 
@@ -399,11 +400,11 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun showLoginDialog(provider: GiftCardProviderType) {
-        DashSpendLoginInfoDialog(provider.logo).show(
+        DashSpendLoginInfoDialog.newInstance(provider.logo).show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    DashSpendTermsDialog(provider.termsAndConditions).show(requireActivity()) {
+                    DashSpendTermsDialog.newInstance(provider.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
@@ -449,20 +450,15 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     
     private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
         val rootView = requireActivity().findViewById<View>(android.R.id.content)
-        var isKeyboardCurrentlyVisible = false
-        
-        rootView.viewTreeObserver.addOnGlobalLayoutListener {
-            val heightDiff = rootView.rootView.height - rootView.height
-            val isKeyboardVisible = heightDiff > 200 // Threshold for keyboard detection
-            
-            if (isKeyboardVisible != isKeyboardCurrentlyVisible) {
-                isKeyboardCurrentlyVisible = isKeyboardVisible
-                this.isKeyboardShowing = isKeyboardVisible
-                
-                if (isKeyboardVisible) {
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeVisible != isKeyboardShowing) {
+                isKeyboardShowing = imeVisible
+                if (imeVisible) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 }
             }
+            insets
         }
     }
 

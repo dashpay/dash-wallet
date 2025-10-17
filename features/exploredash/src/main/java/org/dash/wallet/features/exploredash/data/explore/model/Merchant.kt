@@ -56,7 +56,7 @@ data class Merchant(
     @Ignore var maxCardPurchase: Double? = null,
     @Ignore var physicalAmount: Int = 0,
     @Ignore var fixedDenomination: Boolean = false,
-    @Ignore var denominations: List<Int> = listOf(),
+    @Ignore var denominations: List<Double> = listOf(),
     @Ignore var giftCardProviders: List<GiftCardProvider> = listOf()
 ) : SearchResult() {
 

@@ -42,8 +42,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.Veri
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
-import retrofit2.Response
-import java.text.DecimalFormat
+import java.text.NumberFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -60,8 +59,12 @@ class PiggyCardsRepository @Inject constructor(
         const val DEFAULT_STATE = "CA"
         private val log = LoggerFactory.getLogger(PiggyCardsRepository::class.java)
         private val disabledMerchants = listOf<String>()
+        val disabledGiftCards = mapOf(
+            174 to listOf("Xbox Live", "Xbox Game Pass")
+        )
         private const val INSTANT_DELIVERY = "(instant delivery)"
         private const val SERVICE_FEE = 150
+        private const val SERVICE_FEE_PERCENT = 1.5
         private const val DASH_DASH_KEY = "DASH.DASH"
     }
     private val giftCardMap = hashMapOf<String, List<Giftcard>>()
@@ -154,18 +157,30 @@ class PiggyCardsRepository @Inject constructor(
         val brandList = api.getBrands(DEFAULT_COUNTRY)
         val brandWithMerchantId = brandList.find { it.id == merchantId }
         brandWithMerchantId?.let { it ->
-            val giftcards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
+            val allGiftCards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
+            val disabledGiftCardsForMerchant = disabledGiftCards[brandWithMerchantId.id.toInt()].orEmpty()
+            val giftcards = if (disabledGiftCardsForMerchant.isEmpty()) {
+                allGiftCards?.data
+            } else {
+                allGiftCards?.data?.filter { giftCard ->
+                    !disabledGiftCardsForMerchant.any { name -> giftCard.name.contains(name) }
+                }
+            }
 
-            val immediateDeliveryCards = giftcards?.data?.filter { giftCard ->
+
+            val immediateDeliveryCards = giftcards?.filter { giftCard ->
                 giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
             }
 
-            val nonImmediateDeliveryFixedCards = giftcards?.data?.filter { giftCard ->
+            val nonImmediateDeliveryFixedCards = giftcards?.filter { giftCard ->
                 !giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0 && giftCard.isFixed
             } ?: listOf()
 
             // do we have a range card
-            val rangeGiftCard = giftcards?.data?.find { !it.isFixed }
+            val rangeGiftCard = giftcards?.find { !it.isFixed }
+
+            // do we have an option card
+            val optionCard = giftcards?.find { it.isOption }
 
             // priority:
             // 1. Instant Delivery Fixed Value Cards and all other fixed delivery
@@ -176,8 +191,8 @@ class PiggyCardsRepository @Inject constructor(
                 return updatedMerchantDetails(allFixedCards, brandWithMerchantId)
             } else if (rangeGiftCard != null) {
                 val denominations = listOf(
-                    rangeGiftCard.minDenomination.toString(),
-                    rangeGiftCard.maxDenomination.toString()
+                    rangeGiftCard.minDenomination,
+                    rangeGiftCard.maxDenomination
                 )
                 val denominationsType = "min-max"
                 val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt()  - SERVICE_FEE
@@ -191,7 +206,21 @@ class PiggyCardsRepository @Inject constructor(
                     enabled = rangeGiftCard.quantity > 0 && !disabledMerchants.contains(rangeGiftCard.name),
                     productId = rangeGiftCard.id.toString()
                 )
-            } else if (giftcards != null && giftcards.data?.isNotEmpty() == true) {
+            } else if (optionCard != null) {
+                val denominations = optionCard.denomination.split(",").map { it.toDouble() }
+                val denominationsType = "fixed"
+                val discountPercentage = (optionCard.discountPercentage * 100).toInt()  - SERVICE_FEE
+                giftCardMap[it.id] = listOf(optionCard)
+                return UpdatedMerchantDetails(
+                    optionCard.brandId.toString(),
+                    denominations,
+                    denominationsType,
+                    discountPercentage,
+                    redeemType = "barcode",
+                    enabled = optionCard.quantity > 0 && !disabledMerchants.contains(optionCard.name),
+                    productId = optionCard.id.toString()
+                )
+            } else if (!giftcards.isNullOrEmpty()) {
                 return updatedMerchantDetails(
                     nonImmediateDeliveryFixedCards,
                     it
@@ -209,7 +238,7 @@ class PiggyCardsRepository @Inject constructor(
         }
         return UpdatedMerchantDetails(
             merchantId,
-            listOf("0", "0"),
+            listOf(0.0),
             "fixed",
             0,
             redeemType = "",
@@ -222,7 +251,7 @@ class PiggyCardsRepository @Inject constructor(
         it: Brand
     ): UpdatedMerchantDetails {
         val denominations = arrayListOf<Double>()
-        var discountPercentage = -100.0
+        var discountPercentage = -100.0 // very low number for max
         val activeGiftCards = arrayListOf<Giftcard>()
         data.forEach { card ->
             if (card.quantity > 0) {
@@ -233,14 +262,14 @@ class PiggyCardsRepository @Inject constructor(
         }
         val denominationsType = "fixed"
         giftCardMap[it.id] = activeGiftCards
-        val format = DecimalFormat("0.##")
+        //val format = DecimalFormat("0.##")
         return UpdatedMerchantDetails(
             it.id,
-            denominations.sorted().map { format.format(it) },
+            denominations.sorted(),
             denominationsType,
             (discountPercentage * 100).toInt() - SERVICE_FEE,
             redeemType = "barcode",
-            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(data.first().name)
+            enabled = denominations.isNotEmpty() && !disabledMerchants.contains(activeGiftCards.firstOrNull()?.name ?: "")
         )
     }
 
@@ -252,9 +281,12 @@ class PiggyCardsRepository @Inject constructor(
         val userEmail = userEmail.first()!!
         val giftCards = giftCardMap[merchantId]
         if (!giftCards.isNullOrEmpty()) {
-            val rangeGiftCard = giftCards.find { !it.isFixed }
+            val optionGiftcard = giftCards.find { it.isOption }
+            val rangeGiftCard = giftCards.find { it.isRange }
             val productId = if (rangeGiftCard != null) {
                 rangeGiftCard.id
+            } else if (optionGiftcard != null) {
+                optionGiftcard.id
             } else {
                 val card = giftCards.find {
                     it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
@@ -356,7 +388,7 @@ class PiggyCardsRepository @Inject constructor(
             paymentCryptoNetwork = Constants.DASH_CURRENCY,
             paymentId = data.orderId,
             percentDiscount = "0.0",
-            rate = exchangeRateMap[data.orderId]?.toString() ?: "0.0",
+            rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
             redeemUrl = giftCard.claimLink,
             fiatAmount = "0.0",
             fiatCurrency = Constants.USD_CURRENCY,
@@ -366,5 +398,17 @@ class PiggyCardsRepository @Inject constructor(
 
     suspend fun getAccountEmail(): String? {
         return config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
+    }
+
+    private val numberFormat = NumberFormat.getNumberInstance().apply {
+        minimumFractionDigits = 0
+    }
+
+    override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
+        return giftCardMap[merchantId]?.find {
+            it.isFixed && it.denomination == numberFormat.format(denomination)
+        }?.discountPercentage?.let {
+            (it - SERVICE_FEE_PERCENT) / 100.0
+        } ?: 0.0
     }
 }

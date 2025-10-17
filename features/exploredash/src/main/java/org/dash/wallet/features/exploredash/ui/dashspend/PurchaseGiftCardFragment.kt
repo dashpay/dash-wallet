@@ -295,8 +295,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             binding.discountValue.isVisible = false
             return
         }
-        val savingsFraction = merchant.savingsFraction
+        val savingsFraction = if (merchant.fixedDenomination) {
+            viewModel.getGiftCardDiscount(viewModel.giftCardPaymentValue.value.toBigDecimal().toDouble())
+        } else {
+            merchant.savingsFraction
+        }
 
+        // do not show discount if the entered value is zero or the discount is zero
         if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
             viewModel.giftCardPaymentValue.value.isZero
         ) {
@@ -439,7 +444,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 modifier = Modifier.padding(20.dp),
                 denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
-                selectedDenomination = selectedDenomination.value.toBigDecimal().toInt(),
+                selectedDenomination = selectedDenomination.value.toBigDecimal().toDouble(),
                 canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())

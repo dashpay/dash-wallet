@@ -82,7 +82,11 @@ data class FilterOptions(
     val isUserSetSort: Boolean = false // Track if sort was explicitly set by user
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION, "", false)
+        val DEFAULT = FilterOptions(
+            "", "", "", DenomOption.Both,
+            SortOption.Name,
+            DEFAULT_RADIUS_OPTION, "", false
+        )
     }
 }
 
@@ -104,6 +108,10 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+        
+        // Session-only memory for filter modes (not persisted)
+        private var lastSelectedMerchantFilterMode: FilterMode? = null
+        private var lastSelectedAtmFilterMode: FilterMode? = null
     }
 
     private val workerJob = SupervisorJob()
@@ -182,6 +190,9 @@ class ExploreViewModel @Inject constructor(
     val isLocationEnabled: LiveData<Boolean>
         get() = _isLocationEnabled
 
+    // Store separate FilterOptions for each FilterMode to preserve settings when switching
+    private val filterOptionsMap = mutableMapOf<FilterMode, FilterOptions>()
+    
     private val _appliedFilters = MutableStateFlow(FilterOptions.DEFAULT)
     val appliedFilters: StateFlow<FilterOptions>
         get() = _appliedFilters
@@ -250,17 +261,18 @@ class ExploreViewModel @Inject constructor(
                 }
         }
 
-    // Used for the map
+    // Used for the map - combine both _filterMode and _appliedFilters so either can restart the flow
     val boundedSearchFlow: Flow<List<SearchResult>> =
-        _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { filters ->
-            _searchBounds
-                .filterNotNull()
-                .filter { screenState.value == ScreenState.SearchResults }
-                .flatMapLatest { bounds ->
-                    _filterMode
-                        .filterNot { it == FilterMode.Online }
-                        .flatMapLatest { mode -> getBoundedFlow(filters, mode, bounds) }
-                }
+        combine(
+            _filterMode.filterNot { it == FilterMode.Online },
+            _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
+            _searchBounds.filterNotNull()
+        ) { mode, filters, bounds ->
+            Triple(mode, filters, bounds)
+        }.filter { (_, _, _) ->
+            screenState.value == ScreenState.SearchResults
+        }.flatMapLatest { (mode, filters, bounds) ->
+            getBoundedFlow(filters, mode, bounds)
         }
 
     fun init(exploreTopic: ExploreTopic) {
@@ -282,7 +294,7 @@ class ExploreViewModel @Inject constructor(
 
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
-                    .distinctUntilChanged()
+                    //.distinctUntilChanged()
                     .onEach { list ->
                         list.forEach {
                             if (it is Merchant) {
@@ -331,7 +343,14 @@ class ExploreViewModel @Inject constructor(
         this.pagingFilterJob?.cancel(CancellationException())
         clearFilters()
         resetFilterMode()
+        clearFilterModeMemory()
         _searchLocationName.value = ""
+    }
+
+    fun clearFilterModeMemory() {
+        lastSelectedMerchantFilterMode = null
+        lastSelectedAtmFilterMode = null
+        filterOptionsMap.clear()
     }
 
     fun setFilterMode(mode: FilterMode) {
@@ -339,39 +358,51 @@ class ExploreViewModel @Inject constructor(
 
         if (_filterMode.value != mode) {
             val previousMode = _filterMode.value
+            val currentQuery = _appliedFilters.value.query // Preserve current query globally
+            
+            // Save current FilterOptions for the previous mode
+            filterOptionsMap[previousMode] = _appliedFilters.value
+            
             _filterMode.value = mode
-            
-            // Only set default sort option if switching from a different mode type
-            // and user hasn't explicitly set a custom sort
-            val shouldSetDefaultSort = when {
-                // Don't override user-set sorts
-                _appliedFilters.value.isUserSetSort -> false
-                // Switching to Nearby from any other mode - set Distance as default
-                mode == FilterMode.Nearby && previousMode != FilterMode.Nearby -> true
-                // Switching to Online from any other mode - set Name as default  
-                mode == FilterMode.Online && previousMode != FilterMode.Online -> true
-                // Switching to All from any other mode - set Name as default
-                mode == FilterMode.All && previousMode != FilterMode.All -> true
-                // Same mode, preserve current sort
-                else -> false
-            }
-            
-            if (shouldSetDefaultSort) {
+
+            // Save the selected filter mode in session memory
+            saveLastSelectedFilterMode(mode)
+
+            // Restore FilterOptions for the new mode, or create defaults if none exist
+            val savedFilters = filterOptionsMap[mode]
+            if (savedFilters != null) {
+                // Restore saved FilterOptions for this mode but keep the current query global
+                _appliedFilters.value = savedFilters.copy(query = currentQuery)
+            } else {
+                // No saved filters for this mode, set up clean defaults with appropriate sort option
                 val defaultSortOption = when (mode) {
-                    FilterMode.Online -> SortOption.Name
                     FilterMode.Nearby -> SortOption.Distance
+                    FilterMode.Online -> SortOption.Name
+                    FilterMode.All -> SortOption.Name
                     else -> SortOption.Name
                 }
                 
-                _appliedFilters.update { current -> 
-                    current.copy(sortOption = defaultSortOption, isUserSetSort = false)
-                }
+                // Start with completely clean FilterOptions.DEFAULT and only preserve query and update sort
+                val cleanDefaults = FilterOptions.DEFAULT.copy(
+                    query = currentQuery, // Preserve global query
+                    sortOption = defaultSortOption,
+                    isUserSetSort = false
+                )
+                
+                _appliedFilters.value = cleanDefaults
             }
         }
     }
 
     fun submitSearchQuery(query: String) {
-        _appliedFilters.update { current -> current.copy(query = query) }
+        _appliedFilters.update { current ->
+            val newFilters = current.copy(query = query)
+            
+            // Save the updated FilterOptions to the map for the current filter mode
+            filterOptionsMap[_filterMode.value] = newFilters
+            
+            newFilters
+        }
     }
 
     fun setFilters(
@@ -383,7 +414,7 @@ class ExploreViewModel @Inject constructor(
         providerFilter: String = ""
     ) {
         _appliedFilters.update { current ->
-            current.copy(
+            val newFilters = current.copy(
                 territory = selectedTerritory,
                 payment = paymentFilter,
                 denominationType = denomOption,
@@ -392,6 +423,11 @@ class ExploreViewModel @Inject constructor(
                 provider = providerFilter,
                 isUserSetSort = true // Mark as user-set since this comes from the filters screen
             )
+            
+            // Save the updated FilterOptions to the map for the current filter mode
+            filterOptionsMap[_filterMode.value] = newFilters
+            
+            newFilters
         }
     }
 
@@ -457,7 +493,9 @@ class ExploreViewModel @Inject constructor(
         this.allMerchantLocationsJob = _searchBounds
             .filterNotNull()
             .flatMapLatest { bounds ->
-                val radiusBounds = if (_isLocationEnabled.value == true) {
+                // Only apply radius bounds if we're in Nearby mode
+                // For All and Online tabs, show all locations globally
+                val radiusBounds = if (_isLocationEnabled.value == true && _filterMode.value == FilterMode.Nearby) {
                     locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
                 } else {
                     GeoBounds.noBounds
@@ -535,6 +573,22 @@ class ExploreViewModel @Inject constructor(
         exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
     }
 
+    fun getLastSelectedFilterMode(): FilterMode? {
+        return when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode
+            else -> lastSelectedMerchantFilterMode // Default fallback
+        }
+    }
+
+    fun saveLastSelectedFilterMode(mode: FilterMode) {
+        when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode = mode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode = mode
+            else -> lastSelectedMerchantFilterMode = mode // Default fallback
+        }
+    }
+
     private fun clearSearchResults() {
         _pagingSearchResults.postValue(PagingData.from(listOf()))
         _physicalSearchResults.postValue(listOf())
@@ -571,8 +625,9 @@ class ExploreViewModel @Inject constructor(
             _isLocationEnabled.value == true &&
             userLat != null &&
             userLng != null
-        val sortOption = if (filters.sortOption != SortOption.Distance) {
-            filters.sortOption
+        val currentSortOption = filters.sortOption
+        val sortOption = if (currentSortOption != SortOption.Distance) {
+            currentSortOption
         } else if (canSortByDistance) {
             SortOption.Distance
         } else {
@@ -768,15 +823,16 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
+        val currentSortOption = _appliedFilters.value.sortOption
         logEvent(
             if (exploreTopic == ExploreTopic.Merchants) {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                     SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                 }
             } else {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
                     SortOption.Discount -> ""

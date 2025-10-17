@@ -297,7 +297,7 @@ class DashSpendViewModel @Inject constructor(
                     copy.maxCardPurchase = apiResponse.maximumCardPurchase
                     copy.active = apiResponse.enabled
                     copy.fixedDenomination = apiResponse.denominationType == DenominationType.Fixed
-                    copy.denominations = apiResponse.denominations.map { it.toInt() }
+                    copy.denominations = apiResponse.denominations
                     copy.denominationsType = apiResponse.denominationsType
                 }
             }
@@ -603,6 +603,18 @@ class DashSpendViewModel @Inject constructor(
     suspend fun getMerchantById(merchantId: String): Merchant? = withContext(Dispatchers.IO) {
         exploreDao.getMerchantById(merchantId)
     }
+
+    fun getGiftCardDiscount(denomination: Double): Double {
+        val merchantId = giftCardMerchant.value?.giftCardProviders?.find { it.provider == selectedProvider?.name}?.sourceId
+        return merchantId?.let {
+            when (selectedProvider) {
+                GiftCardProviderType.CTX -> ctxSpendRepository.getGiftCardDiscount(merchantId, denomination)
+                GiftCardProviderType.PiggyCards -> piggyCardsRepository.getGiftCardDiscount(merchantId, denomination)
+                else -> 0.0
+            }
+        } ?: 0.0
+    }
+
 
     private fun updatePurchaseLimits() {
         _exchangeRate.value?.let {

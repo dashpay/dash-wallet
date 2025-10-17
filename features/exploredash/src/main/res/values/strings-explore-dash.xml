@@ -230,15 +230,16 @@
     <string name="try_again">Try Again</string>
     <string name="cancel">Cancel</string>
     <string name="gift_card_error">For some reason we were not able to buy a gift card. Please, try again.</string>
+    <string name="gift_card_out_of_stock_error">This gift card is out of stock. Please, try again.</string>
     <string name="gift_card_details_error">For some reason we were not able to buy a gift card. Please contact support.</string>
     <string name="gift_card_limit_error">The purchase limits for this merchant have changed.  Please contact CTX Support for more information.</string>
-    <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact CTX support to report the problem.</string>
+    <string name="gift_card_server_error">For some reason we were not able to buy a gift card. Please contact %s Support to report the problem.</string>
     <string name="gift_card_server_region_error">Purchases of this gift card cannot be made from your region.</string>
     <string name="gift_card_error_wrong_network">The payment request is for a different network. Please contact support.</string>
     <string name="gift_card_unknown_error">For some reason we were not able to buy a gift card. Please contact support with the txid %s.</string>
     <string name="gift_card_delay">It is taking more time than usual to retrieve this card. Please contact <a href="contact:support">support@dash.org</a> if it takes much longer.</string>
-    <string name="gift_card_rejected">The payment has been rejected.  Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
-    <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact %s with gift card id %s and payment id %s and transaction id %s.</string>
+    <string name="gift_card_rejected">The payment has been rejected.  Please contact %s Support with gift card id %s and payment id %s and transaction id %s.</string>
+    <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported.  Please contact %s Support with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="dashspend_terms_conditions">Accept terms and conditions</string>
     <string name="accept_terms_conditions">I accept DashSpend terms and conditions</string>
     <string name="tap_link_to_proceed">To create an account at DashSpend you must tap on the link below to proceed</string>
