@@ -63,7 +63,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginLeft="15dp"
                 android:layout_marginRight="15dp"
-                android:layout_marginBottom="25dp"
+                android:background="@android:color/white"
+                android:textColor="@color/dash_blue"
                 android:text="@string/processing_let_me_know"
                 app:layout_constraintBottom_toBottomOf="parent" />
 
