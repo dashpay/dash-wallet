@@ -22,7 +22,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     tools:background="@color/background_primary"
-    tools:context="org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog">
+    tools:context="org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header"
@@ -372,6 +372,8 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:paddingHorizontal="15dp"
+                android:visibility="invisible"
+                tools:visibility="visible"
                 android:theme="@style/ListViewButtonBackground"
                 app:layout_constraintTop_toBottomOf="@id/purchase_card_info">
 
@@ -546,6 +548,7 @@
                 android:text="@string/purchase_powered_by" />
 
             <androidx.appcompat.widget.AppCompatImageView
+                android:id="@+id/powered_by_icon"
                 android:layout_width="wrap_content"
                 android:layout_height="18dp"
                 android:layout_gravity="center"

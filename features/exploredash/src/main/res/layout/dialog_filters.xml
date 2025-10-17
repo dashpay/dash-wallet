@@ -150,7 +150,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="15dp"
-                android:text="@string/explore_payment_method" />
+                android:text="@string/explore_spending_options" />
 
             <androidx.cardview.widget.CardView
                 android:id="@+id/payment_methods"
@@ -175,21 +175,32 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:checked="true"
+                        android:drawableStart="@drawable/ic_dash_d_blue"
                         android:drawablePadding="8dp"
                         android:paddingVertical="16dp"
-                        android:drawableStart="@drawable/ic_dash_pay"
                         android:text="@string/explore_payment_dash" />
 
                     <CheckBox
-                        android:id="@+id/gift_card_option"
+                        android:id="@+id/ctx_option"
                         style="@style/CheckBox"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:checked="true"
                         android:drawablePadding="8dp"
                         android:paddingVertical="16dp"
-                        android:drawableStart="@drawable/ic_gift_card_rounded"
-                        android:text="@string/explore_payment_gift_card" />
+                        android:drawableStart="@drawable/ic_ctx_logo_small"
+                        android:text="@string/ctx_gift_cards" />
+
+                    <CheckBox
+                        android:id="@+id/piggycards_option"
+                        style="@style/CheckBox"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:drawablePadding="8dp"
+                        android:paddingVertical="16dp"
+                        android:drawableStart="@drawable/ic_piggy_cards_small"
+                        android:text="@string/piggycards_gift_cards" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 

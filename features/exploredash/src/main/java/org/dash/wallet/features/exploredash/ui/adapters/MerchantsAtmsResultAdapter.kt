@@ -33,6 +33,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.slf4j.LoggerFactory
 import java.util.*
 
 open class ExploreViewHolder(root: View) : RecyclerView.ViewHolder(root) {
@@ -108,6 +109,9 @@ class MerchantsAtmsResultAdapter(private val clickListener: (SearchResult, Recyc
 }
 
 class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(binding.root) {
+    companion object {
+        private val log = LoggerFactory.getLogger(MerchantViewHolder::class.java)
+    }
     fun bind(merchant: Merchant?) {
         val resources = binding.root.resources
         binding.title.text = merchant?.name
@@ -132,6 +136,16 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
             error(R.drawable.ic_image_placeholder)
             transformations(
                 RoundedCornersTransformation(resources.getDimensionPixelSize(R.dimen.logo_corners_radius).toFloat())
+            )
+            listener(
+                onError = { _, result ->
+                    log.error(
+                        "Image load error for ${
+                        merchant?.name
+                        }: ${merchant?.logoLocation}: ${result.throwable.message}",
+                        result.throwable
+                    )
+                }
             )
         }
 

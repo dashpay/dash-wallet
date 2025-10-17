@@ -22,6 +22,10 @@ android {
             }
         }
     }
+    
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
+    }
 
     buildTypes {
         release {
@@ -89,6 +93,7 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 

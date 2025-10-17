@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.ui.explore
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -27,13 +28,20 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.net.toUri
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
@@ -52,22 +60,25 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
+import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.*
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantType
 import org.dash.wallet.features.exploredash.data.explore.model.PaymentMethod
+import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.databinding.FragmentSearchBinding
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantLocationsHeaderAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsAtmsResultAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.MerchantsLocationsAdapter
 import org.dash.wallet.features.exploredash.ui.adapters.SearchHeaderAdapter
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment
-import org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendViewModel
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendLoginInfoDialog
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.CTXSpendTermsDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendUserAuthFragment
+import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendLoginInfoDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendTermsDialog
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
@@ -80,7 +91,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private val binding by viewBinding(FragmentSearchBinding::bind)
     private val viewModel by exploreViewModels<ExploreViewModel>()
-    private val ctxSpendViewModel by exploreViewModels<CTXSpendViewModel>()
+    private val dashSpendViewModel by exploreViewModels<DashSpendViewModel>()
     private val args by navArgs<SearchFragmentArgs>()
 
     private var bottomSheetWasExpanded: Boolean = false
@@ -145,21 +156,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
     private var lastSyncProgress: Resource<Double> = Resource.success(100.0)
 
+    // State variables for ItemDetails compose content
+    private var selectedProvider: GiftCardProviderType by mutableStateOf(GiftCardProviderType.CTX)
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val binding = binding // Avoids IllegalStateException in onStateChanged callback
         val bottomSheet = BottomSheetBehavior.from(binding.contentPanel)
         bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
-        bottomSheet.halfExpandedRatio =
-            ResourcesCompat.getFloat(
-                resources,
-                if (args.type == ExploreTopic.Merchants) {
-                    R.dimen.merchant_half_expanded_ratio
-                } else {
-                    R.dimen.atm_half_expanded_ratio
-                }
-            )
+        bottomSheet.halfExpandedRatio = ResourcesCompat.getFloat(
+            resources,
+            if (args.type == ExploreTopic.Merchants) {
+                R.dimen.merchant_half_expanded_ratio
+            } else {
+                R.dimen.atm_half_expanded_ratio
+            }
+        )
 
         searchHeaderAdapter = SearchHeaderAdapter(args.type)
         setupBackNavigation()
@@ -187,6 +200,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                 runLocationFlow(viewModel.exploreTopic, viewModel.exploreConfig, permissionRequestSettings)
             }
         }
+
+        dashSpendViewModel.observeDashSpendState(selectedProvider)
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
             val item = viewModel.selectedItem.value
@@ -235,7 +250,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                if (args.type == ExploreTopic.Merchants && !ctxSpendViewModel.checkToken()) {
+                if (args.type == ExploreTopic.Merchants && !dashSpendViewModel.checkToken()) {
                     AdaptiveDialog.create(
                         null,
                         getString(R.string.token_expired_title),
@@ -243,7 +258,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         getString(R.string.button_okay)
                     ).show(requireActivity()) {
                         if (isAdded) {
-                            showLoginDialog()
+                            showLoginDialog(GiftCardProviderType.CTX) // TODO: piggycards token expiration
                         }
                     }
                 }
@@ -301,12 +316,6 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         } catch (e: IllegalArgumentException) {
             // Handle case where nav graph is no longer on back stack after process death
         }
-        // clear this listener
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, _ ->
-                WindowInsetsCompat.CONSUMED
-            }
-        }
         onBackPressedCallback?.remove()
     }
 
@@ -329,12 +338,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupFilters(bottomSheet: BottomSheetBehavior<ConstraintLayout>, topic: ExploreTopic) {
-        val defaultMode =
-            when {
-                topic == ExploreTopic.ATMs -> FilterMode.All
-                isLocationPermissionGranted -> FilterMode.Nearby
-                else -> FilterMode.Online
-            }
+        // Try to restore the last selected filter mode, otherwise use defaults
+        val savedFilterMode = viewModel.getLastSelectedFilterMode()
+        val defaultMode = savedFilterMode ?: when {
+            topic == ExploreTopic.ATMs -> FilterMode.All
+            isLocationPermissionGranted -> FilterMode.Nearby
+            else -> FilterMode.Online
+        }
 
         viewModel.setFilterMode(defaultMode)
 
@@ -387,16 +397,17 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun showLoginDialog() {
-        CTXSpendLoginInfoDialog().show(
+    private fun showLoginDialog(provider: GiftCardProviderType) {
+        DashSpendLoginInfoDialog.newInstance(provider.logo).show(
             requireActivity(),
             onResult = {
                 if (it == true) {
-                    CTXSpendTermsDialog().show(requireActivity()) {
+                    DashSpendTermsDialog.newInstance(provider.termsAndConditions).show(requireActivity()) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.CREATE_ACCOUNT)
                         safeNavigate(
                             SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
-                                CTXSpendUserAuthFragment.CTXSpendUserAuthType.CREATE_ACCOUNT
+                                DashSpendUserAuthFragment.AuthType.CREATE_ACCOUNT,
+                                provider
                             )
                         )
                     }
@@ -404,13 +415,16 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.LOGIN)
                     safeNavigate(
                         SearchFragmentDirections.searchToCtxSpendUserAuthFragment(
-                            CTXSpendUserAuthFragment.CTXSpendUserAuthType.SIGN_IN
+                            DashSpendUserAuthFragment.AuthType.SIGN_IN,
+                            provider
                         )
                     )
                 }
             },
             onExtraMessageAction = {
-                requireActivity().openCustomTab(getString(R.string.ctx_terms_url))
+                requireActivity().openCustomTab(
+                    provider.termsAndConditions
+                )
             }
         )
     }
@@ -428,17 +442,21 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         searchHeaderAdapter.setOnSearchQuerySubmitted { hideKeyboard() }
 
-        requireActivity().window?.decorView?.let { decor ->
-            ViewCompat.setOnApplyWindowInsetsListener(decor) { _, insets ->
-                val showingKeyboard = insets.isVisible(WindowInsetsCompat.Type.ime())
-                this.isKeyboardShowing = showingKeyboard
+        // Set up keyboard detection using view height changes
+        setupKeyboardDetection(bottomSheet)
+    }
 
-                if (showingKeyboard) {
+    private fun setupKeyboardDetection(bottomSheet: BottomSheetBehavior<ConstraintLayout>) {
+        val rootView = requireActivity().findViewById<View>(android.R.id.content)
+        ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            val imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime())
+            if (imeVisible != isKeyboardShowing) {
+                isKeyboardShowing = imeVisible
+                if (imeVisible) {
                     bottomSheet.state = BottomSheetBehavior.STATE_EXPANDED
                 }
-
-                insets
             }
+            insets
         }
     }
 
@@ -492,61 +510,28 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     }
 
     private fun setupItemDetails() {
-        binding.itemDetails.setOnSendDashClicked { isPayingWithDash ->
-            if (isPayingWithDash) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
-            }
-
-            deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
-        }
-        binding.itemDetails.setOnReceiveDashClicked {
-            deepLinkNavigate(
-                DeepLinkDestination.ReceiveDash(source = "explore")
-            )
-        }
-        binding.itemDetails.setOnBackButtonClicked { viewModel.backFromMerchantLocation() }
-        binding.itemDetails.setOnShowAllLocationsClicked {
-            viewModel.selectedItem.value?.let { merchant ->
-                if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
-                    viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
-                }
+        // Set up the ComposeView with proper lifecycle strategy
+        binding.itemDetails.setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        binding.itemDetails.setContent {
+            val item by viewModel.selectedItem.collectAsStateWithLifecycle()
+            item?.let {
+                ItemDetailsComposable(it)
             }
         }
 
+        // Observe selected item changes
         viewModel.selectedItem.observe(viewLifecycleOwner) { item ->
             if (item != null) {
-                binding.itemDetails.bindItem(item)
                 binding.toolbarTitle.text = item.name
+
+                if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
+                    selectedProvider = GiftCardProviderType.fromProviderName(item.giftCardProviders.first().provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                }
             } else {
                 binding.toolbarTitle.text = getToolbarTitle()
             }
         }
-
-        binding.itemDetails.setOnBuyGiftCardButtonClicked {
-            lifecycleScope.launch {
-                if (!ctxSpendViewModel.isUserSignedInCTXSpend()) {
-                    showLoginDialog()
-                } else {
-                    openPurchaseGiftCardFragment()
-                }
-            }
-        }
-
-        binding.itemDetails.setOnCTXSpendLogOutClicked {
-            lifecycleScope.launch {
-                if (ctxSpendViewModel.isUserSignedInCTXSpend()) {
-                    ctxSpendViewModel.logout()
-                }
-            }
-        }
-
-        ctxSpendViewModel.userEmail.observe(viewLifecycleOwner) { email ->
-            lifecycleScope.launch {
-                binding.itemDetails.setCTXSpendLogInUser(email, ctxSpendViewModel.isUserSignedInCTXSpend())
-            }
-        }
-
-        trackMerchantDetailsEvents(binding)
     }
 
     private fun setupScreenTransitions() {
@@ -581,8 +566,8 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                         if (viewModel.selectedItem.value is Merchant) {
                             launch {
                                 val merchant = viewModel.selectedItem.value as Merchant
-                                ctxSpendViewModel.updateMerchantDetails(merchant)
-                                updateIsEnabled(merchant)
+                                val updatedMerchant = dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
+                                updateIsEnabled(updatedMerchant)
                             }
                         }
                         transitToDetails()
@@ -621,7 +606,23 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
 
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            hardBackAction.invoke()
+            if (isKeyboardVisible()) {
+                // If keyboard is visible, hide it first and clear focus
+                requireActivity().currentFocus?.clearFocus()
+                hideKeyboard()
+
+                // Add small delay to ensure keyboard is hidden and layout adjusts
+                lifecycleScope.launch {
+                    delay(150)
+                    // Force window to adjust after keyboard is hidden
+                    requireActivity().window?.setSoftInputMode(
+                        android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
+                    )
+                }
+            } else {
+                // Normal back behavior
+                hardBackAction.invoke()
+            }
         }
     }
 
@@ -633,6 +634,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheetWasExpanded = bottomSheet.state == BottomSheetBehavior.STATE_EXPANDED
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.state = setBottomSheetState(isOnline)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreBottomContentBackground)
 
         binding.itemDetails.isVisible = true
         binding.upButton.isVisible = false
@@ -640,19 +642,34 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
 
         val animResults = ObjectAnimator.ofFloat(binding.searchResults, View.ALPHA, 0f)
         val animBackButton = ObjectAnimator.ofFloat(binding.backToNearestBtn, View.ALPHA, 0f)
-        val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
         val animDetails = ObjectAnimator.ofFloat(binding.itemDetails, View.ALPHA, 1f)
-        AnimatorSet()
-            .apply {
-                playTogether(animResults, animBackButton, animDrag, animDetails)
-                duration = 200
-                doOnEnd {
-                    binding.searchResults.isVisible = false
-                    binding.dragIndicator.isVisible = false
-                    binding.backToNearestBtn.isVisible = false
+
+        // Keep drag indicator visible if bottom sheet is draggable
+        if (bottomSheet.isDraggable) {
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
                 }
-            }
-            .start()
+                .start()
+        } else {
+            val animDrag = ObjectAnimator.ofFloat(binding.dragIndicator, View.ALPHA, 0f)
+            AnimatorSet()
+                .apply {
+                    playTogether(animResults, animBackButton, animDrag, animDetails)
+                    duration = 200
+                    doOnEnd {
+                        binding.searchResults.isVisible = false
+                        binding.dragIndicator.isVisible = false
+                        binding.backToNearestBtn.isVisible = false
+                    }
+                }
+                .start()
+        }
     }
 
     private fun transitToSearchResults() {
@@ -662,6 +679,7 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.default_expanded_offset)
         bottomSheet.state = setBottomSheetState(bottomSheetWasExpanded)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         if (binding.searchResults.itemDecorationCount < 1) {
             binding.searchResults.addItemDecoration(searchResultsDecorator)
@@ -701,12 +719,13 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         bottomSheet.isDraggable = isBottomSheetDraggable()
         bottomSheet.expandedOffset = resources.getDimensionPixelOffset(R.dimen.all_locations_expanded_offset)
         bottomSheet.state = setBottomSheetState(expand)
+        binding.contentPanel.setRoundedBackground(R.style.ExploreSearchResultsBackground)
 
         viewModel.selectedItem.value?.let { item ->
             val header =
                 MerchantLocationsHeaderAdapter(
                     item.name ?: "",
-                    binding.itemDetails.getMerchantType(item.type),
+                    getMerchantType(item.type),
                     item.logoLocation ?: ""
                 )
 
@@ -853,6 +872,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         inputManager?.hideSoftInputFromWindow(requireActivity().window.decorView.windowToken, 0)
     }
 
+    private fun isKeyboardVisible(): Boolean {
+        return isKeyboardShowing
+    }
+
     private fun shouldShowUpButton(): Boolean {
         val offset = binding.searchResults.computeVerticalScrollOffset()
         return offset > SCROLL_OFFSET_FOR_UP
@@ -863,8 +886,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         val isDetails = screenState == ScreenState.DetailsGrouped || screenState == ScreenState.Details
         val nearbySearch = viewModel.appliedFilters.value.territory.isEmpty() &&
             viewModel.isLocationEnabled.value == true
+        val locationEnabled = viewModel.isLocationEnabled.value == true
+        val isOnlineMerchant = viewModel.selectedItem.value?.type == MerchantType.ONLINE
 
-        return !isDetails && nearbySearch
+        return (isDetails && !isOnlineMerchant) || (!isDetails && nearbySearch && locationEnabled)
     }
 
     @BottomSheetBehavior.State
@@ -882,26 +907,113 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         }
     }
 
-    private fun trackMerchantDetailsEvents(binding: FragmentSearchBinding) {
-        binding.itemDetails.setOnDialPhoneButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
-            }
+    private suspend fun updateIsEnabled(merchant: Merchant) {
+        val updatedMerchant = dashSpendViewModel.updateMerchantDetailsForAllProviders(merchant)
+        viewModel.updateSelectedItem(updatedMerchant)
+    }
+
+    private fun openMaps(item: SearchResult) {
+        val uri = if (!item.googleMaps.isNullOrBlank()) {
+            item.googleMaps
+        } else {
+            getString(R.string.explore_maps_intent_uri, item.latitude!!, item.longitude!!)
         }
 
-        binding.itemDetails.setOnOpenWebsiteButtonClicked {
-            if (isMerchantTopic) {
-                viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
-            }
+        uri?.let {
+            val intent = Intent(Intent.ACTION_VIEW, uri.toUri())
+            startActivity(intent)
         }
     }
 
-    private suspend fun updateIsEnabled(merchant: Merchant) {
-        val wasEnabled = merchant.active
-        ctxSpendViewModel.updateMerchantDetails(merchant)
+    private fun dialPhone(phone: String) {
+        val intent = Intent(Intent.ACTION_DIAL, "tel: $phone".toUri())
+        startActivity(intent)
+    }
 
-        if (merchant.active != wasEnabled) {
-            binding.itemDetails.bindItem(merchant)
+    private fun openWebsite(website: String) {
+        val fixedUrl = if (!website.startsWith("http")) "https://$website" else website
+        val intent = Intent(Intent.ACTION_VIEW, fixedUrl.toUri())
+        startActivity(intent)
+    }
+
+    private fun getMerchantType(type: String?): String {
+        return when (cleanMerchantTypeValue(type)) {
+            MerchantType.ONLINE -> getString(R.string.explore_online_merchant)
+            MerchantType.PHYSICAL -> getString(R.string.explore_physical_merchant)
+            MerchantType.BOTH -> getString(R.string.explore_both_types_merchant)
+            else -> ""
+        }
+    }
+
+    private fun cleanMerchantTypeValue(value: String?): String? {
+        return value?.trim()?.lowercase()?.replace(" ", "_")
+    }
+
+    @Composable
+    private fun ItemDetailsComposable(item: SearchResult) {
+        val state by dashSpendViewModel.dashSpendState.collectAsStateWithLifecycle()
+        val currentItem by viewModel.selectedItem.collectAsStateWithLifecycle()
+
+        currentItem?.let {
+            ItemDetails(
+                item = it,
+                isLoggedIn = state.isLoggedIn,
+                userEmail = state.email,
+                selectedProvider = selectedProvider,
+                onProviderSelected = { provider ->
+                    selectedProvider = GiftCardProviderType.fromProviderName(provider.provider)
+                    dashSpendViewModel.observeDashSpendState(selectedProvider)
+                },
+                onSendDashClicked = { isPayingWithDash ->
+                    if (isPayingWithDash) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_PAY_WITH_DASH)
+                    }
+                    deepLinkNavigate(DeepLinkDestination.SendDash(source = "explore"))
+                },
+                onReceiveDashClicked = {
+                    deepLinkNavigate(DeepLinkDestination.ReceiveDash(source = "explore"))
+                },
+                onShowAllLocationsClicked = {
+                    viewModel.selectedItem.value?.let { merchant ->
+                        if (merchant is Merchant && merchant.merchantId != null && !merchant.source.isNullOrEmpty()) {
+                            viewModel.openAllMerchantLocations(merchant.merchantId!!, merchant.source!!)
+                        }
+                    }
+                },
+                onBackButtonClicked = {
+                    viewModel.backFromMerchantLocation()
+                },
+                onNavigationButtonClicked = {
+                    openMaps(item)
+                },
+                onDialPhoneButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_DIAL_PHONE_CALL)
+                    }
+                    it.phone?.let { phone -> dialPhone(phone) }
+                },
+                onOpenWebsiteButtonClicked = {
+                    if (isMerchantTopic) {
+                        viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_OPEN_WEBSITE)
+                    }
+                    it.website?.let { website -> openWebsite(website) }
+                },
+                onBuyGiftCardButtonClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.selectedProvider = selectedProvider
+                        if (!dashSpendViewModel.isUserSignedInService(selectedProvider)) {
+                            showLoginDialog(selectedProvider)
+                        } else {
+                            openPurchaseGiftCardFragment() // TODO: service
+                        }
+                    }
+                },
+                onExploreLogOutClicked = {
+                    lifecycleScope.launch {
+                        dashSpendViewModel.logout(selectedProvider)
+                    }
+                }
+            )
         }
     }
 }

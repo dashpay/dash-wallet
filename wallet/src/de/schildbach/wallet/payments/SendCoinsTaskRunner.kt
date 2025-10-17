@@ -51,6 +51,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
+import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.DirectPayException
@@ -183,34 +184,39 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent, serviceName: String?): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
-            ?: throw InvalidPaymentRequestURL("Payment request URL is null")
+        if (requestUrl != null) {
 
         log.info("requesting payment request from {}", requestUrl)
         val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
-        val request = buildOkHttpPaymentRequest(requestUrl)
-        val response = Constants.HTTP_CLIENT.call(request)
-        response.ensureSuccessful()
+            val request = buildOkHttpPaymentRequest(requestUrl)
+            val response = Constants.HTTP_CLIENT.call(request)
+            response.ensureSuccessful()
         requestUrl.toUri().host?.let {
             timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
         }
         log.info("payment request received")
 
-        val contentType = response.header("Content-Type")
-        val byteStream = response.body?.byteStream()
+            val contentType = response.header("Content-Type")
+            val byteStream = response.body?.byteStream()
 
-        if (byteStream == null || contentType.isNullOrEmpty()) {
-            throw IOException("Null response for the payment request: $requestUrl")
+            if (byteStream == null || contentType.isNullOrEmpty()) {
+                throw IOException("Null response for the payment request: $requestUrl")
+            }
+
+            val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+
+            if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+                log.info("BIP72 trust check failed")
+                throw IllegalStateException("BIP72 trust check failed: $requestUrl")
+            }
+
+            val sendRequest = createRequestFromPaymentIntent(paymentIntent)
+            return sendPayment(paymentIntent, sendRequest, serviceName)
+        } else {
+            val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
+            val sendRequestForSigning = SendRequest.forTx(sendRequest.tx)
+            return sendCoins(sendRequestForSigning, serviceName = serviceName)
         }
-
-        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
-
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
-            log.info("BIP72 trust check failed")
-            throw IllegalStateException("BIP72 trust check failed: $requestUrl")
-        }
-
-        val sendRequest = createRequestFromPaymentIntent(paymentIntent)
-        return sendPayment(paymentIntent, sendRequest, serviceName)
     }
 
     private fun createRequestFromPaymentIntent(paymentIntent: PaymentIntent): SendRequest {
@@ -426,7 +432,8 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest: SendRequest,
         txCompleted: Boolean = false,
         checkBalanceConditions: Boolean = true,
-        beforeSending: Consumer<Transaction>? = null
+        beforeSending: Consumer<Transaction>? = null,
+        serviceName: String? = null
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
@@ -447,6 +454,9 @@ class SendCoinsTaskRunner @Inject constructor(
 
             val transaction = sendRequest.tx
             beforeSending?.accept(transaction)
+            serviceName?.let {
+                metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
+            }
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)

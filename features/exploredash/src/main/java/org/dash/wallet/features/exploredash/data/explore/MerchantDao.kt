@@ -32,19 +32,20 @@ interface MerchantDao : BaseDao<Merchant> {
     // in UI it should be done using map APIs.
     @Query(
         """
-        SELECT *
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
         FROM merchant
         WHERE (:merchantId = '' OR merchantId = :merchantId)
-            AND (:source = '' OR source = :source COLLATE NOCASE)
+            AND (:source = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE source = :source COLLATE NOCASE))
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
         LIMIT :limit
     """
     )
@@ -55,6 +56,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
@@ -64,28 +66,30 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingGetByCoordinates(
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -101,18 +105,20 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant
         WHERE type IN (:types)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     suspend fun getByCoordinatesResultCount(
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -122,24 +128,25 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingSearchByCoordinates(
@@ -147,6 +154,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -163,13 +171,14 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     suspend fun searchByCoordinatesResultCount(
@@ -177,6 +186,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -186,14 +196,15 @@ interface MerchantDao : BaseDao<Merchant> {
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY 
             CASE type
@@ -203,7 +214,7 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingGetByTerritory(
@@ -211,6 +222,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
@@ -224,31 +236,34 @@ interface MerchantDao : BaseDao<Merchant> {
         FROM merchant 
         WHERE (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     suspend fun getByTerritoryResultCount(
         territoryFilter: String,
         types: List<String>,
         paymentMethod: String,
-        denomType: String
+        denomType: String,
+        provider: String
     ): Int
 
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE type
@@ -258,7 +273,7 @@ interface MerchantDao : BaseDao<Merchant> {
             END,
             CASE WHEN :sortOption = 0 THEN merchant.name END COLLATE NOCASE ASC,
             CASE WHEN :sortOption = 1 THEN (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) END ASC,
-            CASE WHEN :sortOption = 2 THEN savingsPercentage END DESC
+            CASE WHEN :sortOption = 2 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingSearchByTerritory(
@@ -267,6 +282,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         sortOption: Int,
         anchorLat: Double,
         anchorLng: Double,
@@ -282,9 +298,10 @@ interface MerchantDao : BaseDao<Merchant> {
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     suspend fun searchByTerritoryResultCount(
@@ -292,29 +309,32 @@ interface MerchantDao : BaseDao<Merchant> {
         territoryFilter: String,
         types: List<String>,
         paymentMethod: String,
-        denomType: String
+        denomType: String,
+        provider: String
     ): Int
 
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN name END COLLATE NOCASE ASC,
-            CASE WHEN :sortByDiscount = 1 THEN savingsPercentage END DESC
+            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingGetGrouped(
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
@@ -325,29 +345,36 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT COUNT(DISTINCT merchantId)
         FROM merchant
         WHERE (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
-    suspend fun getGroupedResultCount(types: List<String>, paymentMethod: String, denomType: String): Int
+    suspend fun getGroupedResultCount(
+        types: List<String>,
+        paymentMethod: String,
+        denomType: String,
+        provider: String
+    ): Int
 
     @Transaction
     @Query(
         """
-        SELECT *, COUNT(*) AS physical_amount
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type, COUNT(*) AS physical_amount
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
-        GROUP BY source, merchantId
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
+        GROUP BY merchantId
         HAVING (latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng) = MIN((latitude - :anchorLat)*(latitude - :anchorLat) + (longitude - :anchorLng)*(longitude - :anchorLng))
         ORDER BY
             CASE WHEN :sortByDiscount = 0 THEN merchant.name END COLLATE NOCASE ASC,
-            CASE WHEN :sortByDiscount = 1 THEN savingsPercentage END DESC
+            CASE WHEN :sortByDiscount = 1 THEN (SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId) END DESC
     """
     )
     fun pagingSearchGrouped(
@@ -355,6 +382,7 @@ interface MerchantDao : BaseDao<Merchant> {
         types: List<String>,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         sortByDiscount: Boolean,
         anchorLat: Double,
         anchorLng: Double
@@ -367,16 +395,18 @@ interface MerchantDao : BaseDao<Merchant> {
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND type IN (:types)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     suspend fun searchGroupedResultCount(
         query: String,
         types: List<String>,
         paymentMethod: String,
-        denomType: String
+        denomType: String,
+        provider: String
     ): Int
 
     @Query(
@@ -384,15 +414,16 @@ interface MerchantDao : BaseDao<Merchant> {
         SELECT * 
         FROM merchant
         WHERE (:merchantId = '' OR merchantId = :merchantId)
-            AND (:source = '' OR source = :source COLLATE NOCASE)
+            AND (:source = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE source = :source COLLATE NOCASE))
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
         LIMIT :limit
     """
     )
@@ -402,6 +433,7 @@ interface MerchantDao : BaseDao<Merchant> {
         excludeType: String,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -411,18 +443,19 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT *
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:excludeType = '' OR type != :excludeType)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND latitude < :northLat
             AND latitude > :southLat
             AND longitude < :eastLng
             AND longitude > :westLng
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     fun observeSearchResults(
@@ -430,6 +463,7 @@ interface MerchantDao : BaseDao<Merchant> {
         excludeType: String,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         northLat: Double,
         eastLng: Double,
         southLat: Double,
@@ -438,15 +472,16 @@ interface MerchantDao : BaseDao<Merchant> {
 
     @Query(
         """
-        SELECT * 
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type 
         FROM merchant 
         WHERE (:merchantId = '' OR merchantId = :merchantId)
-            AND (:source = '' OR source = :source COLLATE NOCASE) 
+            AND (:source = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE source = :source COLLATE NOCASE))
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND (:excludeType = '' OR type != :excludeType)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
         LIMIT :limit
     """
     )
@@ -457,20 +492,22 @@ interface MerchantDao : BaseDao<Merchant> {
         excludeType: String,
         paymentMethod: String,
         denomType: String,
+        provider: String,
         limit: Int
     ): Flow<List<Merchant>>
 
     @Query(
         """
-        SELECT *
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type
         FROM merchant
         JOIN merchant_fts ON merchant.id = merchant_fts.docid
         WHERE merchant_fts MATCH :query
             AND (:territoryFilter = '' OR territory = :territoryFilter)
             AND (:paymentMethod = '' OR paymentMethod = :paymentMethod)
-            AND (:denomType = '' OR paymentMethod = 'dash' OR denominationsType = :denomType)
+            AND (:denomType = '' OR paymentMethod = 'dash' OR (:provider != '' AND merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider AND denominationsType = :denomType)) OR (:provider = '' AND denominationsType = :denomType))
             AND (:excludeType = '' OR type != :excludeType)
             AND redeemType <> 'url'
+            AND (:provider = '' OR merchantId IN (SELECT DISTINCT merchantId FROM gift_card_providers WHERE provider = :provider))
     """
     )
     fun searchByTerritory(
@@ -478,7 +515,8 @@ interface MerchantDao : BaseDao<Merchant> {
         territoryFilter: String,
         excludeType: String,
         paymentMethod: String,
-        denomType: String
+        denomType: String,
+        provider: String
     ): Flow<List<Merchant>>
 
     @Query("SELECT DISTINCT territory FROM merchant WHERE territory IS NOT NULL")
@@ -490,6 +528,10 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount(): Int
 
-    @Query("SELECT * FROM merchant where merchantId = :merchantId")
+    @Query(
+        """
+        SELECT merchant.id, merchant.deeplink, merchant.plusCode, merchant.addDate, merchant.updateDate, merchant.paymentMethod, merchant.merchantId, merchant.redeemType, COALESCE((SELECT MAX(savingsPercentage) FROM gift_card_providers WHERE merchantId = merchant.merchantId), merchant.savingsPercentage, 0) as savingsPercentage, merchant.denominationsType, merchant.name, merchant.active, merchant.address1, merchant.address2, merchant.address3, merchant.address4, merchant.latitude, merchant.longitude, merchant.website, merchant.phone, merchant.territory, merchant.city, merchant.source, merchant.sourceId, merchant.logoLocation, merchant.googleMaps, merchant.coverImage, merchant.type FROM merchant where merchantId = :merchantId
+        """
+    )
     suspend fun getMerchantById(merchantId: String): Merchant?
 }
