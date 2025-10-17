@@ -62,7 +62,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
     <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
-    <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
     <string name="send_coins_fragment_direct_payment_enable">Zahlung direkt an den Empfänger senden.</string>
     <string name="send_coins_fragment_direct_payment_ack">Die Zahlung wurde erfolgreich direkt gesendet.</string>
     <string name="send_coins_fragment_direct_payment_nack">Die Zahlung wurde über die direkte Verbindung abgelehnt.</string>

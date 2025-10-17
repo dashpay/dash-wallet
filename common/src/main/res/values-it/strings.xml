@@ -97,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
+    <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Ricevi direttamente nel Portafoglio Dash</string>

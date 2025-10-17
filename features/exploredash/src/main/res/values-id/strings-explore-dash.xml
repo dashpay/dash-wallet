@@ -241,4 +241,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Beli kartu hadiah dengan akun DashSpend anda</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Buat akun DashSpend atau masuk dengan akun yang sudah ada</string>
     <string name="temporarily_unavailable">Tidak tersedia untuk sementara</string>
-</resources>
+    <string name="token_expired_title">Sesi anda telah kedaluwarsa</string>
+    </resources>

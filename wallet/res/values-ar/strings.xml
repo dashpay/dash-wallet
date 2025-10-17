@@ -57,7 +57,6 @@
     <string name="send_coins_fragment_hint_fee_economic">سيتم دفع رسوم شبكة قدرها %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">سيتم دفع رسم أولوية بنسبة%s إذا كنت تهتم برسوم منخفضة، tاستخدم \"الأولوية\" فقط إذا كنت بحاجة إلى تأكيد في أقرب وقت ممكن.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">لا يضيف مبلغ المدفوعات الصغيرة في محفظتك قيمة قابلة للإرسال.</string>
-    <string name="send_coins_fragment_hint_replaying">لا يمكن الدفع حاليًا لأن المحفظة غير متزامنة بالكامل مع الشبكة</string>
     <string name="send_coins_fragment_direct_payment_enable">إرسال الدفعة مباشرة إلى المستفيد.</string>
     <string name="send_coins_fragment_direct_payment_ack">تم بنجاح إرسال الدفعة مباشرة.</string>
     <string name="send_coins_fragment_direct_payment_nack">تم رفض دفعتك بواسطة الاتصال المباشر.</string>

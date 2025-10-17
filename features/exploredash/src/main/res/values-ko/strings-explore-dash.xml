@@ -241,4 +241,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpend 계정으로 기프트 카드를 구매하세요</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpend 계정을 생성하시거나 기존 계정에 로그인하세요</string>
     <string name="temporarily_unavailable">일시적으로 이용할 수 없음</string>
-</resources>
+    <string name="token_expired_title">세션이 만료되었습니다</string>
+    </resources>

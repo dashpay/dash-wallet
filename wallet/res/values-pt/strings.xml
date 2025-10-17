@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Uma taxa de rede de %s será paga.</string>
     <string name="send_coins_fragment_hint_fee_priority">Uma taxa para a prioridade de%s será paga. Se você se preocupa com baixas taxas, use "prioridade" apenas se você precisar de confirmação mais rapido possível.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">A quantidade de pequenos pagamentos em sua carteira não somam um valor para envio.</string>
-    <string name="send_coins_fragment_hint_replaying">Pagamentos não são possíveis no momento porque a carteira não está totalmente sincronizada com a rede</string>
     <string name="send_coins_fragment_direct_payment_enable">Enviar pagamento diretamente ao destinatário.</string>
     <string name="send_coins_fragment_direct_payment_ack">Seu pagamento foi enviado diretamente com sucesso.</string>
     <string name="send_coins_fragment_direct_payment_nack">Seu pagamento foi rejeitado utilizando a conexão direta.</string>

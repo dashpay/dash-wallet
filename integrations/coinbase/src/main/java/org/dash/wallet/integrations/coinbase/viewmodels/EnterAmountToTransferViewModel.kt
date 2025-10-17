@@ -168,6 +168,9 @@ class EnterAmountToTransferViewModel @Inject constructor(
             formattedValue = if (rawFormattedValue.endsWith(".") || rawFormattedValue.isEmpty()) {
                 // Don't process incomplete decimal entries
                 rawFormattedValue
+            } else if (isFraction && lengthOfDecimalPart <= 8) {
+                // Preserve input format for incomplete decimal entries like "0.0"
+                rawFormattedValue
             } else {
                 try {
                     val bigDecimal = rawFormattedValue.toBigDecimal()
@@ -181,8 +184,17 @@ class EnterAmountToTransferViewModel @Inject constructor(
     }
 
     val hasBalance: Boolean
-        get() = inputValue.isNotEmpty() &&
-            (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        get() {
+            if (inputValue.isEmpty()) return false
+            if (inputValue == CoinbaseConstants.VALUE_ZERO) return false
+            
+            // Allow incomplete decimal entries like "0." or "0.0" to keep UI responsive
+            if (inputValue.endsWith(".") || inputValue.matches(Regex("0\\.0+"))) {
+                return false
+            }
+            
+            return (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        }
 
     fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
         // there must be a non-zero balance

@@ -92,6 +92,7 @@
     <string name="payment_protocol_default_error_title">การชำระเงินผิดพลาด</string>
     <string name="payment_request_problem_message">เซิร์ฟเวอร์การชำระเงินของคุณไม่สามารถดำเนินการโดยเซิร์ฟเวอร์นี้ได้ โปรดสอบถามกับทางร้านค้า</string>
     <string name="exchange_rate_not_found">ไม่พบอัตราแลกเปลี่ยน</string>
+    <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">รับโดยตรงไปยังกระเป๋าเงิน Dash</string>

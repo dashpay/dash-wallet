@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">ネットワーク手数料 %s が支払われます。</string>
     <string name="send_coins_fragment_hint_fee_priority">優先手数料%s が支払われます。できるだけ早い承認が必要な場合のみ「優先」をお使いください。</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">ウォレット中の少額の支払いを合計しても送信可能な額には足りませんでした。</string>
-    <string name="send_coins_fragment_hint_replaying">ウォレットがネットワークと完全に同期されていないため、現在支払いはできません</string>
     <string name="send_coins_fragment_direct_payment_enable">受取人へ直接送金する。</string>
     <string name="send_coins_fragment_direct_payment_ack">直接的な送金が成功しました。</string>
     <string name="send_coins_fragment_direct_payment_nack">直接的な接続による送金での支払いは拒否されました。</string>

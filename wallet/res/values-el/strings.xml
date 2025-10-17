@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
-    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
     <string name="send_coins_fragment_direct_payment_ack">Η πληρωμή σας στάλθηκε απευθείας επιτυχώς.</string>
     <string name="send_coins_fragment_direct_payment_nack">Η πληρωμή μέσω απευθείας σύνδεσης απορρίφθηκε.</string>

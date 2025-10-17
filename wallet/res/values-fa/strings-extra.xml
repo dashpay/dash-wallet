@@ -275,7 +275,6 @@
     <string name="menu_settings_subtitle">واحد پول پیش‌فرض، میان‌برها، درباره...</string>
     <string name="menu_tools_title">ابزارها</string>
     <string name="menu_tools_subtitle">وارد کردن کلید خصوصی</string>
-    <string name="menu_local_currency">واحد پول محلی</string>
     <string name="menu_rescan_blockchain">اسکن دوباره بلاکچین</string>
     <string name="menu_contact_support_title">تماس با پشتیبانی</string>
     <string name="menu_contact_support_subtitle">گزارش مشکل</string>

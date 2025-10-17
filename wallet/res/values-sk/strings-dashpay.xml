@@ -431,7 +431,7 @@ používateľské meno</b></string>
     <string name="credit_balance_button_maybe_later">Možno neskôr</string>
     <string name="credit_balance_button_buy">Kúpiť kredity</string>
     <string name="credit_balance_insufficient_error_message">Nemáte dostatok prostriedkov na nákup kreditov</string>
-    <string name="buy_credits_estimated_items">%s - %d kontakty / %d aktualizácie profilu</string>
+    <string name="buy_credits_estimated_items">%s - %d kontaktov / %d aktualizácií profilu</string>
 
     <string name="request_username_username_voting_message">+ čo je to hlasovanie o používateľskom mene\?</string>
     <string name="request_username_character_requirement">Iba písmená, čísla a spojovníky</string>
@@ -453,7 +453,7 @@ používateľské meno</b></string>
     <string name="tools_credits_buy_button">Kúpiť</string>
     <string name="dashpay_what_are_credits_title">Čo sú to kredity\?</string>
     <string name="dashpay_what_are_credits_message">Používatelia platia transakčné poplatky za interakciu so sieťou Dash. To je dôvod, prečo všetky zmeny vo vašom profile vyžadujú zaplatenie malého poplatku, ktorý je možné zaplatiť kreditmi.\n\nVaše kredity môžete použiť na:</string>
-    <string name="credits_send_and_accept_contact_requests">Posielajte a prijímajte žiadosti o kontakt</string>
+    <string name="credits_send_and_accept_contact_requests">Posielať a prijímať žiadosti o kontakt</string>
     <string name="platform_credits">Platformové kredity</string>
     <string name="platform_credits_error">Chyba</string>
     <string name="platform_credits_not_transferred">Čakajúce kredity platformy</string>

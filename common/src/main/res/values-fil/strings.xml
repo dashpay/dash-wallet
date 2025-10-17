@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">May mali sa bayad</string>
     <string name="payment_request_problem_message">Ang iyong pagbabayad ay hindi maproseso ng server, mangyaring magtanong sa merchant</string>
     <string name="exchange_rate_not_found">Hindi makita ang halaga ng palitan</string>
+    <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang pitaka ay hindi sync sa network</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Direktang tumanggap sa Dash Wallet.</string>

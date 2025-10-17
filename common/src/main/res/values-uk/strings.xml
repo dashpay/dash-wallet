@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">Помилка платежу</string>
     <string name="payment_request_problem_message">Ваш платіж не може бути оброблений сервером, будь ласка, зверніться до продавця</string>
     <string name="exchange_rate_not_found">Не вдалося знайти обмінний курс.</string>
+    <string name="send_coins_fragment_hint_replaying">Наразі платежі неможливі, оскільки гаманець не повністю синхронізовано з мережею</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Отримуйте безпосередньо в Dash Wallet.</string>

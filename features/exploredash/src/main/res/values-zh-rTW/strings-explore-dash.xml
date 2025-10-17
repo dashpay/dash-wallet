@@ -241,4 +241,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 帳戶購買禮品卡</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">建立 DashSpend 帳戶或登入現有帳戶</string>
     <string name="temporarily_unavailable">暫時不可用</string>
-</resources>
+    <string name="token_expired_title">您的工作階段已經過期</string>
+    </resources>

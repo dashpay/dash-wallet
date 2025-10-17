@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
-    <string name="send_coins_fragment_hint_replaying">Saat ini pembayaran tidak dimungkinkan karena dompet tidak sepenuhnya disinkronkan dengan jaringan</string>
     <string name="send_coins_fragment_direct_payment_enable">Kirim pembayaran langsung ke penerima pembayaran.</string>
     <string name="send_coins_fragment_direct_payment_ack">Pembayaran Anda berhasil dikirim langsung.</string>
     <string name="send_coins_fragment_direct_payment_nack">Pembayaran Anda ditolak melalui koneksi langsung.</string>

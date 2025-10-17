@@ -253,4 +253,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Створіть обліковий запис на DashSpend або увійдіть у вже існуючий</string>
     <string name="temporarily_unavailable">Тимчасово недоступно</string>
-</resources>
+    <string name="token_expired_title">Ваш сеанс закінчився</string>
+    </resources>

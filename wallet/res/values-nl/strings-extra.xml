@@ -273,7 +273,7 @@
     <string name="menu_settings_subtitle">Standaard valuta, snelkoppelingen, over... </string>
     <string name="menu_tools_title">Gereedschap</string>
     <string name="menu_tools_subtitle">Importeer persoonlijke sleutel…</string>
-    <string name="menu_local_currency">Lokale valuta</string>
+    <string name="menu_local_currency">lokale valuta</string>
     <string name="menu_rescan_blockchain">Blockchain opnieuw scannen</string>
     <string name="menu_contact_support_title">Neem contact op</string>
     <string name="menu_contact_support_subtitle">Meld een probleem</string>

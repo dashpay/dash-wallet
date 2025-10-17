@@ -245,4 +245,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Bumili ng gift card gamit ang iyong DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Gumawa ng DashSpend account o mag-log in sa dati nang account</string>
     <string name="temporarily_unavailable">Pansamantalang hindi magagamit</string>
-</resources>
+    <string name="token_expired_title">Nag-expire ang iyong session</string>
+    </resources>

@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">Σφάλμα πληρωμής</string>
     <string name="payment_request_problem_message">Δεν ήταν δυνατή η επεξεργασία της πληρωμής σας από τον διακομιστή, παρακαλώ ρωτήστε τον έμπορο</string>
     <string name="exchange_rate_not_found">Δε βρέθηκε η ισοτιμία.</string>
+    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Λάβετε απευθείας στο Dash Wallet</string>

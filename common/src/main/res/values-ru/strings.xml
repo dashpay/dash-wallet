@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">Ошибка оплаты</string>
     <string name="payment_request_problem_message">Ваш платёж не может быть обработан сервером. Пожалуйста, свяжитесь с продавцом</string>
     <string name="exchange_rate_not_found">Не удалось найти обменный курс.</string>
+    <string name="send_coins_fragment_hint_replaying">В данный момент платежи невозможны, так как кошелёк не полностью синхронизирован с сетью.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Получать напрямую на Dash Wallet.</string>

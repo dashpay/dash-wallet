@@ -92,6 +92,7 @@
     <string name="payment_protocol_default_error_title">Ödeme hatası</string>
     <string name="payment_request_problem_message">Ödemeniz sunucu tarafından işleme konulamadı, lütfen satıcıya danışın</string>
     <string name="exchange_rate_not_found">Döviz kuru bulunamadı.</string>
+    <string name="send_coins_fragment_hint_replaying">Cüzdanınız ağ ile senkronize olmadığından şuan ödeme yapabilmeniz mümkün değil.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Doğrudan Dash Cüzdan\'a al</string>

@@ -253,4 +253,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Kup kartę podarunkową za pomocą konta DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Stwórz konto DashSpend lub zaloguj się do już istniejącego</string>
     <string name="temporarily_unavailable">Tymczasowo niedostępny</string>
-</resources>
+    <string name="token_expired_title">Twoja sesja wygasła</string>
+    </resources>
