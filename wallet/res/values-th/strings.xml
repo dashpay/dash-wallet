@@ -57,7 +57,6 @@
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
-    <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
     <string name="send_coins_fragment_direct_payment_ack">การชำระเงินของคุณได้ถูกส่งโดยตรงแล้ว</string>
     <string name="send_coins_fragment_direct_payment_nack">การชำระเงินถูกปฏิเสธผ่านเครือข่ายโดยตรง</string>

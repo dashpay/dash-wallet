@@ -241,4 +241,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpendアカウントでギフトカードを購入する</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpendのアカウントを作成するか既存のアカウントにログインする</string>
     <string name="temporarily_unavailable">現在はご利用いただけません</string>
-</resources>
+    <string name="token_expired_title">セッションの有効時間が切れました</string>
+    </resources>

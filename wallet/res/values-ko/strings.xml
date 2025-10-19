@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">네트워크 승인을 위해 %s가 지불됩니다.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s의 선행 수수료가 지불됩니다. 네트워크에서 최대한 빠른 확인이 필요하시다면 \'선행\'을 사용하세요.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">극소량의 금액은 송금 가능액에 포함되지 않습니다.</string>
-    <string name="send_coins_fragment_hint_replaying">지갑이 네트워크와 완전히 동기화되지 않아 현재 지불 할 수 없습니다</string>
     <string name="send_coins_fragment_direct_payment_enable">대시가 수신인에게 바로 송금됩니다.</string>
     <string name="send_coins_fragment_direct_payment_ack">송금이 완료되었습니다.</string>
     <string name="send_coins_fragment_direct_payment_nack">송금 시도가 직접 연결된 곳으로부터 거부되었습니다.</string>

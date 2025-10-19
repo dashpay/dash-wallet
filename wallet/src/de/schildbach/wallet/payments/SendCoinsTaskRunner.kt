@@ -214,7 +214,12 @@ class SendCoinsTaskRunner @Inject constructor(
             return sendPayment(paymentIntent, sendRequest, serviceName)
         } else {
             val sendRequest = createRequestFromPaymentIntent(basePaymentIntent)
-            val sendRequestForSigning = SendRequest.forTx(sendRequest.tx)
+            val sendRequestForSigning = createSendRequest(
+                false,
+                basePaymentIntent,
+                true,
+                sendRequest.ensureMinRequiredFee
+            )
             return sendCoins(sendRequestForSigning, serviceName = serviceName)
         }
     }

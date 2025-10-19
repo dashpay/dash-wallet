@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Будет заплачена комиссия %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Приоритетный размер платы составит %s. Если размер комиссии имеет для Вас значение, используйте опцию приоритета, только когда Вам необходимо срочное подтверждение транзакции.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Количества малых платежей в Вашем кошельке недостаточно для отправки средств.</string>
-    <string name="send_coins_fragment_hint_replaying">В данный момент платежи невозможны, так как кошелёк не полностью синхронизирован с сетью.</string>
     <string name="send_coins_fragment_direct_payment_enable">Отправить платёж непосредственно получателю.</string>
     <string name="send_coins_fragment_direct_payment_ack">Платёж был успешно отправлен получателю.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ваш платёж был отклонен через прямое подключение.</string>

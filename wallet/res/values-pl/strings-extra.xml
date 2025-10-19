@@ -279,8 +279,8 @@
     <string name="menu_settings_subtitle">Domyślna waluta, skróty, o…</string>
     <string name="menu_tools_title">Narzędzia</string>
     <string name="menu_tools_subtitle">Importuj klucz prywatny...</string>
-    <string name="menu_local_currency">Lokalna Waluta</string>
-    <string name="menu_rescan_blockchain">Przeskanuj Blockchain Ponownie</string>
+    <string name="menu_local_currency">Lokalna waluta</string>
+    <string name="menu_rescan_blockchain">Przeskanuj blockchain ponownie</string>
     <string name="menu_contact_support_title">Skontaktuj się z pomocą techniczną</string>
     <string name="menu_contact_support_subtitle">Zgłoś problem</string>
     <string name="menu_explore_title">Odkryj</string>
