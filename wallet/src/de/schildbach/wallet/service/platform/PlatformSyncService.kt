@@ -152,10 +152,10 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val PUSH_PERIOD = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
         val WEEKLY_PUSH_PERIOD = 7.days
-        val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
-        val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
+        val CUTOFF_MIN = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
+        val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
     }
 
