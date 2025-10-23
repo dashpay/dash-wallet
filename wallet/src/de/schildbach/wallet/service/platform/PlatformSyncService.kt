@@ -1061,7 +1061,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         progressListener?.invoke(10)
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
-        val keyIndex = transactionMetadataChangeCacheDao.count() + transactionMetadataDocumentDao.countAllRequests()
+        val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
         platformRepo.blockchainIdentity.publishTxMetaData(
             metadataList,
             walletEncryptionKey,
@@ -1261,7 +1261,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         progressListener?.invoke(10)
         var itemsSaved = 0
-        var itemsToSave = changedItems.size
+        val itemsToSave = changedItems.size
         try {
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
