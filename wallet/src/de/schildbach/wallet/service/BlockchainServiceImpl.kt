@@ -1355,8 +1355,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
+                // Always create cleanup coordination to prevent file access conflicts
                 cleanupDeferred = CompletableDeferred()
                 checkMutex.lock()
+                log.info("detach from wallet")
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 val wallet = application.wallet
                 if (wallet != null) {
@@ -1367,12 +1369,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
+                    log.info("shutting down peerGroup and system services")
                     propagateContext()
                     dashSystemService.system.close()
+                    log.info("Dash system services are shutdown")
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
+                    log.info("peerGroup: removing listeners and wallet")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
                     peerGroup!!.stop()
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
@@ -1413,6 +1418,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     //Clear the blockchain identity
                     application.clearDatabases(false)
                 }
+                log.info("closing bootstrap streams")
                 closeStream(mnlistinfoBootStrapStream)
                 closeStream(qrinfoBootStrapStream)
             } finally {
