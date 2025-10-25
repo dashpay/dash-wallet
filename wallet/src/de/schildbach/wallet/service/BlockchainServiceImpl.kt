@@ -1385,8 +1385,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerConnectivityListener!!.stop()
                 delayHandler.removeCallbacksAndMessages(null)
                 try {
-                    blockStore!!.close()
-                    headerStore!!.close()
+                    log.info("closing blockchain stores")
+                    blockStore?.close()
+                    headerStore?.close()
                     blockchainStateDataProvider.setBlockChain(null)
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
