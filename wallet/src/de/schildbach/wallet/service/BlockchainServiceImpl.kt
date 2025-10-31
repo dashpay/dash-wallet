@@ -347,12 +347,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleMetadata(tx)
                 handleContactPayments(tx)
                 updateAppWidget()
+                log.info("onCoinsReceived: {}", watch)
             }
 
             override fun onCoinsSent(
                 wallet: Wallet, tx: Transaction, prevBalance: Coin,
                 newBalance: Coin
             ) {
+                val watch = Stopwatch.createStarted()
                 transactionsReceived.incrementAndGet()
                 log.info("onCoinsSent: {}", tx.txId)
                 if (AssetLockTransaction.isAssetLockTransaction(tx) && tx.purpose == Transaction.Purpose.UNKNOWN) {
@@ -367,6 +369,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 handleMetadata(tx)
                 updateAppWidget()
+                log.info("onCoinsSent: {}", watch)
             }
 
             private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
@@ -1309,6 +1312,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             try {
                 startForeground(notification)
+                log.info("start foreground service")
             } catch (e: ForegroundServiceStartNotAllowedException) {
                 log.info("failed to start in foreground, try again", e)
                 // On Android 15+, we'll retry later when the app is in foreground
@@ -1317,6 +1321,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         } else {
             startForeground(notification)
+            log.info("start foreground service")
         }
     }
 
@@ -1327,6 +1332,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (pendingForegroundNotification != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 try {
                     startForeground(pendingForegroundNotification!!)
+                    log.info("start foreground service (delayed)")
                     pendingForegroundNotification = null
                     log.info("Successfully started foreground service on retry")
                 } catch (e: ForegroundServiceStartNotAllowedException) {
@@ -1350,6 +1356,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             unregisterReceiver(connectivityReceiver)
             connectivityReceiverRegistered = false
         }
+        log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
         serviceScope.launch {
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
@@ -1441,7 +1448,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
     override fun onTimeout(startId: Int, fgsType: Int) {
-        log.warn("Foreground service timeout reached for startId: $startId, fgsType: $fgsType")
+        log.info("onTimeoutCalled({}, {})", startId, fgsType)
         log.info("DataSync foreground service 6-hour limit exceeded, stopping service")
         
         // Show notification about the timeout

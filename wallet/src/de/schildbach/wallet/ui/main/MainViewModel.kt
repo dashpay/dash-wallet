@@ -458,7 +458,6 @@ class MainViewModel @Inject constructor(
                 if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
             }
             coinJoinService.updateTimeSkew(timeSkew)
-            log.info("timeskew: {} ms", timeSkew)
             return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (_: Exception) {
             // Ignore errors

@@ -82,6 +82,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
+import kotlin.math.min
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
@@ -212,7 +213,7 @@ class PlatformSynchronizationService @Inject constructor(
         if (!platformRepo.hasBlockchainIdentity || walletApplication.wallet == null) {
             return
         }
-
+        log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
             log.info("updateContactRequests is already running: {}", lastPreBlockStage)
@@ -223,6 +224,7 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("update contacts not completed because there is no dashpay contract")
             return
         }
+        log.info("updateContactRequests($initialSync) starting now")
 
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
@@ -369,17 +371,27 @@ class PlatformSynchronizationService @Inject constructor(
                 coroutineScope {
                     awaitAll(
                         // fetch updated invitations
-                        async { updateInvitations() },
+                        async {
+                            updateInvitations()
+                            updateSyncStatus(PreBlockStage.GetInvites)
+                        },
                         // fetch updated transaction metadata
-                        async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
+                        async {
+                            updateTransactionMetadata()
+                            updateSyncStatus(PreBlockStage.TransactionMetadata)
+                        },  // TODO: this is skipped in VOTING state, but shouldn't be
                         // fetch updated profiles from the network
-                        async { updateContactProfiles(userId, lastContactRequestTime) },
+                        async {
+                            updateContactProfiles(userId, min(lastContactRequestTimeToMe, lastContactRequestTimeFromMe))
+                            updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
+                        },
                         // check for unused topups
-                        async { checkTopUps() }
+                        async {
+                            checkTopUps()
+                            updateSyncStatus(PreBlockStage.Topups)
+                        }
                     )
                 }
-
-                updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
             } else {
                 if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
                     platformRepo.updateFrequentContacts()
