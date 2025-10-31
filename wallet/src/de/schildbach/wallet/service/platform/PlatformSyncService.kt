@@ -262,8 +262,22 @@ class PlatformSynchronizationService @Inject constructor(
             var addedContact = false
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
 
-            val lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
-                val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
+            val lastContactRequestTimeToMe = if (dashPayContactRequestDao.countAllRequestsToUser(userId) > 0) {
+                val lastTimeStamp = dashPayContactRequestDao.getLastTimestampToUser(userId)
+                // if the last contact request was received in the past 10 minutes, then query for
+                // contact requests that are 10 minutes before it.  If the last contact request was
+                // more than 10 minutes ago, then query all contact requests that came after it.
+                if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10) {
+                    lastTimeStamp
+                } else {
+                    lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
+                }
+            } else {
+                0L
+            }
+
+            val lastContactRequestTimeFromMe = if (dashPayContactRequestDao.countAllRequestsFromUser(userId) > 0) {
+                val lastTimeStamp = dashPayContactRequestDao.getLastTimestampFromUser(userId)
                 // if the last contact request was received in the past 10 minutes, then query for
                 // contact requests that are 10 minutes before it.  If the last contact request was
                 // more than 10 minutes ago, then query all contact requests that came after it.
@@ -287,7 +301,7 @@ class PlatformSynchronizationService @Inject constructor(
             val toContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = false,
-                afterTime = lastContactRequestTime,
+                afterTime = lastContactRequestTimeFromMe,
                 retrieveAll = true
             )
             toContactDocuments.forEach {
@@ -314,7 +328,7 @@ class PlatformSynchronizationService @Inject constructor(
             val fromContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = true,
-                afterTime = lastContactRequestTime,
+                afterTime = lastContactRequestTimeToMe,
                 retrieveAll = true
             )
             fromContactDocuments.forEach {
