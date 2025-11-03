@@ -32,7 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -146,10 +148,13 @@ class SettingsViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         // Observe blockchain identity for transaction metadata visibility
-        blockchainIdentityConfig.observeBase().onEach { identityData ->
-            val isVisible = identityData.creationComplete
-            _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
-        }.launchIn(viewModelScope)
+        blockchainIdentityConfig.observeBase()
+            .filterNotNull()
+            .map { it.creationComplete }
+            .distinctUntilChanged()
+            .onEach { isVisible ->
+                _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+            }.launchIn(viewModelScope)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {

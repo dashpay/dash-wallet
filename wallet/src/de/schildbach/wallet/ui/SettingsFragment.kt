@@ -141,101 +141,6 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         }
     }
 
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//        enterTransition = MaterialFadeThrough()
-//
-//        binding.appBar.toolbar.title = getString(R.string.settings_title)
-//        binding.appBar.toolbar.setNavigationOnClickListener {
-//            findNavController().popBackStack()
-//        }
-//
-//        binding.about.setOnClickListener {
-//            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT)
-//            startActivity(Intent(requireContext(), AboutActivity::class.java))
-//        }
-//        binding.localCurrency.setOnClickListener {
-//            lifecycleScope.launch {
-//                viewModel.logEvent(AnalyticsConstants.Settings.LOCAL_CURRENCY)
-//                val currentOption = walletUIConfig.getExchangeCurrencyCode()
-//                ExchangeRatesDialog(currentOption) { rate, _, dialog ->
-//                    setSelectedCurrency(rate.currencyCode)
-//                    dialog.dismiss()
-//                }.show(requireActivity())
-//            }
-//        }
-//
-//        binding.rescanBlockchain.setOnClickListener { resetBlockchain() }
-//        binding.notifications.setOnClickListener { systemActions.openNotificationSettings() }
-//        binding.batteryOptimization.setOnClickListener {
-//            batteryOptimization()
-//        }
-//        setBatteryOptimizationText()
-//        binding.coinjoin.setOnClickListener {
-//            lifecycleScope.launch {
-//                val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
-//
-//                if (shouldShowFirstTimeInfo) {
-//                    viewModel.setCoinJoinInfoShown()
-//                }
-//
-//                val intent = Intent(requireContext(), CoinJoinActivity::class.java)
-//                intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
-//                viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
-//                startActivity(intent)
-//            }
-//        }
-//
-//        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-//            .filterNotNull()
-//            .onEach { binding.localCurrencySymbol.text = it }
-//            .launchIn(lifecycleScope)
-//
-//        viewModel.coinJoinMixingMode.observe(viewLifecycleOwner) { mode ->
-//            if (mode == CoinJoinMode.NONE) {
-//                binding.coinjoinSubtitle.text = getText(R.string.turned_off)
-//                binding.coinjoinSubtitleIcon.isVisible = false
-//                binding.progressBar.isVisible = false
-//                binding.balance.isVisible = false
-//                binding.coinjoinProgress.isVisible = false
-//            } else {
-//                if (viewModel.coinJoinMixingStatus.value == MixingStatus.FINISHED) {
-//                    binding.coinjoinSubtitle.text = getString(R.string.coinjoin_progress_finished)
-//                    binding.coinjoinSubtitleIcon.isVisible = false
-//                    binding.progressBar.isVisible = false
-//                    binding.coinjoinProgress.isVisible = false
-//                } else {
-//                    @StringRes val statusId = when(viewModel.coinJoinMixingStatus.value) {
-//                        MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
-//                        MixingStatus.MIXING -> R.string.coinjoin_mixing
-//                        MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
-//                        MixingStatus.PAUSED -> R.string.coinjoin_paused
-//                        MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
-//                        else -> R.string.error
-//                    }
-//
-//                    binding.coinjoinSubtitle.text = getString(statusId)
-//                    binding.coinjoinSubtitleIcon.isVisible = true
-//                    binding.progressBar.isVisible = viewModel.coinJoinMixingStatus.value == MixingStatus.MIXING
-//                    binding.coinjoinProgress.text = getString(R.string.percent, viewModel.mixingProgress.value.toInt())
-//                    binding.coinjoinProgress.isVisible = true
-//                    binding.balance.isVisible = true
-//                    //binding.balance.text = getString(R.string.coinjoin_progress_balance, viewModel.mixedBalance, viewModel.walletBalance)
-//                }
-//            }
-//        }
-//    }
-//
-//    private fun setBatteryOptimizationText() {
-//        binding.batterySettingsSubtitle.text = getString(
-//            if (viewModel.isIgnoringBatteryOptimizations) {
-//                R.string.battery_optimization_subtitle_unrestricted
-//            } else {
-//                R.string.battery_optimization_subtitle_optimized
-//            }
-//        )
-//    }
-
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun setupTransactionMetadataObservers() {
         lifecycleScope.launch {
@@ -254,13 +159,13 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun setTransactionMetadataText(isSaving: Boolean, saveProgress: Int) {
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             val subtitle = if (isSaving) {
                 getString(R.string.transaction_metadata_saving_to_network, saveProgress)
             } else {
                 val lastSavedDate = transactionMetadataSettingsViewModel.lastSaveDate.value
                 when {
-                    lastSavedDate != -0L -> {
+                    lastSavedDate > 0  -> {
                         getString(
                             R.string.transaction_metadata_last_saved_date,
                             dateFormat.format(Date(lastSavedDate))
