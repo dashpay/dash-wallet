@@ -73,7 +73,7 @@ class ContactSupportViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
-        private const val MAX_LOGS_SIZE = 20 * 1024 * 1024
+        private const val MAX_LOGS_SIZE = 10 * 1024 * 1024
         private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
     }
 
