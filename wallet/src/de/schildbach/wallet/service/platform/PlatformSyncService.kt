@@ -1336,7 +1336,7 @@ class PlatformSynchronizationService @Inject constructor(
                     updateContactRequests(initialSync = true)
                 }
             }
-            initSync()
+            initSync(true)
         }
     }
 

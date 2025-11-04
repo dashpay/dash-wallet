@@ -377,8 +377,9 @@ class MainViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach { lastSeenNotification ->
                 startContactRequestTimer()
-                forceUpdateNotificationCount()
-
+                if (_isBlockchainSynced.value == true) {
+                    forceUpdateNotificationCount()
+                }
                 if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
                     userAlertDao.observe(lastSeenNotification)
                         .filterNotNull()
