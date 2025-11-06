@@ -278,7 +278,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
     private var pendingForegroundNotification: Notification? = null
-    
+
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
 
@@ -1177,10 +1177,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val lockName = "$packageName blockchain sync"
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
-        
+
         // Register for app lifecycle events to detect background/foreground transitions
         ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
@@ -1638,12 +1638,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
                     return@launch
                 }
-                
+
                 // Create cleanup coordination only if none exists or existing one is already completed
                 val existingCleanup = cleanupDeferred
                 if (existingCleanup == null || existingCleanup.isCompleted) {
                     cleanupDeferred = CompletableDeferred()
-                    log.info("Created new cleanupDeferred for coordination (previous was {})", 
+                    log.info("Created new cleanupDeferred for coordination (previous was {})",
                         if (existingCleanup == null) "null" else "completed")
                 } else {
                     log.info("Using existing active cleanupDeferred for coordination")
