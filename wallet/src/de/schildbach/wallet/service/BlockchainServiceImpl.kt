@@ -778,6 +778,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val hasTrustedPeer = trustedPeerHost != null
                 val connectTrustedPeerOnly = hasTrustedPeer && config.trustedPeerOnly
                 peerGroup!!.maxConnections = if (connectTrustedPeerOnly) 1 else maxConnectedPeers
+                peerGroup!!.maxStalls = 1000
+                peerGroup!!.setStallThreshold(30, 5 * Block.HEADER_SIZE)
                 peerGroup!!.setConnectTimeoutMillis(Constants.PEER_TIMEOUT_MS)
                 peerGroup!!.setPeerDiscoveryTimeoutMillis(Constants.PEER_DISCOVERY_TIMEOUT_MS.toLong())
                 peerGroup!!.addPeerDiscovery(object : PeerDiscovery {
