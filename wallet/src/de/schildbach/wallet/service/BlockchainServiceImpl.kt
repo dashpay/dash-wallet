@@ -301,6 +301,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 wallet: Wallet, tx: Transaction, prevBalance: Coin,
                 newBalance: Coin
             ) {
+                val watch = Stopwatch.createStarted()
                 val bestChainHeight = blockChain!!.bestChainHeight
                 val replaying =
                     bestChainHeight < config.bestChainHeightEver || config.isRestoringBackup
@@ -1713,13 +1714,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     //    };
     @Throws(BlockStoreException::class)
     private fun verifyBlockStore(store: BlockStore?): Boolean {
+        val watch = Stopwatch.createStarted()
         var cursor = store!!.chainHead
-        for (i in 0..9) {
+        for (i in 0 until 100) {
             cursor = cursor!!.getPrev(store)
             if (cursor == null || cursor.header == Constants.NETWORK_PARAMETERS.genesisBlock) {
                 break
             }
         }
+        log.info("verify blockstore: {}, {} loaded", watch, cursor?.let { store.chainHead.height - it.height })
         return true
     }
 
@@ -1729,7 +1732,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     ): Boolean {
         return try {
             val future = scheduledExecutorService.schedule<Boolean>(
-                { verifyBlockStore(store) }, 100, TimeUnit.MILLISECONDS
+                { verifyBlockStore(store) },
+                100,
+                TimeUnit.MILLISECONDS
             )
             future[1, TimeUnit.SECONDS]
         } catch (e: Exception) {
