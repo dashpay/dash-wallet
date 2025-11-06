@@ -1107,12 +1107,25 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         }
                     }
                 } catch (x: BlockStoreException) {
-                    blockChainFile!!.delete()
-                    headerChainFile!!.delete()
-                    resetMNLists(false)
-                    val msg = "blockstore cannot be created"
-                    log.error(msg, x)
-                    throw Error(msg, x)
+                    // Check if this is a file lock exception - don't delete files if another service is using them
+                    val isFileLockException = x.cause?.javaClass?.simpleName?.contains("OverlappingFileLockException") == true ||
+                                            x.message?.contains("OverlappingFileLockException") == true ||
+                                            x.message?.contains("FileLock") == true
+                    
+                    if (isFileLockException) {
+                        log.warn("BlockStore creation failed due to file lock conflict - NOT deleting blockchain files as another service may be using them: {}", x.message)
+                        val msg = "blockstore cannot be created due to file lock conflict - files preserved"
+                        log.error(msg, x)
+                        throw Error(msg, x)
+                    } else {
+                        log.warn("BlockStore creation failed due to corruption or other error - deleting blockchain files for clean restart: {}", x.message)
+                        blockChainFile!!.delete()
+                        headerChainFile!!.delete()
+                        resetMNLists(false)
+                        val msg = "blockstore cannot be created"
+                        log.error(msg, x)
+                        throw Error(msg, x)
+                    }
                 }
                 try {
                     blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
@@ -1171,9 +1184,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
             } catch (t: Throwable) {
-                log.error(".onCreate() failed", t)
+                log.error("Service initialization failed in background coroutine, stopping service", t)
                 if (onCreateCompleted.isActive) {
                     onCreateCompleted.complete(Unit)
+                }
+                // Service is in a broken state - stop it gracefully
+                handler.post {
+                    stopSelf()
                 }
             }
         }
