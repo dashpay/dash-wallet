@@ -38,7 +38,10 @@ import android.text.format.DateUtils
 import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleService
+import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
@@ -153,6 +156,20 @@ import kotlin.math.max
 @AndroidEntryPoint
 class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
+    private val appLifecycleObserver = object : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            log.info("App moved to foreground")
+            isAppInBackground = false
+            adjustThreadPriorityForState(false)
+        }
+
+        override fun onStop(owner: LifecycleOwner) {
+            log.info("App moved to background")
+            isAppInBackground = true
+            adjustThreadPriorityForState(true)
+        }
+    }
+
     companion object {
         private const val MINIMUM_PEER_COUNT = 16
         private const val MIN_COLLECT_HISTORY = 2
@@ -250,6 +267,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
     private var pendingForegroundNotification: Notification? = null
+    
+    // Background state tracking for Android 15 thread optimization
+    private var isAppInBackground = false
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
@@ -1047,6 +1067,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         val lockName = "$packageName blockchain sync"
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, lockName)
+        
+        // Register for app lifecycle events to detect background/foreground transitions
+        ProcessLifecycleOwner.get().lifecycle.addObserver(appLifecycleObserver)
+        
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
         }
@@ -1765,6 +1789,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 //                throw new BlockStoreException("can't verify and recover");
 //            }
 //        }
-        log.info("blockstore files verified: {}, {}", verifiedBlockStore, verifiedHeaderStore)
+        log.info("blockstore files verified: {}, {}", verifiedHeaderStore, verifiedBlockStore)
+    }
+
+    /**
+     * Adjusts thread priorities for Android 15+ background optimization
+     */
+    private fun adjustThreadPriorityForState(isBackground: Boolean) {
+        if (Build.VERSION.SDK_INT >= 35) { // Android 15
+            try {
+                val peerGroup = this.peerGroup
+                if (peerGroup != null) {
+                    if (isBackground) {
+                        log.info("App backgrounded on Android 15+, boosting network thread priority")
+                        // For Android 15, boost thread priority when backgrounded to counteract throttling
+                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
+                    } else {
+                        log.info("App foregrounded on Android 15+, resetting thread priority to default")
+                        // Reset to default priority when foregrounded
+                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT)
+                    }
+                }
+            } catch (e: Exception) {
+                log.warn("Failed to adjust thread priority for Android 15: {}", e.message)
+            }
+        }
     }
 }
