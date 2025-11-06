@@ -73,6 +73,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
@@ -187,6 +188,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
         var cleanupDeferred: CompletableDeferred<Unit>? = null
+        private val isCleaningUp = AtomicBoolean(false)
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -1403,8 +1405,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
-                // Always create cleanup coordination to prevent file access conflicts
-                cleanupDeferred = CompletableDeferred()
+                // Prevent multiple cleanup operations using atomic flag
+                if (!isCleaningUp.compareAndSet(false, true)) {
+                    log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
+                    return@launch
+                }
+                
+                // Create cleanup coordination only if none exists or existing one is already completed
+                val existingCleanup = cleanupDeferred
+                if (existingCleanup == null || existingCleanup.isCompleted) {
+                    cleanupDeferred = CompletableDeferred()
+                    log.info("Created new cleanupDeferred for coordination (previous was {})", 
+                        if (existingCleanup == null) "null" else "completed")
+                } else {
+                    log.info("Using existing active cleanupDeferred for coordination")
+                }
                 checkMutex.lock()
                 log.info("detach from wallet")
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
