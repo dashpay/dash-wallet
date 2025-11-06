@@ -1442,9 +1442,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
-                    log.info("peerGroup: removing listeners and wallet")
+                    log.info("peerGroup: removed listeners and wallet")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    peerGroup!!.stop()
+                    peerGroup!!.forceStop(7_000)
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     if (wallet != null) {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
