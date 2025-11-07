@@ -434,27 +434,17 @@ class CreateIdentityService : LifecycleService() {
             if (assetLockTransaction != null) {
                 val confidence = assetLockTransaction.getConfidence(wallet.context)
                 val sent = confidence?.let {
-                    it.isSent || it.isIX || it.numBroadcastPeers() > 0
-                } ?: false
-                val confirmed = confidence?.let {
-                    it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || it.isChainLocked || it.isTransactionLocked
+                    it.isSent || it.isIX || it.numBroadcastPeers() > 0 || it.confidenceType == TransactionConfidence.ConfidenceType.BUILDING
                 } ?: false
 
-                when {
-                    confirmed -> {
-                        // Transaction is already confirmed, no need to wait
-                        log.info("Credit funding transaction already confirmed: ${assetLockTransaction.txId}")
-                    }
-                    sent -> {
-                        // Transaction was sent but not confirmed yet, wait for confirmation
-                        log.info("Credit funding transaction sent, waiting for confirmation: ${assetLockTransaction.txId}")
-                        topUpRepository.waitForTransaction(confidence)
-                    }
-                    else -> {
-                        // Transaction not sent yet, send it
-                        log.info("Sending credit funding transaction: ${assetLockTransaction.txId}")
-                        topUpRepository.sendTransaction(assetLockTransaction)
-                    }
+                if (!sent) {
+                    // Transaction not sent yet, send it
+                    log.info("Sending credit funding transaction: ${assetLockTransaction.txId}")
+                    topUpRepository.sendTransaction(assetLockTransaction)
+                } else {
+                    // Transaction was sent, wait for confirmation (waitForTransaction handles already-confirmed transactions)
+                    log.info("Credit funding transaction sent, waiting for confirmation: ${assetLockTransaction.txId}")
+                    topUpRepository.waitForTransaction(confidence)
                 }
             }
             timerIsLock.logTiming()
@@ -675,6 +665,8 @@ class CreateIdentityService : LifecycleService() {
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
         if (usernameSecondary != null || blockchainIdentityData.usernameSecondary != null) {
+            blockchainIdentity.primaryUsername = blockchainIdentityData.username
+            blockchainIdentity.secondaryUsername = blockchainIdentityData.usernameSecondary
             registerUsername(blockchainIdentity, encryptionKey, UsernameType.Secondary)
         }
         registerUsername(blockchainIdentity, encryptionKey, UsernameType.Primary)
@@ -1126,6 +1118,7 @@ class CreateIdentityService : LifecycleService() {
 
     override fun onDestroy() {
         super.onDestroy()
+        log.info(".onDestroy()")
         serviceJob.cancel()
         
         // Detach wallet wipe listener to prevent memory leaks

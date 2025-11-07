@@ -75,10 +75,6 @@ class CreateUsernameActivity : LockScreenActivity() {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)
                 putExtra(EXTRA_FROM_ONBOARDING, fromOnboarding)
-                if (fromOnboarding) {
-                    putExtra(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE, true)
-                    putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
-                }
             }
         }
 
@@ -90,7 +86,6 @@ class CreateUsernameActivity : LockScreenActivity() {
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -128,8 +123,7 @@ class CreateUsernameActivity : LockScreenActivity() {
             if (requestUserNameViewModel.isUserNameRequested() &&
                 !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting() &&
-                (requestUserNameViewModel.identity?.creationState
-                    ?: IdentityCreationState.NONE) >= IdentityCreationState.VOTING
+                requestUserNameViewModel.isUsernameInVotingState()
             ) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {
