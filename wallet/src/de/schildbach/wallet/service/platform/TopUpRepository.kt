@@ -32,6 +32,7 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Coin
@@ -163,7 +164,8 @@ class TopUpRepositoryImpl @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
     private val coinJoinConfig: CoinJoinConfig,
-    private val dashPayConfig: DashPayConfig
+    private val dashPayConfig: DashPayConfig,
+    private val dashSystemService: DashSystemService
 ) : TopUpRepository {
     companion object {
         private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
@@ -300,6 +302,17 @@ class TopUpRepositoryImpl @Inject constructor(
                         TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                             // TODO: a chainlock is needed to accompany the block information
                             // to provide sufficient proof
+                            if (confidence!!.depthInBlocks > 1) {
+                                if (confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
+                                    log.info("credit funding transaction verified with chainlock: ${cftx.txId} and block depth")
+                                    confidence.removeEventListener(this)
+                                    continuation.resumeWith(Result.success(true))
+                                }
+                            } else if (confidence.depthInBlocks > 3) {
+                                log.info("credit funding transaction verified with block depth")
+                                confidence.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
+                            }
                         }
                         // If this transaction is InstantSend Locked, then it has been sent successfully
                         TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
@@ -429,10 +442,11 @@ class TopUpRepositoryImpl @Inject constructor(
                 withTimeout(TimeUnit.MINUTES.toMillis(5)) { // Increased timeout to 5 minutes
                     suspendCancellableCoroutine { continuation ->
                         // Check again if transaction got confirmed while setting up the listener
-                        if (confidence.isTransactionLocked || 
+                        log.info("wait for credit funding transaction: ${confidence.transactionHash}")
+                        if (confidence.isTransactionLocked ||
                             confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || 
                             confidence.isChainLocked) {
-                            log.info("topup: transaction confirmed during listener setup")
+                            log.info("wait: transaction confirmed during listener setup")
                             continuation.resumeWith(Result.success(Unit))
                             return@suspendCancellableCoroutine
                         }
@@ -445,13 +459,25 @@ class TopUpRepositoryImpl @Inject constructor(
                                 when (reason) {
                                     TransactionConfidence.Listener.ChangeReason.IX_TYPE -> {
                                         if (confidence!!.isTransactionLocked || confidence.ixType == TransactionConfidence.IXType.IX_REQUEST) {
-                                            log.info("topup: observe ISLock")
+                                            log.info("wait: observe ISLock")
                                             confidence.removeEventListener(this)
                                             continuation.resumeWith(Result.success(Unit))
                                         }
                                     }
 
-                                    TransactionConfidence.Listener.ChangeReason.DEPTH,
+                                    TransactionConfidence.Listener.ChangeReason.DEPTH -> {
+                                        if (confidence!!.depthInBlocks > 1) {
+                                            if (confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
+                                                log.info("credit funding transaction verified with chainlock: ${confidence.transactionHash} and block depth")
+                                                confidence.removeEventListener(this)
+                                                continuation.resumeWith(Result.success(Unit))
+                                            }
+                                        } else if (confidence.depthInBlocks > 3) {
+                                            log.info("credit funding transaction verified with block depth")
+                                            confidence.removeEventListener(this)
+                                            continuation.resumeWith(Result.success(Unit))
+                                        }
+                                    }
                                     TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> {
                                         if (confidence!!.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || confidence.isChainLocked) {
                                             log.info("topup: observe block or chainlock")
