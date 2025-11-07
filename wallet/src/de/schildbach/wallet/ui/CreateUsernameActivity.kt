@@ -26,11 +26,11 @@ import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
-import de.schildbach.wallet.ui.username.voting.RequestUserNameViewModel
+import de.schildbach.wallet.ui.username.request.RequestUserNameViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.slf4j.LoggerFactory
@@ -75,10 +75,6 @@ class CreateUsernameActivity : LockScreenActivity() {
                 action = ACTION_FROM_INVITE
                 putExtra(EXTRA_INVITE, invite)
                 putExtra(EXTRA_FROM_ONBOARDING, fromOnboarding)
-                if (fromOnboarding) {
-                    putExtra(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE, true)
-                    putExtra(INTENT_EXTRA_KEEP_UNLOCKED, true)
-                }
             }
         }
 
@@ -90,7 +86,6 @@ class CreateUsernameActivity : LockScreenActivity() {
         }
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -112,7 +107,6 @@ class CreateUsernameActivity : LockScreenActivity() {
 
         val username = intent?.extras?.getString(EXTRA_USERNAME)
         val invite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
-        val fromOnboardng = intent.getBooleanExtra(EXTRA_FROM_ONBOARDING, false)
 
         lifecycleScope.launchWhenCreated {
             val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_create_user_name_fragment) as NavHostFragment
@@ -129,8 +123,7 @@ class CreateUsernameActivity : LockScreenActivity() {
             if (requestUserNameViewModel.isUserNameRequested() &&
                 !requestUserNameViewModel.isUsernameLocked() &&
                 !requestUserNameViewModel.isUsernameLostAfterVoting() &&
-                (requestUserNameViewModel.identity?.creationState
-                    ?: BlockchainIdentityData.CreationState.NONE) >= BlockchainIdentityData.CreationState.VOTING
+                requestUserNameViewModel.isUsernameInVotingState()
             ) {
                 navGraph.setStartDestination(R.id.votingRequestDetailsFragment)
             } else {

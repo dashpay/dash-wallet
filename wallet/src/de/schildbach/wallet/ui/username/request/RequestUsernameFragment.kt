@@ -1,7 +1,9 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.os.Handler
+import android.text.TextWatcher
+import android.text.Editable
 import android.text.format.DateFormat
 import android.view.View
 import android.view.ViewGroup
@@ -10,12 +12,14 @@ import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.navArgs
 import com.google.android.material.textfield.TextInputLayout
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
-import de.schildbach.wallet.ui.username.request.UsernameTypesDialog
+import de.schildbach.wallet.ui.username.CreateUsernameActions
+import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
 import kotlinx.coroutines.delay
@@ -30,11 +34,15 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import java.util.Date
 
 @AndroidEntryPoint
-class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
+open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     private val binding by viewBinding(FragmentRequestUsernameBinding::bind)
 
     private val dashPayViewModel: DashPayViewModel by activityViewModels()
     private val requestUserNameViewModel by activityViewModels<RequestUserNameViewModel>()
+    private val args by navArgs<RequestUsernameFragmentArgs>()
+    
+    // Username type determines which field to use in the ViewModel
+    private var usernameType: UsernameType = UsernameType.Primary
 
     private var handler: Handler = Handler()
     private lateinit var checkUsernameNotExistRunnable: Runnable
@@ -43,6 +51,27 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
+        
+        // Get username type from arguments if provided. Consider error states
+        usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
+            val identityData = requestUserNameViewModel.identity
+            if (identityData != null && identityData.creationError) {
+                when {
+                    identityData.usernameSecondary != null && identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
+                    identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
+                    else -> args.usernameType
+                }
+            } else {
+                args.usernameType
+            }
+        } else {
+            args.usernameType
+        }
+
+        binding.title.text = when (usernameType) {
+            UsernameType.Primary -> getString(R.string.request_your_username)
+            UsernameType.Secondary -> getString(R.string.request_instant_username)
+        }
 
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
@@ -64,13 +93,65 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             true
         }
 
+        if (usernameType == UsernameType.Secondary) {
+            val primaryUsername = requestUserNameViewModel.requestedUserName!!
+            binding.usernameInput.setText(primaryUsername)
+            
+            // Set selection to the end so user can only type after the dash
+            binding.usernameInput.setSelection(primaryUsername.length)
+            
+            // Add TextWatcher to prevent editing the prefix part and restrict suffix to digits 2-9
+            binding.usernameInput.addTextChangedListener(object : TextWatcher {
+                private var isUpdating = false
+                
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+                
+                override fun afterTextChanged(s: Editable?) {
+                    if (isUpdating || s == null) return
+                    
+                    val currentText = s.toString()
+                    
+                    // Ensure text starts with primary username
+                    if (!currentText.startsWith(primaryUsername)) {
+                        isUpdating = true
+                        s.clear()
+                        s.append(primaryUsername)
+                        binding.usernameInput.setSelection(primaryUsername.length)
+                        isUpdating = false
+                        return
+                    }
+                    
+//                    // Check suffix for invalid characters (only allow digits 2-9)
+//                    val suffix = currentText.substring(primaryUsername.length)
+//                    val validSuffix = suffix.filter { it in '0'..'9' }
+//
+//                    if (suffix != validSuffix) {
+//                        isUpdating = true
+//                        s.clear()
+//                        s.append(primaryUsername + validSuffix)
+//                        binding.usernameInput.setSelection(primaryUsername.length + validSuffix.length)
+//                        isUpdating = false
+//                    }
+                }
+            })
+        }
+
         requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
             processUsername(binding.usernameInput.text.toString())
         }
 
         binding.inputWrapper.endIconMode = TextInputLayout.END_ICON_CUSTOM
         binding.inputWrapper.setEndIconOnClickListener {
-            binding.usernameInput.text?.clear()
+            if (usernameType == UsernameType.Secondary) {
+                // For secondary usernames, only clear the suffix part
+                val primaryUsername = requestUserNameViewModel.requestedUserName!!
+                binding.usernameInput.setText(primaryUsername)
+                binding.usernameInput.setSelection(primaryUsername.length)
+            } else {
+                binding.usernameInput.text?.clear()
+            }
         }
 
         binding.requestUsernameButton.isEnabled = false
@@ -92,8 +173,9 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 showErrorDialog()
             }
 
-            binding.votingPeriodProgress.isVisible = it.checkingUsername
-            binding.votingPeriodContainer.isVisible = !it.checkingUsername
+            // Hide voting period elements for Secondary username type (instant usernames)
+            binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
+            binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary
 
             binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
             binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
@@ -131,7 +213,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                 binding.checkAvailable.setImageResource(getCheckMarkImage(!it.usernameExists))
                 binding.checkBalance.setImageResource(getCheckMarkImage(it.enoughBalance))
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
-                if (!requestUserNameViewModel.isUsingInvite() || isInviteContested) {
+                if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
 
                     if (it.usernameContestable || it.usernameContested) {
@@ -154,6 +236,10 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     }
                 } else {
                     binding.votingPeriodContainer.isVisible = false
+                    // For Secondary username type, always hide wallet balance
+                    if (usernameType == UsernameType.Secondary) {
+                        binding.walletBalanceContainer.isVisible = false
+                    }
                 }
 
                 binding.usernameAvailableContainer.isVisible = true
@@ -187,7 +273,12 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                         binding.checkAvailable.setImageResource(getCheckMarkImage(true))
                     }
                 }
-                binding.requestUsernameButton.isEnabled = it.enoughBalance
+                // For Secondary username type, enable button if username is valid (no balance check)
+                binding.requestUsernameButton.isEnabled = if (usernameType == UsernameType.Secondary) {
+                    !it.usernameExists && !it.usernameContestable
+                } else {
+                    it.enoughBalance && !it.usernameExists
+                }
 
                 if (it.usernameRequestSubmitting) {
                     binding.usernameInput.isFocusable = false
@@ -236,6 +327,10 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     R.string.request_username_length_requirement_noncontested
                 }
             )
+            
+            // Hide length requirement for Secondary usernames
+            binding.charLengthRequirement.isVisible = usernameType != UsernameType.Secondary
+            binding.checkLength.isVisible = usernameType != UsernameType.Secondary
             binding.allowedCharsRule.text = getString(
                 if (isInviteContested) {
                     R.string.request_username_character_requirement
@@ -255,12 +350,13 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             if (it?.creationStateErrorMessage != null) {
                 // why are we closing, we should allow the user to chose a new name
                 // requireActivity().finish()
-            } else if ((it?.creationState?.ordinal ?: 0) > BlockchainIdentityData.CreationState.NONE.ordinal) {
+            } else if ((it?.creationState?.ordinal ?: 0) > IdentityCreationState.NONE.ordinal) {
                 // completeUsername = it.username ?: ""
                 // showCompleteState()
                 // for now, just go to the home screen
                 // requireActivity().finish()
-                safeNavigate(RequestUsernameFragmentDirections.requestsToUsernameRegistrationFragment())
+                // Navigate to MoreFragment instead of UsernameRegistrationFragment
+                requireActivity().finish()
             }
         }
         binding.nonContestedNameInfoButton.setOnClickListener {
@@ -268,10 +364,20 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         }
     }
 
+    /**
+     * Sets the username in the appropriate ViewModel field based on the username type
+     */
+    private fun setUsernameInViewModel(username: String) {
+        when (usernameType) {
+            UsernameType.Primary -> requestUserNameViewModel.requestedUserName = username
+            UsernameType.Secondary -> requestUserNameViewModel.requestedUsernameSecondary = username
+        }
+    }
+
     private fun processUsername(username: String) {
         binding.requestUsernameButton.isEnabled = false
         if (username.isNotEmpty()) {
-            val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username)
+            val usernameIsValid = requestUserNameViewModel.checkUsernameValid(username, usernameType)
 
             if (usernameIsValid) { // ensure username meets basic rules before making a Platform query
                 checkUsername(username)
@@ -299,11 +405,20 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
         if (requestUserNameViewModel.hasUserCancelledVerification()) {
             requestUserNameViewModel.submit()
         } else {
-            safeNavigate(
-                RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog(
-                    requestUserNameViewModel.requestedUserName!!
+            when (usernameType) {
+                UsernameType.Primary -> safeNavigate(
+                    RequestUsernameFragmentDirections.requestsToConfirmUsernameRequestDialog(
+                        requestUserNameViewModel.requestedUserName!!,
+                        usernameType
+                    )
                 )
-            )
+                UsernameType.Secondary -> safeNavigate(
+                    RequestUsernameSecondaryFragmentDirections.requestsInstantToConfirmUsernameRequestDialog(
+                        requestUserNameViewModel.requestedUsernameSecondary!!,
+                        usernameType
+                    )
+                )
+            }
         }
     }
 
@@ -358,11 +473,13 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
                     R.string.verify
                 )
             ).show(requireActivity()) {
-                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                setUsernameInViewModel(binding.usernameInput.text.toString())
                 if (it == true) {
+                    // Use primary directions for both types - verify fragment will handle both
                     safeNavigate(
                         RequestUsernameFragmentDirections.requestUsernameFragmentToVerifyIdentityFragment(
-                            binding.usernameInput.text.toString()
+                            binding.usernameInput.text.toString(),
+                            usernameType
                         )
                     )
                 } else {
@@ -373,7 +490,7 @@ class RequestUsernameFragment : Fragment(R.layout.fragment_request_username) {
             }
         } else {
             lifecycleScope.launch {
-                requestUserNameViewModel.requestedUserName = binding.usernameInput.text.toString()
+                setUsernameInViewModel(binding.usernameInput.text.toString())
                 checkViewConfirmDialog()
             }
         }

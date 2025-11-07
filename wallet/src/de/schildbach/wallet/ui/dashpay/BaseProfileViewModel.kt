@@ -20,6 +20,7 @@ import androidx.lifecycle.*
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -31,8 +32,8 @@ open class BaseProfileViewModel(
     val dashPayProfileDao: DashPayProfileDao
 ) : ViewModel() {
 
-    private val _blockchainIdentity = MutableLiveData<BlockchainIdentityBaseData?>()
-    val blockchainIdentity: LiveData<BlockchainIdentityBaseData?>
+    private val _blockchainIdentity = MutableLiveData<BlockchainIdentityData?>()
+    val blockchainIdentity: LiveData<BlockchainIdentityData?>
         get() = _blockchainIdentity
 
     private val _dashPayProfile = MutableLiveData<DashPayProfile?>()
@@ -40,14 +41,14 @@ open class BaseProfileViewModel(
         get() = _dashPayProfile
 
     val hasIdentity: Boolean
-        get() = _blockchainIdentity.value?.creationComplete ?: false
+        get() = _blockchainIdentity.value?.hasUsername ?: false
 
     val inVotingPeriod: Boolean
         get() = _blockchainIdentity.value?.votingInProgress ?: false
     init {
         // blockchainIdentityData is observed instead of using PlatformRepo.getBlockchainIdentity()
         // since neither PlatformRepo nor blockchainIdentity is initialized when there is no username
-        blockchainIdentityDataDao.observeBase()
+        blockchainIdentityDataDao.observe()
             .distinctUntilChanged()
             .onEach(_blockchainIdentity::postValue)
             .filter { it.userId != null }

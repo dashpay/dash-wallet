@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -29,6 +29,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.I
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.USERNAME_REQUESTED
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.CoinJoinMode
@@ -37,6 +38,7 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
 import de.schildbach.wallet.ui.username.CreateUsernameArgs
+import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -59,6 +61,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
@@ -114,6 +117,7 @@ class RequestUserNameViewModel @Inject constructor(
 
     var identity: BlockchainIdentityData? = null
     var requestedUserName: String? = null
+    var requestedUsernameSecondary: String? = null
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -143,10 +147,10 @@ class RequestUserNameViewModel @Inject constructor(
 
     suspend fun isUserNameRequested(): Boolean {
         val hasRequestedName = identityConfig.get(USERNAME).isNullOrEmpty().not()
-        val creationState = BlockchainIdentityData.CreationState.valueOf(
-            identityConfig.get(CREATION_STATE) ?: BlockchainIdentityData.CreationState.NONE.name
+        val creationState = IdentityCreationState.valueOf(
+            identityConfig.get(CREATION_STATE) ?: IdentityCreationState.NONE.name
         )
-        return hasRequestedName && creationState != BlockchainIdentityData.CreationState.NONE && creationState.ordinal <= BlockchainIdentityData.CreationState.VOTING.ordinal
+        return hasRequestedName && creationState != IdentityCreationState.NONE && creationState.ordinal <= IdentityCreationState.VOTING.ordinal
     }
 
     suspend fun isUsernameLocked(): Boolean {
@@ -157,6 +161,10 @@ class RequestUserNameViewModel @Inject constructor(
     suspend fun isUsernameLostAfterVoting(): Boolean {
         return isUserNameRequested() &&
                 UsernameRequestStatus.valueOf(identityConfig.get(USERNAME_REQUESTED)!!) == UsernameRequestStatus.LOST_VOTE
+    }
+
+    suspend fun isUsernameInVotingState(): Boolean {
+        return IdentityCreationState.valueOf(identityConfig.get(CREATION_STATE) ?: "NONE") >= IdentityCreationState.VOTING
     }
 
     suspend fun hasUserCancelledVerification(): Boolean =
@@ -261,13 +269,15 @@ class RequestUserNameViewModel @Inject constructor(
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
         val username = requestedUserName!!
+        val usernameSecondary = requestedUsernameSecondary
         val isUsingInvite = isUsingInvite()
         when {
             isUsingInvite && reuseTransaction -> {
                 walletApplication.startService(
                     CreateIdentityService.createIntentFromInviteForNewUsername(
                         walletApplication,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
@@ -276,6 +286,7 @@ class RequestUserNameViewModel @Inject constructor(
                     CreateIdentityService.createIntentFromInvite(
                         walletApplication,
                         username,
+                        usernameSecondary,
                         createUsernameArgs!!.invite!!
                     )
                 )
@@ -284,7 +295,8 @@ class RequestUserNameViewModel @Inject constructor(
                 walletApplication.startService(
                     CreateIdentityService.createIntentForNewUsername(
                         walletApplication,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
@@ -292,29 +304,13 @@ class RequestUserNameViewModel @Inject constructor(
                 walletApplication.startService(
                     CreateIdentityService.createIntent(
                         walletApplication,
-                        username
+                        username,
+                        usernameSecondary
                     )
                 )
             }
         }
     }
-
-//    fun triggerIdentityCreationFromInvite(
-//        reuseTransaction: Boolean,
-//        fromOnboarding: Boolean,
-//        inviteLinkData: InvitationLinkData
-//    ) {
-//        if (reuseTransaction) {
-//            walletApplication.startService(CreateIdentityService.createIntentFromInviteForNewUsername(walletApplication, requestedUserName!!))
-//        } else {
-//            if (fromOnboarding) {
-//                walletApplication.configuration.onboardingInviteUsername = requestedUserName
-//                return
-//            } else {
-//                walletApplication.startService(CreateIdentityService.createIntentFromInvite(walletApplication, requestedUserName!!, inviteLinkData))
-//            }
-//        }
-//    }
 
     fun submit() {
         // Reset ui state for retry if needed
@@ -327,10 +323,6 @@ class RequestUserNameViewModel @Inject constructor(
             } ?: false
             triggerIdentityCreation(reuseTransaction)
         }
-        // if call success
-        // updateUiForApiSuccess()
-        // else if call failed
-        // updateUiForApiError()
     }
 
     fun reset() {
@@ -358,25 +350,6 @@ class RequestUserNameViewModel @Inject constructor(
             identityConfig.set(BlockchainIdentityConfig.REQUESTED_USERNAME_LINK, link ?: "")
         }
     }
-
-//    private fun updateUiForApiSuccess() {
-//        _uiState.update {
-//            it.copy(
-//                usernameCheckSuccess = true,
-//                usernameRequestSubmitting = false,
-//                usernameRequestSubmitted = true,
-//                usernameSubmittedError = false
-//            )
-//        }
-//    }
-//    private fun updateUiForApiError() {
-//        _uiState.update { it ->
-//            it.copy(
-//                usernameCheckSuccess = false,
-//                usernameSubmittedError = true
-//            )
-//        }
-//    }
 
     fun checkUsername(requestedUserName: String?) {
         viewModelScope.launch {
@@ -461,8 +434,11 @@ class RequestUserNameViewModel @Inject constructor(
         }
     }
 
-    private fun validateUsernameSize(uname: String): Boolean {
-        return uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+    private fun validateUsernameSize(uname: String, usernameType: UsernameType): Boolean {
+        return when (usernameType) {
+            UsernameType.Primary -> uname.length in Constants.USERNAME_MIN_LENGTH..Constants.USERNAME_MAX_LENGTH
+            UsernameType.Secondary -> uname.length in Constants.USERNAME_MIN_LENGTH..(Constants.USERNAME_MAX_LENGTH + 4)
+        }
     }
 
     private fun validateNonContestedUsernameSize(uname: String): Boolean {
@@ -479,8 +455,8 @@ class RequestUserNameViewModel @Inject constructor(
         return Regex("[2-9]").containsMatchIn(uname)
     }
 
-    fun checkUsernameValid(username: String): Boolean {
-        val validLength = validateUsernameSize(username)
+    fun checkUsernameValid(username: String, usernameType: UsernameType): Boolean {
+        val validLength = validateUsernameSize(username, usernameType)
         val (validCharacters, startOrEndWithHyphen) = validateUsernameCharacters(username)
         val contestable = Names.isUsernameContestable(username)
 
@@ -490,8 +466,10 @@ class RequestUserNameViewModel @Inject constructor(
         val enoughBalance = when {
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
-            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000)
-            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
+                CONTEST_DOCUMENT_FEE / 1000)
+            identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
+                NON_CONTEST_DOCUMENT_FEE / 1000)
             identityBalance == 0L && contestable -> walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
             identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
             else -> false // how can we get here?
@@ -551,7 +529,7 @@ class RequestUserNameViewModel @Inject constructor(
         inviteAssetLockTx.value
     }
 
-    fun getInvitationAmount(): Coin {
+    private fun getInvitationAmount(): Coin {
         return inviteAssetLockTx.value?.let {
             it.assetLockPayload.creditOutputs?.find { transactionOutput ->
                 if (ScriptPattern.isP2PKH(transactionOutput.scriptPubKey)) {
@@ -571,5 +549,13 @@ class RequestUserNameViewModel @Inject constructor(
         _isInviteMixed.value = inviteAssetLockTx.value?.let {
             topUpRepository.isInvitationMixed(it)
         } ?: false
+    }
+
+    suspend fun hasSecondaryName(): Boolean {
+        return identityConfig.get(IDENTITY_ID) != null &&
+                identityConfig.get(BlockchainIdentityConfig.USERNAME_SECONDARY) != null &&
+                identityConfig.get(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS)?.let {
+                    UsernameStatus.valueOf(it) == UsernameStatus.CONFIRMED
+                } == true
     }
 }
