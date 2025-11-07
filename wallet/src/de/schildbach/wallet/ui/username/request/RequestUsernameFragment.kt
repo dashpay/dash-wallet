@@ -18,6 +18,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
+import de.schildbach.wallet.ui.username.CreateUsernameActions
 import de.schildbach.wallet.ui.username.UsernameType
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentRequestUsernameBinding
@@ -51,8 +52,21 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         super.onViewCreated(view, savedInstanceState)
         requestUserNameViewModel.setCreateUsernameArgs(dashPayViewModel.createUsernameArgs)
         
-        // Get username type from arguments if provided
-        usernameType = args.usernameType
+        // Get username type from arguments if provided. Consider error states
+        usernameType = if (dashPayViewModel.createUsernameArgs?.actions == CreateUsernameActions.REUSE_TRANSACTION) {
+            val identityData = requestUserNameViewModel.identity
+            if (identityData != null && identityData.creationError) {
+                when {
+                    identityData.usernameSecondary != null && identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Secondary
+                    identityData.creationState == IdentityCreationState.USERNAME_REGISTERING -> UsernameType.Primary
+                    else -> args.usernameType
+                }
+            } else {
+                args.usernameType
+            }
+        } else {
+            args.usernameType
+        }
 
         binding.title.text = when (usernameType) {
             UsernameType.Primary -> getString(R.string.request_your_username)
