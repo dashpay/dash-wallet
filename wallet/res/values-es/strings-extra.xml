@@ -276,8 +276,8 @@
     <string name="menu_settings_subtitle">Moneda predeterminada, atajos, acerca…</string>
     <string name="menu_tools_title">Herramientas</string>
     <string name="menu_tools_subtitle">Barrer billetera de papel…</string>
-    <string name="menu_local_currency">Moneda Local</string>
-    <string name="menu_rescan_blockchain">Reescanear la cadena de bloques</string>
+    <string name="menu_local_currency">Moneda local</string>
+    <string name="menu_rescan_blockchain">Escanear de nuevo la cadena de bloques</string>
     <string name="menu_contact_support_title">Contactar Soporte</string>
     <string name="menu_contact_support_subtitle">Reportar un problema</string>
     <string name="menu_explore_title">Explorar</string>

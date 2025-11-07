@@ -58,9 +58,9 @@ dependencies {
     implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
     implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
-    implementation "org.dashj.android:dashj-bls-android:1.0.0"
-    implementation "org.dashj.android:dashj-x11-android:0.17.5"
-    implementation "org.dashj.android:dashj-scrypt-android:0.17.5"
+    implementation "org.dashj.android:dashj-bls-android:1.0.1-SNAPSHOT"
+    implementation "org.dashj.android:dashj-x11-android:1.0.0-SNAPSHOT"
+    implementation "org.dashj.android:dashj-scrypt-android:1.0.0-SNAPSHOT"
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
@@ -79,7 +79,7 @@ dependencies {
     implementation 'com.squareup.moshi:moshi:1.11.0'
     implementation 'com.squareup.moshi:moshi-kotlin:1.11.0'
     implementation 'com.squareup.retrofit2:converter-moshi:2.6.4'
-    implementation 'org.conscrypt:conscrypt-android:2.5.2' // TLS 1.3 support for Android <= 9.0
+    implementation 'org.conscrypt:conscrypt-android:2.5.3' // TLS 1.3 support for Android <= 9.0
 
     // Credential Manager
     implementation "androidx.credentials:credentials:1.3.0"
@@ -216,8 +216,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11030202
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.3.2"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11040106
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.4.1"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

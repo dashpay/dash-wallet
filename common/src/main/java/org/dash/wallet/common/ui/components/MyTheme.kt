@@ -41,6 +41,13 @@ object MyTheme {
         textAlign = TextAlign.Center,
     )
 
+    val Caption = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
+    )
+
     val CaptionMedium = TextStyle(
         fontSize = 13.sp,
         lineHeight = 18.sp,
@@ -62,14 +69,14 @@ object MyTheme {
         fontWeight = FontWeight(600),
     )
 
-    val Caption = TextStyle(
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        fontFamily = interRegular,
-        fontWeight = FontWeight(400)
+    val OverlineMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
     )
 
-    val OverlineMedium = TextStyle(
+    val OverlineCaptionRegular = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
         fontFamily = interMedium,
@@ -81,13 +88,6 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interRegular,
         fontWeight = FontWeight(400)
-    )
-
-    val OverlineCaptionRegular = TextStyle(
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontFamily = interMedium,
-        fontWeight = FontWeight(500)
     )
 
     val Body2Regular = TextStyle(

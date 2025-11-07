@@ -54,7 +54,8 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     private var sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
     private var selectedTerritory: String = ""
     private var dashPaymentOn: Boolean = true
-    private var giftCardPaymentOn: Boolean = true
+    private var ctxPaymentOn: Boolean = true
+    private var piggyCardsPaymentOn: Boolean = true
     private var sortOptions = listOf<SortOption>()
 
     private val binding by viewBinding(DialogFiltersBinding::bind)
@@ -80,10 +81,12 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         } else {
             binding.paymentMethods.isVisible = false
             binding.paymentMethodsLabel.isVisible = false
+            binding.giftCardTypesLabel.isVisible = false
+            binding.giftCardTypes.isVisible = false
         }
 
         viewModel.isLocationEnabled.observe(viewLifecycleOwner) {
-            if (viewModel.filterMode.value != FilterMode.Online) {
+            if (viewModel.filterMode.value != FilterMode.Online && viewModel.filterMode.value != FilterMode.All) {
                 setupRadiusOptions()
                 setupTerritoryFilter()
                 setupLocationPermission()
@@ -114,39 +117,98 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun setupPaymentMethods() {
-        val isDashOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-            viewModel.appliedFilters.value.payment == PaymentMethod.DASH
-        dashPaymentOn = isDashOn
-        binding.dashOption.isChecked = isDashOn
+        // Initialize spending options based on current filter state
+        val currentPayment = viewModel.appliedFilters.value.payment
+        val currentProvider = viewModel.appliedFilters.value.provider
+
+        // Determine the current state based on saved filters
+        when {
+            currentPayment.isEmpty() && currentProvider.isEmpty() -> {
+                // No filters applied - show all options as selected
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = true
+            }
+            currentPayment.isEmpty() && currentProvider == "CTX" -> {
+                // Dash + CTX selected
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = false
+            }
+            currentPayment.isEmpty() && currentProvider == "PiggyCards" -> {
+                // Dash + PiggyCards selected
+                dashPaymentOn = true
+                ctxPaymentOn = false
+                piggyCardsPaymentOn = true
+            }
+            currentPayment == PaymentMethod.DASH -> {
+                // Only Dash is selected
+                dashPaymentOn = true
+                ctxPaymentOn = false
+                piggyCardsPaymentOn = false
+            }
+            currentPayment == PaymentMethod.GIFT_CARD -> {
+                // Gift card mode - check provider
+                dashPaymentOn = false
+                when (currentProvider) {
+                    "CTX" -> {
+                        ctxPaymentOn = true
+                        piggyCardsPaymentOn = false
+                    }
+                    "PiggyCards" -> {
+                        ctxPaymentOn = false
+                        piggyCardsPaymentOn = true
+                    }
+                    else -> {
+                        // No specific provider (both gift card providers selected)
+                        ctxPaymentOn = true
+                        piggyCardsPaymentOn = true
+                    }
+                }
+            }
+            else -> {
+                // Default fallback
+                dashPaymentOn = true
+                ctxPaymentOn = true
+                piggyCardsPaymentOn = true
+            }
+        }
+
+        binding.dashOption.isChecked = dashPaymentOn
+        binding.ctxOption.isChecked = ctxPaymentOn
+        binding.piggycardsOption.isChecked = piggyCardsPaymentOn
+
         binding.dashOption.setOnCheckedChangeListener { _, isChecked ->
-            if (!isChecked && !binding.giftCardOption.isChecked) {
-                // shouldn't allow to uncheck both options
-                binding.giftCardOption.isChecked = true
+            if (!isChecked && !binding.ctxOption.isChecked && !binding.piggycardsOption.isChecked) {
+                // At least one option must be selected
+                binding.ctxOption.isChecked = true
+                binding.piggycardsOption.isChecked = true
             }
 
             dashPaymentOn = isChecked
+            updateGiftCardVisibility()
             checkResetButton()
         }
 
-        val isGiftCardOn = viewModel.appliedFilters.value.payment.isEmpty() ||
-            viewModel.appliedFilters.value.payment == PaymentMethod.GIFT_CARD
-        giftCardPaymentOn = isGiftCardOn
-        binding.giftCardOption.isChecked = isGiftCardOn
-        binding.giftCardTypesLabel.isVisible = isGiftCardOn
-        binding.giftCardTypes.isVisible = isGiftCardOn
-        binding.giftCardOption.setOnCheckedChangeListener { _, isChecked ->
-            if (!isChecked && !binding.dashOption.isChecked) {
+        binding.ctxOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.dashOption.isChecked && !binding.piggycardsOption.isChecked) {
+                // At least one option must be selected
                 binding.dashOption.isChecked = true
             }
 
-            giftCardPaymentOn = isChecked
-            binding.giftCardTypesLabel.isVisible = isChecked
-            binding.giftCardTypes.isVisible = isChecked
+            ctxPaymentOn = isChecked
+            updateGiftCardVisibility()
+            checkResetButton()
+        }
 
-            val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !isChecked
-            binding.sortByCard.isVisible = !shouldHideSorting
-            binding.sortByLabel.isVisible = !shouldHideSorting
+        binding.piggycardsOption.setOnCheckedChangeListener { _, isChecked ->
+            if (!isChecked && !binding.dashOption.isChecked && !binding.ctxOption.isChecked) {
+                // At least one option must be selected
+                binding.dashOption.isChecked = true
+            }
 
+            piggyCardsPaymentOn = isChecked
+            updateGiftCardVisibility()
             checkResetButton()
         }
 
@@ -168,6 +230,23 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
             checkResetButton()
         }
+
+        updateGiftCardVisibility()
+    }
+
+    private fun updateGiftCardVisibility() {
+        val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
+        val isMerchantScreen = viewModel.exploreTopic == ExploreTopic.Merchants
+
+        // Only show gift card types for Merchants screen
+        binding.giftCardTypesLabel.isVisible = hasGiftCardOptions && isMerchantScreen
+        binding.giftCardTypes.isVisible = hasGiftCardOptions && isMerchantScreen
+
+        val shouldHideSorting = (
+            viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All
+            ) && !hasGiftCardOptions
+        binding.sortByCard.isVisible = !shouldHideSorting
+        binding.sortByLabel.isVisible = !shouldHideSorting
     }
 
     private fun setupSortByOptions() {
@@ -177,7 +256,10 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
             SortOption.Name
         )
 
-        if (viewModel.filterMode.value != FilterMode.Online && viewModel.isLocationEnabled.value == true) {
+        if (viewModel.filterMode.value != FilterMode.Online &&
+            viewModel.filterMode.value != FilterMode.All &&
+            viewModel.isLocationEnabled.value == true
+        ) {
             sortOptions.add(SortOption.Distance)
         }
 
@@ -198,7 +280,9 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         }
         this.sortOptions = sortOptions
 
-        val shouldHideSorting = viewModel.filterMode.value == FilterMode.Online && !binding.giftCardOption.isChecked
+        val shouldHideSorting = (
+            viewModel.filterMode.value == FilterMode.Online || viewModel.filterMode.value == FilterMode.All
+            ) && viewModel.exploreTopic != ExploreTopic.ATMs && !ctxPaymentOn && !piggyCardsPaymentOn
         binding.sortByCard.isVisible = !shouldHideSorting
         binding.sortByLabel.isVisible = !shouldHideSorting
 
@@ -324,43 +408,100 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
 
     private fun applyFilters() {
         var paymentFilter = ""
+        var providerFilter = ""
+        var denomOption = DenomOption.Both
 
-        if (!dashPaymentOn || !giftCardPaymentOn) {
-            paymentFilter = if (dashPaymentOn) {
-                PaymentMethod.DASH
+        // Only apply payment and denomination filters for merchants
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            // Determine payment method and provider based on selected options
+            when {
+                dashPaymentOn && !ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Only Dash selected
+                    paymentFilter = PaymentMethod.DASH
+                    providerFilter = ""
+                }
+                !dashPaymentOn && ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Only CTX selected
+                    paymentFilter = PaymentMethod.GIFT_CARD
+                    providerFilter = "CTX"
+                }
+                !dashPaymentOn && !ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Only PiggyCards selected
+                    paymentFilter = PaymentMethod.GIFT_CARD
+                    providerFilter = "PiggyCards"
+                }
+                !dashPaymentOn && ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Both gift card providers selected (no Dash)
+                    paymentFilter = PaymentMethod.GIFT_CARD
+                    providerFilter = "" // Empty means both providers
+                }
+                dashPaymentOn && ctxPaymentOn && !piggyCardsPaymentOn -> {
+                    // Dash + CTX selected
+                    paymentFilter = ""
+                    providerFilter = "CTX"
+                }
+                dashPaymentOn && !ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // Dash + PiggyCards selected
+                    paymentFilter = ""
+                    providerFilter = "PiggyCards"
+                }
+                dashPaymentOn && ctxPaymentOn && piggyCardsPaymentOn -> {
+                    // All three selected
+                    paymentFilter = ""
+                    providerFilter = ""
+                }
+                else -> {
+                    // Fallback (should not happen)
+                    paymentFilter = ""
+                    providerFilter = ""
+                }
+            }
+
+            denomOption = if (binding.fixedDenomOption.isChecked && binding.flexibleAmountOption.isChecked) {
+                DenomOption.Both
+            } else if (binding.fixedDenomOption.isChecked) {
+                DenomOption.Fixed
             } else {
-                PaymentMethod.GIFT_CARD
+                DenomOption.Flexible
             }
         }
 
-        val denomOption = if (binding.fixedDenomOption.isChecked && binding.flexibleAmountOption.isChecked) {
-            DenomOption.Both
-        } else if (binding.fixedDenomOption.isChecked) {
-            DenomOption.Fixed
-        } else {
-            DenomOption.Flexible
-        }
+        viewModel.setFilters(
+            paymentFilter,
+            selectedTerritory,
+            selectedRadiusOption,
+            sortOption,
+            denomOption,
+            providerFilter
+        )
 
-        viewModel.setFilters(paymentFilter, selectedTerritory, selectedRadiusOption, sortOption, denomOption)
-        viewModel.trackFilterEvents(dashPaymentOn, giftCardPaymentOn)
+        // Only track filter events for merchants
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            val hasGiftCardOptions = ctxPaymentOn || piggyCardsPaymentOn
+            viewModel.trackFilterEvents(dashPaymentOn, hasGiftCardOptions)
+        }
     }
 
     private fun checkResetButton() {
         var isEnabled = false
 
-        if (!dashPaymentOn || !giftCardPaymentOn) {
-            isEnabled = true
-        }
+        // Only check payment and denomination options for merchants
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            if (!dashPaymentOn || !ctxPaymentOn || !piggyCardsPaymentOn) {
+                isEnabled = true
+            }
 
-        if (!binding.flexibleAmountOption.isChecked || !binding.fixedDenomOption.isChecked) {
-            isEnabled = true
+            if (!binding.flexibleAmountOption.isChecked || !binding.fixedDenomOption.isChecked) {
+                isEnabled = true
+            }
         }
 
         if (selectedTerritory.isNotEmpty()) {
             isEnabled = true
         }
 
-        if (sortOption != ExploreViewModel.DEFAULT_SORT_OPTION) {
+        val currentSortOption = viewModel.appliedFilters.value.sortOption
+        if (currentSortOption != ExploreViewModel.DEFAULT_SORT_OPTION) {
             isEnabled = true
         }
 
@@ -372,13 +513,18 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
     }
 
     private fun resetFilters() {
-        dashPaymentOn = true
-        binding.dashOption.isChecked = true
-        giftCardPaymentOn = true
-        binding.giftCardOption.isChecked = true
+        // Only reset payment and denomination options for merchants
+        if (viewModel.exploreTopic == ExploreTopic.Merchants) {
+            dashPaymentOn = true
+            binding.dashOption.isChecked = true
+            ctxPaymentOn = true
+            binding.ctxOption.isChecked = true
+            piggyCardsPaymentOn = true
+            binding.piggycardsOption.isChecked = true
 
-        binding.flexibleAmountOption.isChecked = true
-        binding.fixedDenomOption.isChecked = true
+            binding.flexibleAmountOption.isChecked = true
+            binding.fixedDenomOption.isChecked = true
+        }
 
         selectedTerritory = ""
         binding.locationName.text = if (viewModel.isLocationEnabled.value == true) {
@@ -393,6 +539,7 @@ class FiltersDialog : OffsetDialogFragment(R.layout.dialog_filters) {
         sortOption = ExploreViewModel.DEFAULT_SORT_OPTION
         sortByOptionsAdapter?.selectedIndex = sortOptions.indexOf(sortOption)
 
+        updateGiftCardVisibility()
         binding.resetFiltersBtn.isEnabled = false
     }
 }

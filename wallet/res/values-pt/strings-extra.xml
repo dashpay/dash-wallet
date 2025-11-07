@@ -276,7 +276,7 @@
     <string name="menu_settings_subtitle">Moeda padrão, atalhos, sobre...</string>
     <string name="menu_tools_title">Ferramentas</string>
     <string name="menu_tools_subtitle">Importe chave privada…</string>
-    <string name="menu_local_currency">Moeda Local</string>
+    <string name="menu_local_currency">Moeda local</string>
     <string name="menu_rescan_blockchain">Reexaminar blockchain</string>
     <string name="menu_contact_support_title">Contato com o Suporte</string>
     <string name="menu_contact_support_subtitle">Reportar um problema</string>

@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Sarà pagata una piccola commissione di rete di %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Una tassa di priorità %s sara pagata. Usa \'priorità\' solo se hai bisogno di una conferma il prima possibile.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La quantità di piccoli pagamenti nel vostro portamonete non raggiunge valori inviabili.</string>
-    <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
     <string name="send_coins_fragment_direct_payment_enable">Invia il pagamento al beneficiario</string>
     <string name="send_coins_fragment_direct_payment_ack">Il tuo pagamento è stato inviato con successo.</string>
     <string name="send_coins_fragment_direct_payment_nack">Il tuo pagamento con connessione diretta è stato rifiutato.</string>

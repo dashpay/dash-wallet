@@ -1,4 +1,19 @@
 Dash Wallet / DashPay
+v11.4.1
+* Support Android 15
+* New Mixing Pane design on Home Screen
+* New Settings Page design
+* Support Dash branding on Blockchair.com
+* Address Sending Delays
+* Address gift card purchase delays
+* Inform user of merchant country
+* Fix Coinbase Transfer MAX function
+* Fix Topup bugs
+* Many UI fixes in DashSpend
+
+v11.4.0
+* Add PiggyCards support in DashSpend
+
 v11.3.2
 * Improve security model for PIN's and wallet encryption
 * Improve DashSpend error handling

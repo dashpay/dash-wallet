@@ -24,11 +24,11 @@ class ExploreDatabaseMigrations {
     companion object {
         val migration1To2 =
             object : Migration(1, 2) {
-                override fun migrate(database: SupportSQLiteDatabase) {
+                override fun migrate(db: SupportSQLiteDatabase) {
                     // Change `merchantId` and `sourceId` in `merchant` table
                     // column types from INTEGER to TEXT.
 
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE TABLE `temp` AS SELECT " +
                             "deeplink, " +
                             "plusCode, " +
@@ -57,10 +57,10 @@ class ExploreDatabaseMigrations {
                             "type " +
                             "FROM merchant"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "DROP TABLE merchant"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE TABLE merchant (" +
                             "deeplink TEXT, " +
                             "plusCode TEXT, " +
@@ -89,23 +89,23 @@ class ExploreDatabaseMigrations {
                             "type TEXT " +
                             ")"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE INDEX index_merchant_latitude ON merchant (latitude ASC)"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE INDEX index_merchant_longitude ON merchant (longitude ASC)"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "INSERT INTO merchant SELECT * FROM `temp`"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "DROP TABLE `temp`"
                     )
 
                     // Change `sourceId` in `atm` table column type from
                     // INTEGER to TEXT.
 
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE TABLE `temp` AS SELECT " +
                             "postcode, " +
                             "manufacturer, " +
@@ -130,10 +130,10 @@ class ExploreDatabaseMigrations {
                             "type " +
                             "FROM atm"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "DROP TABLE atm"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE TABLE atm (" +
                             "postcode TEXT, " +
                             "manufacturer TEXT, " +
@@ -158,29 +158,33 @@ class ExploreDatabaseMigrations {
                             "type TEXT " +
                             ")"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE INDEX index_atm_latitude ON atm (latitude ASC)"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "CREATE INDEX index_atm_longitude ON atm (longitude ASC)"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "INSERT INTO atm SELECT * FROM `temp`"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "DROP TABLE `temp`"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "ALTER TABLE merchant ADD COLUMN redeemType TEXT DEFAULT 'barcode'"
                     )
-                    database.execSQL(
+                    db.execSQL(
                         "ALTER TABLE merchant ADD COLUMN savingsPercentage INTEGER DEFAULT 0"
                     )
                 }
             }
 
         val migration2To3 = object : Migration(2, 3) {
-            override fun migrate(database: SupportSQLiteDatabase) { }
+            override fun migrate(db: SupportSQLiteDatabase) { }
+        }
+
+        val migration3To4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) { }
         }
     }
 }

@@ -96,6 +96,7 @@
     <string name="payment_protocol_default_error_title">Zahlungsfehler</string>
     <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
     <string name="exchange_rate_not_found">Kann Wechselkurs nicht finden.</string>
+    <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Direkt in der Dash Wallet erhalten</string>

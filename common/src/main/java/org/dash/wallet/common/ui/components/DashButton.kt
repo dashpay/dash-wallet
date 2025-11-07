@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.components.MyTheme.OverlineSemibold
+import org.dash.wallet.common.ui.components.MyTheme.SubtitleSemibold
 
 @Composable
 fun DashButton(

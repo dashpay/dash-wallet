@@ -226,7 +226,7 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
 
         override fun onNumber(number: Int) {
             refreshValue()
-            if (value.toString() == CoinbaseConstants.VALUE_ZERO) {
+            if (value.toString() == CoinbaseConstants.VALUE_ZERO && !value.toString().contains(DECIMAL_SEPARATOR)) {
                 value.clear()
             }
             val formattedValue = value.toString()

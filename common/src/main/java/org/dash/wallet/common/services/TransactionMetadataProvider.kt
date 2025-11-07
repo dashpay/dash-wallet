@@ -59,7 +59,7 @@ interface TransactionMetadataProvider {
     /**
      * Mark a transaction as DashSpend gift card expense with an icon
      */
-    suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?)
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?)
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)
     suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat)
 

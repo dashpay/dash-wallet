@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">將收取%s作為網絡費用。</string>
     <string name="send_coins_fragment_hint_fee_priority">將支付%s優先級的手續費。如果您希望支付較低的費用，則您只有在需要盡快確認時才使用“優先級”。</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">在你的錢包微小金額加起來不足以發送。</string>
-    <string name="send_coins_fragment_hint_replaying">目前無法付款，因為錢包未與網絡完全同步</string>
     <string name="send_coins_fragment_direct_payment_enable">直接付款給收款人</string>
     <string name="send_coins_fragment_direct_payment_ack">你的付款已經直接傳送成功</string>
     <string name="send_coins_fragment_direct_payment_nack">你的付款經直接連線被拒絕</string>
