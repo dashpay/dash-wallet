@@ -51,6 +51,18 @@
         </action>
 
         <action
+            android:id="@+id/home_to_transaction_metadata_settings"
+            app:destination="@id/transaction_metadata_info_dialog" >
+
+            <argument
+                android:name="first_time"
+                android:defaultValue="true" />
+            <argument
+                android:name="use_navigation"
+                android:defaultValue="true" />
+        </action>
+
+        <action
             android:id="@+id/home_to_addressInput"
             app:destination="@id/addressInputFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -298,7 +310,71 @@
         android:id="@+id/settingsFragment"
         android:name="de.schildbach.wallet.ui.SettingsFragment"
         android:label="Settings"
-        tools:layout="@layout/fragment_settings" />
+        tools:layout="@layout/fragment_more">
+
+        <action
+            android:id="@+id/settings_to_transaction_metadata"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/settings_to_transaction_metadata_info"
+            app:destination="@id/transaction_metadata_info_dialog"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/transaction_metadata_settings_fragment"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataSettingsFragment"
+        android:label="Transaction Metadata Settings"
+        tools:layout="@layout/fragment_transaction_metadata_settings">
+
+        <action
+            android:id="@+id/to_info_dialog"
+            app:destination="@id/transaction_metadata_info_dialog"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+
+    </fragment>
+
+    <dialog
+        android:id="@+id/transaction_metadata_info_dialog"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataDialog"
+        android:label="Transaction Metadata Info"
+        tools:layout="@layout/dialog_transaction_metadata"
+        android:theme="@style/My.Theme.Dialog">
+        <action
+            android:id="@+id/to_cost_dialog"
+            app:destination="@id/transaction_metadata_cost_dialog"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+
+        <action
+            android:id="@+id/to_settings_fragment"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/slide_out_right"/>
+        <argument
+            android:name="first_time"
+            app:argType="boolean"
+            app:defaultValue="false" />
+        <argument
+            android:name="use_navigation"
+            app:argType="boolean"
+            app:defaultValue="false" />
+    </dialog>
+
+    <dialog
+        android:id="@+id/transaction_metadata_cost_dialog"
+        android:name="de.schildbach.wallet.ui.more.TransactionMetadataCostDialog"
+        android:label="Transaction Metadata Cost Info"
+        tools:layout="@layout/dialog_transaction_metadata_costs"
+        />
 
     <fragment
         android:id="@+id/masternodeKeyTypeFragment"
@@ -393,6 +469,13 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/security_to_transaction_metadata"
+            app:destination="@id/transaction_metadata_settings_fragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -434,4 +517,6 @@
     <include app:graph="@navigation/nav_explore" />
     <include app:graph="@navigation/nav_coinbase" />
     <include app:graph="@navigation/nav_voting" />
+    <!--include app:graph="@navigation/nav_settings" /-->
+    <!--include app:graph="@navigation/nav_metadata_settings" /-->
 </navigation>

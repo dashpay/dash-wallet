@@ -20,17 +20,9 @@ package de.schildbach.wallet.ui.more
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.script.ScriptPattern
-import org.bitcoinj.wallet.KeyChain
-import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.services.BlockchainStateProvider
-import org.dash.wallet.common.util.Constants.DASH_CURRENCY
-import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel

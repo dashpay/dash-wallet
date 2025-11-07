@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.util.CrashReporter
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -69,7 +71,8 @@ class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
     walletDataProvider: WalletDataProvider,
-    private val packageInfoProvider: PackageInfoProvider
+    private val packageInfoProvider: PackageInfoProvider,
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
@@ -227,6 +230,33 @@ class ContactSupportViewModel @Inject constructor(
                 )
             }
             savedBackgroundTraces.deleteOnExit()
+        } catch (x: IOException) {
+            log.info("problem writing attachment", x)
+        }
+        // only for development
+        try {
+            val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
+            val listDocs = transactionMetadataDocumentDao.load()
+            try {
+                FileWriter(txMetadataEntries).use { writer ->
+                    writer.write("Transaction Metadata Documents\n")
+                    listDocs.forEach {
+                        writer.write("${it.id}, ${it.txId}, memo=${it.memo}, rate=${it.rate} ${it.currencyCode}, taxCat=${it.taxCategory}, service=${it.service}")
+                        writer.write("\n")
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            if (listDocs.isNotEmpty()) {
+                attachments.add(
+                    FileProvider.getUriForFile(
+                        application, application.packageName + ".file_attachment",
+                        txMetadataEntries
+                    )
+                )
+            }
+            txMetadataEntries.deleteOnExit()
         } catch (x: IOException) {
             log.info("problem writing attachment", x)
         }

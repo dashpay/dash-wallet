@@ -468,4 +468,48 @@
     <string name="voting_period_ends_tomorrow">Voting ends tomorrow</string>
     <string name="link_included">link included</string>
     <string name="group_by">Group by</string>
+    <string name="transaction_metadata_title">Transaction metadata</string>
+    <string name="transaction_metadata_data_being_saved">Scheduled</string>
+    <string name="transaction_metadata_payment_category_description">Indicates if a transaction is associated with Coinbase, Uphold, Topper or CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">The historical price at the time of the transaction</string>
+    <string name="transaction_metadata_description">Your data is stored on your device but will be lost if you reset or restore your wallet. Below are examples of the information that will be saved when saved on the network.</string>
+    <string name="transaction_metadata_cost">How much does it cost?</string>
+    <string name="transaction_metadata_payment_category">Payment Categories</string>
+    <string name="transaction_metadata_save_data">Save data</string>
+    <string name="transaction_metadata_tax_category">Tax Categories</string>
+    <string name="transaction_metadata_fiat_prices">Fiat Prices</string>
+    <string name="transaction_metadata_private_memos">Private Memos</string>
+    <string name="transaction_metadata_gift_card_info">Gift Card data</string>
+    <string name="transaction_metadata_private_memo_description">Short memos that describe the purpose of the transaction</string>
+    <string name="transaction_metadata_tax_category_description">Indicates if a transaction is a transfer, income or expense</string>
+    <string name="transaction_metadata_gift_card_info_description">Includes card number, pin code and other information</string>
+    <string name="transaction_metadata_costs_title">Costs associated with saving data to the network</string>
+    <string name="transaction_metadata_costs_description">As part of creating a username, you receive credits that are used for various activities on the network; saving transaction metadata on the network will consume these credits faster.  Once all credits are used, you can purchase more.\n\nIt costs approximately %s per upload of data to the network so it is recommended to upload multiple transactions at a time.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>After 10 transactions</item>
+        <item>Once a week</item>
+        <item>After every transaction</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Do you want to reset wallet without saving your metadata to the network?</string>
+    <string name="reset_wallet_metadata_message">Resetting your wallet without saving data to the network will result in the loss of some transaction metadata.</string>
+    <string name="reset_wallet_metadata_button_without">Reset wallet without saving</string>
+    <string name="reset_wallet_metadata_button_with">Save data and reset wallet</string>
+    <string name="reset_wallet_metadata_button_saving">Saving</string>
+    <string name="transaction_metadata_save_to_network">Save to network</string>
+    <string name="transaction_metadata_save_frequency">How often to save?</string>
+    <string name="transaction_metadata_what_to_save">What to save?</string>
+    <string name="transaction_metadata_past_title">Past</string>
+    <string name="transaction_metadata_future_title">Future</string>
+    <string name="transaction_metadata_past_subtitle">Save all transactions made up to %s</string>
+    <string name="transaction_metadata_future_subtitle">Automatically save all transactions you make after %s</string>
+    <string name="transaction_metadata_gift_card_data">Gift card data</string>
+    <string name="transaction_metadata_saving_to_network">Saving to network - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Last saved %s</string>
+    <string name="transaction_metadata_past_already_saved">All transactions made up to %s have already been saved</string>
+    <string name="transaction_metadata_past_already_saved_none">No transactions have been saved</string>
+    <string name="transaction_metadata_past_syncing">All transactions made up to %s are syncing</string>
+    <string name="transaction_metadata_save_new_tx_title">Do you want to save unsaved transactions?</string>
+    <string name="transaction_metadata_you_have_n_tx">You have %d unsaved transactions since %s</string>
+    <string name="transaction_metadata_save_transactions">Save unsaved transactions</string>
+    <string name="transaction_metadata_continue_without_saving">Continue without saving</string>
 </resources>

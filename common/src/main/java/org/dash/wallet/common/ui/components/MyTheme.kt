@@ -28,7 +28,7 @@ import org.dash.wallet.common.R
 
 object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
-    private val interRegular = FontFamily(Font(R.font.inter_regular))
+    val interRegular = FontFamily(Font(R.font.inter_regular))
     private val interMedium = FontFamily(Font(R.font.inter_medium))
     private val interSemibold = FontFamily(Font(R.font.inter_semibold))
     private val interBold = FontFamily(Font(R.font.inter_bold))
@@ -154,5 +154,7 @@ object MyTheme {
         val red = Color(0xFFEA3943)
         val red5 = Color(0x0DEA3943)
         val extraLightGray = Color(0xFFEBEDEE)
+        val darkGray = Color(0xFF75808A)
+        val darkerGray50 = Color(0x80B0B6BC)
     }
 }

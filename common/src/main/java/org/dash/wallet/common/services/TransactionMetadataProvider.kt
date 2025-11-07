@@ -118,6 +118,11 @@ interface TransactionMetadataProvider {
         markAddressAsync(address, false, TaxCategory.TransferIn, service)
     }
 
+    /**
+     * check if the tx metadata table has metadata for the given tx.
+     */
+    suspend fun exists(txId: Sha256Hash): Boolean
+
     // Reset methods
     suspend fun clear()
 }
