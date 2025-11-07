@@ -1490,7 +1490,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             } finally {
                 log.info("serviceJob cancelled after " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
                 serviceJob.cancel()
-                checkMutex.unlock()
+                if (checkMutex.isLocked) {
+                    checkMutex.unlock()
+                }
                 cleanupDeferred?.complete(Unit)
             }
         }
