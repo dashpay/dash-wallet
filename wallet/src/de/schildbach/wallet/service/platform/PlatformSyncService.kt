@@ -1550,8 +1550,9 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
+    private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
         if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
+            log.info("checking the vote status of {}", identityData.username)
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
