@@ -852,7 +852,7 @@ class PlatformRepo @Inject constructor(
                 blockchainIdentity.secondaryUsername?.let { name ->
                     usernameSecondary = name
                     usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
-                    log.info("creation: usernameSecondaryStatus = {}", blockchainIdentity.secondaryUsername)
+                    log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
                     preorderSaltSecondary = blockchainIdentity.saltForUsername(name, false)
                 }
             }
