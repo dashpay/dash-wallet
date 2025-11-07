@@ -78,8 +78,15 @@ class VotingRequestDetailsFragment : Fragment(R.layout.fragment_voting_request_d
                     } else {
                         dateFormat.format(endTime)
                     }
-                } ?: "Voting period not found"
+                } ?: getString(R.string.voting_period_error)
                 binding.votingRange.text = votingResults
+                binding.votingPeriodStatus.text = getString(
+                    if (isVotingOver) {
+                        R.string.after_the_voting_result
+                    } else {
+                        R.string.after_the_voting
+                    }
+                )
                 when {
                     isVotingOver -> {
                         binding.link.text = if (myUsernameRequest?.link != null && myUsernameRequest.link != "") {
