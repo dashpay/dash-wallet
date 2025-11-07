@@ -20,13 +20,19 @@ package de.schildbach.wallet.ui.more
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
@@ -48,8 +54,11 @@ class SecurityViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
     private val walletApplication: WalletApplication,
-    val biometricHelper: BiometricHelper
-): ViewModel() {
+    val biometricHelper: BiometricHelper,
+    blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao,
+    private val platformSyncService: PlatformSyncService,
+): BaseProfileViewModel(blockchainIdentityConfig, dashPayProfileDao) {
     private var selectedExchangeRate: ExchangeRate? = null
 
     val needPassphraseBackUp
@@ -131,5 +140,9 @@ class SecurityViewModel @Inject constructor(
                 mapOf()
             )
         }
+    }
+
+    suspend fun hasPendingTxMetadataToSave(): Boolean = withContext(Dispatchers.IO) {
+        platformSyncService.hasPendingTxMetadataToSave()
     }
 }

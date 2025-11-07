@@ -36,7 +36,7 @@ import org.dash.wallet.common.ui.setRoundedBackground
 class RadioGroupAdapter(
     defaultSelectedIndex: Int = 0,
     private val isCheckMark: Boolean = false,
-    private val clickListener: (IconifiedViewItem, Int) -> Unit
+    private val clickListener: (IconifiedViewItem, Int) -> Unit,
 ): ListAdapter<IconifiedViewItem, RadioButtonViewHolder>(DiffCallback()) {
 
     var selectedIndex: Int = defaultSelectedIndex
