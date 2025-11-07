@@ -339,9 +339,9 @@ public final class RequestWalletBalanceTask {
 			blockExplorers.push(new Pair<>("https://chainz.cryptoid.info/dash/api.dws?q=unspent", UnspentAPI.CryptoId));
 			blockExplorers.push(new Pair<>("https://insight.dash.org/insight-api/addr/", UnspentAPI.Insight));
 		} else if (BuildConfig.FLAVOR.equals("_testNet3") || BuildConfig.FLAVOR.equals("staging")) {
-			blockExplorers.push(new Pair<>("https://insight.testnet.networks.dash.org:3002/insight-api/addr/", UnspentAPI.Insight));
+			blockExplorers.push(new Pair<>("https://insight.testnet.networks.dash.org/insight-api/addr/", UnspentAPI.Insight));
 		} else if (BuildConfig.FLAVOR.equals("devnet")) {
-			blockExplorers.push(new Pair<>(String.format("http://insight.%s.networks.dash.org:3002/insight-api/addr/", Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())), UnspentAPI.Insight));
+			blockExplorers.push(new Pair<>(String.format("http://insight.%s.networks.dash.org/insight-api/addr/", Constants.NETWORK_PARAMETERS.getDevNetName().substring("devnet-".length())), UnspentAPI.Insight));
 		}
 
 		while (!blockExplorers.empty()) {
