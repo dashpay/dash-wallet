@@ -359,6 +359,24 @@ class CreateIdentityService : LifecycleService() {
                     }
                 }
             }
+
+            if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
+                if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (errorMessage.contains("missing domain document for")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (retryWithNewUserName) {
+                    // lets rewind the state to allow for a new username registration or request
+                    // it may have failed later in the process
+                    if (blockchainIdentityData.creationState > IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
+                        blockchainIdentityData.creationState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING
+                    }
+                }
+            }
         }
 
         platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
@@ -554,6 +572,42 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentityData.creationState = IdentityCreationState.NONE
                 blockchainIdentityData.creditFundingTxId = null
                 isRetry = true
+            }
+
+            if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING) {
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
+                if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (errorMessage.contains("missing domain document for")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (retryWithNewUserName) {
+                    // lets rewind the state to allow for a new username registration or request
+                    // it may have failed later in the process
+                    if (blockchainIdentityData.creationState > IdentityCreationState.USERNAME_REGISTERING) {
+                        blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
+                    }
+                }
+            }
+
+            if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
+                val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
+                if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (errorMessage.contains("missing domain document for")) {
+                    blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
+                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                } else if (retryWithNewUserName) {
+                    // lets rewind the state to allow for a new username registration or request
+                    // it may have failed later in the process
+                    if (blockchainIdentityData.creationState > IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
+                        blockchainIdentityData.creationState = IdentityCreationState.USERNAME_SECONDARY_REGISTERING
+                    }
+                }
             }
         }
 

@@ -165,7 +165,8 @@ class HistoryHeaderAdapter(
 
         if (blockchainIdentityData.creationStateErrorMessage != null) {
             val creationStateErrorMessage = blockchainIdentityData.creationStateErrorMessage!!
-            if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
+            if ((blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING ||
+                blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                 (creationStateErrorMessage.contains("Document transitions with duplicate unique properties") ||
                     creationStateErrorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll")) ||
                     creationStateErrorMessage.contains(Regex("does not have .* as a contender")) ||

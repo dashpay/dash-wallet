@@ -419,7 +419,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     // Do we need to have the user request a new username
                     val errorMessage = blockchainIdentityData.creationStateErrorMessage
                     val needsNewUsername =
-                        blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING &&
+                        (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING ||
+                                blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                                 (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
                                         errorMessage?.contains("missing domain document for") == true)
                     if (needsNewUsername ||
