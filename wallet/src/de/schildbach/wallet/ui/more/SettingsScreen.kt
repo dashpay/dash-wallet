@@ -217,9 +217,10 @@ private fun SettingsScreenContent(
                 )
 
                 // Transaction Metadata
-                if (Constants.SUPPORTS_TXMETADATA) {
+                if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
                     MenuItem(
-                        title = "Transaction metadata",
+                        title = stringResource(R.string.transaction_metadata_title),
+                        subtitle = uiState.transactionMetadataSubtitle,
                         icon = R.drawable.transaction_metadata,
                         action = onTransactionMetadataClick
                     )
@@ -260,7 +261,9 @@ fun MoreScreenPreviewWithCoinJoin() {
         mixedBalance = Coin.COIN,
         totalBalance = Coin.COIN.multiply(2L),
         hideBalance = false,
-        ignoringBatteryOptimizations = true
+        ignoringBatteryOptimizations = true,
+        transactionMetadataVisible = true,
+        transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
     )
     SettingsScreenContent(uiState = customState)
 }

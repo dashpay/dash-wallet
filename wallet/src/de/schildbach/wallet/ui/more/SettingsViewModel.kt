@@ -32,7 +32,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
@@ -54,6 +56,8 @@ data class SettingsUIState(
     val coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED,
     val totalBalance: Coin = Coin.ZERO,
     val mixedBalance: Coin = Coin.ZERO,
+    val transactionMetadataVisible: Boolean = false,
+    val transactionMetadataSubtitle: String? = null,
 )
 
 @HiltViewModel
@@ -66,7 +70,7 @@ class SettingsViewModel @Inject constructor(
     private val analytics: AnalyticsService,
     private val configuration: Configuration,
     private val dashPayConfig: DashPayConfig,
-    blockchainIdentityConfig: BlockchainIdentityConfig,
+    private val blockchainIdentityConfig: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(
     blockchainIdentityConfig,
@@ -142,6 +146,15 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(totalBalance = balance)
             }
             .launchIn(viewModelScope)
+
+        // Observe blockchain identity for transaction metadata visibility
+        blockchainIdentityConfig.observeBase()
+            .filterNotNull()
+            .map { it.creationComplete }
+            .distinctUntilChanged()
+            .onEach { isVisible ->
+                _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+            }.launchIn(viewModelScope)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
@@ -182,4 +195,8 @@ class SettingsViewModel @Inject constructor(
     suspend fun isTransactionMetadataInfoShown() = dashPayConfig.isTransactionMetadataInfoShown()
 
     suspend fun isSavingTransactionMetadata() = dashPayConfig.isSavingTransactionMetadata()
+
+    fun updateTransactionMetadataSubtitle(subtitle: String?) {
+        _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
+    }
 }

@@ -152,10 +152,10 @@ class PlatformSynchronizationService @Inject constructor(
         private val random = Random(System.currentTimeMillis())
 
         val UPDATE_TIMER_DELAY = 15.seconds
-        val PUSH_PERIOD = if (BuildConfig.DEBUG) 3.minutes else 3.hours
+        val PUSH_PERIOD = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
         val WEEKLY_PUSH_PERIOD = 7.days
-        val CUTOFF_MIN = if (BuildConfig.DEBUG) 3.minutes else 3.hours
-        val CUTOFF_MAX = if (BuildConfig.DEBUG) 6.minutes else 6.hours
+        val CUTOFF_MIN = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
+        val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
     }
 
@@ -805,8 +805,9 @@ class PlatformSynchronizationService @Inject constructor(
                 log.info("processing TxMetadata: ${doc.id} with ${list.size} items")
                 list.forEach { metadata ->
                     if (metadata.isNotEmpty()) {
+                        val txIdAsHash = Sha256Hash.wrapReversed(metadata.txId)
                         val cachedItems = transactionMetadataChangeCacheDao.findAfter(
-                            Sha256Hash.wrap(metadata.txId),
+                            txIdAsHash, // tx hash is stored in LE
                             timestamp
                         )
                         log.info(
@@ -819,7 +820,6 @@ class PlatformSynchronizationService @Inject constructor(
 
                         // we need to find a new way -- how can we know that we should change something?
                         // should we save to the DB table?
-                        val txIdAsHash = Sha256Hash.wrap(metadata.txId)
                         val metadataDocumentRecord = TransactionMetadataDocument(
                             doc.id,
                             doc.updatedAt!!,
@@ -1042,7 +1042,7 @@ class PlatformSynchronizationService @Inject constructor(
         log.info(PUBLISH, txMetadataItems.joinToString("\n") { it.toString() })
         val metadataList = txMetadataItems.map {
             TxMetadataItem(
-                it.txId.bytes,
+                it.txId.reversedBytes, // tx hash is stored in LE
                 it.sentTimestamp,
                 it.memo,
                 it.rate?.toDouble(),
@@ -1061,7 +1061,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         progressListener?.invoke(10)
         val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
-        val keyIndex = transactionMetadataChangeCacheDao.count() + transactionMetadataDocumentDao.countAllRequests()
+        val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
         platformRepo.blockchainIdentity.publishTxMetaData(
             metadataList,
             walletEncryptionKey,
@@ -1261,7 +1261,7 @@ class PlatformSynchronizationService @Inject constructor(
         }
         progressListener?.invoke(10)
         var itemsSaved = 0
-        var itemsToSave = changedItems.size
+        val itemsToSave = changedItems.size
         try {
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
