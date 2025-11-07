@@ -390,6 +390,8 @@
     <string name="requested_voting_duration">Results on %s.</string>
     <string name="cancel_request">Cancel Request</string>
     <string name="after_the_voting">After the voting ends we will notify you about its results</string>
+    <string name="after_the_voting_result">Voting has ended</string>
+    <string name="voting_period_error">Voting period not found</string>
     <string name="none">None</string>
     <string name="verify_now">Verify Now</string>
     <string name="if_you_tap_cancel">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
