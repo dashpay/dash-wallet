@@ -34,61 +34,78 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 
 open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomSheetDialogFragment() {
     protected open val forceExpand: Boolean = false
     @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // keep style, just move it here
         setStyle(STYLE_NORMAL, R.style.OffsetDialog)
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View? {
         return inflater.inflate(layout, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Edge-to-edge bottom handling for gesture nav / Android 15
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            // Don't consume the insets, let the layout handle margins naturally
+            v.setPadding(
+                v.paddingLeft,
+                v.paddingTop,
+                v.paddingRight,
+                v.paddingBottom + sys.bottom
+            )
+            WindowInsetsCompat.CONSUMED
+        }
+
         dialog?.setOnShowListener { dialog ->
-            if (!this@OffsetDialogFragment.isAdded) {
-                return@setOnShowListener
-            }
+            if (!this@OffsetDialogFragment.isAdded) return@setOnShowListener
 
             val d = dialog as BottomSheetDialog
             val bottomSheet = d.findViewById<FrameLayout>(R.id.design_bottom_sheet)
-            bottomSheet?.let {
-                bottomSheet.background = ResourcesCompat.getDrawable(
+            bottomSheet?.let { sheet ->
+                sheet.background = ResourcesCompat.getDrawable(
                     resources,
                     R.drawable.offset_dialog_background,
                     resources.newTheme().apply { applyStyle(backgroundStyle, true) }
                 )
 
                 val marginTop = resources.getDimensionPixelSize(R.dimen.offset_dialog_margin_top)
-                val displayHeight = requireContext().resources.displayMetrics.heightPixels
-                val height = if (forceExpand) displayHeight - marginTop else bottomSheet.height
-                view.layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, height)
 
-                val statusBar = Rect()
-                val window = requireActivity().window
-                window.decorView.getWindowVisibleDisplayFrame(statusBar)
-
-                val coordinatorLayout = bottomSheet.parent as CoordinatorLayout
-                val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-
-                if (forceExpand || (bottomSheet.height + marginTop + statusBar.top) > displayHeight) {
-                    // apply top offset
-                    bottomSheetBehavior.isFitToContents = false
-                    bottomSheetBehavior.expandedOffset = marginTop
-
-                    if (forceExpand) {
-                        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-                    } else {
-                        bottomSheetBehavior.peekHeight = bottomSheet.height - marginTop
+                // Only use full height for expanded dialogs
+                if (forceExpand) {
+                    sheet.layoutParams = (sheet.layoutParams as CoordinatorLayout.LayoutParams).apply {
+                        height = ViewGroup.LayoutParams.MATCH_PARENT
                     }
-                } else {
-                    // apply wrap_content height
-                    bottomSheetBehavior.peekHeight = bottomSheet.height
                 }
 
-                coordinatorLayout.parent.requestLayout()
+                BottomSheetBehavior.from(sheet).apply {
+                    isFitToContents = false
+                    skipCollapsed = true
+
+                    if (forceExpand) {
+                        expandedOffset = marginTop
+                        state = BottomSheetBehavior.STATE_EXPANDED
+                    } else {
+                        // still allow partially visible sheet but use same offset logic
+                        expandedOffset = marginTop
+                    }
+                }
+
+                (sheet.parent as? CoordinatorLayout)?.parent?.requestLayout()
             }
         }
 
@@ -96,7 +113,8 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
             dismiss()
         }
 
-        dialog?.window?.callback = UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
+        dialog?.window?.callback =
+            UserInteractionAwareCallback(dialog?.window?.callback, requireActivity())
     }
 
     fun show(activity: FragmentActivity) {
