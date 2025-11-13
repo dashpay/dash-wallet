@@ -61,7 +61,6 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
         // Edge-to-edge bottom handling for gesture nav / Android 15
         ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            // Don't consume the insets, let the layout handle margins naturally
             v.setPadding(
                 v.paddingLeft,
                 v.paddingTop,
