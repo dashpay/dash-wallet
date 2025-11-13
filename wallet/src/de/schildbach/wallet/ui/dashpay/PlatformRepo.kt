@@ -543,7 +543,6 @@ class PlatformRepo @Inject constructor(
             }
             contactScores[it.fromContactRequest!!.userId] = count
             contactIds.add(it.fromContactRequest!!.userId)
-            log.info("contact: {}", watch)
         }
 
         // determine users with top TOP_CONTACT_COUNT non-zero scores
