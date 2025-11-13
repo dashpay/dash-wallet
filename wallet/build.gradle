@@ -58,9 +58,9 @@ dependencies {
     implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
     implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
-    implementation "org.dashj.android:dashj-bls-android:1.0.1-SNAPSHOT"
-    implementation "org.dashj.android:dashj-x11-android:1.0.0-SNAPSHOT"
-    implementation "org.dashj.android:dashj-scrypt-android:1.0.0-SNAPSHOT"
+    implementation "org.dashj.android:dashj-bls-android:1.0.1"
+    implementation "org.dashj.android:dashj-x11-android:1.0.0"
+    implementation "org.dashj.android:dashj-scrypt-android:1.0.0"
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
