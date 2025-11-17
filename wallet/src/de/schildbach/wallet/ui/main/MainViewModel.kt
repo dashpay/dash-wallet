@@ -88,6 +88,7 @@ import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
+import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
@@ -144,7 +145,7 @@ class MainViewModel @Inject constructor(
     private val invitationsDao: InvitationsDao,
     userAlertDao: UserAlertDao,
     dashPayProfileDao: DashPayProfileDao,
-    dashPayConfig: DashPayConfig,
+    private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService
@@ -234,8 +235,9 @@ class MainViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false
         )
-
-    val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT)
+    private val _remindMetadata = MutableStateFlow(false)
+    val remindMetadata = _remindMetadata.asStateFlow()
+    val showTapToHideHint = walletUIConfig.observe(WalletUIConfig.SHOW_TAP_TO_HIDE_HINT).asLiveData()
 
     private val _isNetworkUnavailable = MutableLiveData<Boolean>()
     val isNetworkUnavailable: LiveData<Boolean>
@@ -782,7 +784,7 @@ class MainViewModel @Inject constructor(
     }
 
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
-        return metadata[transactions.values.first().txId]?.service == ServiceName.CTXSpend
+        return ServiceName.isDashSpend(metadata[transactions.values.first().txId]?.service)
     }
 
     /**
@@ -944,4 +946,24 @@ class MainViewModel @Inject constructor(
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
+
+    fun metadataReminder() {
+        viewModelScope.launch {
+            if (hasIdentity && !dashPayConfig.isTransactionMetadataInfoShown()) {
+                // have there been 10 transactions since the last update?
+                val installedDate = dashPayConfig.getMetadataFeatureInstalled()
+                walletData.wallet?.let { wallet: Wallet ->
+                    var count = 0
+                    wallet.getTransactions(true).forEach { tx ->
+                        if (tx.updateTime.time > installedDate) {
+                            count++
+                        }
+                    }
+                    if (count >= 10) {
+                        _remindMetadata.value = true
+                    }
+                }
+            }
+        }
+    }
 }

@@ -63,8 +63,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.features.exploredash.ui.ctxspend.dialogs.GiftCardDetailsDialog
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -96,7 +96,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     val fragment = if (rowView.txWrapper != null) {
                         viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                         TransactionGroupDetailsFragment(rowView.txWrapper)
-                    } else if (rowView.service == ServiceName.CTXSpend) {
+                    } else if (ServiceName.isDashSpend(rowView.service)) {
                         viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
                         GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
                     } else {

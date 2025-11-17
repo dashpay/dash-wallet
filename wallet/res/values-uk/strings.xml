@@ -65,7 +65,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Буде знято комісію мережі %s .</string>
     <string name="send_coins_fragment_hint_fee_priority">Буде сплачено плату за пріоритет у розмірі %s. Якщо вам важлива низька комісія, використовуйте Пріоритет, лише якщо вам потрібне підтвердження якнайшвидше.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сума дрібних платежів у вашому гаманці не становить суми, яку можна відправити.</string>
-    <string name="send_coins_fragment_hint_replaying">Наразі платежі неможливі, оскільки гаманець не повністю синхронізовано з мережею</string>
     <string name="send_coins_fragment_direct_payment_enable">Відправити платіж безпосередньо отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_ack">Платіж був успішно відправлений отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ваш платіж через пряме підключення був відхилений.</string>

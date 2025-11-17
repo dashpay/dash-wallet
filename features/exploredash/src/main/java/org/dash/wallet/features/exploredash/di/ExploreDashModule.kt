@@ -28,15 +28,19 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.MerchantAtmDataSource
+import org.dash.wallet.features.exploredash.network.PiggyCardsRemoteDataSource
 import org.dash.wallet.features.exploredash.network.RemoteDataSource
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
+import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
 import org.dash.wallet.features.exploredash.repository.*
 import org.dash.wallet.features.exploredash.services.UserLocationState
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -56,13 +60,27 @@ abstract class ExploreDashModule {
         }
 
         @Provides
-        fun provideApi(ctxSpendDataSource: RemoteDataSource): CTXSpendApi {
+        fun provideCTXSpendApi(ctxSpendDataSource: RemoteDataSource): CTXSpendApi {
             return ctxSpendDataSource.buildApi(CTXSpendApi::class.java)
         }
 
         @Provides
         fun provideCTXAuthApi(remoteDataSource: RemoteDataSource): CTXSpendTokenApi {
             return remoteDataSource.buildApi(CTXSpendTokenApi::class.java)
+        }
+
+        @Provides
+        fun provideDashSpendFactory(
+            ctxSpendConfig: CTXSpendConfig,
+            piggyCardsConfig: PiggyCardsConfig,
+            walletDataProvider: WalletDataProvider
+        ): DashSpendRepositoryFactory {
+            return DashSpendRepositoryFactory(ctxSpendConfig, piggyCardsConfig, walletDataProvider)
+        }
+
+        @Provides
+        fun providePiggyCardsApi(piggyCardsDataSource: PiggyCardsRemoteDataSource): PiggyCardsApi {
+            return piggyCardsDataSource.buildApi(PiggyCardsApi::class.java)
         }
     }
 

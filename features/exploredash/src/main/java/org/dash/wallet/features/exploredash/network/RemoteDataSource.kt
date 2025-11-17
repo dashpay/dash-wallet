@@ -19,7 +19,9 @@ package org.dash.wallet.features.exploredash.network
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
+import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
@@ -57,6 +59,7 @@ class RemoteDataSource @Inject constructor(private val config: CTXSpendConfig) {
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(HeadersInterceptor(config))
+            .addInterceptor(ErrorHandlingInterceptor(ServiceName.CTXSpend))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())
             .readTimeout(20.seconds.toJavaDuration())

@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.data.explore.model
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 
 object PaymentMethod {
     const val DASH = "dash"
@@ -48,13 +49,14 @@ data class Merchant(
     var paymentMethod: String? = "",
     var merchantId: String? = null,
     var redeemType: String? = "",
-    var savingsPercentage: Int? = 0, // in basis points 1 = 0.001%
+    var savingsPercentage: Int? = 0, // in basis points 1 = 0.01%
     var denominationsType: String? = "",
     @Ignore var minCardPurchase: Double? = null,
     @Ignore var maxCardPurchase: Double? = null,
     @Ignore var physicalAmount: Int = 0,
     @Ignore var fixedDenomination: Boolean = false,
-    @Ignore var denominations: List<Int> = listOf()
+    @Ignore var denominations: List<Double> = listOf(),
+    @Ignore var giftCardProviders: List<GiftCardProvider> = listOf()
 ) : SearchResult() {
 
     // 1% discount is 0.01
@@ -64,4 +66,62 @@ data class Merchant(
     // 1% discount is 1.00
     val savingsPercentageAsDouble: Double
         get() = savingsFraction * 100
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Merchant) return false
+
+        return id == other.id && name == other.name &&
+            active == other.active &&
+            denominations == other.denominations &&
+            fixedDenomination == other.fixedDenomination &&
+            savingsPercentage == other.savingsPercentage &&
+            giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active }
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + (name?.hashCode() ?: 0)
+        result = 31 * result + (active?.hashCode() ?: 0)
+        result = 31 * result + denominations.hashCode()
+        result = 31 * result + fixedDenomination.hashCode()
+        result = 31 * result + (savingsPercentage?.hashCode() ?: 0)
+        result = 31 * result + giftCardProviders.map { it.active }.hashCode()
+        return result
+    }
+
+    fun deepCopy(
+        savingsPercentage: Int? = null,
+        giftCardProviders: List<GiftCardProvider>? = null
+    ): Merchant =
+        this.copy(
+            savingsPercentage = savingsPercentage ?: this.savingsPercentage,
+            giftCardProviders = giftCardProviders ?: this.giftCardProviders
+        ).also { copy ->
+            // copy over SearchResult in bulk
+            copy.applySearchResultFrom(this)
+        }
+
+    private fun applySearchResultFrom(other: Merchant) {
+        this.id = other.id
+        this.active = other.active
+        this.name = other.name
+        this.address1 = other.address1
+        this.address2 = other.address2
+        this.address3 = other.address3
+        this.address4 = other.address4
+        this.latitude = other.latitude
+        this.longitude = other.longitude
+        this.website = other.website
+        this.phone = other.phone
+        this.territory = other.territory
+        this.city = other.city
+        this.source = other.source
+        this.sourceId = other.sourceId
+        this.logoLocation = other.logoLocation
+        this.googleMaps = other.googleMaps
+        this.coverImage = other.coverImage
+        this.type = other.type
+        this.distance = other.distance
+    }
 }

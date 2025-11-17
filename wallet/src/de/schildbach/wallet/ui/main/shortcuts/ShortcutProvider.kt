@@ -70,21 +70,44 @@ class ShortcutProvider @Inject constructor(
             }
             .launchIn(scope)
     }
+    /* Current Default Shortcuts
+        When they have a zero balance and have not verified their passphrase
+            Backup
+            Receive
+            Buy & Sell
+            Spend
+        When they have a zero balance and have verified their passphrase
+            Receive
+            Send
+            Buy & Sell
+            Spend
+        When they have a balance and have verified their passphrase
+            Receive
+            Send
+            Scan
+            Spend
+        When they have a balance and have not verified their passphrase
+            Backup
+            Receive
+            Send
+            Spend
+     */
 
     // Default logic before the user customizes shortcuts
     fun getFilteredShortcuts(
         isPassphraseVerified: Boolean = true,
         userHasBalance: Boolean = true,
-        userHasContacts: Boolean = false
+        userHasContacts: Boolean = false,
+        prioritizeSpend: Boolean = true
     ): List<ShortcutOption> {
         val shortcuts = ShortcutOption.entries.filter { shortcut ->
             when (shortcut) {
                 ShortcutOption.SECURE_NOW -> !isPassphraseVerified
-                ShortcutOption.SCAN_QR -> userHasBalance
-                ShortcutOption.SEND -> !userHasBalance && isPassphraseVerified
+                ShortcutOption.SCAN_QR -> userHasBalance && isPassphraseVerified
+                ShortcutOption.SEND -> userHasBalance || isPassphraseVerified
                 ShortcutOption.BUY_SELL -> !userHasBalance
-                ShortcutOption.SEND_TO_ADDRESS -> userHasBalance
-                ShortcutOption.SEND_TO_CONTACT -> userHasBalance && userHasContacts
+                ShortcutOption.SEND_TO_ADDRESS -> userHasBalance && !prioritizeSpend
+                ShortcutOption.SEND_TO_CONTACT -> userHasBalance && userHasContacts && !prioritizeSpend
                 else -> true
             }
         }

@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.components.MyTheme.OverlineSemibold
+import org.dash.wallet.common.ui.components.MyTheme.SubtitleSemibold
 
 @Composable
 fun DashButton(
@@ -186,6 +188,10 @@ enum class Size(
     Small(13.sp, 18.sp, 16.dp, 6.dp, 12.dp, 6.dp, 8.dp, 36.dp),
     ExtraSmall(12.sp, 16.sp,13.dp, 6.dp, 8.dp, 4.dp, 6.dp, 28.dp)
 }
+
+val DashBlue = Color(0xFF008DE4)
+val PrimaryText = Color(0xFF000000)
+val TertiaryText = Color(0xFF888888)
 
 @Composable
 @Preview

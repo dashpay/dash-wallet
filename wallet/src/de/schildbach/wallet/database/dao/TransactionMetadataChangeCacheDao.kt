@@ -19,6 +19,7 @@ package de.schildbach.wallet.database.dao
 
 import androidx.room.*
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import kotlinx.coroutines.flow.Flow
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.TaxCategory
 
@@ -47,6 +48,9 @@ interface TransactionMetadataChangeCacheDao {
 
     @Query("SELECT * FROM transaction_metadata_cache WHERE txid = :txId")
     suspend fun load(txId: Sha256Hash): TransactionMetadataCacheItem?
+
+    @Query("SELECT DISTINCT txId FROM transaction_metadata_cache")
+    suspend fun getAllTransactionIds(): List<Sha256Hash>
 
     @Query(
         """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, taxCategory) 
@@ -131,6 +135,92 @@ interface TransactionMetadataChangeCacheDao {
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
+    @Query("SELECT COUNT(*) FROM transaction_metadata_cache")
+    suspend fun count(): Int
+
+    @Query("SELECT COUNT(DISTINCT txId) FROM transaction_metadata_cache where cacheTimestamp < :beforeTimestamp")
+    suspend fun countTransactions(beforeTimestamp: Long): Int
+
     @Query("DELETE FROM transaction_metadata_cache")
     suspend fun clear()
+
+    @Query("SELECT MAX(cacheTimestamp) FROM transaction_metadata_cache")
+    suspend fun lastTransactionTime(): Long
+
+    @Query("""
+        SELECT * FROM transaction_metadata_cache 
+        WHERE txId IN (
+            SELECT txId FROM transaction_metadata 
+            WHERE timestamp < :maxTimestamp
+        )
+    """)
+    suspend fun getCachedItemsBefore(maxTimestamp: Long): List<TransactionMetadataCacheItem>
+
+    @Query("""
+        SELECT * FROM transaction_metadata_cache 
+        WHERE txId IN (
+            SELECT txId FROM transaction_metadata 
+            WHERE timestamp < :maxTimestamp
+        )
+    """)
+    fun observeCachedItemsBefore(maxTimestamp: Long): Flow<List<TransactionMetadataCacheItem>>
+
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM transaction_metadata_cache
+            WHERE txId = :txId
+              AND sentTimestamp IS :sentTimestamp
+              AND taxCategory IS :taxCategory
+              AND currencyCode IS :currencyCode
+              AND rate IS :rate
+              AND memo IS :memo
+              AND service IS :service
+              AND customIconUrl IS :customIconUrl
+              AND giftCardNumber IS :giftCardNumber
+              AND giftCardPin IS :giftCardPin
+              AND merchantName IS :merchantName
+              AND originalPrice IS :originalPrice
+              AND barcodeValue IS :barcodeValue
+              AND barcodeFormat IS :barcodeFormat
+              AND merchantUrl IS :merchantUrl
+        )
+    """)
+    suspend fun has(
+        txId: Sha256Hash,
+        sentTimestamp: Long?,
+        taxCategory: TaxCategory?,
+        currencyCode: String?,
+        rate: String?,
+        memo: String?,
+        service: String?,
+        customIconUrl: String?,
+        giftCardNumber: String?,
+        giftCardPin: String?,
+        merchantName: String?,
+        originalPrice: Double?,
+        barcodeValue: String?,
+        barcodeFormat: String?,
+        merchantUrl: String?
+    ): Boolean
+
+
+    suspend fun has(item: TransactionMetadataCacheItem): Boolean {
+        return has(
+            item.txId,
+            item.sentTimestamp,
+            item.taxCategory,
+            item.currencyCode,
+            item.rate,
+            item.memo,
+            item.service,
+            item.customIconUrl,
+            item.giftCardNumber,
+            item.giftCardPin,
+            item.merchantName,
+            item.originalPrice,
+            item.barcodeValue,
+            item.barcodeFormat,
+            item.merchantUrl
+        )
+    }
 }

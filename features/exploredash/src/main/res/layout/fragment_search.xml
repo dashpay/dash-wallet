@@ -98,7 +98,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:background="@drawable/rounded_background"
-            android:paddingBottom="40dp"
+            android:paddingBottom="80dp"
             android:theme="@style/ExploreSearchResultsBackground"
             app:behavior_expandedOffset="@dimen/default_expanded_offset"
             app:behavior_fitToContents="false"
@@ -191,13 +191,14 @@
                     android:text="@string/explore_reset_all_filters" />
             </LinearLayout>
 
-            <org.dash.wallet.features.exploredash.ui.explore.ItemDetails
+            <androidx.compose.ui.platform.ComposeView
                 android:id="@+id/item_details"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
+                android:layout_marginTop="24dp"
                 android:visibility="gone"
                 app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintHeight_percent="@dimen/merchant_details_height_ratio" />
+                app:layout_constraintBottom_toBottomOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

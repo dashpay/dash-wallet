@@ -2,15 +2,15 @@ buildscript {
     ext {
         kotlin_version = '2.1.0'
         coroutinesVersion = '1.6.4'
-        ok_http_version = '4.9.1'
-        dashjVersion = '21.1.12-SNAPSHOT'
-        dppVersion = "2.0.1-SNAPSHOT"
+        ok_http_version = '4.12.0'
+        dashjVersion = '21.1.12'
+        dppVersion = "2.0.2-SNAPSHOT"
         hiltVersion = '2.53'
         hiltCompilerVersion = '1.2.0'
         hiltWorkVersion = '1.2.0'
         workRuntimeVersion='2.9.1'
         firebaseVersion = '32.1.1'
-        roomVersion = '2.5.2'
+        roomVersion = '2.6.1'
         jetpackVersion = '1.8.0'
         appCompatVersion = '1.4.2'
 
@@ -41,7 +41,7 @@ buildscript {
         testCoreVersion = '1.5.0'
         mockitoVersion = '4.0.0'
         espressoVersion = '3.4.0'
-        coilVersion = '1.4.0'
+        coilVersion = '2.7.0'
         junitExtVersion = '1.1.3'
         coreTestingVersion = '2.1.0'
     }
@@ -76,6 +76,5 @@ allprojects {
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
-        maven { url 'https://central.sonatype.com/repository/maven-snapshots/' }
     }
 }

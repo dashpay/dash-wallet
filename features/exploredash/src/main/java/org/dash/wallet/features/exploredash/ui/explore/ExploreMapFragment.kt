@@ -39,6 +39,7 @@ import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
@@ -154,6 +155,24 @@ class ExploreMapFragment : SupportMapFragment() {
                     }
                 }
             }
+
+        viewModel.appliedFilters
+            .distinctUntilChangedBy {
+                "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}-${it.query}"
+            }
+            .observe(viewLifecycleOwner) { filters ->
+                googleMap?.let { map ->
+                    if (viewModel.screenState.value == ScreenState.SearchResults &&
+                        viewModel.physicalSearchResults.value != null
+                    ) {
+                        setResults(viewModel.physicalSearchResults.value)
+                    } else if (viewModel.screenState.value == ScreenState.MerchantLocations &&
+                        viewModel.allMerchantLocations.value?.isNotEmpty() == true
+                    ) {
+                        setResults(viewModel.allMerchantLocations.value)
+                    }
+                }
+            }
     }
 
     private fun showSelectedMarker(state: ScreenState) {
@@ -226,7 +245,9 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                viewModel.onMapMarkerSelected(marker.tag as Int)
+                lifecycleScope.launch {
+                    viewModel.onMapMarkerSelected(marker.tag as Int)
+                }
                 true
             }
 

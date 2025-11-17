@@ -234,6 +234,12 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
+        viewModel.remindMetadata.observe(viewLifecycleOwner) { shouldRemind ->
+            if (shouldRemind) {
+                safeNavigate(WalletFragmentDirections.homeToTransactionMetadataSettings())
+            }
+        }
+
         viewModel.dashPayProfile.observe(viewLifecycleOwner) { profile ->
             if (viewModel.hasIdentity) {
                 ProfilePictureDisplay.display(binding.dashpayUserAvatar, profile, true)

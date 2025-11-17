@@ -727,7 +727,7 @@ public class WalletApplication extends MultiDexApplication
         final LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
 
         final LogMarkerFilter markerFilter = new LogMarkerFilter();
-
+        markerFilter.addAcceptedMarker("PUBLISH");
         final PatternLayoutEncoder filePattern = new PatternLayoutEncoder();
         filePattern.setContext(context);
         filePattern.setPattern("%d{HH:mm:ss,UTC} [%thread] %logger{0} - %msg%n");

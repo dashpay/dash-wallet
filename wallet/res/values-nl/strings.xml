@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Netwerkkosten %s worden betaald.</string>
     <string name="send_coins_fragment_hint_fee_priority">Een prioriteitstoeslag van %s wordt betaald. Als je een lage toeslag belangrijk vindt, gebruik \'prioriteit\' alleen als je zo spoedig mogelijk bevestiging nodig hebt.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Het saldo van kleine betalingen in je Dashportemonnee is bij elkaar niet hoog genoeg om te kunnen versturen.</string>
-    <string name="send_coins_fragment_hint_replaying">Momenteel zijn betalingen niet mogelijk omdat de portemonnee niet volledig is gesynchroniseerd met het netwerk</string>
     <string name="send_coins_fragment_direct_payment_enable">Betaling direct versturen aan de begunstigde.</string>
     <string name="send_coins_fragment_direct_payment_ack">Je betaling is succesvol direct verstuurd.</string>
     <string name="send_coins_fragment_direct_payment_nack">Je betaling is afgewezen via directe verbinding.</string>

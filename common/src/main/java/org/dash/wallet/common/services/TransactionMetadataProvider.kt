@@ -59,7 +59,7 @@ interface TransactionMetadataProvider {
     /**
      * Mark a transaction as DashSpend gift card expense with an icon
      */
-    suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?)
+    suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?)
     suspend fun updateGiftCardMetadata(giftCard: GiftCard)
     suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat)
 
@@ -117,6 +117,11 @@ interface TransactionMetadataProvider {
     fun markAddressAsTransferInAsync(address: String, service: String) {
         markAddressAsync(address, false, TaxCategory.TransferIn, service)
     }
+
+    /**
+     * check if the tx metadata table has metadata for the given tx.
+     */
+    suspend fun exists(txId: Sha256Hash): Boolean
 
     // Reset methods
     suspend fun clear()

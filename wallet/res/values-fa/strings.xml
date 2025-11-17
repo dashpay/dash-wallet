@@ -63,7 +63,6 @@
     <string name="send_coins_fragment_hint_fee_economic">کارمزد شبکه معادل با %s پرداخت خواهد شد. </string>
     <string name="send_coins_fragment_hint_fee_priority">کارمزد اولویت معادل با %s پرداخت خواهد شد. اگر به دنبال کارمزد پایین هستید، از گزینه «اولویت» فقط در مواردی که نیازمند تایید سریع تراکنش از سوی شبکه هستید استفاده کنید. </string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">پرداخت‌های جزیی در کیف پول‌تان روی هم رفته آن قدر نیست که بتواند به یک میزان قابل ارسال برسد. </string>
-    <string name="send_coins_fragment_hint_replaying">پرداخت‌های کنونی امکان‌پذیر نیست، زیرا کیف پول به خوبی با شبکه همزمان نشده است</string>
     <string name="send_coins_fragment_direct_payment_enable">مبلغ را به صورت مستقیم برای دریافت‌کننده ارسال کنید.</string>
     <string name="send_coins_fragment_direct_payment_ack">مبلغ مورد نظرتان با موفقیت ارسال شد.</string>
     <string name="send_coins_fragment_direct_payment_nack">پرداخت شما از طریق اتصال مستقیم رد شد!</string>

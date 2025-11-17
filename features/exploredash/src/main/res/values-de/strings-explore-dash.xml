@@ -245,4 +245,5 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Kaufe eine Geschenkkarte mit deinem DashSpend Konto.</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Erstelle ein DashSpend Konto oder logge dich ein bestehendes Konto ein.</string>
     <string name="temporarily_unavailable">Zur Zeit nicht verfügbar</string>
-</resources>
+    <string name="token_expired_title">Deine Session ist abgelaufen</string>
+    </resources>

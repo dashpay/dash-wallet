@@ -91,6 +91,7 @@
     <string name="payment_protocol_default_error_title">خطأ في الدفع</string>
     <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
     <string name="exchange_rate_not_found">تعذر العثور على سعر الصرف.</string>
+    <string name="send_coins_fragment_hint_replaying">لا يمكن الدفع حاليًا لأن المحفظة غير متزامنة بالكامل مع الشبكة</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">استلم مباشرةً إلى محفظة داش</string>

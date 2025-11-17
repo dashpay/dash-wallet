@@ -28,7 +28,7 @@ import org.dash.wallet.common.R
 
 object MyTheme {
     val ToastBackground = Color(0xff191c1f).copy(alpha = 0.9f)
-    private val interRegular = FontFamily(Font(R.font.inter_regular))
+    val interRegular = FontFamily(Font(R.font.inter_regular))
     private val interMedium = FontFamily(Font(R.font.inter_medium))
     private val interSemibold = FontFamily(Font(R.font.inter_semibold))
     private val interBold = FontFamily(Font(R.font.inter_bold))
@@ -39,6 +39,13 @@ object MyTheme {
         fontFamily = interRegular,
         fontWeight = FontWeight(500),
         textAlign = TextAlign.Center,
+    )
+
+    val Caption = TextStyle(
+        fontSize = 13.sp,
+        lineHeight = 18.sp,
+        fontFamily = interRegular,
+        fontWeight = FontWeight(400)
     )
 
     val CaptionMedium = TextStyle(
@@ -62,14 +69,14 @@ object MyTheme {
         fontWeight = FontWeight(600),
     )
 
-    val Caption = TextStyle(
-        fontSize = 13.sp,
-        lineHeight = 18.sp,
-        fontFamily = interRegular,
-        fontWeight = FontWeight(400)
+    val OverlineMedium = TextStyle(
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        fontFamily = interMedium,
+        fontWeight = FontWeight(500)
     )
 
-    val OverlineMedium = TextStyle(
+    val OverlineCaptionRegular = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
         fontFamily = interMedium,
@@ -81,13 +88,6 @@ object MyTheme {
         lineHeight = 16.sp,
         fontFamily = interRegular,
         fontWeight = FontWeight(400)
-    )
-
-    val OverlineCaptionRegular = TextStyle(
-        fontSize = 12.sp,
-        lineHeight = 16.sp,
-        fontFamily = interMedium,
-        fontWeight = FontWeight(500)
     )
 
     val Body2Regular = TextStyle(
@@ -154,5 +154,7 @@ object MyTheme {
         val red = Color(0xFFEA3943)
         val red5 = Color(0x0DEA3943)
         val extraLightGray = Color(0xFFEBEDEE)
+        val darkGray = Color(0xFF75808A)
+        val darkerGray50 = Color(0x80B0B6BC)
     }
 }

@@ -163,7 +163,8 @@ class ShortcutsViewModel @Inject constructor(
         return shortcutProvider.getFilteredShortcuts(
             isPassphraseVerified = isPassphraseVerified,
             userHasBalance = userHasBalance,
-            userHasContacts = userHasContacts
+            userHasContacts = userHasContacts,
+            prioritizeSpend = true
         )
     }
 
