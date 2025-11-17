@@ -228,6 +228,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     lateinit var dashSystemService: DashSystemService
 
     @Inject lateinit var coinJoinService: CoinJoinService
+    @Inject lateinit var serviceConfig: BlockchainServiceConfig
+    @Inject lateinit var analyticsService: AnalyticsService
 
     private var blockStore: BlockStore? = null
     private var headerStore: BlockStore? = null
@@ -549,6 +551,64 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private abstract inner class MyDownloadProgressTracker
         : DownloadProgressTracker(Constants.SYNC_FLAGS.contains(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING)), OnPreBlockProgressListener
+
+    private val timeoutErrorListener = TimeoutErrorListener { error, peer ->
+        log.info("handling timeout error due to $error from $peer")
+        when (error) {
+            TimeoutError.BLOCKSTORE_MEMORY_ACCESS -> {
+                serviceScope.launch {
+                    if (serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) != true) {
+                        serviceConfig.set(BLOCKCHAIN_STORE_MEMORY_FAILURE, true)
+                        log.warn("BLOCKSTORE_MEMORY_ACCESS timeout detected - forcing shutdown and scheduling restart in 1 minute")
+                        analyticsService.logError(Exception("Blockstore memory stalled"))
+                        rescheduleService()
+
+                        // Force immediate shutdown
+                        withContext(Dispatchers.Main) {
+                            stopSelf()
+                        }
+                    }
+                }
+            }
+            TimeoutError.UNKNOWN -> {
+
+            }
+            else -> {}
+        }
+    }
+
+    private fun rescheduleService() {
+        // Schedule restart in 1 minute
+        val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
+        val serviceIntent = Intent(
+            application,
+            BlockchainServiceImpl::class.java
+        )
+        val alarmIntent: PendingIntent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            serviceIntent.putExtra(START_AS_FOREGROUND_EXTRA, true)
+            PendingIntent.getForegroundService(
+                application, 0, serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } else {
+            PendingIntent.getService(
+                application, 0, serviceIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        }
+        // alarmManager.cancel(alarmIntent)
+
+
+        val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
+        alarmManager.setInexactRepeating(
+            AlarmManager.RTC_WAKEUP,
+            restartTime,
+            AlarmManager.INTERVAL_FIFTEEN_MINUTES,
+            alarmIntent
+        )
+
+        log.info("Scheduled service restart in 1 minute at {}", Date(restartTime))
+    }
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
         object : MyDownloadProgressTracker() {
@@ -1109,7 +1169,128 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     blockStore?.chainHead // detect corruptions as early as possible
                     headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
                     headerStore?.chainHead // detect corruptions as early as possible
+                    val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
+                    if (blockchainStoreMemoryError /*&& serviceConfig.getBlockStoreLastFix() == BlockStoreLastFix.COPY_FILES*/) {
+                        try {
+                            // the stores are open, copy 100 blocks to a new store.
+                            log.info("attempting to fix blockchain memory stalls by copying from store: {}", serviceConfig.getBlockStoreLastFix())
+
+                            val blockchainFileTemp = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME + "-temp")
+                            val headerFileTemp = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.HEADERS_FILENAME + "-temp")
+
+                            // Clean up any existing temp files from previous failed attempts
+                            blockchainFileTemp.delete()
+                            headerFileTemp.delete()
+
+                            var blockStoreTemp: SPVBlockStore? = null
+                            var headerStoreTemp: SPVBlockStore? = null
+
+                            try {
+                                blockStoreTemp = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockchainFileTemp)
+                                headerStoreTemp = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerFileTemp)
+
+                                // Copy blockchain blocks
+                                var cursor = blockStore!!.chainHead
+                                val chainHead = cursor
+                                blockStoreTemp.put(cursor)
+                                var blockCount = 1
+                                for (i in 0 until 100) {
+                                    cursor = cursor!!.getPrev(blockStore!!)
+                                    if (cursor == null || cursor.header == Constants.NETWORK_PARAMETERS.genesisBlock) {
+                                        break
+                                    }
+                                    blockStoreTemp.put(cursor)
+                                    blockCount++
+                                }
+                                blockStoreTemp.chainHead = chainHead
+                                log.info("copied {} blocks to temp store", blockCount)
+
+                                // Copy header blocks
+                                cursor = headerStore!!.chainHead
+                                val headerChainHead = cursor
+                                headerStoreTemp.put(cursor)
+                                var headerCount = 1
+                                for (i in 0 until 100) {
+                                    cursor = cursor!!.getPrev(headerStore!!)
+                                    if (cursor == null || cursor.header == Constants.NETWORK_PARAMETERS.genesisBlock) {
+                                        break
+                                    }
+                                    headerStoreTemp.put(cursor)
+                                    headerCount++
+                                }
+                                headerStoreTemp.chainHead = headerChainHead
+                                log.info("copied {} headers to temp store", headerCount)
+
+                                // Close temp stores first
+                                headerStoreTemp.close()
+                                headerStoreTemp = null
+                                blockStoreTemp.close()
+                                blockStoreTemp = null
+
+                                // Close old stores
+                                blockStore!!.close()
+                                headerStore!!.close()
+
+                                // Delete old files
+                                if (!blockChainFile!!.delete()) {
+                                    log.error("Failed to delete old blockchain file")
+                                    throw IOException("Failed to delete old blockchain file")
+                                }
+                                if (!headerChainFile!!.delete()) {
+                                    log.error("Failed to delete old header chain file")
+                                    throw IOException("Failed to delete old header chain file")
+                                }
+
+                                // Rename temp files to actual files
+                                if (!blockchainFileTemp.renameTo(blockChainFile!!)) {
+                                    log.error("Failed to rename temp blockchain file")
+                                    throw IOException("Failed to rename temp blockchain file")
+                                }
+                                if (!headerFileTemp.renameTo(headerChainFile!!)) {
+                                    log.error("Failed to rename temp header file")
+                                    throw IOException("Failed to rename temp header file")
+                                }
+
+                                log.info("completed file replacement, now reloading the block stores")
+                                blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                                blockStore?.chainHead // detect corruptions as early as possible
+                                headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                                headerStore?.chainHead // detect corruptions as early as possible
+                                log.info("block stores reloaded successfully")
+
+                                // Record that we attempted this fix
+                                serviceConfig.set(BLOCKCHAIN_STORE_LAST_FIX, BlockStoreLastFix.COPY_FROM_STORE.name)
+                                serviceConfig.set(BLOCKCHAIN_STORE_MEMORY_FAILURE, false)
+                            } finally {
+                                // Ensure temp stores are closed even if an error occurs
+                                try {
+                                    blockStoreTemp?.close()
+                                } catch (e: Exception) {
+                                    log.warn("Error closing temp blockStore", e)
+                                }
+                                try {
+                                    headerStoreTemp?.close()
+                                } catch (e: Exception) {
+                                    log.warn("Error closing temp headerStore", e)
+                                }
+                            }
+                        } catch (e: Exception) {
+                            log.error("Failed to fix blockchain memory stalls by copying from store", e)
+                            // Clean up temp files on failure
+                            try {
+                                val blockchainFileTemp = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.BLOCKCHAIN_FILENAME + "-temp")
+                                val headerFileTemp = File(getDir("blockstore", MODE_PRIVATE), Constants.Files.HEADERS_FILENAME + "-temp")
+                                blockchainFileTemp.delete()
+                                headerFileTemp.delete()
+                            } catch (cleanupEx: Exception) {
+                                log.warn("Error cleaning up temp files", cleanupEx)
+                            }
+                        }
+                    }
                     withContext(Dispatchers.Main) { verifyBlockStores() }
+//                    if (blockStore is TestingSPVBlockStore) {
+//                        (blockStore as TestingSPVBlockStore).setBlockGetMethod(true)
+//                    }
                     val earliestKeyCreationTime = wallet.earliestKeyCreationTime
                     if (!blockChainFileExists && earliestKeyCreationTime > 0) {
                         try {
@@ -1441,6 +1622,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("Dash system services are shutdown")
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
+                    peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("peerGroup: removed listeners and wallet")
