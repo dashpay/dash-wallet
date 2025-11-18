@@ -345,7 +345,9 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING) {
                 val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
                 if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
-                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere") ||
+                    // dash-sdk doesn't give us the above
+                    errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
@@ -363,7 +365,9 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
                 val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
                 if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
-                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere") ||
+                    // dash-sdk doesn't give us the above
+                    errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
@@ -577,7 +581,9 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING) {
                 val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
                 if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
-                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere") ||
+                    // dash-sdk doesn't give us the above
+                    errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
@@ -595,7 +601,9 @@ class CreateIdentityService : LifecycleService() {
             if (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) {
                 val errorMessage = blockchainIdentityData.creationStateErrorMessage ?: ""
                 if (errorMessage.contains("preorderDocument was not found with a salted domain hash") ||
-                    errorMessage.contains("cannot find preorder document, though it should be somewhere")) {
+                    errorMessage.contains("cannot find preorder document, though it should be somewhere") ||
+                    // dash-sdk doesn't give us the above
+                    errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
                     platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
