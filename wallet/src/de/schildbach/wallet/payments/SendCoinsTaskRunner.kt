@@ -463,6 +463,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
             }
             log.info("send successful, transaction committed: {}", transaction.txId.toString())
+            log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)
             transaction
