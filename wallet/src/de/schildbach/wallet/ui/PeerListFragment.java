@@ -312,7 +312,13 @@ public final class PeerListFragment extends Fragment {
 
         @Override
         public List<Peer> loadInBackground() {
-            return service.getConnectedPeers();
+            List<Peer> connectedPeers = service.getConnectedPeers();
+            if (connectedPeers == null) {
+                log.warn("getConnectedPeers() returned null, using empty list");
+                connectedPeers = Collections.emptyList();
+            }
+            log.info("connected peers: {}", connectedPeers.size());
+            return connectedPeers;
         }
 
         private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
