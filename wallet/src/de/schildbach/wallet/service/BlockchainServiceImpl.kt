@@ -311,7 +311,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 wallet: Wallet, tx: Transaction, prevBalance: Coin,
                 newBalance: Coin
             ) {
-                val watch = Stopwatch.createStarted()
                 val bestChainHeight = blockChain!!.bestChainHeight
                 val replaying =
                     bestChainHeight < config.bestChainHeightEver || config.isRestoringBackup
@@ -380,14 +379,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 handleMetadata(tx)
                 handleContactPayments(tx)
                 updateAppWidget()
-                log.info("onCoinsReceived: {}", watch)
             }
 
             override fun onCoinsSent(
                 wallet: Wallet, tx: Transaction, prevBalance: Coin,
                 newBalance: Coin
             ) {
-                val watch = Stopwatch.createStarted()
                 transactionsReceived.incrementAndGet()
                 log.info("onCoinsSent: {}", tx.txId)
                 if (AssetLockTransaction.isAssetLockTransaction(tx) && tx.purpose == Transaction.Purpose.UNKNOWN) {
@@ -402,7 +399,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 handleMetadata(tx)
                 updateAppWidget()
-                log.info("onCoinsSent: {}", watch)
             }
 
             private fun passFilters(tx: Transaction, wallet: Wallet): Boolean {
