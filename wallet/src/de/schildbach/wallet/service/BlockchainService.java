@@ -48,7 +48,6 @@ public interface BlockchainService {
     String ACTION_RESET_BLOOMFILTERS =  BlockchainService.class.getPackage().getName()
             + ".reset_bloomfilters";
 
-    @Nullable
     List<Peer> getConnectedPeers();
 
     List<StoredBlock> getRecentBlocks(int maxBlocks);
