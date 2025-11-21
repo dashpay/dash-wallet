@@ -17,6 +17,7 @@
 package de.schildbach.wallet.service
 
 import android.annotation.SuppressLint
+import android.app.AlarmManager
 import android.app.ForegroundServiceStartNotAllowedException
 import android.app.Notification
 import android.app.NotificationManager
