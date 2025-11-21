@@ -56,7 +56,6 @@ import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
-import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
@@ -75,7 +74,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
@@ -486,7 +484,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private inner class PeerConnectivityListener : PeerConnectedEventListener,
         PeerDisconnectedEventListener, SharedPreferences.OnSharedPreferenceChangeListener {
         private var peerCount = 0
-        private val stopped = AtomicBoolean(false)
+        val stopped = AtomicBoolean(false)
 
         init {
             config.registerOnSharedPreferenceChangeListener(this)
@@ -1776,8 +1774,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
     }
 
-    override fun getConnectedPeers(): List<Peer>? {
-        return if (peerGroup != null) peerGroup!!.connectedPeers else null
+    override fun getConnectedPeers(): List<Peer> {
+        return if (peerGroup != null) peerGroup!!.connectedPeers else emptyList()
     }
 
     override fun getRecentBlocks(maxBlocks: Int): List<StoredBlock> {
