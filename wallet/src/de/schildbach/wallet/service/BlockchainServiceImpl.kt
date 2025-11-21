@@ -311,7 +311,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 wallet: Wallet, tx: Transaction, prevBalance: Coin,
                 newBalance: Coin
             ) {
-                val watch = Stopwatch.createStarted()
                 val bestChainHeight = blockChain!!.bestChainHeight
                 val replaying =
                     bestChainHeight < config.bestChainHeightEver || config.isRestoringBackup
