@@ -60,6 +60,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PreBlockStage
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
@@ -1682,6 +1683,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
+                isCleaningUp.set(false)
                 cleanupDeferred?.complete(Unit)
             }
         }
