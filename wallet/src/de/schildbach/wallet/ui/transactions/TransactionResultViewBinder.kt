@@ -76,6 +76,9 @@ class TransactionResultViewBinder(
     private var iconRes: Int? = null
     private var customTitle: String? = null
     private var dashPayProfile: DashPayProfile? = null
+    // Address List
+    private var inputAddresses: List<Address> = listOf()
+    private var outputAddresses: List<Address> = listOf()
     private var outputAssetLocks = listOf<String>()
 
     fun bind(tx: Transaction, profile: DashPayProfile?, payeeName: String? = null, payeeSecuredBy: String? = null) {
@@ -98,10 +101,6 @@ class TransactionResultViewBinder(
         }
 
         updateStatus()
-
-        // Address List
-        val inputAddresses: List<Address>
-        val outputAddresses: List<Address>
 
         if (isSent) {
             inputAddresses = TransactionUtils.getFromAddressOfSent(tx)
@@ -138,7 +137,7 @@ class TransactionResultViewBinder(
             } else {
                 binding.inputsContainer.addView(userNameView)
                 binding.inputsContainer.setOnClickListener { openProfile(profile) }
-                setOutputs(outputAddresses, inflater)
+                setOutputs(outputAddresses, outputAssetLocks, inflater)
             }
 
             if (profile.displayName.isNotEmpty()) {
@@ -160,8 +159,8 @@ class TransactionResultViewBinder(
             binding.checkIcon.setOnClickListener { openProfile(profile) }
         } else {
             setInputs(inputAddresses, inflater)
-            setOutputs(outputAddresses, inflater)
-            setReturns(outputAssetLocks, inflater, false, true)
+            setOutputs(outputAddresses, outputAssetLocks, inflater)
+            setReturns(outputAddresses, outputAssetLocks, inflater, false, true)
         }
 
         // For displaying purposes only
@@ -384,8 +383,8 @@ class TransactionResultViewBinder(
         }
     }
 
-    private fun setOutputs(outputAddresses: List<Address>, inflater: LayoutInflater) {
-        binding.outputsContainer.isVisible = outputAddresses.isNotEmpty()
+    private fun setOutputs(outputAddresses: List<Address>, outputOpReturns: List<String>, inflater: LayoutInflater) {
+        binding.outputsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")) || outputAddresses.isNotEmpty()
         outputAddresses.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -397,8 +396,8 @@ class TransactionResultViewBinder(
         }
     }
 
-    private fun setReturns(outputOpReturns: List<String>, inflater: LayoutInflater, error: Boolean, completed: Boolean) {
-        binding.outputsContainer.isVisible = outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")
+    private fun setReturns(outputAddresses: List<Address>, outputOpReturns: List<String>, inflater: LayoutInflater, error: Boolean, completed: Boolean) {
+        binding.outputsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")) || outputAddresses.isNotEmpty()
         outputOpReturns.forEach {
             val addressView = inflater.inflate(
                 R.layout.transaction_result_address_row,
@@ -419,6 +418,6 @@ class TransactionResultViewBinder(
 
     fun setSentToReturn(error: Boolean, completed: Boolean) {
         binding.transactionOutputAddressesContainer.removeAllViews()
-        setReturns(outputAssetLocks, LayoutInflater.from(context), error, completed)
+        setReturns(outputAddresses, outputAssetLocks, LayoutInflater.from(context), error, completed)
     }
 }
