@@ -113,6 +113,10 @@ import org.bitcoinj.wallet.DefaultRiskAnalysis
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.BlockStoreLastFix
+import org.dash.wallet.common.data.BlockchainServiceConfig
+import org.dash.wallet.common.data.BlockchainServiceConfig.Companion.BLOCKCHAIN_STORE_LAST_FIX
+import org.dash.wallet.common.data.BlockchainServiceConfig.Companion.BLOCKCHAIN_STORE_MEMORY_FAILURE
 import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
@@ -1092,6 +1096,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // if idling, shutdown service
                 if (isIdle && mixingStatus != MixingStatus.MIXING) {
                     log.info("idling detected, stopping service")
+                    if (blockchainState?.replaying == true) {
+                        rescheduleService()
+                    }
                     stopSelf()
                 }
             }
