@@ -1202,7 +1202,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 val chainHead = cursor
                                 blockStoreTemp.put(cursor)
                                 var blockCount = 1
-                                for (i in 0 until 100) {
+                                for (i in 0 until 500) {
                                     cursor = cursor!!.getPrev(blockStore!!)
                                     if (cursor == null || cursor.header == Constants.NETWORK_PARAMETERS.genesisBlock) {
                                         break
@@ -1218,7 +1218,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 val headerChainHead = cursor
                                 headerStoreTemp.put(cursor)
                                 var headerCount = 1
-                                for (i in 0 until 100) {
+                                for (i in 0 until 500) {
                                     cursor = cursor!!.getPrev(headerStore!!)
                                     if (cursor == null || cursor.header == Constants.NETWORK_PARAMETERS.genesisBlock) {
                                         break
