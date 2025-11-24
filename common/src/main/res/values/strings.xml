@@ -13,6 +13,7 @@
     <string name="buy_dash">Buy Dash</string>
     <string name="copied">Copied</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Spend</string>
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Error</string>

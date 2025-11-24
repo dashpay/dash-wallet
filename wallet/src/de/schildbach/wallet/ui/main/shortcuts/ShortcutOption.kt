@@ -31,11 +31,7 @@ enum class ShortcutOption(
         R.drawable.ic_shortcut_secure_now,
         R.string.shortcut_secure_now
     ),
-    EXPLORE(
-        1,
-        R.drawable.ic_explore,
-        R.string.menu_explore_title
-    ),
+
     RECEIVE(
         2,
         R.drawable.ic_transaction_received,
@@ -69,7 +65,12 @@ enum class ShortcutOption(
     WHERE_TO_SPEND(
         8,
         R.drawable.ic_where_to_spend,
-        R.string.explore_where_to_spend
+        R.string.spend_title
+    ),
+    EXPLORE(
+        1,
+        R.drawable.ic_explore,
+        R.string.menu_explore_title
     ),
     ATMS(
         9,
