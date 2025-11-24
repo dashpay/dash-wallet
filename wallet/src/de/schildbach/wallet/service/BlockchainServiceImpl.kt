@@ -1055,6 +1055,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
+//    // Separate receiver for storage events (storage broadcasts are still the correct API)
+//    private var storageReceiverRegistered = false
+//    private val storageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+//        override fun onReceive(context: Context, intent: Intent) {
+//            serviceScope.launch {
+//                val action = intent.action
+//                if (Intent.ACTION_DEVICE_STORAGE_LOW == action) {
+//                    log.info("device storage low")
+//                    impediments.add(Impediment.STORAGE)
+//                    updateBlockchainStateImpediments()
+//                    networkCallback.check()
+//                } else if (Intent.ACTION_DEVICE_STORAGE_OK == action) {
+//                    log.info("device storage ok")
+//                    impediments.remove(Impediment.STORAGE)
+//                    updateBlockchainStateImpediments()
+//                    networkCallback.check()
+//                }
+//            }
+//        }
+//    }
+
     private class ActivityHistoryEntry(
         val numTransactionsReceived: Int, val numBlocksDownloaded: Int,
         val numHeadersDownloaded: Int, val numMnListDiffsDownloaded: Int
