@@ -357,7 +357,7 @@
 
     <string name="continue_reset">Pokračovat</string>
     <string name="reset_wallet_text">Resetovat peněženku</string>
-
+    <string name="reset_wallet_button">Resetovat peněženku</string>
 
 
     <string name="masternode_key_type_owner">Klíče majitele</string>

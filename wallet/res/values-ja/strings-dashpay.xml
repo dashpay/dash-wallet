@@ -146,7 +146,7 @@
     <string name="about_me">プロフィール</string>
     <string name="char_count">%1$d〜%2$d文字</string>
     <!-- overrides default TextInputLayout value. Do not change the name -->
-    <string name="save">保存</string>
+    <string name="save">保存する</string>
     <string name="edit_profile_take_picture">カメラで写真を撮影する</string>
     <string name="edit_profile_choose_picture">ギャラリーから選択する</string>
     <string name="upgrade_to_evolution_title">DashPayに参加する</string>
@@ -412,8 +412,8 @@
     <string name="coinjoin_start">ミキシングを開始する</string>
     <string name="coinjoin_stop">ミキシングを停止する</string>
     <string name="coinjoin_mixing">ミキシング中</string>
-    <string name="coinjoin_mixing_finishing">ミキシングを完了中</string>
-    <string name="coinjoin_paused">ミキシングを一時停止しました</string>
+    <string name="coinjoin_mixing_finishing">完了中</string>
+    <string name="coinjoin_paused">一時停止しました</string>
     <string name="coinjoin_not_started">開始していません</string>
     <string name="coinjoin_progress_balance">%2$sの%1$s</string>
     <string name="coinjoin_progress_finished">ミキシング完了しました</string>
@@ -462,4 +462,48 @@
     <string name="voting_period_ends_tomorrow">投票は明日で締め切ります</string>
     <string name="link_included">リンクは含まれています</string>
     <string name="group_by">グループ</string>
+    <string name="transaction_metadata_title">取引のメタデータ</string>
+    <string name="transaction_metadata_data_being_saved">スケジュール化済み</string>
+    <string name="transaction_metadata_payment_category_description">取引がCoinbase、Uphold、Topper、またはCrowdNodeと紐づいているかどうかを示します</string>
+    <string name="transaction_metadata_fiat_price_description">取引の時点での取引価格</string>
+    <string name="transaction_metadata_description">データはお客様の端末に保存されますが、ウォレットをリセットしたり復元するとそのデータは失われます。 ネットワーク上に保存する際に保存される情報の例を以下に示します。</string>
+    <string name="transaction_metadata_cost">金額はいくらですか。</string>
+    <string name="transaction_metadata_payment_category">決済カテゴリー</string>
+    <string name="transaction_metadata_save_data">データを保存する</string>
+    <string name="transaction_metadata_tax_category">税金のカテゴリー</string>
+    <string name="transaction_metadata_fiat_prices">フィアット価格</string>
+    <string name="transaction_metadata_private_memos">非公開メモ</string>
+    <string name="transaction_metadata_gift_card_info">ギフトカードのデータ</string>
+    <string name="transaction_metadata_private_memo_description">取引の目的を説明する略式メモ</string>
+    <string name="transaction_metadata_tax_category_description">取引が送金、収入、または支出のいずれかであることを示します</string>
+    <string name="transaction_metadata_gift_card_info_description">カード番号、暗証番号、その他の情報を含みます</string>
+    <string name="transaction_metadata_costs_title">ネットワークへのデータ保存にかかる費用</string>
+    <string name="transaction_metadata_costs_description">ユーザー名の作成の一環として、ネットワーク上の様々な活動で使用するクレジットを入手できます。ネットワーク上に取引メタデータを保存すると、このクレジットの消費が早まります。 全てのクレジットを使い切った場合、追加購入できます。\n\nネットワークにデータをアップロードする度に約%sの費用がかかるため、一度に複数の取引をアップロードすることをお勧めします。</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>10件の取引後</item>
+        <item>週1回</item>
+        <item>毎取引後</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">メタデータをネットワークに保存せずにウォレットをリセットしますか。</string>
+    <string name="reset_wallet_metadata_message">ネットワークにデータを保存せずにウォレットをリセットすると、一部の取引メタデータが失われます。</string>
+    <string name="reset_wallet_metadata_button_without">保存せずにウォレットをリセットする</string>
+    <string name="reset_wallet_metadata_button_with">データを保存してウォレットをリセットする</string>
+    <string name="reset_wallet_metadata_button_saving">保存中</string>
+    <string name="transaction_metadata_save_to_network">ネットワークに保存する</string>
+    <string name="transaction_metadata_save_frequency">保存する頻度はどのくらいですか。</string>
+    <string name="transaction_metadata_what_to_save">何を保存しますか。</string>
+    <string name="transaction_metadata_past_title">過去のもの</string>
+    <string name="transaction_metadata_future_title">今後のもの</string>
+    <string name="transaction_metadata_past_subtitle">%sまでに行った全ての取引を保存する</string>
+    <string name="transaction_metadata_future_subtitle">%s以降に行う全ての取引を自動保存する</string>
+    <string name="transaction_metadata_gift_card_data">ギフトカードのデータ</string>
+    <string name="transaction_metadata_saving_to_network">ネットワークに保存中 - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">前回は%sお得になりました</string>
+    <string name="transaction_metadata_past_already_saved">%sまでに行った全ての取引を保存しました</string>
+    <string name="transaction_metadata_past_already_saved_none">保存した取引はありません</string>
+    <string name="transaction_metadata_past_syncing">%sまでに行った全ての取引を同期しています</string>
+    <string name="transaction_metadata_save_new_tx_title">保存していない取引を保存しますか。</string>
+    <string name="transaction_metadata_you_have_n_tx">%s以降に行った保存していない取引が%d個あります</string>
+    <string name="transaction_metadata_save_transactions">保存していない取引を保存する</string>
+    <string name="transaction_metadata_continue_without_saving">保存せずに続ける</string>
 </resources>

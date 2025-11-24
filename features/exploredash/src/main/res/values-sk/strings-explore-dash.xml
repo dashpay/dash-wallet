@@ -77,8 +77,10 @@
     <string name="explore_filter">Filter platieb</string>
     <string name="explore_filters">Filtre</string>
     <string name="explore_apply_filter">Použiť</string>
-    <string name="explore_payment_method">Spôsob platby</string>
+    <string name="explore_spending_options">Možnosti výdavkov</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Darčekové karty CTX</string>
+    <string name="piggycards_gift_cards">Darčekové karty Piggy Cards</string>
     <string name="explore_payment_gift_card">Darčeková karta</string>
     <string name="explore_filter_gift_cards">Darčekové karty</string>
     <string name="explore_radius">Okruh</string>
@@ -93,6 +95,7 @@
     <string name="gift_card_types">Typy darčekových kariet</string>
     <string name="flexible_amount_option">Flexibilné sumy</string>
     <string name="fixed_denom_option">Fixné denominované sumy</string>
+    <string name="gift_card_providers">Poskytovatelia darčekových poukážok</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -196,7 +199,7 @@
     <string name="purchase_gift_card_confirm">Potvrdiť</string>
     <string name="purchase_gift_card_details">Podrobnosti darčekovej karty</string>
     <string name="purchase_original_purchase">Pôvodná kúpa</string>
-    <string name="purchase_check_current_balance">Skontrolujte aktuálny zostatok</string>
+    <string name="purchase_check_current_balance">Zobraziť podrobnosti o karte</string>
     <string name="purchase_card_number">Číslo karty</string>
     <string name="purchase_card_pin">PIN karty</string>
     <string name="purchase_view_transaction">Zobraziť podrobnosti transakcie</string>
@@ -233,19 +236,25 @@
     <string name="try_again">Skúsiť znova</string>
     <string name="cancel">Zrušiť</string>
     <string name="gift_card_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Prosím skúste znova.</string>
+    <string name="gift_card_out_of_stock_error">Táto darčeková karta je vypredaná. Skúste to znova.</string>
     <string name="gift_card_details_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu.</string>
     <string name="gift_card_limit_error">Limity nákupov pre tohto obchodníka sa zmenili. Pre viac informácií kontaktujte podporu CTX.</string>
+    <string name="gift_card_server_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Ak chcete nahlásiť problém, kontaktujte podporu %s.</string>
+    <string name="gift_card_server_region_error">Nákupy tejto darčekovej karty nie je možné uskutočniť z vášho regiónu.</string>
+    <string name="gift_card_error_wrong_network">Žiadosť o platbu je pre inú sieť. Kontaktujte podporu.</string>
     <string name="gift_card_unknown_error">Z nejakého dôvodu sa nám nepodarilo kúpiť darčekovú kartu. Kontaktujte podporu s txid %s.</string>
-    <string name="gift_card_rejected">Platba bola odmietnutá. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Platba bola uskutočnená u obchodníka, ktorý poskytuje adresu URL na uplatnenie, ale táto nie je momentálne podporovaná. Obráťte sa na CTX s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
+    <string name="gift_card_delay">Získanie tejto karty trvá dlhšie ako zvyčajne. Ak to trvá oveľa dlhšie, kontaktujte prosím <a href="contact:support">support@dash.org</a>.</string>
+    <string name="gift_card_rejected">Platba bola odmietnutá. Obráťte sa na podporu %s s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Platba bola uskutočnená u obchodníka, ktorý poskytuje adresu URL na uplatnenie, ale táto nie je momentálne podporovaná. Obráťte sa na podporu %s s ID darčekovej karty %s, ID platby %s a ID transakcie %s.</string>
     <string name="dashspend_terms_conditions">Prijmite zmluvné podmienky</string>
     <string name="accept_terms_conditions">Prijímam zmluvné podmienky DashSpend</string>
     <string name="tap_link_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte klepnúť na odkaz nižšie, aby ste mohli pokračovať</string>
     <string name="accept_to_proceed">Ak si chcete vytvoriť účet na DashSpend, musíte prijať zmluvné podmienky DashSpend</string>
     <string name="view_terms_conditions">Zmluvné podmienky</string>
-    <string name="barcode_placeholder">Hneď ako bude váš kód vygenerovaný, zobrazí sa tu.</string>
+    <string name="barcode_placeholder">Počkajte na doručenie údajov o darčekovej karte.</string>
     <string name="gift_card_contact_ctx">Kontaktovať podporu CTX</string>
-
+    <string name="gift_card_contact_piggycards">Kontaktovať podporu PiggyCards</string>
+    <string name="gift_card_contact_support">Kontaktovať podporu</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Vytvoriť účet</string>
     <string name="log_in_to_ctxspend_account">Prihlásiť sa do svojho účtu</string>
@@ -253,5 +262,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Kúpte si darčekovú kartu pomocou svojho účtu na výdavky v Dash</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Vytvorte si účet DashSpend alebo sa prihláste do existujúceho účtu</string>
     <string name="temporarily_unavailable">Dočasne nedostupné</string>
+    <string name="country_availability">Táto karta funguje iba v USA</string>
     <string name="token_expired_title">Platnosť vašej relácie vypršala</string>
-    </resources>
+    <string name="token_expired_message">Zdá sa, že ste už nejaký čas nepoužili DashSpend. Z bezpečnostných dôvodov ste boli odhlásený/á.\n\nPrihláste sa znova a pokračujte v skúmaní, kde môžete minúť vaše Dashe.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Váš e-mail nebude zdieľaný s nikým iným ako so spoločnosťou PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Vyberte poskytovateľa darčekových kariet</string>
+    <string name="flexible_amounts">Flexibilné sumy</string>
+    <string name="fixed_amounts">Fixné sumy</string>
+    <string name="address">Adresa</string>
+    <string name="phone">Telefón</string>
+    <string name="website">Webová stránka</string>
+    <string name="call">Volať</string>
+    <string name="directions">Trasa</string>
+    <string name="explore_show_all_locations">Zobraziť všetky miesta (%d)</string>
+    <string name="provider">Poskytovateľ</string>
+    <string name="save">Uložiť</string>
+</resources>

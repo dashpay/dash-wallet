@@ -413,8 +413,8 @@ Dash</b></string>
     <string name="coinjoin_start">Iniciar mistura</string>
     <string name="coinjoin_stop">Parar mistura</string>
     <string name="coinjoin_mixing">Misturando</string>
-    <string name="coinjoin_mixing_finishing">Finalizando Mistura</string>
-    <string name="coinjoin_paused">Mistura Pausada</string>
+    <string name="coinjoin_mixing_finishing">Finalizando</string>
+    <string name="coinjoin_paused">Pausado</string>
     <string name="coinjoin_not_started">Não iniciado</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>
     <string name="coinjoin_progress_finished">Totalmente Misturado</string>
@@ -463,4 +463,48 @@ Dash</b></string>
     <string name="voting_period_ends_tomorrow">Votação encerra amanhã</string>
     <string name="link_included">Link incluído</string>
     <string name="group_by">Agrupar por</string>
+    <string name="transaction_metadata_title">Metadados da transação</string>
+    <string name="transaction_metadata_data_being_saved">Agendado</string>
+    <string name="transaction_metadata_payment_category_description">Indica se uma transação está associada à Coinbase, Uphold, Topper ou CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">O preço histórico no momento da transação</string>
+    <string name="transaction_metadata_description">Seus dados ficam armazenados no seu dispositivo, mas serão perdidos se você redefinir ou restaurar sua carteira. Abaixo estão exemplos das informações que serão preservadas quando forem salvas na rede.</string>
+    <string name="transaction_metadata_cost">Quanto custa\?</string>
+    <string name="transaction_metadata_payment_category">Categorias de Pagamento</string>
+    <string name="transaction_metadata_save_data">Salvar dados</string>
+    <string name="transaction_metadata_tax_category">Categorias de impostos</string>
+    <string name="transaction_metadata_fiat_prices">Preços em moeda fiduciária</string>
+    <string name="transaction_metadata_private_memos">Notas privadas</string>
+    <string name="transaction_metadata_gift_card_info">Dados do cartão presente</string>
+    <string name="transaction_metadata_private_memo_description">Anotações curtas que descrevem o propósito da transação</string>
+    <string name="transaction_metadata_tax_category_description">Indica se uma transação é uma transferência, receita ou despesa</string>
+    <string name="transaction_metadata_gift_card_info_description">Inclui número do cartão, código PIN e outras informações</string>
+    <string name="transaction_metadata_costs_title">Custos associados ao salvamento de dados na rede</string>
+    <string name="transaction_metadata_costs_description">Ao criar um nome de usuário, você recebe créditos que são usados para diversas atividades na rede. Salvar metadados de transações na rede fará com que esses créditos sejam consumidos mais rapidamente. Quando todos os créditos forem utilizados, você poderá adquirir mais.\n\nO custo é de aproximadamente %s por envio de dados para a rede, portanto é recomendado enviar várias transações de uma só vez.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Depois de 10 transações</item>
+        <item>Uma vez por semana</item>
+        <item>Depois de cada transação</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Você deseja redefinir a carteira sem salvar seus metadados na rede\?</string>
+    <string name="reset_wallet_metadata_message">Redefinir sua carteira sem salvar os dados na rede resultará na perda de alguns metadados de transação.</string>
+    <string name="reset_wallet_metadata_button_without">Redefinir carteira sem salvar</string>
+    <string name="reset_wallet_metadata_button_with">Salvar dados e redefinir carteira</string>
+    <string name="reset_wallet_metadata_button_saving">Salvando</string>
+    <string name="transaction_metadata_save_to_network">Categorias de impostos</string>
+    <string name="transaction_metadata_save_frequency">Com que frequência salvar\?</string>
+    <string name="transaction_metadata_what_to_save">O que salvar\?</string>
+    <string name="transaction_metadata_past_title">Passado</string>
+    <string name="transaction_metadata_future_title">Futuro</string>
+    <string name="transaction_metadata_past_subtitle">Salvar todas as transações feitas até %s</string>
+    <string name="transaction_metadata_future_subtitle">Salvar automaticamente todas as transações feitas após %s</string>
+    <string name="transaction_metadata_gift_card_data">Dados do cartão presente</string>
+    <string name="transaction_metadata_saving_to_network">Salvando para a rede - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Salvo pela última vez %s</string>
+    <string name="transaction_metadata_past_already_saved">Todas as transações feitas até %s já foram salvas</string>
+    <string name="transaction_metadata_past_already_saved_none">Nenhuma transação foi salva</string>
+    <string name="transaction_metadata_past_syncing">Todas as transações feitas até %s estão sendo sincronizadas</string>
+    <string name="transaction_metadata_save_new_tx_title">Você deseja salvar as transações não salvas\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Você tem %d transações não salvas desde %s</string>
+    <string name="transaction_metadata_save_transactions">Salvar transações não salvas</string>
+    <string name="transaction_metadata_continue_without_saving">Continuar sem salvar</string>
 </resources>

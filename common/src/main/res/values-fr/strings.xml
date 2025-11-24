@@ -11,6 +11,7 @@
     <string name="buy_dash">Acheter Dash</string>
     <string name="copied">Copié</string>
     <string name="staking_title">Récompenses</string>
+    <string name="spend_title">Dépenser</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">par exemple johndoe@mail.com</string>
     <string name="error">Erreur</string>

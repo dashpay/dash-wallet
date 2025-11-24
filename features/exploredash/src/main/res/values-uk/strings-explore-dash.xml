@@ -77,7 +77,6 @@
     <string name="explore_filter">Фільтр</string>
     <string name="explore_filters">Фільтри</string>
     <string name="explore_apply_filter">Застосувати</string>
-    <string name="explore_payment_method">Спосіб оплати</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Подарункова карта</string>
     <string name="explore_filter_gift_cards">Подарункові карти</string>
@@ -93,7 +92,6 @@
     <string name="gift_card_types">Типи подарункових карток</string>
     <string name="flexible_amount_option">Гнучкі суми</string>
     <string name="fixed_denom_option">Фіксовані номінали</string>
-
     <string-array name="merchants_filter_options">
         <item>Інтернет-магазин</item>
         <item>Поруч</item>
@@ -196,7 +194,6 @@
     <string name="purchase_gift_card_confirm">Підтвердити</string>
     <string name="purchase_gift_card_details">Реквізити подарункової картки</string>
     <string name="purchase_original_purchase">Початкова покупка</string>
-    <string name="purchase_check_current_balance">Перевірити поточний баланс</string>
     <string name="purchase_card_number">Номер картки</string>
     <string name="purchase_card_pin">PIN-код картки</string>
     <string name="purchase_view_transaction">Переглянути деталі транзакції</string>
@@ -236,16 +233,13 @@
     <string name="gift_card_details_error">Чомусь ми не змогли купити подарункову картку. Будь ласка зв\'яжіться зі службою піддтримки.</string>
     <string name="gift_card_limit_error">Ліміти покупок для цього торговця змінилися. Будь ласка, зверніться до служби підтримки CTX для отримання додаткової інформації.</string>
     <string name="gift_card_unknown_error">Чомусь ми не змогли купити подарункову картку. Будь ласка зв\'яжіться зі службою піддтримки з txid %s.</string>
-    <string name="gift_card_rejected">Платіж відхилено. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Платіж було здійснено для продавця, який надає URL-адресу активації, але наразі це не підтримується. Будь ласка, зв’яжіться з CTX, надавши ідентифікатор подарункової картки %s, ідентифікатор платежу %s та ідентифікатор транзакції %s.</string>
     <string name="dashspend_terms_conditions">Прийняти положення та умови</string>
     <string name="accept_terms_conditions">Я приймаю правила та умови використання DashSpend</string>
     <string name="tap_link_to_proceed">Натисніть на посилання нижче щоб продовжити створення облікового запису на DashSpend</string>
     <string name="accept_to_proceed">Прийміть правила та умови DashSpend, щоб створити обліковий запис DashSpend</string>
     <string name="view_terms_conditions">Терміни і умови</string>
-    <string name="barcode_placeholder">Щойно ваш код буде згенеровано, він відобразиться тут.</string>
     <string name="gift_card_contact_ctx">Зверніться до служби підтримки CTX</string>
-
+    <string name="gift_card_contact_support">Служба підтримки</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Створити аккаунт</string>
     <string name="log_in_to_ctxspend_account">Увійти в свій аккаунт</string>
@@ -253,5 +247,15 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Придбайте подарункову картку за допомогою свого облікового запису DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Створіть обліковий запис на DashSpend або увійдіть у вже існуючий</string>
     <string name="temporarily_unavailable">Тимчасово недоступно</string>
+    <string name="country_availability">Ця картка працює лише в Сполучених Штатах.</string>
     <string name="token_expired_title">Ваш сеанс закінчився</string>
-    </resources>
+    <string name="token_expired_message">Схоже, ви давно не користувалися DashSpend. З міркувань безпеки вас було виведено з системи.
+
+Будь ласка, увійдіть знову, щоб продовжити досліджувати, де можна витратити Dash.</string>
+
+    <string name="flexible_amounts">Гнучкі суми</string>
+    <string name="address">Адреса</string>
+    <string name="website">Веб-сайт</string>
+    <string name="call">Зателефонувати</string>
+    <string name="save">Зберегти</string>
+</resources>

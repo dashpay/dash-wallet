@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Ilakip ang wallet dump</string>
     <string name="report_issue_dialog_mail_intent_failed">Nabigo ang pagpapadala ng report.</string>
     <string name="report_issue_dialog_generating_report">Pagbuo ng ulat</string>
+    <string name="report_issue_dialog_status_device_info">impormasyon ng aparato</string>
+    <string name="report_issue_dialog_status_installed_packages">listahan ng installed packages</string>
+    <string name="report_issue_dialog_status_application_log">log ng aplikasyon</string>
+    <string name="report_issue_dialog_status_application_info">impormasyon ng aplikasyon</string>
+    <string name="report_issue_dialog_status_wallet_dump">pagbaba ng pitaka (mabagal)</string>
+    <string name="report_issue_dialog_status_contextual_info">impormasyon sa konteksto</string>
+    <string name="report_issue_dialog_status_background_traces">mga bakas sa background</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">pagtatapos</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">Tungkol sa</string>
+    <string name="about_dash_title">Tungkol sa Dash</string>
     <string name="about_version_title">Bersyon</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">Lisensya</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
     <string name="notification_bluetooth_service_listening">Handa nang tumanggap ng mga pagbabayad sa pamamagitan ng Bluetooth</string>
+    <string name="notification_sync_paused">Sandaling tumigil ang pag sync ng blockchain</string>
+    <string name="notification_background_processes_paused">Sandaling tumigil and proseso sa background</string>
+    <string name="notification_background_processes_paused_text">Naabot mo na ang Android 6 na oras na limitasyon ng serbisyo sa foreground para sa paghahalo o pag-sync ng blockchain. I-tap para i-reset…</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>
 
     <!-- generic buttons -->

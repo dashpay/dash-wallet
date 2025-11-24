@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Добавить дамп памяти кошелька</string>
     <string name="report_issue_dialog_mail_intent_failed">Ошибка при отправке отчёта.</string>
     <string name="report_issue_dialog_generating_report">Создание отчёта</string>
+    <string name="report_issue_dialog_status_device_info">информация об устройстве</string>
+    <string name="report_issue_dialog_status_installed_packages">список установленных пакетов</string>
+    <string name="report_issue_dialog_status_application_log">лог приложения</string>
+    <string name="report_issue_dialog_status_application_info">информация о приложении</string>
+    <string name="report_issue_dialog_status_wallet_dump">сброс кошелька (медленный)</string>
+    <string name="report_issue_dialog_status_contextual_info">контекстная информация</string>
+    <string name="report_issue_dialog_status_background_traces">фоновые следы</string>
+    <string name="report_issue_dialog_status_stack_trace">трассировка стека</string>
+    <string name="report_issue_dialog_status_finishing">завершается</string>
     <string name="report_transaction_history_export">Экспортировать</string>
     <string name="report_transaction_history_title">Экспортировать CSV</string>
     <string name="report_transaction_history_not_synced_title">Экспортировать CSV</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">О программе</string>
+    <string name="about_dash_title">О Dash</string>
     <string name="about_version_title">Версия</string>
     <string name="about_copyright_title">Авторское право</string>
     <string name="about_license_title">Лицензия</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Напомнить мне позже</string>
     <string name="notification_inactivity_action_dismiss_forever">Не напоминать мне</string>
     <string name="notification_bluetooth_service_listening">Готов к получению платежей через Bluetooth</string>
+    <string name="notification_sync_paused">Синхронизация блокчейна приостановлена</string>
+    <string name="notification_background_processes_paused">Фоновая обработка приостановлена</string>
+    <string name="notification_background_processes_paused_text">Вы исчерпали 6-часовой лимит Android на высокоприоритетное перемешивание или синхронизацию с блокчейном. Тапните, чтобы перезагрузить...</string>
     <string name="appwidget_wallet_balance_title">Баланс</string>
 
     <!-- generic buttons -->

@@ -412,8 +412,8 @@
     <string name="coinjoin_start">Commencer le mélange</string>
     <string name="coinjoin_stop">Arrêter le mélange</string>
     <string name="coinjoin_mixing">Mélange</string>
-    <string name="coinjoin_mixing_finishing">Achèvement du mélange</string>
-    <string name="coinjoin_paused">Mélange mis en pause</string>
+    <string name="coinjoin_mixing_finishing">Achèvement</string>
+    <string name="coinjoin_paused">En pause</string>
     <string name="coinjoin_not_started">Non démarré</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>
     <string name="coinjoin_progress_finished">Entièrement mélangé</string>
@@ -462,4 +462,48 @@
     <string name="voting_period_ends_tomorrow">Le vote se termine demain</string>
     <string name="link_included">lien inclus</string>
     <string name="group_by">Grouper par</string>
+    <string name="transaction_metadata_title">Métadonnées de transaction</string>
+    <string name="transaction_metadata_data_being_saved">Prévu</string>
+    <string name="transaction_metadata_payment_category_description">Indique si une transaction est liée à Coinbase, Uphold, Topper ou CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Le cours historique au moment de la transaction</string>
+    <string name="transaction_metadata_description">Vos données sont stockées sur votre appareil mais elles seront perdues si vous réinitialisez ou restaurez votre portefeuille. Ci-dessous, quelques exemples des infos qui seront enregistrées si vous choisissez de le faire sur le réseau.</string>
+    <string name="transaction_metadata_cost">Combien ça coûte \?</string>
+    <string name="transaction_metadata_payment_category">Catégories de paiement</string>
+    <string name="transaction_metadata_save_data">Enregistrer les données</string>
+    <string name="transaction_metadata_tax_category">Types de taxe</string>
+    <string name="transaction_metadata_fiat_prices">Prix fiduciaires</string>
+    <string name="transaction_metadata_private_memos">Notes privées</string>
+    <string name="transaction_metadata_gift_card_info">Données carte-cadeau</string>
+    <string name="transaction_metadata_private_memo_description">Des notes brèves pour décrire l\'objet de la transaction</string>
+    <string name="transaction_metadata_tax_category_description">Indique si une transaction est un virement, un revenu ou une dépense</string>
+    <string name="transaction_metadata_gift_card_info_description">Inclut le numéro de la carte, son code PIN et d\'autres infos</string>
+    <string name="transaction_metadata_costs_title">Frais liés à l\'enregistrement des données sur le réseau</string>
+    <string name="transaction_metadata_costs_description">Avec la création d\'un nom d\'utilisateur, vous recevez des crédits à utiliser pour différentes activités sur le réseau ; enregistrer sur le réseau les métadonnées des transactions utiisera un peu de ces crédits. Une fois tous les crédits utilisés, vous pouvez en acheter d\'autres.\n\nChaque versement de données sur le réseau coûte environ %s, donc il est recommandé de verser plusieurs transactions en une seule fois.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Après 10 transactions</item>
+        <item>Une fois par semaine</item>
+        <item>Après chaque transaction</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Souhaitez-vous réinitialiser le portefeuille sans enregistrer vos métadonnées sur le réseau \?</string>
+    <string name="reset_wallet_metadata_message">Réinitialiser votre portefeuille sans enregistrer vos données sur le réseau entraînera la perte de certaines métadonnées de transaction.</string>
+    <string name="reset_wallet_metadata_button_without">Réinitialiser le portefeuille sans enregistrer</string>
+    <string name="reset_wallet_metadata_button_with">Enregistrer les données puis réinitialiser le portefeuille</string>
+    <string name="reset_wallet_metadata_button_saving">Enregistrement</string>
+    <string name="transaction_metadata_save_to_network">Enregistrer sur le réseau</string>
+    <string name="transaction_metadata_save_frequency">Enregistrer à quelle fréquence \?</string>
+    <string name="transaction_metadata_what_to_save">Que faut-il enregistrer \?</string>
+    <string name="transaction_metadata_past_title">Passé</string>
+    <string name="transaction_metadata_future_title">Avenir</string>
+    <string name="transaction_metadata_past_subtitle">Enregistrer toutes les transactions faites jusqu\'à %s</string>
+    <string name="transaction_metadata_future_subtitle">Enregistrer automatiquement toutes les transactions faites au-delà de %s</string>
+    <string name="transaction_metadata_gift_card_data">Données de cartes-cadeau</string>
+    <string name="transaction_metadata_saving_to_network">Enregistrement sur le réseau - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Dernier enregistrement %s</string>
+    <string name="transaction_metadata_past_already_saved">Toutes les transactions faites jusqu\'à %s ont déjà été enregistrées</string>
+    <string name="transaction_metadata_past_already_saved_none">Aucune transaction n\'a été enregistrée</string>
+    <string name="transaction_metadata_past_syncing">Toutes les transactions faites jusqu\'à %s sont en cours de synchronisation</string>
+    <string name="transaction_metadata_save_new_tx_title">Souhaitez-vous enregistrer les transactions pas encore enregistrées \?</string>
+    <string name="transaction_metadata_you_have_n_tx">Vous avez %d transactions non enregistrées depuis %s</string>
+    <string name="transaction_metadata_save_transactions">Enregistrer les transactions non enregistrées</string>
+    <string name="transaction_metadata_continue_without_saving">Continuer sans enregistrer</string>
 </resources>

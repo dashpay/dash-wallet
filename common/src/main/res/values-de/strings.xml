@@ -11,6 +11,7 @@
     <string name="buy_dash">Dash kaufen</string>
     <string name="copied">Kopiert</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Ausgegeben</string>
     <string name="email">E-Mail</string>
     <string name="email_placeholder">z.B. maxmustermann@mail.com</string>
     <string name="error">Fehler</string>

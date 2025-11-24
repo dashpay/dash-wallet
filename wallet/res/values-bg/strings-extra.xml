@@ -294,7 +294,7 @@
     <string name="sent_transactions">Изпратено</string>
     <string name="continue_reset">Продължи</string>
     <string name="reset_wallet_text">Нулиране на портфейл</string>
-
+    <string name="reset_wallet_button">Нулиране на портфейла</string>
 
 
     <string name="masternode_key_type_owner">Ключове на собственика</string>

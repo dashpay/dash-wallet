@@ -75,8 +75,10 @@
     <string name="explore_filter">Filtro</string>
     <string name="explore_filters">Filtri</string>
     <string name="explore_apply_filter">Applica</string>
-    <string name="explore_payment_method">Metodo di Pagamento</string>
+    <string name="explore_spending_options">Opzioni di spesa</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Carte regalo CTX</string>
+    <string name="piggycards_gift_cards">Carte regalo Piggy Cards</string>
     <string name="explore_payment_gift_card">Carta Regalo</string>
     <string name="explore_filter_gift_cards">Carte regalo</string>
     <string name="explore_radius">Raggio</string>
@@ -91,6 +93,7 @@
     <string name="gift_card_types">Tipologie di gift card</string>
     <string name="flexible_amount_option">Importi flessibili</string>
     <string name="fixed_denom_option">Importi denominati in maniera fissa</string>
+    <string name="gift_card_providers">Fornitori di carte regalo</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -192,7 +195,7 @@
     <string name="purchase_gift_card_confirm">Confermare</string>
     <string name="purchase_gift_card_details">Dettagli della carta regalo</string>
     <string name="purchase_original_purchase">Acquisto originale</string>
-    <string name="purchase_check_current_balance">Controlla il saldo attuale</string>
+    <string name="purchase_check_current_balance">Vedi i dettagli della carta</string>
     <string name="purchase_card_number">Numero della carta</string>
     <string name="purchase_card_pin">PIN della carta</string>
     <string name="purchase_view_transaction">Visualizza i dettagli della transazione</string>
@@ -229,19 +232,25 @@
     <string name="try_again">Prova Ancora</string>
     <string name="cancel">Annulla</string>
     <string name="gift_card_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Per favore riprova.</string>
+    <string name="gift_card_out_of_stock_error">Questa carta regalo è esaurita. Riprova.</string>
     <string name="gift_card_details_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Si prega di contattare l\'assistenza.</string>
     <string name="gift_card_limit_error">I limiti di acquisto per questo commerciante sono cambiati. Contatta l\'assistenza CTX per ulteriori informazioni.</string>
+    <string name="gift_card_server_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Contatta %s l\'assistenza per segnalare il problema.</string>
+    <string name="gift_card_server_region_error">Non è possibile acquistare questa carta regalo dalla tua regione.</string>
+    <string name="gift_card_error_wrong_network">La richiesta di pagamento è per una rete diversa. Contatta il supporto.</string>
     <string name="gift_card_unknown_error">Per qualche motivo non siamo riusciti ad acquistare una carta regalo. Contatta l\'assistenza con il txid %s.</string>
-    <string name="gift_card_rejected">Il pagamento è stato rifiutato. Si prega di contattare CTX con l\'ID %s della carta regalo, l\'ID del pagamento %s e l\'ID della transazione %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Il pagamento è stato effettuato per il commerciante che fornisce un URL di riscatto, ma ciò non è attualmente supportato. Si prega di contattare CTX con l\'ID della carta regalo %s, l\'ID del pagamento %s e l\'ID della transazione %s.</string>
+    <string name="gift_card_delay">Il recupero di questa carta sta richiedendo più tempo del solito. Se il tempo impiegato dovesse essere maggiore, contatta <a href="contact:support"> support@dash.org </a>.</string>
+    <string name="gift_card_rejected">Il pagamento è stato rifiutato. Contatta %s l\'assistenza fornendo l\'ID %s della carta regalo, l\'ID %s del pagamento e l\'ID %s della transazione.</string>
+    <string name="gift_card_redeem_url_not_supported">Il pagamento è stato effettuato per un commerciante che fornisce un URL di riscatto, ma al momento non è supportato. Contatta %s il Supporto fornendo l\'ID %s della carta regalo, l\'ID %s del pagamento e l\'ID %s della transazione.</string>
     <string name="dashspend_terms_conditions">Accetta i termini e le condizioni</string>
     <string name="accept_terms_conditions">Accetto i termini e le condizioni di DashSpend</string>
     <string name="tap_link_to_proceed">Per creare un account su DashSpend è necessario toccare il collegamento sottostante per procedere</string>
     <string name="accept_to_proceed">Per creare un account su DashSpend devi accettare i termini e le condizioni di DashSpend</string>
     <string name="view_terms_conditions">Termini &amp; condizioni</string>
-    <string name="barcode_placeholder">Non appena il tuo codice sarà generato, verrà visualizzato qui.</string>
+    <string name="barcode_placeholder">Attendi che ti vengano inviati i dettagli della carta regalo.</string>
     <string name="gift_card_contact_ctx">Contatta il supporto CTX</string>
-
+    <string name="gift_card_contact_piggycards">Contatta il Supporto di PiggyCards</string>
+    <string name="gift_card_contact_support">Contatta il Supporto</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Crea un account</string>
     <string name="log_in_to_ctxspend_account">Esegui il Log in al tuo account</string>
@@ -249,5 +258,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Acquista una carta regalo con il tuo account DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Crea un account DashSpend o accedi a quello esistente</string>
     <string name="temporarily_unavailable">Temporaneamente non disponibile</string>
+    <string name="country_availability">Questa carta funziona solo negli Stati Uniti</string>
     <string name="token_expired_title">La tua sessione è scaduta</string>
-    </resources>
+    <string name="token_expired_message">Sembra che non usi DashSpend da un po\'. Per motivi di sicurezza, sei stato disconnesso.\n\nAccedi di nuovo per continuare a esplorare dove puoi spendere i tuoi Dash.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Il tuo indirizzo email non sarà condiviso con nessuno tranne PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Seleziona il fornitore della carta regalo</string>
+    <string name="flexible_amounts">Importi flessibili</string>
+    <string name="fixed_amounts">Importi fissi</string>
+    <string name="address">Indirizzo</string>
+    <string name="phone">Telefono</string>
+    <string name="website">Sito Web</string>
+    <string name="call">Chiama</string>
+    <string name="directions">Indicazioni</string>
+    <string name="explore_show_all_locations">Mostra tutte le location (%d)</string>
+    <string name="provider">Fornitore</string>
+    <string name="save">Salva</string>
+</resources>
