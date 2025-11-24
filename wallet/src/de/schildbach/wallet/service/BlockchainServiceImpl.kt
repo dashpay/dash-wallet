@@ -29,6 +29,8 @@ import android.content.IntentFilter
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
@@ -736,50 +738,85 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 lastPreBlockStage = stage
             }
         }
-    private var connectivityReceiverRegistered = false
-    private val connectivityReceiver: BroadcastReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
+    private var networkCallbackRegistered = false
+    private val networkCallback: ConnectivityManager.NetworkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
             serviceScope.launch {
-                val action = intent.action
-                if (ConnectivityManager.CONNECTIVITY_ACTION == action) {
-                    val networkInfo = connectivityManager.activeNetworkInfo
-                    val hasConnectivity = networkInfo != null && networkInfo.isConnected
-                    if (log.isInfoEnabled) {
-                        val s = StringBuilder("active network is ")
-                            .append(if (hasConnectivity) "up" else "down")
-                        if (networkInfo != null) {
-                            s.append(", type: ").append(networkInfo.typeName)
-                            s.append(", state: ").append(networkInfo.state).append('/')
-                                .append(networkInfo.detailedState)
-                            val extraInfo = networkInfo.extraInfo
-                            if (extraInfo != null) s.append(", extraInfo: ").append(extraInfo)
-                            val reason = networkInfo.reason
-                            if (reason != null) s.append(", reason: ").append(reason)
+                val capabilities = connectivityManager.getNetworkCapabilities(network)
+                val hasInternet = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+                val hasValidated = capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+
+                if (log.isInfoEnabled) {
+                    val s = StringBuilder("network available: ")
+                        .append(network)
+                    if (capabilities != null) {
+                        s.append(", hasInternet: ").append(hasInternet)
+                        s.append(", validated: ").append(hasValidated)
+                        if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                            s.append(", type: WiFi")
+                        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                            s.append(", type: Cellular")
+                        } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                            s.append(", type: Ethernet")
                         }
-                        log.info(s.toString())
                     }
-                    if (hasConnectivity) {
-                        impediments.remove(Impediment.NETWORK)
-                    } else {
-                        impediments.add(Impediment.NETWORK)
-                    }
-                    updateBlockchainStateImpediments()
-                    check()
-                } else if (Intent.ACTION_DEVICE_STORAGE_LOW == action) {
-                    log.info("device storage low")
-                    impediments.add(Impediment.STORAGE)
-                    updateBlockchainStateImpediments()
-                    check()
-                } else if (Intent.ACTION_DEVICE_STORAGE_OK == action) {
-                    log.info("device storage ok")
-                    impediments.remove(Impediment.STORAGE)
+                    log.info(s.toString())
+                }
+
+                if (hasInternet && hasValidated) {
+                    impediments.remove(Impediment.NETWORK)
                     updateBlockchainStateImpediments()
                     check()
                 }
             }
         }
 
-        private fun check() {
+        override fun onLost(network: Network) {
+            serviceScope.launch {
+                log.info("network lost: $network")
+
+                // Check if there's any other available network
+                val activeNetwork = connectivityManager.activeNetwork
+                val hasConnectivity = if (activeNetwork != null) {
+                    val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+                    capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
+                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                } else {
+                    false
+                }
+
+                if (!hasConnectivity) {
+                    impediments.add(Impediment.NETWORK)
+                    updateBlockchainStateImpediments()
+                    check()
+                }
+            }
+        }
+
+        override fun onCapabilitiesChanged(network: Network, capabilities: NetworkCapabilities) {
+            serviceScope.launch {
+                val hasInternet = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                val hasValidated = capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+
+                if (log.isInfoEnabled) {
+                    val s = StringBuilder("network capabilities changed: ")
+                        .append(network)
+                        .append(", hasInternet: ").append(hasInternet)
+                        .append(", validated: ").append(hasValidated)
+                    log.info(s.toString())
+                }
+
+                if (hasInternet && hasValidated) {
+                    impediments.remove(Impediment.NETWORK)
+                } else {
+                    impediments.add(Impediment.NETWORK)
+                }
+                updateBlockchainStateImpediments()
+                check()
+            }
+        }
+
+        fun check() {
             serviceScope.launch {
                 // make sure that onCreate is finished
                 onCreateCompleted.await()
@@ -835,8 +872,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.setDownloadTxDependencies(0) // recursive implementation causes StackOverflowError
                 peerGroup!!.addWallet(wallet)
                 peerGroup!!.setUserAgent(Constants.USER_AGENT, packageInfoProvider.versionName)
+                log.info("Adding PeerConnectivityListener to peerGroup: listener={}, stopped={}",
+                    peerConnectivityListener, peerConnectivityListener?.stopped?.get())
                 peerGroup!!.addConnectedEventListener(peerConnectivityListener)
                 peerGroup!!.addDisconnectedEventListener(peerConnectivityListener)
+                peerGroup!!.addTimeoutErrorListener(executor, timeoutErrorListener)
+                log.info("Successfully added peer listeners to peerGroup")
                 val maxConnectedPeers = application.maxConnectedPeers()
                 val trustedPeerHost = config.trustedPeerHost
                 val hasTrustedPeer = trustedPeerHost != null
@@ -1015,6 +1056,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
     }
+
+//    // Separate receiver for storage events (storage broadcasts are still the correct API)
+//    private var storageReceiverRegistered = false
+//    private val storageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+//        override fun onReceive(context: Context, intent: Intent) {
+//            serviceScope.launch {
+//                val action = intent.action
+//                if (Intent.ACTION_DEVICE_STORAGE_LOW == action) {
+//                    log.info("device storage low")
+//                    impediments.add(Impediment.STORAGE)
+//                    updateBlockchainStateImpediments()
+//                    networkCallback.check()
+//                } else if (Intent.ACTION_DEVICE_STORAGE_OK == action) {
+//                    log.info("device storage ok")
+//                    impediments.remove(Impediment.STORAGE)
+//                    updateBlockchainStateImpediments()
+//                    networkCallback.check()
+//                }
+//            }
+//        }
+//    }
 
     private class ActivityHistoryEntry(
         val numTransactionsReceived: Int, val numBlocksDownloaded: Int,
@@ -1350,15 +1412,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } catch (x: BlockStoreException) {
                     throw Error("blockchain cannot be created", x)
                 }
-                // register receivers on the main thread
+                // register network and storage receivers on the main thread
                 withContext(Dispatchers.Main) {
-                    val intentFilter = IntentFilter()
-                    intentFilter.addAction(ConnectivityManager.CONNECTIVITY_ACTION)
-                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
-                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
-                    registerReceiver(connectivityReceiver, intentFilter) // implicitly start PeerGroup
-                    connectivityReceiverRegistered = true
-                    log.info("receiver register: connectivityReceiver, {}", connectivityReceiver)
+                    // Register network callback for modern network monitoring
+                    connectivityManager.registerDefaultNetworkCallback(networkCallback)
+                    networkCallbackRegistered = true
+                    log.info("network callback registered: {}", networkCallback)
+
+                    // Register broadcast receiver for storage events (still the correct API)
+                    //val storageIntentFilter = IntentFilter()
+                    //storageIntentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
+                    //storageIntentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
+                    //registerReceiver(storageReceiver, storageIntentFilter)
+                    //storageReceiverRegistered = true
+                    //log.info("storage receiver registered: {}", storageReceiver)
                 }
                 wallet.addCoinsReceivedEventListener(
                     Threading.SAME_THREAD,
@@ -1585,10 +1652,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             unregisterReceiver(tickReceiver)
             tickRecieverRegistered = false
         }
-        if (connectivityReceiverRegistered) {
-            unregisterReceiver(connectivityReceiver)
-            connectivityReceiverRegistered = false
+        if (networkCallbackRegistered) {
+            connectivityManager.unregisterNetworkCallback(networkCallback)
+            networkCallbackRegistered = false
         }
+//        if (storageReceiverRegistered) {
+//            unregisterReceiver(storageReceiver)
+//            storageReceiverRegistered = false
+//        }
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
         serviceScope.launch {
             try {
