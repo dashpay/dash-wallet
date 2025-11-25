@@ -168,6 +168,7 @@ class HistoryHeaderAdapter(
             if ((blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING ||
                 blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
                 (creationStateErrorMessage.contains("Document transitions with duplicate unique properties") ||
+                        creationStateErrorMessage.contains("DuplicateUniqueIndexError") == true ||
                     creationStateErrorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll")) ||
                     creationStateErrorMessage.contains(Regex("does not have .* as a contender")) ||
                     creationStateErrorMessage.contains("missing domain document for ")

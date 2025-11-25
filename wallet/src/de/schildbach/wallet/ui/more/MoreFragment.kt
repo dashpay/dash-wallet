@@ -321,6 +321,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun retry(errorMessage: String) {
         val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
+                errorMessage.contains("DuplicateUniqueIndexError") ||
                 errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
                 errorMessage.contains(Regex("does not have .* as a contender")) ||
                 errorMessage.contains("missing domain document for ")
