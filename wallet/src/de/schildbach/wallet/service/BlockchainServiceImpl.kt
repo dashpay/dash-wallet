@@ -1395,14 +1395,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     connectivityManager.registerDefaultNetworkCallback(networkCallback)
                     networkCallbackRegistered = true
                     log.info("network callback registered: {}", networkCallback)
-
-                    // Register broadcast receiver for storage events (still the correct API)
-                    //val storageIntentFilter = IntentFilter()
-                    //storageIntentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW)
-                    //storageIntentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK)
-                    //registerReceiver(storageReceiver, storageIntentFilter)
-                    //storageReceiverRegistered = true
-                    //log.info("storage receiver registered: {}", storageReceiver)
                 }
                 wallet.addCoinsReceivedEventListener(
                     Threading.SAME_THREAD,
@@ -1633,10 +1625,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
         }
-//        if (storageReceiverRegistered) {
-//            unregisterReceiver(storageReceiver)
-//            storageReceiverRegistered = false
-//        }
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
+
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
         serviceScope.launch {
             try {
@@ -2051,29 +2041,5 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 //            }
 //        }
         log.info("blockstore files verified: {}, {}", verifiedHeaderStore, verifiedBlockStore)
-    }
-
-    /**
-     * Adjusts thread priorities for Android 15+ background optimization
-     */
-    private fun adjustThreadPriorityForState(isBackground: Boolean) {
-        if (Build.VERSION.SDK_INT >= 35) { // Android 15
-            try {
-                val peerGroup = this.peerGroup
-                if (peerGroup != null) {
-                    if (isBackground) {
-                        log.info("App backgrounded on Android 15+, boosting network thread priority")
-                        // For Android 15, boost thread priority when backgrounded to counteract throttling
-                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_URGENT_AUDIO)
-                    } else {
-                        log.info("App foregrounded on Android 15+, resetting thread priority to default")
-                        // Reset to default priority when foregrounded
-                        android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_DEFAULT)
-                    }
-                }
-            } catch (e: Exception) {
-                log.warn("Failed to adjust thread priority for Android 15: {}", e.message)
-            }
-        }
     }
 }
