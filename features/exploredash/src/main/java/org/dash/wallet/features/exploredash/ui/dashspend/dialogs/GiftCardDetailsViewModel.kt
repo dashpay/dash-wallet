@@ -505,7 +505,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 giftCard.copy(
                     number = number,
                     pin = pinCode,
-                    note = null
+                    // note = null
                 )
             )
         }
@@ -520,7 +520,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
                     merchantUrl = merchantUrl,
-                    note = null
+                    // note = null
                 )
             )
         }
