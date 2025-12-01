@@ -208,7 +208,7 @@ class CTXSpendRepository @Inject constructor(
             giftCardMap[merchantId] = it
             UpdatedMerchantDetails(
                 id = response.id,
-                savingsPercentage = response.savingsPercentage,
+                savingsPercentage = response.discount,
                 denominationsType = response.denominationsType,
                 denominations = response.denominations.map { denom -> denom.toDouble() },
                 redeemType = response.redeemType,
@@ -244,7 +244,7 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
-        return giftCardMap[merchantId]?.savingsPercentage?.let {
+        return giftCardMap[merchantId]?.discount?.let {
             it.toDouble() / 10000.0
         } ?: 0.0
     }

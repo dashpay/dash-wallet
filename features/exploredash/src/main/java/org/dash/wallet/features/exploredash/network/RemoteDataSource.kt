@@ -19,6 +19,8 @@ package org.dash.wallet.features.exploredash.network
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
@@ -33,14 +35,23 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class RemoteDataSource @Inject constructor(private val config: CTXSpendConfig) {
+class RemoteDataSource @Inject constructor(
+    private val config: CTXSpendConfig,
+    private val walletData: WalletDataProvider
+) {
     companion object {
         private val log = LoggerFactory.getLogger(RemoteDataSource::class.java)
     }
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(CTXSpendConstants.BASE_URL)
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    CTXSpendConstants.BASE_URL
+                } else {
+                    CTXSpendConstants.DEV_BASE_URL
+                }
+            )
             .client(getOkHttpClient(TokenAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
@@ -49,7 +60,13 @@ class RemoteDataSource @Inject constructor(private val config: CTXSpendConfig) {
 
     private fun buildTokenApi(): CTXSpendTokenApi {
         return Retrofit.Builder()
-            .baseUrl(CTXSpendConstants.BASE_URL)
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    CTXSpendConstants.BASE_URL
+                } else {
+                    CTXSpendConstants.DEV_BASE_URL
+                }
+            )
             .client(getOkHttpClient())
             .addConverterFactory(GsonConverterFactory.create())
             .build()
