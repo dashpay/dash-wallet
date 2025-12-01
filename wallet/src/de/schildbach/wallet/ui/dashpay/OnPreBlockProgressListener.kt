@@ -15,7 +15,10 @@ enum class PreBlockStage (val value: Int) {
     GetSentRequests (10),
     GetNewProfiles(11),
     GetUpdatedProfiles(12),
-    Complete(13),
+    GetInvites(13),
+    TransactionMetadata(14),
+    Topups(15),
+    Complete(16),
     UpdateTotal(7),
     RecoveryAndUpdateTotal(13)
 }
