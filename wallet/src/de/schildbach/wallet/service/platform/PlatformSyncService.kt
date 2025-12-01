@@ -279,7 +279,7 @@ class PlatformSynchronizationService @Inject constructor(
         if (!platformRepo.hasBlockchainIdentity || walletApplication.wallet == null) {
             return
         }
-
+        log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
         if (updatingContacts.get()) {
             log.info("updateContactRequests is already running: {}", lastPreBlockStage)
@@ -290,6 +290,7 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("update contacts not completed because there is no dashpay contract")
             return
         }
+        log.info("updateContactRequests($initialSync) starting now")
 
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
@@ -329,8 +330,22 @@ class PlatformSynchronizationService @Inject constructor(
             var addedContact = false
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
 
-            val lastContactRequestTime = if (dashPayContactRequestDao.countAllRequests() > 0) {
-                val lastTimeStamp = dashPayContactRequestDao.getLastTimestamp()
+            val lastContactRequestTimeToMe = if (dashPayContactRequestDao.countAllRequestsToUser(userId) > 0) {
+                val lastTimeStamp = dashPayContactRequestDao.getLastTimestampToUser(userId)
+                // if the last contact request was received in the past 10 minutes, then query for
+                // contact requests that are 10 minutes before it.  If the last contact request was
+                // more than 10 minutes ago, then query all contact requests that came after it.
+                if (lastTimeStamp < System.currentTimeMillis() - DateUtils.MINUTE_IN_MILLIS * 10) {
+                    lastTimeStamp
+                } else {
+                    lastTimeStamp - DateUtils.MINUTE_IN_MILLIS * 10
+                }
+            } else {
+                0L
+            }
+
+            val lastContactRequestTimeFromMe = if (dashPayContactRequestDao.countAllRequestsFromUser(userId) > 0) {
+                val lastTimeStamp = dashPayContactRequestDao.getLastTimestampFromUser(userId)
                 // if the last contact request was received in the past 10 minutes, then query for
                 // contact requests that are 10 minutes before it.  If the last contact request was
                 // more than 10 minutes ago, then query all contact requests that came after it.
@@ -354,7 +369,7 @@ class PlatformSynchronizationService @Inject constructor(
             val toContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = false,
-                afterTime = lastContactRequestTime,
+                afterTime = lastContactRequestTimeFromMe,
                 retrieveAll = true
             )
             toContactDocuments.forEach {
@@ -381,7 +396,7 @@ class PlatformSynchronizationService @Inject constructor(
             val fromContactDocuments = platform.contactRequests.get(
                 userId,
                 toUserId = true,
-                afterTime = lastContactRequestTime,
+                afterTime = lastContactRequestTimeToMe,
                 retrieveAll = true
             )
             fromContactDocuments.forEach {
@@ -422,17 +437,27 @@ class PlatformSynchronizationService @Inject constructor(
                 coroutineScope {
                     awaitAll(
                         // fetch updated invitations
-                        async { updateInvitations() },
+                        async {
+                            updateInvitations()
+                            updateSyncStatus(PreBlockStage.GetInvites)
+                        },
                         // fetch updated transaction metadata
-                        async { updateTransactionMetadata() },  // TODO: this is skipped in VOTING state, but shouldn't be
+                        async {
+                            updateTransactionMetadata()
+                            updateSyncStatus(PreBlockStage.TransactionMetadata)
+                        },  // TODO: this is skipped in VOTING state, but shouldn't be
                         // fetch updated profiles from the network
-                        async { updateContactProfiles(userId, lastContactRequestTime) },
+                        async {
+                            updateContactProfiles(userId, min(lastContactRequestTimeToMe, lastContactRequestTimeFromMe))
+                            updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
+                        },
                         // check for unused topups
-                        async { checkTopUps() }
+                        async {
+                            checkTopUps()
+                            updateSyncStatus(PreBlockStage.Topups)
+                        }
                     )
                 }
-
-                updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
             } else {
                 if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
                     platformRepo.updateFrequentContacts()
@@ -1533,7 +1558,7 @@ class PlatformSynchronizationService @Inject constructor(
                     updateContactRequests(initialSync = true)
                 }
             }
-            initSync()
+            initSync(true)
         }
     }
 

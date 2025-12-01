@@ -285,6 +285,7 @@ android {
         }
         androidTest {
             assets.srcDirs += "$projectDir/schemas"
+            assets.srcDirs += "androidTest/assets"
             java.srcDirs = ['androidTest']
             resources.srcDirs = ['androidTest/java']
             res.srcDirs = ['androidTest/testNet3/res']
