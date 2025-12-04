@@ -45,6 +45,11 @@ class TokenAuthenticator @Inject constructor(
                     tokenResponse?.let {
                         config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
                         config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                        if (it.refreshToken != null) {
+                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, System.currentTimeMillis())
+                        } else {
+                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
+                        }
                         response.request.newBuilder()
                             .header("Authorization", "Bearer ${it.accessToken}")
                             .build()
@@ -52,6 +57,8 @@ class TokenAuthenticator @Inject constructor(
                 } catch (e: Exception) {
                     config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
                     config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                    config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
+                    config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
                     null
                 }
             }

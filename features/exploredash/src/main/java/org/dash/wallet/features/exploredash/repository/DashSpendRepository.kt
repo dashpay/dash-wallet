@@ -29,7 +29,7 @@ interface DashSpendRepository {
     suspend fun verifyEmail(code: String): Boolean
     suspend fun isUserSignedIn(): Boolean
     suspend fun logout()
-    suspend fun refreshToken(): Boolean // TODO
+    suspend fun refreshToken(): Boolean
 
     /** obtain up-to-date information about the merchant from the service */
     suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails?
