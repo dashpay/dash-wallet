@@ -20,7 +20,6 @@ package org.dash.wallet.features.exploredash.repository
 import com.google.gson.Gson
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.common.util.ResourceString
-import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.CTXAccountResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GetMerchantResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.GiftCardResponse
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.LoginRequest
@@ -32,7 +31,6 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchant
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
