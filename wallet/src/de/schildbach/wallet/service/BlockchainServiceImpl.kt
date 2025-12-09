@@ -31,6 +31,7 @@ import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
@@ -77,7 +78,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
@@ -778,21 +781,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             serviceScope.launch {
                 log.info("network lost: $network")
 
-                // Check if there's any other available network
-                val activeNetwork = connectivityManager.activeNetwork
-                val hasConnectivity = if (activeNetwork != null) {
-                    val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-                    capabilities?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) == true &&
-                    capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-                } else {
-                    false
-                }
-
-                if (!hasConnectivity) {
-                    impediments.add(Impediment.NETWORK)
-                    updateBlockchainStateImpediments()
-                    check()
-                }
+                // When using registerNetworkCallback with NetworkRequest, onLost is only called
+                // when a network that satisfied our requirements (INTERNET + VALIDATED) is lost.
+                // If another suitable network exists, onAvailable would have been called for it.
+                // Therefore, we should add the impediment here and rely on onAvailable to remove it.
+                impediments.add(Impediment.NETWORK)
+                updateBlockchainStateImpediments()
+                check()
             }
         }
 
@@ -819,17 +814,35 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
 
+        override fun onUnavailable() {
+            super.onUnavailable()
+            serviceScope.launch {
+                log.info("network unavailable - no network satisfies request")
+                impediments.add(Impediment.NETWORK)
+                updateBlockchainStateImpediments()
+                check()
+            }
+        }
+
         fun check() {
             serviceScope.launch {
-                // make sure that onCreate is finished
-                onCreateCompleted.await()
-                log.info("acquiring check() mutex")
-                checkMutex.lock()
                 try {
-                    checkService()
-                } finally {
-                    checkMutex.unlock()
+                    // make sure that onCreate is finished
+                    onCreateCompleted.await()
+                    log.info("acquiring check() mutex")
+
+                    // Use withLock to guarantee mutex release even if coroutine is cancelled
+                    checkMutex.withLock {
+                        try {
+                            checkService()
+                        } catch (e: Exception) {
+                            log.error("checkService() failed with exception", e)
+                            // Don't rethrow - we want to ensure clean mutex release
+                        }
+                    }
                     log.info("releasing check() mutex")
+                } catch (e: Exception) {
+                    log.error("check() failed", e)
                 }
             }
         }
@@ -1440,9 +1453,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 // register network and storage receivers on the main thread
                 withContext(Dispatchers.Main) {
                     // Register network callback for modern network monitoring
-                    connectivityManager.registerDefaultNetworkCallback(networkCallback)
+                    // Use NetworkRequest to reliably detect when no validated network is available (e.g., airplane mode)
+                    val networkRequest = NetworkRequest.Builder()
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .addCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+                        .build()
+                    connectivityManager.registerNetworkCallback(networkRequest, networkCallback)
                     networkCallbackRegistered = true
-                    log.info("network callback registered: {}", networkCallback)
+                    log.info("network callback registered with NetworkRequest: {}", networkCallback)
                 }
                 wallet.addCoinsReceivedEventListener(
                     Threading.SAME_THREAD,
