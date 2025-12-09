@@ -196,6 +196,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
         var cleanupDeferred: CompletableDeferred<Unit>? = null
         private val isCleaningUp = AtomicBoolean(false)
+
+        // TEST ONLY: Reduce timeout for testing onTimeout callback
+        // Set to 0 to disable test timeout (use Android's default 6-hour limit)
+        // Set to 1-2 minutes for testing the timeout behavior
+        private val TEST_TIMEOUT_MINUTES = 0L // Change to 0 to disable
     }
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
@@ -1195,6 +1200,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundAndCatch(createNetworkSyncNotification())
+
+            // TEST ONLY: Simulate onTimeout callback for testing
+            if (TEST_TIMEOUT_MINUTES > 0 && Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                serviceScope.launch {
+                    delay(TimeUnit.MINUTES.toMillis(TEST_TIMEOUT_MINUTES))
+                    log.warn("TEST: Triggering onTimeout() after {} minutes", TEST_TIMEOUT_MINUTES)
+                    onTimeout(1, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+                }
+            }
         }
         serviceScope.launch {
             try {
