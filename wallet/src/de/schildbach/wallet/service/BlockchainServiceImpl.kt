@@ -1036,7 +1036,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener)
             } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
-                dashSystemService.system.close()
+                try {
+                    dashSystemService.system.close()
+                } catch (e: Exception) {
+                    log.error("Error closing dash system service", e)
+                }
                 log.info("stopping peergroup")
                 peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1045,12 +1049,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                 peerGroup!!.stopAsync()
                 // use the offline risk analyzer
-                wallet!!.riskAnalyzer =
-                    OfflineAnalyzer(config.bestHeightEver, System.currentTimeMillis() / 1000)
-                riskAnalyzer!!.shutdown()
+                if (wallet != null) {
+                    wallet.riskAnalyzer =
+                        OfflineAnalyzer(config.bestHeightEver, System.currentTimeMillis() / 1000)
+                }
+                try {
+                    riskAnalyzer?.shutdown()
+                } catch (e: Exception) {
+                    log.error("Error shutting down risk analyzer", e)
+                }
                 peerGroup = null
                 log.debug("releasing wakelock")
-                wakeLock!!.release()
+                if (wakeLock!!.isHeld) {
+                    wakeLock!!.release()
+                }
             }
         }
     }
@@ -1187,7 +1199,29 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         serviceScope.launch {
             try {
                 log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
-                cleanupDeferred?.await()
+
+                val cleanupCompleted = withTimeoutOrNull(15_000) {
+                    cleanupDeferred?.await()
+                    true
+                } != null
+
+                if (!cleanupCompleted) {
+                    log.error("CRITICAL: Cleanup did not complete within 15 seconds")
+                    log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
+                    log.error("Stopping service to prevent resource conflicts and file lock exceptions")
+
+                    // Complete onCreate to unblock any waiting onStartCommand calls
+                    if (onCreateCompleted.isActive) {
+                        onCreateCompleted.complete(Unit)
+                    }
+
+                    // Stop the service - we cannot safely initialize with cleanup still running
+                    withContext(Dispatchers.Main) {
+                        stopSelf()
+                    }
+                    return@launch
+                }
+
                 propagateContext()
                 val wallet = application.wallet
                 if (wallet == null) {
@@ -1648,8 +1682,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } else {
                     log.info("Using existing active cleanupDeferred for coordination")
                 }
-                checkMutex.lock()
-                log.info("detach from wallet")
+
+                // Try to acquire mutex with timeout
+                val mutexAcquired = withTimeoutOrNull(5_000) {
+                    checkMutex.lock()
+                    true
+                } != null
+
+                if (!mutexAcquired) {
+                    log.error("CRITICAL: Failed to acquire check() mutex within 5 seconds")
+                    log.error("A check() operation appears to be deadlocked - proceeding with cleanup anyway")
+                    log.error("This may result in resource leaks but allows service restart")
+                    // Dump all thread stack traces using AnrException
+                    try {
+                        val anrException = de.schildbach.wallet.util.AnrException(Thread.currentThread())
+                        anrException.logProcessMap()
+                    } catch (e: Exception) {
+                        log.error("Failed to dump thread traces", e)
+                    }
+
+                }
+
+                log.info("detaching from wallet")
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 val wallet = application.wallet
                 if (wallet != null) {
@@ -1662,25 +1716,32 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (peerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
+                    log.info("CLEANUP STEP 1: About to close dashSystemService.system")
                     dashSystemService.system.close()
-                    log.info("Dash system services are shutdown")
+                    log.info("CLEANUP STEP 1: Dash system services are shutdown")
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
-                    log.info("peerGroup: removed listeners and wallet")
+                    log.info("CLEANUP STEP 2: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
+                    log.info("CLEANUP STEP 3: About to call peerGroup.forceStop(7000)")
                     peerGroup!!.forceStop(7_000)
+                    log.info("CLEANUP STEP 3: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     if (wallet != null) {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
                     }
+                    log.info("CLEANUP STEP 4: About to shutdown riskAnalyzer")
                     riskAnalyzer!!.shutdown()
-                    log.info("peergroup stopped")
+                    log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
                 }
+                log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
                 peerConnectivityListener!!.stop()
+                log.info("CLEANUP STEP 5: peerConnectivityListener stopped")
                 delayHandler.removeCallbacksAndMessages(null)
+                log.info("CLEANUP STEP 6: delayHandler callbacks cleared")
                 try {
                     log.info("closing blockchain stores")
                     blockStore?.close()
