@@ -46,6 +46,7 @@ import org.dashj.platform.dashpay.UsernameStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.slf4j.LoggerFactory
 
@@ -192,18 +193,23 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 4)
 
-            if (blockchainIdentity.currentUsername == null) {
+            if (blockchainIdentity.currentUsername == null || !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // check if the network has this name in the queue for voting
                 val contestedNames = platformRepo.platform.names.getAllContestedNames()
 
+                // now much of this can be put in BlockchainIdentity
                 contestedNames.forEach { name ->
                     val voteContenders = platformRepo.getVoteContenders(name)
                     val winner = voteContenders.winner
                     voteContenders.map.forEach { (identifier, documentWithVotes) ->
                         if (blockchainIdentity.uniqueIdentifier == identifier) {
+                            if (blockchainIdentity.currentUsername != null) {
+                                blockchainIdentity.secondaryUsername = blockchainIdentity.currentUsername
+                            }
                             blockchainIdentity.currentUsername = name
+                            blockchainIdentity.primaryUsername = name
                             // load the serialized doc to get voting period and status...
                             val usernameRequestStatus = if (winner.isEmpty) {
                                 UsernameRequestStatus.VOTING
@@ -217,7 +223,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                             }
 
                             blockchainIdentity.usernameStatuses.apply {
-                                clear()
+                                // clear()
                                 val usernameInfo = UsernameInfo(
                                     null,
                                     UsernameStatus.CONFIRMED,
@@ -259,7 +265,6 @@ class RestoreIdentityWorker @AssistedInject constructor(
                                 )
                             )
                             // what if usernameInfo would have been null, we should create it.
-
                             var usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]
                             if (usernameInfo == null) {
                                 usernameInfo = UsernameInfo(
