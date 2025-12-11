@@ -33,6 +33,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
@@ -40,7 +41,6 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.PlatformService
-import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -76,7 +76,6 @@ import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
@@ -135,6 +134,26 @@ class PlatformRepo @Inject constructor(
             blockchainIdentity.currentUsername
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+        }
+    }
+
+    suspend fun getActiveUsername(): String? {
+        return if (this::blockchainIdentity.isInitialized) {
+            blockchainIdentity.currentUsername
+        } else {
+            val username = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+            val creationState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (creationState == IdentityCreationState.VOTING.name) {
+                val usernameSecondary = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
+                if (usernameSecondary != null &&
+                    blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS) == UsernameStatus.CONFIRMED.name) {
+                    usernameSecondary
+                } else {
+                    username
+                }
+            } else {
+                username
+            }
         }
     }
 
@@ -432,7 +451,7 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .filter { it.creationState >= BlockchainIdentityData.CreationState.DONE }
+            .filter { it.hasUsername }
             .flatMapLatest { identityData ->
                 val userId = identityData.userId!!
 
@@ -623,7 +642,7 @@ class PlatformRepo @Inject constructor(
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
+        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == IdentityCreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
         return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
     }
@@ -660,16 +679,14 @@ class PlatformRepo @Inject constructor(
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
-    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter) {
-        withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet as WalletEx
-            // this will initialize any missing key chains
-            wallet.initializeCoinJoin(keyParameter, 0)
+    fun addWalletAuthenticationKeys(seed: DeterministicSeed, keyParameter: KeyParameter) {
+        val wallet = walletApplication.wallet as WalletEx
+        // this will initialize any missing key chains
+        wallet.initializeCoinJoin(keyParameter, 0)
 
-            var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
-            authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
-            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
-        }
+        var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+        authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
+        authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
     }
 
     //
@@ -680,22 +697,20 @@ class PlatformRepo @Inject constructor(
     //
     // Step 3: Register the identity
     //
-    suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            for (i in 0 until 3) {
-                try {
-                    val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                    blockchainIdentity.registerIdentity(keyParameter, true, true)
-                    timer.logTiming() // we won't log timing for failed registrations
-                    return@withContext
-                } catch (e: InvalidInstantAssetLockProofException) {
-                    log.info("instantSendLock error: retry registerIdentity again ($i)")
-                    delay(3000)
-                }
+    suspend fun registerIdentity(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        Context.propagate(walletApplication.wallet!!.context)
+        for (i in 0 until 3) {
+            try {
+                val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
+                blockchainIdentity.registerIdentity(keyParameter, true, true)
+                timer.logTiming() // we won't log timing for failed registrations
+                return
+            } catch (e: InvalidInstantAssetLockProofException) {
+                log.info("instantSendLock error: retry registerIdentity again ($i)")
+                delay(3000)
             }
-            throw InvalidInstantAssetLockProofException("failed after 3 tries")
         }
+        throw InvalidInstantAssetLockProofException("failed after 3 tries")
     }
 
     //
@@ -717,53 +732,21 @@ class PlatformRepo @Inject constructor(
     //
     // Step 4: Preorder the username
     //
-    suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.getUnregisteredUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
-            blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names, keyParameter)
-            timer.logTiming()
-        }
-    }
-
-    //
-    // Step 4: Verify that the username was preordered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val set = blockchainIdentity.getUsernamesWithStatus(UsernameStatus.PREORDER_REGISTRATION_PENDING)
-            val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
-            }
-        }
+    fun preorderName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.getUnregisteredUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
+        blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(listOf(username), keyParameter)
+        timer.logTiming()
     }
 
     //
     // Step 5: Register the username
     //
-    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.preorderedUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter, false)
-            timer.logTiming()
-        }
-    }
-
-    //
-    // Step 5: Verify that the username was registered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
-            }
-        }
+    fun registerName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.preorderedUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
+        blockchainIdentity.registerUsernameDomainsForUsernames(listOf(username), keyParameter, false)
+        timer.logTiming()
     }
 
     //Step 6: Create DashPay Profile
@@ -791,7 +774,7 @@ class PlatformRepo @Inject constructor(
             ?: throw IllegalStateException("AuthenticationGroupExtension is not initialised")
         val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authExt)
         log.info("loading BlockchainIdentity: {}", watch)
-        if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
+        if (blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
                 uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
                 identity = blockchainIdentityData.identity
@@ -806,11 +789,19 @@ class PlatformRepo @Inject constructor(
         // Syncing complete
         log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}")
         return blockchainIdentity.apply {
-            currentUsername = blockchainIdentityData.username
+            primaryUsername = blockchainIdentityData.username
+            secondaryUsername = blockchainIdentityData.usernameSecondary
+            blockchainIdentityData.username?.let {
+                addUsername(it)
+            }
+            blockchainIdentityData.usernameSecondary?.let {
+                addUsername(it)
+            }
+
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
-                var usernameStatus = UsernameInfo(
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_REGISTERING) {
+                val usernameStatus = UsernameInfo(
                     blockchainIdentityData.preorderSalt,
                     blockchainIdentityData.usernameStatus ?: UsernameStatus.NOT_PRESENT,
                     currentUsername,
@@ -818,6 +809,19 @@ class PlatformRepo @Inject constructor(
                     blockchainIdentityData.votingPeriodStart
                 )
                 currentUsername ?.let {
+                    usernameStatuses[it] = usernameStatus
+                }
+            }
+
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_SECONDARY_REGISTERING) {
+                val usernameStatus = UsernameInfo(
+                    blockchainIdentityData.preorderSaltSecondary,
+                    blockchainIdentityData.usernameSecondaryStatus ?: UsernameStatus.NOT_PRESENT,
+                    blockchainIdentityData.usernameSecondary,
+                    null,
+                    null
+                )
+                secondaryUsername ?.let {
                     usernameStatuses[it] = usernameStatus
                 }
             }
@@ -836,13 +840,21 @@ class PlatformRepo @Inject constructor(
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
-                username = blockchainIdentity.currentUsername
+                username = blockchainIdentity.primaryUsername
                 if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
                 }
                 usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
                 votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
+
+                log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
+                blockchainIdentity.secondaryUsername?.let { name ->
+                    usernameSecondary = name
+                    usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
+                    log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
+                    preorderSaltSecondary = blockchainIdentity.saltForUsername(name, false)
+                }
             }
             creditBalance = blockchainIdentity.creditBalance
 
@@ -851,12 +863,12 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
-                                            state: BlockchainIdentityData.CreationState,
+                                            state: IdentityCreationState,
                                             exception: Throwable? = null) {
         val errorMessage = exception?.run {
             var message = "${exception.javaClass.simpleName}: ${exception.message}"
@@ -871,7 +883,7 @@ class PlatformRepo @Inject constructor(
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
         }
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityDataStorage.updateCreationState(state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
@@ -925,8 +937,8 @@ class PlatformRepo @Inject constructor(
 
     suspend fun doneAndDismiss() {
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
-            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+        if (blockchainIdentityData != null && blockchainIdentityData.creationState == IdentityCreationState.DONE) {
+            blockchainIdentityData.creationState = IdentityCreationState.DONE_AND_DISMISS
             blockchainIdentityDataStorage.insert(blockchainIdentityData)
         }
     }
@@ -934,7 +946,7 @@ class PlatformRepo @Inject constructor(
     //
     // Step 5: Find the usernames in the case of recovery
     //
-    suspend fun recoverUsernamesAsync(blockchainIdentity: BlockchainIdentity) {
+    suspend fun recoverUsernames(blockchainIdentity: BlockchainIdentity) {
         withContext(Dispatchers.IO) {
             blockchainIdentity.recoverUsernames()
         }
@@ -1030,7 +1042,6 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun clearDatabase(includeInvitations: Boolean) {
         log.info("clearing databases (includeInvitations = $includeInvitations)")
-        blockchainIdentityDataStorage.clear()
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
@@ -1149,10 +1160,8 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    fun clearBlockchainIdentityData() {
-        GlobalScope.launch(Dispatchers.IO) {
-            blockchainIdentityDataStorage.clear()
-        }
+    suspend fun clearBlockchainIdentityData() {
+        blockchainIdentityDataStorage.clear()
     }
 
     // current unused

@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -55,12 +56,14 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig
 ) : ViewModel() {
 
+    var usernameType: UsernameType = UsernameType.Primary
     var isContestableUsername: Boolean = false
     var hasIdentity: Boolean = false
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
     private val amount: Coin
         get() = when {
+            usernameType == UsernameType.Secondary -> Coin.ZERO
             isContestableUsername && !hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED
             isContestableUsername && hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED_NAME
             else -> Constants.DASH_PAY_FEE

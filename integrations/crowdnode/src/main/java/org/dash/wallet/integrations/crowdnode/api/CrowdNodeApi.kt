@@ -134,7 +134,7 @@ class CrowdNodeApiAggregator @Inject constructor(
 
     init {
         walletDataProvider.attachOnWalletWipedListener {
-            configScope.launch { reset() }
+            reset()
         }
 
         onlineAccountStatus

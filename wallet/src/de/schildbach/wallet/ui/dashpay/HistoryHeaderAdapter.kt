@@ -27,7 +27,7 @@ import androidx.core.view.isVisible
 import androidx.recyclerview.widget.RecyclerView
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.HistoryHeaderViewBinding
 import org.slf4j.LoggerFactory
@@ -164,11 +164,14 @@ class HistoryHeaderAdapter(
         binding.identityCreation.root.setOnClickListener { onIdentityClicked?.invoke() }
 
         if (blockchainIdentityData.creationStateErrorMessage != null) {
-            if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
-                (blockchainIdentityData.creationStateErrorMessage.contains("Document transitions with duplicate unique properties") ||
-                    blockchainIdentityData.creationStateErrorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll")) ||
-                    blockchainIdentityData.creationStateErrorMessage.contains(Regex("does not have .* as a contender")) ||
-                    blockchainIdentityData.creationStateErrorMessage.contains("missing domain document for ")
+            val creationStateErrorMessage = blockchainIdentityData.creationStateErrorMessage!!
+            if ((blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING ||
+                blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
+                (creationStateErrorMessage.contains("Document transitions with duplicate unique properties") ||
+                        creationStateErrorMessage.contains("DuplicateUniqueIndexError") == true ||
+                    creationStateErrorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll")) ||
+                    creationStateErrorMessage.contains(Regex("does not have .* as a contender")) ||
+                    creationStateErrorMessage.contains("missing domain document for ")
                 ) {
                 binding.identityCreation.title.text = binding.root.context.getString(R.string.processing_username_unavailable_title)
                 binding.identityCreation.subtitle.visibility = View.VISIBLE
@@ -189,7 +192,7 @@ class HistoryHeaderAdapter(
             binding.identityCreation.icon.setImageResource(R.drawable.identity_processing)
             (binding.identityCreation.icon.drawable as AnimationDrawable).start()
 
-            if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState == IdentityCreationState.DONE) {
                 binding.identityCreation.icon.visibility = View.GONE
             } else {
                 binding.identityCreation.icon.visibility = View.VISIBLE
@@ -199,30 +202,34 @@ class HistoryHeaderAdapter(
         }
 
         when (blockchainIdentityData.creationState) {
-            BlockchainIdentityData.CreationState.NONE,
-            BlockchainIdentityData.CreationState.UPGRADING_WALLET,
-            BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CREATING,
-            BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENDING,
-            BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_SENT,
-            BlockchainIdentityData.CreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
+            IdentityCreationState.NONE,
+            IdentityCreationState.UPGRADING_WALLET,
+            IdentityCreationState.CREDIT_FUNDING_TX_CREATING,
+            IdentityCreationState.CREDIT_FUNDING_TX_SENDING,
+            IdentityCreationState.CREDIT_FUNDING_TX_SENT,
+            IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED -> {
                 binding.identityCreation.progress.visibility = View.VISIBLE
                 binding.identityCreation.progress.progress = 25
                 binding.identityCreation.subtitle.setText(R.string.processing_home_step_1)
             }
-            BlockchainIdentityData.CreationState.IDENTITY_REGISTERING,
-            BlockchainIdentityData.CreationState.IDENTITY_REGISTERED -> {
+            IdentityCreationState.IDENTITY_REGISTERING,
+            IdentityCreationState.IDENTITY_REGISTERED -> {
                 binding.identityCreation.progress.progress = 50
                 binding.identityCreation.subtitle.setText(
                     if (blockchainIdentityData.restoring)
                         R.string.processing_home_step_2_restoring else
                         R.string.processing_home_step_2)
             }
-            BlockchainIdentityData.CreationState.PREORDER_REGISTERING,
-            BlockchainIdentityData.CreationState.PREORDER_REGISTERED,
-            BlockchainIdentityData.CreationState.USERNAME_REGISTERING,
-            BlockchainIdentityData.CreationState.USERNAME_REGISTERED,
-            BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATING,
-            BlockchainIdentityData.CreationState.DASHPAY_PROFILE_CREATED -> {
+            IdentityCreationState.PREORDER_REGISTERING,
+            IdentityCreationState.PREORDER_REGISTERED,
+            IdentityCreationState.USERNAME_REGISTERING,
+            IdentityCreationState.USERNAME_REGISTERED,
+            IdentityCreationState.PREORDER_SECONDARY_REGISTERING,
+            IdentityCreationState.PREORDER_SECONDARY_REGISTERED,
+            IdentityCreationState.USERNAME_SECONDARY_REGISTERING,
+            IdentityCreationState.USERNAME_SECONDARY_REGISTERED,
+            IdentityCreationState.DASHPAY_PROFILE_CREATING,
+            IdentityCreationState.DASHPAY_PROFILE_CREATED -> {
                 binding.identityCreation.progress.progress = 75
                 binding.identityCreation.subtitle.setText(
                     when {
@@ -233,13 +240,13 @@ class HistoryHeaderAdapter(
                     }
                 )
             }
-            BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING,
-            BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKED,
-            BlockchainIdentityData.CreationState.REQUESTED_NAME_LINK_SAVING,
-            BlockchainIdentityData.CreationState.REQUESTED_NAME_LINK_SAVED -> {
+            IdentityCreationState.REQUESTED_NAME_CHECKING,
+            IdentityCreationState.REQUESTED_NAME_CHECKED,
+            IdentityCreationState.REQUESTED_NAME_LINK_SAVING,
+            IdentityCreationState.REQUESTED_NAME_LINK_SAVED -> {
                 binding.identityCreation.progress.progress = 90
             }
-            BlockchainIdentityData.CreationState.VOTING -> {
+            IdentityCreationState.VOTING -> {
                 binding.identityCreation.icon.visibility = View.GONE
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
                 binding.identityCreation.progress.visibility = View.GONE
@@ -247,7 +254,7 @@ class HistoryHeaderAdapter(
                     blockchainIdentityData.username)
                 binding.identityCreation.subtitle.setText(R.string.processing_voting_subtitle)
             }
-            BlockchainIdentityData.CreationState.DONE -> {
+            IdentityCreationState.DONE -> {
                 binding.identityCreation.icon.visibility = View.GONE
                 binding.identityCreation.forwardArrow.visibility = View.VISIBLE
                 binding.identityCreation.progress.visibility = View.GONE
@@ -255,7 +262,7 @@ class HistoryHeaderAdapter(
                     blockchainIdentityData.username)
                 binding.identityCreation.subtitle.setText(R.string.processing_done_subtitle)
             }
-            BlockchainIdentityData.CreationState.DONE_AND_DISMISS -> {
+            IdentityCreationState.DONE_AND_DISMISS -> {
                 // nothing to do
             }
         }
@@ -283,7 +290,7 @@ class HistoryHeaderAdapter(
 
     private fun shouldShowJoinDashPay(canJoin: Boolean): Boolean {
         val hideJoinDashPay = preferences.getBoolean(PREFS_KEY_HIDE_JOIN_DASHPAY_CARD, false)
-        return blockchainIdentityData?.creationState == BlockchainIdentityData.CreationState.NONE && canJoin && !hideJoinDashPay
+        return blockchainIdentityData?.creationState == IdentityCreationState.NONE && canJoin && !hideJoinDashPay
     }
 
     private fun shouldShowAcceptInvitation(invitation: InvitationLinkData?, isSynced: Boolean): Boolean {

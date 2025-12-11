@@ -1,4 +1,4 @@
-package de.schildbach.wallet.ui.username.voting
+package de.schildbach.wallet.ui.username.request
 
 import android.os.Bundle
 import android.view.View

@@ -163,6 +163,7 @@ object AnalyticsConstants {
 
     object UsersContacts {
         const val CREATE_USERNAME = "create_username"
+        const val CREATE_USERNAME_INSTANT = "create_username_instant"
         const val JOIN_DASHPAY = "start_btn_join_dashpay"
         const val CREATE_USERNAME_CONFIRM = "start_username_btn_confirm"
         const val CREATE_USERNAME_SUCCESS = "start_username_created_success"

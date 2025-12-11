@@ -66,8 +66,7 @@ abstract class BaseConfig(
 
     init {
         walletDataProvider.attachOnWalletWipedListener {
-            @OptIn(DelicateCoroutinesApi::class)
-            GlobalScope.launch { clearAll() }
+            clearAll()
         }
     }
 

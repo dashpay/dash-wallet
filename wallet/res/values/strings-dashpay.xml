@@ -16,6 +16,7 @@
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
     <string name="new_account_confirm_message">You have chosen %s as your username. Please note that the username can NOT be changed once it is registered.</string>
+    <string name="new_account_secondary_confirm_message">You chose %s’ as an instant username. Please note that the username can NOT be changed once it is registered.</string>
     <string name="invitation_confirm_title">Invitation Fee</string>
     <string name="invitation_confirm_message">Each invitation will be funded with this amount so that the receiver can quickly create their username on the Dash Network</string>
     <string name="invitation_title">Invitation</string>
@@ -312,6 +313,7 @@
         <item>Has Blocked votes</item>
     </string-array>
     <string name="request_your_username">Create your username</string>
+    <string name="request_instant_username">Create instant username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
     <string name="request_voting_range">The Dash network will vote on this username. We will notify you of the results on %s.</string>
@@ -388,6 +390,8 @@
     <string name="requested_voting_duration">Results on %s.</string>
     <string name="cancel_request">Cancel Request</string>
     <string name="after_the_voting">After the voting ends we will notify you about its results</string>
+    <string name="after_the_voting_result">Voting has ended</string>
+    <string name="voting_period_error">Voting period not found</string>
     <string name="none">None</string>
     <string name="verify_now">Verify Now</string>
     <string name="if_you_tap_cancel">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
@@ -538,4 +542,11 @@
     <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
     <string name="accept_invitation_hide">Hide</string>
     <string name="accept_invitation_create">Create</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Create an instant username</string>
+    <string name="create_instant_username_description">Your requested username will be voted on for 2 weeks. For immediate contacts and payments, you can create a similar instant username.\n\nIf your original request is approved, it replaces the instant one, preserving contacts and history. If not, continue using the instant one uninterrupted.</string>
+    <string name="create_instant_username_button">Create instant username</string>
+    <string name="create_instant_username_cancel">Cancel</string>
+
 </resources>

@@ -35,7 +35,7 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
@@ -191,7 +191,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.requestedUsernameContainer.setOnClickListener {
             val errorMessage = createIdentityViewModel.creationException.value
-            if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+            if (createIdentityViewModel.creationState.value.ordinal < IdentityCreationState.VOTING.ordinal &&
                 errorMessage != null) {
                 // Perform Retry
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
@@ -214,8 +214,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
-                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal
+            if (!it.restoring && it.creationState.ordinal > IdentityCreationState.NONE.ordinal &&
+                it.creationState.ordinal < IdentityCreationState.VOTING.ordinal
             ) {
                 val username = it.username
 
@@ -244,7 +244,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameContainer.isEnabled = false
                     }
                 }
-            } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
+            } else if (it.creationState == IdentityCreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
@@ -292,9 +292,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                         binding.requestedUsernameArrow.isVisible = false
                     }
+                    UsernameRequestStatus.APPROVED -> {
+                        // swallow to prevent crash
+                    }
                     else -> error("${it.usernameRequested} is not valid")
                 }
-            } else if (it.creationState >= BlockchainIdentityData.CreationState.VOTING) {
+            } else if (it.creationState >= IdentityCreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.GONE
             } else {
@@ -318,6 +321,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun retry(errorMessage: String) {
         val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
+                errorMessage.contains("DuplicateUniqueIndexError") ||
                 errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
                 errorMessage.contains(Regex("does not have .* as a contender")) ||
                 errorMessage.contains("missing domain document for ")
@@ -423,7 +427,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        if (createIdentityViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
+        val shouldShowProfileSection = createIdentityViewModel.creationState.value.ordinal >= IdentityCreationState.DONE.ordinal ||
+                createIdentityViewModel.blockchainIdentity.value?.showSecondaryUsername == true
+        if (shouldShowProfileSection) {
             binding.editUpdateSwitcher.visibility = View.VISIBLE
             binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
             if (profile.displayName.isNotEmpty()) {

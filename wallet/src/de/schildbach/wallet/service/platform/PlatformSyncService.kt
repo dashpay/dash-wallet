@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
@@ -81,6 +82,7 @@ import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.dashj.platform.wallet.TxMetadataItem
 import org.slf4j.Logger
@@ -293,9 +295,9 @@ class PlatformSynchronizationService @Inject constructor(
 
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState < IdentityCreationState.DONE) {
                 // Is the Voting Period complete?
-                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                if (blockchainIdentityData.creationState == IdentityCreationState.VOTING) {
                     val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
                     val votingPeriodStart = blockchainIdentityData.votingPeriodStart ?: 0L
                     if (System.currentTimeMillis() - votingPeriodStart >= timeWindow) {
@@ -304,18 +306,20 @@ class PlatformSynchronizationService @Inject constructor(
                             val domainDocument = DomainDocument(resource.data)
                             if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
                                 blockchainIdentityData.creationState =
-                                    BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                                    IdentityCreationState.DONE_AND_DISMISS
                                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                             }
                         }
                     }
                 }
-                log.info("update contacts not completed username registration/recovery is not complete")
-                // if username creation or request is not complete, then allow the sync process to finish
-                if (preDownloadBlocks.get()) {
-                    finishPreBlockDownload()
+                if (blockchainIdentityData.votingInProgress && !blockchainIdentityData.showSecondaryUsername) {
+                    log.info("update contacts not completed username registration/recovery is not complete")
+                    // if username creation or request is not complete, then allow the sync process to finish
+                    if (preDownloadBlocks.get()) {
+                        finishPreBlockDownload()
+                    }
+                    return
                 }
-                return
             }
 
             if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
@@ -623,8 +627,27 @@ class PlatformSynchronizationService @Inject constructor(
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
-                val nameById =
-                    nameDocuments.associateBy({ platformRepo.getIdentityForName(it) }, { it })
+                val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
+                val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
+
+                val nameById = hashMapOf<Identifier, DomainDocument>()
+
+                idByNameMap.forEach { (name, identifier) ->
+                    val otherNames = idByNameMap.filter { it.value == identifier && name != it.key }
+
+                    val shouldAddName = when {
+                        otherNames.isEmpty() -> true
+                        Names.isUsernameContestable(name) -> true
+                        else -> {
+                            otherNames.keys.find { name.contains(it)} == null
+                        }
+                    }
+                    if (shouldAddName) {
+                        documentsByName[name]?.let {
+                            nameById[it.ownerId] = it
+                        }
+                    }
+                }
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
@@ -1527,8 +1550,9 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
-        if (identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+    private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
+        if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
+            log.info("checking the vote status of {}", identityData.username)
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
@@ -1542,7 +1566,12 @@ class PlatformSynchronizationService @Inject constructor(
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch {
+                            platformRepo.updateBlockchainIdentityData(identityData)
+                            platformRepo.getLocalUserProfile()?.let {
+                                dashPayProfileDao.insert(it.copy(username = identityData.username!!))
+                            }
+                        }
                     }
 
                     winner.noWinner -> {
@@ -1557,7 +1586,7 @@ class PlatformSynchronizationService @Inject constructor(
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
                     if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
-                        identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                        identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
                         platformRepo.updateBlockchainIdentityData(identityData)
                     }
                 } else {

@@ -21,36 +21,36 @@ import de.schildbach.wallet.data.InvitationLinkData
 import org.bitcoinj.core.Sha256Hash
 import org.dashj.platform.dashpay.UsernameRequestStatus
 
-data class BlockchainIdentityBaseData(
-    val id: Int,
-    val creationState: BlockchainIdentityData.CreationState,
-    val creationStateErrorMessage: String?,
-    val username: String?,
-    val userId: String?,
-    val restoring: Boolean,
-    val creditFundingTxId: Sha256Hash? = null,
-    val usingInvite: Boolean = false,
+open class BlockchainIdentityBaseData(
+    var creationState: IdentityCreationState,
+    var creationStateErrorMessage: String?,
+    var username: String?,
+    var usernameSecondary: String?,
+    var userId: String?,
+    var restoring: Boolean,
+    var creditFundingTxId: Sha256Hash? = null,
+    var usingInvite: Boolean = false,
     val invite: InvitationLinkData? = null,
     var requestedUsername: String? = null,
     var verificationLink: String? = null,
     val cancelledVerificationLink: Boolean? = null,
-    val usernameRequested: UsernameRequestStatus? = null,
-    val votingPeriodStart: Long? = null
+    var usernameRequested: UsernameRequestStatus? = null,
+    var votingPeriodStart: Long? = null
 ) {
 
     val creationInProgress: Boolean
-        get() = creationState > BlockchainIdentityData.CreationState.NONE &&
-                creationState < BlockchainIdentityData.CreationState.VOTING &&
+        get() = creationState > IdentityCreationState.NONE &&
+                creationState < IdentityCreationState.VOTING &&
                 creationStateErrorMessage == null && !restoring
 
     val votingInProgress: Boolean
-        get() = creationState == BlockchainIdentityData.CreationState.VOTING
+        get() = creationState == IdentityCreationState.VOTING
 
     val creationComplete: Boolean
-        get() = creationState >= BlockchainIdentityData.CreationState.DONE
+        get() = creationState >= IdentityCreationState.DONE
 
     val creationCompleteDismissed: Boolean
-        get() = creationState == BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+        get() = creationState == IdentityCreationState.DONE_AND_DISMISS
 
     val creationError: Boolean
         get() = creationStateErrorMessage != null
