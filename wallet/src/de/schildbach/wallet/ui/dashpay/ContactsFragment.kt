@@ -164,7 +164,7 @@ class ContactsFragment : Fragment(),
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS)
 
-                lifecycleScope.launch {
+                viewLifecycleOwner.lifecycleScope.launch {
                     if (dashPayViewModel.getInviteCount() == 0) {
                         safeNavigate(ContactsFragmentDirections.contactsToInviteFee("contacts"))
                     } else {
@@ -184,7 +184,7 @@ class ContactsFragment : Fragment(),
             }
         )
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             mainViewModel.dismissUsernameCreatedCardIfDone()
         }
     }
