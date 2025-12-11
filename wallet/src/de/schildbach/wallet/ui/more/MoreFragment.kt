@@ -357,6 +357,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
 
+        createInviteViewModel.blockchainIdentity.observe(viewLifecycleOwner) { _ ->
+            editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
+                showProfileSection(dashPayProfile)
+            }
+        }
+
         // track the status of broadcast changes to our profile
         editProfileViewModel.updateProfileRequestState.observe(viewLifecycleOwner) { state ->
             if (state != null) {
