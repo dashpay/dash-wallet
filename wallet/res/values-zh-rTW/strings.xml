@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加錢包dump</string>
     <string name="report_issue_dialog_mail_intent_failed">寄送報告失敗。</string>
     <string name="report_issue_dialog_generating_report">正在生成報告</string>
+    <string name="report_issue_dialog_status_device_info">設備信息</string>
+    <string name="report_issue_dialog_status_installed_packages">已安裝軟件包列表</string>
+    <string name="report_issue_dialog_status_application_log">應用程式日誌</string>
+    <string name="report_issue_dialog_status_application_info">應用程式資訊</string>
+    <string name="report_issue_dialog_status_wallet_dump">錢包轉儲（慢）</string>
+    <string name="report_issue_dialog_status_contextual_info">上下文信息</string>
+    <string name="report_issue_dialog_status_background_traces">背景追蹤</string>
+    <string name="report_issue_dialog_status_stack_trace">堆疊追蹤</string>
+    <string name="report_issue_dialog_status_finishing">正在完成</string>
     <string name="report_transaction_history_export">導出</string>
     <string name="report_transaction_history_title">導出到CSV檔案</string>
     <string name="report_transaction_history_not_synced_title">導出到CSV檔案</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">關於</string>
+    <string name="about_dash_title">關於達世幣</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">著作權</string>
     <string name="about_license_title">授權</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">稍後提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不要提醒我</string>
     <string name="notification_bluetooth_service_listening">準備透過藍牙接收付款</string>
+    <string name="notification_sync_paused">區塊鏈同步已暫停</string>
+    <string name="notification_background_processes_paused">後台處理已暫停</string>
+    <string name="notification_background_processes_paused_text">您已達到 Android 混合或區塊鏈同步的 6 小時前台服務限制。點擊重置...</string>
     <string name="appwidget_wallet_balance_title">達世幣結餘</string>
 
     <!-- generic buttons -->

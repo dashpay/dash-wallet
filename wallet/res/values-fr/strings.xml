@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Inclure une exportation du portefeuille</string>
     <string name="report_issue_dialog_mail_intent_failed">Échec lors de l\'envoi du rapport.</string>
     <string name="report_issue_dialog_generating_report">Génération du rapport</string>
+    <string name="report_issue_dialog_status_device_info">information de l\'appareil</string>
+    <string name="report_issue_dialog_status_installed_packages">liste des paquets installés</string>
+    <string name="report_issue_dialog_status_application_log">journal de l\'application</string>
+    <string name="report_issue_dialog_status_application_info">infos de l\'application</string>
+    <string name="report_issue_dialog_status_wallet_dump">récup. données du portefeuille (lent)</string>
+    <string name="report_issue_dialog_status_contextual_info">infos contextuelles</string>
+    <string name="report_issue_dialog_status_background_traces">traces d\'arrière-plan</string>
+    <string name="report_issue_dialog_status_stack_trace">traces de pile</string>
+    <string name="report_issue_dialog_status_finishing">achèvement</string>
     <string name="report_transaction_history_export">Exportation</string>
     <string name="report_transaction_history_title">Exportation CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportation CSV</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">À propos du logiciel</string>
+    <string name="about_dash_title">À propos de Dash</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Tous droits réservés</string>
     <string name="about_license_title">Licence</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Me le rappeler plus tard</string>
     <string name="notification_inactivity_action_dismiss_forever">Ne plus me le rappeler</string>
     <string name="notification_bluetooth_service_listening">Prêt à recevoir des paiements via Bluetooth</string>
+    <string name="notification_sync_paused">Synchro. de la blockchain en pause</string>
+    <string name="notification_background_processes_paused">Traitement d\'arrière-plan en pause</string>
+    <string name="notification_background_processes_paused_text">Vous avez atteint la limite de services Android d\'avant-plan (6 heures) pour le mixage ou la synchronisation de blockchain. Touchez pour relancer…</string>
     <string name="appwidget_wallet_balance_title">Solde Dash</string>
 
     <!-- generic buttons -->

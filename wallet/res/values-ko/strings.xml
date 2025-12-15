@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">지갑 덤프 파일 첨부</string>
     <string name="report_issue_dialog_mail_intent_failed">오류 보고서 전송에 실패했습니다.</string>
     <string name="report_issue_dialog_generating_report">보고서 생성중</string>
+    <string name="report_issue_dialog_status_device_info">기기 정보</string>
+    <string name="report_issue_dialog_status_installed_packages">설치된 패키지 목록</string>
+    <string name="report_issue_dialog_status_application_log">어플리케이션 로그</string>
+    <string name="report_issue_dialog_status_application_info">어플리케이션 정보</string>
+    <string name="report_issue_dialog_status_wallet_dump">지갑 덤프 (느림)</string>
+    <string name="report_issue_dialog_status_contextual_info">상황 정보</string>
+    <string name="report_issue_dialog_status_background_traces">백그라운드 추적</string>
+    <string name="report_issue_dialog_status_stack_trace">스택 추적</string>
+    <string name="report_issue_dialog_status_finishing">마치는 중</string>
     <string name="report_transaction_history_export">내보내기</string>
     <string name="report_transaction_history_title">CSV 내보내기</string>
     <string name="report_transaction_history_not_synced_title">CSV 내보내기</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">우리에 관하여</string>
+    <string name="about_dash_title">대시에 관하여</string>
     <string name="about_version_title">버전</string>
     <string name="about_copyright_title">저작권</string>
     <string name="about_license_title">라이선스</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">다시 알림</string>
     <string name="notification_inactivity_action_dismiss_forever">알림 없음</string>
     <string name="notification_bluetooth_service_listening">블루투스를 통해 지불 받을 준비를 마쳤습니다</string>
+    <string name="notification_sync_paused">블록체인 동기화 멈추어짐</string>
+    <string name="notification_background_processes_paused">백그라운드 처리 멈추어짐</string>
+    <string name="notification_background_processes_paused_text">믹싱 또는 블록체인 동기화를 위한 안드로이드의 6시간 포그라운드 서비스 제한에 도달했습니다. 탭하여 재설정하세요…</string>
     <string name="appwidget_wallet_balance_title">대시 잔고</string>
 
     <!-- generic buttons -->

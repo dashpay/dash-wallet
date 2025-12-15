@@ -11,6 +11,7 @@
     <string name="buy_dash">대시 매수</string>
     <string name="copied">복사됨</string>
     <string name="staking_title">스테이킹</string>
+    <string name="spend_title">지출</string>
     <string name="email">이메일</string>
     <string name="email_placeholder">예시 johndoe@mail.com</string>
     <string name="error">오류</string>

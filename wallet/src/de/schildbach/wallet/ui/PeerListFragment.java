@@ -183,7 +183,7 @@ public final class PeerListFragment extends Fragment {
         @Override
         public void onServiceConnected(final ComponentName name, final IBinder binder) {
             service = ((BlockchainServiceImpl.LocalBinder) binder).getService();
-
+            log.info("service is bound: {}", serviceBound);
             loaderManager.initLoader(ID_PEER_LOADER, null, peerLoaderCallbacks);
         }
 

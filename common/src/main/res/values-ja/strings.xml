@@ -11,6 +11,7 @@
     <string name="buy_dash">Dashを購入する</string>
     <string name="copied">コピーされた</string>
     <string name="staking_title">ステーキング</string>
+    <string name="spend_title">使う</string>
     <string name="email">Eメール</string>
     <string name="email_placeholder">例：johndoe@mail.com</string>
     <string name="error">エラー</string>

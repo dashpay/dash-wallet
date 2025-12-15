@@ -73,7 +73,6 @@
     <string name="explore_filter">Filtr</string>
     <string name="explore_filters">Filtry</string>
     <string name="explore_apply_filter">Aplikovat</string>
-    <string name="explore_payment_method">Platební metoda</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Dárkový poukaz</string>
     <string name="explore_radius">Okruh</string>
@@ -165,4 +164,8 @@
     <string name="retry">Opakovat</string>
     <string name="try_again">Zkusit znovu</string>
     <string name="cancel">Zrušit</string>
-    </resources>
+    <string name="gift_card_contact_support">Podpora</string>
+    <string name="address">Adresa</string>
+    <string name="call">Volání</string>
+    <string name="save">Uložit</string>
+</resources>

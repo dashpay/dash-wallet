@@ -11,6 +11,7 @@
     <string name="buy_dash">Αγορά Dash</string>
     <string name="copied">Αντιγράφηκε</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Ξοδέψτε</string>
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Σφάλμα</string>

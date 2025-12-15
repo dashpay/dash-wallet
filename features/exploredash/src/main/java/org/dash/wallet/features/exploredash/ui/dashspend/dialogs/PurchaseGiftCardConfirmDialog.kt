@@ -46,6 +46,7 @@ import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
@@ -85,7 +86,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             return
         }
         val paymentValue = viewModel.giftCardPaymentValue.value
-        val savingsFraction = merchant.savingsFraction
+        val savingsFraction = viewModel.getGiftCardDiscount(paymentValue.toBigDecimal().toDouble())
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
             binding.merchantLogo.load(logoLocation) {

@@ -413,8 +413,8 @@ Benutzernamen</b></string>
     <string name="coinjoin_start">Mixen starten</string>
     <string name="coinjoin_stop">Mixen beenden</string>
     <string name="coinjoin_mixing">Mixing</string>
-    <string name="coinjoin_mixing_finishing">Mixing abschließen</string>
-    <string name="coinjoin_paused">Mixing pausiert</string>
+    <string name="coinjoin_mixing_finishing">Abschließen</string>
+    <string name="coinjoin_paused">Pausiert</string>
     <string name="coinjoin_not_started">Nicht gestartet</string>
     <string name="coinjoin_progress_balance">%1$s von %2$s</string>
     <string name="coinjoin_progress_finished">Vollständig gemixt</string>
@@ -463,4 +463,48 @@ Benutzernamen</b></string>
     <string name="voting_period_ends_tomorrow">Die Abstimmung endet morgen</string>
     <string name="link_included">Link enthalten</string>
     <string name="group_by">Gruppieren nach</string>
+    <string name="transaction_metadata_title">Metadaten der Transaktion</string>
+    <string name="transaction_metadata_data_being_saved">Geplant</string>
+    <string name="transaction_metadata_payment_category_description">Gibt an, ob eine Transaktion mit Coinbase, Uphold, Topper oder CrowdNode verbunden ist.</string>
+    <string name="transaction_metadata_fiat_price_description">Der historisch korrekte Preis zum Zeitpunkt der Transaktion</string>
+    <string name="transaction_metadata_description">Deine Daten sind auf dem Gerät gespeichert, werden aber gelöscht, sobald du die Wallet zurücksetzt oder eine alte Wallet wiederherstellst.</string>
+    <string name="transaction_metadata_cost">Wieviel kostet es\?</string>
+    <string name="transaction_metadata_payment_category">Zahlungskategorie</string>
+    <string name="transaction_metadata_save_data">Daten sichern</string>
+    <string name="transaction_metadata_tax_category">Steuerliche Kategorien</string>
+    <string name="transaction_metadata_fiat_prices">Fiat-Preise</string>
+    <string name="transaction_metadata_private_memos">Private Memos</string>
+    <string name="transaction_metadata_gift_card_info">Geschenkkartendaten</string>
+    <string name="transaction_metadata_private_memo_description">Kurze Memos, die den Zweck deiner Transaktion beschreiben</string>
+    <string name="transaction_metadata_tax_category_description">Gibt an, ob eine Transaktion ein Transfer, eine Einnahme oder eine Ausgabe ist</string>
+    <string name="transaction_metadata_gift_card_info_description">Beinhaltet Kartennummer, Pin-Code und andere Informationen</string>
+    <string name="transaction_metadata_costs_title">Kosten, die mit dem Speichern in das Netzwerk verbunden sind</string>
+    <string name="transaction_metadata_costs_description">Wenn du einen Nutzernamen erstellst, erhältst du Credits, die du für verschiedene Aktivitäten im Netzwerk nutzen kannst. Wenn die Metadaten einer Transaktion im Netzwerk speicherst, werden diese Credits schneller aufgebraucht. Sobald alle Credits ausgegeben worden sind, kannst du neue kaufen.\n\nEs kostet ungefähr %s pro Datenupload in das Netzwerk. Es wird empfohlen, mehrere Transaktionen gleichzeitig hochzuladen.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Nach 10 Transaktionen</item>
+        <item>Einmal die Woche</item>
+        <item>Nach jeder Transaktion</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Möchtest du die Wallet zurücksetzen, ohne deine Metadaten ins Netzwerk zu speichern\?</string>
+    <string name="reset_wallet_metadata_message">Wenn die Wallet ohne Speichern der Daten ins Netzwerk zurückgesetzt wird, gehen Metadaten von Transaktionen verloren.</string>
+    <string name="reset_wallet_metadata_button_without">Wallet ohne Speichern zurücksetzen</string>
+    <string name="reset_wallet_metadata_button_with">Daten speichern und Wallet zurücksetzen</string>
+    <string name="reset_wallet_metadata_button_saving">Speichern</string>
+    <string name="transaction_metadata_save_to_network">Im Netzwerk speichern</string>
+    <string name="transaction_metadata_save_frequency">Wie oft soll gespeichert werden\?</string>
+    <string name="transaction_metadata_what_to_save">Was soll gespeichert werden\?</string>
+    <string name="transaction_metadata_past_title">Vergangen</string>
+    <string name="transaction_metadata_future_title">Zukünftig</string>
+    <string name="transaction_metadata_past_subtitle">Speichere alle Transaktionen bis zum %s</string>
+    <string name="transaction_metadata_future_subtitle">Alle Transaktionen nach dem %s automatisch speichern</string>
+    <string name="transaction_metadata_gift_card_data">Geschenkkartendaten</string>
+    <string name="transaction_metadata_saving_to_network">Im Netzwerk speichern - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Als letztes gespeichert %s</string>
+    <string name="transaction_metadata_past_already_saved">Alle Transaktionen bis zum %s wurden gespeichert</string>
+    <string name="transaction_metadata_past_already_saved_none">Es wurden keine Transaktionen gespeichert</string>
+    <string name="transaction_metadata_past_syncing">Alle Transaktionen bis zum %s werden synchronisiert</string>
+    <string name="transaction_metadata_save_new_tx_title">Möchtest du nicht gespeicherte Transaktionen speichern\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Es gibt %d nicht gespeicherte Transaktionen seit dem %s</string>
+    <string name="transaction_metadata_save_transactions">Ungespeicherte Transaktionen speichern</string>
+    <string name="transaction_metadata_continue_without_saving">Ohne Speichern fortfahren</string>
 </resources>

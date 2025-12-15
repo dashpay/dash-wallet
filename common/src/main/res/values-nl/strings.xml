@@ -11,6 +11,7 @@
     <string name="buy_dash">Koop Dash</string>
     <string name="copied">Gekopieerd</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Uitgeven</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">bijvoorbeeld jan@mail.com</string>
     <string name="error">Fout</string>

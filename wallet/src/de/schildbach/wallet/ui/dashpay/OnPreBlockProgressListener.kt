@@ -20,7 +20,7 @@ enum class PreBlockStage (val value: Int) {
     Topups(15),
     Complete(16),
     UpdateTotal(7),
-    RecoveryAndUpdateTotal(13)
+    RecoveryAndUpdateTotal(16)
 }
 
 interface OnPreBlockProgressListener {

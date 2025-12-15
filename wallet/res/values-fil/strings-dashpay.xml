@@ -413,8 +413,8 @@ Username</b></string>
     <string name="coinjoin_start">Simulan ang Paghahalo</string>
     <string name="coinjoin_stop">Itigil ang Paghahalo</string>
     <string name="coinjoin_mixing">Paghahalo</string>
-    <string name="coinjoin_mixing_finishing">Pagtatapos ng Paghahalo</string>
-    <string name="coinjoin_paused">Nakahinto ang Paghahalo</string>
+    <string name="coinjoin_mixing_finishing">Pagtatapos</string>
+    <string name="coinjoin_paused">Sandaling Pagtigil</string>
     <string name="coinjoin_not_started">Hindi Nagsimula</string>
     <string name="coinjoin_progress_balance">%1$s ng %2$s</string>
     <string name="coinjoin_progress_finished">Ganap na Nahalo</string>
@@ -463,4 +463,48 @@ Username</b></string>
     <string name="voting_period_ends_tomorrow">Matatapos ang botohan bukas</string>
     <string name="link_included">kasama ang link</string>
     <string name="group_by">Pangkatin ayon sa</string>
+    <string name="transaction_metadata_title">Metadata ng transaksyon</string>
+    <string name="transaction_metadata_data_being_saved">Naka-iskedyul</string>
+    <string name="transaction_metadata_payment_category_description">Isinasaad kung ang isang transaksyon ay nauugnay sa Coinbase, Uphold, Topper o CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Ang makasaysayang presyo sa oras ng transaksyon</string>
+    <string name="transaction_metadata_description">Ang iyong data ay nakaimbak sa iyong device ngunit mawawala kung ire-reset o ire-restore mo ang iyong wallet. Nasa ibaba ang mga halimbawa ng impormasyong ise-save kapag nai-save sa network.</string>
+    <string name="transaction_metadata_cost">Magkano ang halaga nito\?</string>
+    <string name="transaction_metadata_payment_category">Mga Kategorya ng Pagbabayad</string>
+    <string name="transaction_metadata_save_data">I-save ang data</string>
+    <string name="transaction_metadata_tax_category">Mga Kategorya ng Buwis</string>
+    <string name="transaction_metadata_fiat_prices">Mga Presyo ng Fiat</string>
+    <string name="transaction_metadata_private_memos">Mga Pribadong Memo</string>
+    <string name="transaction_metadata_gift_card_info">Data ng Gift Card</string>
+    <string name="transaction_metadata_private_memo_description">Maikling memo na naglalarawan sa layunin ng transaksyon</string>
+    <string name="transaction_metadata_tax_category_description">Isinasaad kung ang isang transaksyon ay isang paglipat, kita o gastos</string>
+    <string name="transaction_metadata_gift_card_info_description">Kasama ang numero ng card, pin code at iba pang impormasyon</string>
+    <string name="transaction_metadata_costs_title">Mga gastos na nauugnay sa pag-save ng data sa network</string>
+    <string name="transaction_metadata_costs_description">Bilang bahagi ng paglikha ng isang username, makakatanggap ka ng mga kredito na ginagamit para sa iba\'t ibang aktibidad sa network; ang pag-save ng metadata ng transaksyon sa network ay makakakonsumo ng mga credit na ito nang mas mabilis. Kapag nagamit na ang lahat ng credit, maaari kang bumili ng higit pa.\n\nIto ay nagkakahalaga ng humigit-kumulang %s bawat pag-upload ng data sa network kaya inirerekomenda na mag-upload ng maramihang mga transaksyon sa isang pagkakataon.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Pagkatapos ng 10 transaksyon</item>
+        <item>Minsan sa isang linggo</item>
+        <item>Pagkatapos ng bawat transaksyon</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Gusto mo bang i-reset ang wallet nang hindi sine-save ang iyong metadata sa network\?</string>
+    <string name="reset_wallet_metadata_message">Ang pag-reset ng iyong wallet nang hindi nagse-save ng data sa network ay magreresulta sa pagkawala ng ilang metadata ng transaksyon.</string>
+    <string name="reset_wallet_metadata_button_without">I-reset ang wallet nang hindi nagse-save</string>
+    <string name="reset_wallet_metadata_button_with">I-save ang data at i-reset ang wallet</string>
+    <string name="reset_wallet_metadata_button_saving">Nagse-save</string>
+    <string name="transaction_metadata_save_to_network">I-save sa network</string>
+    <string name="transaction_metadata_save_frequency">Gaano kadalas magsave\?</string>
+    <string name="transaction_metadata_what_to_save">Ano ang dapat i-save\?</string>
+    <string name="transaction_metadata_past_title">Nakaraan</string>
+    <string name="transaction_metadata_future_title">hinaharap</string>
+    <string name="transaction_metadata_past_subtitle">I-save ang lahat ng mga transaksyon na ginawa hanggang sa %s</string>
+    <string name="transaction_metadata_future_subtitle">Awtomatikong i-save ang lahat ng mga transaksyon na gagawin mo pagkatapos %s</string>
+    <string name="transaction_metadata_gift_card_data">Data ng Gift Card</string>
+    <string name="transaction_metadata_saving_to_network">Nagse-save sa network - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Huling na-save%s</string>
+    <string name="transaction_metadata_past_already_saved">Ang lahat ng mga transaksyon na ginawa hanggang sa %s nai-save na.</string>
+    <string name="transaction_metadata_past_already_saved_none">Walang mga transaksyon ang na-save</string>
+    <string name="transaction_metadata_past_syncing">Ang lahat ng mga transaksyon ay ginawa hanggang sa %s ay nagsi-sync</string>
+    <string name="transaction_metadata_save_new_tx_title">Gusto mo bang i-save ang mga hindi na-save na transaksyon\?</string>
+    <string name="transaction_metadata_you_have_n_tx">meron kang %d hindi na-save na mga transaksyon mula noon %s</string>
+    <string name="transaction_metadata_save_transactions">I-save ang mga hindi na-save na transaksyon</string>
+    <string name="transaction_metadata_continue_without_saving">Magpatuloy nang hindi sine-save</string>
 </resources>
