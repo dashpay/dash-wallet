@@ -423,7 +423,7 @@
     <string name="launch_reset_wallet_extra_message">リカバリーフレーズをバックアップする</string>
     <string name="start_reset_wallet_title">%sを失う可能性があります。</string>
     <string name="reset_wallet_text">ウォレットをリセットする</string>
-
+    <string name="reset_wallet_button">ウォレットをリセットする</string>
 
 
     <!-- Tax category -->

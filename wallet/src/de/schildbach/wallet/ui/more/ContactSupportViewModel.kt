@@ -76,8 +76,9 @@ class ContactSupportViewModel @Inject constructor(
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
-        private const val MAX_LOGS_SIZE = 15 * 1024 * 1024
+        private const val MAX_LOGS_SIZE = 12 * 1024 * 1024
         private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
+        private const val MAX_WALLET_LOG_SIZE = 4 * 1024 * 1024
     }
 
     val wallet: Wallet? = walletDataProvider.wallet
@@ -162,17 +163,44 @@ class ContactSupportViewModel @Inject constructor(
             var totalLogsSize = 0L
             if (logDir.exists()) {
                 val sortedLogFiles = logDir.listFiles()
-                sortedLogFiles?.let {
+                sortedLogFiles?.let { it ->
                     it.sortByDescending { file -> file.lastModified() }
                     for (logFile in sortedLogFiles) {
                         if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
-                            attachments.add(
-                                FileProvider.getUriForFile(
-                                    application,
-                                    application.packageName + ".file_attachment", logFile
+                            // Check if it's wallet.log and larger than 4 MB
+                            if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
+                                // Compress the wallet.log file
+                                val compressedFile = File(reportDir, "wallet.log.gz")
+                                try {
+                                    FileInputStream(logFile).use { fis ->
+                                        GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
+                                            val buffer = ByteArray(4096)
+                                            var len: Int
+                                            while (fis.read(buffer).also { count -> len = count } != -1) {
+                                                gzipOS.write(buffer, 0, len)
+                                            }
+                                            log.info("wallet.log compressed successfully to $compressedFile")
+                                            attachments.add(
+                                                FileProvider.getUriForFile(
+                                                    application,
+                                                    application.packageName + ".file_attachment", compressedFile
+                                                )
+                                            )
+                                            totalLogsSize += compressedFile.length()
+                                        }
+                                    }
+                                } catch (e: IOException) {
+                                    log.error("Failed to compress wallet.log", e)
+                                }
+                            } else {
+                                attachments.add(
+                                    FileProvider.getUriForFile(
+                                        application,
+                                        application.packageName + ".file_attachment", logFile
+                                    )
                                 )
-                            )
-                            totalLogsSize += logFile.length()
+                                totalLogsSize += logFile.length()
+                            }
                         }
                     }
                 }
@@ -194,7 +222,7 @@ class ContactSupportViewModel @Inject constructor(
                     try {
                         FileInputStream(file).use { fis ->
                             GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
-                                val buffer = ByteArray(1024)
+                                val buffer = ByteArray(4096)
                                 var len: Int
                                 while (fis.read(buffer).also { len = it } != -1) {
                                     gzipOS.write(buffer, 0, len)

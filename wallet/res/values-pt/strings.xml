@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Anexar "wallet dump"</string>
     <string name="report_issue_dialog_mail_intent_failed">Envio de relatório falhou.</string>
     <string name="report_issue_dialog_generating_report">Gerando relatório</string>
+    <string name="report_issue_dialog_status_device_info">informação do dispositivo</string>
+    <string name="report_issue_dialog_status_installed_packages">lista dos pacotes instalados</string>
+    <string name="report_issue_dialog_status_application_log">logs da aplicação</string>
+    <string name="report_issue_dialog_status_application_info">informações da aplicação</string>
+    <string name="report_issue_dialog_status_wallet_dump">backup da carteira (lento)</string>
+    <string name="report_issue_dialog_status_contextual_info">informação contextual</string>
+    <string name="report_issue_dialog_status_background_traces">background traces</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">finalizando</string>
     <string name="report_transaction_history_export">Exportar</string>
     <string name="report_transaction_history_title">Exportar CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportar CSV</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">Sobre</string>
+    <string name="about_dash_title">Sobre o Dash</string>
     <string name="about_version_title">Versão</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">Licença</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Me lembre depois</string>
     <string name="notification_inactivity_action_dismiss_forever">Não me lembre</string>
     <string name="notification_bluetooth_service_listening">Pronto para receber pagamentos via Bluetooth</string>
+    <string name="notification_sync_paused">Sincronização da Blockchain pausada</string>
+    <string name="notification_background_processes_paused">Processamento em segundo plano pausado</string>
+    <string name="notification_background_processes_paused_text">Você atingiu o limite de 6 horas para serviços em primeiro plano no Android ao realizar mixagem ou sincronização da blockchain. Toque para redefinir…</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
     <!-- generic buttons -->

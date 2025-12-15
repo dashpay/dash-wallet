@@ -77,8 +77,10 @@
     <string name="explore_filter">Фильтр</string>
     <string name="explore_filters">Фильтры</string>
     <string name="explore_apply_filter">Применить</string>
-    <string name="explore_payment_method">Способ оплаты</string>
+    <string name="explore_spending_options">Куда потратить</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Подарочные карты CTX</string>
+    <string name="piggycards_gift_cards">Подарочные карты Piggy Cards</string>
     <string name="explore_payment_gift_card">Подарочная карта</string>
     <string name="explore_filter_gift_cards">Подарочные карты</string>
     <string name="explore_radius">Радиус</string>
@@ -93,6 +95,7 @@
     <string name="gift_card_types">Типы подарочных карт</string>
     <string name="flexible_amount_option">Настраиваемая сумма</string>
     <string name="fixed_denom_option">Фиксированная сумма</string>
+    <string name="gift_card_providers">Поставщики подарочных карт</string>
 
     <string-array name="merchants_filter_options">
         <item>Онлайн</item>
@@ -196,7 +199,7 @@
     <string name="purchase_gift_card_confirm">Подтвердить</string>
     <string name="purchase_gift_card_details">Подробная информация о подарочной карте</string>
     <string name="purchase_original_purchase">Первоначальная покупка</string>
-    <string name="purchase_check_current_balance">Проверить текущий баланс</string>
+    <string name="purchase_check_current_balance">Подробная информация о подарочной карте</string>
     <string name="purchase_card_number">Номер карты</string>
     <string name="purchase_card_pin">Пин-код карты</string>
     <string name="purchase_view_transaction">Посмотреть параметры транзакции</string>
@@ -233,19 +236,25 @@
     <string name="try_again">Попробуйте ещё раз</string>
     <string name="cancel">Отмена</string>
     <string name="gift_card_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, попробуйте ещё раз.</string>
+    <string name="gift_card_out_of_stock_error">Эта подарочная карта распродана. Пожалуйста, попробуйте снова.</string>
     <string name="gift_card_details_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой.</string>
     <string name="gift_card_limit_error">Правила покупки у этого продавца изменились. Чтобы узнать больше, свяжитесь с поддержкой CTX.</string>
+    <string name="gift_card_server_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой %s для решения этой проблемы.</string>
+    <string name="gift_card_server_region_error">Эту подарочную карту нельзя купить в вашем регионе.</string>
+    <string name="gift_card_error_wrong_network">Этот платёжный запрос предназначен для другой сети. Пожалуйста, свяжитесь с техподдержкой. </string>
     <string name="gift_card_unknown_error">По какой-то причине мы не смогли купить подарочную карту. Пожалуйста, свяжитесь с техподдержкой с txid %s.</string>
-    <string name="gift_card_rejected">Перевод был отклонён. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Вы перевели оплату магазину, который предоставлял ссылку для погашения карты, но эта функция больше не поддерживается. Пожалуйста, свяжитесь с CTX и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
+    <string name="gift_card_delay">На получение этой карты уходит больше времени, чем обычно. Пожалуйста, напишите на почту <a href="contact:support">support@dash.org</a>, если это займёт большое количество времени. </string>
+    <string name="gift_card_rejected">Перевод был отклонён. Пожалуйста, свяжитесь с техподдержкой %s и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Вы перевели оплату магазину, который предоставлял ссылку для погашения карты, но эта функция больше не поддерживается. Пожалуйста, свяжитесь с техподдержкой %s и назовите номер подарочной карты %s, платежа %s и транзакции %s.</string>
     <string name="dashspend_terms_conditions">Принять условия использования</string>
     <string name="accept_terms_conditions">Я принимаю положения и условия DashSpend</string>
     <string name="tap_link_to_proceed">Нажмите на ссылку ниже, чтобы создать аккаунт DashSpend</string>
     <string name="accept_to_proceed">Чтобы создать аккаунт DashSpend, необходимо принять условия и положения DashSpend</string>
     <string name="view_terms_conditions">Условия использования</string>
-    <string name="barcode_placeholder">Как только ваш код будет сгенерирован, он отобразится здесь.</string>
+    <string name="barcode_placeholder">Пожалуйста, дождитесь подробной информации по подарочной карте.</string>
     <string name="gift_card_contact_ctx">Связаться с поддержкой CTX</string>
-
+    <string name="gift_card_contact_piggycards">Связаться с поддержкой PiggyCards</string>
+    <string name="gift_card_contact_support">Связаться с поддержкой</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Создать учетную запись</string>
     <string name="log_in_to_ctxspend_account">Войти в ваш аккаунт</string>
@@ -253,5 +262,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Приобрести подарочную карту через аккаунт DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Создать аккаунт DashSpend или войти в уже существующий</string>
     <string name="temporarily_unavailable">Временно недоступно</string>
+    <string name="country_availability">Эта карта работает только в США.</string>
     <string name="token_expired_title">Сессия была завершена</string>
-    </resources>
+    <string name="token_expired_message">Похоже, вы довольно долго не пользовались DashSpend.  В целях безопасности мы выполнили за вас выход из аккаунта.\n\nПопробуйте войти снова и узнайте, где можно потратить Dash.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Ваш электронный адрес увидит только техподдержка PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Выбрать поставщика подарочных карт</string>
+    <string name="flexible_amounts">Настраиваемая сумма</string>
+    <string name="fixed_amounts">Фиксированная сумма</string>
+    <string name="address">Адрес</string>
+    <string name="phone">Телефон</string>
+    <string name="website">Вебсайт</string>
+    <string name="call">Позвонить</string>
+    <string name="directions">Направления</string>
+    <string name="explore_show_all_locations">Показать все точки (%d)</string>
+    <string name="provider">Провайдер</string>
+    <string name="save">Сохранить</string>
+</resources>

@@ -414,8 +414,8 @@ gebruikersnaam</b></string>
     <string name="coinjoin_start">Start met mixen</string>
     <string name="coinjoin_stop">Stop het mixen</string>
     <string name="coinjoin_mixing">Aan het mixen</string>
-    <string name="coinjoin_mixing_finishing">Mixen wordt afgerond</string>
-    <string name="coinjoin_paused">mixen gepauzeerd </string>
+    <string name="coinjoin_mixing_finishing">Aan het afronden</string>
+    <string name="coinjoin_paused">Gepauzeerd</string>
     <string name="coinjoin_not_started">Niet gestart</string>
     <string name="coinjoin_progress_balance">%1$s van %2$s</string>
     <string name="coinjoin_progress_finished">Volledig gemixt</string>
@@ -464,4 +464,48 @@ gebruikersnaam</b></string>
     <string name="voting_period_ends_tomorrow">De stemperiode eindigt morgen.</string>
     <string name="link_included">Link inbegrepen.</string>
     <string name="group_by">groepeer op</string>
+    <string name="transaction_metadata_title">Transactie metadata</string>
+    <string name="transaction_metadata_data_being_saved">Gepland</string>
+    <string name="transaction_metadata_payment_category_description">Geeft aan of een transactie is gekoppeld aan Coinbase, Uphold, Topper, of CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">De historische prijs op het moment van de transactie</string>
+    <string name="transaction_metadata_description">Je gegevens worden op je apparaat opgeslagen maar gaan verloren als je je portemonnee opnieuw instelt of herstelt. Hieronder staan voorbeelden van informatie die wordt bewaard wanneer deze op het netwerk wordt opgeslagen.</string>
+    <string name="transaction_metadata_cost">Hoeveel kost het\?</string>
+    <string name="transaction_metadata_payment_category">Betalingscategorieën</string>
+    <string name="transaction_metadata_save_data">Gegevens opslaan</string>
+    <string name="transaction_metadata_tax_category">Belastingcategorieën</string>
+    <string name="transaction_metadata_fiat_prices">Fiat prijzen</string>
+    <string name="transaction_metadata_private_memos">Privénotities</string>
+    <string name="transaction_metadata_gift_card_info">Cadeaukaart gegevens</string>
+    <string name="transaction_metadata_private_memo_description">Korte notities die het doel van de transactie beschrijven</string>
+    <string name="transaction_metadata_tax_category_description">Geeft aan of een transactie een overdracht, inkomen of uitgave is</string>
+    <string name="transaction_metadata_gift_card_info_description">Bevat kaartnummer, pincode en andere informatie</string>
+    <string name="transaction_metadata_costs_title">Kosten die verbonden zijn aan het opslaan van gegevens op het netwerk</string>
+    <string name="transaction_metadata_costs_description">Als onderdeel van het aanmaken van een gebruikersnaam ontvang je credits die worden gebruikt voor verschillende activiteiten op het netwerk; het opslaan van transactie metadata op het netwerk zal deze credits sneller verbruiken. Zodra alle credits op zijn, kun je er meer kopen. Het kost ongeveer %s per upload van gegevens naar het netwerk, dus het wordt aanbevolen om meerdere transacties tegelijk te uploaden.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Na 10 transacties</item>
+        <item>Eén keer per week</item>
+        <item>Na elke transactie</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Wil je de portemonnee opnieuw instellen zonder je metadata op te slaan op het netwerk\?</string>
+    <string name="reset_wallet_metadata_message">Het opnieuw instellen van je portemonnee zonder gegevens op te slaan op het netwerk zal leiden tot het verlies van bepaalde transactie metadata.</string>
+    <string name="reset_wallet_metadata_button_without">Portemonnee opnieuw instellen zonder op te slaan</string>
+    <string name="reset_wallet_metadata_button_with">Gegevens opslaan en portemonnee opnieuw instellen</string>
+    <string name="reset_wallet_metadata_button_saving">Bezig met opslaan</string>
+    <string name="transaction_metadata_save_to_network">Opslaan op netwerk</string>
+    <string name="transaction_metadata_save_frequency">Hoe vaak opslaan\?</string>
+    <string name="transaction_metadata_what_to_save">Wat opslaan\?</string>
+    <string name="transaction_metadata_past_title">Verleden</string>
+    <string name="transaction_metadata_future_title">Toekomst</string>
+    <string name="transaction_metadata_past_subtitle">Sla alle transacties op die zijn gedaan tot %s</string>
+    <string name="transaction_metadata_future_subtitle">Sla automatisch alle transacties op die je maakt na %s</string>
+    <string name="transaction_metadata_gift_card_data">Cadeaukaart gegevens</string>
+    <string name="transaction_metadata_saving_to_network">Opslaan op netwerk - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Laatst opgeslagen %s</string>
+    <string name="transaction_metadata_past_already_saved">Alle transacties tot %s zijn al opgeslagen</string>
+    <string name="transaction_metadata_past_already_saved_none">Er zijn geen transacties opgeslagen</string>
+    <string name="transaction_metadata_past_syncing">Alle transacties tot %s worden gesynchroniseerd</string>
+    <string name="transaction_metadata_save_new_tx_title">Wil je niet opgeslagen transacties opslaan\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Je hebt %d niet opgeslagen transacties sinds %s</string>
+    <string name="transaction_metadata_save_transactions">Niet opgeslagen transacties opslaan</string>
+    <string name="transaction_metadata_continue_without_saving">Doorgaan zonder op te slaan</string>
 </resources>

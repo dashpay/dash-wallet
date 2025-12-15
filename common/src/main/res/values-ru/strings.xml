@@ -11,6 +11,7 @@
     <string name="buy_dash">Купить Dash</string>
     <string name="copied">Скопировано</string>
     <string name="staking_title">Стейкинг</string>
+    <string name="spend_title">Потратить</string>
     <string name="email">Почта</string>
     <string name="email_placeholder">например, johndoe@mail.com</string>
     <string name="error">Ошибка</string>

@@ -72,7 +72,6 @@
     <string name="explore_filter">Filtre</string>
     <string name="explore_filters">Filtreler</string>
     <string name="explore_apply_filter">Uygula</string>
-    <string name="explore_payment_method">Ödeme Şekli</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Hediye Kartı</string>
     <string name="explore_filter_gift_cards">Hediye Kartları</string>
@@ -181,7 +180,6 @@
     <string name="purchase_gift_card_confirm">Onayla</string>
     <string name="purchase_gift_card_details">Hediye kartı ayrıntıları</string>
     <string name="purchase_original_purchase">Orijinal satın alma</string>
-    <string name="purchase_check_current_balance">Mevcut bakiyeyi kontrol edin</string>
     <string name="purchase_card_number">Kart Numarası</string>
     <string name="purchase_card_pin">Kart PIN\'i</string>
     <string name="purchase_view_transaction">İşlem Detaylarını Görüntüle</string>
@@ -215,12 +213,15 @@
     <string name="gift_card_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen tekrar deneyin.</string>
     <string name="gift_card_details_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen desteğe başvurun.</string>
     <string name="gift_card_unknown_error">Bazı nedenlerden dolayı hediye kartı alamadık. Lütfen %s txid\'si ile destek ekibiyle iletişime geçin.</string>
-    <string name="gift_card_rejected">Ödeme reddedildi. Lütfen hediye kartı kimliği %s, ödeme kimliği %s ve işlem kimliği %s ile CTX ile iletişime geçin.</string>
-    <string name="gift_card_redeem_url_not_supported">The payment has was made for merchant that supplies a redeem URL, but that is not currently supported. Please contact CTX with gift card id %s and payment id %s and transaction id %s.</string>
     <string name="accept_terms_conditions">DashSpend şartlar ve koşullarını kabul ediyorum</string>
     <string name="tap_link_to_proceed">DashSpend\'de bir hesap oluşturmak için devam etmek üzere aşağıdaki bağlantıya dokunmalısınız</string>
     <string name="accept_to_proceed">DashSpend\'de bir hesap oluşturmak için DashSpend hüküm ve koşullarını kabul etmeniz gerekir</string>
+    <string name="gift_card_contact_support">Destekle İletişime Geçin</string>
     <string name="log_in_to_ctxspend_account_desc">E-postanız yalnızca tek kullanımlık şifre göndermek için kullanılır.</string>
     <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpend hesabınızla bir hediye kartı satın alın</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Bir DashSpend hesabı oluşturun veya mevcut hesaba giriş yapın</string>
-    </resources>
+    <string name="address">Adres</string>
+    <string name="website">İnternet sitesi</string>
+    <string name="call">Ara</string>
+    <string name="save">Kaydet</string>
+</resources>

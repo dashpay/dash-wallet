@@ -419,7 +419,7 @@
     <string name="launch_reset_wallet_extra_message">당신의 복구 문구를 백업하세요</string>
     <string name="start_reset_wallet_title">%s을/를 잃을 수 있습니다.</string>
     <string name="reset_wallet_text">지갑 리셋하기</string>
-
+    <string name="reset_wallet_button">지갑 리셋하기</string>
 
 
     <!-- Tax category -->

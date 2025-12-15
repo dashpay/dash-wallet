@@ -412,8 +412,8 @@
     <string name="coinjoin_start">آغاز ترکیب</string>
     <string name="coinjoin_stop">توقف ترکیب</string>
     <string name="coinjoin_mixing">در حال ترکیب</string>
-    <string name="coinjoin_mixing_finishing">پایان ترکیب</string>
-    <string name="coinjoin_paused">توقف موقت ترکیب</string>
+    <string name="coinjoin_mixing_finishing">در حال پایان</string>
+    <string name="coinjoin_paused">متوقف شده</string>
     <string name="coinjoin_not_started">شروع نشده</string>
     <string name="coinjoin_progress_balance">%1$s از %2$s</string>
     <string name="coinjoin_progress_finished">کاملا ترکیب شده</string>
@@ -462,4 +462,48 @@
     <string name="voting_period_ends_tomorrow">رای‌گیری امروز پایان می‌یابد</string>
     <string name="link_included">لینک همراهش است</string>
     <string name="group_by">دسته‌بندی بر اساس</string>
+    <string name="transaction_metadata_title">متادیتای تراکنش</string>
+    <string name="transaction_metadata_data_being_saved">زمان‌بندی‌شده</string>
+    <string name="transaction_metadata_payment_category_description">نشان می‌دهد که آیا تراکتش با کوین‌بیس، آپهولد، پاپیر یا کراودنود مرتبط است</string>
+    <string name="transaction_metadata_fiat_price_description">قیمت در زمان تراکنش</string>
+    <string name="transaction_metadata_description">اطلاعات‌تان روی دستگاه‌تان ذخیره می‌شود، اما اگر کیف پول‌تان را ریست‌ کنید یا بازیابی کنید، این اطلاعات از بین می‌رود. چند مثال از اطلاعاتی که وقتی روی شبکه ذخیره می‌کنید، ذخیره می‌شود را در ادامه می‌بینید. </string>
+    <string name="transaction_metadata_cost">هزینه‌اش چقدر است؟ </string>
+    <string name="transaction_metadata_payment_category">دسته‌بندی‌های پرداخت</string>
+    <string name="transaction_metadata_save_data">ذخیره اطلاعات</string>
+    <string name="transaction_metadata_tax_category">دسته‌بندی‌های مالیات</string>
+    <string name="transaction_metadata_fiat_prices">قیمت بدون‌تغییر</string>
+    <string name="transaction_metadata_private_memos">یادداشت‌های خصوصی</string>
+    <string name="transaction_metadata_gift_card_info">اطلاعات کارت هدیه</string>
+    <string name="transaction_metadata_private_memo_description">یادداشت‌های کوتاهی که هدف تراکنش را نشان می‌دهند. </string>
+    <string name="transaction_metadata_tax_category_description">نشا می‌دهند که آیا تراکنش از نوع انتقال وجه بوده، یا درآمد یا هزینه</string>
+    <string name="transaction_metadata_gift_card_info_description">شامل شماره کارت، پین‌کد و سایر اطلاعات</string>
+    <string name="transaction_metadata_costs_title">هزینه ذخیره‌ داده‌ها روی شبکه</string>
+    <string name="transaction_metadata_costs_description">به‌عنوان بخشی از فرآیند ساخت نام کاربری، مقداری اعتبا دریافت خواهید کرد که برای انجام فعالیت‌های مختلف در شبکه استفاده می‌شود؛ ذخیرهٔ متادیتای تراکنش‌ها روی شبکه سبب مصرف سریع‌تر این اعتبارات می‌شود. وقتی همهٔ اعتبارات تمام شد، می‌توانید اعتبار بیشتری خریداری کنید.\n\nهر بار آپلود داده به شبکه تقریباً %s هزینه دارد، بنابراین توصیه می‌شود چندین تراکنش را همزمان آپلود کنید.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>پس از ۱۰ تراکنش</item>
+        <item>هفته‌ای یک بار</item>
+        <item>پس از هر تراکنش</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">آیا می‌خواهید کیف پول را ریست کنید بدون اینکه متادیتای آن روی شبکه ذخیره شود؟</string>
+    <string name="reset_wallet_metadata_message">ریست کردن کیف پول بدون ذخیره‌سازی داده‌ها روی شبکه سبب از دست رفتن بخشی از متادیتای تراکنش‌های شما خواهد شد.</string>
+    <string name="reset_wallet_metadata_button_without">ریست کردن کیف پول بدون ذخیره</string>
+    <string name="reset_wallet_metadata_button_with">ذخیره داده‌ها و ریست کیف پول</string>
+    <string name="reset_wallet_metadata_button_saving">در حال ذخیره</string>
+    <string name="transaction_metadata_save_to_network">ذخیره در شبکه</string>
+    <string name="transaction_metadata_save_frequency">هر چند وقت یکبار ذخیره شود؟</string>
+    <string name="transaction_metadata_what_to_save">آیا می‌خواهید ذخیره کنید؟ </string>
+    <string name="transaction_metadata_past_title">گذشته</string>
+    <string name="transaction_metadata_future_title">آینده</string>
+    <string name="transaction_metadata_past_subtitle">ذخیره همه تراکنش‌های انجام شده تا %s</string>
+    <string name="transaction_metadata_future_subtitle">به صورت خودکار، همه تراکنش‌هایی که پس از %sصورت می‌گیرد را ذخیره کن</string>
+    <string name="transaction_metadata_gift_card_data">داده‌های کارت هدیه</string>
+    <string name="transaction_metadata_saving_to_network">ذخیره روی شبکه %d%%</string>
+    <string name="transaction_metadata_last_saved_date">آخرین ذخیره %s</string>
+    <string name="transaction_metadata_past_already_saved">همه تراکنش‌های صورت گرفته تا %sقبلاً ذخیره شده‌اند</string>
+    <string name="transaction_metadata_past_already_saved_none">هیچ تراکنشی ذخیره نشده است</string>
+    <string name="transaction_metadata_past_syncing">همه تراکنش‌هایی که تا %s انجام شده‌اند، همگام‌سازی شد</string>
+    <string name="transaction_metadata_save_new_tx_title">آیا می‌خواهید تراکنش‌های ذخیره‌نشده را ذخیره کنید؟ </string>
+    <string name="transaction_metadata_you_have_n_tx">شما تعداد %d تراکنش ذخیره‌نشده از تاریخ %s دارید</string>
+    <string name="transaction_metadata_save_transactions">تراکنش‌های ذخیره‌نشده را ذخیره کن</string>
+    <string name="transaction_metadata_continue_without_saving">بدون ذخیره‌کردن ادامه بده</string>
 </resources>

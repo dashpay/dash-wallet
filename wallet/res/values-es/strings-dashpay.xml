@@ -413,8 +413,8 @@ de Dash</b></string>
     <string name="coinjoin_start">Empezar a mezclar</string>
     <string name="coinjoin_stop">Dejar de mezclar</string>
     <string name="coinjoin_mixing">Mezclando</string>
-    <string name="coinjoin_mixing_finishing">Terminando mezclado</string>
-    <string name="coinjoin_paused">Mezcla en pausa</string>
+    <string name="coinjoin_mixing_finishing">Acabando</string>
+    <string name="coinjoin_paused">Pausado</string>
     <string name="coinjoin_not_started">No iniciado</string>
     <string name="coinjoin_progress_balance">%1$s de %2$s</string>
     <string name="coinjoin_progress_finished">Completamente mezclado</string>
@@ -463,4 +463,48 @@ de Dash</b></string>
     <string name="voting_period_ends_tomorrow">La votación termina mañana</string>
     <string name="link_included">Enlace incluido</string>
     <string name="group_by">Agrupar por</string>
+    <string name="transaction_metadata_title">Metadatos de la transacción</string>
+    <string name="transaction_metadata_data_being_saved">Agendado</string>
+    <string name="transaction_metadata_payment_category_description">Indica si una transacción está asociada con Coinbase, Uphold, Topper o CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">El precio histórico en el momento de la transacción</string>
+    <string name="transaction_metadata_description">Tus datos se almacenan en tu dispositivo, pero se perderán si restableces o restauras tu billetera. A continuación, se muestran ejemplos de la información que se guardará en la red.</string>
+    <string name="transaction_metadata_cost">¿Cuánto cuesta\?</string>
+    <string name="transaction_metadata_payment_category">Categorías de pago</string>
+    <string name="transaction_metadata_save_data">Guardar datos</string>
+    <string name="transaction_metadata_tax_category">Categorías de impuestos</string>
+    <string name="transaction_metadata_fiat_prices">Precio de la división</string>
+    <string name="transaction_metadata_private_memos">Memorandos privados</string>
+    <string name="transaction_metadata_gift_card_info">Datos de la tarjeta de regalo</string>
+    <string name="transaction_metadata_private_memo_description">Memorandos breves que describen el propósito de la transacción</string>
+    <string name="transaction_metadata_tax_category_description">Indica si una transacción es una transferencia, un ingreso o un gasto.</string>
+    <string name="transaction_metadata_gift_card_info_description">Incluye número de tarjeta, código PIN y cualquier otra información</string>
+    <string name="transaction_metadata_costs_title">Costos asociados al almacenamiento de datos en la red</string>
+    <string name="transaction_metadata_costs_description">Al crear un nombre de usuario, recibes créditos que se utilizan para diversas actividades en la red; guardar los metadatos de las transacciones en la red consumirá estos créditos más rápidamente. Una vez que se agoten tus créditos, puedes comprar más.\n\nEl costo aproximado por cada carga de datos a la red es de %s, por lo que se recomienda cargar varias transacciones a la vez.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Después de 10 transacciones</item>
+        <item>Una vez a la semana</item>
+        <item>Después de cada transacción</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">¿Desea restablecer su monedero sin guardar sus metadatos en la red\?</string>
+    <string name="reset_wallet_metadata_message">Restablecer tu monedero sin guardar los datos en la red provocará la pérdida de algunos metadatos de las transacciones.</string>
+    <string name="reset_wallet_metadata_button_without">Restablecer monedero sin guardar</string>
+    <string name="reset_wallet_metadata_button_with">Guarde los datos y restablezca su monedero</string>
+    <string name="reset_wallet_metadata_button_saving">Guardando</string>
+    <string name="transaction_metadata_save_to_network">Guardar en la red</string>
+    <string name="transaction_metadata_save_frequency">¿Con qué frecuencia debo guardar mis datos\?</string>
+    <string name="transaction_metadata_what_to_save">¿Qué datos guardar\?</string>
+    <string name="transaction_metadata_past_title">Pasado</string>
+    <string name="transaction_metadata_future_title">Futuro</string>
+    <string name="transaction_metadata_past_subtitle">Guarda todas las transacciones realizadas hasta el %s</string>
+    <string name="transaction_metadata_future_subtitle">Guardar automáticamente todas las transacciones que realice después de %s</string>
+    <string name="transaction_metadata_gift_card_data">Datos de la tarjeta de regalo</string>
+    <string name="transaction_metadata_saving_to_network">Guardando en la red - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">último guardado %s</string>
+    <string name="transaction_metadata_past_already_saved">Todas las transacciones realizadas hasta %s momento ya han sido guardadas.</string>
+    <string name="transaction_metadata_past_already_saved_none">No se ha guardado ninguna transacción</string>
+    <string name="transaction_metadata_past_syncing">Todas las transacciones realizadas hasta %s se están sincronizando.</string>
+    <string name="transaction_metadata_save_new_tx_title">¿Desea guardar las transacciones no guardadas\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Tienes %d transacciones sin guardar desde %s</string>
+    <string name="transaction_metadata_save_transactions">Guardar transacciones no guardadas</string>
+    <string name="transaction_metadata_continue_without_saving">Continuar sin guardar</string>
 </resources>

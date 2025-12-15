@@ -568,6 +568,7 @@ public class WalletApplication extends MultiDexApplication
 
 
     private void afterLoadWallet() {
+        wallet.setSaveOnNextBlock(false);
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
 
         // clean up spam

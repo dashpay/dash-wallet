@@ -265,7 +265,7 @@ class WalletSavePerformanceTest {
         // Create a realistic transaction structure for testing
         // This is a simplified version - in reality you'd want more varied transaction types
         val baseHex = "01000000013511fbb91663e90da67107e1510521440a9bf73878e45549ac169c7cd30c826e"
-        val indexHex = String.format("%02d", index % 256)
+        val indexHex = String.format("%02x", index % 256)
         val restHex = "0000006a473044022048edae0ab0abcb736ca1a8702c2e99673d7958f4661a4858f437b03a359c0375022023f4a45b8817d9fcdad073cfb43320eae7e064a7873564e4cbc8853da548321a01210359c815be43ce68de8188f02b1b3ecb589fb8facdc2d694104a13bb2a2055f5ceffffffff0240420f00000000001976a9148017fd8d70d8d4b8ddb289bb73bcc0522bc06e0888acb9456900000000001976a914c9e6676121e9f38c7136188301a95d800ceade6588ac00000000"
         
         return Constants.HEX.decode(baseHex + indexHex + restHex)
