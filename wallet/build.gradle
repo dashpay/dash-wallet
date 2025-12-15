@@ -216,8 +216,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11040210
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.4.2-ctx-staging"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11050008
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.5.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
