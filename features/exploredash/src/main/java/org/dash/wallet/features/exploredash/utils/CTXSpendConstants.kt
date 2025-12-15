@@ -18,6 +18,7 @@ package org.dash.wallet.features.exploredash.utils
 
 object CTXSpendConstants {
     const val BASE_URL = "https://spend.ctx.com/"
+    const val DEV_BASE_URL = "https://staging.spend.ctx.com/"
     const val CLIENT_ID_PARAM_NAME = "X-Client-Id"
     @JvmField var CLIENT_ID = "dcg_android"
     const val DEFAULT_DISCOUNT: Int = 0 // 0%

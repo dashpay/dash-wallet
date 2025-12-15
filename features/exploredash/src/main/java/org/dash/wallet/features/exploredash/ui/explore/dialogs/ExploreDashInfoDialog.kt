@@ -30,7 +30,7 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_info) {
-
+    override val forceExpand = true
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
     @Inject lateinit var analyticsService: AnalyticsService
 
