@@ -33,6 +33,7 @@ import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.io.IOException
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.net.ssl.SSLHandshakeException
 
@@ -98,6 +99,9 @@ class CTXSpendRepository @Inject constructor(
     private val config: CTXSpendConfig,
     private val tokenAuthenticator: TokenAuthenticator
 ) : CTXSpendRepositoryInt, DashSpendRepository {
+    companion object {
+        private val REFRESH_TOKEN_EXPIRATION = TimeUnit.DAYS.toMillis(90)
+    }
     private val giftCardMap = hashMapOf<String, GetMerchantResponse>()
 
     override val userEmail: Flow<String?> = config.observeSecureData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
@@ -115,7 +119,10 @@ class CTXSpendRepository @Inject constructor(
         val email = config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
         val response = api.verifyEmail(VerifyEmailRequest(email = email!!, code = code))
         config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, response?.accessToken!!)
-        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, response?.refreshToken!!)
+        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, response.refreshToken!!)
+        val time = System.currentTimeMillis()
+        config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, time)
+        config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, time)
         return config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
@@ -129,6 +136,8 @@ class CTXSpendRepository @Inject constructor(
     suspend fun reset() {
         config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
         config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+        config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
+        config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
     }
 
     override suspend fun purchaseGiftCard(
@@ -217,6 +226,15 @@ class CTXSpendRepository @Inject constructor(
         }
     }
 
+    suspend fun checkToken(): Boolean {
+        val refreshTokenTime = config.get(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME)
+        return if (refreshTokenTime == null) {
+            false
+        } else {
+            (System.currentTimeMillis() - refreshTokenTime) < REFRESH_TOKEN_EXPIRATION
+        }
+    }
+
 //    override suspend fun getMerchant(merchantId: String): GetMerchantResponse? =
 //        api.getMerchant(merchantId)
 
@@ -230,11 +248,14 @@ class CTXSpendRepository @Inject constructor(
             tokenResponse?.let {
                 config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
                 config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, System.currentTimeMillis())
                 true
             } ?: false
         } catch (e: Exception) {
             config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
             config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
+            config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
             false
         }
     }
