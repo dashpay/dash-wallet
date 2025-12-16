@@ -435,7 +435,11 @@ class PlatformSynchronizationService @Inject constructor(
                         // check for unused topups
                         async { checkTopUps() },
                         // check for unused invites
-                        async { checkInvitations() }
+                        async {
+                            if (Constants.SUPPORTS_INVITES) {
+                                checkInvitations()
+                            }
+                        }
                     )
                 }
 
