@@ -284,15 +284,18 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                             usernameInfo.votingStartedAt = earliestCreatedAt
                             usernameInfo.requestStatus = usernameRequestStatus
+                            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                             // schedule work to check the status after voting has ended
-                            GetUsernameVotingResultOperation(walletApplication)
-                                .create(
-                                    usernameInfo.username!!,
-                                    blockchainIdentity.uniqueIdentifier.toString(),
-                                    earliestCreatedAt
-                                )
-                                .enqueue()
+                            if (usernameInfo.votingStartedAt != 0L) {
+                                GetUsernameVotingResultOperation(walletApplication)
+                                    .create(
+                                        usernameInfo.username!!,
+                                        blockchainIdentity.uniqueIdentifier.toString(),
+                                        earliestCreatedAt
+                                    )
+                                    .enqueue()
+                            }
                         }
                     }
                 }
@@ -345,7 +348,8 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
             // We are finished recovering
             blockchainIdentityData.finishRestoration()
-            if (blockchainIdentityData.creationState != IdentityCreationState.VOTING) {
+            if (blockchainIdentityData.creationState != IdentityCreationState.VOTING ||
+                (blockchainIdentityData.creationState == IdentityCreationState.VOTING && blockchainIdentityData.lostVote && blockchainIdentityData.showSecondaryUsername)) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                 // Complete the entire process
