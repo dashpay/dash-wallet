@@ -313,6 +313,19 @@ class PlatformRepo @Inject constructor(
                     listOf()
                 }
             }
+            // determine if multiple names belong to the same identity. If so, don't show any non-contested names
+            val identifierDocumentMap = hashMapOf<Identifier, ArrayList<DomainDocument>>()
+            nameDocuments.forEach { document ->
+                val domainDocument = DomainDocument(document)
+                val identifier = getIdentityForName(domainDocument)
+                if (identifierDocumentMap.contains(identifier)) {
+                    identifierDocumentMap[identifier]?.add(domainDocument)
+                } else {
+                    val newList = arrayListOf(domainDocument)
+                    identifierDocumentMap[identifier] = newList
+                }
+            }
+
             val userIds = if (onlyExactUsername) {
                 val result = mutableListOf<Identifier>()
                 val exactNameDoc = try {
@@ -325,7 +338,7 @@ class PlatformRepo @Inject constructor(
                 }
                 result
             } else {
-                nameDocuments.map { getIdentityForName(DomainDocument(it)) }
+                identifierDocumentMap.keys
             }.toSet().toList()
 
             val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
@@ -336,6 +349,23 @@ class PlatformRepo @Inject constructor(
                 mapOf()
             }
 
+            // remove non-contested names if there are contested names for the same identity
+            val filteredNameDocuments = arrayListOf<DomainDocument>()
+            identifierDocumentMap.forEach { (identifier, documents) ->
+                if (documents.size == 1) {
+                    filteredNameDocuments.addAll(documents)
+                } else {
+                    val hasContestedNames = documents.any { Names.isUsernameContestable(it.normalizedLabel) }
+                    documents.forEach { document ->
+                        if (Names.isUsernameContestable(document.normalizedLabel)) {
+                            filteredNameDocuments.add(document)
+                        } else if (!hasContestedNames) {
+                            filteredNameDocuments.add(document)
+                        }
+                    }
+                }
+            }
+
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
 
             // Get all contact requests where toUserId == userId
@@ -343,8 +373,7 @@ class PlatformRepo @Inject constructor(
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-            for (domainDoc in nameDocuments) {
-                val nameDoc = DomainDocument(domainDoc)
+            for (nameDoc in filteredNameDocuments) {
                 if (nameDoc.dashAliasIdentityId != null) {
                     continue // skip aliases
                 }

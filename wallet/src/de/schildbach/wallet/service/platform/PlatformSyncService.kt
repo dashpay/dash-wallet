@@ -79,6 +79,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dashj.platform.contracts.wallet.TxMetadataDocument
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.sdk.platform.DomainDocument
@@ -639,7 +640,7 @@ class PlatformSynchronizationService @Inject constructor(
                         otherNames.isEmpty() -> true
                         Names.isUsernameContestable(name) -> true
                         else -> {
-                            otherNames.keys.find { name.contains(it)} == null
+                            !otherNames.keys.any { name.contains(it) }
                         }
                     }
                     if (shouldAddName) {
@@ -651,25 +652,15 @@ class PlatformSynchronizationService @Inject constructor(
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
-                        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
-                        val username = nameDocument.label
-                        val identityId = platformRepo.getIdentityForName(nameDocument)
-
-                        val profileDocument = profileById[id]
-
-                        val profile = if (profileDocument != null) {
-                            DashPayProfile.fromDocument(profileDocument, username)
-                        } else {
-                            DashPayProfile(identityId.toString(), username)
-                        }
-
-                        dashPayProfileDao.insert(profile)
-                        if (checkingIntegrity) {
-                            log.info("check database integrity: adding missing profile $username:$id")
-                        }
+                        updateDashPayProfile(nameById, id, profileById, checkingIntegrity)
                     } else {
                         log.info("domain document for $id could not be found, though a profile exists")
                     }
+                }
+                // handle any domain documents without a profile
+                val remainingNames = nameById.filter { !profileById.keys.contains(it.key) }
+                for (id in remainingNames) {
+                    updateDashPayProfile(nameById, id.key, mapOf(), checkingIntegrity)
                 }
 
                 // add a blank profile for any identity that is still missing a profile
@@ -699,6 +690,30 @@ class PlatformSynchronizationService @Inject constructor(
             }
         } catch (e: Exception) {
             platformRepo.formatExceptionMessage("update contact profiles", e)
+        }
+    }
+
+    private suspend fun updateDashPayProfile(
+        nameById: HashMap<Identifier, DomainDocument>,
+        id: Identifier,
+        profileById: Map<Identifier, Document>,
+        checkingIntegrity: Boolean
+    ) {
+        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
+        val username = nameDocument.label
+        val identityId = platformRepo.getIdentityForName(nameDocument)
+
+        val profileDocument = profileById[id]
+
+        val profile = if (profileDocument != null) {
+            DashPayProfile.fromDocument(profileDocument, username)
+        } else {
+            DashPayProfile(identityId.toString(), username)
+        }
+
+        dashPayProfileDao.insert(profile)
+        if (checkingIntegrity) {
+            log.info("check database integrity: adding missing profile $username:$id")
         }
     }
 

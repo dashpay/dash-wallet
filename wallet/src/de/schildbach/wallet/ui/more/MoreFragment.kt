@@ -144,7 +144,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.invite.visibility = View.GONE
         binding.invite.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
                 mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.INVITE)
                 if (inviteHistory.isEmpty()) {
@@ -171,7 +171,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
         binding.joinDashpayContainer.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
@@ -352,6 +352,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
         createIdentityViewModel.creationState.observe(viewLifecycleOwner) { _ ->
+            editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
+                showProfileSection(dashPayProfile)
+            }
+        }
+
+        createInviteViewModel.blockchainIdentity.observe(viewLifecycleOwner) { _ ->
             editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
                 showProfileSection(dashPayProfile)
             }
