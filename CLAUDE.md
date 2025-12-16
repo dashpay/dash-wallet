@@ -95,7 +95,7 @@ The app follows **MVVM (Model-View-ViewModel)** architecture with the following 
 ### Development Setup
 - Set build variant to required flavor (e.g., `_testNet3Debug` for testnet development)
 - Android SDK Build Tools version 35+ and NDK required
-- Uses Gradle 8.7.3 with Kotlin 2.1.0
+- Uses Gradle 8.9 with Kotlin 2.1.0
 
 ### Build Flavors
 - **prod**: Production mainnet build (non-debuggable, ProGuard optimized)
