@@ -286,13 +286,6 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
         val blockchainIdentityDataBase = platformRepo.loadBlockchainIdentityBaseData() // for other info
         when {
-            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring && blockchainIdentityDataTmp.creationStateErrorMessage == null) -> {
-                val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
-                        ?: throw IllegalStateException("can't find asset lock transaction")
-
-                restoreIdentity(cftx.identityId.bytes)
-                return
-            }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
@@ -529,13 +522,6 @@ class CreateIdentityService : LifecycleService() {
         val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
 
         when {
-            (blockchainIdentityDataTmp != null && blockchainIdentityDataTmp.restoring) -> {
-                val cftx = blockchainIdentityDataTmp.findAssetLockTransaction(walletApplication.wallet)
-                        ?: throw IllegalStateException()
-
-                restoreIdentity(cftx.identityId.bytes)
-                return
-            }
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
                 if (username != null && blockchainIdentityData.username != username && !retryWithNewUserName) {
@@ -945,6 +931,7 @@ class CreateIdentityService : LifecycleService() {
     /**
      * restores an identity using information from the wallet and platform
      */
+    @Deprecated("Use RestoreIdentityWorker instead")
     private suspend fun restoreIdentity(identity: ByteArray) {
         log.info("Restoring identity and username")
         try {
