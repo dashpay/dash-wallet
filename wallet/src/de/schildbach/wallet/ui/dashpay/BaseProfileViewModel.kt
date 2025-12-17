@@ -18,7 +18,6 @@ package de.schildbach.wallet.ui.dashpay
 
 import androidx.lifecycle.*
 import de.schildbach.wallet.database.dao.DashPayProfileDao
-import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayProfile

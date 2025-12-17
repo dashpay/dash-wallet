@@ -54,4 +54,7 @@ open class BlockchainIdentityBaseData(
 
     val creationError: Boolean
         get() = creationStateErrorMessage != null
+
+    val lostVote: Boolean
+        get() = usernameRequested == UsernameRequestStatus.LOST_VOTE || usernameRequested == UsernameRequestStatus.LOCKED
 }

@@ -146,7 +146,7 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
         binding.inputWrapper.setEndIconOnClickListener {
             if (usernameType == UsernameType.Secondary) {
                 // For secondary usernames, only clear the suffix part
-                val primaryUsername = requestUserNameViewModel.requestedUserName!!
+                val primaryUsername = requestUserNameViewModel.requestedUserName ?: return@setEndIconOnClickListener
                 binding.usernameInput.setText(primaryUsername)
                 binding.usernameInput.setSelection(primaryUsername.length)
             } else {
@@ -414,7 +414,8 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 )
                 UsernameType.Secondary -> safeNavigate(
                     RequestUsernameSecondaryFragmentDirections.requestsInstantToConfirmUsernameRequestDialog(
-                        requestUserNameViewModel.requestedUsernameSecondary!!,
+                        requestUserNameViewModel.requestedUsernameSecondary
+                            ?: binding.usernameInput.text.toString(),
                         usernameType
                     )
                 )

@@ -302,12 +302,11 @@ class TopUpRepositoryImpl @Inject constructor(
                         TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                             // TODO: a chainlock is needed to accompany the block information
                             // to provide sufficient proof
-                            if (confidence!!.depthInBlocks > 1) {
-                                if (confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
-                                    log.info("credit funding transaction verified with chainlock: ${cftx.txId} and block depth")
-                                    confidence.removeEventListener(this)
-                                    continuation.resumeWith(Result.success(true))
-                                }
+                            if (confidence!!.depthInBlocks > 1 &&
+                                confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
+                                log.info("credit funding transaction verified with chainlock: ${cftx.txId} and block depth")
+                                confidence.removeEventListener(this)
+                                continuation.resumeWith(Result.success(true))
                             } else if (confidence.depthInBlocks > 3) {
                                 log.info("credit funding transaction verified with block depth")
                                 confidence.removeEventListener(this)
@@ -466,12 +465,11 @@ class TopUpRepositoryImpl @Inject constructor(
                                     }
 
                                     TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                                        if (confidence!!.depthInBlocks > 1) {
-                                            if (confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
-                                                log.info("credit funding transaction verified with chainlock: ${confidence.transactionHash} and block depth")
-                                                confidence.removeEventListener(this)
-                                                continuation.resumeWith(Result.success(Unit))
-                                            }
+                                        if (confidence!!.depthInBlocks > 1 &&
+                                            confidence.appearedAtChainHeight < dashSystemService.system.chainLockHandler.bestChainLockBlockHeight) {
+                                            log.info("credit funding transaction verified with chainlock: ${confidence.transactionHash} and block depth")
+                                            confidence.removeEventListener(this)
+                                            continuation.resumeWith(Result.success(Unit))
                                         } else if (confidence.depthInBlocks > 3) {
                                             log.info("credit funding transaction verified with block depth")
                                             confidence.removeEventListener(this)

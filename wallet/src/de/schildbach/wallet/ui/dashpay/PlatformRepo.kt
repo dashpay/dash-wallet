@@ -975,10 +975,8 @@ class PlatformRepo @Inject constructor(
     //
     // Step 5: Find the usernames in the case of recovery
     //
-    suspend fun recoverUsernames(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            blockchainIdentity.recoverUsernames()
-        }
+    fun recoverUsernames(blockchainIdentity: BlockchainIdentity) {
+        blockchainIdentity.recoverUsernames()
     }
 
     //Step 6: Recover the DashPay Profile
@@ -1074,6 +1072,7 @@ class PlatformRepo @Inject constructor(
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
+        clearBlockchainIdentityData()
         if (includeInvitations) {
             invitationsDao.clear()
         }
