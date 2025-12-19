@@ -48,7 +48,10 @@ public class SecurityGuard {
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
         log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
-        
+
+        // Run migration to hybrid encryption system
+        runHybridEncryptionMigration();
+
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
         analyticsService = WalletApplication.getInstance().getAnalyticsService();
@@ -94,33 +97,45 @@ public class SecurityGuard {
 
     public synchronized void savePassword(String password) throws GeneralSecurityException, IOException {
         validateKeyIntegrity(WALLET_PASSWORD_KEY_ALIAS);
-        String encryptedPin = encrypt(WALLET_PASSWORD_KEY_ALIAS, password);
-        securityPrefs.edit().putString(WALLET_PASSWORD_KEY_ALIAS, encryptedPin).apply();
-        
-        // Backup to multiple locations
-        backupEncryptedData(WALLET_PASSWORD_KEY_ALIAS, encryptedPin);
+
+        // HybridEncryptionProvider handles storage internally with primary_ and fallback_ prefixes
+        // No need to store again here
+        encryptionProvider.encrypt(WALLET_PASSWORD_KEY_ALIAS, password);
+
+        // Note: backupEncryptedData is now redundant as HybridEncryptionProvider
+        // already stores both primary and fallback versions
     }
 
     public static boolean isConfiguredQuickCheck() {
-        return WalletApplication.getInstance()
-                .getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE)
-                .contains(WALLET_PASSWORD_KEY_ALIAS);
+        SharedPreferences prefs = WalletApplication.getInstance()
+                .getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
+
+        // Check for hybrid system format (primary or fallback)
+        if (prefs.contains("primary_" + WALLET_PASSWORD_KEY_ALIAS) ||
+            prefs.contains("fallback_" + WALLET_PASSWORD_KEY_ALIAS)) {
+            return true;
+        }
+
+        // Check for legacy format (backward compatibility during migration)
+        return prefs.contains(WALLET_PASSWORD_KEY_ALIAS);
     }
 
     public boolean isConfigured() {
+        // Check for hybrid system format (primary or fallback)
+        if (securityPrefs.contains("primary_" + WALLET_PASSWORD_KEY_ALIAS) ||
+            securityPrefs.contains("fallback_" + WALLET_PASSWORD_KEY_ALIAS)) {
+            return true;
+        }
+
+        // Check for legacy format (backward compatibility during migration)
         return securityPrefs.contains(WALLET_PASSWORD_KEY_ALIAS);
     }
 
     public synchronized String retrievePassword() throws SecurityGuardException {
         try {
-            String encryptedPasswordStr = recoverEncryptedData(WALLET_PASSWORD_KEY_ALIAS);
-            if (encryptedPasswordStr == null) {
-                throw new SecurityGuardException("No valid encrypted password found. backups: " + SecurityFileUtils.INSTANCE.isMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE));
-            }
-            
-            byte[] encryptedPassword = Base64.decode(encryptedPasswordStr, Base64.NO_WRAP);
-
-            String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, encryptedPassword);
+            // HybridEncryptionProvider handles loading from primary_/fallback_ prefixes internally
+            // We just pass a dummy byte array since the parameter is ignored
+            String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, new byte[0]);
             return password;
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve password", e);
@@ -131,13 +146,9 @@ public class SecurityGuard {
 
     public synchronized String retrievePin() throws SecurityGuardException {
         try {
-            String savedPinStr = recoverEncryptedData(UI_PIN_KEY_ALIAS);
-            if (savedPinStr == null || savedPinStr.isEmpty()) {
-                throw new SecurityGuardException("No valid encrypted PIN found. backups: " + SecurityFileUtils.INSTANCE.isMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE));
-            }
-            
-            byte[] savedPin = Base64.decode(savedPinStr, Base64.NO_WRAP);
-            return encryptionProvider.decrypt(UI_PIN_KEY_ALIAS, savedPin);
+            // HybridEncryptionProvider handles loading from primary_/fallback_ prefixes internally
+            // We just pass a dummy byte array since the parameter is ignored
+            return encryptionProvider.decrypt(UI_PIN_KEY_ALIAS, new byte[0]);
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve PIN", e);
             analyticsService.logError(e, "Failed to retrieve PIN");
@@ -147,18 +158,24 @@ public class SecurityGuard {
 
     public synchronized void savePin(String pin) throws GeneralSecurityException, IOException {
         validateKeyIntegrity(UI_PIN_KEY_ALIAS);
-        String encryptedPin = encrypt(UI_PIN_KEY_ALIAS, pin);
-        securityPrefs.edit().putString(UI_PIN_KEY_ALIAS, encryptedPin).apply();
-        
-        // Backup to multiple locations
-        backupEncryptedData(UI_PIN_KEY_ALIAS, encryptedPin);
+
+        // HybridEncryptionProvider handles storage internally with primary_ and fallback_ prefixes
+        // No need to store again here
+        encryptionProvider.encrypt(UI_PIN_KEY_ALIAS, pin);
+
+        // Note: backupEncryptedData is now redundant as HybridEncryptionProvider
+        // already stores both primary and fallback versions
     }
 
     public synchronized boolean checkPin(String pin) throws GeneralSecurityException, IOException {
-        validateKeyIntegrity(UI_PIN_KEY_ALIAS);
-        String encryptedPin = encrypt(UI_PIN_KEY_ALIAS, pin);
-        String savedPin = securityPrefs.getString(UI_PIN_KEY_ALIAS, "");
-        return encryptedPin.equals(savedPin);
+        try {
+            // Retrieve the stored PIN and compare with input
+            String storedPin = retrievePin();
+            return pin.equals(storedPin);
+        } catch (Exception e) {
+            log.debug("PIN check failed: {}", e.getMessage());
+            return false;
+        }
     }
 
     private String encrypt(String keyAlias, String data) throws GeneralSecurityException, IOException {
@@ -217,11 +234,17 @@ public class SecurityGuard {
         } catch (KeyStoreException e) {
             log.warn("unable to remove WALLET_PASSWORD_KEY_ALIAS key from keystore", e);
         }
+
+        // Remove all keys (legacy and hybrid formats)
         securityPrefs.edit()
                 .remove(UI_PIN_KEY_ALIAS)
                 .remove(WALLET_PASSWORD_KEY_ALIAS)
+                .remove("primary_" + UI_PIN_KEY_ALIAS)
+                .remove("primary_" + WALLET_PASSWORD_KEY_ALIAS)
+                .remove("fallback_" + UI_PIN_KEY_ALIAS)
+                .remove("fallback_" + WALLET_PASSWORD_KEY_ALIAS)
                 .apply();
-        
+
         // Clear backups
         clearBackups();
     }
@@ -286,17 +309,17 @@ public class SecurityGuard {
             return data;
         }
         
-        // If primary data is invalid, try IV recovery first (common cause of decryption failures)
-        if (data != null && !data.isEmpty()) {
-            log.info("Primary data exists but validation failed for {}, attempting IV recovery", keyAlias);
-            if (tryIvRecovery()) {
-                // Re-validate after IV recovery
-                if (isValidEncryptedData(keyAlias, data)) {
-                    log.info("Successfully recovered {} after IV recovery", keyAlias);
-                    return data;
-                }
-            }
-        }
+//        // If primary data is invalid, try IV recovery first (common cause of decryption failures)
+//        if (data != null && !data.isEmpty()) {
+//            log.info("Primary data exists but validation failed for {}, attempting IV recovery", keyAlias);
+//            if (tryIvRecovery()) {
+//                // Re-validate after IV recovery
+//                if (isValidEncryptedData(keyAlias, data)) {
+//                    log.info("Successfully recovered {} after IV recovery", keyAlias);
+//                    return data;
+//                }
+//            }
+//        }
         
         // Try DataStore backup
         if (backupConfig != null) {
@@ -391,27 +414,27 @@ public class SecurityGuard {
      * Attempt to recover IV from backups when decryption failures occur
      * This handles the case where IV corruption causes AEADBadTagException
      */
-    private boolean tryIvRecovery() {
-        try {
-            if (encryptionProvider instanceof ModernEncryptionProvider) {
-                ModernEncryptionProvider modernProvider = (ModernEncryptionProvider) encryptionProvider;
-                boolean recovered = modernProvider.recoverIvFromBackups();
-                if (recovered) {
-                    log.info("Successfully recovered IV from backups");
-                    return true;
-                } else {
-                    log.warn("IV recovery failed - no valid IV found in backups");
-                    return false;
-                }
-            } else {
-                log.debug("EncryptionProvider is not ModernEncryptionProvider, skipping IV recovery");
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("IV recovery attempt failed", e);
-            return false;
-        }
-    }
+//    private boolean tryIvRecovery() {
+//        try {
+//            if (encryptionProvider instanceof ModernEncryptionProvider) {
+//                ModernEncryptionProvider modernProvider = (ModernEncryptionProvider) encryptionProvider;
+//                boolean recovered = modernProvider.recoverIvFromBackups();
+//                if (recovered) {
+//                    log.info("Successfully recovered IV from backups");
+//                    return true;
+//                } else {
+//                    log.warn("IV recovery failed - no valid IV found in backups");
+//                    return false;
+//                }
+//            } else {
+//                log.debug("EncryptionProvider is not ModernEncryptionProvider, skipping IV recovery");
+//                return false;
+//            }
+//        } catch (Exception e) {
+//            log.error("IV recovery attempt failed", e);
+//            return false;
+//        }
+//    }
 
     /**
      * Clear all backup data
@@ -448,30 +471,76 @@ public class SecurityGuard {
             log.info("check that the password and pin can be decrypted");
             retrievePassword();
             retrievePin();
-            
+
             log.info("Starting backup migration for existing data");
-            
+
             // Backup existing wallet password if it exists
             String existingPassword = securityPrefs.getString(WALLET_PASSWORD_KEY_ALIAS, null);
             if (existingPassword != null && !existingPassword.isEmpty()) {
                 log.info("Migrating existing wallet password to backup system");
                 backupEncryptedData(WALLET_PASSWORD_KEY_ALIAS, existingPassword);
             }
-            
+
             // Backup existing PIN if it exists
             String existingPin = securityPrefs.getString(UI_PIN_KEY_ALIAS, null);
             if (existingPin != null && !existingPin.isEmpty()) {
                 log.info("Migrating existing PIN to backup system");
                 backupEncryptedData(UI_PIN_KEY_ALIAS, existingPin);
             }
-            
+
             // Mark migration as completed using file flag
             SecurityFileUtils.INSTANCE.setMigrationCompleted(backupDir, MIGRATION_COMPLETED_FILE);
             log.info("Backup migration completed successfully");
-            
+
         } catch (Exception e) {
             log.error("Failed to migrate existing data to backup system", e);
         }
     }
-    
+
+    /**
+     * Run migration to hybrid encryption system
+     * This migrates old shared-IV encrypted data to the new format with embedded IVs and fallback encryption
+     */
+    private void runHybridEncryptionMigration() {
+        try {
+            if (encryptionProvider instanceof HybridEncryptionProvider) {
+                // Get the underlying providers from the hybrid provider
+                // We need access to the primary provider for the KeyStore
+                java.security.KeyStore keyStore = java.security.KeyStore.getInstance(org.dash.wallet.common.util.Constants.ANDROID_KEY_STORE);
+                keyStore.load(null);
+
+                HybridEncryptionMigration migration = new HybridEncryptionMigration(
+                        securityPrefs,
+                        (HybridEncryptionProvider) encryptionProvider,
+                        keyStore
+                );
+                migration.migrateToHybridSystem();
+            } else {
+                log.warn("EncryptionProvider is not HybridEncryptionProvider, skipping hybrid migration");
+            }
+        } catch (Exception e) {
+            log.error("Failed to run hybrid encryption migration", e);
+            // Don't throw - allow app to continue, migration will retry on next start
+        }
+    }
+
+    /**
+     * Ensure fallback encryption for all keys after wallet initialization
+     * This should be called after the wallet is fully loaded to upgrade any keys
+     * that were encrypted before the wallet seed was available
+     *
+     * IMPORTANT: Call this from WalletApplication after wallet is initialized
+     */
+    public void ensureFallbackEncryptions() {
+        try {
+            if (encryptionProvider instanceof HybridEncryptionProvider) {
+                log.info("Ensuring fallback encryptions for all keys (wallet is now available)");
+                ((HybridEncryptionProvider) encryptionProvider).ensureAllFallbackEncryptions();
+            }
+        } catch (Exception e) {
+            log.error("Failed to ensure fallback encryptions", e);
+            // Don't throw - this is a best-effort upgrade
+        }
+    }
+
 }

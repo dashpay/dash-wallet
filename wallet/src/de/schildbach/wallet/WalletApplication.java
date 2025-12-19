@@ -450,6 +450,11 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void finalizeInitialization() {
+        try {
+            SecurityGuard.getInstance().ensureFallbackEncryptions();
+        } catch (Exception e) {
+            log.error("failure to ensure fallback encryption: ", e);
+        }
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
