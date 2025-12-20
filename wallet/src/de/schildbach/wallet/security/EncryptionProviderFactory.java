@@ -14,11 +14,12 @@ import java.security.KeyStore;
 public class EncryptionProviderFactory {
 
     /**
-     * Create a hybrid encryption provider with KeyStore and seed-based fallback
+     * Create a dual-fallback encryption provider
      *
      * This provides:
      * - Primary: KeyStore encryption (hardware-backed when available)
-     * - Fallback: Seed-derived encryption (always recoverable)
+     * - Fallback #1: PIN-derived encryption (for wallet password recovery)
+     * - Fallback #2: Mnemonic-derived encryption (for PIN + wallet password recovery)
      * - Self-healing: Automatically restores KeyStore encryption after recovery
      */
     public static EncryptionProvider create(SharedPreferences securityPrefs)
@@ -31,15 +32,7 @@ public class EncryptionProviderFactory {
         // Create primary provider (KeyStore-based)
         ModernEncryptionProvider primaryProvider = new ModernEncryptionProvider(keyStore, securityPrefs);
 
-        // Create master key provider (seed-derived)
-        SeedBasedMasterKeyProvider masterKeyProvider = new SeedBasedMasterKeyProvider(
-                WalletApplication.getInstance()
-        );
-
-        // Create fallback provider (password-based, uses seed)
-        PasswordBasedEncryptionProvider fallbackProvider = new PasswordBasedEncryptionProvider(masterKeyProvider);
-
-        // Create hybrid provider with self-healing
-        return new HybridEncryptionProvider(primaryProvider, fallbackProvider, securityPrefs);
+        // Create dual-fallback provider (Primary + PIN fallback + Mnemonic fallback)
+        return new DualFallbackEncryptionProvider(primaryProvider, securityPrefs);
     }
 }

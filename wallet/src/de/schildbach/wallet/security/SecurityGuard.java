@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
+import java.util.List;
 import java.util.UUID;
 
 import de.schildbach.wallet.WalletApplication;
@@ -41,6 +42,7 @@ public class SecurityGuard {
     private final EncryptionProvider encryptionProvider;
     private final File backupDir;
     private SecurityConfig backupConfig;
+    private DualFallbackMigration dualFallbackMigration;
 
     private SecurityGuard() throws GeneralSecurityException, IOException {
         backupDir = WalletApplication.getInstance().getFilesDir();
@@ -51,6 +53,15 @@ public class SecurityGuard {
 
         // Run migration to hybrid encryption system
         runHybridEncryptionMigration();
+
+        // Initialize dual-fallback migration (wallet provider will be set later)
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+            dualFallbackMigration = new DualFallbackMigration(
+                    securityPrefs,
+                    (DualFallbackEncryptionProvider) encryptionProvider,
+                    null  // WalletDataProvider will be set when wallet loads
+            );
+        }
 
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
@@ -63,6 +74,15 @@ public class SecurityGuard {
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
         log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
+
+        // Initialize dual-fallback migration (wallet provider will be set later)
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+            dualFallbackMigration = new DualFallbackMigration(
+                    securityPrefs,
+                    (DualFallbackEncryptionProvider) encryptionProvider,
+                    null  // WalletDataProvider will be set when wallet loads
+            );
+        }
 
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
@@ -110,9 +130,10 @@ public class SecurityGuard {
         SharedPreferences prefs = WalletApplication.getInstance()
                 .getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
 
-        // Check for hybrid system format (primary or fallback)
+        // Check for dual-fallback system format (primary or fallbacks)
         if (prefs.contains("primary_" + WALLET_PASSWORD_KEY_ALIAS) ||
-            prefs.contains("fallback_" + WALLET_PASSWORD_KEY_ALIAS)) {
+            prefs.contains("fallback_pin_" + WALLET_PASSWORD_KEY_ALIAS) ||
+            prefs.contains("fallback_mnemonic_" + WALLET_PASSWORD_KEY_ALIAS)) {
             return true;
         }
 
@@ -121,9 +142,10 @@ public class SecurityGuard {
     }
 
     public boolean isConfigured() {
-        // Check for hybrid system format (primary or fallback)
+        // Check for dual-fallback system format (primary or fallbacks)
         if (securityPrefs.contains("primary_" + WALLET_PASSWORD_KEY_ALIAS) ||
-            securityPrefs.contains("fallback_" + WALLET_PASSWORD_KEY_ALIAS)) {
+            securityPrefs.contains("fallback_pin_" + WALLET_PASSWORD_KEY_ALIAS) ||
+            securityPrefs.contains("fallback_mnemonic_" + WALLET_PASSWORD_KEY_ALIAS)) {
             return true;
         }
 
@@ -235,14 +257,16 @@ public class SecurityGuard {
             log.warn("unable to remove WALLET_PASSWORD_KEY_ALIAS key from keystore", e);
         }
 
-        // Remove all keys (legacy and hybrid formats)
+        // Remove all keys (legacy, hybrid, and dual-fallback formats)
         securityPrefs.edit()
                 .remove(UI_PIN_KEY_ALIAS)
                 .remove(WALLET_PASSWORD_KEY_ALIAS)
                 .remove("primary_" + UI_PIN_KEY_ALIAS)
                 .remove("primary_" + WALLET_PASSWORD_KEY_ALIAS)
-                .remove("fallback_" + UI_PIN_KEY_ALIAS)
-                .remove("fallback_" + WALLET_PASSWORD_KEY_ALIAS)
+                .remove("fallback_pin_" + UI_PIN_KEY_ALIAS)
+                .remove("fallback_pin_" + WALLET_PASSWORD_KEY_ALIAS)
+                .remove("fallback_mnemonic_" + UI_PIN_KEY_ALIAS)
+                .remove("fallback_mnemonic_" + WALLET_PASSWORD_KEY_ALIAS)
                 .apply();
 
         // Clear backups
@@ -524,22 +548,132 @@ public class SecurityGuard {
         }
     }
 
+    // ===== Dual-Fallback Recovery Methods =====
+
     /**
-     * Ensure fallback encryption for all keys after wallet initialization
-     * This should be called after the wallet is fully loaded to upgrade any keys
-     * that were encrypted before the wallet seed was available
+     * Recover wallet password using PIN-based fallback
+     * Use this when KeyStore fails but user remembers their PIN
      *
-     * IMPORTANT: Call this from WalletApplication after wallet is initialized
+     * @param pin User's PIN
+     * @return Recovered wallet password
+     * @throws SecurityGuardException if PIN-fallback fails or is not available
      */
-    public void ensureFallbackEncryptions() {
+    public synchronized String recoverPasswordWithPin(String pin) throws SecurityGuardException {
         try {
-            if (encryptionProvider instanceof HybridEncryptionProvider) {
-                log.info("Ensuring fallback encryptions for all keys (wallet is now available)");
-                ((HybridEncryptionProvider) encryptionProvider).ensureAllFallbackEncryptions();
+            if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+                String password = ((DualFallbackEncryptionProvider) encryptionProvider)
+                        .decryptWithPin(WALLET_PASSWORD_KEY_ALIAS, pin);
+                log.info("Successfully recovered wallet password with PIN-based fallback");
+                return password;
+            } else {
+                throw new SecurityGuardException("PIN-based fallback not available");
+            }
+        } catch (GeneralSecurityException e) {
+            log.error("PIN-based recovery failed", e);
+            analyticsService.logError(e, "PIN-based recovery failed");
+            throw new SecurityGuardException("PIN-based recovery failed", e);
+        }
+    }
+
+    /**
+     * Recover PIN using mnemonic-based fallback
+     * Use this when KeyStore fails and user needs to recover their PIN
+     *
+     * @param mnemonicWords User's wallet recovery phrase
+     * @return Recovered PIN
+     * @throws SecurityGuardException if mnemonic-fallback fails or is not available
+     */
+    public synchronized String recoverPinWithMnemonic(List<String> mnemonicWords) throws SecurityGuardException {
+        try {
+            if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+                String pin = ((DualFallbackEncryptionProvider) encryptionProvider)
+                        .decryptWithMnemonic(UI_PIN_KEY_ALIAS, mnemonicWords);
+                log.info("Successfully recovered PIN with mnemonic-based fallback");
+                return pin;
+            } else {
+                throw new SecurityGuardException("Mnemonic-based fallback not available");
+            }
+        } catch (GeneralSecurityException e) {
+            log.error("Mnemonic-based PIN recovery failed", e);
+            analyticsService.logError(e, "Mnemonic-based PIN recovery failed");
+            throw new SecurityGuardException("Mnemonic-based PIN recovery failed", e);
+        }
+    }
+
+    /**
+     * Recover wallet password using mnemonic-based fallback
+     * Use this when KeyStore fails and user forgot their PIN (nuclear option)
+     *
+     * @param mnemonicWords User's wallet recovery phrase
+     * @return Recovered wallet password
+     * @throws SecurityGuardException if mnemonic-fallback fails or is not available
+     */
+    public synchronized String recoverPasswordWithMnemonic(List<String> mnemonicWords) throws SecurityGuardException {
+        try {
+            if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+                String password = ((DualFallbackEncryptionProvider) encryptionProvider)
+                        .decryptWithMnemonic(WALLET_PASSWORD_KEY_ALIAS, mnemonicWords);
+                log.info("Successfully recovered wallet password with mnemonic-based fallback");
+                return password;
+            } else {
+                throw new SecurityGuardException("Mnemonic-based fallback not available");
+            }
+        } catch (GeneralSecurityException e) {
+            log.error("Mnemonic-based password recovery failed", e);
+            analyticsService.logError(e, "Mnemonic-based password recovery failed");
+            throw new SecurityGuardException("Mnemonic-based password recovery failed", e);
+        }
+    }
+
+    /**
+     * Ensure PIN-based fallback encryption for wallet password
+     * Call this after user sets or enters their PIN
+     *
+     * @param pin User's PIN
+     * @return true if PIN-fallback was added or already exists, false on failure
+     */
+    public synchronized boolean ensurePinFallback(String pin) {
+        try {
+            if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+                boolean success = ((DualFallbackEncryptionProvider) encryptionProvider)
+                        .ensurePinFallback(pin);
+                if (success) {
+                    log.info("PIN-based fallback ensured for wallet password");
+                }
+                return success;
+            } else {
+                log.warn("DualFallbackEncryptionProvider not available, skipping PIN-fallback");
+                return false;
             }
         } catch (Exception e) {
-            log.error("Failed to ensure fallback encryptions", e);
-            // Don't throw - this is a best-effort upgrade
+            log.error("Failed to ensure PIN-based fallback", e);
+            return false;
+        }
+    }
+
+    /**
+     * Ensure mnemonic-based fallback encryption for both PIN and wallet password
+     * Call this after wallet initialization when mnemonic is available
+     *
+     * @param mnemonicWords User's wallet recovery phrase
+     * @return true if all mnemonic-fallbacks were added or already exist, false on failure
+     */
+    public synchronized boolean ensureMnemonicFallbacks(List<String> mnemonicWords) {
+        try {
+            if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+                boolean success = ((DualFallbackEncryptionProvider) encryptionProvider)
+                        .ensureMnemonicFallbacks(mnemonicWords);
+                if (success) {
+                    log.info("Mnemonic-based fallbacks ensured for PIN and wallet password");
+                }
+                return success;
+            } else {
+                log.warn("DualFallbackEncryptionProvider not available, skipping mnemonic-fallbacks");
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Failed to ensure mnemonic-based fallbacks", e);
+            return false;
         }
     }
 

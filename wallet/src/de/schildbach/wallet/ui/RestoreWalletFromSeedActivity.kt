@@ -144,10 +144,14 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
 
     private suspend fun restoreWallet(words: ArrayList<String>) {
         if (recoveryPinMode) {
-            val pin = viewModel.recoverPin(words)
+            val recoveryData = viewModel.recoverPin(words)
 
-            if (pin != null) {
-                startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, pin))
+            if (recoveryData != null) {
+                if (!recoveryData.requiresReset) {
+                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
+                } else {
+                    viewModel.restoreWalletFromSeed(words)
+                }
             } else {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }

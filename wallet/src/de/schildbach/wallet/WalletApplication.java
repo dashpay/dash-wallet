@@ -451,10 +451,33 @@ public class WalletApplication extends MultiDexApplication
 
     public void finalizeInitialization() {
         try {
-            SecurityGuard.getInstance().ensureFallbackEncryptions();
+            //FallbackTestingUtils.INSTANCE.enableTestMode();
+            //FallbackTestingUtils.INSTANCE.simulateKeystoreCorruption_KeepFallbacks();
+            SecurityGuard securityGuard = SecurityGuard.getInstance();
+            // TODO: put a button on the home screen
+            //            if (securityGuard.isHealthlyWithFallbacks()) {
+//                FallbackTestingUtils.INSTANCE.enableTestMode();
+//                FallbackTestingUtils.INSTANCE.simulateKeystoreCorruption_KeepFallbacks();
+//            }
+            List<String> mnemonicWords = platformRepo.getWalletSeed().getMnemonicCode();
+            if (mnemonicWords != null) {
+                securityGuard.ensureMnemonicFallbacks(mnemonicWords);
+                log.info("Mnemonic-based fallbacks ensured");
+            }
+            boolean success = securityGuard.ensurePinFallback(securityGuard.retrievePin());
+            if (success) {
+                log.info("PIN-based fallback added successfully");
+            }
         } catch (Exception e) {
-            log.error("failure to ensure fallback encryption: ", e);
+            log.error("Failed to ensure mnemonic-based fallbacks", e);
+            // Don't crash - app can continue with primary+PIN fallback only
         }
+
+//        try {
+//            SecurityGuard.getInstance().ensureFallbackEncryptions();
+//        } catch (Exception e) {
+//            log.error("failure to ensure fallback encryption: ", e);
+//        }
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)

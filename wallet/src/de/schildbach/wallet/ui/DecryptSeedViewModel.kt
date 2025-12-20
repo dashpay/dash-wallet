@@ -56,7 +56,35 @@ class DecryptSeedViewModel @Inject constructor(
     }
 
     suspend fun decryptSeed(pin: String): Array<String> {
-        if (!securityGuard.checkPin(pin)) {
+        // Try primary PIN check (KeyStore-based) with automatic fallback
+        val isPinCorrect = try {
+            securityGuard.checkPin(pin)
+        } catch (primaryException: Exception) {
+            logError(primaryException, "Primary PIN check failed during seed decryption")
+
+            // Primary failed - try PIN-based fallback recovery
+            try {
+                logEvent("seed_decryption_pin_fallback_recovery_attempt")
+                val recoveredPassword = securityGuard.recoverPasswordWithPin(pin)
+
+                // PIN-based recovery succeeded! This means:
+                // 1. PIN is correct
+                // 2. We recovered the wallet password
+                // 3. Self-healing has already occurred
+                logEvent("seed_decryption_pin_fallback_recovery_success")
+
+                // Ensure PIN fallback is added if it wasn't already
+                securityGuard.ensurePinFallback(pin)
+
+                true // PIN is correct
+            } catch (fallbackException: Exception) {
+                logError(fallbackException, "PIN-based fallback recovery also failed during seed decryption")
+                // Both primary and PIN-based fallback failed - PIN is incorrect
+                false
+            }
+        }
+
+        if (!isPinCorrect) {
             throw IllegalArgumentException("wrong pin")
         }
 

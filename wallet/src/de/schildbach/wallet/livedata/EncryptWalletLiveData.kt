@@ -63,8 +63,36 @@ class EncryptWalletLiveData(
     }
 
     fun changePassword(oldPin: String, newPin: String) {
-        value = if (securityGuard.checkPin(oldPin)) {
+        // Try primary PIN check (KeyStore-based) with automatic fallback
+        val isPinCorrect = try {
+            securityGuard.checkPin(oldPin)
+        } catch (primaryException: Exception) {
+            log.warn("Primary PIN check failed during password change: ${primaryException.message}")
+
+            // Primary failed - try PIN-based fallback recovery
+            try {
+                log.info("Attempting PIN-based fallback recovery for password change")
+                val recoveredPassword = securityGuard.recoverPasswordWithPin(oldPin)
+
+                // PIN-based recovery succeeded! This means old PIN is correct
+                // Self-healing has already occurred
+                log.info("PIN-based fallback recovery succeeded during password change")
+
+                // Ensure PIN fallback is added if it wasn't already
+                securityGuard.ensurePinFallback(oldPin)
+
+                true // Old PIN is correct
+            } catch (fallbackException: Exception) {
+                log.error("PIN-based fallback recovery also failed during password change: ${fallbackException.message}")
+                // Both primary and PIN-based fallback failed - old PIN is incorrect
+                false
+            }
+        }
+
+        value = if (isPinCorrect) {
             securityGuard.savePin(newPin)
+            // Ensure PIN fallback is added for new PIN
+            securityGuard.ensurePinFallback(newPin)
             biometricHelper.clearBiometricInfo()
             Resource.success(walletApplication.wallet)
         } else {

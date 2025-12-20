@@ -20,6 +20,7 @@ package de.schildbach.wallet.security
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.DeterministicKey
 import org.bitcoinj.crypto.HDKeyDerivation
+import org.bitcoinj.wallet.DeterministicSeed
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.util.security.MasterKeyProvider
 import org.slf4j.LoggerFactory
@@ -32,9 +33,12 @@ import javax.crypto.spec.SecretKeySpec
  * This allows recovery of encrypted data using only the wallet seed phrase
  *
  * Key derivation uses custom BIP32 paths:
- * - m/9999'/0'/0' for wallet password encryption
  * - m/9999'/0'/1' for UI PIN encryption
  * - m/9999'/1'/[hash]' for other key aliases
+ *
+ * IMPORTANT: This provider CANNOT be used for wallet password encryption due to circular dependency:
+ * - Wallet seed is encrypted with wallet password
+ * - Can't use seed to encrypt the password that encrypts the seed!
  *
  * The high path number (9999) ensures no collision with standard wallet keys
  */
@@ -47,8 +51,6 @@ class SeedBasedMasterKeyProvider(
 
         // Custom derivation paths for encryption keys (using purpose 9999 to avoid conflicts)
         private const val ENCRYPTION_PURPOSE = 9999
-        private const val WALLET_PASSWORD_ACCOUNT = 0
-        private const val WALLET_PASSWORD_INDEX = 0
 
         private const val UI_PIN_ACCOUNT = 0
         private const val UI_PIN_INDEX = 1
@@ -58,11 +60,20 @@ class SeedBasedMasterKeyProvider(
 
     @Throws(GeneralSecurityException::class)
     override fun getMasterKey(keyAlias: String): SecretKey {
+        // CRITICAL: Cannot use seed for wallet password (circular dependency)
+        if (SecurityGuard.WALLET_PASSWORD_KEY_ALIAS == keyAlias) {
+            throw GeneralSecurityException(
+                "Cannot use seed-based encryption for wallet password (circular dependency). " +
+                "Wallet password must use KeyStore-only encryption."
+            )
+        }
+
         val wallet = walletDataProvider.wallet
             ?: throw GeneralSecurityException("Wallet not available")
 
-        val seed = wallet.keyChainSeed
-            ?: throw GeneralSecurityException("Wallet seed not available")
+        // Get the decrypted seed
+        val seed = getDecryptedSeed(wallet)
+            ?: throw GeneralSecurityException("Wallet seed not available or wallet is locked")
 
         // Derive master key from seed
         val masterKey = HDKeyDerivation.createMasterPrivateKey(seed.seedBytes)
@@ -88,16 +99,26 @@ class SeedBasedMasterKeyProvider(
         }
     }
 
+    /**
+     * Get the decrypted seed from the wallet
+     * If wallet is encrypted, this will fail with an exception
+     */
+    private fun getDecryptedSeed(wallet: org.bitcoinj.wallet.Wallet): DeterministicSeed? {
+        val seed = wallet.keyChainSeed ?: return null
+
+        // Check if seed bytes are accessible
+        if (seed.seedBytes == null) {
+            throw GeneralSecurityException(
+                "Wallet is encrypted - cannot access seed. " +
+                "Seed-based encryption can only be used when wallet is decrypted."
+            )
+        }
+
+        return seed
+    }
+
     private fun getDerivationPath(keyAlias: String): List<ChildNumber> {
         return when (keyAlias) {
-            SecurityGuard.WALLET_PASSWORD_KEY_ALIAS -> {
-                // m/9999'/0'/0' for wallet password
-                listOf(
-                    ChildNumber(ENCRYPTION_PURPOSE, true),
-                    ChildNumber(WALLET_PASSWORD_ACCOUNT, true),
-                    ChildNumber(WALLET_PASSWORD_INDEX, true)
-                )
-            }
             SecurityGuard.UI_PIN_KEY_ALIAS -> {
                 // m/9999'/0'/1' for UI PIN
                 listOf(
@@ -108,7 +129,7 @@ class SeedBasedMasterKeyProvider(
             }
             else -> {
                 // m/9999'/1'/[hashcode]' for other aliases
-                val index = Math.abs(keyAlias.hashCode() % 1000000)
+                val index = kotlin.math.abs(keyAlias.hashCode() % 1000000)
                 listOf(
                     ChildNumber(ENCRYPTION_PURPOSE, true),
                     ChildNumber(OTHER_KEYS_ACCOUNT, true),
