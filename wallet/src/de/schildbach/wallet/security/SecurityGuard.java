@@ -189,14 +189,15 @@ public class SecurityGuard {
         // already stores both primary and fallback versions
     }
 
-    public synchronized boolean checkPin(String pin) throws GeneralSecurityException, IOException {
+    public synchronized boolean checkPin(String pin) throws GeneralSecurityException, IOException, SecurityGuardException {
         try {
             // Retrieve the stored PIN and compare with input
             String storedPin = retrievePin();
             return pin.equals(storedPin);
         } catch (Exception e) {
-            log.debug("PIN check failed: {}", e.getMessage());
-            return false;
+            log.error("PIN check failed: {}", e.getMessage());
+            throw e;
+            //return false;
         }
     }
 
@@ -677,4 +678,20 @@ public class SecurityGuard {
         }
     }
 
+    public boolean isHealthly() {
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+            return ((DualFallbackEncryptionProvider) encryptionProvider).isKeyStoreHealthy();
+        }
+        return false;
+    }
+
+    public boolean isHealthlyWithFallbacks() {
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider provider) {
+            return provider.isKeyStoreHealthy() &&
+                    provider.hasMnemonicFallback(WALLET_PASSWORD_KEY_ALIAS) &&
+                    provider.hasMnemonicFallback(UI_PIN_KEY_ALIAS) &&
+                    provider.hasPinFallback(WALLET_PASSWORD_KEY_ALIAS);
+        }
+        return false;
+    }
 }

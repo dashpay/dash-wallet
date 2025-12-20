@@ -450,15 +450,9 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void finalizeInitialization() {
+        // TODO, put this in a different place. maybe SecurityInitilizer
         try {
-            //FallbackTestingUtils.INSTANCE.enableTestMode();
-            //FallbackTestingUtils.INSTANCE.simulateKeystoreCorruption_KeepFallbacks();
             SecurityGuard securityGuard = SecurityGuard.getInstance();
-            // TODO: put a button on the home screen
-            //            if (securityGuard.isHealthlyWithFallbacks()) {
-//                FallbackTestingUtils.INSTANCE.enableTestMode();
-//                FallbackTestingUtils.INSTANCE.simulateKeystoreCorruption_KeepFallbacks();
-//            }
             List<String> mnemonicWords = platformRepo.getWalletSeed().getMnemonicCode();
             if (mnemonicWords != null) {
                 securityGuard.ensureMnemonicFallbacks(mnemonicWords);

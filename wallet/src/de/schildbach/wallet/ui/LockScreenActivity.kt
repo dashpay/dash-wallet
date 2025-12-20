@@ -45,7 +45,9 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+import de.schildbach.wallet.security.FallbackTestingUtils
 import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
@@ -255,8 +257,32 @@ open class LockScreenActivity : SecureActivity() {
         walletApplication.startBlockchainService(false)
     }
 
+    // TODO: remove
+    private fun updateBreakStatus() {
+        val sg = SecurityGuard.getInstance()
+        binding.lockScreen.securityStatus.text = when {
+            sg.isHealthlyWithFallbacks -> "OK"
+            sg.isHealthly -> "bad"
+            else -> "dead"
+        }
+    }
+    // TODO: end
+
     private fun initView() {
         binding.lockScreen.apply {
+            // TODO: remove this (only for testing)
+            breakPrimary.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateKeystoreCorruption_KeepFallbacks()
+                updateBreakStatus()
+            }
+            breakAll.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailure()
+                updateBreakStatus()
+            }
+            updateBreakStatus()
+            // TODO END
             actionLoginWithPin.setOnClickListener {
                 setLockState(State.ENTER_PIN)
             }
