@@ -1444,6 +1444,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 }
                 try {
+                    propagateContext()
                     blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
                     headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
                     blockchainStateDataProvider.setBlockChain(blockChain)
