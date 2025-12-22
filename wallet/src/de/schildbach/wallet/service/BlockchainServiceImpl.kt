@@ -1275,8 +1275,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     blockStore?.chainHead // detect corruptions as early as possible
                     headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
                     headerStore?.chainHead // detect corruptions as early as possible
+                    wallet.isNotifyTxOnNextBlock = false
                     val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
-                    if (blockchainStoreMemoryError /*&& serviceConfig.getBlockStoreLastFix() == BlockStoreLastFix.COPY_FILES*/) {
+                    if (blockchainStoreMemoryError) {
                         try {
                             // the stores are open, copy 100 blocks to a new store.
                             log.info("attempting to fix blockchain memory stalls by copying from store: {}", serviceConfig.getBlockStoreLastFix())
