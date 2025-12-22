@@ -119,6 +119,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.collections.set
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -185,7 +186,9 @@ class MainViewModel @Inject constructor(
     private val _blockchainSyncPercentage = MutableLiveData<Int>()
     val blockchainSyncPercentage: LiveData<Int>
         get() = _blockchainSyncPercentage
+    private var chainHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
     private var chainLockBlockHeight: Int = 0
+    private var headersHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -335,6 +338,8 @@ class MainViewModel @Inject constructor(
             .onEach { state ->
                 updateSyncStatus(state)
                 updatePercentage(state)
+                headersHeight = state.mnlistHeight
+                chainHeight = state.bestChainHeight
                 chainLockBlockHeight = state.chainlockHeight
             }
             .launchIn(viewModelWorkerScope)
@@ -521,6 +526,7 @@ class MainViewModel @Inject constructor(
                         Constants.CONTEXT,
                         null,
                         metadata[tx.txId],
+                        chainHeight,
                         chainLockBlockHeight
                     )
                     txByHash[rowView.id] = rowView
@@ -589,7 +595,7 @@ class MainViewModel @Inject constructor(
 
             // is the item currently in our list
             val rowView = txByHash[itemId]
-
+            val oneHourAgo = System.currentTimeMillis() - 1.hours.inWholeMilliseconds
             val transactionRow = if (!included || wrapper == null) {
                 TransactionRowView.fromTransaction(
                     tx,
@@ -598,6 +604,7 @@ class MainViewModel @Inject constructor(
                     metadata[tx.txId],
                     contacts[tx.txId] ?: rowView?.contact,
                     TxResourceMapper(),
+                    if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                     chainLockBlockHeight
                 )
             } else {
@@ -607,6 +614,7 @@ class MainViewModel @Inject constructor(
                     Constants.CONTEXT,
                     null,
                     metadata[tx.txId],
+                    if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                     chainLockBlockHeight
                 )
             }
@@ -710,6 +718,7 @@ class MainViewModel @Inject constructor(
                 walletData.getTransaction(txId)?.let { tx ->
                     // Use new metadata if exists, otherwise create empty metadata
                     val txMetadata = metadata[txId] ?: PresentableTxMetadata(txId)
+                    val oneHourAgo = System.currentTimeMillis() - 1.hours.inWholeMilliseconds
                     val updatedRowView = TransactionRowView.fromTransaction(
                         tx,
                         walletData.transactionBag,
@@ -717,6 +726,7 @@ class MainViewModel @Inject constructor(
                         txMetadata,
                         contacts[txId] ?: rowView.contact,
                         TxResourceMapper(),
+                        if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                         chainLockBlockHeight
                     )
                     txByHash[txId.toString()] = updatedRowView

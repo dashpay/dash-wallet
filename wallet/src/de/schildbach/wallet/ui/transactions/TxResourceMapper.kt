@@ -153,17 +153,22 @@ open class TxResourceMapper {
      * @return the secondary status or -1 if there is none
      */
     @StringRes
-    open fun getReceivedStatusString(tx: Transaction, context: Context, bestChainLockBlockHeight: Int): Int {
+    open fun getReceivedStatusString(
+        tx: Transaction,
+        context: Context,
+        chainTipBlockHeight: Int,
+        bestChainLockBlockHeight: Int
+    ): Int {
         val confidence = tx.getConfidence(context)
         var statusId = -1
         if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
-            val confirmations = confidence.depthInBlocks
-            val isChainLocked = bestChainLockBlockHeight >= confidence.depthInBlocks
+            val confirmations = chainTipBlockHeight - confidence.appearedAtChainHeight
+            val isChainLocked = bestChainLockBlockHeight >= confidence.appearedAtChainHeight
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase) {
                 // coinbase transactions are locked if they have less than 100 confirmations
-                if (confidence.depthInBlocks < Constants.NETWORK_PARAMETERS.spendableCoinbaseDepth) {
+                if (confirmations < Constants.NETWORK_PARAMETERS.spendableCoinbaseDepth) {
                     statusId = R.string.transaction_row_status_locked
                 }
             } else if (confirmations < 6 && !isChainLocked && confidence.ixType != TransactionConfidence.IXType.IX_LOCKED) {
