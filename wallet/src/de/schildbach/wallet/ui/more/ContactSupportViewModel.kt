@@ -38,6 +38,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletTransaction
+import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.slf4j.LoggerFactory
@@ -262,31 +263,33 @@ class ContactSupportViewModel @Inject constructor(
             log.info("problem writing attachment", x)
         }
         // only for development
-        try {
-            val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
-            val listDocs = transactionMetadataDocumentDao.load()
+        if (BuildConfig.DEBUG) {
             try {
-                FileWriter(txMetadataEntries).use { writer ->
-                    writer.write("Transaction Metadata Documents\n")
-                    listDocs.forEach {
-                        writer.write("${it.id}, ${it.txId}, memo=${it.memo}, rate=${it.rate} ${it.currencyCode}, taxCat=${it.taxCategory}, service=${it.service}")
-                        writer.write("\n")
+                val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
+                val listDocs = transactionMetadataDocumentDao.load()
+                try {
+                    FileWriter(txMetadataEntries).use { writer ->
+                        writer.write("Transaction Metadata Documents\n")
+                        listDocs.forEach {
+                            writer.write("${it.id}, ${it.txId}, memo=${it.memo}, rate=${it.rate} ${it.currencyCode}, taxCat=${it.taxCategory}, service=${it.service}")
+                            writer.write("\n")
+                        }
                     }
+                } catch (e: IOException) {
+                    e.printStackTrace()
                 }
-            } catch (e: IOException) {
-                e.printStackTrace()
-            }
-            if (listDocs.isNotEmpty()) {
-                attachments.add(
-                    FileProvider.getUriForFile(
-                        application, application.packageName + ".file_attachment",
-                        txMetadataEntries
+                if (listDocs.isNotEmpty()) {
+                    attachments.add(
+                        FileProvider.getUriForFile(
+                            application, application.packageName + ".file_attachment",
+                            txMetadataEntries
+                        )
                     )
-                )
+                }
+                txMetadataEntries.deleteOnExit()
+            } catch (x: IOException) {
+                log.info("problem writing attachment", x)
             }
-            txMetadataEntries.deleteOnExit()
-        } catch (x: IOException) {
-            log.info("problem writing attachment", x)
         }
 
         text.append("\n\nPUT ADDITIONAL COMMENTS TO THE TOP. DOWN HERE NOBODY WILL NOTICE.")
