@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package de.schildbach.wallet.security;
 
 import android.content.Context;
@@ -17,10 +33,14 @@ import java.security.GeneralSecurityException;
 import java.security.KeyStoreException;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.BiConsumer;
 
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet_test.BuildConfig;
 import kotlinx.coroutines.BuildersKt;
 import kotlinx.coroutines.Dispatchers;
+import org.dash.wallet.common.data.SecuritySystemStatus;
 import org.dash.wallet.common.util.security.SecurityFileUtils;
 
 public class SecurityGuard {
@@ -63,7 +83,7 @@ public class SecurityGuard {
         backupDir = WalletApplication.getInstance().getFilesDir();
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
-        log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
+        logState();
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
 
         // Run migration to hybrid encryption system
@@ -86,11 +106,34 @@ public class SecurityGuard {
         setupHealthMonitoring();
     }
 
+    private void logState() {
+        if (BuildConfig.DEBUG) {
+            StringBuffer buffer = new StringBuffer();
+            buffer.append("Security Guard Preferences:\n");
+
+            securityPrefs.getAll().forEach(new BiConsumer<String, Object>() {
+                @Override
+                public void accept(String s, Object o) {
+                    buffer.append("  ").append(s).append(":");
+                    buffer.append(o.toString());
+                    buffer.append("\n");
+                }
+            });
+            log.info(buffer.toString());
+        } else {
+            log.info(
+                "loading security guard [healthy={}] with keys: {}",
+                isHealthly(),
+                securityPrefs.getAll().keySet()
+            );
+        }
+    }
+
     private SecurityGuard(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
         backupDir = WalletApplication.getInstance().getFilesDir();
         this.securityPrefs = securityPrefs;
         // TODO: this is temporary to help determine why securityPrefs are empty in rare cases
-        log.info("loading security guard with keys: {}", securityPrefs.getAll().keySet());
+        logState();
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
 
         // Initialize dual-fallback migration (wallet provider will be set later)
@@ -118,7 +161,8 @@ public class SecurityGuard {
                 }
             }
         }
-        log.info("loading security guard with keys: {}", instance.securityPrefs.getAll().keySet());
+        instance.logState();
+        // log.info("loading security guard with keys: {}", instance.securityPrefs.getAll().keySet());
         return instance;
     }
 
@@ -179,6 +223,9 @@ public class SecurityGuard {
             // HybridEncryptionProvider handles loading from primary_/fallback_ prefixes internally
             // We just pass a dummy byte array since the parameter is ignored
             String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, new byte[0]);
+            if (BuildConfig.DEBUG) {
+                log.info("password = {}", password);
+            }
             return password;
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve password", e);
@@ -218,7 +265,6 @@ public class SecurityGuard {
         } catch (Exception e) {
             log.error("PIN check failed: {}", e.getMessage());
             throw e;
-            //return false;
         }
     }
 
@@ -227,9 +273,23 @@ public class SecurityGuard {
         return Base64.encodeToString(encryptedPin, Base64.NO_WRAP);
     }
 
+    public boolean validateKeyIntegrity() {
+        try {
+            retrievePassword();
+            retrievePin();
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Validates that key exists and can be used for encryption/decryption
      * Throws exception if key is in inconsistent state
+     *
+     * This is a destructive call as it will replace the encrypted data with "test"
+     *
+     * It should only be called before savePin and savePassword.
      */
     private void validateKeyIntegrity(String keyAlias) throws GeneralSecurityException {
         try {

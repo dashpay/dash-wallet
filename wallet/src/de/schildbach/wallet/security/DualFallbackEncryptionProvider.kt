@@ -63,7 +63,7 @@ class DualFallbackEncryptionProvider(
         private const val GCM_TAG_LENGTH = 128
 
         // Health tracking
-        private const val KEYSTORE_HEALTHY_KEY = "keystore_healthy"
+        const val KEYSTORE_HEALTHY_KEY = "keystore_healthy"
     }
 
     private val pinProvider = PinBasedKeyProvider()
@@ -81,6 +81,9 @@ class DualFallbackEncryptionProvider(
         } catch (e: Exception) {
             log.error("Primary encryption failed for {}: {}", keyAlias, e.message)
             null
+        }
+        securityPrefs.edit {
+            putBoolean(KEYSTORE_HEALTHY_KEY, true)
         }
 
         // Note: Fallback encryption will be added later via ensureFallbackEncryptions()
@@ -106,6 +109,7 @@ class DualFallbackEncryptionProvider(
             try {
                 val decrypted = primaryProvider.decrypt(keyAlias, primaryData)
                 log.debug("Primary decryption succeeded for {}", keyAlias)
+                // securityPrefs.edit { putBoolean(KEYSTORE_HEALTHY_KEY, true) }
                 return decrypted
             } catch (e: GeneralSecurityException) {
                 if (isKeystoreCorruption(e)) {
@@ -182,6 +186,9 @@ class DualFallbackEncryptionProvider(
             // Get plaintext from primary
             val primaryData = loadPrimaryData(keyAlias) ?: return false
             val plaintext = primaryProvider.decrypt(keyAlias, primaryData)
+//            if (plaintext != pin) {
+//                throw IllegalStateException()
+//            }
 
             // Encrypt with PIN-derived key
             val key = pinProvider.deriveKeyFromPin(pin, keyAlias)
@@ -192,7 +199,7 @@ class DualFallbackEncryptionProvider(
             return true
 
         } catch (e: Exception) {
-            log.error("Failed to add PIN-fallback for {}: {}", keyAlias, e.message)
+            log.error("Failed to add PIN-fallback for {}: ", keyAlias, e)
             return false
         }
     }

@@ -230,8 +230,9 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
-                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()})")
+                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout()) ||
+                !authenticationManager.getHealth().isHealthy
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()}) || isHealthy=${authenticationManager.getHealth().isHealthy}")
         if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {
@@ -262,9 +263,11 @@ open class LockScreenActivity : SecureActivity() {
     // TODO: remove
     private fun updateBreakStatus() {
         val sg = SecurityGuard.getInstance()
+        sg.validateKeyIntegrity()
         binding.lockScreen.securityStatus.text = when {
             sg.isHealthlyWithFallbacks -> "OK"
-            sg.isHealthly -> "bad"
+            sg.isHealthly -> "~OK"
+            sg.hasFallbacks() -> "bad"
             else -> "dead"
         }
     }

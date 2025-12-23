@@ -180,7 +180,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    fun restoreWalletFromSeed(words: List<String>) {
+    fun restoreWalletFromSeed(words: List<String>, onboarding: Boolean, requireBlockchainReset: Boolean) {
         if (isSeedValid(words)) {
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
             walletApplication.setWallet(wallet)
@@ -189,12 +189,14 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
+
             startActivityAction.call(
                 SetPinActivity.createIntent(
                     walletApplication,
                     R.string.set_pin_restore_wallet,
-                    onboarding = true,
-                    onboardingPath = OnboardingPath.RestoreSeed
+                    onboarding = onboarding,
+                    onboardingPath = OnboardingPath.RestoreSeed,
+                    requiresRescan = requireBlockchainReset
                 )
             )
         }

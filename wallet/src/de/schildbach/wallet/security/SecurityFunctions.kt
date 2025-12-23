@@ -39,6 +39,7 @@ import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.SecuritySystemStatus
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -49,7 +50,8 @@ class SecurityFunctions @Inject constructor(
     private val walletData: WalletDataProvider,
     private val context: Context,
     private val biometricHelper: BiometricHelper,
-    private val pinRetryController: PinRetryController
+    private val pinRetryController: PinRetryController,
+    private val analyticsService: AnalyticsService
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     private val status = MutableStateFlow(SecuritySystemStatus.HEALTHY)

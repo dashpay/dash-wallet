@@ -150,13 +150,13 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 if (!recoveryData.requiresReset) {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
                 } else {
-                    viewModel.restoreWalletFromSeed(words)
+                    viewModel.restoreWalletFromSeed(words, onboarding = false, requireBlockchainReset = true)
                 }
             } else {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            viewModel.restoreWalletFromSeed(words)
+            viewModel.restoreWalletFromSeed(words, onboarding = true, requireBlockchainReset = false)
         }
     }
 

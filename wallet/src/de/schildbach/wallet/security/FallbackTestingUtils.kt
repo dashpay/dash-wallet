@@ -139,6 +139,57 @@ object FallbackTestingUtils {
     }
 
     /**
+     * Replace KeyStore keys by deleting and recreating them
+     * This simulates what happens when device lock screen settings change,
+     * invalidating biometric/hardware-backed keys and making old encrypted data undecryptable
+     */
+    fun simulateKeystoreKeyReplacement() {
+        try {
+            val keyStore = KeyStore.getInstance("AndroidKeyStore")
+            keyStore.load(null)
+            val securityPrefs = getSecurityPrefs()
+
+            // Delete existing keys
+            try {
+                keyStore.deleteEntry(SecurityGuard.UI_PIN_KEY_ALIAS)
+                log.info("Deleted UI_PIN_KEY_ALIAS from KeyStore")
+            } catch (e: Exception) {
+                log.debug("Could not delete UI_PIN_KEY_ALIAS: ${e.message}")
+            }
+
+            try {
+                keyStore.deleteEntry(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
+                log.info("Deleted WALLET_PASSWORD_KEY_ALIAS from KeyStore")
+            } catch (e: Exception) {
+                log.debug("Could not delete WALLET_PASSWORD_KEY_ALIAS: ${e.message}")
+            }
+
+            // Recreate keys (new keys will be different, making old encrypted data undecryptable)
+            val modernProvider = ModernEncryptionProvider(keyStore, securityPrefs)
+
+            // Generate new keys by attempting encryption (this will auto-create keys)
+            try {
+                modernProvider.encrypt(SecurityGuard.UI_PIN_KEY_ALIAS, "test")
+                log.info("Recreated UI_PIN_KEY_ALIAS in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate UI_PIN_KEY_ALIAS: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS, "test")
+                log.info("Recreated WALLET_PASSWORD_KEY_ALIAS in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate WALLET_PASSWORD_KEY_ALIAS: ${e.message}")
+            }
+
+            log.info("✓ KeyStore keys replaced (old encrypted data now undecryptable, fallback data preserved)")
+
+        } catch (e: Exception) {
+            log.error("Failed to replace KeyStore keys: ${e.message}", e)
+        }
+    }
+
+    /**
      * Method 2: Corrupt primary encrypted data
      * This makes decryption fail with BadPaddingException
      */

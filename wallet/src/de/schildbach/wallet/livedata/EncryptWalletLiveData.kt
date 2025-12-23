@@ -27,6 +27,7 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.crypto.KeyCrypterScrypt
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.BuildConfig
 import org.slf4j.LoggerFactory
 
 class EncryptWalletLiveData(
@@ -42,8 +43,20 @@ class EncryptWalletLiveData(
     private var scryptIterationsTarget: Int = Constants.SCRYPT_ITERATIONS_TARGET
     private val securityGuard = SecurityGuard.getInstance()
 
+    /**
+     * will save the PIN and also will save the fallbacks
+     * assumes the wallet is not encrypted.
+     */
     fun savePin(pin: String) {
+        securityGuard.removeKeys()
         securityGuard.savePin(pin)
+        securityGuard.ensurePinFallback(pin)
+        val wallet = walletApplication.wallet!!
+        if (wallet.isEncrypted) {
+            error("the wallet should not be encrypted")
+        }
+        val words = wallet.keyChainSeed.mnemonicCode
+        securityGuard.ensureMnemonicFallbacks(words)
     }
 
     fun encrypt(scryptIterationsTarget: Int, initialize: Boolean = true) {
@@ -93,6 +106,10 @@ class EncryptWalletLiveData(
             securityGuard.savePin(newPin)
             // Ensure PIN fallback is added for new PIN
             securityGuard.ensurePinFallback(newPin)
+            val wallet = walletApplication.wallet!!
+            val key = wallet.keyCrypter!!.deriveKey(securityGuard.retrievePassword())
+            val words = walletApplication.wallet!!.keyChainSeed.decrypt(wallet.keyCrypter, "", key).mnemonicCode
+            securityGuard.ensureMnemonicFallbacks(words)
             biometricHelper.clearBiometricInfo()
             Resource.success(walletApplication.wallet)
         } else {
@@ -112,7 +129,9 @@ class EncryptWalletLiveData(
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
             val wallet = walletApplication.wallet as WalletEx
             val password = securityGuard.generateRandomPassword()
-
+            if (BuildConfig.DEBUG) {
+                log.info("password = {}", password)
+            }
             return try {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.
