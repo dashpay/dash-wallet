@@ -35,6 +35,7 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SecuritySystemStatus
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
@@ -49,6 +50,8 @@ class SecurityFunctions @Inject constructor(
     private val pinRetryController: PinRetryController
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    private val status = MutableStateFlow(SecuritySystemStatus.HEALTHY)
+    private var healthListenerInitialized = false
 
     /**
      * Low memory devices (currently 1GB or less) and 32 bit devices will require
@@ -148,6 +151,32 @@ class SecurityFunctions @Inject constructor(
         val keyParameter = deriveKey(walletData.wallet!!, password)
         val key = walletData.wallet?.findKeyFromAddress(address)
         return key?.signMessage(message, keyParameter) ?: ""
+    }
+
+    override fun getHealth(): SecuritySystemStatus {
+        val securityGuard = SecurityGuard.getInstance()
+        return when {
+            securityGuard.isHealthlyWithFallbacks -> SecuritySystemStatus.HEALTHY_WITH_FALLBACKS
+            securityGuard.isHealthly -> SecuritySystemStatus.HEALTHY
+            securityGuard.hasFallbacks() -> SecuritySystemStatus.FALLBACKS
+            else -> SecuritySystemStatus.DEAD
+        }
+    }
+
+    private val healthListener = SecurityGuard.HealthListener { securitySystemStatus ->
+        if (status.value.isHealthy && !securitySystemStatus.isHealthy) {
+            analyticsService.logError(Exception("Android Key Store corrupted"))
+        }
+        status.value = securitySystemStatus
+    }
+
+    override fun observeHealth(): Flow<SecuritySystemStatus> {
+        if (!healthListenerInitialized) {
+            val securityGuard = SecurityGuard.getInstance()
+            securityGuard.addHealthListener(healthListener)
+            healthListenerInitialized = true
+        }
+        return status
     }
 
     @Throws(KeyCrypterException::class)

@@ -66,6 +66,9 @@ public class SecurityGuard {
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
         analyticsService = WalletApplication.getInstance().getAnalyticsService();
+
+        // Setup health monitoring system
+        setupHealthMonitoring();
     }
 
     private SecurityGuard(SharedPreferences securityPrefs) throws GeneralSecurityException, IOException {
@@ -87,6 +90,9 @@ public class SecurityGuard {
         // Backup config will be injected separately to avoid circular dependency
         backupConfig = null;
         analyticsService = WalletApplication.getInstance().getAnalyticsService();
+
+        // Setup health monitoring system
+        setupHealthMonitoring();
     }
 
     public static SecurityGuard getInstance() throws GeneralSecurityException, IOException {
@@ -687,11 +693,111 @@ public class SecurityGuard {
 
     public boolean isHealthlyWithFallbacks() {
         if (encryptionProvider instanceof DualFallbackEncryptionProvider provider) {
-            return provider.isKeyStoreHealthy() &&
-                    provider.hasMnemonicFallback(WALLET_PASSWORD_KEY_ALIAS) &&
+            return provider.isKeyStoreHealthy() && hasFallbacks();
+        }
+        return false;
+    }
+
+    public boolean hasFallbacks() {
+        if (encryptionProvider instanceof DualFallbackEncryptionProvider provider) {
+            return provider.hasMnemonicFallback(WALLET_PASSWORD_KEY_ALIAS) &&
                     provider.hasMnemonicFallback(UI_PIN_KEY_ALIAS) &&
                     provider.hasPinFallback(WALLET_PASSWORD_KEY_ALIAS);
         }
         return false;
+    }
+
+    // ===== Health Listener System =====
+
+    /**
+     * Add a health listener to be notified of security system status changes
+     * @param listener The listener to add
+     */
+    public void addHealthListener(HealthListener listener) {
+        if (!healthListeners.contains(listener)) {
+            healthListeners.add(listener);
+            log.debug("Added health listener: {}", listener.getClass().getSimpleName());
+        }
+    }
+
+    /**
+     * Remove a health listener
+     * @param listener The listener to remove
+     */
+    public void removeHealthListener(HealthListener listener) {
+        healthListeners.remove(listener);
+        log.debug("Removed health listener: {}", listener.getClass().getSimpleName());
+    }
+
+    /**
+     * Setup health monitoring system
+     * Registers a SharedPreferences listener to monitor security-related changes
+     */
+    private void setupHealthMonitoring() {
+        securityPrefsListener = (prefs, key) -> {
+            // Check if key is security-related
+            if (key != null && isSecurityRelatedKey(key)) {
+                log.debug("Security preference changed: {}", key);
+
+                // Calculate current health status
+                SecuritySystemStatus status = calculateHealthStatus();
+
+                // Notify all listeners
+                notifyHealthListeners(status);
+            }
+        };
+
+        securityPrefs.registerOnSharedPreferenceChangeListener(securityPrefsListener);
+        log.info("Health monitoring system initialized");
+    }
+
+    /**
+     * Check if a preference key is security-related
+     */
+    private boolean isSecurityRelatedKey(String key) {
+        return key.startsWith("primary_") ||
+               key.startsWith("fallback_pin_") ||
+               key.startsWith("fallback_mnemonic_") ||
+               key.equals(DualFallbackEncryptionProvider.KEYSTORE_HEALTHY_KEY) ||
+               key.equals(UI_PIN_KEY_ALIAS) ||
+               key.equals(WALLET_PASSWORD_KEY_ALIAS);
+    }
+
+    /**
+     * Calculate current security system health status
+     */
+    private SecuritySystemStatus calculateHealthStatus() {
+        if (isHealthlyWithFallbacks()) {
+            return SecuritySystemStatus.HEALTHY_WITH_FALLBACKS;
+        } else if (isHealthly()) {
+            return SecuritySystemStatus.HEALTHY;
+        } else if (hasFallbacks()) {
+            return SecuritySystemStatus.FALLBACKS;
+        } else {
+            return SecuritySystemStatus.DEAD;
+        }
+    }
+
+    /**
+     * Notify all registered health listeners of status change
+     */
+    private void notifyHealthListeners(SecuritySystemStatus status) {
+        log.info("Notifying {} health listeners of status change: {}", healthListeners.size(), status);
+
+        for (HealthListener listener : healthListeners) {
+            try {
+                listener.onHealthChanged(status);
+            } catch (Exception e) {
+                log.error("Health listener threw exception: {}", listener.getClass().getSimpleName(), e);
+            }
+        }
+    }
+
+    /**
+     * Get current security system health status
+     * @return Current security system status
+     */
+    public SecuritySystemStatus getHealthStatus() {
+        return calculateHealthStatus();
     }
 }
