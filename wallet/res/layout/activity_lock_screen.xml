@@ -95,6 +95,12 @@
                 android:layout_height="wrap_content"
                 android:text="Break All"
                 />
+            <Button
+                android:id="@+id/break_before"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Break Before"
+                />
         </LinearLayout>
         <TextView
             android:id="@+id/action_title"

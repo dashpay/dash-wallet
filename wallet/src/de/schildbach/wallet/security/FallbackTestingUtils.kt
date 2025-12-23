@@ -238,6 +238,40 @@ object FallbackTestingUtils {
     }
 
     /**
+     * Method 5: Complete encryption failure (for cryptographic verification testing)
+     */
+    fun simulateCompleteEncryptionFailureFromPreviousInstall() {
+        simulateKeystoreCorruption_KeepFallbacks()
+
+        val prefs = getSecurityPrefs()
+
+        // Corrupt ALL fallback data
+        val pinFallback = prefs.getString("fallback_pin_${SecurityGuard.WALLET_PASSWORD_KEY_ALIAS}", null)
+        val mnemonicPinFallback = prefs.getString("fallback_mnemonic_${SecurityGuard.UI_PIN_KEY_ALIAS}", null)
+        val mnemonicPasswordFallback = prefs.getString("fallback_mnemonic_${SecurityGuard.WALLET_PASSWORD_KEY_ALIAS}", null)
+
+        if (pinFallback != null) {
+            prefs.edit {
+                remove("fallback_pin_${SecurityGuard.WALLET_PASSWORD_KEY_ALIAS}")
+            }
+        }
+
+        if (mnemonicPinFallback != null) {
+            prefs.edit {
+                remove("fallback_mnemonic_${SecurityGuard.UI_PIN_KEY_ALIAS}")
+            }
+        }
+
+        if (mnemonicPasswordFallback != null) {
+            prefs.edit {
+                remove("fallback_mnemonic_${SecurityGuard.WALLET_PASSWORD_KEY_ALIAS}")
+            }
+        }
+
+        log.warn("⚠️ ALL ENCRYPTION CORRUPTED/REMOVED - Only cryptographic verification will work!")
+    }
+
+    /**
      * Restore everything to normal
      */
     fun restoreAllEncryption() {
@@ -246,16 +280,33 @@ object FallbackTestingUtils {
     }
 
     /**
-     * Helper: Corrupt a Base64 string by flipping some bits
+     * Helper: Corrupt a Base64 string by flipping characters
+     * Note: This always changes characters but is reversible if called twice
      */
     private fun corruptBase64String(base64: String): String {
         if (base64.length < 10) return base64
 
         val chars = base64.toCharArray()
-        // Flip some characters in the middle
-        val midPoint = chars.size / 2
-        chars[midPoint] = if (chars[midPoint] == 'A') 'Z' else 'A'
-        chars[midPoint + 1] = if (chars[midPoint + 1] == 'B') 'Y' else 'B'
+        // Flip multiple characters to ensure corruption is detectable
+        val positions = listOf(
+            chars.size / 4,
+            chars.size / 2,
+            chars.size * 3 / 4
+        )
+
+        for (pos in positions) {
+            if (pos < chars.size) {
+                // XOR with a fixed offset to ensure we always get a different character
+                chars[pos] = when (chars[pos]) {
+                    'A' -> 'Z'
+                    'Z' -> 'A'
+                    '/' -> '+'
+                    '+' -> '/'
+                    '=' -> 'A'
+                    else -> 'A'
+                }
+            }
+        }
 
         return String(chars)
     }
