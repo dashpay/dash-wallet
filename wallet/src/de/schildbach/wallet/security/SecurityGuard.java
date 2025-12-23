@@ -44,6 +44,21 @@ public class SecurityGuard {
     private SecurityConfig backupConfig;
     private DualFallbackMigration dualFallbackMigration;
 
+    // Health listener system
+    private final CopyOnWriteArrayList<HealthListener> healthListeners = new CopyOnWriteArrayList<>();
+    private SharedPreferences.OnSharedPreferenceChangeListener securityPrefsListener;
+
+    /**
+     * Listener interface for security health status changes
+     */
+    public interface HealthListener {
+        /**
+         * Called when the security system health status changes
+         * @param status The new security system status
+         */
+        void onHealthChanged(SecuritySystemStatus status);
+    }
+
     private SecurityGuard() throws GeneralSecurityException, IOException {
         backupDir = WalletApplication.getInstance().getFilesDir();
         securityPrefs = WalletApplication.getInstance().getSharedPreferences(SECURITY_PREFS_NAME, Context.MODE_PRIVATE);
