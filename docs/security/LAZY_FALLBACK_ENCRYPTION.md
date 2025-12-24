@@ -2,11 +2,11 @@
 
 ## Problem Solved
 
-**Issue**: SecurityGuard initializes before WalletApplication.wallet is assigned, so SeedBasedMasterKeyProvider can't access the wallet seed during initial encryption. This means fallback encryption was always skipped, defeating the hybrid system's redundancy.
+**Issue**: SecurityGuard initializes before WalletApplication.wallet is assigned, so the mnemonic-based fallback can't access the wallet seed during initial encryption. This means fallback encryption was always skipped, defeating the dual-fallback system's redundancy.
 
 ## Solution: Lazy Fallback Encryption
 
-The hybrid system now works in two phases:
+The dual-fallback system now works in two phases:
 
 ### Phase 1: Initial Encryption (Early Startup)
 ```
@@ -14,24 +14,25 @@ SecurityGuard initializes (wallet seed not available yet)
 ↓
 User sets PIN
 ↓
-HybridEncryptionProvider.encrypt():
+DualFallbackEncryptionProvider.encrypt():
   - Primary (KeyStore): ✓ Encrypts → stores at "primary_ui_pin_key"
-  - Fallback (Seed): ✗ Skipped (wallet not ready) - logs warning
-  - Result: Only primary encryption exists
+  - PIN Fallback: ✓ Encrypts → stores at "fallback_pin_wallet_password_key" (if PIN provided)
+  - Mnemonic Fallback: ✗ Skipped (wallet not ready) - logs warning
+  - Result: Primary and PIN fallback exist, mnemonic fallback pending
 ```
 
-### Phase 2: Upgrade to Dual Encryption (After Wallet Loads)
+### Phase 2: Upgrade to Full Dual Encryption (After Wallet Loads)
 ```
 Wallet finishes loading
 ↓
-Call SecurityGuard.getInstance().ensureFallbackEncryptions()
+Call SecurityGuard.getInstance().ensureMnemonicFallbacks(mnemonicWords)
 ↓
-HybridEncryptionProvider.ensureAllFallbackEncryptions():
+DualFallbackEncryptionProvider.ensureMnemonicFallbacks():
   - For each key (wallet_password_key, ui_pin_key):
     1. Check if fallback already exists → skip if yes
     2. Decrypt primary encryption → get plaintext
-    3. Encrypt with fallback (seed now available!) → save
-  - Result: Dual encryption now complete
+    3. Encrypt with mnemonic (seed now available!) → save
+  - Result: Full dual-fallback encryption now complete
 ```
 
 ## Integration Instructions
@@ -92,34 +93,39 @@ public void restoreWallet(DeterministicSeed seed) {
 
 ## Implementation Details
 
-### HybridEncryptionProvider Changes
+### DualFallbackEncryptionProvider Changes
 
-1. **tryFallbackEncryption()** - New private method
-   - Attempts fallback encryption
-   - Returns `null` if wallet not available (instead of throwing)
-   - Logs warning: "wallet seed not yet available (will retry later)"
-
-2. **ensureFallbackEncryption(keyAlias)** - New public method
-   - Checks if fallback already exists → return true
-   - Loads primary encrypted data
+1. **ensurePinFallback(pin)** - Public method
+   - Checks if PIN fallback already exists → return true if yes
+   - Loads primary encrypted data for wallet password
    - Decrypts with primary → gets plaintext
-   - Encrypts with fallback → saves
+   - Encrypts with PIN-derived key → saves to fallback_pin_ prefix
    - Returns true if successful, false otherwise
 
-3. **ensureAllFallbackEncryptions()** - New public method
+2. **ensureMnemonicFallbacks(mnemonicWords)** - Public method
    - Loops through all known keys (WALLET_PASSWORD_KEY_ALIAS, UI_PIN_KEY_ALIAS)
-   - Calls `ensureFallbackEncryption()` for each
-   - Logs count of upgraded keys
+   - For each key:
+     - Checks if fallback already exists → skip if yes
+     - Decrypts primary encryption → gets plaintext
+     - Encrypts with mnemonic-derived key → saves to fallback_mnemonic_ prefix
+   - Returns true if all fallbacks successful
 
 ### SecurityGuard Changes
 
-**New public method:**
+**New public methods:**
 ```java
-public void ensureFallbackEncryptions() {
-    if (encryptionProvider instanceof HybridEncryptionProvider) {
-        log.info("Ensuring fallback encryptions for all keys (wallet is now available)");
-        ((HybridEncryptionProvider) encryptionProvider).ensureAllFallbackEncryptions();
+public boolean ensurePinFallback(String pin) {
+    if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+        return ((DualFallbackEncryptionProvider) encryptionProvider).ensurePinFallback(pin);
     }
+    return false;
+}
+
+public boolean ensureMnemonicFallbacks(List<String> mnemonicWords) {
+    if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
+        return ((DualFallbackEncryptionProvider) encryptionProvider).ensureMnemonicFallbacks(mnemonicWords);
+    }
+    return false;
 }
 ```
 
@@ -214,8 +220,9 @@ INFO: Upgraded 0 keys to dual-encryption
 
 The lazy fallback encryption approach solves the initialization timing problem by:
 - Allowing encryption to work immediately with just KeyStore (primary)
-- Deferring seed-based encryption (fallback) until wallet is ready
-- Automatically upgrading to dual-encryption when possible
+- Adding PIN-based fallback when user sets/enters PIN
+- Deferring mnemonic-based encryption (fallback) until wallet is ready
+- Automatically upgrading to full dual-fallback encryption when possible
 - Maintaining backward compatibility with existing encrypted data
 
-**Result**: Users get full hybrid encryption protection without app startup delays or initialization order constraints.
+**Result**: Users get full dual-fallback encryption protection (KeyStore + PIN + Mnemonic) without app startup delays or initialization order constraints.

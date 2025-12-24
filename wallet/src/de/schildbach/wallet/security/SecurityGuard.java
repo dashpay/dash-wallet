@@ -86,9 +86,6 @@ public class SecurityGuard {
         logState();
         encryptionProvider = EncryptionProviderFactory.create(securityPrefs);
 
-        // Run migration to hybrid encryption system
-        runHybridEncryptionMigration();
-
         // Initialize dual-fallback migration (wallet provider will be set later)
         if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
             dualFallbackMigration = new DualFallbackMigration(
@@ -183,12 +180,8 @@ public class SecurityGuard {
     public synchronized void savePassword(String password) throws GeneralSecurityException, IOException {
         validateKeyIntegrity(WALLET_PASSWORD_KEY_ALIAS);
 
-        // HybridEncryptionProvider handles storage internally with primary_ and fallback_ prefixes
-        // No need to store again here
+        // DualFallbackEncryptionProvider handles storage internally with primary_ and fallback_ prefixes
         encryptionProvider.encrypt(WALLET_PASSWORD_KEY_ALIAS, password);
-
-        // Note: backupEncryptedData is now redundant as HybridEncryptionProvider
-        // already stores both primary and fallback versions
     }
 
     public static boolean isConfiguredQuickCheck() {
@@ -220,7 +213,7 @@ public class SecurityGuard {
 
     public synchronized String retrievePassword() throws SecurityGuardException {
         try {
-            // HybridEncryptionProvider handles loading from primary_/fallback_ prefixes internally
+            // DualFallbackEncryptionProvider handles loading from primary_/fallback_ prefixes internally
             // We just pass a dummy byte array since the parameter is ignored
             String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, new byte[0]);
             if (BuildConfig.DEBUG) {
@@ -236,7 +229,7 @@ public class SecurityGuard {
 
     public synchronized String retrievePin() throws SecurityGuardException {
         try {
-            // HybridEncryptionProvider handles loading from primary_/fallback_ prefixes internally
+            // DualFallbackEncryptionProvider handles loading from primary_/fallback_ prefixes internally
             // We just pass a dummy byte array since the parameter is ignored
             return encryptionProvider.decrypt(UI_PIN_KEY_ALIAS, new byte[0]);
         } catch (GeneralSecurityException | IOException e) {
@@ -249,12 +242,8 @@ public class SecurityGuard {
     public synchronized void savePin(String pin) throws GeneralSecurityException, IOException {
         validateKeyIntegrity(UI_PIN_KEY_ALIAS);
 
-        // HybridEncryptionProvider handles storage internally with primary_ and fallback_ prefixes
-        // No need to store again here
+        // DualFallbackEncryptionProvider handles storage internally with primary_ prefix
         encryptionProvider.encrypt(UI_PIN_KEY_ALIAS, pin);
-
-        // Note: backupEncryptedData is now redundant as HybridEncryptionProvider
-        // already stores both primary and fallback versions
     }
 
     public synchronized boolean checkPin(String pin) throws GeneralSecurityException, IOException, SecurityGuardException {
@@ -600,33 +589,6 @@ public class SecurityGuard {
 
         } catch (Exception e) {
             log.error("Failed to migrate existing data to backup system", e);
-        }
-    }
-
-    /**
-     * Run migration to hybrid encryption system
-     * This migrates old shared-IV encrypted data to the new format with embedded IVs and fallback encryption
-     */
-    private void runHybridEncryptionMigration() {
-        try {
-            if (encryptionProvider instanceof HybridEncryptionProvider) {
-                // Get the underlying providers from the hybrid provider
-                // We need access to the primary provider for the KeyStore
-                java.security.KeyStore keyStore = java.security.KeyStore.getInstance(org.dash.wallet.common.util.Constants.ANDROID_KEY_STORE);
-                keyStore.load(null);
-
-                HybridEncryptionMigration migration = new HybridEncryptionMigration(
-                        securityPrefs,
-                        (HybridEncryptionProvider) encryptionProvider,
-                        keyStore
-                );
-                migration.migrateToHybridSystem();
-            } else {
-                log.warn("EncryptionProvider is not HybridEncryptionProvider, skipping hybrid migration");
-            }
-        } catch (Exception e) {
-            log.error("Failed to run hybrid encryption migration", e);
-            // Don't throw - allow app to continue, migration will retry on next start
         }
     }
 

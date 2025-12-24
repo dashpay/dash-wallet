@@ -75,7 +75,7 @@ All locations in the codebase that check user PINs have been updated to include 
                 │                        │
                 ▼                        ▼
          ┌──────────┐          ┌─────────────────┐
-         │PIN OK ✓ │          │Try PIN Fallback │
+         │PIN OK ✓  │          │Try PIN Fallback │
          └──────────┘          └─────────────────┘
                                         │
                             ┌───────────┴────────────┐
@@ -84,13 +84,13 @@ All locations in the codebase that check user PINs have been updated to include 
                             │                        │
                             ▼                        ▼
                     ┌───────────────┐        ┌──────────┐
-                    │Self-heal      │        │PIN Wrong│
+                    │Self-heal      │        │PIN Wrong │
                     │KeyStore       │        └──────────┘
                     └───────────────┘
                             │
                             ▼
                     ┌───────────────┐
-                    │PIN OK ✓      │
+                    │PIN OK ✓       │
                     └───────────────┘
 ```
 
