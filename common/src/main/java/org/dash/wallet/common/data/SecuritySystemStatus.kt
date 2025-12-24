@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Dash Core Group.
+ * Copyright 2025 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.services
+package org.dash.wallet.common.data
 
-import androidx.fragment.app.FragmentActivity
-import kotlinx.coroutines.flow.Flow
-import org.bitcoinj.core.Address
-import org.dash.wallet.common.data.SecuritySystemStatus
-
-interface AuthenticationManager {
-    fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false, callback: (String?) -> Unit)
-    suspend fun authenticate(activity: FragmentActivity, pinOnly: Boolean = false): String?
-    suspend fun signMessage(address: Address, message: String): String
-    fun getHealth(): SecuritySystemStatus
-    fun observeHealth(): Flow<SecuritySystemStatus>
+enum class SecuritySystemStatus(val value: Int, val isHealthy: Boolean) {
+    DEAD(0, false),
+    FALLBACKS(2, false),
+    HEALTHY(1, true),
+    HEALTHY_WITH_FALLBACKS(3, true);
 }

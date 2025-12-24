@@ -45,7 +45,9 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+import de.schildbach.wallet.security.FallbackTestingUtils
 import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
@@ -60,6 +62,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
@@ -87,6 +90,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var biometricHelper: BiometricHelper
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var authenticationManager: AuthenticationManager
 
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
@@ -226,8 +230,9 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
-                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()})")
+                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout()) ||
+                !authenticationManager.getHealth().isHealthy
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()}) || isHealthy=${authenticationManager.getHealth().isHealthy}")
         if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {
@@ -255,8 +260,39 @@ open class LockScreenActivity : SecureActivity() {
         walletApplication.startBlockchainService(false)
     }
 
+    // TODO: remove
+    private fun updateBreakStatus() {
+        val sg = SecurityGuard.getInstance()
+        sg.validateKeyIntegrity()
+        binding.lockScreen.securityStatus.text = when {
+            sg.isHealthlyWithFallbacks -> "OK"
+            sg.isHealthly -> "~OK"
+            sg.hasFallbacks() -> "bad"
+            else -> "dead"
+        }
+    }
+    // TODO: end
+
     private fun initView() {
         binding.lockScreen.apply {
+            // TODO: remove this (only for testing)
+            breakPrimary.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateKeystoreCorruption_KeepFallbacks()
+                updateBreakStatus()
+            }
+            breakAll.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailure()
+                updateBreakStatus()
+            }
+            breakBefore.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailureFromPreviousInstall()
+                updateBreakStatus()
+            }
+            updateBreakStatus()
+            // TODO END
             actionLoginWithPin.setOnClickListener {
                 setLockState(State.ENTER_PIN)
             }
