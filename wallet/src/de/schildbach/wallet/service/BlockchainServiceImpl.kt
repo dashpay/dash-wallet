@@ -1695,6 +1695,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
+
+        // Monitor the entire cleanup process with timeout reporting
+        val cleanupThread = Thread.currentThread()
+        val cleanupMonitorJob = serviceScope.launch {
+            delay(5_000) // Wait 5 seconds before first check
+            var checkCount = 0
+            while (isActive) {
+                if (checkCount > 4) return@launch
+                checkCount++
+                log.warn("onDestroy() cleanup is taking longer than {} seconds", 3 * checkCount)
+                try {
+                    val anrException = AnrException(cleanupThread)
+                    anrException.logProcessMap()
+                } catch (e: Exception) {
+                    log.error("Failed to dump thread traces during cleanup timeout", e)
+                }
+                // Wait another 5 seconds before next check
+                delay(5_000)
+            }
+        }
+
         serviceScope.launch {
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
