@@ -82,10 +82,10 @@ interface TopUpRepository {
     /** top up identity and save topup state to the db */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
-        aesKeyParameter: KeyParameter
+        aesKeyParameter: KeyParameter?
     )
 
-    suspend fun checkTopUps(aesKeyParameter: KeyParameter)
+    suspend fun checkTopUps(aesKeyParameter: KeyParameter?)
 }
 
 class TopUpRepositoryImpl @Inject constructor(
@@ -251,7 +251,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun topUpIdentity(
         topUpTx: AssetLockTransaction,
-        aesKeyParameter: KeyParameter
+        aesKeyParameter: KeyParameter?
     ) {
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
@@ -341,7 +341,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     private var checkedPreviousTopUps = false
 
-    override suspend fun checkTopUps(aesKeyParameter: KeyParameter) {
+    override suspend fun checkTopUps(aesKeyParameter: KeyParameter?) {
         val topUps = topUpsDao.getUnused()
         topUps.forEach { topUp ->
             try {
