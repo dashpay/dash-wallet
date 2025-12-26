@@ -1706,7 +1706,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             while (isActive) {
                 if (checkCount > 4) return@launch
                 checkCount++
-                log.warn("onDestroy() cleanup is taking longer than {} seconds", 3 * checkCount)
+                log.warn("onDestroy() cleanup is taking longer than {} seconds", 5 * checkCount)
                 try {
                     val anrException = AnrException(cleanupThread)
                     anrException.logProcessMap()

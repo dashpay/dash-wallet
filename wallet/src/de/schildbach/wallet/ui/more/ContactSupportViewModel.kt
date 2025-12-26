@@ -276,7 +276,7 @@ class ContactSupportViewModel @Inject constructor(
                         }
                     }
                 } catch (e: IOException) {
-                    e.printStackTrace()
+                    log.info("io error: ", e)
                 }
                 if (listDocs.isNotEmpty()) {
                     attachments.add(
