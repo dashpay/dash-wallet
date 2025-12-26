@@ -66,6 +66,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
+import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
@@ -76,6 +77,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -1771,7 +1773,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
                     log.info("CLEANUP STEP 1: About to close dashSystemService.system")
-                    dashSystemService.system.close()
+                        dashSystemService.system.close()
                     log.info("CLEANUP STEP 1: Dash system services are shutdown")
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1836,6 +1838,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 isCleaningUp.set(false)
                 cleanupDeferred?.complete(Unit)
+                // Cancel the cleanup monitor since cleanup is done
+                cleanupMonitorJob.cancel()
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
