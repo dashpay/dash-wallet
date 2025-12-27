@@ -31,6 +31,10 @@ import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
@@ -38,6 +42,11 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import java.util.*
 import javax.inject.Inject
+
+data class ToolsUIState(
+    val isLoading: Boolean = false,
+    val isSyncing: Boolean = false
+)
 
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
@@ -49,6 +58,9 @@ class ToolsViewModel @Inject constructor(
     val identityConfig: BlockchainIdentityConfig
 ) : ViewModel() {
     val blockchainState = blockchainStateDao.observeState()
+
+    private val _uiState = MutableStateFlow(ToolsUIState())
+    val uiState: StateFlow<ToolsUIState> = _uiState.asStateFlow()
 
     val xpub: String
     val xpubWithCreationDate: String
@@ -62,6 +74,10 @@ class ToolsViewModel @Inject constructor(
             xpub,
             extendedKey.creationTimeSeconds,
         )
+
+        blockchainStateDao.observeState().onEach {
+            _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
+        }
     }
 
     fun copyXpubToClipboard() {
