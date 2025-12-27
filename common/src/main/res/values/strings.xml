@@ -13,6 +13,7 @@
     <string name="buy_dash">Buy Dash</string>
     <string name="copied">Copied</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Spend</string>
     <string name="email">Email</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Error</string>
@@ -99,6 +100,7 @@
     <string name="payment_protocol_default_error_title">Payment error</string>
     <string name="payment_request_problem_message">Your payment could not be processed by the server, please inquire with the merchant</string>
     <string name="exchange_rate_not_found">Could not find exchange rate.</string>
+    <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Receive directly into Dash Wallet</string>

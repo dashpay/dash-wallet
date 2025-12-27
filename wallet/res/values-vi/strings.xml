@@ -56,7 +56,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
-    <string name="send_coins_fragment_hint_replaying">Giao dịch hiện chưa thực hiện được vì ví chưa hoàn thành được việc đồng bộ với mạng lưới</string>
     <string name="send_coins_fragment_direct_payment_enable">Gửi thanh toán trực tiếp cho người trả.</string>
     <string name="send_coins_fragment_direct_payment_ack">Việc thanh toán của bạn đã thành công khi gửi trực tiếp.</string>
     <string name="send_coins_fragment_direct_payment_nack">Giao dịch của bạn vừa bị từ chối qua kết nối trực tiếp.</string>

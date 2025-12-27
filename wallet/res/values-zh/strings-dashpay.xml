@@ -413,8 +413,8 @@
     <string name="coinjoin_start">开始混币</string>
     <string name="coinjoin_stop">停止混币</string>
     <string name="coinjoin_mixing">混币</string>
-    <string name="coinjoin_mixing_finishing">混币收尾</string>
-    <string name="coinjoin_paused">混币暂停</string>
+    <string name="coinjoin_mixing_finishing">正在完成</string>
+    <string name="coinjoin_paused">已暂停</string>
     <string name="coinjoin_not_started">尚未开始</string>
     <string name="coinjoin_progress_balance">%2$s中的%1$s</string>
     <string name="coinjoin_progress_finished">完全混币</string>
@@ -463,4 +463,48 @@
     <string name="voting_period_ends_tomorrow">投票明天结束</string>
     <string name="link_included">包含链接</string>
     <string name="group_by">排列方式</string>
+    <string name="transaction_metadata_title">交易元数据</string>
+    <string name="transaction_metadata_data_being_saved">预定</string>
+    <string name="transaction_metadata_payment_category_description">表示交易是否与 Coinbase, Uphold, Topper 或 CrowdNode 相关</string>
+    <string name="transaction_metadata_fiat_price_description">交易时的市场历史价格</string>
+    <string name="transaction_metadata_description">您的数据存储在您的设备中, 但如果您重置或恢复钱包, 这些数据将会丢失. 下面是一些在保存到网络时会被记录的信息示例.</string>
+    <string name="transaction_metadata_cost">需要花费多少\?</string>
+    <string name="transaction_metadata_payment_category">支付类别</string>
+    <string name="transaction_metadata_save_data">保存数据</string>
+    <string name="transaction_metadata_tax_category">税务类别</string>
+    <string name="transaction_metadata_fiat_prices">法币价格</string>
+    <string name="transaction_metadata_private_memos">私人备忘录</string>
+    <string name="transaction_metadata_gift_card_info">礼品卡数据</string>
+    <string name="transaction_metadata_private_memo_description">描述交易目的的简要备忘录</string>
+    <string name="transaction_metadata_tax_category_description">表明一笔交易是转账, 收入或支出</string>
+    <string name="transaction_metadata_gift_card_info_description">包括卡号, 密码和其他信息</string>
+    <string name="transaction_metadata_costs_title">与将数据保存到网络相关的成本</string>
+    <string name="transaction_metadata_costs_description">作为创建用户名的一步, 您会收到用于网络上各种活动的积分; 在网络上保存交易元数据将更快地消耗这些积分. 所有积分用完后, 您可以购买更多积分.\n\n每次将数据上传到网络的手续费约为 %s, 因此建议一次上传多笔交易.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>10 次交易后</item>
+        <item>每周一次</item>
+        <item>每次交易后</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">您想重置钱包而不将元数据保存到网络吗\?</string>
+    <string name="reset_wallet_metadata_message">重置钱包而不将数据保存到网络将导致一些交易元数据丢失.</string>
+    <string name="reset_wallet_metadata_button_without">放弃保存并重置钱包</string>
+    <string name="reset_wallet_metadata_button_with">保存数据并重置钱包</string>
+    <string name="reset_wallet_metadata_button_saving">正在保存</string>
+    <string name="transaction_metadata_save_to_network">保存到网络</string>
+    <string name="transaction_metadata_save_frequency">多久保存一次\?</string>
+    <string name="transaction_metadata_what_to_save">要保存什么\?</string>
+    <string name="transaction_metadata_past_title">过往</string>
+    <string name="transaction_metadata_future_title">未来</string>
+    <string name="transaction_metadata_past_subtitle">保存截至到 %s 前的所有交易</string>
+    <string name="transaction_metadata_future_subtitle">自动保存您在执行 %s 之后进行的所有交易</string>
+    <string name="transaction_metadata_gift_card_data">礼品卡数据</string>
+    <string name="transaction_metadata_saving_to_network">正保存到网络 - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">上次保存 %s</string>
+    <string name="transaction_metadata_past_already_saved">截止到 %s 的所有交易均已保存</string>
+    <string name="transaction_metadata_past_already_saved_none">没有保存任何交易</string>
+    <string name="transaction_metadata_past_syncing">截止到 %s 的所有交易正在同步</string>
+    <string name="transaction_metadata_save_new_tx_title">您想保存为保存的交易吗\?</string>
+    <string name="transaction_metadata_you_have_n_tx">自 %s 以来, 您有%d 笔为保存的交易</string>
+    <string name="transaction_metadata_save_transactions">保存未保存的交易</string>
+    <string name="transaction_metadata_continue_without_saving">放弃保存并继续</string>
 </resources>

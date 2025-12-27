@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Biaya jaringan %s akan dibayarkan.</string>
     <string name="send_coins_fragment_hint_fee_priority">Biaya prioritas %s akan dibayarkan. Jika Anda peduli dengan biaya rendah, gunakan \'prioritas\' hanya jika Anda perlu konfirmasi sesegera mungkin.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Jumlah pembayaran kecil di dompet Anda tidak menambah nilai yang dapat dikirim.</string>
-    <string name="send_coins_fragment_hint_replaying">Saat ini pembayaran tidak dimungkinkan karena dompet tidak sepenuhnya disinkronkan dengan jaringan</string>
     <string name="send_coins_fragment_direct_payment_enable">Kirim pembayaran langsung ke penerima pembayaran.</string>
     <string name="send_coins_fragment_direct_payment_ack">Pembayaran Anda berhasil dikirim langsung.</string>
     <string name="send_coins_fragment_direct_payment_nack">Pembayaran Anda ditolak melalui koneksi langsung.</string>
@@ -297,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Tambahkan dump dompet</string>
     <string name="report_issue_dialog_mail_intent_failed">Gagal mengirim laporan.</string>
     <string name="report_issue_dialog_generating_report">Membuat laporan</string>
+    <string name="report_issue_dialog_status_device_info">informasi perangkat</string>
+    <string name="report_issue_dialog_status_installed_packages">daftar paket yang di install</string>
+    <string name="report_issue_dialog_status_application_log">log aplikasi</string>
+    <string name="report_issue_dialog_status_application_info">info aplikasi</string>
+    <string name="report_issue_dialog_status_wallet_dump">wallet dump (lambat)</string>
+    <string name="report_issue_dialog_status_contextual_info">informasi kontekstual</string>
+    <string name="report_issue_dialog_status_background_traces">background traces</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">penyelesaian</string>
     <string name="report_transaction_history_export">Ekspor</string>
     <string name="report_transaction_history_title">Ekspor CSV</string>
     <string name="report_transaction_history_not_synced_title">Ekspor CSV</string>
@@ -316,6 +324,7 @@
 
 
     <string name="about_title">Mengenai</string>
+    <string name="about_dash_title">Tentang Dash</string>
     <string name="about_version_title">versi</string>
     <string name="about_copyright_title">Hak cipta</string>
     <string name="about_license_title">Lisensi</string>
@@ -338,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Ingatkan saya nanti</string>
     <string name="notification_inactivity_action_dismiss_forever">Jangan ingatkan saya</string>
     <string name="notification_bluetooth_service_listening">Siap untuk menerima pembayaran melalui Bluetooth</string>
+    <string name="notification_sync_paused">Sinkronisasi Blockchain dijeda</string>
+    <string name="notification_background_processes_paused">Proses latar belakang dijeda</string>
+    <string name="notification_background_processes_paused_text">Anda telah mencapai batas layanan latar depan Android 6 jam untuk pencampuran atau sinkronisasi blockchain. Ketuk untuk mengatur ulang…</string>
     <string name="appwidget_wallet_balance_title">Saldo Dash</string>
 
     <!-- generic buttons -->

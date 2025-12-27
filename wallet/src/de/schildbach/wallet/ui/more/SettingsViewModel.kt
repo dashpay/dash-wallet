@@ -17,11 +17,12 @@
 package de.schildbach.wallet.ui.more
 
 import android.os.PowerManager
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
@@ -29,14 +30,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
+import org.dash.wallet.common.util.toBigDecimal
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 data class SettingsUIState(
@@ -48,6 +56,8 @@ data class SettingsUIState(
     val coinJoinMixingStatus: MixingStatus = MixingStatus.NOT_STARTED,
     val totalBalance: Coin = Coin.ZERO,
     val mixedBalance: Coin = Coin.ZERO,
+    val transactionMetadataVisible: Boolean = false,
+    val transactionMetadataSubtitle: String? = null,
 )
 
 @HiltViewModel
@@ -58,7 +68,14 @@ class SettingsViewModel @Inject constructor(
     private val coinJoinService: CoinJoinService,
     private val walletDataProvider: WalletDataProvider,
     private val analytics: AnalyticsService,
-) : ViewModel() {
+    private val configuration: Configuration,
+    private val dashPayConfig: DashPayConfig,
+    private val blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao
+) : BaseProfileViewModel(
+    blockchainIdentityConfig,
+    dashPayProfileDao
+) {
     companion object {
         private val log = LoggerFactory.getLogger(SettingsViewModel::class.java)
     }
@@ -71,7 +88,7 @@ class SettingsViewModel @Inject constructor(
     init {
         // Initialize with current battery optimization status
         updateIgnoringBatteryOptimizations()
-        
+
         // Observe all data sources and update UI state
         observeDataSources()
     }
@@ -129,6 +146,15 @@ class SettingsViewModel @Inject constructor(
                 _uiState.value = _uiState.value.copy(totalBalance = balance)
             }
             .launchIn(viewModelScope)
+
+        // Observe blockchain identity for transaction metadata visibility
+        blockchainIdentityConfig.observeBase()
+            .filterNotNull()
+            .map { it.creationComplete }
+            .distinctUntilChanged()
+            .onEach { isVisible ->
+                _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+            }.launchIn(viewModelScope)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
@@ -158,5 +184,19 @@ class SettingsViewModel @Inject constructor(
         } catch (e: Exception) {
             log.error("Error logging analytics event: $event", e)
         }
+    }
+
+    fun updateLastBlockchainResetTime() {
+        configuration.updateLastBlockchainResetTime()
+    }
+
+    fun getTotalWalletBalance() = walletDataProvider.getWalletBalance()
+
+    suspend fun isTransactionMetadataInfoShown() = dashPayConfig.isTransactionMetadataInfoShown()
+
+    suspend fun isSavingTransactionMetadata() = dashPayConfig.isSavingTransactionMetadata()
+
+    fun updateTransactionMetadataSubtitle(subtitle: String?) {
+        _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
     }
 }

@@ -53,9 +53,9 @@
 
     <fragment
         android:id="@+id/ctxSpendUserAuthFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashspend.DashSpendUserAuthFragment"
         android:label="fragment_ctxSpendUserAuthFragment"
-        tools:layout="@layout/fragment_ctx_spend_user_auth">
+        tools:layout="@layout/fragment_dash_spend_user_auth">
 
         <action
             android:id="@+id/auth_to_ctxSpendUserAuthFragment"
@@ -73,13 +73,17 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <argument
-            android:name="ctxSpendUserAuthType"
-            app:argType="org.dash.wallet.features.exploredash.ui.ctxspend.CTXSpendUserAuthFragment$CTXSpendUserAuthType" />
+            android:name="authType"
+            app:argType="org.dash.wallet.features.exploredash.ui.dashspend.DashSpendUserAuthFragment$AuthType" />
+
+        <argument
+            android:name="service"
+            app:argType="org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType" />
     </fragment>
 
     <fragment
         android:id="@+id/purchaseCTXSpendGiftCardFragment"
-        android:name="org.dash.wallet.features.exploredash.ui.ctxspend.PurchaseGiftCardFragment"
+        android:name="org.dash.wallet.features.exploredash.ui.dashspend.PurchaseGiftCardFragment"
         android:label="fragment_purchase_ctxspend_gift_card"
         tools:layout="@layout/fragment_purchase_ctxspend_gift_card"/>
 

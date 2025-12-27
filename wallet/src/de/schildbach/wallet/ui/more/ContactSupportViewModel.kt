@@ -25,6 +25,7 @@ import com.google.common.base.Stopwatch
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.util.CrashReporter
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +44,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.FileWriter
 import java.io.IOException
 import java.io.OutputStreamWriter
 import java.io.Writer
@@ -69,12 +71,14 @@ class ContactSupportViewModel @Inject constructor(
     private val configuration: Configuration,
     private val application: WalletApplication,
     walletDataProvider: WalletDataProvider,
-    private val packageInfoProvider: PackageInfoProvider
+    private val packageInfoProvider: PackageInfoProvider,
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ContactSupportViewModel::class.java)
-        private const val MAX_LOGS_SIZE = 20 * 1024 * 1024
+        private const val MAX_LOGS_SIZE = 12 * 1024 * 1024
         private const val MAX_WALLET_DUMP_SIZE = 4 * 1024 * 1024
+        private const val MAX_WALLET_LOG_SIZE = 4 * 1024 * 1024
     }
 
     val wallet: Wallet? = walletDataProvider.wallet
@@ -159,17 +163,44 @@ class ContactSupportViewModel @Inject constructor(
             var totalLogsSize = 0L
             if (logDir.exists()) {
                 val sortedLogFiles = logDir.listFiles()
-                sortedLogFiles?.let {
+                sortedLogFiles?.let { it ->
                     it.sortByDescending { file -> file.lastModified() }
                     for (logFile in sortedLogFiles) {
                         if (logFile.isFile() && logFile.length() > 0 && totalLogsSize < MAX_LOGS_SIZE) {
-                            attachments.add(
-                                FileProvider.getUriForFile(
-                                    application,
-                                    application.packageName + ".file_attachment", logFile
+                            // Check if it's wallet.log and larger than 4 MB
+                            if (logFile.name == "wallet.log" && logFile.length() > MAX_WALLET_LOG_SIZE) {
+                                // Compress the wallet.log file
+                                val compressedFile = File(reportDir, "wallet.log.gz")
+                                try {
+                                    FileInputStream(logFile).use { fis ->
+                                        GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
+                                            val buffer = ByteArray(4096)
+                                            var len: Int
+                                            while (fis.read(buffer).also { count -> len = count } != -1) {
+                                                gzipOS.write(buffer, 0, len)
+                                            }
+                                            log.info("wallet.log compressed successfully to $compressedFile")
+                                            attachments.add(
+                                                FileProvider.getUriForFile(
+                                                    application,
+                                                    application.packageName + ".file_attachment", compressedFile
+                                                )
+                                            )
+                                            totalLogsSize += compressedFile.length()
+                                        }
+                                    }
+                                } catch (e: IOException) {
+                                    log.error("Failed to compress wallet.log", e)
+                                }
+                            } else {
+                                attachments.add(
+                                    FileProvider.getUriForFile(
+                                        application,
+                                        application.packageName + ".file_attachment", logFile
+                                    )
                                 )
-                            )
-                            totalLogsSize += logFile.length()
+                                totalLogsSize += logFile.length()
+                            }
                         }
                     }
                 }
@@ -191,7 +222,7 @@ class ContactSupportViewModel @Inject constructor(
                     try {
                         FileInputStream(file).use { fis ->
                             GZIPOutputStream(FileOutputStream(compressedFile)).use { gzipOS ->
-                                val buffer = ByteArray(1024)
+                                val buffer = ByteArray(4096)
                                 var len: Int
                                 while (fis.read(buffer).also { len = it } != -1) {
                                     gzipOS.write(buffer, 0, len)
@@ -227,6 +258,33 @@ class ContactSupportViewModel @Inject constructor(
                 )
             }
             savedBackgroundTraces.deleteOnExit()
+        } catch (x: IOException) {
+            log.info("problem writing attachment", x)
+        }
+        // only for development
+        try {
+            val txMetadataEntries = File.createTempFile("tx-metadata-documents.", ".txt", reportDir)
+            val listDocs = transactionMetadataDocumentDao.load()
+            try {
+                FileWriter(txMetadataEntries).use { writer ->
+                    writer.write("Transaction Metadata Documents\n")
+                    listDocs.forEach {
+                        writer.write("${it.id}, ${it.txId}, memo=${it.memo}, rate=${it.rate} ${it.currencyCode}, taxCat=${it.taxCategory}, service=${it.service}")
+                        writer.write("\n")
+                    }
+                }
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+            if (listDocs.isNotEmpty()) {
+                attachments.add(
+                    FileProvider.getUriForFile(
+                        application, application.packageName + ".file_attachment",
+                        txMetadataEntries
+                    )
+                )
+            }
+            txMetadataEntries.deleteOnExit()
         } catch (x: IOException) {
             log.info("problem writing attachment", x)
         }

@@ -21,7 +21,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.TaxCategory
 
 @Entity(tableName = "transaction_metadata_platform", primaryKeys = ["id", "txId"])
-class TransactionMetadataDocument(
+data class TransactionMetadataDocument(
     val id: String,
     val timestamp: Long,
     var txId: Sha256Hash,

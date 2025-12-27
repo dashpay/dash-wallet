@@ -77,10 +77,21 @@ data class FilterOptions(
     val payment: String,
     val denominationType: DenomOption,
     val sortOption: SortOption,
-    val radius: Int // Can be miles or kilometers, see isMetric
+    val radius: Int, // Can be miles or kilometers, see isMetric
+    val provider: String = "",
+    val isUserSetSort: Boolean = false // Track if sort was explicitly set by user
 ) {
     companion object {
-        val DEFAULT = FilterOptions("", "", "", DenomOption.Both, SortOption.Name, DEFAULT_RADIUS_OPTION)
+        val DEFAULT = FilterOptions(
+            "",
+            "",
+            "",
+            DenomOption.Both,
+            SortOption.Name,
+            DEFAULT_RADIUS_OPTION,
+            "",
+            false
+        )
     }
 }
 
@@ -102,6 +113,10 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+
+        // Session-only memory for filter modes (not persisted)
+        private var lastSelectedMerchantFilterMode: FilterMode? = null
+        private var lastSelectedAtmFilterMode: FilterMode? = null
     }
 
     private val workerJob = SupervisorJob()
@@ -172,13 +187,16 @@ class ExploreViewModel @Inject constructor(
     val searchLocationName: LiveData<String>
         get() = _searchLocationName
 
-    private val _selectedItem = MutableLiveData<SearchResult?>()
-    val selectedItem: LiveData<SearchResult?>
-        get() = _selectedItem
+    private val _selectedItem = MutableStateFlow<SearchResult?>(null)
+    val selectedItem: StateFlow<SearchResult?>
+        get() = _selectedItem.asStateFlow()
 
     private val _isLocationEnabled = MutableLiveData(false)
     val isLocationEnabled: LiveData<Boolean>
         get() = _isLocationEnabled
+
+    // Store separate FilterOptions for each FilterMode to preserve settings when switching
+    private val filterOptionsMap = mutableMapOf<FilterMode, FilterOptions>()
 
     private val _appliedFilters = MutableStateFlow(FilterOptions.DEFAULT)
     val appliedFilters: StateFlow<FilterOptions>
@@ -248,17 +266,18 @@ class ExploreViewModel @Inject constructor(
                 }
         }
 
-    // Used for the map
+    // Used for the map - combine both _filterMode and _appliedFilters so either can restart the flow
     val boundedSearchFlow: Flow<List<SearchResult>> =
-        _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { filters ->
-            _searchBounds
-                .filterNotNull()
-                .filter { screenState.value == ScreenState.SearchResults }
-                .flatMapLatest { bounds ->
-                    _filterMode
-                        .filterNot { it == FilterMode.Online }
-                        .flatMapLatest { mode -> getBoundedFlow(filters, mode, bounds) }
-                }
+        combine(
+            _filterMode.filterNot { it == FilterMode.Online },
+            _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
+            _searchBounds.filterNotNull()
+        ) { mode, filters, bounds ->
+            Triple(mode, filters, bounds)
+        }.filter { (_, _, _) ->
+            screenState.value == ScreenState.SearchResults
+        }.flatMapLatest { (mode, filters, bounds) ->
+            getBoundedFlow(filters, mode, bounds)
         }
 
     fun init(exploreTopic: ExploreTopic) {
@@ -280,7 +299,7 @@ class ExploreViewModel @Inject constructor(
 
             if (locationEnabled) {
                 this.boundedFilterJob = boundedSearchFlow
-                    .distinctUntilChanged()
+                    // .distinctUntilChanged()
                     .onEach { list ->
                         list.forEach {
                             if (it is Merchant) {
@@ -329,19 +348,66 @@ class ExploreViewModel @Inject constructor(
         this.pagingFilterJob?.cancel(CancellationException())
         clearFilters()
         resetFilterMode()
+        clearFilterModeMemory()
         _searchLocationName.value = ""
+    }
+
+    fun clearFilterModeMemory() {
+        lastSelectedMerchantFilterMode = null
+        lastSelectedAtmFilterMode = null
+        filterOptionsMap.clear()
     }
 
     fun setFilterMode(mode: FilterMode) {
         logFilterChange(mode)
 
         if (_filterMode.value != mode) {
+            val previousMode = _filterMode.value
+            val currentQuery = _appliedFilters.value.query // Preserve current query globally
+
+            // Save current FilterOptions for the previous mode
+            filterOptionsMap[previousMode] = _appliedFilters.value
+
             _filterMode.value = mode
+
+            // Save the selected filter mode in session memory
+            saveLastSelectedFilterMode(mode)
+
+            // Restore FilterOptions for the new mode, or create defaults if none exist
+            val savedFilters = filterOptionsMap[mode]
+            if (savedFilters != null) {
+                // Restore saved FilterOptions for this mode but keep the current query global
+                _appliedFilters.value = savedFilters.copy(query = currentQuery)
+            } else {
+                // No saved filters for this mode, set up clean defaults with appropriate sort option
+                val defaultSortOption = when (mode) {
+                    FilterMode.Nearby -> SortOption.Distance
+                    FilterMode.Online -> SortOption.Name
+                    FilterMode.All -> SortOption.Name
+                    else -> SortOption.Name
+                }
+
+                // Start with completely clean FilterOptions.DEFAULT and only preserve query and update sort
+                val cleanDefaults = FilterOptions.DEFAULT.copy(
+                    query = currentQuery, // Preserve global query
+                    sortOption = defaultSortOption,
+                    isUserSetSort = false
+                )
+
+                _appliedFilters.value = cleanDefaults
+            }
         }
     }
 
     fun submitSearchQuery(query: String) {
-        _appliedFilters.update { current -> current.copy(query = query) }
+        _appliedFilters.update { current ->
+            val newFilters = current.copy(query = query)
+
+            // Save the updated FilterOptions to the map for the current filter mode
+            filterOptionsMap[_filterMode.value] = newFilters
+
+            newFilters
+        }
     }
 
     fun setFilters(
@@ -349,16 +415,24 @@ class ExploreViewModel @Inject constructor(
         selectedTerritory: String,
         selectedRadiusOption: Int,
         sortOption: SortOption,
-        denomOption: DenomOption
+        denomOption: DenomOption,
+        providerFilter: String = ""
     ) {
         _appliedFilters.update { current ->
-            current.copy(
+            val newFilters = current.copy(
                 territory = selectedTerritory,
                 payment = paymentFilter,
                 denominationType = denomOption,
                 sortOption = sortOption,
-                radius = selectedRadiusOption
+                radius = selectedRadiusOption,
+                provider = providerFilter,
+                isUserSetSort = true // Mark as user-set since this comes from the filters screen
             )
+
+            // Save the updated FilterOptions to the map for the current filter mode
+            filterOptionsMap[_filterMode.value] = newFilters
+
+            newFilters
         }
     }
 
@@ -370,8 +444,13 @@ class ExploreViewModel @Inject constructor(
         }
     }
 
-    fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
-        _selectedItem.postValue(merchant)
+    suspend fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
+        merchant.merchantId?.let { id ->
+            val providers = exploreData.getGiftCardProvidersFor(id)
+            merchant.giftCardProviders = providers
+        }
+
+        _selectedItem.value = merchant
 
         if (isGrouped) {
             if (canShowNearestLocation(merchant)) {
@@ -389,19 +468,19 @@ class ExploreViewModel @Inject constructor(
 
     fun openAtmDetails(atm: Atm) {
         analyticsService.logEvent(AnalyticsConstants.Explore.SELECT_ATM_LOCATION, mapOf())
-        _selectedItem.postValue(atm)
+        _selectedItem.value = atm
         _screenState.postValue(ScreenState.Details)
     }
 
     fun openSearchResults() {
         nearestLocation = null
-        _selectedItem.postValue(null)
+        _selectedItem.value = null
         _screenState.postValue(ScreenState.SearchResults)
         _allMerchantLocations.postValue(listOf())
         this.allMerchantLocationsJob?.cancel()
     }
 
-    fun onMapMarkerSelected(id: Int) {
+    suspend fun onMapMarkerSelected(id: Int) {
         val item = _allMerchantLocations.value?.firstOrNull { it.id == id }
             ?: _physicalSearchResults.value?.firstOrNull { it.id == id }
         item?.let {
@@ -419,7 +498,9 @@ class ExploreViewModel @Inject constructor(
         this.allMerchantLocationsJob = _searchBounds
             .filterNotNull()
             .flatMapLatest { bounds ->
-                val radiusBounds = if (_isLocationEnabled.value == true) {
+                // Only apply radius bounds if we're in Nearby mode
+                // For All and Online tabs, show all locations globally
+                val radiusBounds = if (_isLocationEnabled.value == true && _filterMode.value == FilterMode.Nearby) {
                     locationProvider.getRadiusBounds(bounds.centerLat, bounds.centerLng, radius)
                 } else {
                     GeoBounds.noBounds
@@ -433,6 +514,7 @@ class ExploreViewModel @Inject constructor(
                     _appliedFilters.value.territory,
                     "",
                     DenomOption.Both,
+                    "",
                     radiusBounds,
                     limit
                 )
@@ -469,7 +551,9 @@ class ExploreViewModel @Inject constructor(
         val openedLocation = nearestLocation
 
         if (screenState.value == ScreenState.MerchantLocations && openedLocation is Merchant) {
-            openMerchantDetails(openedLocation, true)
+            viewModelScope.launch {
+                openMerchantDetails(openedLocation, true)
+            }
         }
     }
 
@@ -483,11 +567,31 @@ class ExploreViewModel @Inject constructor(
         _appliedFilters.value = FilterOptions.DEFAULT
     }
 
+    fun updateSelectedItem(item: SearchResult) {
+        _selectedItem.value = item
+    }
+
     suspend fun isInfoShown(): Boolean =
         exploreConfig.get(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN) ?: false
 
     suspend fun setIsInfoShown(isShown: Boolean) {
         exploreConfig.set(ExploreConfig.HAS_INFO_SCREEN_BEEN_SHOWN, isShown)
+    }
+
+    fun getLastSelectedFilterMode(): FilterMode? {
+        return when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode
+            else -> lastSelectedMerchantFilterMode // Default fallback
+        }
+    }
+
+    fun saveLastSelectedFilterMode(mode: FilterMode) {
+        when (exploreTopic) {
+            ExploreTopic.Merchants -> lastSelectedMerchantFilterMode = mode
+            ExploreTopic.ATMs -> lastSelectedAtmFilterMode = mode
+            else -> lastSelectedMerchantFilterMode = mode // Default fallback
+        }
     }
 
     private fun clearSearchResults() {
@@ -506,6 +610,7 @@ class ExploreViewModel @Inject constructor(
                 filters.territory,
                 filters.payment,
                 filters.denominationType,
+                filters.provider,
                 bounds
             )
         } else {
@@ -525,8 +630,9 @@ class ExploreViewModel @Inject constructor(
             _isLocationEnabled.value == true &&
             userLat != null &&
             userLng != null
-        val sortOption = if (filters.sortOption != SortOption.Distance) {
-            filters.sortOption
+        val currentSortOption = filters.sortOption
+        val sortOption = if (currentSortOption != SortOption.Distance) {
+            currentSortOption
         } else if (canSortByDistance) {
             SortOption.Distance
         } else {
@@ -546,6 +652,7 @@ class ExploreViewModel @Inject constructor(
                     type,
                     filters.payment,
                     filters.denominationType,
+                    filters.provider,
                     bounds,
                     sortOption,
                     userLat ?: 0.0,
@@ -596,6 +703,7 @@ class ExploreViewModel @Inject constructor(
                     type,
                     _appliedFilters.value.payment,
                     _appliedFilters.value.denominationType,
+                    _appliedFilters.value.provider,
                     radiusBounds ?: GeoBounds.noBounds
                 )
             } else {
@@ -720,15 +828,16 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
+        val currentSortOption = _appliedFilters.value.sortOption
         logEvent(
             if (exploreTopic == ExploreTopic.Merchants) {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                     SortOption.Discount -> AnalyticsConstants.Explore.FILTER_MERCHANT_SORT_BY_DISTANCE
                 }
             } else {
-                when (_appliedFilters.value.sortOption) {
+                when (currentSortOption) {
                     SortOption.Name -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_NAME
                     SortOption.Distance -> AnalyticsConstants.Explore.FILTER_ATM_SORT_BY_DISTANCE
                     SortOption.Discount -> ""

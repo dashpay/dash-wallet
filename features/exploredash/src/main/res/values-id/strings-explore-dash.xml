@@ -71,8 +71,10 @@
     <string name="explore_filter">Menyaring</string>
     <string name="explore_filters">Menyaring</string>
     <string name="explore_apply_filter">Terapkan</string>
-    <string name="explore_payment_method">Metode Pembayaran</string>
+    <string name="explore_spending_options">Pilihan pembelanjaan</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Kartu hadiah CTX</string>
+    <string name="piggycards_gift_cards">Kartu hadiah Piggy Cards</string>
     <string name="explore_payment_gift_card">Kartu Hadiah</string>
     <string name="explore_filter_gift_cards">Kartu Hadiah</string>
     <string name="explore_radius">Radius</string>
@@ -87,6 +89,7 @@
     <string name="gift_card_types">Tipe kartu hadiah</string>
     <string name="flexible_amount_option">Jumlah yang fleksibel</string>
     <string name="fixed_denom_option">Jumlah denominasi tetap</string>
+    <string name="gift_card_providers">Penyedia Kartu hadiah</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -184,7 +187,7 @@
     <string name="purchase_gift_card_confirm">Memastikan</string>
     <string name="purchase_gift_card_details">Detail kartu hadiah</string>
     <string name="purchase_original_purchase">Pembelian asli</string>
-    <string name="purchase_check_current_balance">Periksa saldo saat ini</string>
+    <string name="purchase_check_current_balance">Lihat detail kartu</string>
     <string name="purchase_card_number">Nomor Kartu</string>
     <string name="purchase_card_pin">PIN kartu</string>
     <string name="purchase_view_transaction">Lihat Detail Transaksi</string>
@@ -221,19 +224,25 @@
     <string name="try_again">Coba lagi</string>
     <string name="cancel">Batal</string>
     <string name="gift_card_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan, cobal lagi.</string>
+    <string name="gift_card_out_of_stock_error">Kartu hadiah ini telah habis. Silakan coba lagi.</string>
     <string name="gift_card_details_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi pusat dukungan.</string>
     <string name="gift_card_limit_error">Batasan pembelian untuk pedagang ini telah berubah. Silakan hubungi Dukungan CTX untuk informasi lebih lanjut.</string>
+    <string name="gift_card_server_error">Karena suatu alasan, kami tidak dapat membeli kartu hadiah. Silakan hubungi dukungan %s untuk melaporkan masalah ini.</string>
+    <string name="gift_card_server_region_error">Pembelian kartu hadiah ini tidak dapat dilakukan dari wilayah anda.</string>
+    <string name="gift_card_error_wrong_network">Permintaan pembayaran untuk jaringan yang berbeda. Silakan hubungi dukungan.</string>
     <string name="gift_card_unknown_error">Untuk beberapa alasan kami tidak dapat membeli kartu hadian. Silahkan hubungi dukungan dengan txid %s.</string>
-    <string name="gift_card_rejected">Pembayaran telah ditolak. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Pembayaran telah dibuat untuk pedagang yang menyediakan URL penebusan, tapi saat ini belum didukung. Silahkan hubungi CTX dengan id kartu hadiah %s dan id pembayaran %s dan id transaksi %s.</string>
+    <string name="gift_card_delay">Proses pengambilan kartu ini membutuhkan waktu lebih lama dari biasanya. Silakan hubungi <a href="contact:support">support@dash.org</a> jika membutuhkan waktu lebih lama.</string>
+    <string name="gift_card_rejected">Pembayaran telah di tolak. Silahkan hubungi dukungan %s dengan ID kartu hadiah %s dan ID pembayaran %s dan ID transaksi %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Pembayaran telah dilakukan untuk pedagang yang menyediakan URL penukaran, tetapi saat ini tidak didukung. Silakan hubungi Dukungan %s dengan ID kartu hadiah %s, ID pembayaran %s, dan ID transaksi %s.</string>
     <string name="dashspend_terms_conditions">Terima syarat dan kondisi</string>
     <string name="accept_terms_conditions">Say menerima syarat dan ketentuan DashSpend</string>
     <string name="tap_link_to_proceed">Untuk membuat akun di DashSpend Anda harus mengetuk tautan di bawah untuk melanjutkan</string>
     <string name="accept_to_proceed">Untuk membuat akun di DashSpend Anda harus menerima syarat dan ketentuan DashSpend</string>
     <string name="view_terms_conditions">Syarat &amp; kondisi</string>
-    <string name="barcode_placeholder">Segera setelah kode Anda dibuat, kode tersebut akan ditampilkan di sini.</string>
+    <string name="barcode_placeholder">Harap tunggu hingga rincian kartu hadiah dikirimkan.</string>
     <string name="gift_card_contact_ctx">Hubungi dukungan CTX</string>
-
+    <string name="gift_card_contact_piggycards">Hubungi dukungan PiggyCards</string>
+    <string name="gift_card_contact_support">Hubungi Dukungan</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Buat akun</string>
     <string name="log_in_to_ctxspend_account">Masuk ke akun anda</string>
@@ -241,4 +250,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Beli kartu hadiah dengan akun DashSpend anda</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Buat akun DashSpend atau masuk dengan akun yang sudah ada</string>
     <string name="temporarily_unavailable">Tidak tersedia untuk sementara</string>
+    <string name="country_availability">Kartu ini hanya berfungsi di Amerika Serikat</string>
+    <string name="token_expired_title">Sesi anda telah kedaluwarsa</string>
+    <string name="token_expired_message">Sepertinya Anda sudah lama tidak menggunakan DashSpend. Demi keamanan, Anda telah keluar.\n\nSilakan masuk lagi untuk melanjutkan menjelajahi tempat Anda ingin membelanjakan Dash Anda.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Email Anda tidak akan dibagikan dengan siapa pun selain PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Pilih penyedia Kartu hadiah</string>
+    <string name="flexible_amounts">Jumlah yang fleksibel</string>
+    <string name="fixed_amounts">Jumlah tetap</string>
+    <string name="address">Alamat</string>
+    <string name="phone">Telepon</string>
+    <string name="website">Website</string>
+    <string name="call">Panggil</string>
+    <string name="directions">Petunjuk arah</string>
+    <string name="explore_show_all_locations">Tampilkan semua lokasi (%d)</string>
+    <string name="provider">Penyedia</string>
+    <string name="save">Simpan</string>
 </resources>

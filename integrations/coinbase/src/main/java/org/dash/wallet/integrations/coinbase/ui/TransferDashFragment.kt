@@ -54,12 +54,14 @@ import org.dash.wallet.integrations.coinbase.viewmodels.EnterAmountToTransferVie
 import org.dash.wallet.integrations.coinbase.viewmodels.SendDashResponseState
 import org.dash.wallet.integrations.coinbase.viewmodels.TransferDashViewModel
 import org.dash.wallet.integrations.coinbase.viewmodels.coinbaseViewModels
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
 
     companion object {
+        private val log = LoggerFactory.getLogger(TransferDashFragment::class.java)
         fun newInstance() = TransferDashFragment()
     }
 
@@ -140,7 +142,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                     }
                 } else {
                     binding.dashWalletLimitBanner.isVisible = false
-                    val error = transferDashViewModel.checkEnteredAmountValue(it.second)
+                    val isEmptyWallet = enterAmountToTransferViewModel.isMaxAmountSelected
+                    val amountToTransfer = if (isEmptyWallet) {
+                        transferDashViewModel.maxForDashCoinBaseAccount - transferDashViewModel.minimumFee
+                    } else {
+                        it.second
+                    }
+                    val error = transferDashViewModel.checkEnteredAmountValue(amountToTransfer)
                     binding.authLimitBanner.root.isVisible = error == SwapValueErrorType.UnAuthorizedValue
                     binding.dashWalletLimitBanner.isVisible = (error == SwapValueErrorType.MoreThanMax
                             || error == SwapValueErrorType.LessThanMin
@@ -162,7 +170,7 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
                             else -> {}
                         }
                     } else {
-                        transferDashViewModel.reviewTransfer(dashValue.toPlainString())
+                        transferDashViewModel.reviewTransfer(amountToTransfer.toPlainString())
                     }
                 }
             }
@@ -218,6 +226,13 @@ class TransferDashFragment : Fragment(R.layout.transfer_dash_fragment) {
             } else {
                 "$amountFiat $fiatSymbol"
             }
+            
+            // Log the values to debug zero amounts
+            log.info("Amount received - DASH: '{}', Fiat: '{}', exchangeRate: {}", 
+                formatDashValue, formatFiatValue, enterAmountToTransferViewModel.coinbaseExchangeRate != null)
+            log.info("Raw values - dashInStr: '{}', amountFiat: '{}', fiatSymbol: '{}', it.second: {}, it.first: {}", 
+                dashInStr, amountFiat, fiatSymbol, it.second, it.first)
+            
             // For initial load till coinbase exchange rate loaded
             if(enterAmountToTransferViewModel.coinbaseExchangeRate==null){
                 binding.amountReceived.text = getString(

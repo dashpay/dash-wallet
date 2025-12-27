@@ -11,6 +11,7 @@
     <string name="buy_dash">Koop Dash</string>
     <string name="copied">Gekopieerd</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Uitgeven</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">bijvoorbeeld jan@mail.com</string>
     <string name="error">Fout</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Fout in de betaling</string>
     <string name="payment_request_problem_message">Je betaling kon niet door de server worden verwerkt, doe a.u.b. navraag bij de winkelier</string>
     <string name="exchange_rate_not_found">De wisselkoers kon niet worden gevonden.</string>
+    <string name="send_coins_fragment_hint_replaying">Momenteel zijn betalingen niet mogelijk omdat de portemonnee niet volledig is gesynchroniseerd met het netwerk</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Ontvang het direct in de Dash portemonnee.</string>

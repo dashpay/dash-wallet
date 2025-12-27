@@ -413,8 +413,8 @@ Dash</b> anda</string>
     <string name="coinjoin_start">Mulai Mixing</string>
     <string name="coinjoin_stop">Hentikan Mixing</string>
     <string name="coinjoin_mixing">Pencampuran</string>
-    <string name="coinjoin_mixing_finishing">Mixing Akhir</string>
-    <string name="coinjoin_paused">Pencampuran Dijeda</string>
+    <string name="coinjoin_mixing_finishing">Penyelesaian</string>
+    <string name="coinjoin_paused">Dijeda</string>
     <string name="coinjoin_not_started">Tidak Dimulai</string>
     <string name="coinjoin_progress_balance">%1$s dari %2$s</string>
     <string name="coinjoin_progress_finished">Tercampur Sepenuhnya</string>
@@ -463,4 +463,48 @@ Dash</b> anda</string>
     <string name="voting_period_ends_tomorrow">Pemilihan berakhir besok</string>
     <string name="link_included">tautan disertakan</string>
     <string name="group_by">Kelompokkan berdasarkan</string>
+    <string name="transaction_metadata_title">Metadata transaksi</string>
+    <string name="transaction_metadata_data_being_saved">Dijadwalkan</string>
+    <string name="transaction_metadata_payment_category_description">Menunjukkan apakah transaksi dikaitkan dengan Coinbase, Uphold, Topper atau CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Riwayat harga pada saat transaksi</string>
+    <string name="transaction_metadata_description">Data Anda tersimpan di perangkat Anda, tetapi akan hilang jika Anda mengatur ulang atau memulihkan dompet Anda. Berikut adalah contoh informasi yang akan tersimpan saat disimpan di jaringan.</string>
+    <string name="transaction_metadata_cost">Berapa biayanya\?</string>
+    <string name="transaction_metadata_payment_category">Kategori Pembayaran</string>
+    <string name="transaction_metadata_save_data">Simpan data</string>
+    <string name="transaction_metadata_tax_category">Kategori Pajak</string>
+    <string name="transaction_metadata_fiat_prices">Harga Uang Fiat</string>
+    <string name="transaction_metadata_private_memos">Memo Pribadi</string>
+    <string name="transaction_metadata_gift_card_info">Data kartu Hadiah</string>
+    <string name="transaction_metadata_private_memo_description">Memo singkat yang menjelaskan tujuan transaksi</string>
+    <string name="transaction_metadata_tax_category_description">Menunjukkan apakah suatu transaksi merupakan transfer, pendapatan atau pengeluaran</string>
+    <string name="transaction_metadata_gift_card_info_description">Termasuk nomor kartu, kode pin, dan informasi lainnya</string>
+    <string name="transaction_metadata_costs_title">Biaya yang terkait dengan penyimpanan data ke jaringan</string>
+    <string name="transaction_metadata_costs_description">Sebagai bagian dari pembuatan nama pengguna, Anda akan menerima kredit yang digunakan untuk berbagai aktivitas di jaringan; menyimpan metadata transaksi di jaringan akan menghabiskan kredit ini lebih cepat. Setelah semua kredit digunakan, Anda dapat membeli lebih banyak.\n\nBiayanya sekitar %s per unggahan data ke jaringan sehingga disarankan untuk mengunggah beberapa transaksi sekaligus.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Setelah 10 transaksi</item>
+        <item>Seminggu sekali</item>
+        <item>Setelah setiap transaksi</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Apakah Anda ingin mengatur ulang dompet tanpa menyimpan metadata Anda ke jaringan\?</string>
+    <string name="reset_wallet_metadata_message">Mengatur ulang dompet Anda tanpa menyimpan data ke jaringan akan mengakibatkan hilangnya beberapa metadata transaksi.</string>
+    <string name="reset_wallet_metadata_button_without">Setel ulang dompet tanpa menyimpan</string>
+    <string name="reset_wallet_metadata_button_with">Simpan data dan atur ulang dompet</string>
+    <string name="reset_wallet_metadata_button_saving">Menyimpan</string>
+    <string name="transaction_metadata_save_to_network">Simpan ke jaringan</string>
+    <string name="transaction_metadata_save_frequency">Seberapa sering harus menyimpan\?</string>
+    <string name="transaction_metadata_what_to_save">Apa yang harus disimpan\?</string>
+    <string name="transaction_metadata_past_title">yang lalu</string>
+    <string name="transaction_metadata_future_title">yang akan datang</string>
+    <string name="transaction_metadata_past_subtitle">Simpan semua transaksi yang dilakukan hingga %s</string>
+    <string name="transaction_metadata_future_subtitle">Secara otomatis menyimpan semua transaksi yang Anda lakukan setelah %s</string>
+    <string name="transaction_metadata_gift_card_data">Data kartu hadiah</string>
+    <string name="transaction_metadata_saving_to_network">Menyimpan ke jaringan - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Terakhir disimpan %s</string>
+    <string name="transaction_metadata_past_already_saved">Semua transaksi yang dibuat hingga %s telah disimpan</string>
+    <string name="transaction_metadata_past_already_saved_none">Tak ada transaksi yang disimpan</string>
+    <string name="transaction_metadata_past_syncing">Semua transaksi yang dibuat hingga %s sedang di singkronkan</string>
+    <string name="transaction_metadata_save_new_tx_title">Apakah Anda ingin menyimpan transaksi yang belum disimpan\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Anda mempunyai %d transaksi yang belum disimpan sejak %s</string>
+    <string name="transaction_metadata_save_transactions">Simpan transaksi yang belum disimpan</string>
+    <string name="transaction_metadata_continue_without_saving">Lanjutkan tanpa menyimpan</string>
 </resources>

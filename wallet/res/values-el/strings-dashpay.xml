@@ -413,8 +413,8 @@
     <string name="coinjoin_start">Έναρξη μίξης.</string>
     <string name="coinjoin_stop">Διακοπή μίξης</string>
     <string name="coinjoin_mixing">Ανάμιξη</string>
-    <string name="coinjoin_mixing_finishing">Η ανάμιξη ολοκληρώθηκε</string>
-    <string name="coinjoin_paused">Ανάμειξη σε παύση</string>
+    <string name="coinjoin_mixing_finishing">Ολοκλήρωση</string>
+    <string name="coinjoin_paused">Σε παύση</string>
     <string name="coinjoin_not_started">Δεν ξεκίνησε</string>
     <string name="coinjoin_progress_balance">%1$s από%2$s</string>
     <string name="coinjoin_progress_finished">Πλήρως αναμεμειγμένα</string>
@@ -463,4 +463,48 @@
     <string name="voting_period_ends_tomorrow">Η ψηφοφορία λήγει αύριο</string>
     <string name="link_included">περιλαμβάνεται σύνδεσμος</string>
     <string name="group_by">Ομαδοποίηση κατά</string>
+    <string name="transaction_metadata_title">Metadata συναλλαγής</string>
+    <string name="transaction_metadata_data_being_saved">Προγραμματισμένο</string>
+    <string name="transaction_metadata_payment_category_description">Υποδεικνύει εάν μια συναλλαγή σχετίζεται με την Coinbase, την Uphold,  την Topper ή την CrowdNode.</string>
+    <string name="transaction_metadata_fiat_price_description">Η ιστορική τιμή κατά τη στιγμή της συναλλαγής</string>
+    <string name="transaction_metadata_description">Τα δεδομένα σας αποθηκεύονται στη συσκευή σας, αλλά θα χαθούν αν επαναφέρετε ή αποκαταστήσετε το πορτοφόλι σας. Ακολουθούν παραδείγματα των πληροφοριών που θα αποθηκευτούν όταν αποθηκευτούν στο δίκτυο.</string>
+    <string name="transaction_metadata_cost">Πόσο κοστίζει;</string>
+    <string name="transaction_metadata_payment_category">Κατηγορίες πληρωμών</string>
+    <string name="transaction_metadata_save_data">Αποθήκευση δεδομένων</string>
+    <string name="transaction_metadata_tax_category">Φορολογικές κατηγορίες</string>
+    <string name="transaction_metadata_fiat_prices">Τιμές Fiat</string>
+    <string name="transaction_metadata_private_memos">Ιδιωτικές σημειώσεις</string>
+    <string name="transaction_metadata_gift_card_info">Δεδομένα δωροκάρτας</string>
+    <string name="transaction_metadata_private_memo_description">Σύντομα σημειώματα που περιγράφουν τον σκοπό της συναλλαγής</string>
+    <string name="transaction_metadata_tax_category_description">Υποδεικνύει εάν μια συναλλαγή είναι μεταφορά, έσοδο ή έξοδο.</string>
+    <string name="transaction_metadata_gift_card_info_description">Περιλαμβάνει τον αριθμό της κάρτας, τον κωδικό PIN και άλλες πληροφορίες.</string>
+    <string name="transaction_metadata_costs_title">Κόστος που σχετίζεται με την αποθήκευση δεδομένων στο δίκτυο</string>
+    <string name="transaction_metadata_costs_description">Κατά τη δημιουργία ενός ονόματος χρήστη, λαμβάνετε credits που χρησιμοποιούνται για διάφορες δραστηριότητες στο δίκτυο. Η αποθήκευση των metadata των συναλλαγών στο δίκτυο θα καταναλώσει αυτά τα credits πιο γρήγορα. Μόλις εξαντληθούν όλα τα credits, μπορείτε να αγοράσετε περισσότερα..\n\nΚοστίζει περίπου  %s  ανά μεταφόρτωση δεδομένων στο δίκτυο, επομένως συνιστάται να μεταφορτώνετε πολλές συναλλαγές ταυτόχρονα.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Μετά από 10 συναλλαγές</item>
+        <item>Μία φορά την εβδομάδα</item>
+        <item>Μετά από κάθε συναλλαγή</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Θέλετε να επαναφέρετε το πορτοφόλι χωρίς να αποθηκεύσετε τα metadata σας στο δίκτυο;</string>
+    <string name="reset_wallet_metadata_message">Η επαναφορά του πορτοφολιού σας χωρίς αποθήκευση δεδομένων στο δίκτυο θα έχει ως αποτέλεσμα την απώλεια ορισμένων metadata συναλλαγών.</string>
+    <string name="reset_wallet_metadata_button_without">Επαναφορά πορτοφολιού χωρίς αποθήκευση</string>
+    <string name="reset_wallet_metadata_button_with">Αποθήκευση δεδομένων και επαναφορά πορτοφολιού</string>
+    <string name="reset_wallet_metadata_button_saving">Αποθήκευση</string>
+    <string name="transaction_metadata_save_to_network">Αποθήκευση στο δίκτυο</string>
+    <string name="transaction_metadata_save_frequency">Πόσο συχνά να αποθηκεύεται;</string>
+    <string name="transaction_metadata_what_to_save">Τι να αποθηκεύεται;</string>
+    <string name="transaction_metadata_past_title">Παρελθόν</string>
+    <string name="transaction_metadata_future_title">Μέλλον</string>
+    <string name="transaction_metadata_past_subtitle">Αποθήκευση όλων των συναλλαγών που πραγματοποιήθηκαν μέχρι %s</string>
+    <string name="transaction_metadata_future_subtitle">Αυτόματη αποθήκευση όλων των συναλλαγών που πραγματοποιήθηκαν μετά από %s</string>
+    <string name="transaction_metadata_gift_card_data">Δεδομένα δωροκάρτας</string>
+    <string name="transaction_metadata_saving_to_network">Αποθήκευση στο δίκτυο - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Τελευταία αποθήκευση %s</string>
+    <string name="transaction_metadata_past_already_saved">AΌλες οι συναλλαγές που πραγματοποιήθηκαν μέχρι τις %s έχουν ήδη αποθηκευτεί.</string>
+    <string name="transaction_metadata_past_already_saved_none">Δεν έχουν αποθηκευτεί συναλλαγές</string>
+    <string name="transaction_metadata_past_syncing">Όλες οι συναλλαγές που πραγματοποιήθηκαν έως και  %s συγχρονίζονται</string>
+    <string name="transaction_metadata_save_new_tx_title">Θέλετε να αποθηκεύσετε τις μη αποθηκευμένες συναλλαγές;</string>
+    <string name="transaction_metadata_you_have_n_tx">Έχετε %d μη αποθηκευμένες συναλλαγές από τις %s</string>
+    <string name="transaction_metadata_save_transactions">Αποθήκευση μη αποθηκευμένων συναλλαγών</string>
+    <string name="transaction_metadata_continue_without_saving">Συνέχεια χωρίς αποθήκευση</string>
 </resources>

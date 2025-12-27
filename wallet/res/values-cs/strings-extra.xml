@@ -247,8 +247,8 @@
     <string name="menu_settings_subtitle">Výchozí měna, zkratky, o aplikaci</string>
     <string name="menu_tools_title">Nástroje</string>
     <string name="menu_tools_subtitle">Importovat privátní klíč…</string>
-    <string name="menu_local_currency">Místní Měna</string>
-    <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
+    <string name="menu_local_currency">Místní měna</string>
+    <string name="menu_rescan_blockchain">Znovu skenovat blockchain</string>
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
     <string name="menu_explore_title">Prozkoumat</string>
@@ -357,7 +357,7 @@
 
     <string name="continue_reset">Pokračovat</string>
     <string name="reset_wallet_text">Resetovat peněženku</string>
-
+    <string name="reset_wallet_button">Resetovat peněženku</string>
 
 
     <string name="masternode_key_type_owner">Klíče majitele</string>

@@ -1,4 +1,28 @@
 Dash Wallet / DashPay
+v11.5.0
+* Added Transaction metadata feature
+* Addressed Sync issues and sync stalls
+* Update to dashj 21.1.13
+* Use 16KB aligned 64-bit native libraries
+* Fix max topup failure
+* Support Android 15 edge-to-edge on bottom sheet dialogs
+* Put Spend button on shortcut bar by default
+
+v11.4.1
+* Support Android 15
+* New Mixing Pane design on Home Screen
+* New Settings Page design
+* Support Dash branding on Blockchair.com
+* Address Sending Delays
+* Address gift card purchase delays
+* Inform user of merchant country
+* Fix Coinbase Transfer MAX function
+* Fix Topup bugs
+* Many UI fixes in DashSpend
+
+v11.4.0
+* Add PiggyCards support in DashSpend
+
 v11.3.2
 * Improve security model for PIN's and wallet encryption
 * Improve DashSpend error handling

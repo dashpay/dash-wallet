@@ -11,6 +11,7 @@
     <string name="buy_dash">Dashを購入する</string>
     <string name="copied">コピーされた</string>
     <string name="staking_title">ステーキング</string>
+    <string name="spend_title">使う</string>
     <string name="email">Eメール</string>
     <string name="email_placeholder">例：johndoe@mail.com</string>
     <string name="error">エラー</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">支払いエラー</string>
     <string name="payment_request_problem_message">お客様のお支払いがサーバーで処理されませんでしたので、加盟店にお問い合わせください。</string>
     <string name="exchange_rate_not_found">為替レートが見つかりません。</string>
+    <string name="send_coins_fragment_hint_replaying">ウォレットがネットワークと完全に同期されていないため、現在支払いはできません</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Dashウォレットに直接入金する</string>

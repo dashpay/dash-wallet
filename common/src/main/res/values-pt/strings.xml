@@ -11,6 +11,7 @@
     <string name="buy_dash">Comprar Dash</string>
     <string name="copied">Copiado</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Gastar</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">por exemplo: johndoe@mail.com</string>
     <string name="error">Erro</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Erro no pagamento</string>
     <string name="payment_request_problem_message">Seu pagamento não pôde ser processado pelo servidor, por favor, entre em contato com o comerciante</string>
     <string name="exchange_rate_not_found">Não foi possível encontrar a taxa de câmbio.</string>
+    <string name="send_coins_fragment_hint_replaying">Pagamentos não são possíveis no momento porque a carteira não está totalmente sincronizada com a rede</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Receba diretamente na sua Carteira Dash</string>

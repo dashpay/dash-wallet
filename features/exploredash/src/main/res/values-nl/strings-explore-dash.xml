@@ -73,8 +73,10 @@
     <string name="explore_filter">Filter</string>
     <string name="explore_filters">Filters</string>
     <string name="explore_apply_filter">Pas toe</string>
-    <string name="explore_payment_method">Betalingsmethode</string>
+    <string name="explore_spending_options">Uitgave opties</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">CTX cadeaukaarten</string>
+    <string name="piggycards_gift_cards">Piggy Cards cadeaukaarten</string>
     <string name="explore_payment_gift_card">Geschenkbon</string>
     <string name="explore_filter_gift_cards">Cadeaukaarten</string>
     <string name="explore_radius">Straal</string>
@@ -89,6 +91,7 @@
     <string name="gift_card_types">Soorten cadeaubonnen</string>
     <string name="flexible_amount_option">Flexibele bedragen</string>
     <string name="fixed_denom_option"> Vastgestelde bedragen</string>
+    <string name="gift_card_providers">cadeaukaart aanbieders</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -188,7 +191,7 @@
     <string name="purchase_gift_card_confirm">Bevestig</string>
     <string name="purchase_gift_card_details">Gegevens cadeaukaart</string>
     <string name="purchase_original_purchase">Originele aankoop</string>
-    <string name="purchase_check_current_balance">Controleer het huidige saldo</string>
+    <string name="purchase_check_current_balance">Bekijk kaartdetails</string>
     <string name="purchase_card_number">Kaartnummer</string>
     <string name="purchase_card_pin">Pincode kaart</string>
     <string name="purchase_view_transaction">Transactiedetails bekijken</string>
@@ -225,19 +228,25 @@
     <string name="try_again">Probeer opnieuw</string>
     <string name="cancel">Annuleer</string>
     <string name="gift_card_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Probeer het opnieuw.</string>
+    <string name="gift_card_out_of_stock_error">Deze cadeaukaart is niet op voorraad. Probeer het opnieuw.</string>
     <string name="gift_card_details_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning.</string>
     <string name="gift_card_limit_error">De aankooplimieten voor deze winkelier zijn gewijzigd. Neem contact op met CTX Support voor meer informatie.</string>
+    <string name="gift_card_server_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met %s om het probleem te melden.</string>
+    <string name="gift_card_server_region_error">Aankopen van deze cadeaukaart kunnen niet worden gedaan vanuit jouw regio.</string>
+    <string name="gift_card_error_wrong_network">Het betalingsverzoek is voor een ander netwerk. Neem contact op met de ondersteuning.</string>
     <string name="gift_card_unknown_error">Vanwege een onbekende reden is de aankoop van de cadeaukaart mislukt. Neem contact op met de ondersteuning met txid %s.</string>
-    <string name="gift_card_rejected">De betaling is afgewezen. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie ID%s.</string>
-    <string name="gift_card_redeem_url_not_supported">De betaling is gedaan voor een winkelier die een inwissel-URL levert, maar die wordt momenteel niet ondersteund. Neem contact op met CTX. Cadeaukaart ID %s. Betaling ID %s. Transactie %s.</string>
+    <string name="gift_card_delay">Het duurt langer dan normaal om deze kaart op te halen. Neem contact op met <a href="contact:support">support@dash.org</a></string>
+    <string name="gift_card_rejected">De betaling is geweigerd. Neem contact op met %s. Cadeaukaart ID %s, betaling ID %s, en transactie ID %s.</string>
+    <string name="gift_card_redeem_url_not_supported">De betaling is gedaan aan een leverancier die een inwissel URL levert, maar dat wordt momenteel niet ondersteund. Neem contact op met %s. Cadeaukaart ID %s, betaling ID %s, en transactie ID %s.</string>
     <string name="dashspend_terms_conditions">accepteren algemene voorwaarden </string>
     <string name="accept_terms_conditions">Ik accepteer de algemene voorwaarden van DashSpend</string>
     <string name="tap_link_to_proceed">Om een ​​account bij DashSpend aan te maken, tik dan op de onderstaande link om verder te gaan</string>
     <string name="accept_to_proceed">Om een ​​account aan te maken bij DashSpend, accepteer de algemene voorwaarden van DashSpend</string>
     <string name="view_terms_conditions">Terms &amp; voorwaarden</string>
-    <string name="barcode_placeholder">Zodra je code is gegenereerd, wordt deze hier weergegeven</string>
+    <string name="barcode_placeholder">Wacht tot de cadeaukaart worden geleverd.</string>
     <string name="gift_card_contact_ctx">Neem contact op met CTX</string>
-
+    <string name="gift_card_contact_piggycards">Neem contact op met PiggyCards.</string>
+    <string name="gift_card_contact_support">Neem contact op</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Maak account aan</string>
     <string name="log_in_to_ctxspend_account">Log in op je account</string>
@@ -245,4 +254,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Koop een cadeaukaart met je DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Maak een DashSpend account aan of log in op een bestaand account</string>
     <string name="temporarily_unavailable"> Tijdelijk niet beschikbaar</string>
+    <string name="country_availability">Deze kaart werkt alleen in de Verenigde Staten.</string>
+    <string name="token_expired_title">Je sessie is verlopen</string>
+    <string name="token_expired_message">Het lijkt erop dat je DashSpend al een tijdje niet hebt gebruikt. Om veiligheidsredenen ben je uitgelogd.\n\nMeld je opnieuw aan om verder te gaan.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Je e-mailadres wordt met niemand anders gedeeld dan PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Selecteer cadeaukaart aanbieder</string>
+    <string name="flexible_amounts">Flexibele bedragen</string>
+    <string name="fixed_amounts">Vaste bedragen</string>
+    <string name="address">Adres</string>
+    <string name="phone">Telefoon</string>
+    <string name="website">Website</string>
+    <string name="call">Bel</string>
+    <string name="directions">Routebeschrijving</string>
+    <string name="explore_show_all_locations">Toon alle locaties (%d)</string>
+    <string name="provider">Aanbieder</string>
+    <string name="save">Opslaan</string>
 </resources>

@@ -75,8 +75,10 @@
     <string name="explore_filter">Filtro</string>
     <string name="explore_filters">Filtros</string>
     <string name="explore_apply_filter">Aplicar</string>
-    <string name="explore_payment_method">Método de Pagamento</string>
+    <string name="explore_spending_options">Opções de gastos</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Cartões presente CTX</string>
+    <string name="piggycards_gift_cards">Cartões presente PiggyCards</string>
     <string name="explore_payment_gift_card">Vale-presente</string>
     <string name="explore_filter_gift_cards">Vales-presente</string>
     <string name="explore_radius">Raio</string>
@@ -91,7 +93,6 @@
     <string name="gift_card_types">Tipos de cartão-presente</string>
     <string name="flexible_amount_option">Valores flexíveis</string>
     <string name="fixed_denom_option">Valores fixos denominados</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Próximo</item>
@@ -192,7 +193,7 @@
     <string name="purchase_gift_card_confirm">Confirmar</string>
     <string name="purchase_gift_card_details">Detalhes do cartão-presente</string>
     <string name="purchase_original_purchase">Compra original</string>
-    <string name="purchase_check_current_balance">Verificar saldo atual</string>
+    <string name="purchase_check_current_balance">Ver detalhes do cartão</string>
     <string name="purchase_card_number">Número do cartão</string>
     <string name="purchase_card_pin">PIN do cartão</string>
     <string name="purchase_view_transaction">Ver detalhes da transação</string>
@@ -232,16 +233,13 @@
     <string name="gift_card_details_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, entre em contato com o suporte.</string>
     <string name="gift_card_limit_error">Os limites de compra para este comerciante foram alterados. Por favor, entre em contato com o Suporte CTX para mais informações.</string>
     <string name="gift_card_unknown_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, entre em contato com o suporte com o txid %s.</string>
-    <string name="gift_card_rejected">O pagamento foi rejeitado. Por favor, entre em contato com CTX com o ID do cartão-presente %s, o ID do pagamento %s e o ID da transação %s.</string>
-    <string name="gift_card_redeem_url_not_supported">O pagamento foi feito para um comerciante que fornece uma URL de resgate, mas isso não é suportado atualmente. Por favor, entre em contato com CTX com o ID do cartão-presente %s, o ID do pagamento %s e o ID da transação %s.</string>
     <string name="dashspend_terms_conditions">Aceitar termos e condições</string>
     <string name="accept_terms_conditions">Eu aceito os termos e condições do DashSpend</string>
     <string name="tap_link_to_proceed">Para criar uma conta no DashSpend, você deve clicar no link abaixo</string>
     <string name="accept_to_proceed">Para criar uma conta no DashSpend, você deve aceitar os termos e condições do DashSpend</string>
     <string name="view_terms_conditions">Termos &amp; condições</string>
-    <string name="barcode_placeholder">Assim que seu código for gerado, ele será exibido aqui.</string>
     <string name="gift_card_contact_ctx">Entrar em contato com o Suporte CTX</string>
-
+    <string name="gift_card_contact_support">Contato com o Suporte</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Criar conta</string>
     <string name="log_in_to_ctxspend_account">Entrar na sua conta</string>
@@ -249,4 +247,14 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Compre um cartão-presente com sua conta DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Crie uma conta no DashSpend ou faça login em uma existente</string>
     <string name="temporarily_unavailable">Indisponível temporariamente</string>
+    <string name="country_availability">Este cartão funciona apenas nos Estados Unidos. </string>
+    <string name="token_expired_title">Sua sessão expirou</string>
+    <string name="token_expired_message">Parece que você não usa o DashSpend há algum tempo. Por motivos de segurança, você foi desconectado.\n\nPor favor, faça login novamente para continuar explorando onde gastar seu Dash.</string>
+
+    <string name="flexible_amounts">Valores flexíveis</string>
+    <string name="address">Endereço</string>
+    <string name="phone">Fone</string>
+    <string name="website">Website</string>
+    <string name="call">Ligar</string>
+    <string name="save">Salvar</string>
 </resources>

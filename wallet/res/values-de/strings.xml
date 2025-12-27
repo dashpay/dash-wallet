@@ -62,7 +62,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Eine Netzwerk-Gebühr von %szahlen.</string>
     <string name="send_coins_fragment_hint_fee_priority">Eine Vorzugs-Gebühr von %s zahlen. Wenn Dir eine geringe Gebühr wichtig ist, verwende diese Einstellung nur, wenn Du sehr schnell eine Bestätigung brauchst.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Die Summe an winzigen Zahlungen in Deiner Wallet ist zu klein, um verschickt zu werden.</string>
-    <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
     <string name="send_coins_fragment_direct_payment_enable">Zahlung direkt an den Empfänger senden.</string>
     <string name="send_coins_fragment_direct_payment_ack">Die Zahlung wurde erfolgreich direkt gesendet.</string>
     <string name="send_coins_fragment_direct_payment_nack">Die Zahlung wurde über die direkte Verbindung abgelehnt.</string>
@@ -294,10 +293,19 @@
     <string name="report_issue_dialog_report">Senden</string>
     <string name="report_issue_dialog_collect_device_info">Geräte-Informationen anhängen</string>
     <string name="report_issue_dialog_collect_installed_packages">Liste von installierten Paketen anhängen</string>
-    <string name="report_issue_dialog_collect_application_log">Applikations-Logfile anhängen</string>
+    <string name="report_issue_dialog_collect_application_log">Logdatei der Anwendung anhängen</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dump der Wallet anhängen</string>
     <string name="report_issue_dialog_mail_intent_failed">Senden des Berichts fehlgeschlagen.</string>
     <string name="report_issue_dialog_generating_report">Bericht erstellen</string>
+    <string name="report_issue_dialog_status_device_info">Geräte-Information</string>
+    <string name="report_issue_dialog_status_installed_packages">Liste der installierten Pakete</string>
+    <string name="report_issue_dialog_status_application_log">Logdatei der Anwendung</string>
+    <string name="report_issue_dialog_status_application_info">Anwendungsinfo</string>
+    <string name="report_issue_dialog_status_wallet_dump">Wallet Dump (langsam)</string>
+    <string name="report_issue_dialog_status_contextual_info">Kontextinformationen</string>
+    <string name="report_issue_dialog_status_background_traces">Background Traces</string>
+    <string name="report_issue_dialog_status_stack_trace">Stack Traces</string>
+    <string name="report_issue_dialog_status_finishing">abschließen</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -317,6 +325,7 @@
 
 
     <string name="about_title">Über</string>
+    <string name="about_dash_title">Über Dash</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Urheberrecht</string>
     <string name="about_license_title">Lizenz</string>
@@ -339,6 +348,9 @@
     <string name="notification_inactivity_action_dismiss">Später erinnern</string>
     <string name="notification_inactivity_action_dismiss_forever">Nicht weiter erinnern</string>
     <string name="notification_bluetooth_service_listening">Bereit zum Empfang von Zahlungen über Bluetooth</string>
+    <string name="notification_sync_paused">Synchronisierung der Blockchain pausiert</string>
+    <string name="notification_background_processes_paused">Verarbeitung im Hintergrund pausiert</string>
+    <string name="notification_background_processes_paused_text">Du hast das Android-6h-Foreground-Servicelimit für das Mixen oder der Synchronisierung der Blockchain erreicht. Tippe zum Zurücksetzen ...</string>
     <string name="appwidget_wallet_balance_title">Dash-Guthaben</string>
 
     <!-- generic buttons -->

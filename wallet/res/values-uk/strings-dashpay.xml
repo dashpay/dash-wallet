@@ -412,8 +412,8 @@
     <string name="coinjoin_start">Почати змішування</string>
     <string name="coinjoin_stop">Зупинити змішування</string>
     <string name="coinjoin_mixing">Змішування</string>
-    <string name="coinjoin_mixing_finishing">Змішування та фінішна обробка</string>
-    <string name="coinjoin_paused">Змішування на паузі</string>
+    <string name="coinjoin_mixing_finishing">Завершується</string>
+    <string name="coinjoin_paused">На паузі</string>
     <string name="coinjoin_not_started">Не розпачато</string>
     <string name="coinjoin_progress_balance">%1$s з %2$s</string>
     <string name="coinjoin_progress_finished">Повністю змішано</string>
@@ -462,4 +462,4 @@
     <string name="voting_period_ends_tomorrow">Голосування закінчується завтра</string>
     <string name="link_included">посилання включено</string>
     <string name="group_by">Групувати за</string>
-</resources>
+    </resources>

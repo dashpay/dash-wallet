@@ -11,6 +11,7 @@
     <string name="buy_dash">購買達世幣</string>
     <string name="copied">已複製</string>
     <string name="staking_title">質押</string>
+    <string name="spend_title">消費</string>
     <string name="email">電子郵件</string>
     <string name="email_placeholder">例如 johndoe@mail.com</string>
     <string name="error">錯誤</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">付款錯誤</string>
     <string name="payment_request_problem_message">服務器無法處理您的付款，請向商家查詢</string>
     <string name="exchange_rate_not_found">無法找到匯率</string>
+    <string name="send_coins_fragment_hint_replaying">目前無法付款，因為錢包未與網絡完全同步</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">直接在達世幣錢包上收款</string>

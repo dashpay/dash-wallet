@@ -413,8 +413,8 @@ Dash</b></string>
     <string name="coinjoin_start">Начать перемешивание</string>
     <string name="coinjoin_stop">Остановить перемешивание</string>
     <string name="coinjoin_mixing">Перемешивание</string>
-    <string name="coinjoin_mixing_finishing">Перемешивание завершено</string>
-    <string name="coinjoin_paused">Перемешивание на паузе</string>
+    <string name="coinjoin_mixing_finishing">Завершается</string>
+    <string name="coinjoin_paused">Приостановлено</string>
     <string name="coinjoin_not_started">Не начато</string>
     <string name="coinjoin_progress_balance">%1$s из %2$s</string>
     <string name="coinjoin_progress_finished">Полностью перемешано</string>
@@ -463,4 +463,48 @@ Dash</b></string>
     <string name="voting_period_ends_tomorrow">Голосование закончится завтра</string>
     <string name="link_included">со ссылкой</string>
     <string name="group_by">Сгруппировать по</string>
+    <string name="transaction_metadata_title">Метаданные транзакции</string>
+    <string name="transaction_metadata_data_being_saved">Запланировано</string>
+    <string name="transaction_metadata_payment_category_description">Показывает, связана ли транзакция с Coinbase, Uphold, Topper или CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Данные о курсе на момент транзакции</string>
+    <string name="transaction_metadata_description">Данные хранятся на вашем устройстве, но они будут потеряны, если вы сбросите настройки или восстановите свой кошелёк. Ниже представлены примеры информации, которая будет сохранена при условии хранения в сети. </string>
+    <string name="transaction_metadata_cost">Сколько это стоит\?</string>
+    <string name="transaction_metadata_payment_category">Категории платежей</string>
+    <string name="transaction_metadata_save_data">Сохранить данные</string>
+    <string name="transaction_metadata_tax_category">Налоговые категории</string>
+    <string name="transaction_metadata_fiat_prices">Стоимость валюты</string>
+    <string name="transaction_metadata_private_memos">Приватные заметки</string>
+    <string name="transaction_metadata_gift_card_info">Данные подарочной карты</string>
+    <string name="transaction_metadata_private_memo_description">Короткие заметки, описывающие назначение транзакции</string>
+    <string name="transaction_metadata_tax_category_description">Показывает, является ли транзакция переводом, доходом или расходом</string>
+    <string name="transaction_metadata_gift_card_info_description">Включает номер карты, пин-код и другую информацию</string>
+    <string name="transaction_metadata_costs_title">Расходы, связанные с хранением данных в сети</string>
+    <string name="transaction_metadata_costs_description">При создании имени пользователя вы получаете кредиты, которые можно потратить на различную деятельность в сети; хранение метаданных транзакции в сети будет быстрее расходовать эти кредиты. Когда кредиты закончатся, можно купить ещё. \n\nСтоимость одной загрузки данных в сеть примерно %s, поэтому рекомендуется загружать несколько транзакций за раз. </string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>После 10 транзакций</item>
+        <item>Раз в неделю</item>
+        <item>После каждой транзакции</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Хотите сбросить настройки кошелька, не сохранив метаданные в сети\?</string>
+    <string name="reset_wallet_metadata_message">Если вы сбросите настройки кошелька, не сохранив данные в сети, часть метаданных транзакций будет утеряна.</string>
+    <string name="reset_wallet_metadata_button_without">Сбросить настройки кошелька без сохранения</string>
+    <string name="reset_wallet_metadata_button_with">Сохранить данные и сбросить настройки кошелька</string>
+    <string name="reset_wallet_metadata_button_saving">Сохранение</string>
+    <string name="transaction_metadata_save_to_network">Сохранить в сети</string>
+    <string name="transaction_metadata_save_frequency">Как часто нужно сохранять\?</string>
+    <string name="transaction_metadata_what_to_save">Что сохранять\?</string>
+    <string name="transaction_metadata_past_title">Прошлое</string>
+    <string name="transaction_metadata_future_title">Будущее</string>
+    <string name="transaction_metadata_past_subtitle">Сохранить все транзакции, сделанные до %s</string>
+    <string name="transaction_metadata_future_subtitle">Автоматически сохранять все транзакции, которые вы сделаете после %s</string>
+    <string name="transaction_metadata_gift_card_data">Данные подарочной карты</string>
+    <string name="transaction_metadata_saving_to_network">Сохранение в сети - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Последнее сохранение %s</string>
+    <string name="transaction_metadata_past_already_saved">Все транзакции, сделанные до %s, были автоматически сохранены </string>
+    <string name="transaction_metadata_past_already_saved_none">Не сохранилось ни одной транзакции</string>
+    <string name="transaction_metadata_past_syncing">Все транзакции, сделанные до %s, в процессе синхронизации</string>
+    <string name="transaction_metadata_save_new_tx_title">Хотите сохранить несохранённые транзакции\?</string>
+    <string name="transaction_metadata_you_have_n_tx">С %s у вас %d несохранённых транзакций</string>
+    <string name="transaction_metadata_save_transactions">Сохранить несохранённые транзакции</string>
+    <string name="transaction_metadata_continue_without_saving">Продолжить без сохранения</string>
 </resources>

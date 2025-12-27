@@ -11,6 +11,7 @@
     <string name="buy_dash">Beli Dash</string>
     <string name="copied">Disalin</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Membelanjakan</string>
     <string name="email">Email</string>
     <string name="email_placeholder">misalnya johndoe@mail.com</string>
     <string name="error">Kesalahan</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Kesalahan pembayaran</string>
     <string name="payment_request_problem_message">Pembayaran Anda tidak dapat diproses oleh server, harap tanyakan kepada pedagang</string>
     <string name="exchange_rate_not_found">Tidak dapat menemukan nilai tukar. </string>
+    <string name="send_coins_fragment_hint_replaying">Saat ini pembayaran tidak dimungkinkan karena dompet tidak sepenuhnya disinkronkan dengan jaringan</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Terima langsung ke Dash Wallet</string>

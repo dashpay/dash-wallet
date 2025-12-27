@@ -23,10 +23,8 @@ import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
 import okhttp3.Route
-import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.safeApiCall
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenRequest
-import org.dash.wallet.features.exploredash.data.ctxspend.model.RefreshTokenResponse
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenRequest
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.RefreshTokenResponse
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import javax.inject.Inject
@@ -42,29 +40,33 @@ class TokenAuthenticator @Inject constructor(
     override fun authenticate(route: Route?, response: Response): Request? {
         return runBlocking {
             tokenMutex.withLock {
-                when (val tokenResponse = getUpdatedToken()) {
-                    is ResponseResource.Success -> {
-                        tokenResponse.value?.let {
-                            config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
-                            config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
-                            response.request.newBuilder()
-                                .header("Authorization", "Bearer ${it.accessToken}")
-                                .build()
+                try {
+                    val tokenResponse = getUpdatedToken()
+                    tokenResponse?.let {
+                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
+                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
+                        if (it.refreshToken != null) {
+                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, System.currentTimeMillis())
+                        } else {
+                            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
                         }
+                        response.request.newBuilder()
+                            .header("Authorization", "Bearer ${it.accessToken}")
+                            .build()
                     }
-
-                    else -> {
-                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
-                        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
-                        null
-                    }
+                } catch (e: Exception) {
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
+                    config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
+                    config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
+                    config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
+                    null
                 }
             }
         }
     }
 
-    suspend fun getUpdatedToken(): ResponseResource<RefreshTokenResponse?> {
+    suspend fun getUpdatedToken(): RefreshTokenResponse? {
         val refreshToken = config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN) ?: ""
-        return safeApiCall { tokenApi.refreshToken(RefreshTokenRequest(refreshToken = refreshToken)) }
+        return tokenApi.refreshToken(RefreshTokenRequest(refreshToken = refreshToken))
     }
 }

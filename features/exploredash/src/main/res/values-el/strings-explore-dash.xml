@@ -73,7 +73,6 @@
     <string name="explore_filter">Φίλτρο</string>
     <string name="explore_filters">Φίλτρα</string>
     <string name="explore_apply_filter">Εφαρμογή</string>
-    <string name="explore_payment_method">Μέθοδος πληρωμής</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Δωροκάρτα</string>
     <string name="explore_filter_gift_cards">Δωροκάρτες</string>
@@ -89,7 +88,6 @@
     <string name="gift_card_types">Τύποι δωροκάρτας</string>
     <string name="flexible_amount_option">Flexible amounts</string>
     <string name="fixed_denom_option">Ποσά σε σταθερές μονάδες</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Κοντινή τοποθεσία</item>
@@ -188,7 +186,6 @@
     <string name="purchase_gift_card_confirm">Επιβεβαίωση</string>
     <string name="purchase_gift_card_details">Λεπτομέριες δωροκάρτας</string>
     <string name="purchase_original_purchase">Αρχική αγορά</string>
-    <string name="purchase_check_current_balance">Έλεγχος τρέχοντος υπολοίπου</string>
     <string name="purchase_card_number">Αριθμός κάρτας</string>
     <string name="purchase_card_pin">PIN κάρτας</string>
     <string name="purchase_view_transaction">Προβολή στοιχείων συναλλαγής</string>
@@ -228,16 +225,13 @@
     <string name="gift_card_details_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη.</string>
     <string name="gift_card_limit_error">Τα όρια αγορών για αυτόν τον έμπορο έχουν αλλάξει. Παρακαλούμε επικοινωνήστε με την Υποστήριξη CTX για περισσότερες πληροφορίες.</string>
     <string name="gift_card_unknown_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη με το txid %s.</string>
-    <string name="gift_card_rejected">Η πληρωμή απορρίφθηκε. Παρακαλούμε επικοινωνήστε με την CTX με το αναγνωριστικό της δωροκάρτας %s και το αναγνωριστικό πληρωμής %s και το αναγνωριστικό συναλλαγής%s.</string>
-    <string name="gift_card_redeem_url_not_supported">Η πληρωμή έχει γίνει για τον έμπορο που παρέχει μια διεύθυνση URL εξαργύρωσης, αλλά αυτό δεν υποστηρίζεται επί του παρόντος. Παρακαλούμε επικοινωνήστε με την CTX με το αναγνωριστικό της δωροκάρτας %s και το αναγνωριστικό πληρωμής %s και το αναγνωριστικό συναλλαγής %s.</string>
     <string name="dashspend_terms_conditions">Αποδοχή των όρων και προϋποθέσεων</string>
     <string name="accept_terms_conditions">Αποδέχομαι τους όρους και τις προϋποθέσεις του DashSpend</string>
     <string name="tap_link_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να πατήσετε στον παρακάτω σύνδεσμο για να προχωρήσετε.</string>
     <string name="accept_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να αποδεχτείτε τους όρους και τις προϋποθέσεις του DashSpend.</string>
     <string name="view_terms_conditions">Όροι και Προϋποθέσεις</string>
-    <string name="barcode_placeholder">Μόλις δημιουργηθεί ο κώδικας σας, θα εμφανιστεί εδώ.</string>
     <string name="gift_card_contact_ctx">Επικοινωνήστε με την CTX υποστήριξη</string>
-
+    <string name="gift_card_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Δημιουργία λογαριασμού</string>
     <string name="log_in_to_ctxspend_account">Συνδεθείτε στο λογαριασμό σας</string>
@@ -245,4 +239,13 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Δημιουργήστε έναν λογαριασμό στο DashSpend ή συνδεθείτε στον ήδη υπάρχοντα.</string>
     <string name="temporarily_unavailable">Προσωρινά μη διαθέσιμο</string>
+    <string name="country_availability">Αυτή η κάρτα λειτουργεί μόνο στις Ηνωμένες Πολιτείες</string>
+    <string name="token_expired_title">Η συνεδρία σας έληξε</string>
+    <string name="token_expired_message">Φαίνεται ότι έχετε καιρό να χρησιμοποιήσετε το DashSpend. Για λόγους ασφαλείας, έχετε αποσυνδεθεί.\n\nΠαρακαλούμε συνδεθείτε ξανά για να συνεχίσετε να εξερευνάτε πού μπορείτε να ξοδέψετε τα Dash σας.</string>
+
+    <string name="flexible_amounts">Flexible amounts</string>
+    <string name="address">Διεύθυνση</string>
+    <string name="website">Ιστοσελίδα</string>
+    <string name="call">Κλήση</string>
+    <string name="save">Αποθήκευση</string>
 </resources>

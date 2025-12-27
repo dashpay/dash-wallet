@@ -11,6 +11,7 @@
     <string name="buy_dash">خرید دش</string>
     <string name="copied">کپی شد</string>
     <string name="staking_title">سپرده‌گذاری</string>
+    <string name="spend_title">خرج کردن</string>
     <string name="email">ایمیل</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">خطا</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">خطا در پرداخت</string>
     <string name="payment_request_problem_message">امکان پردازش پرداخت‌تان توسط سرور وجود ندارد. لطفا با فروشنده تماس بگیرید. </string>
     <string name="exchange_rate_not_found"> نرخ‌های تبدیل پیدا نشد.</string>
+    <string name="send_coins_fragment_hint_replaying">پرداخت‌های کنونی امکان‌پذیر نیست، زیرا کیف پول به خوبی با شبکه همزمان نشده است</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">مستقیما روی دش والت دریافت کنید</string>

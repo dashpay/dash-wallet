@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Sarà pagata una piccola commissione di rete di %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Una tassa di priorità %s sara pagata. Usa \'priorità\' solo se hai bisogno di una conferma il prima possibile.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">La quantità di piccoli pagamenti nel vostro portamonete non raggiunge valori inviabili.</string>
-    <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
     <string name="send_coins_fragment_direct_payment_enable">Invia il pagamento al beneficiario</string>
     <string name="send_coins_fragment_direct_payment_ack">Il tuo pagamento è stato inviato con successo.</string>
     <string name="send_coins_fragment_direct_payment_nack">Il tuo pagamento con connessione diretta è stato rifiutato.</string>
@@ -297,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Allega il dump del portafoglio</string>
     <string name="report_issue_dialog_mail_intent_failed">Invio della segnalazione non riuscito.</string>
     <string name="report_issue_dialog_generating_report">Generazione del report</string>
+    <string name="report_issue_dialog_status_device_info">informazioni sul dispositivo</string>
+    <string name="report_issue_dialog_status_installed_packages">elenco dei pacchetti installati</string>
+    <string name="report_issue_dialog_status_application_log">registro dell\'applicazione</string>
+    <string name="report_issue_dialog_status_application_info">informazioni sull\'applicazione</string>
+    <string name="report_issue_dialog_status_wallet_dump">dump del portafoglio (lento)</string>
+    <string name="report_issue_dialog_status_contextual_info">informazioni contestuali</string>
+    <string name="report_issue_dialog_status_background_traces">tracce in background</string>
+    <string name="report_issue_dialog_status_stack_trace">tracce dello stack</string>
+    <string name="report_issue_dialog_status_finishing">sta terminando</string>
     <string name="report_transaction_history_export">Esporta</string>
     <string name="report_transaction_history_title">Esporta CSV</string>
     <string name="report_transaction_history_not_synced_title">Esporta CSV</string>
@@ -316,6 +324,7 @@
 
 
     <string name="about_title">Informazioni</string>
+    <string name="about_dash_title">Informazioni su Dash</string>
     <string name="about_version_title">Versione</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">Licenza</string>
@@ -338,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Ricordamelo in seguito</string>
     <string name="notification_inactivity_action_dismiss_forever">Non ricordarmelo</string>
     <string name="notification_bluetooth_service_listening">Pronto per ricevere pagamenti tramite Bluetooth</string>
+    <string name="notification_sync_paused">Sincronizzazione blockchain sospesa</string>
+    <string name="notification_background_processes_paused">Elaborazione in background sospesa</string>
+    <string name="notification_background_processes_paused_text">Hai raggiunto il limite del servizio in primo piano di Android di 6 ore per il mixing o la sincronizzazione blockchain. Tocca per reimpostare...</string>
     <string name="appwidget_wallet_balance_title">Bilancio Dash</string>
 
     <!-- generic buttons -->

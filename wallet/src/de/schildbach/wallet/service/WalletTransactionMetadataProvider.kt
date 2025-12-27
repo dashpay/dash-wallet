@@ -25,9 +25,11 @@ import de.schildbach.wallet.database.dao.TransactionMetadataDao
 import de.schildbach.wallet.database.dao.TransactionMetadataChangeCacheDao
 import de.schildbach.wallet.database.dao.TransactionMetadataDocumentDao
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import okhttp3.*
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.*
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
@@ -61,9 +63,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
     private val walletData: WalletDataProvider,
     private val giftCardDao: GiftCardDao,
     private val transactionMetadataChangeCacheDao: TransactionMetadataChangeCacheDao,
-    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao
+    private val transactionMetadataDocumentDao: TransactionMetadataDocumentDao,
+    private val dashPayConfig: DashPayConfig
 ) : TransactionMetadataProvider {
-
     companion object {
         private val log = LoggerFactory.getLogger(WalletTransactionMetadataProvider::class.java)
     }
@@ -131,8 +133,14 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 service = platformService
             )
             transactionMetadataDao.insert(metadata)
-            // only add to the change cache if some metadata exists
-            if (metadata.isNotEmpty() && !isSyncingPlatform && hasChanges) {
+            // only add to the change cache if some metadata exists and this is not a CoinJoin tx
+            val isCoinJoinTx = when (CoinJoinTransactionType.fromTx(this, walletData.wallet!!)) {
+                CoinJoinTransactionType.None, CoinJoinTransactionType.Send -> false
+                else -> true
+            }
+
+            // only save Transaction metadata to
+            if (!isCoinJoinTx && metadata.isNotEmpty() && !isSyncingPlatform && hasChanges && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insert(TransactionMetadataCacheItem(metadata))
             }
             log.info("txmetadata: inserting $metadata")
@@ -173,6 +181,19 @@ class WalletTransactionMetadataProvider @Inject constructor(
         return null
     }
 
+    private suspend fun shouldSaveToCache(): Boolean {
+        val currentTime = System.currentTimeMillis()
+        val shouldSaveToCache = true // for now always save to cache to support past, future saving of metadata
+        log.info(
+            "saving to cache: {} = saving: {} && current: {} > safe after: {}",
+            shouldSaveToCache,
+            dashPayConfig.isSavingToNetwork(),
+            Date(currentTime),
+            Date(dashPayConfig.getSaveAfterTimestamp())
+        )
+        return shouldSaveToCache
+    }
+
     private suspend fun updateAndInsertIfNotExist(
         txId: Sha256Hash,
         isSyncingPlatform: Boolean,
@@ -200,7 +221,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionTaxCategory(txId: Sha256Hash, taxCategory: TaxCategory, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateTaxCategory(txId, taxCategory)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertTaxCategory(txId, taxCategory)
             }
         }
@@ -213,7 +234,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     ) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateSentTime(txId, timestamp)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertSentTime(txId, timestamp)
             }
         }
@@ -268,7 +289,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                     exchangeRate.currencyCode,
                     exchangeRate.rate!!
                 )
-                if (!isSyncingPlatform) {
+                if (!isSyncingPlatform && shouldSaveToCache()) {
                     transactionMetadataChangeCacheDao.insertExchangeRate(
                         txId,
                         exchangeRate.currencyCode,
@@ -282,7 +303,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionMemo(txId: Sha256Hash, memo: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateMemo(txId, memo)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertMemo(txId, memo)
             }
         }
@@ -291,23 +312,23 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun setTransactionService(txId: Sha256Hash, service: String, isSyncingPlatform: Boolean) {
         updateAndInsertIfNotExist(txId, isSyncingPlatform) {
             transactionMetadataDao.updateService(txId, service)
-            if (!isSyncingPlatform) {
+            if (!isSyncingPlatform && shouldSaveToCache()) {
                 transactionMetadataChangeCacheDao.insertService(txId, service)
             }
         }
     }
 
-    override suspend fun markGiftCardTransaction(txId: Sha256Hash, iconUrl: String?) {
+    override suspend fun markGiftCardTransaction(txId: Sha256Hash, service: String, iconUrl: String?) {
         var transactionMetadata: TransactionMetadata
         updateAndInsertIfNotExist(txId, false) {
             transactionMetadata = it.copy(
-                service = ServiceName.CTXSpend,
+                service = service,
                 taxCategory = TaxCategory.Expense
             )
             transactionMetadataDao.update(transactionMetadata)
             transactionMetadataChangeCacheDao.markGiftCardTx(
                 txId,
-                ServiceName.CTXSpend,
+                service,
                 TaxCategory.Expense,
                 iconUrl
             )
@@ -354,12 +375,16 @@ class WalletTransactionMetadataProvider @Inject constructor(
             val exchangeRate = tx.exchangeRate
             // sync exchange rates
             if (metadata.rate != null && tx.exchangeRate == null) {
-                tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
-                    Fiat.parseFiat(
-                        metadata.currencyCode,
-                        metadata.rate
+                try {
+                    tx.exchangeRate = org.bitcoinj.utils.ExchangeRate(
+                        Fiat.parseFiat(
+                            metadata.currencyCode,
+                            metadata.rate
+                        )
                     )
-                )
+                } catch (e: Exception) {
+                    log.error("Failed to parse exchange rate for metadata: {}. Error: {}", metadata, e.message, e)
+                }
             } else if (metadata.rate == null && exchangeRate != null) {
                 transactionMetadataDao.updateExchangeRate(
                     tx.txId,
@@ -503,7 +528,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                     metadata.icon = bitmaps[iconId]
                                 }
 
-                                if (metadata.service == ServiceName.CTXSpend) {
+                                if (ServiceName.isDashSpend(metadata.service)) {
                                     metadata.title = giftCards[metadata.txId]?.merchantName
                                 }
                             }
@@ -561,6 +586,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
         syncScope.launch(Dispatchers.IO) {
             markAddressWithTaxCategory(address, isInput, taxCategory, service)
         }
+    }
+
+    override suspend fun exists(txId: Sha256Hash): Boolean {
+        return transactionMetadataDao.exists(txId)
     }
 
     override fun observeTransactionMetadata(txId: Sha256Hash): Flow<TransactionMetadata?> {

@@ -88,7 +88,7 @@ fun MenuItem(
                         modifier = Modifier.size(26.dp)
                     )
                 }
-                
+
                 // Direction indicator overlay
                 if (showDirectionIndicator) {
                     Box(
@@ -128,7 +128,7 @@ fun MenuItem(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                
+
                 // Title row with info icon
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -208,7 +208,7 @@ fun MenuItem(
                             )
                         }
                     }
-                    
+
                     // Fiat amount
                     fiatAmount?.let {
                         Text(
@@ -321,7 +321,7 @@ fun PreviewMenuItem() {
         MenuItem(
             helpTextAbove = "help text 1",
             title = "title",
-            subtitle = "help text 2", 
+            subtitle = "help text 2",
             subtitle2 = "help text 3",
             icon = R.drawable.ic_dash_blue_filled,
             showDirectionIndicator = true,

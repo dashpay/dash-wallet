@@ -66,6 +66,7 @@
     <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_request_problem_message">Vaše platba nemohla být serverem zpracována, informujte se prosím u obchodníka.</string>
     <string name="exchange_rate_not_found">Nelze najít směnný kurz.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby momentálně nelze provádět, protože peněženka není synchronizována se sítí.</string>
 
     <string name="disconnected">Odpojeno</string>
     <string name="enter_amount_available">k dispozici</string>

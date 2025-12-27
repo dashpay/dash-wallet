@@ -264,8 +264,8 @@
     <string name="menu_settings_subtitle">Varsayılan para birimi, kısayollar, hakkında…</string>
     <string name="menu_tools_title">Araçlar</string>
     <string name="menu_tools_subtitle">Özel anahtari içeri aktar...</string>
-    <string name="menu_local_currency">Yerel Para Birimi</string>
-    <string name="menu_rescan_blockchain">Blok Zincirini Tekrar Tara</string>
+    <string name="menu_local_currency">Yerel para birimi</string>
+    <string name="menu_rescan_blockchain">Blok zincirini tekrar tara</string>
     <string name="menu_contact_support_title">Destekle İletişime Geçin</string>
     <string name="menu_contact_support_subtitle">Sorun rapor et</string>
     <string name="menu_explore_title">Keşfet</string>
@@ -397,7 +397,7 @@
     <string name="launch_reset_wallet_extra_message">Kurtarma ifadenizi yedekleyin</string>
     <string name="start_reset_wallet_title">%s kaybedebilirsiniz</string>
     <string name="reset_wallet_text">Cüzdanı Sıfırla</string>
-
+    <string name="reset_wallet_button">Cüzdanı sıfırla</string>
 
 
     <!-- Tax category -->

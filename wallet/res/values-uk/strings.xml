@@ -65,7 +65,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Буде знято комісію мережі %s .</string>
     <string name="send_coins_fragment_hint_fee_priority">Буде сплачено плату за пріоритет у розмірі %s. Якщо вам важлива низька комісія, використовуйте Пріоритет, лише якщо вам потрібне підтвердження якнайшвидше.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сума дрібних платежів у вашому гаманці не становить суми, яку можна відправити.</string>
-    <string name="send_coins_fragment_hint_replaying">Наразі платежі неможливі, оскільки гаманець не повністю синхронізовано з мережею</string>
     <string name="send_coins_fragment_direct_payment_enable">Відправити платіж безпосередньо отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_ack">Платіж був успішно відправлений отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ваш платіж через пряме підключення був відхилений.</string>
@@ -301,6 +300,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Додати дамп пам\'яті гаманця</string>
     <string name="report_issue_dialog_mail_intent_failed">Помилка при відправці звіту.</string>
     <string name="report_issue_dialog_generating_report">Формування звіту</string>
+    <string name="report_issue_dialog_status_device_info">інформація про пристрій</string>
+    <string name="report_issue_dialog_status_installed_packages">список встановлених пакетів</string>
+    <string name="report_issue_dialog_status_application_log">лог додатку</string>
+    <string name="report_issue_dialog_status_application_info">інформація додатку</string>
+    <string name="report_issue_dialog_status_wallet_dump">дамп гаманця (повільно)</string>
+    <string name="report_issue_dialog_status_contextual_info">контекстна інформація</string>
+    <string name="report_issue_dialog_status_background_traces">фонові трасування</string>
+    <string name="report_issue_dialog_status_stack_trace">трасування стеку</string>
+    <string name="report_issue_dialog_status_finishing">завершується</string>
     <string name="report_transaction_history_export">Експорт</string>
     <string name="report_transaction_history_title">Експорт CSV</string>
     <string name="report_transaction_history_not_synced_title">Експорт CSV</string>
@@ -320,6 +328,7 @@
 
 
     <string name="about_title">Про програму</string>
+    <string name="about_dash_title">Про Dash</string>
     <string name="about_version_title">Версія</string>
     <string name="about_copyright_title">Авторське право</string>
     <string name="about_license_title">Ліцензія</string>
@@ -342,6 +351,9 @@
     <string name="notification_inactivity_action_dismiss">Нагадати пізніше</string>
     <string name="notification_inactivity_action_dismiss_forever">Не нагадувати</string>
     <string name="notification_bluetooth_service_listening">Готовий приймати платежі через Bluetooth</string>
+    <string name="notification_sync_paused">Синхронізація блокчейну призупинена</string>
+    <string name="notification_background_processes_paused">Фонова обробка призупинена</string>
+    <string name="notification_background_processes_paused_text">Ви досягли 6-годинного ліміту фонової служби Android для мікшування або синхронізації блокчейну. Натисніть, щоб скинути…</string>
     <string name="appwidget_wallet_balance_title">Баланс Dash</string>
 
     <!-- generic buttons -->

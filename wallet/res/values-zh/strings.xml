@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的网络费用.</string>
     <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额.</string>
-    <string name="send_coins_fragment_hint_replaying">因钱包与网络还未完成同步, 当前交易不可用.</string>
     <string name="send_coins_fragment_direct_payment_enable">直接向收款人付款.</string>
     <string name="send_coins_fragment_direct_payment_ack">您的直接付款已经成功发送.</string>
     <string name="send_coins_fragment_direct_payment_nack">您的直接付款已被拒绝.</string>
@@ -297,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">附加钱包 dump 信息</string>
     <string name="report_issue_dialog_mail_intent_failed">发送报告失败.</string>
     <string name="report_issue_dialog_generating_report">正在生成报告</string>
+    <string name="report_issue_dialog_status_device_info">设备信息</string>
+    <string name="report_issue_dialog_status_installed_packages">已安装软件包列表</string>
+    <string name="report_issue_dialog_status_application_log">应用程序日志</string>
+    <string name="report_issue_dialog_status_application_info">应用程序信息</string>
+    <string name="report_issue_dialog_status_wallet_dump">钱包导出 (慢)</string>
+    <string name="report_issue_dialog_status_contextual_info">上下文信息</string>
+    <string name="report_issue_dialog_status_background_traces">背景追踪</string>
+    <string name="report_issue_dialog_status_stack_trace">堆栈跟踪</string>
+    <string name="report_issue_dialog_status_finishing">正在完成</string>
     <string name="report_transaction_history_export">导出</string>
     <string name="report_transaction_history_title">导出CSV文件</string>
     <string name="report_transaction_history_not_synced_title">导出CSV文件</string>
@@ -316,6 +324,7 @@
 
 
     <string name="about_title">关于</string>
+    <string name="about_dash_title">关于 Dash</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">许可协议</string>
@@ -338,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
     <string name="notification_bluetooth_service_listening">准备通过蓝牙接收付款</string>
+    <string name="notification_sync_paused">区块链同步已暂停</string>
+    <string name="notification_background_processes_paused">后台处理已暂停</string>
+    <string name="notification_background_processes_paused_text">您已达到 Android 前台服务权限对于混币或区块链同步的6小时限制. 点击重置...</string>
     <string name="appwidget_wallet_balance_title">Dash余额</string>
 
     <!-- generic buttons -->

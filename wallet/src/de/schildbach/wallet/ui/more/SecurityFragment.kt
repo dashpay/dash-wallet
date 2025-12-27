@@ -118,7 +118,6 @@ class SecurityFragment : Fragment() {
         }
     }
 
-    // TODO: tests
     private fun resetWallet() {
         val state = viewModel.uiState.value
         val walletBalance = state.balance
@@ -126,19 +125,21 @@ class SecurityFragment : Fragment() {
 
         if (walletBalance.isGreaterThan(Coin.ZERO) && state.needPassphraseBackup) {
             val resetWalletDialog = ExtraActionDialog.create(
-                R.drawable.ic_warning,
+                R.drawable.ic_warning_yellow_circle,
                 getString(R.string.launch_reset_wallet_title),
                 getString(R.string.launch_reset_wallet_message),
                 getString(R.string.button_cancel),
-                getString(R.string.continue_reset),
+                getString(R.string.reset_wallet_button),
                 getString(R.string.launch_reset_wallet_extra_message)
-            )
+            ).apply {
+                requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+            }
             resetWalletDialog.show(
                 requireActivity(),
                 onResult = {
                     if (it == true) {
                         val startResetWalletDialog = AdaptiveDialog.create(
-                            R.drawable.ic_warning,
+                            R.drawable.ic_warning_yellow_circle,
                             getString(
                                 R.string.start_reset_wallet_title,
                                 fiatBalanceStr.ifEmpty {
@@ -147,11 +148,13 @@ class SecurityFragment : Fragment() {
                             ),
                             getString(R.string.launch_reset_wallet_message),
                             getString(R.string.button_cancel),
-                            getString(R.string.reset_wallet_text)
-                        )
+                            getString(R.string.reset_wallet_button)
+                        ).apply {
+                            requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+                        }
                         startResetWalletDialog.show(requireActivity()) { confirmed ->
                             if (confirmed == true) {
-                                doReset()
+                                checkUsernameThenReset()
                             }
                         }
                     }
@@ -166,23 +169,42 @@ class SecurityFragment : Fragment() {
             )
         } else {
             val resetWalletDialog = AdaptiveDialog.create(
-                null,
+                R.drawable.ic_warning_yellow_circle,
                 getString(R.string.reset_wallet_title),
                 getString(R.string.reset_wallet_message),
                 getString(R.string.button_cancel),
-                getString(R.string.positive_reset_text)
-            )
+                getString(R.string.reset_wallet_button)
+            ).apply {
+                requireArguments().putInt(AdaptiveDialog.POS_BUTTON_COLOR_ARG, R.style.PrimaryButtonTheme_Large_Red)
+            }
             resetWalletDialog.show(requireActivity()) {
                 if (it == true) {
-                    doReset()
+                    checkUsernameThenReset()
                 }
+            }
+        }
+    }
+
+    private fun checkUsernameThenReset() {
+        lifecycleScope.launch {
+            if (viewModel.hasIdentity && viewModel.hasPendingTxMetadataToSave()) {
+                SaveMetadataAndResetDialogFragment().show(requireActivity()) { result ->
+                    when (result) {
+                        null -> { }
+                        true, false -> {
+                            doReset()
+                        }
+                    }
+                }
+            } else {
+                doReset()
             }
         }
     }
 
     private fun doReset() {
         viewModel.logEvent(AnalyticsConstants.Security.RESET_WALLET)
-        val dialog = AdaptiveDialog.progress(getString(R.string.perm_lock_wipe_wallet))
+        val dialog = AdaptiveDialog.progress(getString(R.string.reset_wallet_text))
         dialog.show(requireActivity())
         (requireActivity() as AbstractBindServiceActivity).doUnbindService()
         viewModel.triggerWipe() {

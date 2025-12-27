@@ -60,6 +60,7 @@ public final class Constants {
 
     public static final boolean IS_PROD_BUILD;
 
+    // 32-bit devices do not support platform
     public static boolean SUPPORTS_PLATFORM;
     // TODO: remove all references to this when invites are enabled and functional
     public static boolean SUPPORTS_INVITES;
@@ -93,10 +94,10 @@ public final class Constants {
                 FILENAME_NETWORK_SUFFIX = "";
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "dash";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4.db");
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
-                SUPPORTS_TXMETADATA = false;
+                SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
@@ -115,13 +116,13 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = !is32Bit;
                 SUPPORTS_INVITES = false;
-                SUPPORTS_TXMETADATA = false;
+                SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
                 org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
-                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v3-testnet.db");
+                org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
                 break;
             }
             case "devnet": {

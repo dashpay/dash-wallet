@@ -22,6 +22,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
+import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.CoinSelector
 import java.util.function.Consumer
 import java.util.function.Predicate

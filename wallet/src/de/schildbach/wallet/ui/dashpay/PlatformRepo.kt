@@ -191,7 +191,7 @@ class PlatformRepo @Inject constructor(
                 null
             }
             // Don't bother with DeriveKeyTask here, just call deriveKey
-            walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
+            password?.let { walletApplication.wallet!!.keyCrypter!!.deriveKey(it) }
         } else {
             null
         }
@@ -543,7 +543,6 @@ class PlatformRepo @Inject constructor(
             }
             contactScores[it.fromContactRequest!!.userId] = count
             contactIds.add(it.fromContactRequest!!.userId)
-            log.info("contact: {}", watch)
         }
 
         // determine users with top TOP_CONTACT_COUNT non-zero scores
@@ -798,10 +797,12 @@ class PlatformRepo @Inject constructor(
         log.info("loading BlockchainIdentity: {}", watch)
         if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
-                uniqueId = Sha256Hash.wrap(Base58.decode(blockchainIdentityData.userId))
+                blockchainIdentityData.userId?.let {
+                    uniqueId = Sha256Hash.wrap(Base58.decode(it))
+                }
                 identity = blockchainIdentityData.identity
             }
-            log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}: {}", watch)
+            log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
             return blockchainIdentity
@@ -809,7 +810,7 @@ class PlatformRepo @Inject constructor(
 
         // TODO: needs to check against Platform to see if values exist.  Check after
         // Syncing complete
-        log.info("loading identity ${blockchainIdentityData.userId} == ${blockchainIdentity.uniqueIdString}")
+        log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
         return blockchainIdentity.apply {
             currentUsername = blockchainIdentityData.username
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
@@ -1058,15 +1059,14 @@ class PlatformRepo @Inject constructor(
         val key = decryptedChain.getKey(index)
         Preconditions.checkState(key.path.last().isHardened)
         return key
-
     }
 
     fun getIdentityFromPublicKeyId(): Identity? {
-        val encryptionKey = getWalletEncryptionKey()
-        val firstIdentityKey = getBlockchainIdentityKey(0, encryptionKey) ?: return null
-
         return try {
-            platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            getWalletEncryptionKey()?.let {
+                val firstIdentityKey = getBlockchainIdentityKey(0, it) ?: return null
+                platform.stateRepository.fetchIdentityFromPubKeyHash(firstIdentityKey.pubKeyHash)
+            }
         } catch (e: MaxRetriesReachedException) {
             null
         } catch (e: NoAvailableAddressesForRetryException) {

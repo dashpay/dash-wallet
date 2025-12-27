@@ -61,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
-    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
     <string name="send_coins_fragment_direct_payment_ack">Η πληρωμή σας στάλθηκε απευθείας επιτυχώς.</string>
     <string name="send_coins_fragment_direct_payment_nack">Η πληρωμή μέσω απευθείας σύνδεσης απορρίφθηκε.</string>
@@ -297,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Επισύναψη αρχείου ένδειξης σφαλμάτων πορτοφολιού</string>
     <string name="report_issue_dialog_mail_intent_failed">Αποτυχία αποστολής της αναφοράς.</string>
     <string name="report_issue_dialog_generating_report">Δημιουργία αναφοράς</string>
+    <string name="report_issue_dialog_status_device_info">πληροφορίες συσκευής</string>
+    <string name="report_issue_dialog_status_installed_packages">λίστα των εγκατεστημένων πακέτων</string>
+    <string name="report_issue_dialog_status_application_log">αρχείο καταγραφής εφαρμογών</string>
+    <string name="report_issue_dialog_status_application_info">πληροφορίες εφαρμογής</string>
+    <string name="report_issue_dialog_status_wallet_dump">απόρριψη πορτοφολιού (αργή)</string>
+    <string name="report_issue_dialog_status_contextual_info">πληροφορίες πλαισίου</string>
+    <string name="report_issue_dialog_status_background_traces">ίχνη στο παρασκήνιο</string>
+    <string name="report_issue_dialog_status_stack_trace">ίχνη στοίβας</string>
+    <string name="report_issue_dialog_status_finishing">ολοκλήρωση</string>
     <string name="report_transaction_history_export">Εξαγωγή</string>
     <string name="report_transaction_history_title">Εξαγωγή CSV</string>
     <string name="report_transaction_history_not_synced_title">Εξαγωγή CSV</string>
@@ -316,6 +324,7 @@
 
 
     <string name="about_title">Πληροφορίες</string>
+    <string name="about_dash_title">Σχετικά με το Dash</string>
     <string name="about_version_title">Έκδοση</string>
     <string name="about_copyright_title">Πνευματικά δικαιώματα</string>
     <string name="about_license_title">Άδεια</string>
@@ -338,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
     <string name="notification_bluetooth_service_listening">Έτοιμο για λήψη πληρωμών μέσω Bluetooth</string>
+    <string name="notification_sync_paused">Διακοπή συγχρονισμού Blockchain</string>
+    <string name="notification_background_processes_paused">Παύση της επεξεργασίας στο παρασκήνιο</string>
+    <string name="notification_background_processes_paused_text">Έχετε φτάσει το όριο των 6 ωρών για την υπηρεσία του Android για μίξη ή συγχρονισμό blockchain. Πατήστε για επαναφορά...</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>
 
     <!-- generic buttons -->

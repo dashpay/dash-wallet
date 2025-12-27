@@ -363,7 +363,6 @@
     <string name="coinjoin_start">Karıştırmaya Başla</string>
     <string name="coinjoin_stop">Karıştırmayı Durdur</string>
     <string name="coinjoin_mixing">Karıştırma</string>
-    <string name="coinjoin_paused">Karıştırma Duraklatıldı</string>
     <string name="coinjoin_not_started">Başlamadı</string>
     <string name="coinjoin_progress_balance">%1$s / %2$s</string>
     <string name="coinjoin_progress_finished">Tamamen Karıştırılmış</string>

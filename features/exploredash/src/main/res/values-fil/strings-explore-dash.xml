@@ -73,8 +73,10 @@
     <string name="explore_filter">Salain</string>
     <string name="explore_filters">Mga filter</string>
     <string name="explore_apply_filter">Mag-apply</string>
-    <string name="explore_payment_method">Paraan ng Pagbayad</string>
+    <string name="explore_spending_options">Mga pagpipilian sa paggastos</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Mga CTX gift card</string>
+    <string name="piggycards_gift_cards">Piggy Cards gift cards</string>
     <string name="explore_payment_gift_card">Gift card</string>
     <string name="explore_filter_gift_cards">Mga gift card</string>
     <string name="explore_radius">Radius</string>
@@ -89,6 +91,7 @@
     <string name="gift_card_types">Mga uri ng gift card</string>
     <string name="flexible_amount_option">Mga flexible na amount</string>
     <string name="fixed_denom_option">Mga nakapirming halaga</string>
+    <string name="gift_card_providers">Mga tagapagbigay ng gift card</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -188,7 +191,7 @@
     <string name="purchase_gift_card_confirm">Kumpirmahin</string>
     <string name="purchase_gift_card_details">Mga detalye ng gift card</string>
     <string name="purchase_original_purchase">Orihinal na pagbili</string>
-    <string name="purchase_check_current_balance">Suriin ang kasalukuyang balanse</string>
+    <string name="purchase_check_current_balance">Tingnan ang mga detalye ng card</string>
     <string name="purchase_card_number">Numero ng card</string>
     <string name="purchase_card_pin">PIN ng Card</string>
     <string name="purchase_view_transaction">Tingnan ang Mga Detalye ng Transaksyon</string>
@@ -225,19 +228,25 @@
     <string name="try_again">Subukan muli</string>
     <string name="cancel">Kanselahin</string>
     <string name="gift_card_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Pakisubukang muli.</string>
+    <string name="gift_card_out_of_stock_error">Wala nang stock ang gift card na ito. Pakisubukang muli.</string>
     <string name="gift_card_details_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Mangyaring makipag-ugnayan sa suporta.</string>
     <string name="gift_card_limit_error">Nagbago ang mga limitasyon sa pagbili para sa merchant na ito. Mangyaring makipag-ugnayan sa CTX Support para sa karagdagang impormasyon.</string>
+    <string name="gift_card_server_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Mangyaring makipag-ugnayan sa %s Suporta upang iulat ang problema.</string>
+    <string name="gift_card_server_region_error">Ang mga pagbili ng gift card na ito ay hindi maaaring gawin mula sa iyong rehiyon.</string>
+    <string name="gift_card_error_wrong_network">Ang kahilingan sa pagbabayad ay para sa ibang network. Mangyaring makipag-ugnayan sa suporta.</string>
     <string name="gift_card_unknown_error">Sa ilang kadahilanan hindi kami nakabili ng gift card. Mangyaring makipag-ugnayan sa suporta sa txid %s.</string>
-    <string name="gift_card_rejected">Tinanggihan ang pagbabayad.  Mangyaring makipag-ugnayan sa CTX gamit ang gift card id %s at payment id %s at transaction id %s.</string>
-    <string name="gift_card_redeem_url_not_supported">Ang pagbabayad ay ginawa para sa merchant na nagbibigay ng isang redeem URL, ngunit hindi iyon kasalukuyang sinusuportahan. Mangyaring makipag-ugnayan sa CTX gamit ang gift card id %s at payment id %s at transaction id %s.</string>
+    <string name="gift_card_delay">Mas tumatagal kaysa karaniwan para makuha ang card na ito. Mangyaring makipag-ugnayan sa <a href="contact:support">support@dash.org</a> kung mas matagal.</string>
+    <string name="gift_card_rejected">Tinanggihan ang pagbabayad. Mangyaring makipag-ugnayan sa %s Suporta gamit ang gift card id %s at payment id %s at transaksyon id %s.</string>
+    <string name="gift_card_redeem_url_not_supported">Ang pagbabayad ay ginawa para sa merchant na nagbibigay ng isang redeem URL, ngunit iyon ay kasalukuyang hindi suportado. Mangyaring makipag-ugnayan sa %s Suporta gamit ang gift card id %s at payment id %s at transaksyon id %s.</string>
     <string name="dashspend_terms_conditions">Tanggapin ang mga tuntunin at kundisyon</string>
     <string name="accept_terms_conditions">Tinatanggap ko ang mga tuntunin at kundisyon ng DashSpend</string>
     <string name="tap_link_to_proceed">Upang lumikha ng isang account sa DashSpend dapat mong i-tap ang link sa ibaba upang magpatuloy</string>
     <string name="accept_to_proceed">Upang gumawa ng account sa DashSpend kailangan mong tanggapin ang mga tuntunin at kundisyon ng DashSpend</string>
     <string name="view_terms_conditions">Mga Tuntunin &amp; kundisyon</string>
-    <string name="barcode_placeholder">Sa sandaling mabuo ang iyong code, ito ay ipapakita dito.</string>
+    <string name="barcode_placeholder">Mangyaring maghintay na maihatid ang mga detalye ng gift card.</string>
     <string name="gift_card_contact_ctx">Makipag-ugnayan sa Suporta sa CTX</string>
-
+    <string name="gift_card_contact_piggycards">Makipag-ugnayan sa Suporta sa PiggyCards</string>
+    <string name="gift_card_contact_support">Contact Support</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Gumawa ng account</string>
     <string name="log_in_to_ctxspend_account">Mag-log in sa iyong account</string>
@@ -245,4 +254,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">Bumili ng gift card gamit ang iyong DashSpend account</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Gumawa ng DashSpend account o mag-log in sa dati nang account</string>
     <string name="temporarily_unavailable">Pansamantalang hindi magagamit</string>
+    <string name="country_availability">Gumagana lang ang card na ito sa United States</string>
+    <string name="token_expired_title">Nag-expire ang iyong session</string>
+    <string name="token_expired_message">Mukhang matagal ka nang hindi gumagamit ng DashSpend. Para sa mga kadahilanang pangseguridad, na-log out ka.\n\nMangyaring mag-sign in muli upang magpatuloy sa pag-explore kung saan gagastusin ang iyong Dash.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Ang iyong email ay hindi ibabahagi sa sinuman maliban sa PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Pumili ng provider ng gift card</string>
+    <string name="flexible_amounts">Mga flexible na amount</string>
+    <string name="fixed_amounts">Mga nakapirming halaga</string>
+    <string name="address">Address</string>
+    <string name="phone">Telepono</string>
+    <string name="website">Website</string>
+    <string name="call">Tumawag</string>
+    <string name="directions">Mga Direksyon</string>
+    <string name="explore_show_all_locations">Ipakita nag lahat ng lokasyon (%d)</string>
+    <string name="provider">Provider</string>
+    <string name="save">I-save</string>
 </resources>

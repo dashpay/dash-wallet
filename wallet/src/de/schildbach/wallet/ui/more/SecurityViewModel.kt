@@ -21,7 +21,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.dao.DashPayProfileDao
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.BiometricHelper
+import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +36,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
@@ -64,8 +70,11 @@ class SecurityViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
     private val walletApplication: WalletApplication,
-    val biometricHelper: BiometricHelper
-): ViewModel() {
+    val biometricHelper: BiometricHelper,
+    blockchainIdentityConfig: BlockchainIdentityConfig,
+    dashPayProfileDao: DashPayProfileDao,
+    private val platformSyncService: PlatformSyncService,
+): BaseProfileViewModel(blockchainIdentityConfig, dashPayProfileDao) {
     companion object {
         private val log = LoggerFactory.getLogger(SecurityViewModel::class.java)
     }
@@ -116,7 +125,7 @@ class SecurityViewModel @Inject constructor(
             fingerprintIsEnabled = biometricHelper.isEnabled,
             balance = walletData.wallet?.getBalance(Wallet.BalanceType.ESTIMATED) ?: Coin.ZERO
         )
-        
+
         // Ensure configuration is in sync
         configuration.enableFingerprint = biometricHelper.isEnabled
     }
@@ -126,7 +135,7 @@ class SecurityViewModel @Inject constructor(
             val exchangeRate = org.bitcoinj.utils.ExchangeRate(Coin.COIN, fiat)
             exchangeRate.coinToFiat(_uiState.value.balance).toFormattedString()
         } ?: ""
-        
+
         _uiState.value = _uiState.value.copy(balanceInLocalFormat = balanceInLocalFormat)
     }
 
@@ -140,7 +149,7 @@ class SecurityViewModel @Inject constructor(
 
     fun setEnableFingerprint(enable: Boolean) {
         val isEnabled = enable && biometricHelper.isEnabled
-        
+
         _uiState.value = _uiState.value.copy(fingerprintIsEnabled = isEnabled)
 
         if (configuration.enableFingerprint != isEnabled) {
@@ -173,5 +182,9 @@ class SecurityViewModel @Inject constructor(
                 mapOf()
             )
         }
+    }
+
+    suspend fun hasPendingTxMetadataToSave(): Boolean = withContext(Dispatchers.IO) {
+        platformSyncService.hasPendingTxMetadataToSave()
     }
 }

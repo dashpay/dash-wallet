@@ -11,6 +11,7 @@
     <string name="buy_dash">Acheter Dash</string>
     <string name="copied">Copié</string>
     <string name="staking_title">Récompenses</string>
+    <string name="spend_title">Dépenser</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">par exemple johndoe@mail.com</string>
     <string name="error">Erreur</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Erreur de paiement</string>
     <string name="payment_request_problem_message">Votre paiement n\'a pas pu être traité par le serveur, veuillez vous adresser au vendeur</string>
     <string name="exchange_rate_not_found">Taux de change introuvables.</string>
+    <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Recevoir directement dans Dash Wallet</string>

@@ -11,6 +11,7 @@
     <string name="buy_dash">Kúpiť Dash</string>
     <string name="copied">Skopírované</string>
     <string name="staking_title">Stávkovanie</string>
+    <string name="spend_title">Výdavky</string>
     <string name="email">Email</string>
     <string name="email_placeholder">napr. johndoe@mail.com</string>
     <string name="error">Chyba</string>
@@ -96,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_request_problem_message">Vaša platba nemohla byť spracovaná serverom, prosím informujte sa u obchodníka</string>
     <string name="exchange_rate_not_found">Nepodarilo sa nájsť výmenný kurz.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože peňaženka nie je plne synchronizovaná so sieťou </string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Obdržať priamo do Dash peňaženky</string>

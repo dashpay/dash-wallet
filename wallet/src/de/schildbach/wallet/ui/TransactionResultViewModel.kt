@@ -79,7 +79,7 @@ class TransactionResultViewModel @Inject constructor(
 
     val merchantName = _transactionMetadata
         .filterNotNull()
-        .filter { it.service == ServiceName.CTXSpend }
+        .filter { ServiceName.isDashSpend(it.service) }
         .map { giftCardDao.getCardForTransaction(it.txId)?.merchantName }
         .filterNotNull()
         .asLiveData()

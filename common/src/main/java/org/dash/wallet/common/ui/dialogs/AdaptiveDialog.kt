@@ -22,7 +22,6 @@ import android.graphics.drawable.InsetDrawable
 import android.os.Bundle
 import android.view.*
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.annotation.DrawableRes
 import androidx.annotation.LayoutRes
@@ -36,6 +35,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.R
 import org.dash.wallet.common.UserInteractionAwareCallback
+import org.dash.wallet.common.ui.setRoundedRippleBackgroundButtonStyle
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -50,6 +50,7 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
         const val POS_BUTTON_ARG = "positive_text"
         const val NEG_BUTTON_ARG = "negative_text"
         const val CUSTOM_DIALOG_ARG = "custom_dialog"
+        const val POS_BUTTON_COLOR_ARG = "positive_style"
 
         @JvmStatic
         fun simple(
@@ -191,7 +192,11 @@ open class AdaptiveDialog(@LayoutRes private val layout: Int): DialogFragment() 
                 messageView.setTextIsSelectable(isMessageSelectable)
             }
         }
-
+        arguments?.getInt(POS_BUTTON_COLOR_ARG)?.let {
+            if (it != 0) {
+                positiveButton?.setRoundedRippleBackgroundButtonStyle(it, 8)
+            }
+        }
         positiveButton?.setOnClickListener {
             onPositiveAction()
         }
