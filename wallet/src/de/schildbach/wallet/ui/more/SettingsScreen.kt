@@ -119,7 +119,7 @@ private fun SettingsScreenContent(
     var balanceIcon: Int? = null
     val decimalFormat = DecimalFormat("0.000")
     
-    if (uiState.coinJoinMixingMode == CoinJoinMode.NONE) {
+    if (uiState.coinJoinMixingMode == CoinJoinMode.NONE && uiState.coinJoinMixingStatus != MixingStatus.FINISHING) {
         statusId = R.string.turned_off
    } else {
         if (uiState.coinJoinMixingStatus == MixingStatus.FINISHED) {

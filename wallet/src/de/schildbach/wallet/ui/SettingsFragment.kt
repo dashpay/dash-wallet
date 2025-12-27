@@ -53,9 +53,8 @@ import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SettingsFragment : Fragment(R.layout.fragment_settings) {
+class SettingsFragment : Fragment() {
     private val log = LoggerFactory.getLogger(SettingsFragment::class.java)
-    //private val binding by viewBinding(FragmentSettingsBinding::bind)
     private val viewModel: SettingsViewModel by viewModels()
     @Inject
     lateinit var systemActions: SystemActionsService
