@@ -197,7 +197,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
                 retry(errorMessage)
             } else {
-                startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                if (createInviteViewModel.blockchainIdentity.value?.showSecondaryUsername == true) {
+                    createIdentityViewModel.hideRequestedUsernameContainer()
+                } else {
+                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                }
             }
         }
 
