@@ -268,6 +268,7 @@ public class SecurityGuard {
             retrievePin();
             return true;
         } catch (Exception e) {
+            notifyHealthListeners(calculateHealthStatus());
             return false;
         }
     }

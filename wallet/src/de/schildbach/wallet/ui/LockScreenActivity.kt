@@ -51,6 +51,8 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
+import de.schildbach.wallet.ui.security.createForgotPinDialog
+import de.schildbach.wallet.ui.security.createUpgradePinDialog
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -69,6 +71,7 @@ import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -338,6 +341,12 @@ open class LockScreenActivity : SecureActivity() {
                 }
             }
             viewFlipper.inAnimation = AnimationUtils.loadAnimation(this@LockScreenActivity, android.R.anim.fade_in)
+
+            pinPreview.onForgotPinClickListener = {
+                createForgotPinDialog(recover = false) {
+                    startActivity(RestoreWalletFromSeedActivity.createIntent(this@LockScreenActivity, true))
+                }.show(this@LockScreenActivity)
+            }
         }
     }
 
@@ -373,6 +382,19 @@ open class LockScreenActivity : SecureActivity() {
                 }
             }
         }
+
+        checkPinViewModel.authenticationHealth.observe(this) {
+            if (!it.isHealthy && !it.hasFallback) {
+                // TODO: show the new dialog about "upgrading PIN"
+                // TODO:
+                createUpgradePinDialog {
+                    createForgotPinDialog(recover = true) {
+                        startActivity(RestoreWalletFromSeedActivity.createIntent(this, true))
+                    }.show(this)
+                }.show(this)
+            }
+        }
+        checkPinViewModel.checkHealth();
     }
 
     private fun onCorrectPin(pin: String) {

@@ -436,4 +436,9 @@
     <string name="select_option">Select option</string>
     <string name="customize_shortcuts">Customize shortcut bar</string>
     <string name="customize_shortcuts_description">Hold any button above to replace it with the function you need</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">You need to upgrade your PIN</string>
+    <string name="upgrade_pin_description">Setup a new PIN</string>
+    <string name="upgrade_pin_continue">Continue</string>
 </resources>

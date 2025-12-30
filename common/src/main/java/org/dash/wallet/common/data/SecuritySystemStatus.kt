@@ -17,9 +17,13 @@
 
 package org.dash.wallet.common.data
 
-enum class SecuritySystemStatus(val value: Int, val isHealthy: Boolean) {
-    DEAD(0, false),
-    FALLBACKS(2, false),
-    HEALTHY(1, true),
-    HEALTHY_WITH_FALLBACKS(3, true);
+enum class SecuritySystemStatus(
+    val value: Int,
+    val isHealthy: Boolean,
+    val hasFallback: Boolean
+) {
+    DEAD(0, false, false),
+    FALLBACKS(2, false, true),
+    HEALTHY(1, true, false),
+    HEALTHY_WITH_FALLBACKS(3, true, true);
 }
