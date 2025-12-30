@@ -70,6 +70,10 @@ component to our component:
 - btn - DashButton
 - toggle - DashSwitch
 - BottomSheet - ComposeBottomSheet
+- feature.top.text - FeatureTopText
+- feature.list - FeatureList
+- feature.single.item - FeatureSingleItem
+- Sheet/Buttons group - SheetButtonGroup
 
 ## Button Mapping (btn -> DashButton)
 When Figma designs specify button styles, map them to DashButton as follows:
@@ -107,6 +111,330 @@ DashButton(
     size = Size.Large,
     onClick = { /* action */ }
 )
+```
+
+## Feature Components (feature.top.text, feature.list, feature.single.item)
+
+Feature components are used to display lists of features, benefits, or steps in onboarding flows, upgrade dialogs, and informational screens.
+
+### FeatureTopText (Figma: feature.top.text)
+
+A header component that displays a centered heading with optional text description and button.
+
+**Figma Node ID**: 4075:36448
+
+```kotlin
+FeatureTopText(
+    heading = "Security Upgrade",
+    text = "Your wallet security will be upgraded to a more secure encryption system",
+    showText = true,
+    showButton = false
+)
+
+// With optional button
+FeatureTopText(
+    heading = "New Feature",
+    text = "Learn more about this new feature",
+    showText = true,
+    showButton = true,
+    buttonLabel = "Learn More",
+    buttonLeadingIcon = ImageVector.vectorResource(R.drawable.ic_info),
+    onButtonClick = { /* action */ }
+)
+```
+
+**Parameters**:
+- `heading`: String (required) - Main heading in HeadlineSmallBold style
+- `text`: String? - Optional descriptive text in BodyMedium style
+- `showText`: Boolean (default: true) - Controls text visibility
+- `showButton`: Boolean (default: false) - Controls button visibility
+- `buttonLabel`: String? - Button text
+- `buttonLeadingIcon`: ImageVector? - Optional icon before button text
+- `buttonTrailingIcon`: ImageVector? - Optional icon after button text
+- `onButtonClick`: (() -> Unit)? - Button click handler
+
+### FeatureList (Figma: feature.list)
+
+A vertical list container that displays multiple feature items with consistent spacing.
+
+**Figma Node ID**: 4075:36433
+
+```kotlin
+FeatureList(
+    items = listOf(
+        FeatureItem(
+            heading = "Enhanced Security",
+            text = "Your wallet will use the latest encryption technology",
+            icon = ImageVector.vectorResource(R.drawable.ic_security)
+        ),
+        FeatureItem(
+            heading = "Biometric Support",
+            text = "Unlock your wallet with fingerprint or face recognition",
+            icon = ImageVector.vectorResource(R.drawable.ic_biometric)
+        )
+    )
+)
+```
+
+### FeatureSingleItem (Figma: feature.single.item)
+
+An individual feature item with icon/number and text content.
+
+**Figma Node ID**: 4075:36400
+
+```kotlin
+// With custom icon
+FeatureSingleItem(
+    heading = "Secure PIN",
+    text = "Create a 6-digit PIN to protect your wallet",
+    icon = ImageVector.vectorResource(R.drawable.ic_lock)
+)
+
+// With numbered step (Figma node: 2905:40402)
+FeatureSingleItem(
+    heading = "Create a secure PIN",
+    text = "Choose a 6-digit PIN that you'll use to unlock your wallet",
+    number = "1"
+)
+
+// Default (bordered box)
+FeatureSingleItem(
+    heading = "Feature Title",
+    text = "Feature description"
+)
+```
+
+**Parameters**:
+- `heading`: String (required) - Feature title in TitleSmallMedium style
+- `text`: String (required) - Feature description in BodyMedium style
+- `icon`: ImageVector? - Custom icon (20dp, gray tint)
+- `number`: String? - Numbered badge (blue circle with white text)
+
+**Priority**: If both `number` and `icon` are provided, `number` takes precedence.
+
+### FeatureItem Data Class
+
+```kotlin
+data class FeatureItem(
+    val heading: String,
+    val text: String,
+    val icon: ImageVector? = null,
+    val number: String? = null
+)
+```
+
+### FeatureItemNumber (Internal Component)
+
+A blue circular badge with white number text, used for numbered lists.
+
+**Figma Node ID**: 2905:40402 (Background component)
+
+```kotlin
+// Used internally by FeatureSingleItem when number is provided
+FeatureItemNumber(number = "1")
+```
+
+**Visual Specs**:
+- Size: 20dp circle
+- Background: MyTheme.Colors.dashBlue
+- Border radius: 8dp
+- Text: 12sp, white, centered
+
+### Complete Example
+
+```kotlin
+@Composable
+fun SecurityUpgradeDialog() {
+    Column(
+        modifier = Modifier.padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
+    ) {
+        // Header section
+        FeatureTopText(
+            heading = "Security Upgrade",
+            text = "Your wallet will be upgraded with the following security enhancements",
+            showText = true,
+            showButton = false
+        )
+
+        // Features list
+        FeatureList(
+            items = listOf(
+                FeatureItem(
+                    heading = "Modern Encryption",
+                    text = "Latest AES-256 encryption for maximum security",
+                    number = "1"
+                ),
+                FeatureItem(
+                    heading = "Biometric Authentication",
+                    text = "Use fingerprint or face recognition",
+                    number = "2"
+                ),
+                FeatureItem(
+                    heading = "Enhanced PIN Protection",
+                    text = "Stronger PIN validation and recovery options",
+                    number = "3"
+                )
+            )
+        )
+
+        // Action buttons
+        DashButton(
+            text = "Upgrade Now",
+            style = Style.FilledBlue,
+            size = Size.Large,
+            onClick = { /* action */ }
+        )
+    }
+}
+```
+
+## SheetButtonGroup (Figma: Sheet/Buttons group)
+
+A button group component for bottom sheets and dialogs that supports 1-2 buttons in vertical or horizontal layouts. This component provides consistent button spacing, sizing, and positioning for sheet actions.
+
+**Figma Node ID**: 4983-1849
+
+### Basic Usage
+
+```kotlin
+// Single button (most common)
+SheetButtonGroup(
+    primaryButton = SheetButton(
+        text = stringResource(R.string.continue_button),
+        style = Style.FilledBlue,
+        onClick = { /* action */ }
+    )
+)
+
+// Two buttons - vertical layout
+SheetButtonGroup(
+    primaryButton = SheetButton(
+        text = stringResource(R.string.continue_button),
+        style = Style.FilledBlue,
+        onClick = { /* primary action */ }
+    ),
+    secondaryButton = SheetButton(
+        text = stringResource(R.string.cancel),
+        style = Style.StrokeGray,
+        onClick = { /* secondary action */ }
+    ),
+    orientation = ButtonGroupOrientation.Vertical
+)
+
+// Two buttons - horizontal layout
+SheetButtonGroup(
+    primaryButton = SheetButton(
+        text = stringResource(R.string.confirm),
+        style = Style.FilledBlue,
+        onClick = { /* primary action */ }
+    ),
+    secondaryButton = SheetButton(
+        text = stringResource(R.string.cancel),
+        style = Style.StrokeGray,
+        onClick = { /* secondary action */ }
+    ),
+    orientation = ButtonGroupOrientation.Horizontal
+)
+```
+
+### SheetButton Data Class
+
+```kotlin
+data class SheetButton(
+    val text: String,                    // Button text
+    val style: Style,                    // Button style (FilledBlue, StrokeGray, etc.)
+    val leadingIcon: ImageVector? = null, // Optional icon before text
+    val trailingIcon: ImageVector? = null, // Optional icon after text
+    val isEnabled: Boolean = true,        // Enable/disable state
+    val isLoading: Boolean = false,       // Loading state with spinner
+    val onClick: () -> Unit               // Click handler
+)
+```
+
+### Layout Behavior
+
+**Vertical Layout** (default):
+- Primary button appears first (top)
+- Secondary button appears below
+- 10dp spacing between buttons
+- Each button takes full width
+
+**Horizontal Layout**:
+- Secondary button appears on left
+- Primary button appears on right
+- 10dp spacing between buttons
+- Buttons share width equally (50/50)
+
+### Parameters
+
+- `primaryButton`: SheetButton (required) - The main action button
+- `secondaryButton`: SheetButton? (optional) - Secondary/cancel button
+- `orientation`: ButtonGroupOrientation (default: Vertical) - Layout direction
+- `modifier`: Modifier - Container modifier
+- `horizontalPadding`: Dp (default: 40.dp) - Left/right padding
+- `verticalPadding`: Dp (default: 20.dp) - Top/bottom padding
+- `spacing`: Dp (default: 10.dp) - Space between buttons
+
+### Button Style Guidelines
+
+For bottom sheets and dialogs:
+- **Primary action**: `Style.FilledBlue` (most common)
+- **Secondary/Cancel**: `Style.StrokeGray` or `Style.TintedGray`
+- **Destructive primary**: `Style.FilledRed`
+- **Emphasized secondary**: `Style.TintedBlue`
+
+### Complete Dialog Example
+
+```kotlin
+fun createConfirmationDialog(
+    onConfirm: () -> Unit = {},
+    onCancel: () -> Unit = {}
+): ComposeBottomSheet {
+    return ComposeBottomSheet(
+        backgroundStyle = R.style.SecondaryBackground,
+        forceExpand = false,
+        content = { dialog ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 60.dp)
+            ) {
+                // Title and content
+                FeatureTopText(
+                    heading = stringResource(R.string.confirm_title),
+                    text = stringResource(R.string.confirm_description),
+                    showText = true,
+                    showButton = false
+                )
+
+                Spacer(modifier = Modifier.height(28.dp))
+
+                // Button group
+                SheetButtonGroup(
+                    primaryButton = SheetButton(
+                        text = stringResource(R.string.confirm),
+                        style = Style.FilledBlue,
+                        onClick = {
+                            onConfirm()
+                            dialog.dismiss()
+                        }
+                    ),
+                    secondaryButton = SheetButton(
+                        text = stringResource(R.string.cancel),
+                        style = Style.StrokeGray,
+                        onClick = {
+                            onCancel()
+                            dialog.dismiss()
+                        }
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+    )
+}
 ```
 
 ## Typography Mapping (Figma Design System → MyTheme.Typography)

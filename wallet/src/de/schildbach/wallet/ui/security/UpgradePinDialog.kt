@@ -18,27 +18,19 @@
 package de.schildbach.wallet.ui.security
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
-import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.FeatureTopText
-import org.dash.wallet.common.ui.components.MyTheme
-import org.dash.wallet.common.ui.components.MyTheme.Typeography.HeadlineSmallBold
-import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.SheetButton
+import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
 
 /**
@@ -89,34 +81,6 @@ private fun UpgradePinContent(
             )
         }
 
-        // Content wrapper - Title and Description
-//        Column(
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(horizontal = 40.dp, vertical = 20.dp),
-//            horizontalAlignment = Alignment.CenterHorizontally
-//        ) {
-//            // Title
-//            Text(
-//                text = stringResource(R.string.upgrade_pin_title),
-//                style = HeadlineSmallBold,
-//                color = Color(0xFF191C1F),
-//                textAlign = TextAlign.Center,
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//
-//            Spacer(modifier = Modifier.height(6.dp))
-//
-//            // Description
-//            Text(
-//                text = stringResource(R.string.upgrade_pin_description),
-//                style = MyTheme.Typeography.BodyMedium,
-//                color = Color(0xFF525C66),
-//                textAlign = TextAlign.Center,
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        }
-
         FeatureTopText(
             heading = stringResource(R.string.upgrade_pin_title),
             modifier = Modifier
@@ -131,20 +95,13 @@ private fun UpgradePinContent(
         Spacer(modifier = Modifier.height(28.dp))
 
         // Buttons section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Continue button
-            DashButton(
+        SheetButtonGroup(
+            primaryButton = SheetButton(
                 text = stringResource(R.string.upgrade_pin_continue),
                 style = Style.FilledBlue,
-                size = Size.Large,
                 onClick = onContinueClick
             )
-        }
+        )
 
         // Home indicator spacing
         Spacer(modifier = Modifier.height(24.dp))

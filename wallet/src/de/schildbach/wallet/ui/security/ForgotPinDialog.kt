@@ -18,26 +18,23 @@
 package de.schildbach.wallet.ui.security
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
-import org.dash.wallet.common.ui.components.DashButton
-import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.FeatureItem
+import org.dash.wallet.common.ui.components.FeatureList
+import org.dash.wallet.common.ui.components.FeatureTopText
+import org.dash.wallet.common.ui.components.SheetButton
+import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
+import java.text.NumberFormat
 
 /**
  * Factory function that creates a Forgot PIN recovery dialog
@@ -87,124 +84,61 @@ private fun ForgotPinContent(
                     .height(100.dp)
             )
         }
-
-        // Title
-        Text(
-            text = if (recover) stringResource(R.string.forgot_pin_setup_new_pin_title) else stringResource(R.string.forgot_pin_title),
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = Color(0xFF191C1F),
-            textAlign = TextAlign.Center,
-            lineHeight = 32.sp,
+        FeatureTopText(
+            if (recover) stringResource(R.string.forgot_pin_setup_new_pin_title) else stringResource(R.string.forgot_pin_title),
+        )
+        Spacer(modifier = Modifier.height(28.dp))
+        val numberFormat = NumberFormat.getIntegerInstance()
+        FeatureList(
+            listOf(
+                FeatureItem(
+                   heading = stringResource(R.string.forgot_pin_instruction_1),
+                    number = numberFormat.format(1)
+                ),
+                FeatureItem(
+                    heading = stringResource(R.string.forgot_pin_instruction_2),
+                    number = numberFormat.format(2)
+                ),
+                FeatureItem(
+                    heading = stringResource(R.string.forgot_pin_instruction_3),
+                    number = numberFormat.format(3)
+                )
+            ),
             modifier = Modifier
+                .padding(horizontal = 40.dp)
                 .fillMaxWidth()
-                .padding(horizontal = 60.dp, vertical = 20.dp)
         )
 
-        // Steps list
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Step 1
-            RecoveryStep(
-                stepNumber = 1,
-                stepText = stringResource(R.string.forgot_pin_instruction_1)
-            )
-
-            // Step 2
-            RecoveryStep(
-                stepNumber = 2,
-                stepText = stringResource(R.string.forgot_pin_instruction_2)
-            )
-
-            // Step 3
-            RecoveryStep(
-                stepNumber = 3,
-                stepText = stringResource(R.string.forgot_pin_instruction_3)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(38.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         // Button section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Recover wallet button
-            DashButton(
+        SheetButtonGroup(
+            primaryButton = SheetButton(
                 text = stringResource(R.string.forgot_pin_recover),
                 style = Style.FilledBlue,
-                size = Size.Large,
                 onClick = onRecoverWalletClick
             )
-        }
+        )
 
         // Home indicator spacing
         Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
+@Preview(showBackground = true)
 @Composable
-private fun RecoveryStep(
-    stepNumber: Int,
-    stepText: String
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.Top
-    ) {
-        // Numbered badge
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .padding(top = 10.dp),
-            contentAlignment = Alignment.TopCenter
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .background(
-                        color = Color(0xFF008DE4),
-                        shape = RoundedCornerShape(8.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stepNumber.toString(),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        // Step text
-        Text(
-            text = stepText,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Normal,
-            color = Color(0xFF191C1F),
-            lineHeight = 20.sp,
-            modifier = Modifier
-                .weight(1f)
-                .padding(top = 10.dp)
-        )
-    }
+private fun RecoverContentPreview() {
+    ForgotPinContent(
+        true,
+        onRecoverWalletClick = { }
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 private fun ForgotPinContentPreview() {
     ForgotPinContent(
-        true,
+        false,
         onRecoverWalletClick = { }
     )
 }
