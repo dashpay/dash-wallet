@@ -113,10 +113,10 @@ class DualFallbackEncryptionProvider(
                 return decrypted
             } catch (e: GeneralSecurityException) {
                 if (isKeystoreCorruption(e)) {
-                    log.error("KeyStore corruption detected for {}, trying fallbacks", keyAlias)
+                    log.error("KeyStore corruption detected for {}, trying fallbacks", keyAlias, e)
                     securityPrefs.edit { putBoolean(KEYSTORE_HEALTHY_KEY, false) }
                 } else {
-                    log.warn("Primary decryption failed for {}: {}", keyAlias, e.message)
+                    log.warn("Primary decryption failed for {}: {}", keyAlias, e.message, e)
                 }
             }
         }

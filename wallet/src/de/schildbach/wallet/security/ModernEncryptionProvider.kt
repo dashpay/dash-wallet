@@ -128,6 +128,7 @@ class ModernEncryptionProvider(
 
     @Throws(KeyStoreException::class)
     override fun deleteKey(keyAlias: String) {
+        log.info("deleting $keyAlias")
         keyStore.deleteEntry(keyAlias)
     }
 
@@ -135,6 +136,9 @@ class ModernEncryptionProvider(
     private fun getSecretKey(alias: String): SecretKey {
         if (!keyStore.containsAlias(alias)) {
             synchronized(keyGenerationLock) {
+                log.info("key store does not have $alias, but has {}, generating new key. Stack trace:\n{}",
+                    keyStore.aliases(),
+                    Thread.currentThread().stackTrace.joinToString("\n") { "  at $it" })
                 // Check again inside synchronized block
                 if (!keyStore.containsAlias(alias)) {
                     val keyGenerator: KeyGenerator = KeyGenerator

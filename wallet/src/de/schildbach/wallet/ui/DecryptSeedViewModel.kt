@@ -39,7 +39,7 @@ class DecryptSeedViewModel @Inject constructor(
     biometricHelper: BiometricHelper,
     analytics: AnalyticsService,
     private val securityFunctions: SecurityFunctions
-) : CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
+) : CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics, securityFunctions) {
 
     private val securityGuard = SecurityGuard.getInstance()
 
