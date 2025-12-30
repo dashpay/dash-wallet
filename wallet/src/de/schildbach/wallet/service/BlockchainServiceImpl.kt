@@ -130,6 +130,7 @@ import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -247,6 +248,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var coinJoinService: CoinJoinService
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
     @Inject lateinit var analyticsService: AnalyticsService
+    @Inject lateinit var securityFunctions: AuthenticationManager
 
     private var blockStore: BlockStore? = null
     private var headerStore: BlockStore? = null
@@ -291,6 +293,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
+
+    // KeyStore Status
+    private var isKeyStoreHealthy = true
 
     // Risk Analyser for Transactions that is PeerGroup Aware
     private var riskAnalyzer: AllowLockTimeRiskAnalysis.Analyzer? = null
@@ -747,7 +752,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
     private var networkCallbackRegistered = false
-    private val networkCallback: ConnectivityManager.NetworkCallback = object : ConnectivityManager.NetworkCallback() {
+    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
+
+    private inner class NetworkCallbackImpl : ConnectivityManager.NetworkCallback() {
+        init {
+            // Setup security health monitoring
+            securityFunctions.observeHealth().observe(this@BlockchainServiceImpl) { status ->
+                // val isKeyStoreHealthyNow = isKeyStoreHealthy
+                isKeyStoreHealthy = status.isHealthy
+//                when(status) {
+//                    SecuritySystemStatus.HEALTHY,
+//                    SecuritySystemStatus.HEALTHY_WITH_FALLBACKS -> true
+//                    else -> false
+//                }
+                //if (isKeyStoreHealthyNow != isKeyStoreHealthy) {
+                    if (isKeyStoreHealthy) {
+                        impediments.remove(Impediment.SECURITY)
+                    } else {
+                        impediments.add(Impediment.SECURITY)
+                    }
+                    updateBlockchainStateImpediments()
+                    check()
+                //}
+            }
+        }
         override fun onAvailable(network: Network) {
             serviceScope.launch {
                 val capabilities = connectivityManager.getNetworkCapabilities(network)
@@ -783,10 +811,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             serviceScope.launch {
                 log.info("network lost: $network")
 
-                // When using registerNetworkCallback with NetworkRequest, onLost is only called
-                // when a network that satisfied our requirements (INTERNET + VALIDATED) is lost.
-                // If another suitable network exists, onAvailable would have been called for it.
-                // Therefore, we should add the impediment here and rely on onAvailable to remove it.
                 impediments.add(Impediment.NETWORK)
                 updateBlockchainStateImpediments()
                 check()
@@ -1447,6 +1471,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                 }
                 try {
+                    propagateContext()
                     blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
                     headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
                     blockchainStateDataProvider.setBlockChain(blockChain)
@@ -1455,6 +1480,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 // register network and storage receivers on the main thread
                 withContext(Dispatchers.Main) {
+                    // Initialize network callback (now that securityFunctions is available)
+                    networkCallback = NetworkCallbackImpl()
+
                     // Register network callback for modern network monitoring
                     // Use NetworkRequest to reliably detect when no validated network is available (e.g., airplane mode)
                     val networkRequest = NetworkRequest.Builder()
@@ -1923,6 +1951,33 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private fun updateBlockchainStateImpediments() {
         blockchainStateDataProvider.updateImpediments(impediments)
     }
+
+//    /**
+//     * Check impediments and start/stop peergroup accordingly
+//     * Can be called from network callbacks or security health observers
+//     */
+//    private fun checkImpediments() {
+//        serviceScope.launch {
+//            try {
+//                // make sure that onCreate is finished
+//                onCreateCompleted.await()
+//                log.info("acquiring check() mutex")
+//
+//                // Use withLock to guarantee mutex release even if coroutine is cancelled
+//                checkMutex.withLock {
+//                    try {
+//                        checkService()
+//                    } catch (e: Exception) {
+//                        log.error("checkService() failed with exception", e)
+//                        // Don't rethrow - we want to ensure clean mutex release
+//                    }
+//                }
+//                log.info("releasing check() mutex")
+//            } catch (e: Exception) {
+//                log.error("check() failed", e)
+//            }
+//        }
+//    }
 
     private fun updateBlockchainState() {
         blockchainStateDataProvider.updateBlockchainState(

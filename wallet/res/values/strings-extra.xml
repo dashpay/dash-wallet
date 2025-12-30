@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">No address copied</string>
 
     <string name="forgot_pin_title">Forgot PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Set up a new PIN</string>
     <string name="forgot_pin_message">You can set a new PIN with the help of your recovery phrase.</string>
     <string name="forgot_pin_instruction_1">Enter recovery phrase to recover your wallet</string>
     <string name="forgot_pin_instruction_2">Set up a new PIN</string>

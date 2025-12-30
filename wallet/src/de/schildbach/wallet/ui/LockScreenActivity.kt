@@ -45,10 +45,14 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+import de.schildbach.wallet.security.FallbackTestingUtils
 import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
+import de.schildbach.wallet.ui.security.createForgotPinDialog
+import de.schildbach.wallet.ui.security.createUpgradePinDialog
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
@@ -60,12 +64,14 @@ import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -87,6 +93,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var biometricHelper: BiometricHelper
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var authenticationManager: AuthenticationManager
 
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
@@ -226,8 +233,9 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.setOnLogoutListener(onLogoutListener)
 
         val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
-                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()})")
+                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout()) ||
+                !authenticationManager.getHealth().isHealthy
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()}) || isHealthy=${authenticationManager.getHealth().isHealthy}")
         if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {
@@ -255,8 +263,39 @@ open class LockScreenActivity : SecureActivity() {
         walletApplication.startBlockchainService(false)
     }
 
+    // TODO: remove
+    private fun updateBreakStatus() {
+        val sg = SecurityGuard.getInstance()
+        sg.validateKeyIntegrity()
+        binding.lockScreen.securityStatus.text = when {
+            sg.isHealthlyWithFallbacks -> "OK"
+            sg.isHealthly -> "~OK"
+            sg.hasFallbacks() -> "bad"
+            else -> "dead"
+        }
+    }
+    // TODO: end
+
     private fun initView() {
         binding.lockScreen.apply {
+            // TODO: remove this (only for testing)
+            breakPrimary.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateKeystoreCorruption_KeepFallbacks()
+                updateBreakStatus()
+            }
+            breakAll.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailure()
+                updateBreakStatus()
+            }
+            breakBefore.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailureFromPreviousInstall()
+                updateBreakStatus()
+            }
+            updateBreakStatus()
+            // TODO END
             actionLoginWithPin.setOnClickListener {
                 setLockState(State.ENTER_PIN)
             }
@@ -302,6 +341,12 @@ open class LockScreenActivity : SecureActivity() {
                 }
             }
             viewFlipper.inAnimation = AnimationUtils.loadAnimation(this@LockScreenActivity, android.R.anim.fade_in)
+
+            pinPreview.onForgotPinClickListener = {
+                createForgotPinDialog(recover = false) {
+                    startActivity(RestoreWalletFromSeedActivity.createIntent(this@LockScreenActivity, true))
+                }.show(this@LockScreenActivity)
+            }
         }
     }
 
@@ -337,6 +382,19 @@ open class LockScreenActivity : SecureActivity() {
                 }
             }
         }
+
+        checkPinViewModel.authenticationHealth.observe(this) {
+            if (!it.isHealthy && !it.hasFallback) {
+                // TODO: show the new dialog about "upgrading PIN"
+                // TODO:
+                createUpgradePinDialog {
+                    createForgotPinDialog(recover = true) {
+                        startActivity(RestoreWalletFromSeedActivity.createIntent(this, true))
+                    }.show(this)
+                }.show(this)
+            }
+        }
+        checkPinViewModel.checkHealth();
     }
 
     private fun onCorrectPin(pin: String) {
