@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -52,6 +53,8 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
     internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard.getInstance()
 
+    val selectedCreationDate = MutableLiveData<Long?>() // timestamp in seconds, null = not selected
+
     private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
         try {
             val password = securityGuard.retrievePassword()
@@ -64,6 +67,14 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         } catch (_: Exception) { }
 
         return@withContext null
+    }
+
+    fun setWalletCreationDate(timeInMillis: Long?) {
+        selectedCreationDate.value = timeInMillis?.let { it / 1000 } // convert to seconds
+    }
+
+    fun clearWalletCreationDate() {
+        selectedCreationDate.value = null
     }
 
     /**
@@ -79,7 +90,8 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     fun restoreWalletFromSeed(words: List<String>) {
         if (isSeedValid(words)) {
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            val creationTime = selectedCreationDate.value
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()

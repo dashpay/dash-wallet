@@ -19,7 +19,7 @@
 	</string-array>
 
 	<string-array name="preferences_block_explorer_values">
-		<item>https://insight.testnet.networks.dash.org:3002/insight/</item>
+		<item>https://insight.testnet.networks.dash.org/insight/</item>
 		<item>https://blockchair.com/dash/</item>
 	</string-array>
 	<string-array name="preferences_block_explorer_labels">

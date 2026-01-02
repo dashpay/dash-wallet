@@ -58,7 +58,7 @@ import javax.inject.Inject
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters, seedWordCount: Int): Wallet
-    fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
+    fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long? = null): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
 
@@ -118,8 +118,8 @@ class DashWalletFactory @Inject constructor(
         return wallet
     }
 
-    override fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet {
-        return restoreWalletFromSeed(recoveryPhrase, params)
+    override fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long?): Wallet {
+        return restoreWalletFromSeed(recoveryPhrase, params, creationTimeSeconds)
     }
 
     @Throws(IOException::class)
@@ -272,10 +272,12 @@ class DashWalletFactory @Inject constructor(
 
     private fun restoreWalletFromSeed(
         words: List<String>,
-        params: NetworkParameters
+        params: NetworkParameters,
+        creationTimeSeconds: Long? = null
     ): Wallet {
         return try {
-            val seed = DeterministicSeed(words, null, "", Constants.EARLIEST_HD_SEED_CREATION_TIME)
+            val seedCreationTime = creationTimeSeconds ?: Constants.EARLIEST_HD_SEED_CREATION_TIME
+            val seed = DeterministicSeed(words, null, "", seedCreationTime)
             val group = KeyChainGroup.builder(params)
                 .fromSeed(seed, Script.ScriptType.P2PKH)
                 .addChain(
