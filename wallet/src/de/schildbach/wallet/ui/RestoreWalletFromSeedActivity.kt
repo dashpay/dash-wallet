@@ -33,6 +33,7 @@ import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
+import de.schildbach.wallet.ui.compose_views.createWalletCreationDateInfoDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityRecoverWalletFromSeedBinding
 import kotlinx.coroutines.launch

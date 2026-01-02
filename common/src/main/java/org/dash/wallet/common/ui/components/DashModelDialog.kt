@@ -32,24 +32,31 @@ import org.dash.wallet.common.R
 /**
  * A modal dialog component following the design system.
  *
+ * Figma Node ID: 2878:103004 (modal.dialogue)
+ *
  * @param showDialog Whether to show the dialog
  * @param onDismissRequest Called when the user dismisses the dialog
  * @param icon Optional icon to be displayed at the top of the dialog
+ * @param iconBackgroundColor Background color for the icon (default: dashBlue)
  * @param heading The dialog heading text
  * @param textBlocks List of text blocks to be displayed in the dialog
  * @param limitationItems Optional list of limitation items with values and labels
+ * @param moreInfoButton Optional button for additional information
  * @param buttons List of button data with labels and click actions
+ * @param content Optional custom content to display after text blocks
  */
 @Composable
 fun ModalDialog(
     showDialog: Boolean,
     onDismissRequest: () -> Unit,
     icon: ImageVector? = null,
+    iconBackgroundColor: Color = Color(0xFF008DE4),
     heading: String,
-    textBlocks: List<String>,
+    textBlocks: List<String> = emptyList(),
     limitationItems: List<LimitationItem> = emptyList(),
-    moreInfoButton: ButtonData?,
-    buttons: List<ButtonData>
+    moreInfoButton: ButtonData? = null,
+    buttons: List<ButtonData> = emptyList(),
+    content: @Composable (() -> Unit)? = null
 ) {
     if (showDialog) {
         Dialog(
@@ -76,22 +83,18 @@ fun ModalDialog(
                 ) {
                     // Info icon if provided
                     icon?.let {
-                        Surface(
+                        Box(
                             modifier = Modifier
                                 .size(46.dp)
-                                .clip(CircleShape),
-                            color = Color(0xFF008DE4)
+                                .background(iconBackgroundColor, CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = icon,
-                                    contentDescription = null,
-                                    tint = Color.Unspecified
-                                )
-                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = Color.Unspecified,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                         Spacer(modifier = Modifier.height(20.dp))
                     }
@@ -181,6 +184,9 @@ fun ModalDialog(
                                 }
                             }
                         }
+
+                        // Custom content (if provided)
+                        content?.invoke()
                     }
 
                     // Learn More Button
@@ -243,28 +249,27 @@ data class ButtonData(
 @Preview(showBackground = true)
 @Composable
 fun ModalDialogPreview() {
-    //MaterialTheme {
-        ModalDialog(
-            showDialog = true,
-            onDismissRequest = { },
-            icon = ImageVector.vectorResource(id = R.drawable.ic_info_blue),
-            heading = "Heading",
-            textBlocks = listOf(
-                "This is the first text block with some information for the user",
-                "This is the second text block with additional details",
-                "And a final text block at the bottom of the dialog"
-            ),
-            limitationItems = listOf(
-                LimitationItem("0", "text", true),
-                LimitationItem("0", "text", true),
-                LimitationItem("0", "text", true)
-            ),
-            ButtonData("Learn more", {}),
-            buttons = listOf(
-                ButtonData("Primary Action", {}, true),
-                ButtonData("Secondary Action", {}),
-                ButtonData("Tertiary Action", {})
-            )
+    ModalDialog(
+        showDialog = true,
+        onDismissRequest = { },
+        icon = ImageVector.vectorResource(id = R.drawable.ic_info_blue),
+        iconBackgroundColor = MyTheme.Colors.dashBlue,
+        heading = "Heading",
+        textBlocks = listOf(
+            "This is the first text block with some information for the user",
+            "This is the second text block with additional details",
+            "And a final text block at the bottom of the dialog"
+        ),
+        limitationItems = listOf(
+            LimitationItem("0", "text", true),
+            LimitationItem("0", "text", true),
+            LimitationItem("0", "text", true)
+        ),
+        moreInfoButton = ButtonData("Learn more", {}),
+        buttons = listOf(
+            ButtonData("Primary Action", {}, true),
+            ButtonData("Secondary Action", {}),
+            ButtonData("Tertiary Action", {})
         )
-    //}
+    )
 }

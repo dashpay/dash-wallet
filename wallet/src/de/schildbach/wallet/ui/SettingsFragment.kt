@@ -41,6 +41,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
+import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet.ui.more.TransactionMetadataSettingsViewModel
@@ -189,17 +190,13 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private fun resetBlockchain() {
         val walletApplication = requireActivity().application as WalletApplication
         val configuration = walletApplication.configuration
-        AdaptiveDialog.create(
-            null,
-            getString(R.string.preferences_initiate_reset_title),
-            getString(R.string.preferences_initiate_reset_dialog_message),
-            getString(R.string.button_cancel),
-            getString(R.string.preferences_initiate_reset_dialog_positive)
-        ).show(requireActivity()) {
-            if (it == true) {
+        RescanBlockchainDialogFragment().show(requireActivity(), walletApplication.wallet!!.keyChainSeed.creationTimeSeconds) { confirm, creationDate ->
+            if (confirm) {
                 log.info("manually initiated blockchain reset")
                 viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
-
+                creationDate?.let {
+                    walletApplication.wallet!!.keyChainSeed.creationTimeSeconds = it
+                }
                 walletApplication.resetBlockchain()
                 configuration.updateLastBlockchainResetTime()
                 startActivity(MainActivity.createIntent(requireContext()))
