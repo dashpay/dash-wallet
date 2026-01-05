@@ -30,6 +30,10 @@ import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.KeyStoreException
+import java.security.ProviderException
+import java.security.UnrecoverableKeyException
+import javax.crypto.AEADBadTagException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -43,7 +47,7 @@ import javax.crypto.spec.GCMParameterSpec
  *  - No shared IV is stored (eliminates corruption issues)
  */
 class ModernEncryptionProvider(
-    private val keyStore: KeyStore,
+    val keyStore: KeyStore,
     private val securityPrefs: SharedPreferences
 ): EncryptionProvider {
 
@@ -95,35 +99,65 @@ class ModernEncryptionProvider(
 
     @Throws(GeneralSecurityException::class)
     override fun decrypt(keyAlias: String, encryptedData: ByteArray): String {
-        val buffer = java.nio.ByteBuffer.wrap(encryptedData)
+        try {
+            val buffer = java.nio.ByteBuffer.wrap(encryptedData)
 
-        // Extract IV length
-        val ivLength = buffer.int
+            // Extract IV length
+            val ivLength = buffer.int
 
-        // Validate IV length
-        if (ivLength < 1 || ivLength > 32) {
-            throw GeneralSecurityException("Invalid IV length: $ivLength")
+            // Validate IV length
+            if (ivLength < 1 || ivLength > 32) {
+                throw GeneralSecurityException("Invalid IV length: $ivLength")
+            }
+
+            // Extract IV
+            val iv = ByteArray(ivLength)
+            buffer.get(iv)
+
+            // Extract encrypted data
+            val encrypted = ByteArray(buffer.remaining())
+            buffer.get(encrypted)
+
+            // Decrypt with exception handling for keystore and decryption issues
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+
+            val secretKey = try {
+                getSecretKey(keyAlias)
+            } catch (e: UnrecoverableKeyException) {
+                log.error("Key recovery failed for alias: $keyAlias", e)
+                throw GeneralSecurityException("Failed to recover encryption key. The key may be corrupted or inaccessible.", e)
+            } catch (e: KeyStoreException) {
+                log.error("KeyStore access error for alias: $keyAlias", e)
+                throw GeneralSecurityException("Failed to access KeyStore. The encryption system may be compromised.", e)
+            } catch (e: ProviderException) {
+                log.error("Keystore provider error for alias: $keyAlias", e)
+                throw GeneralSecurityException("KeyStore provider error. The device security may have changed.", e)
+            }
+
+            val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+
+            val decryptedBytes = try {
+                cipher.doFinal(encrypted)
+            } catch (e: AEADBadTagException) {
+                log.error("Authentication tag verification failed for alias: $keyAlias", e)
+                throw GeneralSecurityException("Decryption failed: data has been tampered with or wrong key used.", e)
+            } catch (e: BadPaddingException) {
+                log.error("Bad padding during decryption for alias: $keyAlias", e)
+                throw GeneralSecurityException("Decryption failed: invalid key or corrupted data.", e)
+            }
+
+            log.info("Decrypted data for alias: {}", keyAlias)
+
+            return String(decryptedBytes, StandardCharsets.UTF_8)
+        } catch (e: GeneralSecurityException) {
+            // Re-throw security exceptions as-is
+            throw e
+        } catch (e: Exception) {
+            // Catch any other unexpected exceptions and wrap them
+            log.error("Unexpected error during decryption for alias: $keyAlias", e)
+            throw GeneralSecurityException("Unexpected error during decryption: ${e.message}", e)
         }
-
-        // Extract IV
-        val iv = ByteArray(ivLength)
-        buffer.get(iv)
-
-        // Extract encrypted data
-        val encrypted = ByteArray(buffer.remaining())
-        buffer.get(encrypted)
-
-        // Decrypt
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val secretKey = getSecretKey(keyAlias)
-        val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
-
-        val decryptedBytes = cipher.doFinal(encrypted)
-
-        log.info("Decrypted data for alias: {}", keyAlias)
-
-        return String(decryptedBytes, StandardCharsets.UTF_8)
     }
 
     @Throws(KeyStoreException::class)

@@ -63,7 +63,7 @@ public class SecurityGuard {
     private final File backupDir;
     private SecurityConfig backupConfig;
     private DualFallbackMigration dualFallbackMigration;
-
+    private ModernEncryptionMigration modernEncryptionMigration;
     // Health listener system
     private final CopyOnWriteArrayList<HealthListener> healthListeners = new CopyOnWriteArrayList<>();
     private SharedPreferences.OnSharedPreferenceChangeListener securityPrefsListener;
@@ -93,6 +93,13 @@ public class SecurityGuard {
                     (DualFallbackEncryptionProvider) encryptionProvider,
                     null  // WalletDataProvider will be set when wallet loads
             );
+            modernEncryptionMigration = new ModernEncryptionMigration(
+                    securityPrefs,
+                    (DualFallbackEncryptionProvider) encryptionProvider
+            );
+            modernEncryptionMigration.migrateToModernEncryption();
+            // dualFallbackMigration.migrateToMnemonicFallbacks();
+            migrate();
         }
 
         // Backup config will be injected separately to avoid circular dependency
@@ -101,6 +108,11 @@ public class SecurityGuard {
 
         // Setup health monitoring system
         setupHealthMonitoring();
+    }
+
+    private void migrate() {
+        modernEncryptionMigration.migrateToModernEncryption();
+        dualFallbackMigration.migrateToFallbacks(this);
     }
 
     private void logState() {
@@ -140,6 +152,13 @@ public class SecurityGuard {
                     (DualFallbackEncryptionProvider) encryptionProvider,
                     null  // WalletDataProvider will be set when wallet loads
             );
+            modernEncryptionMigration = new ModernEncryptionMigration(
+                    securityPrefs,
+                    (DualFallbackEncryptionProvider) encryptionProvider
+            );
+            modernEncryptionMigration.migrateToModernEncryption();
+            // dualFallbackMigration.migrateToMnemonicFallbacks();
+            migrate();
         }
 
         // Backup config will be injected separately to avoid circular dependency

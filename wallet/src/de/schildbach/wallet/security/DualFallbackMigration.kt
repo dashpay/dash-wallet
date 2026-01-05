@@ -119,6 +119,7 @@ class DualFallbackMigration(
             }
 
             // Get mnemonic from wallet
+            // need to decrypt if encrypted
             val seed = wallet.keyChainSeed
             if (seed == null) {
                 log.debug("Wallet seed not available, skipping mnemonic-based fallback migration")
@@ -200,5 +201,36 @@ class DualFallbackMigration(
             .remove(MIGRATION_MNEMONIC_FALLBACK_KEY)
             .apply()
         log.info("Dual-fallback migration status reset")
+    }
+
+    fun migrateToFallbacks(securityGuard: SecurityGuard) {
+        walletDataProvider?.let {
+            it.wallet?.let { wallet ->
+                //migrateToMnemonicFallbacks()
+                //migrateToPinFallback()
+
+                try {
+                    val password = securityGuard.retrievePassword()
+                    val encryptionKey = wallet.keyCrypter!!.deriveKey(password)
+                    val walletSeed = wallet.keyChainSeed.decrypt(wallet.keyCrypter, "", encryptionKey)
+                    val mnemonicWords: List<String>? = walletSeed.mnemonicCode
+                    if (mnemonicWords != null) {
+                        securityGuard.ensureMnemonicFallbacks(mnemonicWords)
+                        log.info("Mnemonic-based fallbacks ensured")
+                    }
+                } catch (e: Exception) {
+                    log.error("Failed to ensure mnemonic-based fallbacks", e)
+                }
+                try {
+                    val success = securityGuard.ensurePinFallback(securityGuard.retrievePin())
+                    if (success) {
+                        log.info("PIN-based fallback added successfully")
+                    }
+                } catch (e: java.lang.Exception) {
+                    log.error("Failed to ensure PIN fallbacks", e)
+                    // Don't crash - app can continue with primary+PIN fallback only
+                }
+            }
+        }
     }
 }

@@ -21,11 +21,13 @@ package de.schildbach.wallet.security
 import android.content.SharedPreferences
 import android.util.Base64
 import androidx.core.content.edit
+import org.dash.wallet.common.util.Constants.ANDROID_KEY_STORE
 import org.dash.wallet.common.util.security.EncryptionProvider
 import org.slf4j.LoggerFactory
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
+import java.security.KeyStore
 import java.security.KeyStoreException
 import javax.crypto.AEADBadTagException
 import javax.crypto.BadPaddingException
@@ -65,6 +67,10 @@ class DualFallbackEncryptionProvider(
         // Health tracking
         const val KEYSTORE_HEALTHY_KEY = "keystore_healthy"
     }
+
+    // Create KeyStore for primary provider
+    val keyStore: KeyStore
+        get() = primaryProvider.keyStore
 
     private val pinProvider = PinBasedKeyProvider()
     private val mnemonicProvider = MnemonicBasedKeyProvider()
