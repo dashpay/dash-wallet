@@ -77,15 +77,24 @@ class ModernEncryptionMigration(
             // Backup legacy IV before migration
             backupLegacyIV()
 
-            // Try to decrypt existing data with legacy method and re-encrypt with modern format
-            val passwordMigrated = migrateKey(SecurityGuard.WALLET_PASSWORD_KEY_ALIAS)
-            val pinMigrated = migrateKey(SecurityGuard.UI_PIN_KEY_ALIAS)
+            // Find all keys that need migration
+            val keysToMigrate = findLegacyEncryptedKeys()
 
-            if (passwordMigrated || pinMigrated) {
-                log.info("Successfully migrated {} keys to modern encryption system",
-                    (if (passwordMigrated) 1 else 0) + (if (pinMigrated) 1 else 0))
-            } else {
+            if (keysToMigrate.isEmpty()) {
                 log.info("No existing keys to migrate (clean install or already migrated)")
+            } else {
+                log.info("Found {} keys to migrate: {}", keysToMigrate.size, keysToMigrate)
+
+                // Try to decrypt existing data with legacy method and re-encrypt with modern format
+                var migratedCount = 0
+                for (keyAlias in keysToMigrate) {
+                    if (migrateKey(keyAlias)) {
+                        migratedCount++
+                    }
+                }
+
+                log.info("Successfully migrated {}/{} keys to modern encryption system",
+                    migratedCount, keysToMigrate.size)
             }
 
             // Mark migration complete
@@ -99,6 +108,49 @@ class ModernEncryptionMigration(
             log.error("Modern encryption migration failed - will retry on next app start", e)
             // Don't mark as complete so it retries
         }
+    }
+
+    /**
+     * Find all legacy encrypted keys that need migration
+     *
+     * Returns list of key aliases that:
+     * - Have encrypted data in SharedPreferences (no "primary_" prefix)
+     * - Have a corresponding key in KeyStore
+     * - Are not internal migration/system keys
+     */
+    private fun findLegacyEncryptedKeys(): List<String> {
+        val legacyKeys = mutableListOf<String>()
+
+        try {
+            // Get all keys from SharedPreferences
+            val allPrefs = securityPrefs.all
+
+            for ((key, value) in allPrefs) {
+                // Skip if not a string (encrypted data is stored as Base64 string)
+                if (value !is String) continue
+
+                // Skip if already in modern format (has primary_, fallback_, or dual_fallback prefix)
+                if (key.startsWith("primary_") ||
+                    key.startsWith("fallback_") ||
+                    key.startsWith("dual_fallback_") ||
+                    key == MIGRATION_COMPLETE_KEY ||
+                    key == LEGACY_ENCRYPTION_IV_KEY ||
+                    key == DualFallbackEncryptionProvider.KEYSTORE_HEALTHY_KEY) {
+                    continue
+                }
+
+                // Check if this key has a corresponding KeyStore entry
+                if (keyStore.containsAlias(key)) {
+                    log.debug("Found legacy encrypted key: {}", key)
+                    legacyKeys.add(key)
+                }
+            }
+
+        } catch (e: Exception) {
+            log.error("Error finding legacy encrypted keys", e)
+        }
+
+        return legacyKeys
     }
 
     /**

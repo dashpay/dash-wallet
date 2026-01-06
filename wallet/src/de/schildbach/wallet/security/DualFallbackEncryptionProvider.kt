@@ -103,12 +103,6 @@ class DualFallbackEncryptionProvider(
      */
     @Throws(GeneralSecurityException::class)
     override fun decrypt(keyAlias: String, encryptedData: ByteArray): String {
-        // Check if testing mode is forcing KeyStore failure
-        if (FallbackTestingUtils.isKeystoreForcedToFail()) {
-            log.warn("⚠️ TESTING MODE: Forcing KeyStore failure for {}", keyAlias)
-            throw SecurityGuardException("Forced KeyStore failure for testing")
-        }
-
         // Try primary first
         val primaryData = loadPrimaryData(keyAlias)
         if (primaryData != null) {
@@ -118,7 +112,7 @@ class DualFallbackEncryptionProvider(
                 // securityPrefs.edit { putBoolean(KEYSTORE_HEALTHY_KEY, true) }
                 return decrypted
             } catch (e: GeneralSecurityException) {
-                if (isKeystoreCorruption(e)) {
+                if (isKeystoreCorruption(e?.cause ?: e)) {
                     log.error("KeyStore corruption detected for {}, trying fallbacks", keyAlias, e)
                     securityPrefs.edit { putBoolean(KEYSTORE_HEALTHY_KEY, false) }
                 } else {
@@ -336,7 +330,7 @@ class DualFallbackEncryptionProvider(
         }
     }
 
-    private fun isKeystoreCorruption(e: Exception): Boolean {
+    private fun isKeystoreCorruption(e: Throwable): Boolean {
         return e is AEADBadTagException ||
                 e is BadPaddingException ||
                 e.message?.contains("bad padding", ignoreCase = true) == true ||

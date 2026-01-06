@@ -73,13 +73,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -105,11 +103,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
-import java.text.DecimalFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -130,12 +125,12 @@ class MainViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
-    val platformService: PlatformService,
-    val platformSyncService: PlatformSyncService,
+    private val platformService: PlatformService,
+    private val platformSyncService: PlatformSyncService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val savedStateHandle: SavedStateHandle,
-    private val metadataProvider: TransactionMetadataProvider,
-    private val blockchainStateProvider: BlockchainStateProvider,
+    metadataProvider: TransactionMetadataProvider,
+    blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
     private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
@@ -748,7 +743,7 @@ class MainViewModel @Inject constructor(
 
         if (state.replaying && state.percentageSync == 100) {
             // This is to prevent showing 100% when using the Rescan blockchain function.
-            // The first few broadcasted blockchainStates are with percentage sync at 100%
+            // The first few broadcast blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
@@ -922,8 +917,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun addCoinJoinToWallet() {
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        try {
+            val encryptionKey = platformRepo.getWalletEncryptionKey()
+                ?: throw IllegalStateException("cannot obtain wallet encryption key")
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        } catch (e: Exception) {
+            log.error("problem adding CoinJoin support to wallet: ", e)
+        }
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()

@@ -21,6 +21,8 @@ import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
 import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
 import java.security.KeyStore
 
@@ -130,6 +132,38 @@ object FallbackTestingUtils {
                 log.debug("Could not delete WALLET_PASSWORD_KEY_ALIAS: ${e.message}")
             }
 
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_CTX_PAY_EMAIL: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_ACCESS_TOKEN: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_REFRESH_TOKEN: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_PASSWORD}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_PASSWORD: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_USER_ID}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_USER_ID: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_EMAIL}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_EMAIL: ${e.message}")
+            }
+
+
             // Keep fallback data in SharedPreferences
             log.info("✓ KeyStore corrupted (keys deleted), fallback data preserved")
 
@@ -164,6 +198,37 @@ object FallbackTestingUtils {
                 log.debug("Could not delete WALLET_PASSWORD_KEY_ALIAS: ${e.message}")
             }
 
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_CTX_PAY_EMAIL: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_ACCESS_TOKEN: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_REFRESH_TOKEN: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_PASSWORD}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_PASSWORD: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_USER_ID}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_USER_ID: ${e.message}")
+            }
+            try {
+                keyStore.deleteEntry("${PiggyCardsConfig.PREFS_KEY_EMAIL}_security_key")
+            } catch (e: Exception) {
+                log.debug("Could not delete PREFS_KEY_EMAIL: ${e.message}")
+            }
+
             // Recreate keys (new keys will be different, making old encrypted data undecryptable)
             val modernProvider = ModernEncryptionProvider(keyStore, securityPrefs)
 
@@ -180,6 +245,48 @@ object FallbackTestingUtils {
                 log.info("Recreated WALLET_PASSWORD_KEY_ALIAS in KeyStore")
             } catch (e: Exception) {
                 log.warn("Could not recreate WALLET_PASSWORD_KEY_ALIAS: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL}_security_key", "test")
+                log.info("Recreated CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN}_security_key", "test")
+                log.info("Recreated CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN}_security_key", "test")
+                log.info("Recreated CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${PiggyCardsConfig.PREFS_KEY_PASSWORD}_security_key", "test")
+                log.info("Recreated PiggyCardsConfig.PREFS_KEY_PASSWORD in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate PiggyCardsConfig.PREFS_KEY_PASSWORD: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${PiggyCardsConfig.PREFS_KEY_USER_ID}_security_key", "test")
+                log.info("Recreated PiggyCardsConfig.PREFS_KEY_USER_ID in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate PiggyCardsConfig.PREFS_KEY_USER_ID: ${e.message}")
+            }
+
+            try {
+                modernProvider.encrypt("${PiggyCardsConfig.PREFS_KEY_EMAIL}_security_key", "test")
+                log.info("Recreated PiggyCardsConfig.PREFS_KEY_EMAIL in KeyStore")
+            } catch (e: Exception) {
+                log.warn("Could not recreate PiggyCardsConfig.PREFS_KEY_EMAIL: ${e.message}")
             }
 
             log.info("✓ KeyStore keys replaced (old encrypted data now undecryptable, fallback data preserved)")

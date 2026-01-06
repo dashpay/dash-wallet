@@ -384,6 +384,7 @@ open class LockScreenActivity : SecureActivity() {
         }
 
         checkPinViewModel.authenticationHealth.observe(this) {
+            updateBreakStatus()
             if (!it.isHealthy && !it.hasFallback) {
                 // TODO: show the new dialog about "upgrading PIN"
                 // TODO:
