@@ -35,6 +35,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -117,17 +118,29 @@ fun RescanBlockchainDialog(
     var selectedCreationDate by remember { mutableStateOf(initialCreationDate) }
     val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
+    var datePickerDialog by remember { mutableStateOf<DatePickerDialog?>(null) }
 
-    val showDatePicker = {
+    // Dismiss date picker when dialog is disposed (e.g., lock screen appears)
+    DisposableEffect(Unit) {
+        onDispose {
+            datePickerDialog?.dismiss()
+        }
+    }
+
+    fun showDatePicker() {
         val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
         val maxDate = System.currentTimeMillis()
 
         val calendar = Calendar.getInstance()
+        // Initialize with the selected creation date if available, otherwise use today
+        if (selectedCreationDate != null) {
+            calendar.timeInMillis = selectedCreationDate!! * 1000L
+        }
         val year = calendar.get(Calendar.YEAR)
         val month = calendar.get(Calendar.MONTH)
         val day = calendar.get(Calendar.DAY_OF_MONTH)
 
-        val datePickerDialog = DatePickerDialog(
+        datePickerDialog = DatePickerDialog(
             context,
             { _, selectedYear, selectedMonth, selectedDay ->
                 val selectedCalendar = Calendar.getInstance()
@@ -140,10 +153,10 @@ fun RescanBlockchainDialog(
             day
         )
 
-        datePickerDialog.datePicker.minDate = minDate
-        datePickerDialog.datePicker.maxDate = maxDate
-        datePickerDialog.setTitle(context.getString(R.string.restore_wallet_date_picker_title))
-        datePickerDialog.show()
+        datePickerDialog?.datePicker?.minDate = minDate
+        datePickerDialog?.datePicker?.maxDate = maxDate
+        datePickerDialog?.setTitle(context.getString(R.string.restore_wallet_date_picker_title))
+        datePickerDialog?.show()
     }
 
     ModalDialog(
@@ -191,7 +204,7 @@ fun RescanBlockchainDialog(
                             color = MyTheme.Colors.backgroundPrimary,
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable(onClick = showDatePicker)
+                        .clickable(onClick = { showDatePicker() })
                         .padding(horizontal = 12.dp, vertical = 11.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
