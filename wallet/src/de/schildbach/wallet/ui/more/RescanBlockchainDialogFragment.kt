@@ -66,7 +66,7 @@ import java.util.Locale
  * Figma Node ID: 2878:103004 (modal.dialogue)
  */
 class RescanBlockchainDialogFragment : DialogFragment() {
-    lateinit var onConfirm: (Boolean, Long?) -> Unit
+    private var onConfirm: ((Boolean, Long?) -> Unit)? = null
     private var initialCreationDate: Long? = null
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
@@ -86,11 +86,11 @@ class RescanBlockchainDialogFragment : DialogFragment() {
                 RescanBlockchainDialog(
                     initialCreationDate = initialCreationDate,
                     onDismissRequest = {
-                        onConfirm(false, null)
+                        onConfirm?.invoke(false, null)
                         dismiss()
                     },
                     onConfirm = { creationDate ->
-                        onConfirm(true, creationDate)
+                        onConfirm?.invoke(true, creationDate)
                         dismiss()
                     },
                     onShowDateInfo = {

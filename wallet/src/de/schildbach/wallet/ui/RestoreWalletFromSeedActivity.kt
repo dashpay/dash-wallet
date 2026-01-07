@@ -204,7 +204,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 val dateStr = dateFormat.format(Date(timestampInSeconds * 1000L))
                 binding.selectedDateDisplay.text = getString(R.string.restore_wallet_selected_date, dateStr)
                 binding.selectedDateDisplay.visibility = View.VISIBLE
-                binding.selectDateButton.text = getString(R.string.restore_wallet_select_date) + " ✓"
+                binding.selectDateButton.text = getString(R.string.fiat_balance_with_currency, getString(R.string.restore_wallet_select_date), "✓")
             } else {
                 binding.selectedDateDisplay.visibility = View.GONE
                 binding.selectDateButton.text = getString(R.string.restore_wallet_select_date)

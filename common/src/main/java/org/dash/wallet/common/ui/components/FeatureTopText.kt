@@ -61,7 +61,7 @@ fun FeatureTopText(
     ) {
         Text(
             text = heading,
-            style = MyTheme.Typeography.HeadlineSmallBold,
+            style = MyTheme.Typography.HeadlineSmallBold,
             color = MyTheme.Colors.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -70,7 +70,7 @@ fun FeatureTopText(
         if (showText && text != null) {
             Text(
                 text = text,
-                style = MyTheme.Typeography.BodyMedium,
+                style = MyTheme.Typography.BodyMedium,
                 color = MyTheme.Colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
