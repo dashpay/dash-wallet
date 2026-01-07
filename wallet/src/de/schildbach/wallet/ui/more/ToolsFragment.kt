@@ -160,6 +160,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         binding.zenledgerExport.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
             ZenLedgerDialogFragment().show(requireActivity())
         }
     }

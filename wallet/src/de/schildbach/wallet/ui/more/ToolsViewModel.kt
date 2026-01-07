@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import java.util.*
 import javax.inject.Inject
 
@@ -43,7 +44,8 @@ class ToolsViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao,
     val dashPayConfig: DashPayConfig,
-    val identityConfig: BlockchainIdentityConfig
+    val identityConfig: BlockchainIdentityConfig,
+    val analyticsService: AnalyticsService
 ) : ViewModel() {
     val blockchainState = blockchainStateDao.observeState()
 
@@ -88,5 +90,9 @@ class ToolsViewModel @Inject constructor(
         identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
                 BlockchainIdentityData.CreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
                     ?: "NONE") >= BlockchainIdentityData.CreationState.DONE
+    }
+
+    fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
     }
 }
