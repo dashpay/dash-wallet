@@ -47,6 +47,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.DialogFragment
@@ -163,11 +164,12 @@ fun RescanBlockchainDialog(
         showDialog = true,
         onDismissRequest = onDismissRequest,
         icon = ImageVector.vectorResource(R.drawable.ic_warning_yellow_circle),
-        iconBackgroundColor = MyTheme.Colors.yellow,
         heading = stringResource(R.string.rescan_blockchain_dialog_title),
         textBlocks = listOf(
             stringResource(R.string.rescan_blockchain_dialog_message)
         ),
+        textAlign = TextAlign.Start,
+        horizontalPadding = 0.dp,
         content = {
             // Wallet creation date selection field
             Column(
