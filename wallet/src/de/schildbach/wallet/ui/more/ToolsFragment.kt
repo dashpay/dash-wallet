@@ -128,12 +128,15 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                 dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
             } else {
                 viewLifecycleOwner.lifecycleScope.launch {
-                    val watch = Stopwatch.createStarted()
-                    val transactionExporter = viewModel.getTransactionExporter()
-                    log.info("export transaction csv time: {}", watch)
-                    viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
-                    (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-                    ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
+                    try {
+                        val watch = Stopwatch.createStarted()
+                        val transactionExporter = viewModel.getTransactionExporter()
+                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
+                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                        }
+                    } catch (e: Exception) {
                         (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
                     }
                 }

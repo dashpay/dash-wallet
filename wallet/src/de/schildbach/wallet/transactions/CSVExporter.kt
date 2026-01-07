@@ -41,12 +41,12 @@ abstract class CSVExporter(
 
     abstract val dataSpec: List<CSVColumn>
 
-    fun getHeader(): String {
+    private fun getHeader(): String {
         val columnList = dataSpec.map { it.name }
         return columnList.joinToString(",")
     }
 
-    override fun exportString(): String {
+    override suspend fun exportString(): String {
         val history = StringBuilder()
 
         history.append(getHeader()).append(NEW_LINE)

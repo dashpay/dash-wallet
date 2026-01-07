@@ -19,31 +19,20 @@ package de.schildbach.wallet.ui.more
 
 import android.app.Dialog
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
@@ -56,7 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.ui.components.ButtonData
 import org.dash.wallet.common.ui.components.ModalDialog
-import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
 import org.slf4j.LoggerFactory
 import java.io.File
@@ -154,7 +142,7 @@ fun ExportCSVDialog(
     onError: (Exception) -> Unit
 ) {
     var isLoading by remember { mutableStateOf(false) }
-    // var loadingMessage by remember { mutableStateOf("") }
+    var loadingMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -163,7 +151,6 @@ fun ExportCSVDialog(
             scope.launch {
                 try {
                     isLoading = true
-                    //loadingMessage = context.getString(R.string.loading_transaction_metadata)
 
                     // Initialize metadata map (may take time)
                     withContext(Dispatchers.IO) {
@@ -171,7 +158,6 @@ fun ExportCSVDialog(
                     }
 
                     // Generate CSV
-                    //loadingMessage = "Generating CSV..."
                     val csvContent = withContext(Dispatchers.IO) {
                         transactionExporter.exportString()
                     }
@@ -187,7 +173,6 @@ fun ExportCSVDialog(
                             writer.write(csvContent)
                         }
                     }
-
                     isLoading = false
                     onExportComplete(file)
                 } catch (e: Exception) {
@@ -205,24 +190,7 @@ fun ExportCSVDialog(
         textBlocks = listOf(
             stringResource(R.string.report_transaction_history_message)
         ),
-        content = /*if (isLoading) {
-            {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    CircularProgressIndicator(
-                        color = MyTheme.Colors.dashBlue
-                    )
-                    Text(
-                        text = loadingMessage,
-                        style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textSecondary
-                    )
-                }
-            }
-        } else*/ null,
+        moreInfoButton = null,
         buttons = listOf(
             ButtonData(
                 label = stringResource(R.string.button_cancel),

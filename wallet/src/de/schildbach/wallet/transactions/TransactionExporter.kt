@@ -167,5 +167,5 @@ abstract class TransactionExporter(
         "DASH Wallet"
     }
 
-    abstract fun exportString(): String
+    abstract suspend fun exportString(): String
 }
