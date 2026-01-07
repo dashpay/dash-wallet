@@ -41,6 +41,7 @@ import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.BufferedReader
@@ -58,7 +59,7 @@ import javax.inject.Inject
 interface WalletFactory {
     // Onboarding
     fun create(params: NetworkParameters, seedWordCount: Int): Wallet
-    fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long? = null): Wallet
+    suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long? = null): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
 
@@ -69,7 +70,8 @@ interface WalletFactory {
 }
 
 class DashWalletFactory @Inject constructor(
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val blockchainServiceConfig: BlockchainServiceConfig
 ) : WalletFactory {
 
     companion object {
@@ -118,7 +120,7 @@ class DashWalletFactory @Inject constructor(
         return wallet
     }
 
-    override fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long?): Wallet {
+    override suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long?): Wallet {
         return restoreWalletFromSeed(recoveryPhrase, params, creationTimeSeconds)
     }
 
@@ -270,7 +272,7 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    private fun restoreWalletFromSeed(
+    private suspend fun restoreWalletFromSeed(
         words: List<String>,
         params: NetworkParameters,
         creationTimeSeconds: Long? = null
@@ -292,6 +294,7 @@ class DashWalletFactory @Inject constructor(
             addMissingExtensions(wallet)
 
             checkWalletValid(wallet, params)
+            blockchainServiceConfig.setWalletCreationDate(seedCreationTime)
             wallet
         } finally {
         }

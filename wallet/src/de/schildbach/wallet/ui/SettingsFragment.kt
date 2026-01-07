@@ -192,14 +192,20 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         val configuration = walletApplication.configuration
         RescanBlockchainDialogFragment().show(requireActivity(), walletApplication.wallet!!.keyChainSeed.creationTimeSeconds) { confirm, creationDate ->
             if (confirm) {
-                log.info("manually initiated blockchain reset")
-                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
-                creationDate?.let {
-                    walletApplication.wallet!!.keyChainSeed.creationTimeSeconds = it
+                viewLifecycleOwner.lifecycleScope.launch {
+                    log.info("manually initiated blockchain reset")
+                    viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
+                    creationDate?.let {
+                        log.info(
+                            "  -> blockchain rescan starting at date: {}",
+                            Date.from(Instant.ofEpochSecond(creationDate))
+                        )
+                        viewModel.setWalletCreationDate(it)
+                    }
+                    walletApplication.resetBlockchain()
+                    configuration.updateLastBlockchainResetTime()
+                    startActivity(MainActivity.createIntent(requireContext()))
                 }
-                walletApplication.resetBlockchain()
-                configuration.updateLastBlockchainResetTime()
-                startActivity(MainActivity.createIntent(requireContext()))
             } else {
                 viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
             }
