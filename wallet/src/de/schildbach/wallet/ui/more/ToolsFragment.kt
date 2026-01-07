@@ -30,11 +30,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
-import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
 import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
@@ -94,7 +93,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
         }
         binding.masternodeKeys.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val pin = authManager.authenticate(requireActivity(), true)
                 pin?.let {
                     findNavController().navigate(
@@ -128,20 +127,20 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                 )
                 dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
             } else {
-                viewModel.getTransactionExporter()
-                viewModel.transactionExporter.observe(viewLifecycleOwner) {
-                    val alertDialog =
-                        ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
-                            requireActivity(),
-                            WalletApplication.getInstance(),
-                            it
-                        ).buildAlertDialog()
-                    alertDialog.show()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val watch = Stopwatch.createStarted()
+                    val transactionExporter = viewModel.getTransactionExporter()
+                    log.info("export transaction csv time: {}", watch)
+                    viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                    (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                    ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
+                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                    }
                 }
             }
         }
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
         }
         binding.buyCreditsInfoButton.setOnClickListener {
@@ -149,7 +148,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         binding.buyCreditsButton.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 if (!viewModel.creditsExplained()) {
                     WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
                         SendCoinsActivity.startBuyCredits(requireActivity())

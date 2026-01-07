@@ -19,9 +19,7 @@ package de.schildbach.wallet.ui.more
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
