@@ -202,7 +202,7 @@ public class RestoreWalletFromSeedDialogFragment extends DialogFragment {
         final MainActivity activity = (MainActivity) this.activity;
         try {
             MnemonicCodeExt.getInstance().check(activity, words);
-            activity.restoreWallet(walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, words, null));
+            activity.restoreWallet(walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, words));
 
             log.info("successfully restored wallet from seed: {}", words.size());
         } catch (MnemonicException x) {

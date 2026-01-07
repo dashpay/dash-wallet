@@ -54,13 +54,13 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // viewModel = ViewModelProvider(this)[RestoreWalletFromFileViewModel::class.java]
         walletApplication = (application as WalletApplication)
         initViewModel()
     }
 
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
-        // TODO: this does not appear to be used
         viewModel.showRestoreWalletFailureAction.observe(this) {
             val message = when {
                 TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
@@ -75,8 +75,6 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
                 getString(R.string.button_retry)
             ).show(this) { shouldRetry ->
                 if (shouldRetry == true) {
-                    // this is incorrect, there should be another try to enter the password
-                    // to restore from file
                     RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
                 }
             }

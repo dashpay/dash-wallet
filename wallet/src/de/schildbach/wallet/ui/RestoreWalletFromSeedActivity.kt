@@ -23,11 +23,9 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
 import android.text.Spanned
-import android.app.DatePickerDialog
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.MenuItem
-import android.view.View
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
@@ -38,10 +36,7 @@ import de.schildbach.wallet_test.databinding.ActivityRecoverWalletFromSeedBindin
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import java.text.SimpleDateFormat
 import java.util.*
-import java.util.Calendar
-import java.util.Date
 import javax.inject.Inject
 import kotlin.collections.ArrayList
 
@@ -143,74 +138,6 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                         showErrorDialog(errorMessage)
                     }
                 }
-            }
-        }
-
-        // Date picker setup
-        setupDatePicker()
-        observeSelectedDate()
-
-        // Info icon click listener
-        binding.dateInfoIcon.setOnClickListener {
-            createWalletCreationDateInfoDialog().show(supportFragmentManager, "wallet_creation_date_info")
-        }
-    }
-
-    private fun setupDatePicker() {
-        binding.selectDateButton.setOnClickListener {
-            showDatePickerDialog()
-        }
-
-        binding.selectedDateDisplay.setOnClickListener {
-            // Click to clear date
-            viewModel.clearWalletCreationDate()
-        }
-    }
-
-    private fun showDatePickerDialog() {
-        val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
-        val maxDate = System.currentTimeMillis()
-
-        // Set initial date to today
-        val calendar = Calendar.getInstance()
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH)
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
-
-        val datePickerDialog = DatePickerDialog(
-            this,
-            { _, selectedYear, selectedMonth, selectedDay ->
-                // User selected a date, convert to timestamp
-                val selectedCalendar = Calendar.getInstance()
-                selectedCalendar.set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
-                selectedCalendar.set(Calendar.MILLISECOND, 0)
-                val selectedDateInMillis = selectedCalendar.timeInMillis
-                viewModel.setWalletCreationDate(selectedDateInMillis)
-            },
-            year,
-            month,
-            day
-        )
-
-        // Set date constraints
-        datePickerDialog.datePicker.minDate = minDate
-        datePickerDialog.datePicker.maxDate = maxDate
-        datePickerDialog.setTitle(getString(R.string.restore_wallet_date_picker_title))
-
-        datePickerDialog.show()
-    }
-
-    private fun observeSelectedDate() {
-        viewModel.selectedCreationDate.observe(this) { timestampInSeconds ->
-            if (timestampInSeconds != null) {
-                val dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
-                val dateStr = dateFormat.format(Date(timestampInSeconds * 1000L))
-                binding.selectedDateDisplay.text = getString(R.string.restore_wallet_selected_date, dateStr)
-                binding.selectedDateDisplay.visibility = View.VISIBLE
-                binding.selectDateButton.text = getString(R.string.restore_wallet_select_date) + " ✓"
-            } else {
-                binding.selectedDateDisplay.visibility = View.GONE
-                binding.selectDateButton.text = getString(R.string.restore_wallet_select_date)
             }
         }
     }

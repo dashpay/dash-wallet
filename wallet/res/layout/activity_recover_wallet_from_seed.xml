@@ -40,62 +40,6 @@
             android:background="@color/dash_white"
             app:layout_constraintTop_toBottomOf="@id/label" />
 
-        <!-- Date Picker Section (Optional) -->
-        <TextView
-            android:id="@+id/date_picker_label"
-            style="@style/MenuRowTitle.Internal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="15dp"
-            android:layout_marginTop="10dp"
-            android:text="@string/restore_wallet_creation_date_label"
-            android:textSize="14sp"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/input" />
-
-        <ImageView
-            android:id="@+id/date_info_icon"
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:layout_marginStart="4dp"
-            android:src="@drawable/ic_info_blue"
-            android:contentDescription="@string/restore_wallet_creation_date_info"
-            app:layout_constraintStart_toEndOf="@id/date_picker_label"
-            app:layout_constraintTop_toTopOf="@id/date_picker_label"
-            app:layout_constraintBottom_toBottomOf="@id/date_picker_label" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/select_date_button"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp"
-            android:layout_marginTop="8dp"
-            android:text="@string/restore_wallet_select_date"
-            android:textAllCaps="false"
-            android:background="@drawable/button_outlined_background"
-            android:paddingVertical="12dp"
-            android:paddingHorizontal="16dp"
-            android:drawableStart="@drawable/ic_calendar"
-            android:drawablePadding="8dp"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/date_picker_label" />
-
-        <TextView
-            android:id="@+id/selected_date_display"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp"
-            android:layout_marginTop="8dp"
-            android:padding="12dp"
-            android:background="@drawable/rounded_background_light"
-            android:textSize="14sp"
-            android:visibility="gone"
-            android:drawableEnd="@drawable/ic_clear"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/select_date_button" />
-
         <LinearLayout
             style="@style/ScreenshotWarningPanel"
             android:layout_width="match_parent"
@@ -105,7 +49,7 @@
             android:orientation="horizontal"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/selected_date_display" >
+            app:layout_constraintTop_toBottomOf="@id/input" >
 
             <ImageView
                 app:srcCompat="@drawable/ic_camera_frame"
