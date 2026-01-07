@@ -27,9 +27,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -50,7 +48,6 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
 
-    internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard.getInstance()
 
     val selectedCreationDate = MutableLiveData<Long?>() // timestamp in seconds, null = not selected
@@ -88,7 +85,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    fun restoreWalletFromSeed(words: List<String>) {
+    suspend fun restoreWalletFromSeed(words: List<String>): Boolean = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
             val creationTime = selectedCreationDate.value
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
@@ -98,14 +95,9 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
-            startActivityAction.call(
-                SetPinActivity.createIntent(
-                    walletApplication,
-                    R.string.set_pin_restore_wallet,
-                    onboarding = true,
-                    onboardingPath = OnboardingPath.RestoreSeed
-                )
-            )
+            true
+        } else {
+            false
         }
     }
 

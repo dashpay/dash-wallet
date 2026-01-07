@@ -81,10 +81,6 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         binding.appBar.toolbar.title = getString(R.string.recover_wallet_title)
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
         initView()
-
-        viewModel.startActivityAction.observe(this) {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
-        }
     }
 
     private fun initView() {
@@ -226,7 +222,17 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            viewModel.restoreWalletFromSeed(words)
+            if (viewModel.restoreWalletFromSeed(words)) {
+                startActivityForResult(
+                    SetPinActivity.createIntent(
+                        walletApplication,
+                        R.string.set_pin_restore_wallet,
+                        onboarding = true,
+                        onboardingPath = OnboardingPath.RestoreSeed
+                    ),
+                    SET_PIN_REQUEST_CODE
+                )
+            }
         }
     }
 
