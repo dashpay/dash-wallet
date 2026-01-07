@@ -58,6 +58,7 @@ import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import javax.inject.Inject
 

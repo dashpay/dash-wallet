@@ -286,7 +286,7 @@
     <string name="preferences_initiate_reset_dialog_message">Would you like to rescan the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as the blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Rescan</string>
     <string name="rescan_blockchain_dialog_title">Are you sure you want to rescan blockchain?</string>
-    <string name="rescan_blockchain_dialog_message">This will temporarily hide your wallet balance and remove transactions. Both will recover as block chain sync progress. Make sure you\'ve got a reliable connection to the internet.</string>
+    <string name="rescan_blockchain_dialog_message">This will temporarily hide your wallet balance and remove transactions. Both will recover as blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
     <string name="rescan_blockchain_select_date_label">Select wallet creation date (optional)</string>
     <string name="rescan_blockchain_date_info_description">Information about wallet creation date</string>
     <string name="rescan_blockchain_select_date_placeholder">Select</string>
