@@ -45,6 +45,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.FlowPreview
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder

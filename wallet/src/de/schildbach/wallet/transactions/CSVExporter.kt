@@ -16,19 +16,19 @@
 
 package de.schildbach.wallet.transactions
 
-import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 
 abstract class CSVExporter(
+    transactionMetadataProvider: TransactionMetadataProvider,
     wallet: Wallet,
-    metadataMap: Map<Sha256Hash, TransactionMetadata>,
     taxCategories: List<String>
 ) :
-    TransactionExporter(wallet, metadataMap, taxCategories) {
+    TransactionExporter(transactionMetadataProvider, wallet, taxCategories) {
 
     companion object {
         const val NEW_LINE = "\n"
@@ -50,10 +50,13 @@ abstract class CSVExporter(
         val history = StringBuilder()
 
         history.append(getHeader()).append(NEW_LINE)
-
         for (tx in sortedTransactions) {
             val columnData = arrayListOf<String>()
-            val shouldExclude = excludeInternal && tx.isEntirelySelf(wallet)
+            val isCoinJoin = when (tx.coinJoinTransactionType) {
+                CoinJoinTransactionType.Mixing -> true
+                else -> false
+            }
+            val shouldExclude = excludeInternal && (tx.isEntirelySelf(wallet) || isCoinJoin)
             if (!shouldExclude) {
                 for (spec in dataSpec) {
                     columnData.add(spec.dataFunction(tx, metadataMap[tx.txId]))
@@ -61,7 +64,6 @@ abstract class CSVExporter(
                 history.append(columnData.joinToString(",")).append(NEW_LINE)
             }
         }
-
         return history.toString()
     }
 }

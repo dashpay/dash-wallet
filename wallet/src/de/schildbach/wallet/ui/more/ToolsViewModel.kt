@@ -31,7 +31,6 @@ import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
@@ -73,21 +72,11 @@ class ToolsViewModel @Inject constructor(
         )
     }
 
-    val transactionExporter = MutableLiveData<TransactionExporter>()
-    fun getTransactionExporter() {
-        viewModelScope.launch {
-            val list = transactionMetadataProvider.getAllTransactionMetadata()
-
-            val map = if (list.isNotEmpty()) {
-                list.associateBy({ it.txId }, { it })
-            } else {
-                mapOf()
-            }
-            transactionExporter.value = TaxBitExporter(
-                walletData.wallet!!,
-                map,
-            )
-        }
+    suspend fun getTransactionExporter(): TransactionExporter = withContext(Dispatchers.IO) {
+        TaxBitExporter(
+            transactionMetadataProvider,
+            walletData.wallet!!,
+        )
     }
 
     suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
