@@ -160,8 +160,8 @@ class SecurityFunctions @Inject constructor(
     override fun getHealth(): SecuritySystemStatus {
         val securityGuard = SecurityGuard.getInstance()
         return when {
-            securityGuard.isHealthlyWithFallbacks -> SecuritySystemStatus.HEALTHY_WITH_FALLBACKS
-            securityGuard.isHealthly -> SecuritySystemStatus.HEALTHY
+            securityGuard.isHealthyWithFallbacks -> SecuritySystemStatus.HEALTHY_WITH_FALLBACKS
+            securityGuard.isHealthy -> SecuritySystemStatus.HEALTHY
             securityGuard.hasFallbacks() -> SecuritySystemStatus.FALLBACKS
             else -> SecuritySystemStatus.DEAD
         }

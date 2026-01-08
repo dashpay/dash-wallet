@@ -124,13 +124,13 @@ fun FeatureSingleItem(
         ) {
             Text(
                 text = heading,
-                style = MyTheme.Typeography.TitleSmallMedium,
+                style = MyTheme.Typography.TitleSmallMedium,
                 color = MyTheme.Colors.textPrimary
             )
             if (text != null) {
                 Text(
                     text = text,
-                    style = MyTheme.Typeography.BodyMedium,
+                    style = MyTheme.Typography.BodyMedium,
                     color = MyTheme.Colors.textSecondary
                 )
             }

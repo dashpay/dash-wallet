@@ -29,7 +29,6 @@ import android.view.View
 import android.view.ViewConfiguration
 import android.view.animation.AnimationUtils
 import android.view.inputmethod.InputMethodManager
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
@@ -60,7 +59,6 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
@@ -268,8 +266,8 @@ open class LockScreenActivity : SecureActivity() {
         val sg = SecurityGuard.getInstance()
         sg.validateKeyIntegrity()
         binding.lockScreen.securityStatus.text = when {
-            sg.isHealthlyWithFallbacks -> "OK"
-            sg.isHealthly -> "~OK"
+            sg.isHealthyWithFallbacks -> "OK"
+            sg.isHealthy -> "~OK"
             sg.hasFallbacks() -> "bad"
             else -> "dead"
         }

@@ -439,6 +439,6 @@
 
     <!-- PIN Upgrade Dialog -->
     <string name="upgrade_pin_title">You need to upgrade your PIN</string>
-    <string name="upgrade_pin_description">Setup a new PIN</string>
+    <string name="upgrade_pin_description">Set up a new PIN</string>
     <string name="upgrade_pin_continue">Continue</string>
 </resources>

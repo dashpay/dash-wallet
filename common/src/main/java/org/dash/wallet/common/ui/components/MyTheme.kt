@@ -132,7 +132,7 @@ object MyTheme {
         fontWeight = FontWeight(700)
     )
 
-    object Typeography {
+    object Typography {
         // Display styles - Largest text, typically for hero sections
         val DisplayLargeBold = TextStyle(
             fontSize = 57.sp,

@@ -132,7 +132,7 @@ public class SecurityGuard {
         } else {
             log.info(
                 "loading security guard [healthy={}] with keys: {}",
-                isHealthly(),
+                isHealthy(),
                 securityPrefs.getAll().keySet()
             );
         }
@@ -741,14 +741,14 @@ public class SecurityGuard {
         }
     }
 
-    public boolean isHealthly() {
+    public boolean isHealthy() {
         if (encryptionProvider instanceof DualFallbackEncryptionProvider) {
             return ((DualFallbackEncryptionProvider) encryptionProvider).isKeyStoreHealthy();
         }
         return false;
     }
 
-    public boolean isHealthlyWithFallbacks() {
+    public boolean isHealthyWithFallbacks() {
         if (encryptionProvider instanceof DualFallbackEncryptionProvider provider) {
             return provider.isKeyStoreHealthy() && hasFallbacks();
         }
@@ -824,9 +824,9 @@ public class SecurityGuard {
      * Calculate current security system health status
      */
     private SecuritySystemStatus calculateHealthStatus() {
-        if (isHealthlyWithFallbacks()) {
+        if (isHealthyWithFallbacks()) {
             return SecuritySystemStatus.HEALTHY_WITH_FALLBACKS;
-        } else if (isHealthly()) {
+        } else if (isHealthy()) {
             return SecuritySystemStatus.HEALTHY;
         } else if (hasFallbacks()) {
             return SecuritySystemStatus.FALLBACKS;

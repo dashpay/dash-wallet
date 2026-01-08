@@ -93,7 +93,7 @@ open class CheckPinViewModel @Inject constructor(
         analytics.logEvent(eventName, mapOf())
     }
 
-    fun checkHealth() {
-        SecurityGuard.getInstance().validateKeyIntegrity()
+    fun checkHealth(): Boolean {
+        return SecurityGuard.getInstance().validateKeyIntegrity()
     }
 }
