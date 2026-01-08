@@ -232,6 +232,8 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                     ),
                     SET_PIN_REQUEST_CODE
                 )
+            } else {
+                showErrorDialog(getString(R.string.restore_wallet_from_invalid_seed_failure, getString(R.string.error)))
             }
         }
     }
