@@ -185,11 +185,6 @@ class ExploreDatabaseMigrations {
 
         val migration3To4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
-                // Add denominationsType column to merchant table
-                db.execSQL(
-                    "ALTER TABLE merchant ADD COLUMN denominationsType TEXT DEFAULT ''"
-                )
-
                 // Create gift_card_providers table
                 db.execSQL(
                     "CREATE TABLE IF NOT EXISTS gift_card_providers (" +
