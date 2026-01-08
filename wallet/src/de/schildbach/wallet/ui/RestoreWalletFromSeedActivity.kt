@@ -181,8 +181,7 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 val selectedCalendar = Calendar.getInstance()
                 selectedCalendar.set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
                 selectedCalendar.set(Calendar.MILLISECOND, 0)
-                val selectedDateInMillis = selectedCalendar.timeInMillis
-                viewModel.setWalletCreationDate(selectedDateInMillis)
+                viewModel.setWalletCreationDate(selectedCalendar.time.time)
             },
             year,
             month,
