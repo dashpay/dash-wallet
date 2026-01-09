@@ -66,6 +66,7 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis
 import de.schildbach.wallet.util.AllowLockTimeRiskAnalysis.OfflineAnalyzer
+import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet.util.BlockchainStateUtils
 import de.schildbach.wallet.util.CrashReporter
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener
@@ -76,6 +77,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -1299,8 +1301,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     blockStore?.chainHead // detect corruptions as early as possible
                     headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
                     headerStore?.chainHead // detect corruptions as early as possible
+                    wallet.isNotifyTxOnNextBlock = false
                     val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
-                    if (blockchainStoreMemoryError /*&& serviceConfig.getBlockStoreLastFix() == BlockStoreLastFix.COPY_FILES*/) {
+                    if (blockchainStoreMemoryError) {
                         try {
                             // the stores are open, copy 100 blocks to a new store.
                             log.info("attempting to fix blockchain memory stalls by copying from store: {}", serviceConfig.getBlockStoreLastFix())
@@ -1722,6 +1725,27 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
         log.info("receivers unregistered, Now starting coroutine to finish the rest of the cleanup")
+
+        // Monitor the entire cleanup process with timeout reporting
+        val cleanupThread = Thread.currentThread()
+        val cleanupMonitorJob = serviceScope.launch {
+            delay(5_000) // Wait 5 seconds before first check
+            var checkCount = 0
+            while (isActive) {
+                if (checkCount > 4) return@launch
+                checkCount++
+                log.warn("onDestroy() cleanup is taking longer than {} seconds", 5 * checkCount)
+                try {
+                    val anrException = AnrException(cleanupThread)
+                    anrException.logProcessMap()
+                } catch (e: Exception) {
+                    log.error("Failed to dump thread traces during cleanup timeout", e)
+                }
+                // Wait another 5 seconds before next check
+                delay(5_000)
+            }
+        }
+
         serviceScope.launch {
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
@@ -1777,7 +1801,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
                     log.info("CLEANUP STEP 1: About to close dashSystemService.system")
-                    dashSystemService.system.close()
+                        dashSystemService.system.close()
                     log.info("CLEANUP STEP 1: Dash system services are shutdown")
                     peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                     peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1842,6 +1866,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 isCleaningUp.set(false)
                 cleanupDeferred?.complete(Unit)
+                // Cancel the cleanup monitor since cleanup is done
+                cleanupMonitorJob.cancel()
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")

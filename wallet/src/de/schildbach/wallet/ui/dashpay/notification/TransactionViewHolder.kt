@@ -75,11 +75,12 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
         @Suppress("UNCHECKED_CAST")
         val transactionCache = (args[0] as HashMap<Sha256Hash, TransactionCacheEntry>)
         val bag = (args[1] as TransactionBag)
-        val chainLockBlockHeight = (args[2] as Int)
-        bind(tx, transactionCache, bag, chainLockBlockHeight)
+        val chainHeight = (args[2] as Int)
+        val chainLockBlockHeight = (args[3] as Int)
+        bind(tx, transactionCache, bag, chainHeight, chainLockBlockHeight)
     }
 
-    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, bag: TransactionBag, chainLockBlockHeight: Int) {
+    private fun bind(tx: Transaction, transactionCache: HashMap<Sha256Hash, TransactionCacheEntry>, bag: TransactionBag, chainHeight: Int, chainLockBlockHeight: Int) {
         if (itemView is CardView) {
             (itemView as CardView).setCardBackgroundColor(if (itemView.isActivated()) colorBackgroundSelected else colorBackground)
         }
@@ -193,6 +194,7 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
             secondaryStatusId = txResourceMapper.getReceivedStatusString(
                 tx,
                 de.schildbach.wallet.Constants.CONTEXT,
+                chainHeight,
                 chainLockBlockHeight
             )
         }

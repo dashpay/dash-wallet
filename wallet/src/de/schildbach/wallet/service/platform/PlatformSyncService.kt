@@ -153,10 +153,11 @@ class PlatformSynchronizationService @Inject constructor(
 
         val UPDATE_TIMER_DELAY = 15.seconds
         val PUSH_PERIOD = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
-        val WEEKLY_PUSH_PERIOD = 7.days
+        val WEEKLY_PUSH_PERIOD = 7.days.inWholeMilliseconds
         val CUTOFF_MIN = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
         val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
+        val NON_CONTACTS_UPDATE_PERIOD = 1.minutes.inWholeMilliseconds
     }
 
     private var platformSyncJob: Job? = null
@@ -171,6 +172,8 @@ class PlatformSynchronizationService @Inject constructor(
     // TODO: cancel these on shutdown?
     private val syncJob = SupervisorJob()
     private val syncScope = CoroutineScope(Dispatchers.IO + syncJob)
+    private var lastTopupUpdateTime = 0L
+    private var lastMetadataUpdateTime = 0L
 
     override fun init() {
         syncScope.launch { platformRepo.init() }
@@ -234,7 +237,7 @@ class PlatformSynchronizationService @Inject constructor(
         val meetsSaveFrequency = when (saveSettings.saveFrequency) {
             TxMetadataSaveFrequency.afterTenTransactions -> newDataItems >= 10
             TxMetadataSaveFrequency.afterEveryTransaction -> newDataItems >= 1
-            TxMetadataSaveFrequency.oncePerWeek -> lastPush < now - WEEKLY_PUSH_PERIOD.inWholeMilliseconds && newDataItems >= 1
+            TxMetadataSaveFrequency.oncePerWeek -> lastPush < now - WEEKLY_PUSH_PERIOD && newDataItems >= 1
         }
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
@@ -281,7 +284,8 @@ class PlatformSynchronizationService @Inject constructor(
         }
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
-        if (updatingContacts.get()) {
+        // allow it to continue if the last state was recovery complete
+        if (updatingContacts.get() && lastPreBlockStage != PreBlockStage.RecoveryComplete) {
             log.info("updateContactRequests is already running: {}", lastPreBlockStage)
             return
         }
@@ -361,9 +365,10 @@ class PlatformSynchronizationService @Inject constructor(
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
-            checkDatabaseIntegrity(userId)
-
-            updateSyncStatus(PreBlockStage.FixMissingProfiles)
+            if (!initialSync) {
+                checkDatabaseIntegrity(userId)
+                updateSyncStatus(PreBlockStage.FixMissingProfiles)
+            }
 
             // Get all out our contact requests
             val toContactDocuments = platform.contactRequests.get(
@@ -435,17 +440,26 @@ class PlatformSynchronizationService @Inject constructor(
                 updateSyncStatus(PreBlockStage.GetNewProfiles)
 
                 coroutineScope {
+                    try {
+                        val myEncryptionKey = platformRepo.getWalletEncryptionKey()
+
                     awaitAll(
                         // fetch updated invitations
                         async {
-                            updateInvitations()
-                            updateSyncStatus(PreBlockStage.GetInvites)
+                            if (Constants.SUPPORTS_INVITES) {
+                                updateInvitations()
+                                updateSyncStatus(PreBlockStage.GetInvites)
+                            }
                         },
                         // fetch updated transaction metadata
                         async {
-                            updateTransactionMetadata()
-                            updateSyncStatus(PreBlockStage.TransactionMetadata)
-                        },  // TODO: this is skipped in VOTING state, but shouldn't be
+                            val shouldUpdate = System.currentTimeMillis() - lastMetadataUpdateTime >= NON_CONTACTS_UPDATE_PERIOD
+                            if (shouldUpdate) {
+                                updateTransactionMetadata(myEncryptionKey)
+                                updateSyncStatus(PreBlockStage.TransactionMetadata)
+                                lastMetadataUpdateTime = System.currentTimeMillis()
+                            }
+                        }, // TODO: this is skipped in VOTING state, but shouldn't be
                         // fetch updated profiles from the network
                         async {
                             updateContactProfiles(userId, min(lastContactRequestTimeToMe, lastContactRequestTimeFromMe))
@@ -453,11 +467,20 @@ class PlatformSynchronizationService @Inject constructor(
                         },
                         // check for unused topups
                         async {
-                            checkTopUps()
-                            updateSyncStatus(PreBlockStage.Topups)
+                            val shouldUpdate = System.currentTimeMillis() - lastTopupUpdateTime >= NON_CONTACTS_UPDATE_PERIOD
+                            if (shouldUpdate) {
+                                checkTopUps(myEncryptionKey)
+                                updateSyncStatus(PreBlockStage.Topups)
+                                lastTopupUpdateTime = System.currentTimeMillis()
+                            }
                         }
                     )
+                    } catch (e: Exception) {
+                        log.error("error obtaining encryption key", e)
+                        return@coroutineScope
+                    }
                 }
+
             } else {
                 if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
                     platformRepo.updateFrequentContacts()
@@ -788,12 +811,8 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    private suspend fun updateTransactionMetadata() {
-        if (!Constants.SUPPORTS_TXMETADATA) {
-            return
-        }
+    private suspend fun updateTransactionMetadata(myEncryptionKey: KeyParameter?) {
         val watch = Stopwatch.createStarted()
-        val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
         val lastTxMetadataRequestTime = if (transactionMetadataDocumentDao.countAllRequests() > 0) {
             val lastTimeStamp = transactionMetadataDocumentDao.getLastTimestamp()
@@ -1058,6 +1077,7 @@ class PlatformSynchronizationService @Inject constructor(
 
     private suspend fun publishTransactionMetadata(
         txMetadataItems: List<TransactionMetadataCacheItem>,
+        myEncryptionKey: KeyParameter?,
         progressListener: (suspend (Int) -> Unit)? = null
     ): Int {
         if (!platformRepo.hasBlockchainIdentity) {
@@ -1085,11 +1105,11 @@ class PlatformSynchronizationService @Inject constructor(
             )
         }
         progressListener?.invoke(10)
-        val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
+        //val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
         platformRepo.blockchainIdentity.publishTxMetaData(
             metadataList,
-            walletEncryptionKey,
+            myEncryptionKey,
             keyIndex,
             TxMetadataDocument.VERSION_PROTOBUF
         ) { progress ->
@@ -1291,7 +1311,8 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
             // publish non-empty items
-            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }) {
+            val myEncryptionKey = platformRepo.getWalletEncryptionKey()
+            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }, myEncryptionKey) {
                 progressListener?.invoke(10 + it * 90 / 100)
             }
             log.info("published ${itemsToPublish.values.size} tx metadata items to platform")
@@ -1302,7 +1323,7 @@ class PlatformSynchronizationService @Inject constructor(
             config.set(DashPayConfig.LAST_METADATA_PUSH, System.currentTimeMillis())
             itemsSaved = changedItems.size
 
-            updateTransactionMetadata()
+            updateTransactionMetadata(myEncryptionKey)
         } catch (_: CancellationException) {
             log.info("publishing updates canceled")
         } catch (e: Exception) {
@@ -1646,12 +1667,10 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private var hasCheckedTopups = false // only run once
-    private suspend fun checkTopUps() {
+    private suspend fun checkTopUps(myEncryptionKey: KeyParameter?) {
         if (!hasCheckedTopups) {
-            platformRepo.getWalletEncryptionKey()?.let {
-                topUpRepository.checkTopUps(it)
-                hasCheckedTopups = true
-            }
+            topUpRepository.checkTopUps(myEncryptionKey)
+            hasCheckedTopups = true
         }
     }
 }
