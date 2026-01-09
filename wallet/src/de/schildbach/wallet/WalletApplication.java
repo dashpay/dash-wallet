@@ -451,6 +451,7 @@ public class WalletApplication extends MultiDexApplication
 
     public void finalizeInitialization() {
         // TODO, put this in a different place. maybe SecurityInitilizer
+        // TODO, can we remove this?
         try {
             SecurityGuard securityGuard = SecurityGuard.getInstance();
             List<String> mnemonicWords = platformRepo.getWalletSeed().getMnemonicCode();
@@ -467,11 +468,6 @@ public class WalletApplication extends MultiDexApplication
             // Don't crash - app can continue with primary+PIN fallback only
         }
 
-//        try {
-//            SecurityGuard.getInstance().ensureFallbackEncryptions();
-//        } catch (Exception e) {
-//            log.error("failure to ensure fallback encryption: ", e);
-//        }
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
