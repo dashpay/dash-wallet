@@ -76,5 +76,14 @@ allprojects {
         mavenCentral()
         maven { url 'https://jitpack.io' }
         maven { url 'https://s01.oss.sonatype.org/content/repositories/snapshots/' }
+        maven {
+            name 'Central Portal Snapshots'
+            url 'https://central.sonatype.com/repository/maven-snapshots/'
+
+            // Only search this repository for the specific dependency
+//            content {
+//                includeModule("<the snapshot's groupId>", "<the snapshot's artifactId>")
+//            }
+        }
     }
 }
