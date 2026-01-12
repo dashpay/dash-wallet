@@ -206,4 +206,7 @@ class SettingsViewModel @Inject constructor(
         walletApplication.wallet!!.keyChainSeed.creationTimeSeconds = creationDate
         blockchainServiceConfig.setWalletCreationDate(creationDate)
     }
+
+    suspend fun getWalletCreationDate(): Long? =
+        blockchainServiceConfig.getWalletCreationDate()
 }

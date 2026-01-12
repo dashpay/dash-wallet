@@ -58,7 +58,7 @@ open class BlockchainServiceConfig @Inject constructor(
 
     suspend fun getWalletCreationDate(): Long? {
         val creationDate = get(WALLET_CREATION_DATE)
-        return if (creationDate != null && creationDate >= Constants.EARLIEST_HD_SEED_CREATION_TIME) {
+        return if (creationDate != null && creationDate > Constants.EARLIEST_HD_SEED_CREATION_TIME) {
             creationDate
         } else {
             null
