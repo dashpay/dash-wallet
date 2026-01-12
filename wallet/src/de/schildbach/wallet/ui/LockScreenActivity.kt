@@ -44,7 +44,7 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
-import de.schildbach.wallet.security.FallbackTestingUtils
+// DEBUG: import de.schildbach.wallet.security.FallbackTestingUtils
 import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
@@ -261,6 +261,7 @@ open class LockScreenActivity : SecureActivity() {
         walletApplication.startBlockchainService(false)
     }
 
+    /* DEBUG: Commented out for production
     // TODO: remove
     private fun updateBreakStatus() {
         val sg = SecurityGuard.getInstance()
@@ -273,9 +274,11 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
     // TODO: end
+    */
 
     private fun initView() {
         binding.lockScreen.apply {
+            /* DEBUG: Commented out for production
             // TODO: remove this (only for testing)
             breakPrimary.setOnClickListener {
                 // FallbackTestingUtils.enableTestMode();
@@ -294,6 +297,7 @@ open class LockScreenActivity : SecureActivity() {
             }
             updateBreakStatus()
             // TODO END
+            */
             actionLoginWithPin.setOnClickListener {
                 setLockState(State.ENTER_PIN)
             }
@@ -382,7 +386,7 @@ open class LockScreenActivity : SecureActivity() {
         }
 
         checkPinViewModel.authenticationHealth.observe(this) {
-            updateBreakStatus()
+            // DEBUG: updateBreakStatus()
             if (!it.isHealthy && !it.hasFallback) {
                 // TODO: show the new dialog about "upgrading PIN"
                 // TODO:

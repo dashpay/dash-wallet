@@ -67,6 +67,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent">
 
+        <!-- DEBUG UI - Commented out for production
         <LinearLayout
             style="?android:attr/buttonBarStyle"
             android:layout_width="match_parent"
@@ -102,6 +103,7 @@
                 android:text="Break Before"
                 />
         </LinearLayout>
+        -->
         <TextView
             android:id="@+id/action_title"
             style="@style/Headline6"
