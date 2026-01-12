@@ -97,7 +97,7 @@ class WalletObserver(
                     val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                         log.info("observing transaction sent: {} [=====] {}", tx.txId, this@WalletObserver)
-                        if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
+                        if ((tx.updateTime.time > oneHourAgo && observeTxConfidence) || tx.isCoinBase) {
                             transactions[tx.txId] = tx
                             tx.getConfidence(wallet.context).addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
                             wallet.addManualNotifyConfidenceChangeTransaction(tx)
@@ -118,7 +118,7 @@ class WalletObserver(
                     if (tx != null && (filters.isEmpty() || filters.any { it.matches(tx) })) {
                         log.info("observing transaction received: {} [=====] {}", tx.txId, this@WalletObserver)
                         val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
-                        if (tx.updateTime.time > oneHourAgo && observeTxConfidence) {
+                        if ((tx.updateTime.time > oneHourAgo && observeTxConfidence) || tx.isCoinBase) {
                             transactions[tx.txId] = tx
                             tx.getConfidence(wallet.context).addEventListener(Threading.USER_THREAD, transactionConfidenceListener)
                             wallet.addManualNotifyConfidenceChangeTransaction(tx)
@@ -151,7 +151,8 @@ class WalletObserver(
                             TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                                 log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                                 // get the current height?
-                                wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + CONFIRMED_DEPTH
+                                val requiredDepth = if (tx?.isCoinBase == true) wallet.params.spendableCoinbaseDepth else CONFIRMED_DEPTH
+                                wallet.lastBlockSeenHeight + 1 >= transactionConfidence.appearedAtChainHeight + requiredDepth
                             }
                             else -> false
                         }
@@ -170,6 +171,26 @@ class WalletObserver(
 
             wallet.addCoinsSentEventListener(Threading.USER_THREAD, coinsSentListener)
             wallet.addCoinsReceivedEventListener(Threading.USER_THREAD, coinsReceivedListener)
+
+            // set up listeners on old transactions
+            wallet.getTransactions(true).forEach { tx ->
+                val confidence = tx.getConfidence(wallet.context)
+                val shouldMonitor = when (confidence.confidenceType) {
+                    TransactionConfidence.ConfidenceType.PENDING -> !confidence.isTransactionLocked
+                    TransactionConfidence.ConfidenceType.BUILDING -> when {
+                        tx.isCoinBase -> confidence.depthInBlocks < wallet.params.spendableCoinbaseDepth
+                        confidence.isChainLocked -> false
+                        else -> confidence.depthInBlocks < 6
+                    }
+
+                    else -> false
+                }
+                if (shouldMonitor) {
+                    transactions[tx.txId] = tx
+                    confidence.addEventListener(transactionConfidenceListener)
+                    wallet.addManualNotifyConfidenceChangeTransaction(tx)
+                }
+            }
 
             awaitClose {
                 log.info("observing transactions stop: {}", this@WalletObserver)
