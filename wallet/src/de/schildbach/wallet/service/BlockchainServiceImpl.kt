@@ -58,6 +58,7 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.transactions.WalletObserver.Companion.CONFIRMED_DEPTH
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -276,7 +277,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var resetBlockchainOnShutdown = false
     private var deleteWalletFileOnShutdown = false
 
-    //Settings to bypass dashj default dns seeds
+    // Settings to bypass dashj default dns seeds
     private val seedPeerDiscovery = SeedPeers(Constants.NETWORK_PARAMETERS)
     private val dnsDiscovery = DnsDiscovery(Constants.DNS_SEED, Constants.NETWORK_PARAMETERS)
     var peerDiscoveryList = ArrayList<PeerDiscovery>(2)
@@ -385,6 +386,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         }
                     }
                 }
+                maybeAddMonitoring(tx, wallet)
                 handleMetadata(tx)
                 handleContactPayments(tx)
                 updateAppWidget()
@@ -406,6 +408,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }
+                maybeAddMonitoring(tx, wallet)
                 handleMetadata(tx)
                 updateAppWidget()
             }
@@ -489,6 +492,71 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         notification.setWhen(System.currentTimeMillis())
         notification.setSound(Uri.parse("android.resource://" + packageName + "/" + R.raw.coins_received))
         nm!!.notify(Constants.NOTIFICATION_ID_COINS_RECEIVED, notification.build())
+    }
+
+    private val oldTransactionsToMonitor = hashMapOf<Sha256Hash, Transaction>()
+    private var transactionConfidenceListener: TransactionConfidence.Listener? = null
+
+    private fun stopMonitoringOlderTransactions() {
+        oldTransactionsToMonitor.forEach { (_, tx) ->
+            tx.getConfidence(application.wallet!!.context).removeEventListener(transactionConfidenceListener)
+            application.wallet!!.removeManualNotifyConfidenceChangeTransaction(tx)
+        }
+        log.info("stop monitoring {} old transactions", oldTransactionsToMonitor.size)
+        oldTransactionsToMonitor.clear()
+    }
+
+    private fun monitorOlderTransactions() {
+        transactionConfidenceListener = TransactionConfidence.Listener { transactionConfidence, changeReason ->
+            try {
+                val wallet = application.wallet!!
+                val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]
+                log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
+                val shouldStopListening = when (changeReason) {
+                    // TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked
+                    // TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked
+                    TransactionConfidence.Listener.ChangeReason.DEPTH -> {
+                        log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
+                        // get the current height?
+                        val requiredDepth = if (tx?.isCoinBase == true) 100 else CONFIRMED_DEPTH
+                        wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + requiredDepth
+                    }
+                    else -> false
+                }
+                if (shouldStopListening) {
+                    log.info("observing transaction: stop listening to {}", transactionConfidence.transactionHash)
+                    transactionConfidence.removeEventListener(transactionConfidenceListener)
+                    oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
+                    wallet.removeManualNotifyConfidenceChangeTransaction(tx)
+                }
+            } catch (e: Exception) {
+                log.error("Error in transactionConfidenceChangedListener", e)
+            }
+        }
+        val wallet = application.wallet!!
+        val transactions = wallet.getTransactions(true)
+        transactions.forEach { tx ->
+            maybeAddMonitoring(tx, wallet)
+        }
+    }
+
+    private fun maybeAddMonitoring(tx: Transaction, wallet: Wallet) {
+        val confidence = tx.getConfidence(wallet.context)
+        val shouldMonitor = when (confidence.confidenceType) {
+            TransactionConfidence.ConfidenceType.PENDING -> true //!confidence.isTransactionLocked
+            TransactionConfidence.ConfidenceType.BUILDING -> when {
+                tx.isCoinBase -> confidence.depthInBlocks < wallet.params.spendableCoinbaseDepth
+                confidence.isChainLocked -> false
+                else -> confidence.depthInBlocks < 6
+            }
+
+            else -> false
+        }
+        if (shouldMonitor) {
+            oldTransactionsToMonitor[tx.txId] = tx
+            confidence.addEventListener(transactionConfidenceListener)
+            wallet.addManualNotifyConfidenceChangeTransaction(tx)
+        }
     }
 
     private inner class PeerConnectivityListener : PeerConnectedEventListener,
@@ -611,7 +679,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         // alarmManager.cancel(alarmIntent)
 
-
         val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
         alarmManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
@@ -627,6 +694,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         object : MyDownloadProgressTracker() {
             private val lastMessageTime = AtomicLong(0)
             private var throttleDelay: Long = -1
+
+            override fun onHeadersDownloadStarted(peer: Peer?, blocksLeft: Int) {
+                super.onHeadersDownloadStarted(peer, blocksLeft)
+                application.wallet!!.updateTransactionDepth()
+            }
+
+            override fun onChainDownloadStarted(peer: Peer?, blocksLeft: Int) {
+                super.onChainDownloadStarted(peer, blocksLeft)
+                application.wallet!!.updateTransactionDepth()
+            }
+
             override fun onBlocksDownloaded(
                 peer: Peer, block: Block, filteredBlock: FilteredBlock?,
                 blocksLeft: Int
@@ -678,10 +756,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
 
             /** This method is called by super.onBlocksDownloaded when the percentage
-                of the chain downloaded is 100.0% (completely done)
-            */
+             *  of the chain downloaded is 100.0% (completely done)
+             */
             override fun doneDownload() {
                 super.doneDownload()
+                application.wallet!!.updateTransactionDepth()
                 log.info("DoneDownload {}", syncPercentage)
                 // if the chain is already synced from a previous session, then syncPercentage = 0
                 // set to 100% so that observers will see that sync is completed
@@ -1471,6 +1550,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
                 wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
+                propagateContext()
+                wallet.updateTransactionDepth()
+                monitorOlderTransactions()
                 config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
                     registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
@@ -1766,6 +1848,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
+                    wallet.updateTransactionDepth()
+                    stopMonitoringOlderTransactions()
                 }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
