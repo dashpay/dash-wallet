@@ -129,9 +129,6 @@ class EncryptWalletLiveData(
         override fun doInBackground(vararg args: Any): Resource<Wallet> {
             val wallet = walletApplication.wallet as WalletEx
             val password = securityGuard.generateRandomPassword()
-            if (BuildConfig.DEBUG) {
-                log.info("password = {}", password)
-            }
             return try {
                 org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
                 // For the new key, we create a new key crypter according to the desired parameters.

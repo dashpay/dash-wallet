@@ -234,11 +234,7 @@ public class SecurityGuard {
         try {
             // DualFallbackEncryptionProvider handles loading from primary_/fallback_ prefixes internally
             // We just pass a dummy byte array since the parameter is ignored
-            String password = encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, new byte[0]);
-            if (BuildConfig.DEBUG) {
-                log.info("password = {}", password);
-            }
-            return password;
+            return encryptionProvider.decrypt(WALLET_PASSWORD_KEY_ALIAS, new byte[0]);
         } catch (GeneralSecurityException | IOException e) {
             log.error("Failed to retrieve password", e);
             analyticsService.logError(e, "Failed to retrieve password");
