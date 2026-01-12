@@ -88,8 +88,10 @@ class DualFallbackEncryptionProvider(
             log.error("Primary encryption failed for {}: {}", keyAlias, e.message)
             null
         }
-        securityPrefs.edit {
-            putBoolean(KEYSTORE_HEALTHY_KEY, true)
+        if (primaryData != null) {
+            securityPrefs.edit {
+                putBoolean(KEYSTORE_HEALTHY_KEY, true)
+            }
         }
 
         // Note: Fallback encryption will be added later via ensureFallbackEncryptions()
