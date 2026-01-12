@@ -198,7 +198,7 @@ class TransactionResultActivity : LockScreenActivity() {
                     Status.ERROR -> {
                         log.info("  error: {}", workData.data?.outputData)
                         viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+                        transactionResultViewBinder.setSentToReturn(viewModel.transaction.value!!, viewModel.topUpError, viewModel.topUpComplete)
                     }
 
                     Status.CANCELED -> {
@@ -212,7 +212,7 @@ class TransactionResultActivity : LockScreenActivity() {
 
         viewModel.topUpStatus(txId).observe(this) { topUp ->
             viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+            transactionResultViewBinder.setSentToReturn(viewModel.transaction.value!!, viewModel.topUpError, viewModel.topUpComplete)
         }
     }
 

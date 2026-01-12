@@ -121,7 +121,6 @@ class TransactionGroupViewModel @Inject constructor(
                 txMetadata,
                 contact = null,
                 resourceMapper,
-                _blockchainState.value?.mnlistHeight ?: walletData.wallet?.lastBlockSeenHeight ?: 0,
                 chainLockBlockHeight
             )
         }.sortedByDescending { row -> row.time }

@@ -145,7 +145,7 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
                     Status.ERROR -> {
                         log.info("  error: {}", workData.data?.outputData)
                         viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+                        transactionResultViewBinder.setSentToReturn(viewModel.transaction.value!!, viewModel.topUpError, viewModel.topUpComplete)
                     }
 
                     Status.CANCELED -> {
@@ -159,7 +159,13 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
 
         viewModel.topUpStatus(txId).observe(this) { topUp ->
             viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(viewModel.topUpError, viewModel.topUpComplete)
+            viewModel.transaction.value?.let {
+                transactionResultViewBinder.setSentToReturn(
+                    it,
+                    viewModel.topUpError,
+                    viewModel.topUpComplete
+                )
+            }
         }
     }
 

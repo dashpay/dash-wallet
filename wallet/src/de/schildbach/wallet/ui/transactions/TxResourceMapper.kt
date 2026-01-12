@@ -156,13 +156,12 @@ open class TxResourceMapper {
     open fun getReceivedStatusString(
         tx: Transaction,
         context: Context,
-        chainTipBlockHeight: Int,
         bestChainLockBlockHeight: Int
     ): Int {
         val confidence = tx.getConfidence(context)
         var statusId = -1
         if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
-            val confirmations = chainTipBlockHeight - confidence.appearedAtChainHeight
+            val confirmations = confidence.depthInBlocks
             val isChainLocked = bestChainLockBlockHeight >= confidence.appearedAtChainHeight
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions

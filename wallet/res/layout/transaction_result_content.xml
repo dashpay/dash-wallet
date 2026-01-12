@@ -197,16 +197,32 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingVertical="12dp">
-
-            <LinearLayout
-                android:id="@+id/transaction_output_addresses_container"
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/transaction_output_container"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/output_addresses_label"
-                app:layout_constraintTop_toTopOf="@id/output_addresses_label" />
+                app:layout_constraintTop_toTopOf="@id/output_addresses_label">
+                <LinearLayout
+                    android:id="@+id/transaction_output_addresses_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
+                <LinearLayout
+                    android:id="@+id/transaction_output_op_returns_container"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toEndOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/transaction_output_addresses_container" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
             <TextView
                 android:id="@+id/output_addresses_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -217,7 +233,7 @@
                 android:lines="1"
                 android:text="@string/transaction_result_sent_to"
                 android:textSize="13sp"
-                app:layout_constraintEnd_toStartOf="@id/transaction_output_addresses_container"
+                app:layout_constraintEnd_toStartOf="@id/transaction_output_container"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
         </androidx.constraintlayout.widget.ConstraintLayout>
