@@ -297,7 +297,7 @@ class DashWalletFactory @Inject constructor(
             checkWalletValid(wallet, params)
             // set the creation date here
             creationTimeSeconds?.let {
-                blockchainServiceConfig.setWalletCreationDate(seedCreationTime)
+                blockchainServiceConfig.setWalletCreationDate(it)
             }
             wallet
         } finally {
