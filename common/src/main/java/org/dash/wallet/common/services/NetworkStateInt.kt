@@ -17,9 +17,12 @@
 
 package org.dash.wallet.common.services
 
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 interface NetworkStateInt {
     val isConnected: StateFlow<Boolean>
     fun isWifiConnected(): Boolean
+    fun getCountryFromIP(): String
+    fun observeCountryFromIP(): Flow<String>
 }
