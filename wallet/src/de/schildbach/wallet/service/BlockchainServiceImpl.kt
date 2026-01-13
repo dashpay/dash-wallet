@@ -508,6 +508,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun monitorOlderTransactions() {
         transactionConfidenceListener = TransactionConfidence.Listener { transactionConfidence, changeReason ->
+            // here, we only track confirmations to ensure that the wallet is updated.
             try {
                 val wallet = application.wallet!!
                 val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]

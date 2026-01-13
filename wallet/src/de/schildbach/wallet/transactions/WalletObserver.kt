@@ -145,13 +145,14 @@ class WalletObserver(
                             }
                         }
                         log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
+                        val isCoinBase = tx?.isCoinBase == true
                         val shouldStopListening = when (changeReason) {
-                            TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked
-                            TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked
+                            TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked && !isCoinBase
+                            TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked && !isCoinBase
                             TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                                 log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                                 // get the current height?
-                                val requiredDepth = if (tx?.isCoinBase == true) wallet.params.spendableCoinbaseDepth else CONFIRMED_DEPTH
+                                val requiredDepth = if (isCoinBase) wallet.params.spendableCoinbaseDepth else CONFIRMED_DEPTH
                                 wallet.lastBlockSeenHeight + 1 >= transactionConfidence.appearedAtChainHeight + requiredDepth
                             }
                             else -> false
