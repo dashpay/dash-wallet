@@ -278,7 +278,8 @@ class DashWalletFactory @Inject constructor(
         creationTimeSeconds: Long? = null
     ): Wallet {
         return try {
-            val seedCreationTime = creationTimeSeconds ?: Constants.EARLIEST_HD_SEED_CREATION_TIME
+            // The wallet creation time should always be the oldest possible time
+            val seedCreationTime = Constants.EARLIEST_HD_SEED_CREATION_TIME
             val seed = DeterministicSeed(words, null, "", seedCreationTime)
             val group = KeyChainGroup.builder(params)
                 .fromSeed(seed, Script.ScriptType.P2PKH)
@@ -294,7 +295,10 @@ class DashWalletFactory @Inject constructor(
             addMissingExtensions(wallet)
 
             checkWalletValid(wallet, params)
-            blockchainServiceConfig.setWalletCreationDate(seedCreationTime)
+            // set the creation date here
+            creationTimeSeconds?.let {
+                blockchainServiceConfig.setWalletCreationDate(seedCreationTime)
+            }
             wallet
         } finally {
         }
