@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
+import android.annotation.SuppressLint
 import androidx.annotation.VisibleForTesting
 import androidx.lifecycle.*
 import androidx.paging.*
@@ -39,6 +40,7 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel.Companio
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.getCountryCodeFromLocation
 import java.util.*
 import javax.inject.Inject
 import kotlin.String
@@ -103,7 +105,8 @@ class ExploreViewModel @Inject constructor(
     private val syncStatusService: DataSyncStatusService,
     private val networkState: NetworkStateInt,
     val exploreConfig: ExploreConfig,
-    private val analyticsService: AnalyticsService
+    private val analyticsService: AnalyticsService,
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -249,22 +252,68 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
+    val location = MutableStateFlow<String>(Locale.getDefault().country)
+    private val excludedCountriesForPiggyCards = listOf("US")
+
+    init {
+        // Observe location enabled state to get country from GPS when available
+        _isLocationEnabled.observeForever { locationEnabled ->
+            if (locationEnabled) {
+                viewModelScope.launch {
+                    try {
+                        // @SuppressLint("MissingPermission") // Checked by locationEnabled flag
+                        val countryFromGPS = getCountryCodeFromLocation(context)
+                        if (countryFromGPS.isNotBlank()) {
+                            location.value = countryFromGPS
+                        }
+                    } catch (e: SecurityException) {
+                        // Location permissions not granted, fall through to IP-based detection
+                    } catch (e: Exception) {
+                        // GPS location failed, fall through to IP-based detection
+                    }
+                }
+            }
+        }
+
+        // Observe IP-based country detection as fallback or secondary source
+        networkState.observeCountryFromIP()
+            .onEach {  countryFromIP ->
+                // Only update if GPS hasn't set a value or if this is different
+                if (location.value == Locale.getDefault().country || countryFromIP.isNotBlank()) {
+                    location.value = countryFromIP
+                }
+            }
+            .launchIn(viewModelScope)
+    }
+
+    private fun getExcludeProvider(): String {
+        return if (location.value in excludedCountriesForPiggyCards) {
+            "PiggyCards"
+        } else {
+            ""
+        }
+    }
+
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> =
-        _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { filters ->
-            _filterMode
-                .filter { screenState.value == ScreenState.SearchResults }
-                .flatMapLatest { mode ->
-                    clearSearchResults()
-                    _searchBounds
-                        .filter { mode != FilterMode.Nearby || _isLocationEnabled.value == true }
-                        .map { transformBounds(it, mode) }
-                        .flatMapLatest { bounds ->
-                            getPagingFlow(filters, mode, bounds)
-                                .cachedIn(viewModelScope)
-                        }
-                }
-        }
+        combine(
+            _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
+            location // React to location changes for filtering
+        ) { filters, _ -> filters }
+            .flatMapLatest { filters ->
+                _filterMode
+                    .filter { screenState.value == ScreenState.SearchResults }
+                    .flatMapLatest { mode ->
+                        clearSearchResults()
+                        _searchBounds
+                            .filter { mode != FilterMode.Nearby || _isLocationEnabled.value == true }
+                            .map { transformBounds(it, mode) }
+                            .flatMapLatest { bounds ->
+                                getPagingFlow(filters, mode, bounds)
+                                    .cachedIn(viewModelScope)
+                            }
+                    }
+            }
 
     // Used for the map - combine both _filterMode and _appliedFilters so either can restart the flow
     val boundedSearchFlow: Flow<List<SearchResult>> =
@@ -447,7 +496,13 @@ class ExploreViewModel @Inject constructor(
     suspend fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         merchant.merchantId?.let { id ->
             val providers = exploreData.getGiftCardProvidersFor(id)
-            merchant.giftCardProviders = providers
+            // Filter out excluded providers based on location
+            val excludeProvider = getExcludeProvider()
+            merchant.giftCardProviders = if (excludeProvider.isNotBlank()) {
+                providers.filter { !it.provider.equals(excludeProvider, ignoreCase = true) }
+            } else {
+                providers
+            }
         }
 
         _selectedItem.value = merchant
@@ -568,6 +623,15 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun updateSelectedItem(item: SearchResult) {
+        // Filter providers if it's a merchant
+        if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
+            val excludeProvider = getExcludeProvider()
+            if (excludeProvider.isNotBlank()) {
+                item.giftCardProviders = item.giftCardProviders.filter {
+                    !it.provider.equals(excludeProvider, ignoreCase = true)
+                }
+            }
+        }
         _selectedItem.value = item
     }
 
@@ -611,7 +675,8 @@ class ExploreViewModel @Inject constructor(
                 filters.payment,
                 filters.denominationType,
                 filters.provider,
-                bounds
+                bounds,
+                getExcludeProvider()
             )
         } else {
             val types = getAtmTypes(filterMode)
@@ -660,7 +725,21 @@ class ExploreViewModel @Inject constructor(
                     onlineFirst
                 )
             }.flow.map { data ->
+                val excludeProvider = getExcludeProvider()
                 data.filter { it.merchant != null }
+                    .filter { merchantInfo ->
+                        // Filter out merchants that only have excluded providers
+                        if (excludeProvider.isBlank()) {
+                            true
+                        } else {
+                            val merchant = merchantInfo.merchant!!
+                            merchant.merchantId?.let { id ->
+                                val providers = exploreData.getGiftCardProvidersFor(id)
+                                // Keep merchant if it has at least one provider that's not the excluded one
+                                providers.any { !it.provider.equals(excludeProvider, ignoreCase = true) }
+                            } ?: true
+                        }
+                    }
                     .map {
                         it.merchant!!.apply {
                             this.physicalAmount = it.physicalAmount ?: 0
