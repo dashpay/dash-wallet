@@ -252,39 +252,48 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-    val location = MutableStateFlow<String>(Locale.getDefault().country)
     private val excludedCountriesForPiggyCards = listOf("US")
 
-    init {
-        // Observe location enabled state to get country from GPS when available
-        _isLocationEnabled.observeForever { locationEnabled ->
+    // GPS-based country detection (higher priority)
+    private val gpsCountryFlow: Flow<String?> = _isLocationEnabled.asFlow()
+        .flatMapLatest { locationEnabled ->
             if (locationEnabled) {
-                viewModelScope.launch {
+                flow {
                     try {
-                        // @SuppressLint("MissingPermission") // Checked by locationEnabled flag
+                        @SuppressLint("MissingPermission") // Checked by locationEnabled flag
                         val countryFromGPS = getCountryCodeFromLocation(context)
                         if (countryFromGPS.isNotBlank()) {
-                            location.value = countryFromGPS
+                            emit(countryFromGPS)
+                        } else {
+                            emit(null)
                         }
                     } catch (e: SecurityException) {
-                        // Location permissions not granted, fall through to IP-based detection
+                        emit(null) // Location permissions not granted
                     } catch (e: Exception) {
-                        // GPS location failed, fall through to IP-based detection
+                        emit(null) // GPS location failed
                     }
                 }
+            } else {
+                flowOf(null) // Location not enabled
             }
         }
 
-        // Observe IP-based country detection as fallback or secondary source
-        networkState.observeCountryFromIP()
-            .onEach {  countryFromIP ->
-                // Only update if GPS hasn't set a value or if this is different
-                if (location.value == Locale.getDefault().country || countryFromIP.isNotBlank()) {
-                    location.value = countryFromIP
-                }
-            }
-            .launchIn(viewModelScope)
-    }
+    // IP-based country detection (lower priority, fallback)
+    private val ipCountryFlow: Flow<String?> = networkState.observeCountryFromIP()
+        .map { it.takeIf { country -> country.isNotBlank() } }
+
+    // Combined location with GPS priority over IP
+    val location: StateFlow<String> = combine(
+        gpsCountryFlow,
+        ipCountryFlow
+    ) { gpsCountry, ipCountry ->
+        // GPS takes priority, fall back to IP, then default locale
+        gpsCountry ?: ipCountry ?: Locale.getDefault().country
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = Locale.getDefault().country
+    )
 
     private fun getExcludeProvider(): String {
         return if (location.value in excludedCountriesForPiggyCards) {
