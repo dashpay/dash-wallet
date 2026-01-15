@@ -497,20 +497,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private val oldTransactionsToMonitor = hashMapOf<Sha256Hash, Transaction>()
     private var transactionConfidenceListener: TransactionConfidence.Listener? = null
 
-    private fun stopMonitoringOlderTransactions() {
+    private fun stopMonitoringOlderTransactions(wallet: Wallet) {
         oldTransactionsToMonitor.forEach { (_, tx) ->
-            tx.getConfidence(application.wallet!!.context).removeEventListener(transactionConfidenceListener)
-            application.wallet!!.removeManualNotifyConfidenceChangeTransaction(tx)
+            tx.getConfidence(wallet.context).removeEventListener(transactionConfidenceListener)
+            wallet.removeManualNotifyConfidenceChangeTransaction(tx)
         }
         log.info("stop monitoring {} old transactions", oldTransactionsToMonitor.size)
         oldTransactionsToMonitor.clear()
     }
 
-    private fun monitorOlderTransactions() {
+    private fun monitorOlderTransactions(wallet: Wallet) {
         transactionConfidenceListener = TransactionConfidence.Listener { transactionConfidence, changeReason ->
             // here, we only track confirmations to ensure that the wallet is updated.
             try {
-                val wallet = application.wallet!!
                 val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]
                 log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
                 val shouldStopListening = when (changeReason) {
@@ -1549,6 +1548,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     networkCallbackRegistered = true
                     log.info("network callback registered with NetworkRequest: {}", networkCallback)
                 }
+                monitorOlderTransactions(wallet)
                 wallet.addCoinsReceivedEventListener(
                     Threading.SAME_THREAD,
                     walletEventListener
@@ -1557,7 +1557,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
                 propagateContext()
                 wallet.updateTransactionDepth()
-                monitorOlderTransactions()
                 config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
                     registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
@@ -1854,7 +1853,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
                     wallet.updateTransactionDepth()
-                    stopMonitoringOlderTransactions()
+                    stopMonitoringOlderTransactions(wallet)
                 }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
