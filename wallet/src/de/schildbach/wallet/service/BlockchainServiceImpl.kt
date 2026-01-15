@@ -519,7 +519,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                         log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                         // get the current height?
-                        val requiredDepth = if (tx?.isCoinBase == true) 100 else CONFIRMED_DEPTH
+                        val requiredDepth = if (tx?.isCoinBase == true) {
+                            wallet.params.spendableCoinbaseDepth
+                        } else {
+                            CONFIRMED_DEPTH
+                        }
                         wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + requiredDepth
                     }
                     else -> false
@@ -544,7 +548,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private fun maybeAddMonitoring(tx: Transaction, wallet: Wallet) {
         val confidence = tx.getConfidence(wallet.context)
         val shouldMonitor = when (confidence.confidenceType) {
-            TransactionConfidence.ConfidenceType.PENDING -> true //!confidence.isTransactionLocked
+            TransactionConfidence.ConfidenceType.PENDING -> true
             TransactionConfidence.ConfidenceType.BUILDING -> when {
                 tx.isCoinBase -> confidence.depthInBlocks < wallet.params.spendableCoinbaseDepth
                 confidence.isChainLocked -> false

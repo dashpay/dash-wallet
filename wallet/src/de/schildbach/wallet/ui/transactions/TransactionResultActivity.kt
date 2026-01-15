@@ -198,8 +198,12 @@ class TransactionResultActivity : LockScreenActivity() {
                     Status.ERROR -> {
                         log.info("  error: {}", workData.data?.outputData)
                         viewModel.topUpError = true
-                        transactionResultViewBinder.setSentToReturn(viewModel.transaction.value!!, viewModel.topUpError, viewModel.topUpComplete)
-                    }
+                        transactionResultViewBinder.setSentToReturn(
+                            viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
+                            viewModel.transaction.value?.type ?:Transaction.Type.TRANSACTION_ASSET_LOCK,
+                            viewModel.topUpError,
+                            viewModel.topUpComplete
+                        )                    }
 
                     Status.CANCELED -> {
                         log.info("  cancel: {}", workData.data?.outputData)
@@ -212,7 +216,12 @@ class TransactionResultActivity : LockScreenActivity() {
 
         viewModel.topUpStatus(txId).observe(this) { topUp ->
             viewModel.topUpComplete = topUp?.used() == true
-            transactionResultViewBinder.setSentToReturn(viewModel.transaction.value!!, viewModel.topUpError, viewModel.topUpComplete)
+            transactionResultViewBinder.setSentToReturn(
+                viewModel.transaction.value?.versionShort ?: Transaction.SPECIAL_VERSION,
+                viewModel.transaction.value?.type ?: Transaction.Type.TRANSACTION_ASSET_LOCK,
+                viewModel.topUpError,
+                viewModel.topUpComplete
+            )
         }
     }
 

@@ -160,7 +160,15 @@ class TransactionResultViewBinder(
         } else {
             setInputs(inputAddresses, inflater)
             setOutputs(outputAddresses, outputAssetLocks, inflater)
-            setReturns(tx, outputAddresses, outputAssetLocks, inflater, error = false, completed = true)
+            setReturns(
+                tx.versionShort,
+                tx.type,
+                outputAddresses,
+                outputAssetLocks,
+                inflater,
+                error = false,
+                completed = true
+            )
         }
 
         // For displaying purposes only
@@ -397,13 +405,21 @@ class TransactionResultViewBinder(
         }
     }
 
-    private fun setReturns(tx: Transaction, outputAddresses: List<Address>, outputOpReturns: List<String>, inflater: LayoutInflater, error: Boolean, completed: Boolean) {
+    private fun setReturns(
+        transactionVersion: Int,
+        transactionType: Transaction.Type,
+        transoutputAddresses: List<Address>,
+        outputOpReturns: List<String>,
+        inflater: LayoutInflater,
+        error: Boolean,
+        completed: Boolean
+    ) {
         binding.outputsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN")) || outputAddresses.isNotEmpty()
         binding.transactionOutputOpReturnsContainer.isVisible = (outputOpReturns.isNotEmpty() && outputOpReturns.contains("OP RETURN"))
         outputOpReturns.forEach {
-            when (tx.versionShort) {
+            when (transactionVersion) {
                 Transaction.SPECIAL_VERSION -> {
-                    if (tx.type == Transaction.Type.TRANSACTION_ASSET_LOCK) {
+                    if (transactionType == Transaction.Type.TRANSACTION_ASSET_LOCK) {
                         val addressView = inflater.inflate(
                             R.layout.transaction_result_address_row,
                             binding.transactionOutputOpReturnsContainer,
@@ -418,7 +434,9 @@ class TransactionResultViewBinder(
 
                             else -> ""
                         }
-                        binding.transactionOutputOpReturnsContainer.addView(addressView)
+                        if (addressView.text.isNotEmpty()) {
+                            binding.transactionOutputOpReturnsContainer.addView(addressView)
+                        }
                     }
                 }
                 Transaction.TIMELOCK_VERSION, 1 -> {
@@ -435,8 +453,13 @@ class TransactionResultViewBinder(
         }
     }
 
-    fun setSentToReturn(tx: Transaction, error: Boolean, completed: Boolean) {
+    fun setSentToReturn(
+        transactionVersion: Int,
+        transactionType: Transaction.Type,
+        error: Boolean,
+        completed: Boolean
+    ) {
         binding.transactionOutputOpReturnsContainer.removeAllViews()
-        setReturns(tx, outputAddresses, outputAssetLocks, LayoutInflater.from(context), error, completed)
+        setReturns(transactionVersion, transactionType, outputAddresses, outputAssetLocks, LayoutInflater.from(context), error, completed)
     }
 }

@@ -27,6 +27,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.utils.Threading
+import org.bitcoinj.utils.Threading.USER_THREAD
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener
@@ -188,7 +189,9 @@ class WalletObserver(
                 }
                 if (shouldMonitor) {
                     transactions[tx.txId] = tx
-                    confidence.addEventListener(transactionConfidenceListener)
+                    transactionConfidenceListener?.let {
+                        confidence.addEventListener(USER_THREAD, it)
+                    }
                     wallet.addManualNotifyConfidenceChangeTransaction(tx)
                 }
             }
