@@ -203,8 +203,8 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
                                 "  -> blockchain rescan starting at date: {}",
                                 Date.from(Instant.ofEpochSecond(creationDate))
                             )
-                            viewModel.setWalletCreationDate(it)
                         }
+                        viewModel.setWalletCreationDate(creationDate)
                         walletApplication.resetBlockchain()
                         configuration.updateLastBlockchainResetTime()
                         startActivity(MainActivity.createIntent(requireContext()))

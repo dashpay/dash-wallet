@@ -65,7 +65,11 @@ open class BlockchainServiceConfig @Inject constructor(
         }
     }
 
-    suspend fun setWalletCreationDate(date: Long) {
-        set(WALLET_CREATION_DATE, date)
+    suspend fun setWalletCreationDate(date: Long?) {
+        if (date != null) {
+            set(WALLET_CREATION_DATE, date)
+        } else {
+            set(WALLET_CREATION_DATE, Constants.EARLIEST_HD_SEED_CREATION_TIME)
+        }
     }
 }

@@ -202,7 +202,7 @@ class SettingsViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
     }
 
-    suspend fun setWalletCreationDate(creationDate: Long) {
+    suspend fun setWalletCreationDate(creationDate: Long?) {
         blockchainServiceConfig.setWalletCreationDate(creationDate)
     }
 
