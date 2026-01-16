@@ -145,13 +145,13 @@ class WalletObserver(
                                 log.error("Failed to send transaction confidence event", it)
                             }
                         }
-                        log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
+                        // log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
                         val isCoinBase = tx?.isCoinBase == true
                         val shouldStopListening = when (changeReason) {
                             TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked && !isCoinBase
                             TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked && !isCoinBase
                             TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                                log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
+                                // log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                                 // get the current height?
                                 val requiredDepth = if (isCoinBase) wallet.params.spendableCoinbaseDepth else CONFIRMED_DEPTH
                                 wallet.lastBlockSeenHeight + 1 >= transactionConfidence.appearedAtChainHeight + requiredDepth
@@ -159,7 +159,11 @@ class WalletObserver(
                             else -> false
                         }
                         if (shouldStopListening) {
-                            log.info("observing transaction: stop listening to {}", transactionConfidence.transactionHash)
+                            log.info(
+                                "observing transaction: stop listening to {} at depth {}",
+                                transactionConfidence.transactionHash,
+                                transactionConfidence.depthInBlocks
+                            )
                             transactionConfidence.removeEventListener(transactionConfidenceListener)
                             transactions.remove(transactionConfidence.transactionHash)
                             wallet.removeManualNotifyConfidenceChangeTransaction(tx)

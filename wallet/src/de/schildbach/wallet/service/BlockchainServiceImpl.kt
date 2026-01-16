@@ -511,12 +511,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             // here, we only track confirmations to ensure that the wallet is updated.
             try {
                 val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]
-                log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
+                // log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
                 val shouldStopListening = when (changeReason) {
                     // TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked
                     // TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked
                     TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                        log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
+                        //log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                         // get the current height?
                         val requiredDepth = if (tx?.isCoinBase == true) {
                             wallet.params.spendableCoinbaseDepth
@@ -528,7 +528,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     else -> false
                 }
                 if (shouldStopListening) {
-                    log.info("observing transaction: stop listening to {}", transactionConfidence.transactionHash)
+                    log.info(
+                        "observing transaction: stop listening to {} at depth {}",
+                        transactionConfidence.transactionHash,
+                        transactionConfidence.depthInBlocks
+                    )
                     transactionConfidence.removeEventListener(transactionConfidenceListener)
                     oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
                     wallet.removeManualNotifyConfidenceChangeTransaction(tx)
@@ -1849,6 +1853,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
                 val wallet = application.wallet
                 if (wallet != null) {
+                    propagateContext()
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
