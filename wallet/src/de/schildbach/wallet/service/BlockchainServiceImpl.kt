@@ -1852,6 +1852,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
+                    propagateContext()
                     wallet.updateTransactionDepth()
                     stopMonitoringOlderTransactions(wallet)
                 }
