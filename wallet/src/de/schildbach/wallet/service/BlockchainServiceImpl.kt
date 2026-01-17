@@ -510,11 +510,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         transactionConfidenceListener = TransactionConfidence.Listener { transactionConfidence, changeReason ->
             // here, we only track confirmations to ensure that the wallet is updated.
             try {
+                // Early exit if already processed
+                if (!oldTransactionsToMonitor.containsKey(transactionConfidence.transactionHash)) {
+                    // log.info("our monitor list does not contain: {}", transactionConfidence.transactionHash)
+                    return@Listener
+                }
+
                 val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]
                 // log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
                 val shouldStopListening = when (changeReason) {
-                    // TransactionConfidence.Listener.ChangeReason.CHAIN_LOCKED -> transactionConfidence.isChainLocked
-                    // TransactionConfidence.Listener.ChangeReason.IX_TYPE -> transactionConfidence.isTransactionLocked
                     TransactionConfidence.Listener.ChangeReason.DEPTH -> {
                         //log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                         // get the current height?
@@ -528,14 +532,26 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     else -> false
                 }
                 if (shouldStopListening) {
-                    log.info(
-                        "observing transaction: stop listening to {} at depth {}",
-                        transactionConfidence.transactionHash,
-                        transactionConfidence.depthInBlocks
-                    )
+                    log.info("observing transaction: stop listening to {}", transactionConfidence.transactionHash)
                     transactionConfidence.removeEventListener(transactionConfidenceListener)
                     oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
                     wallet.removeManualNotifyConfidenceChangeTransaction(tx)
+                    // Use synchronized block to ensure atomic removal
+                    synchronized(oldTransactionsToMonitor) {
+                        // Double-check it's still in the map
+                        if (oldTransactionsToMonitor.containsKey(transactionConfidence.transactionHash)) {
+                            log.info(
+                                "observing transaction: stop listening to {} at depth {}",
+                                transactionConfidence.transactionHash,
+                                transactionConfidence.depthInBlocks
+                            )
+
+                            // Remove from wallet FIRST (prevents new notifications from being queued)
+                            wallet.removeManualNotifyConfidenceChangeTransaction(tx)
+                            transactionConfidence.removeEventListener(transactionConfidenceListener)
+                            oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
+                        }
+                    }
                 }
             } catch (e: Exception) {
                 log.error("Error in transactionConfidenceChangedListener", e)
@@ -546,6 +562,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         transactions.forEach { tx ->
             maybeAddMonitoring(tx, wallet)
         }
+        log.info("monitoring {} old transactions", oldTransactionsToMonitor.size)
     }
 
     private fun maybeAddMonitoring(tx: Transaction, wallet: Wallet) {
