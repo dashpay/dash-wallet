@@ -41,6 +41,7 @@ import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.AboutActivity
+import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
 import de.schildbach.wallet.ui.more.TransactionMetadataSettingsViewModel
@@ -57,6 +58,7 @@ import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.text.SimpleDateFormat
+import java.time.Instant
 import java.util.Date
 import javax.inject.Inject
 
@@ -187,24 +189,29 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
     }
 
     private fun resetBlockchain() {
-        val walletApplication = requireActivity().application as WalletApplication
-        val configuration = walletApplication.configuration
-        AdaptiveDialog.create(
-            null,
-            getString(R.string.preferences_initiate_reset_title),
-            getString(R.string.preferences_initiate_reset_dialog_message),
-            getString(R.string.button_cancel),
-            getString(R.string.preferences_initiate_reset_dialog_positive)
-        ).show(requireActivity()) {
-            if (it == true) {
-                log.info("manually initiated blockchain reset")
-                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
-
-                walletApplication.resetBlockchain()
-                configuration.updateLastBlockchainResetTime()
-                startActivity(MainActivity.createIntent(requireContext()))
-            } else {
-                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+        viewLifecycleOwner.lifecycleScope.launch {
+            val walletApplication = requireActivity().application as WalletApplication
+            val configuration = walletApplication.configuration
+            val creationDateFromSettings = viewModel.getWalletCreationDate()
+            RescanBlockchainDialogFragment().show(requireActivity(), creationDateFromSettings) { confirm, creationDate ->
+                if (confirm) {
+                    viewLifecycleOwner.lifecycleScope.launch {
+                        log.info("manually initiated blockchain reset")
+                        viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
+                        creationDate?.let {
+                            log.info(
+                                "  -> blockchain rescan starting at date: {}",
+                                Date.from(Instant.ofEpochSecond(creationDate))
+                            )
+                        }
+                        viewModel.setWalletCreationDate(creationDate)
+                        walletApplication.resetBlockchain()
+                        configuration.updateLastBlockchainResetTime()
+                        startActivity(MainActivity.createIntent(requireContext()))
+                    }
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_DISMISS)
+                }
             }
         }
     }

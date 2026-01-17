@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui
 
 import android.content.Intent
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,9 +27,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet.util.MnemonicCodeExt
-import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -49,8 +48,9 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromSeedViewModel::class.java)
 
-    internal val startActivityAction = SingleLiveEvent<Intent>()
     private val securityGuard = SecurityGuard.getInstance()
+
+    val selectedCreationDate = MutableLiveData<Long?>() // timestamp in seconds, null = not selected
 
     private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
         try {
@@ -66,6 +66,14 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return@withContext null
     }
 
+    fun setWalletCreationDate(timeInMillis: Long?) {
+        selectedCreationDate.value = timeInMillis?.let { it / 1000 } // convert to seconds
+    }
+
+    fun clearWalletCreationDate() {
+        selectedCreationDate.value = null
+    }
+
     /**
      * Normalize - converts all letter to lowercase and to words matching those of a BIP39 word list.
      * Examples:
@@ -77,23 +85,19 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    fun restoreWalletFromSeed(words: List<String>) {
+    suspend fun restoreWalletFromSeed(words: List<String>): Boolean = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
-            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words))
+            val creationTime = selectedCreationDate.value
+            val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
             walletApplication.setWallet(wallet)
             log.info("successfully restored wallet from seed")
             configuration.disarmBackupSeedReminder()
             configuration.isRestoringBackup = true
             viewModelScope.launch { dashPayConfig.disableNotifications() }
             walletApplication.resetBlockchainState()
-            startActivityAction.call(
-                SetPinActivity.createIntent(
-                    walletApplication,
-                    R.string.set_pin_restore_wallet,
-                    onboarding = true,
-                    onboardingPath = OnboardingPath.RestoreSeed
-                )
-            )
+            true
+        } else {
+            false
         }
     }
 

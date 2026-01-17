@@ -49,7 +49,6 @@ class OnboardingViewModel @Inject constructor(
     private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
 
     internal val showToastAction = SingleLiveEvent<String>()
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()

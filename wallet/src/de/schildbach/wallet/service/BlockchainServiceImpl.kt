@@ -1503,7 +1503,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 //                    if (blockStore is TestingSPVBlockStore) {
 //                        (blockStore as TestingSPVBlockStore).setBlockGetMethod(true)
 //                    }
-                    val earliestKeyCreationTime = wallet.earliestKeyCreationTime
+                    val earliestKeyCreationTime = serviceConfig.getWalletCreationDate() ?: wallet.earliestKeyCreationTime
                     if (!blockChainFileExists && earliestKeyCreationTime > 0) {
                         try {
                             val watch = Stopwatch.createStarted()

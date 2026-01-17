@@ -23,20 +23,26 @@ import android.os.Bundle
 import android.text.Editable
 import android.text.InputFilter
 import android.text.Spanned
+import android.app.DatePickerDialog
 import android.text.TextUtils
 import android.text.TextWatcher
 import android.view.MenuItem
+import android.view.View
 import androidx.activity.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.backup.RestoreFromFileActivity
+import de.schildbach.wallet.ui.compose_views.createWalletCreationDateInfoDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityRecoverWalletFromSeedBinding
 import kotlinx.coroutines.launch
 import org.bitcoinj.crypto.MnemonicException
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Calendar
+import java.util.Date
 import javax.inject.Inject
 import kotlin.collections.ArrayList
 
@@ -75,10 +81,6 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
         binding.appBar.toolbar.title = getString(R.string.recover_wallet_title)
         binding.appBar.toolbar.setNavigationOnClickListener { finish() }
         initView()
-
-        viewModel.startActivityAction.observe(this) {
-            startActivityForResult(it, SET_PIN_REQUEST_CODE)
-        }
     }
 
     private fun initView() {
@@ -140,6 +142,73 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 }
             }
         }
+
+        // Date picker setup
+        setupDatePicker()
+        observeSelectedDate()
+
+        // Info icon click listener
+        binding.dateInfoIcon.setOnClickListener {
+            createWalletCreationDateInfoDialog().show(supportFragmentManager, "wallet_creation_date_info")
+        }
+    }
+
+    private fun setupDatePicker() {
+        binding.selectDateButton.setOnClickListener {
+            showDatePickerDialog()
+        }
+
+        binding.selectedDateDisplay.setOnClickListener {
+            // Click to clear date
+            viewModel.clearWalletCreationDate()
+        }
+    }
+
+    private fun showDatePickerDialog() {
+        val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
+        val maxDate = System.currentTimeMillis()
+
+        // Set initial date to today
+        val calendar = Calendar.getInstance()
+        val year = calendar.get(Calendar.YEAR)
+        val month = calendar.get(Calendar.MONTH)
+        val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+        val datePickerDialog = DatePickerDialog(
+            this,
+            { _, selectedYear, selectedMonth, selectedDay ->
+                // User selected a date, convert to timestamp
+                val selectedCalendar = Calendar.getInstance()
+                selectedCalendar.set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
+                selectedCalendar.set(Calendar.MILLISECOND, 0)
+                viewModel.setWalletCreationDate(selectedCalendar.time.time)
+            },
+            year,
+            month,
+            day
+        )
+
+        // Set date constraints
+        datePickerDialog.datePicker.minDate = minDate
+        datePickerDialog.datePicker.maxDate = maxDate
+        datePickerDialog.setTitle(getString(R.string.restore_wallet_date_picker_title))
+
+        datePickerDialog.show()
+    }
+
+    private fun observeSelectedDate() {
+        viewModel.selectedCreationDate.observe(this) { timestampInSeconds ->
+            if (timestampInSeconds != null) {
+                val dateFormat = SimpleDateFormat("MMMM d, yyyy", Locale.getDefault())
+                val dateStr = dateFormat.format(Date(timestampInSeconds * 1000L))
+                binding.selectedDateDisplay.text = getString(R.string.restore_wallet_selected_date, dateStr)
+                binding.selectedDateDisplay.visibility = View.VISIBLE
+                binding.selectDateButton.text = getString(R.string.fiat_balance_with_currency, getString(R.string.restore_wallet_select_date), "✓")
+            } else {
+                binding.selectedDateDisplay.visibility = View.GONE
+                binding.selectDateButton.text = getString(R.string.restore_wallet_select_date)
+            }
+        }
     }
 
     private suspend fun restoreWallet(words: ArrayList<String>) {
@@ -152,7 +221,19 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            viewModel.restoreWalletFromSeed(words)
+            if (viewModel.restoreWalletFromSeed(words)) {
+                startActivityForResult(
+                    SetPinActivity.createIntent(
+                        walletApplication,
+                        R.string.set_pin_restore_wallet,
+                        onboarding = true,
+                        onboardingPath = OnboardingPath.RestoreSeed
+                    ),
+                    SET_PIN_REQUEST_CODE
+                )
+            } else {
+                showErrorDialog(getString(R.string.restore_wallet_from_invalid_seed_failure, getString(R.string.error)))
+            }
         }
     }
 

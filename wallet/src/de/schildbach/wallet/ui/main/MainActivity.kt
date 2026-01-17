@@ -362,22 +362,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // TODO: can we remove this?
     }
 
-    private fun showRestoreWalletFromSeedDialog() {
-        RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-    }
-
-    fun handleRestoreWalletFromSeed() {
-        showRestoreWalletFromSeedDialog();
-    }
-
-    fun restoreWallet(wallet: Wallet?) {
-        walletApplication.replaceWallet(wallet)
-        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit().clear().commit()
-        config.disarmBackupReminder()
-        upgradeWalletKeyChains(Constants.BIP44_PATH, true)
-        upgradeWalletCoinJoin(true)
-    }
-
     private fun handleInvite(invite: InvitationLinkData) {
         val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
         startActivity(acceptInviteIntent)
@@ -514,12 +498,12 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    open fun upgradeWalletKeyChains(path: ImmutableList<ChildNumber?>?, restoreBackup: Boolean) {
+    private fun upgradeWalletKeyChains(path: ImmutableList<ChildNumber>, restoreBackup: Boolean) {
         val wallet = walletData.wallet!!
         isRestoringBackup = restoreBackup
         if (!wallet.hasKeyChain(path)) {
-            if (wallet.isEncrypted()) {
-                EncryptNewKeyChainDialogFragment.show(getSupportFragmentManager(), path)
+            if (wallet.isEncrypted) {
+                EncryptNewKeyChainDialogFragment.show(supportFragmentManager, path)
             } else {
                 //
                 // Upgrade the wallet now
@@ -530,7 +514,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 // Tell the user that the wallet is being upgraded (BIP44)
                 // and they will have to enter a PIN.
                 //
-                UpgradeWalletDisclaimerDialog.show(getSupportFragmentManager(), false)
+                UpgradeWalletDisclaimerDialog.show(supportFragmentManager, false)
             }
         } else {
             if (restoreBackup) {
@@ -539,7 +523,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    open fun upgradeWalletCoinJoin(restoreBackup: Boolean) {
+    private fun upgradeWalletCoinJoin(restoreBackup: Boolean) {
         val wallet = walletData.wallet!!
         isRestoringBackup = restoreBackup
         val coinJoinPath = DerivationPathFactory(Constants.NETWORK_PARAMETERS).coinJoinDerivationPath(0)
