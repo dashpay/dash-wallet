@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+@file:OptIn(FlowPreview::class)
 package de.schildbach.wallet.service
 
 import android.annotation.SuppressLint
@@ -75,9 +76,18 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -164,6 +174,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.max
+import org.bitcoinj.core.listeners.NewBestBlockListener
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * @author Andreas Schildbach
@@ -308,6 +320,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             transactionMetadataProvider.syncTransaction(tx)
         }
     }
+    private val currentBlock = MutableStateFlow<StoredBlock?>(null)
 
     private val walletEventListener: ThrottlingWalletChangeListener =
         object : ThrottlingWalletChangeListener(
@@ -494,70 +507,52 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         nm!!.notify(Constants.NOTIFICATION_ID_COINS_RECEIVED, notification.build())
     }
 
-    private val oldTransactionsToMonitor = hashMapOf<Sha256Hash, Transaction>()
-    private var transactionConfidenceListener: TransactionConfidence.Listener? = null
+    private val oldTransactionsToMonitor = ConcurrentHashMap<Sha256Hash, Transaction>()
+
+    private fun updateTxConfidence() {
+        application.wallet?.let { wallet ->
+            val txesToRemove = arrayListOf<Sha256Hash>()
+            oldTransactionsToMonitor.forEach { (_, tx) ->
+                val transactionConfidence = tx.getConfidence(application.wallet!!.context)
+                val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
+                    transactionConfidence.depthInBlocks =
+                        application.wallet!!.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+
+                    val requiredDepth = if (tx.isCoinBase) {
+                        wallet.params.spendableCoinbaseDepth
+                    } else {
+                        CONFIRMED_DEPTH
+                    }
+
+                    val result = wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + requiredDepth
+                    transactionConfidence.queueListeners(TransactionConfidence.Listener.ChangeReason.DEPTH)
+                    result
+                } else {
+                    false
+                }
+
+                if (shouldStopListening) {
+                    txesToRemove.add(transactionConfidence.transactionHash)
+                }
+            }
+            txesToRemove.forEach {
+                oldTransactionsToMonitor.remove(it)
+            }
+        }
+    }
 
     private fun stopMonitoringOlderTransactions(wallet: Wallet) {
-        oldTransactionsToMonitor.forEach { (_, tx) ->
-            tx.getConfidence(wallet.context).removeEventListener(transactionConfidenceListener)
-            wallet.removeManualNotifyConfidenceChangeTransaction(tx)
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
         }
         log.info("stop monitoring {} old transactions", oldTransactionsToMonitor.size)
         oldTransactionsToMonitor.clear()
     }
 
     private fun monitorOlderTransactions(wallet: Wallet) {
-        transactionConfidenceListener = TransactionConfidence.Listener { transactionConfidence, changeReason ->
-            // here, we only track confirmations to ensure that the wallet is updated.
-            try {
-                // Early exit if already processed
-                if (!oldTransactionsToMonitor.containsKey(transactionConfidence.transactionHash)) {
-                    // log.info("our monitor list does not contain: {}", transactionConfidence.transactionHash)
-                    return@Listener
-                }
-
-                val tx = oldTransactionsToMonitor[transactionConfidence.transactionHash]
-                // log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
-                val shouldStopListening = when (changeReason) {
-                    TransactionConfidence.Listener.ChangeReason.DEPTH -> {
-                        //log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
-                        // get the current height?
-                        val requiredDepth = if (tx?.isCoinBase == true) {
-                            wallet.params.spendableCoinbaseDepth
-                        } else {
-                            CONFIRMED_DEPTH
-                        }
-                        wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + requiredDepth
-                    }
-                    else -> false
-                }
-                if (shouldStopListening) {
-                    log.info("observing transaction: stop listening to {}", transactionConfidence.transactionHash)
-                    transactionConfidence.removeEventListener(transactionConfidenceListener)
-                    oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
-                    wallet.removeManualNotifyConfidenceChangeTransaction(tx)
-                    // Use synchronized block to ensure atomic removal
-                    synchronized(oldTransactionsToMonitor) {
-                        // Double-check it's still in the map
-                        if (oldTransactionsToMonitor.containsKey(transactionConfidence.transactionHash)) {
-                            log.info(
-                                "observing transaction: stop listening to {} at depth {}",
-                                transactionConfidence.transactionHash,
-                                transactionConfidence.depthInBlocks
-                            )
-
-                            // Remove from wallet FIRST (prevents new notifications from being queued)
-                            wallet.removeManualNotifyConfidenceChangeTransaction(tx)
-                            transactionConfidence.removeEventListener(transactionConfidenceListener)
-                            oldTransactionsToMonitor.remove(transactionConfidence.transactionHash)
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                log.error("Error in transactionConfidenceChangedListener", e)
-            }
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
         }
-        val wallet = application.wallet!!
         val transactions = wallet.getTransactions(true)
         transactions.forEach { tx ->
             maybeAddMonitoring(tx, wallet)
@@ -566,6 +561,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun maybeAddMonitoring(tx: Transaction, wallet: Wallet) {
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
+        }
         val confidence = tx.getConfidence(wallet.context)
         val shouldMonitor = when (confidence.confidenceType) {
             TransactionConfidence.ConfidenceType.PENDING -> true
@@ -579,8 +577,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         if (shouldMonitor) {
             oldTransactionsToMonitor[tx.txId] = tx
-            confidence.addEventListener(transactionConfidenceListener)
-            wallet.addManualNotifyConfidenceChangeTransaction(tx)
         }
     }
 
@@ -717,17 +713,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
         object : MyDownloadProgressTracker() {
+            val watch = Stopwatch.createUnstarted()
             private val lastMessageTime = AtomicLong(0)
             private var throttleDelay: Long = -1
 
             override fun onHeadersDownloadStarted(peer: Peer?, blocksLeft: Int) {
                 super.onHeadersDownloadStarted(peer, blocksLeft)
-                application.wallet!!.updateTransactionDepth()
+                // application.wallet!!.updateTransactionDepth()
             }
 
             override fun onChainDownloadStarted(peer: Peer?, blocksLeft: Int) {
                 super.onChainDownloadStarted(peer, blocksLeft)
-                application.wallet!!.updateTransactionDepth()
+                watch.start();
+                // application.wallet!!.updateTransactionDepth()
             }
 
             override fun onBlocksDownloaded(
@@ -785,8 +783,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
              */
             override fun doneDownload() {
                 super.doneDownload()
-                application.wallet!!.updateTransactionDepth()
-                log.info("DoneDownload {}", syncPercentage)
+                // application.wallet!!.updateTransactionDepth()
+                watch.stop()
+                log.info("DoneDownload {} in {}", syncPercentage, watch)
                 // if the chain is already synced from a previous session, then syncPercentage = 0
                 // set to 100% so that observers will see that sync is completed
                 syncPercentage = 100
@@ -1576,8 +1575,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
                 wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
-                propagateContext()
-                wallet.updateTransactionDepth()
+                // propagateContext()
+                //wallet.updateTransactionDepth()
+                blockChain?.addNewBestBlockListener(newBestBlockListener)
                 config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
                     registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
@@ -1601,6 +1601,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                     balance = it
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                    updateAppWidget()
                 }
 
                 // we need the mixed balance for the CoinJoin notification
@@ -1608,6 +1609,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     mixedBalance = it
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
+
+
+                merge(
+                    currentBlock.filterNotNull().sample(APPWIDGET_THROTTLE_MS),
+                    currentBlock.filterNotNull().debounce(APPWIDGET_THROTTLE_MS)
+                ).distinctUntilChanged()
+                    .onEach { updateTxConfidence() }
+                    .launchIn(serviceScope)
 
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
@@ -1873,10 +1882,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
-                    propagateContext()
-                    wallet.updateTransactionDepth()
+                    // propagateContext()
+                    // wallet.updateTransactionDepth()
                     stopMonitoringOlderTransactions(wallet)
                 }
+                blockChain?.removeNewBestBlockListener(newBestBlockListener)
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
@@ -2125,7 +2135,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun updateAppWidget() {
-        val balance = application.getWalletBalance()
+        // val balance = application.getWalletBalance()
         WalletBalanceWidgetProvider.updateWidgets(this@BlockchainServiceImpl, balance)
     }
 
@@ -2162,14 +2172,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    // TODO: should we have a backup blockchain file?
-    //    private NewBestBlockListener newBestBlockListener = block -> {
-    //        try {
-    //            backupBlockStore.put(block);
-    //        } catch (BlockStoreException x) {
-    //            throw new RuntimeException(x);
-    //        }
-    //    };
+     //TODO: should we have a backup blockchain file?
+    private val newBestBlockListener: NewBestBlockListener = NewBestBlockListener {
+        currentBlock.value = it
+    }
+
     @Throws(BlockStoreException::class)
     private fun verifyBlockStore(store: BlockStore?): Boolean {
         val watch = Stopwatch.createStarted()
