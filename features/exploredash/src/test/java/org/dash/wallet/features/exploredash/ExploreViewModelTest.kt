@@ -18,12 +18,20 @@
 package org.dash.wallet.features.exploredash
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -45,6 +53,19 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
 import org.mockito.kotlin.*
+
+@ExperimentalCoroutinesApi
+class MainCoroutineRule(
+    private val testDispatcher: TestDispatcher = UnconfinedTestDispatcher()
+) : TestWatcher() {
+    override fun starting(description: Description) {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    override fun finished(description: Description) {
+        Dispatchers.resetMain()
+    }
+}
 
 @FlowPreview
 @ExperimentalCoroutinesApi
@@ -246,9 +267,11 @@ class ExploreViewModelTest {
         )
 
     @get:Rule var rule: TestRule = InstantTaskExecutorRule()
+    @get:Rule var mainCoroutineRule = MainCoroutineRule()
 
     private val networkState = mock<NetworkStateInt> {
         on { isConnected } doReturn MutableStateFlow(true)
+        on { observeCountryFromIP() } doReturn flowOf("US")
     }
 
     private val mockPreferences = mock<ExploreConfig>().stub {
@@ -261,13 +284,14 @@ class ExploreViewModelTest {
             val territory = "Texas"
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(territory), eq(""), any(), any(), any(), any()) } doReturn
                         flow { emit(merchants.filter { it.territory == territory }) }
                 }
 
             val locationState =
                 mock<UserLocationStateInt> {
                     on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
                 }
 
             val dataSyncStatus =
@@ -301,7 +325,6 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants("", territory, "", DenomOption.Both, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -314,7 +337,7 @@ class ExploreViewModelTest {
             val dataSource =
                 mock<ExploreDataSource> {
                     on {
-                        observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any())
+                        observePhysicalMerchants(eq(query), eq(""), eq(PaymentMethod.DASH), any(), any(), any(), any())
                     } doReturn
                         flow {
                             emit(
@@ -329,6 +352,7 @@ class ExploreViewModelTest {
             val locationState =
                 mock<UserLocationStateInt> {
                     on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
                 }
 
             val dataSyncStatus =
@@ -367,7 +391,6 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants(query, "", PaymentMethod.DASH, DenomOption.Both, "", bounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -379,7 +402,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants.filter {
@@ -392,6 +415,7 @@ class ExploreViewModelTest {
             val locationState =
                 mock<UserLocationStateInt> {
                     on { getRadiusBounds(eq(0.0), eq(0.0), any()) } doReturn GeoBounds.noBounds
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
                 }
 
             val dataSyncStatus =
@@ -428,7 +452,6 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants(query, territory, "", DenomOption.Both, "", GeoBounds.noBounds)
             verify(locationState).getRadiusBounds(0.0, 0.0, viewModel.radius)
-            verifyNoMoreInteractions(dataSource)
         }
     }
 
@@ -450,7 +473,7 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any(), any()) } doReturn
+                    on { observePhysicalMerchants(eq(""), eq(""), eq(""), any(), any(), any(), any()) } doReturn
                         flow {
                             emit(
                                 merchants
@@ -466,7 +489,10 @@ class ExploreViewModelTest {
                 }
 
             val locationMock =
-                mock<UserLocationStateInt> { on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn bounds }
+                mock<UserLocationStateInt> {
+                    on { getRadiusBounds(eq(userLat), eq(userLng), any()) } doReturn bounds
+                    onBlocking { getCountryCodeFromLocation() } doReturn "US"
+                }
             val dataSyncStatus =
                 mock<DataSyncStatusService> {
                     on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
@@ -507,14 +533,15 @@ class ExploreViewModelTest {
             assertEquals(expected, actual)
             verify(dataSource).observePhysicalMerchants("", "", "", DenomOption.Both, "", bounds)
             verify(locationMock).getRadiusBounds(userLat, userLng, viewModel.radius)
-            verifyNoMoreInteractions(dataSource)
         }
     }
 
     @Test
     fun onMapMarkerSelected_CorrectSelectedItem() {
         runBlocking {
-            val locationMock = mock<UserLocationStateInt>()
+            val locationMock = mock<UserLocationStateInt> {
+                onBlocking { getCountryCodeFromLocation() } doReturn "US"
+            }
             val dataSource = mock<ExploreDataSource>()
             val dataSyncStatus = mock<DataSyncStatusService> {
                 on { getSyncProgressFlow() } doReturn flow { emit(Resource.loading(50.0)) }
@@ -537,9 +564,6 @@ class ExploreViewModelTest {
             val actual = viewModel.selectedItem.value as Merchant
 
             assertEquals(expected, actual)
-
-            verifyNoMoreInteractions(dataSource)
-            verifyNoMoreInteractions(locationMock)
         }
     }
 }

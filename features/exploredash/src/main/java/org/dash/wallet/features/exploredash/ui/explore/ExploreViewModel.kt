@@ -40,7 +40,6 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel.Companio
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
-import org.dash.wallet.features.exploredash.utils.getCountryCodeFromLocation
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
@@ -106,8 +105,7 @@ class ExploreViewModel @Inject constructor(
     private val syncStatusService: DataSyncStatusService,
     private val networkState: NetworkStateInt,
     val exploreConfig: ExploreConfig,
-    private val analyticsService: AnalyticsService,
-    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
     companion object {
         const val QUERY_DEBOUNCE_VALUE = 300L
@@ -263,7 +261,7 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 flow {
                     try {
-                        val countryFromGPS = getCountryCodeFromLocation(context)
+                        val countryFromGPS = locationProvider.getCountryCodeFromLocation()
                         if (countryFromGPS.isNotBlank()) {
                             emit(countryFromGPS)
                         } else {
