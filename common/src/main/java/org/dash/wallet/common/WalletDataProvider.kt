@@ -72,9 +72,9 @@ interface WalletDataProvider {
 
     fun wrapAllTransactions(vararg wrappers: TransactionWrapperFactory): Collection<TransactionWrapper>
 
-    fun attachOnWalletWipedListener(listener: () -> Unit)
+    fun attachOnWalletWipedListener(listener: suspend () -> Unit)
 
-    fun detachOnWalletWipedListener(listener: () -> Unit)
+    fun detachOnWalletWipedListener(listener: suspend () -> Unit)
 
     fun processDirectTransaction(tx: Transaction)
 

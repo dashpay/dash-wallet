@@ -24,7 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -79,17 +79,14 @@ class ToolsViewModel @Inject constructor(
         )
     }
 
-    suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
-    }
-    suspend fun creditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
-    }
+    suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
 
-    suspend fun hasUsername(): Boolean = withContext(Dispatchers.IO) {
-        identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
-                BlockchainIdentityData.CreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
-                    ?: "NONE") >= BlockchainIdentityData.CreationState.DONE
+    suspend fun creditsExplained() = dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
+
+    suspend fun hasUsername(): Boolean {
+        return identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
+                (IdentityCreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
+                    ?: "NONE") >= IdentityCreationState.DONE)
     }
 
     fun logEvent(event: String) {

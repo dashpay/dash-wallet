@@ -22,6 +22,7 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.text.format.DateFormat
 import android.view.View
+import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -34,7 +35,7 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
@@ -47,8 +48,6 @@ import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
@@ -145,16 +144,21 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.invite.visibility = View.GONE
         binding.invite.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
                 mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.INVITE)
                 if (inviteHistory.isEmpty()) {
-                    InviteFriendActivity.startOrError(requireActivity())
-                } else {
-                    val intent = InvitesHistoryActivity.createIntent(requireContext()).apply {
-                        putExtra(AnalyticsConstants.CALLING_ACTIVITY, "more")
+                    val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
+                    if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
+                        safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
+                    } else {
+                        MixDashFirstDialogFragment()
+                            .show(requireActivity()) {
+                                safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
+                            }
                     }
-                    startActivity(intent)
+                } else {
+                    safeNavigate(MoreFragmentDirections.moreToInviteHistory("more"))
                 }
             }
         }
@@ -166,8 +170,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.updateProfileNetworkError.cancelNetworkError.setOnClickListener { dismissProfileError() }
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
-        binding.joinDashpayBtn.setOnClickListener {
-            lifecycleScope.launch {
+        binding.joinDashpayContainer.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
                 if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
@@ -187,19 +191,35 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
         binding.requestedUsernameContainer.setOnClickListener {
             val errorMessage = createIdentityViewModel.creationException.value
-            if (createIdentityViewModel.creationState.value.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal &&
+            if (createIdentityViewModel.creationState.value.ordinal < IdentityCreationState.VOTING.ordinal &&
                 errorMessage != null) {
                 // Perform Retry
                 mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_TRYAGAIN)
                 retry(errorMessage)
             } else {
-                startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                if (createInviteViewModel.blockchainIdentity.value?.showSecondaryUsername == true) {
+                    createIdentityViewModel.hideRequestedUsernameContainer()
+                } else {
+                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
+                }
             }
         }
 
+        mainActivityViewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
+            binding.joinDashpayWait.isVisible = !isSynced
+            binding.joinDashpayIcon.setColorFilter(
+                if (isSynced) {
+                    ContextCompat.getColor(requireContext(), R.color.dash_blue)
+                } else {
+                    ContextCompat.getColor(requireContext(), R.color.gray)
+                }
+            )
+            binding.joinDashpayContainer.isEnabled = isSynced
+        }
+
         mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) {
-            if (!it.restoring && it.creationState.ordinal > BlockchainIdentityData.CreationState.NONE.ordinal &&
-                it.creationState.ordinal < BlockchainIdentityData.CreationState.VOTING.ordinal
+            if (!it.restoring && it.creationState.ordinal > IdentityCreationState.NONE.ordinal &&
+                it.creationState.ordinal < IdentityCreationState.VOTING.ordinal
             ) {
                 val username = it.username
 
@@ -228,7 +248,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameContainer.isEnabled = false
                     }
                 }
-            } else if (it.creationState == BlockchainIdentityData.CreationState.VOTING) {
+            } else if (it.creationState == IdentityCreationState.VOTING) {
                 binding.joinDashpayContainer.visibility = View.GONE
                 binding.requestedUsernameContainer.visibility = View.VISIBLE
                 val votingPeriod = it.votingPeriodStart?.let { startTime ->
@@ -276,8 +296,14 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                         binding.requestedUsernameArrow.isVisible = false
                     }
+                    UsernameRequestStatus.APPROVED -> {
+                        // swallow to prevent crash
+                    }
                     else -> error("${it.usernameRequested} is not valid")
                 }
+            } else if (it.creationState >= IdentityCreationState.VOTING) {
+                binding.joinDashpayContainer.visibility = View.GONE
+                binding.requestedUsernameContainer.visibility = View.GONE
             } else {
                 binding.joinDashpayContainer.visibility = View.VISIBLE
                 binding.requestedUsernameContainer.visibility = View.GONE
@@ -299,6 +325,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
     private fun retry(errorMessage: String) {
         val needsNewName = errorMessage.contains("Document transitions with duplicate unique properties") ||
+                errorMessage.contains("DuplicateUniqueIndexError") ||
                 errorMessage.contains("Document Contest for vote_poll ContestedDocumentResourceVotePoll") ||
                 errorMessage.contains(Regex("does not have .* as a contender")) ||
                 errorMessage.contains("missing domain document for ")
@@ -329,6 +356,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
         createIdentityViewModel.creationState.observe(viewLifecycleOwner) { _ ->
+            editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
+                showProfileSection(dashPayProfile)
+            }
+        }
+
+        createInviteViewModel.blockchainIdentity.observe(viewLifecycleOwner) { _ ->
             editProfileViewModel.dashPayProfile.value?.let { dashPayProfile ->
                 showProfileSection(dashPayProfile)
             }
@@ -404,7 +437,9 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     private fun showProfileSection(profile: DashPayProfile) {
-        if (createIdentityViewModel.creationState.value.ordinal >= BlockchainIdentityData.CreationState.DONE.ordinal) {
+        val shouldShowProfileSection = createIdentityViewModel.creationState.value.ordinal >= IdentityCreationState.DONE.ordinal ||
+                createIdentityViewModel.blockchainIdentity.value?.showSecondaryUsername == true
+        if (shouldShowProfileSection) {
             binding.editUpdateSwitcher.visibility = View.VISIBLE
             binding.editUpdateSwitcher.displayedChild = PROFILE_VIEW
             if (profile.displayName.isNotEmpty()) {

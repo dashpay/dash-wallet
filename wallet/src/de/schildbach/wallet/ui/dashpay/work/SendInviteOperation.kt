@@ -24,6 +24,7 @@ import androidx.work.*
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.work.BaseWorker
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 
@@ -141,22 +142,25 @@ class SendInviteOperation(val application: Application) {
     val allOperationsData = workManager.getWorkInfosByTagLiveData(SendInviteWorker::class.qualifiedName!!)
 
     @SuppressLint("EnqueueWork")
-    fun create(id: String): WorkContinuation {
-
+    fun create(fundingAddress: String, value: Coin): WorkContinuation {
         val password = SecurityGuard.getInstance().retrievePassword()
         val sendInviteWorker = OneTimeWorkRequestBuilder<SendInviteWorker>()
-                .setInputData(
-                    workDataOf(
-                        SendInviteWorker.KEY_PASSWORD to password
-                    )
+            .setInputData(
+                workDataOf(
+                    SendInviteWorker.KEY_PASSWORD to password,
+                    SendInviteWorker.KEY_FUNDING_ADDRESS to fundingAddress,
+                    SendInviteWorker.KEY_VALUE to value.value
                 )
-                .addTag("invite:$id")
-                .build()
+            )
+            .addTag("invite:$fundingAddress")
+            .build()
 
         return WorkManager.getInstance(application)
-                .beginUniqueWork(uniqueWorkName(id),
-                        ExistingWorkPolicy.KEEP,
-                        sendInviteWorker)
+            .beginUniqueWork(
+                uniqueWorkName(fundingAddress),
+                ExistingWorkPolicy.KEEP,
+                sendInviteWorker
+            )
     }
 
 }

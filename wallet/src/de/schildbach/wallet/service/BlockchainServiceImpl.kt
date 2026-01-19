@@ -58,6 +58,7 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -234,6 +235,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject lateinit var platformSyncService: PlatformSyncService
 
     @Inject lateinit var  platformRepo: PlatformRepo
+    @Inject lateinit var topUpRepository: TopUpRepository
 
     @Inject lateinit var  packageInfoProvider: PackageInfoProvider
 
@@ -406,8 +408,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     val authExtension =
                         wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
                     val cftx = authExtension.getAssetLockTransaction(tx)
-                    val blockChainHeadTime = blockChain!!.chainHead.header.time.time
-                    platformRepo.handleSentAssetLockTransaction(cftx, blockChainHeadTime)
+                    topUpRepository.handleSentAssetLockTransaction(cftx, tx.updateTime.time)
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }
@@ -1854,6 +1855,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                     //Clear the blockchain identity
                     application.clearDatabases(false)
+                    resetBlockchainState()
                 }
                 log.info("closing bootstrap streams")
                 closeStream(mnlistinfoBootStrapStream)
@@ -1871,6 +1873,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
         log.info("service was up for " + (System.currentTimeMillis() - serviceCreatedAt) / 1000 / 60 + " minutes")
+    }
+
+    private fun resetBlockchainState() {
+        syncPercentage = 0
     }
 
     override fun onTrimMemory(level: Int) {

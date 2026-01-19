@@ -23,7 +23,7 @@
 
     <fragment
         android:id="@+id/usernameRequestsFragment"
-        android:name="de.schildbach.wallet.ui.username.UsernameRequestsFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.UsernameRequestsFragment"
         android:label="UsernameRequestsFragment"
         tools:layout="@layout/fragment_username_requests">
 
@@ -66,7 +66,7 @@
 
     <fragment
         android:id="@+id/usernameRequestDetailsFragment"
-        android:name="de.schildbach.wallet.ui.username.UsernameRequestDetailsFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.UsernameRequestDetailsFragment"
         android:label="UsernameRequestsFragment"
         tools:layout="@layout/fragment_username_request_details">
 
@@ -95,7 +95,7 @@
 
     <fragment
         android:id="@+id/votingKeyInputFragment"
-        android:name="de.schildbach.wallet.ui.username.VotingKeyInputFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.VotingKeyInputFragment"
         android:label="VotingKeyInputFragment"
         tools:layout="@layout/fragment_voting_key_input">
 
@@ -119,7 +119,7 @@
 
     <fragment
         android:id="@+id/addVotingKeysFragment"
-        android:name="de.schildbach.wallet.ui.username.AddVotingKeysFragment"
+        android:name="de.schildbach.wallet.ui.username.voting.AddVotingKeysFragment"
         android:label="AddVotingKeysFragment"
         tools:layout="@layout/fragment_add_voting_keys">
 

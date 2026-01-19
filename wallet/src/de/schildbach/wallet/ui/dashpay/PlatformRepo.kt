@@ -25,7 +25,6 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.Constants.DASH_PAY_FEE_CONTESTED
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.AppDatabase
@@ -33,15 +32,14 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.SeriousError
 import de.schildbach.wallet.livedata.SeriousErrorListener
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
@@ -56,7 +54,6 @@ import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.evolution.AssetLockTransaction
-import org.bitcoinj.quorums.InstantSendLock
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
@@ -74,13 +71,11 @@ import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofException
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.identity.Identity
-import org.dashj.platform.dpp.toHex
 import org.dashj.platform.dpp.voting.Contenders
 import org.dashj.platform.sdk.platform.DomainDocument
 import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import java.util.*
-import java.util.concurrent.TimeoutException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resumeWithException
@@ -109,7 +104,6 @@ class PlatformRepo @Inject constructor(
         const val TOP_CONTACT_COUNT = 4
     }
 
-    var onIdentityResolved: ((Identity?) -> Unit)? = {}
     private val onSeriousErrorListeneners = arrayListOf<SeriousErrorListener>()
 
     lateinit var blockchainIdentity: BlockchainIdentity
@@ -140,6 +134,26 @@ class PlatformRepo @Inject constructor(
             blockchainIdentity.currentUsername
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+        }
+    }
+
+    suspend fun getActiveUsername(): String? {
+        return if (this::blockchainIdentity.isInitialized) {
+            blockchainIdentity.currentUsername
+        } else {
+            val username = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
+            val creationState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
+            if (creationState == IdentityCreationState.VOTING.name) {
+                val usernameSecondary = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY)
+                if (usernameSecondary != null &&
+                    blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME_SECONDARY_REGISTRATION_STATUS) == UsernameStatus.CONFIRMED.name) {
+                    usernameSecondary
+                } else {
+                    username
+                }
+            } else {
+                username
+            }
         }
     }
 
@@ -299,6 +313,19 @@ class PlatformRepo @Inject constructor(
                     listOf()
                 }
             }
+            // determine if multiple names belong to the same identity. If so, don't show any non-contested names
+            val identifierDocumentMap = hashMapOf<Identifier, ArrayList<DomainDocument>>()
+            nameDocuments.forEach { document ->
+                val domainDocument = DomainDocument(document)
+                val identifier = getIdentityForName(domainDocument)
+                if (identifierDocumentMap.contains(identifier)) {
+                    identifierDocumentMap[identifier]?.add(domainDocument)
+                } else {
+                    val newList = arrayListOf(domainDocument)
+                    identifierDocumentMap[identifier] = newList
+                }
+            }
+
             val userIds = if (onlyExactUsername) {
                 val result = mutableListOf<Identifier>()
                 val exactNameDoc = try {
@@ -311,7 +338,7 @@ class PlatformRepo @Inject constructor(
                 }
                 result
             } else {
-                nameDocuments.map { getIdentityForName(DomainDocument(it)) }
+                identifierDocumentMap.keys
             }.toSet().toList()
 
             val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
@@ -322,6 +349,23 @@ class PlatformRepo @Inject constructor(
                 mapOf()
             }
 
+            // remove non-contested names if there are contested names for the same identity
+            val filteredNameDocuments = arrayListOf<DomainDocument>()
+            identifierDocumentMap.forEach { (identifier, documents) ->
+                if (documents.size == 1) {
+                    filteredNameDocuments.addAll(documents)
+                } else {
+                    val hasContestedNames = documents.any { Names.isUsernameContestable(it.normalizedLabel) }
+                    documents.forEach { document ->
+                        if (Names.isUsernameContestable(document.normalizedLabel)) {
+                            filteredNameDocuments.add(document)
+                        } else if (!hasContestedNames) {
+                            filteredNameDocuments.add(document)
+                        }
+                    }
+                }
+            }
+
             val toContactDocuments = dashPayContactRequestDao.loadToOthers(userIdString)
 
             // Get all contact requests where toUserId == userId
@@ -329,8 +373,7 @@ class PlatformRepo @Inject constructor(
 
             val usernameSearchResults = ArrayList<UsernameSearchResult>()
 
-            for (domainDoc in nameDocuments) {
-                val nameDoc = DomainDocument(domainDoc)
+            for (nameDoc in filteredNameDocuments) {
                 if (nameDoc.dashAliasIdentityId != null) {
                     continue // skip aliases
                 }
@@ -437,7 +480,7 @@ class PlatformRepo @Inject constructor(
     fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean = false): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .filter { it.creationState >= BlockchainIdentityData.CreationState.DONE }
+            .filter { it.hasUsername }
             .flatMapLatest { identityData ->
                 val userId = identityData.userId!!
 
@@ -627,9 +670,9 @@ class PlatformRepo @Inject constructor(
     suspend fun shouldShowAlert(): Boolean {
         val hasSentInvites = invitationsDao.count() > 0
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.NONE
+        val noIdentityCreatedOrInProgress = (blockchainIdentityData == null) || blockchainIdentityData.creationState == IdentityCreationState.NONE
         val canAffordIdentityCreation = walletApplication.canAffordIdentityCreation()
-        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || !hasSentInvites)
+        return !noIdentityCreatedOrInProgress && (canAffordIdentityCreation || hasSentInvites)
     }
 
 
@@ -664,16 +707,14 @@ class PlatformRepo @Inject constructor(
     //
     // Step 1 is to upgrade the wallet to support authentication keys
     //
-    suspend fun addWalletAuthenticationKeysAsync(seed: DeterministicSeed, keyParameter: KeyParameter) {
-        withContext(Dispatchers.IO) {
-            val wallet = walletApplication.wallet as WalletEx
-            // this will initialize any missing key chains
-            wallet.initializeCoinJoin(keyParameter, 0)
+    fun addWalletAuthenticationKeys(seed: DeterministicSeed, keyParameter: KeyParameter) {
+        val wallet = walletApplication.wallet as WalletEx
+        // this will initialize any missing key chains
+        wallet.initializeCoinJoin(keyParameter, 0)
 
-            var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
-            authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
-            authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
-        }
+        var authenticationGroupExtension = AuthenticationGroupExtension(wallet)
+        authenticationGroupExtension = wallet.addOrGetExistingExtension(authenticationGroupExtension) as AuthenticationGroupExtension
+        authenticationGroupExtension.addEncryptedKeyChains(wallet.params, seed, keyParameter, keyChainTypes)
     }
 
     //
@@ -684,22 +725,20 @@ class PlatformRepo @Inject constructor(
     //
     // Step 3: Register the identity
     //
-    suspend fun registerIdentityAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            Context.propagate(walletApplication.wallet!!.context)
-            for (i in 0 until 3) {
-                try {
-                    val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
-                    blockchainIdentity.registerIdentity(keyParameter, true, true)
-                    timer.logTiming() // we won't log timing for failed registrations
-                    return@withContext
-                } catch (e: InvalidInstantAssetLockProofException) {
-                    log.info("instantSendLock error: retry registerIdentity again ($i)")
-                    delay(3000)
-                }
+    suspend fun registerIdentity(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
+        Context.propagate(walletApplication.wallet!!.context)
+        for (i in 0 until 3) {
+            try {
+                val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_IDENTITY_CREATE)
+                blockchainIdentity.registerIdentity(keyParameter, true, true)
+                timer.logTiming() // we won't log timing for failed registrations
+                return
+            } catch (e: InvalidInstantAssetLockProofException) {
+                log.info("instantSendLock error: retry registerIdentity again ($i)")
+                delay(3000)
             }
-            throw InvalidInstantAssetLockProofException("failed after 3 tries")
         }
+        throw InvalidInstantAssetLockProofException("failed after 3 tries")
     }
 
     //
@@ -721,53 +760,21 @@ class PlatformRepo @Inject constructor(
     //
     // Step 4: Preorder the username
     //
-    suspend fun preorderNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.getUnregisteredUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
-            blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(names, keyParameter)
-            timer.logTiming()
-        }
-    }
-
-    //
-    // Step 4: Verify that the username was preordered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNamePreorderedAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val set = blockchainIdentity.getUsernamesWithStatus(UsernameStatus.PREORDER_REGISTRATION_PENDING)
-            val saltedDomainHashes = blockchainIdentity.saltedDomainHashesForUsernames(set)
-            val (result, usernames) = blockchainIdentity.watchPreorder(saltedDomainHashes, 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be preordered in the allotted amount of time")
-            }
-        }
+    fun preorderName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.getUnregisteredUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_PREORDER_CREATE)
+        blockchainIdentity.registerPreorderedSaltedDomainHashesForUsernames(listOf(username), keyParameter)
+        timer.logTiming()
     }
 
     //
     // Step 5: Register the username
     //
-    suspend fun registerNameAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?) {
-        withContext(Dispatchers.IO) {
-            val names = blockchainIdentity.preorderedUsernames()
-            val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
-            blockchainIdentity.registerUsernameDomainsForUsernames(names, keyParameter, false)
-            timer.logTiming()
-        }
-    }
-
-    //
-    // Step 5: Verify that the username was registered
-    //
-    @Deprecated("watch* functions should no longer be used")
-    suspend fun isNameRegisteredAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            val (result, usernames) = blockchainIdentity.watchUsernames(blockchainIdentity.getUsernamesWithStatus(UsernameStatus.REGISTRATION_PENDING), 100, 1000, RetryDelayType.SLOW20)
-            if (!result) {
-                throw TimeoutException("the usernames: $usernames were not found to be registered in the allotted amount of time")
-            }
-        }
+    fun registerName(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?, username: String) {
+        // val names = blockchainIdentity.preorderedUsernames()
+        val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_DOMAIN_CREATE)
+        blockchainIdentity.registerUsernameDomainsForUsernames(listOf(username), keyParameter, false)
+        timer.logTiming()
     }
 
     //Step 6: Create DashPay Profile
@@ -795,7 +802,7 @@ class PlatformRepo @Inject constructor(
             ?: throw IllegalStateException("AuthenticationGroupExtension is not initialised")
         val blockchainIdentity = BlockchainIdentity(platform.platform, 0, wallet, authExt)
         log.info("loading BlockchainIdentity: {}", watch)
-        if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.IDENTITY_REGISTERED) {
+        if (blockchainIdentityData.creationState >= IdentityCreationState.IDENTITY_REGISTERED) {
             blockchainIdentity.apply {
                 blockchainIdentityData.userId?.let {
                     uniqueId = Sha256Hash.wrap(Base58.decode(it))
@@ -812,11 +819,19 @@ class PlatformRepo @Inject constructor(
         // Syncing complete
         log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
         return blockchainIdentity.apply {
-            currentUsername = blockchainIdentityData.username
+            primaryUsername = blockchainIdentityData.username
+            secondaryUsername = blockchainIdentityData.usernameSecondary
+            blockchainIdentityData.username?.let {
+                addUsername(it)
+            }
+            blockchainIdentityData.usernameSecondary?.let {
+                addUsername(it)
+            }
+
             registrationStatus = blockchainIdentityData.registrationStatus ?: IdentityStatus.NOT_REGISTERED
             // usernameStatus, usernameSalts are not set if preorder hasn't started
-            if (blockchainIdentityData.creationState >= BlockchainIdentityData.CreationState.PREORDER_REGISTERING) {
-                var usernameStatus = UsernameInfo(
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_REGISTERING) {
+                val usernameStatus = UsernameInfo(
                     blockchainIdentityData.preorderSalt,
                     blockchainIdentityData.usernameStatus ?: UsernameStatus.NOT_PRESENT,
                     currentUsername,
@@ -824,6 +839,19 @@ class PlatformRepo @Inject constructor(
                     blockchainIdentityData.votingPeriodStart
                 )
                 currentUsername ?.let {
+                    usernameStatuses[it] = usernameStatus
+                }
+            }
+
+            if (blockchainIdentityData.creationState >= IdentityCreationState.PREORDER_SECONDARY_REGISTERING) {
+                val usernameStatus = UsernameInfo(
+                    blockchainIdentityData.preorderSaltSecondary,
+                    blockchainIdentityData.usernameSecondaryStatus ?: UsernameStatus.NOT_PRESENT,
+                    blockchainIdentityData.usernameSecondary,
+                    null,
+                    null
+                )
+                secondaryUsername ?.let {
                     usernameStatuses[it] = usernameStatus
                 }
             }
@@ -842,13 +870,21 @@ class PlatformRepo @Inject constructor(
             identity = blockchainIdentity.identity
             registrationStatus = blockchainIdentity.registrationStatus
             if (blockchainIdentity.currentUsername != null) {
-                username = blockchainIdentity.currentUsername
+                username = blockchainIdentity.primaryUsername
                 if (blockchainIdentity.registrationStatus == IdentityStatus.REGISTERED) {
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
                 }
                 usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
                 votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
+
+                log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
+                blockchainIdentity.secondaryUsername?.let { name ->
+                    usernameSecondary = name
+                    usernameSecondaryStatus = blockchainIdentity.statusOfUsername(name)
+                    log.info("creation: secondary username: {}, usernameSecondaryStatus = {}", name, usernameSecondaryStatus)
+                    preorderSaltSecondary = blockchainIdentity.saltForUsername(name, false)
+                }
             }
             creditBalance = blockchainIdentity.creditBalance
 
@@ -857,12 +893,12 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun resetIdentityCreationStateError(blockchainIdentityData: BlockchainIdentityData) {
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, blockchainIdentityData.creationState, null)
+        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.creationState, null)
         blockchainIdentityData.creationStateErrorMessage = null
     }
 
     suspend fun updateIdentityCreationState(blockchainIdentityData: BlockchainIdentityData,
-                                            state: BlockchainIdentityData.CreationState,
+                                            state: IdentityCreationState,
                                             exception: Throwable? = null) {
         val errorMessage = exception?.run {
             var message = "${exception.javaClass.simpleName}: ${exception.message}"
@@ -877,7 +913,7 @@ class PlatformRepo @Inject constructor(
         } else {
             log.info("updating creation state {} ({})", state, errorMessage)
         }
-        blockchainIdentityDataStorage.updateCreationState(blockchainIdentityData.id, state, errorMessage)
+        blockchainIdentityDataStorage.updateCreationState(state, errorMessage)
         blockchainIdentityData.creationState = state
         blockchainIdentityData.creationStateErrorMessage = errorMessage
     }
@@ -931,8 +967,8 @@ class PlatformRepo @Inject constructor(
 
     suspend fun doneAndDismiss() {
         val blockchainIdentityData = blockchainIdentityDataStorage.load()
-        if (blockchainIdentityData != null && blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
-            blockchainIdentityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+        if (blockchainIdentityData != null && blockchainIdentityData.creationState == IdentityCreationState.DONE) {
+            blockchainIdentityData.creationState = IdentityCreationState.DONE_AND_DISMISS
             blockchainIdentityDataStorage.insert(blockchainIdentityData)
         }
     }
@@ -940,10 +976,8 @@ class PlatformRepo @Inject constructor(
     //
     // Step 5: Find the usernames in the case of recovery
     //
-    suspend fun recoverUsernamesAsync(blockchainIdentity: BlockchainIdentity) {
-        withContext(Dispatchers.IO) {
-            blockchainIdentity.recoverUsernames()
-        }
+    fun recoverUsernames(blockchainIdentity: BlockchainIdentity) {
+        blockchainIdentity.recoverUsernames()
     }
 
     //Step 6: Recover the DashPay Profile
@@ -1036,10 +1070,10 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun clearDatabase(includeInvitations: Boolean) {
         log.info("clearing databases (includeInvitations = $includeInvitations)")
-        blockchainIdentityDataStorage.clear()
         dashPayProfileDao.clear()
         dashPayContactRequestDao.clear()
         userAlertDao.clear()
+        clearBlockchainIdentityData()
         if (includeInvitations) {
             invitationsDao.clear()
         }
@@ -1098,45 +1132,11 @@ class PlatformRepo @Inject constructor(
     //
     // Step 2 is to create the credit funding transaction
     //
-    suspend fun createInviteFundingTransactionAsync(blockchainIdentity: BlockchainIdentity, keyParameter: KeyParameter?)
-            : AssetLockTransaction {
-        // dashj Context does not work with coroutines well, so we need to call Context.propogate
-        // in each suspend method that uses the dashj Context
-        Context.propagate(walletApplication.wallet!!.context)
-        val balance = walletApplication.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
-        val fee = DASH_PAY_FEE_CONTESTED
-        val emptyWallet = balance == fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT)
-        val cftx = blockchainIdentity.createInviteFundingTransaction(
-            Constants.DASH_PAY_FEE,
-            keyParameter,
-            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
-            returnChange = true,
-            emptyWallet = emptyWallet
-        )
-        val invitation = Invitation(cftx.identityId.toStringBase58(), cftx.txId,
-                System.currentTimeMillis())
-        // update database
-        updateInvitation(invitation)
-
-        sendTransaction(cftx)
-        //update database
-        invitation.sentAt = System.currentTimeMillis()
-        updateInvitation(invitation)
-        return cftx
-    }
-
-    suspend fun updateInvitation(invitation: Invitation) {
-        invitationsDao.insert(invitation)
-    }
-
-    suspend fun getInvitation(userId: String): Invitation? {
-        return invitationsDao.loadByUserId(userId)
-    }
 
     private suspend fun sendTransaction(cftx: AssetLockTransaction): Boolean {
         log.info("Sending credit funding transaction: ${cftx.txId}")
         return suspendCoroutine { continuation ->
-            cftx.confidence.addEventListener(object : TransactionConfidence.Listener {
+            cftx.getConfidence(walletApplication.wallet!!.context).addEventListener(object : TransactionConfidence.Listener {
                 override fun onConfidenceChanged(confidence: TransactionConfidence?, reason: TransactionConfidence.Listener.ChangeReason?) {
                     when (reason) {
                         // If this transaction is in a block, then it has been sent successfully
@@ -1189,115 +1189,8 @@ class PlatformRepo @Inject constructor(
         }
     }
 
-    /**
-     * validates an invite
-     *
-     * @return Returns true if it is valid, false if the invite has been used.
-     *
-     * @throws Exception if the invite is invalid
-     */
-
-    fun validateInvitation(invite: InvitationLinkData): Boolean {
-        val stopWatch = Stopwatch.createStarted()
-        var tx = platform.client.getTransaction(invite.cftx)
-        log.info("validateInvitation: obtaining transaction info took $stopWatch")
-        //TODO: remove when iOS uses big endian
-        if (tx == null) {
-            tx =
-                platform.client.getTransaction(Sha256Hash.wrap(invite.cftx).reversedBytes.toHex())
-        }
-        if (tx != null) {
-            val cfTx = AssetLockTransaction(Constants.NETWORK_PARAMETERS, tx)
-            val identity = platform.identities.get(cfTx.identityId.toStringBase58())
-            if (identity == null) {
-                // determine if the invite has enough credits
-                if (cfTx.lockedOutput.value < Constants.DASH_PAY_INVITE_MIN) {
-                    val reason = "Invite does not have enough credits ${cfTx.lockedOutput.value} < ${Constants.DASH_PAY_INVITE_MIN}"
-                    log.warn(reason)
-                    log.info("validateInvitation took $stopWatch")
-                    throw InsufficientMoneyException(cfTx.lockedOutput.value, reason)
-                }
-                return try {
-                    DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
-                    // TODO: when all instantsend locks are deterministic, we don't need the catch block
-                    try {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISDLOCK_VERSION
-                        )
-                    } catch (e: Exception) {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISLOCK_VERSION
-                        )
-                    }
-                    log.info("Invite is valid and took $stopWatch")
-                    true
-                } catch (e: AddressFormatException.WrongNetwork) {
-                    log.warn("Invite has private key from wrong network: $e and took $stopWatch")
-                    throw e
-                } catch (e: AddressFormatException) {
-                    log.warn("Invite has invalid private key: $e and took $stopWatch")
-                    throw e
-                } catch (e: Exception) {
-                    log.warn("Invite has invalid instantSendLock: $e and took $stopWatch")
-                    throw e
-                }
-            } else {
-                log.warn("Invitation has been used: ${identity.id} and took $stopWatch")
-                return false
-            }
-        }
-        log.warn("Invitation uses an invalid transaction ${invite.cftx} and took $stopWatch")
-        throw IllegalArgumentException("Invitation uses an invalid transaction ${invite.cftx}")
-    }
-
-    fun clearBlockchainIdentityData() {
-        GlobalScope.launch(Dispatchers.IO) {
-            blockchainIdentityDataStorage.clear()
-        }
-    }
-
-    fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
-        val extension = authenticationGroupExtension
-
-        if (this::blockchainIdentity.isInitialized && extension != null) {
-            GlobalScope.launch(Dispatchers.IO) {
-                // Context.getOrCreate(platform.params)
-                val isInvite = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isTopup = extension.identityTopupKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val isIdentity = extension.identityFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes) != null
-                val identityId = cftx.identityId.toStringBase58()
-                if (isInvite && !isTopup && !isIdentity && invitationsDao.loadByUserId(identityId) == null) {
-                    // this is not in our database
-                    val invite = Invitation(
-                        identityId,
-                        cftx.txId,
-                        blockTimestamp,
-                        "",
-                        blockTimestamp,
-                        0
-                    )
-
-                    // profile information here
-                    try {
-                        if (updateDashPayProfile(identityId)) {
-                            val profile = dashPayProfileDao.loadByUserId(identityId)
-                            invite.acceptedAt = profile?.createdAt
-                                    ?: -1 // it was accepted in the past, use profile creation as the default
-                        }
-                    } catch (e: NullPointerException) {
-                        // swallow, the identity was not found for this invite
-                    } catch (e: MaxRetriesReachedException) {
-                        // swallow, the profile could not be retrieved
-                        // the invite status update function should be able to try again
-                    }
-                    invitationsDao.insert(invite)
-                }
-            }
-        }
+    suspend fun clearBlockchainIdentityData() {
+        blockchainIdentityDataStorage.clear()
     }
 
     // current unused
@@ -1358,23 +1251,5 @@ class PlatformRepo @Inject constructor(
         // managed by NotificationsLiveData
         val userAlert = UserAlert(UserAlert.INVITATION_NOTIFICATION_TEXT, UserAlert.INVITATION_NOTIFICATION_ICON)
         userAlertDao.insert(userAlert)
-    }
-}
-
-fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {
-    when (orderBy) {
-        UsernameSortOrderBy.DISPLAY_NAME -> this.sortBy {
-            if (it.dashPayProfile.displayName.isNotEmpty())
-                it.dashPayProfile.displayName.lowercase()
-            else it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.USERNAME -> this.sortBy {
-            it.dashPayProfile.username.lowercase()
-        }
-        UsernameSortOrderBy.DATE_ADDED -> this.sortByDescending {
-            it.date
-        }
-        else -> { /* ignore */ }
-        //TODO: sort by last activity or date added
     }
 }

@@ -50,6 +50,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
+import com.appsflyer.AppsFlyerLib;
 import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
@@ -97,6 +98,7 @@ import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
+import de.schildbach.wallet.service.platform.TopUpRepository;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -121,6 +123,7 @@ import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import javax.inject.Inject;
@@ -154,7 +157,9 @@ import de.schildbach.wallet_test.BuildConfig;
 import de.schildbach.wallet_test.R;
 import kotlin.Deprecated;
 import kotlin.Unit;
+import kotlin.coroutines.Continuation;
 import kotlin.jvm.functions.Function0;
+import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
 
@@ -167,7 +172,7 @@ public class WalletApplication extends MultiDexApplication
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private final List<Function0<Unit>> wipeListeners = new ArrayList<>();
+    private final List<Function1<? super Continuation<? super Unit>, ? extends Object>> wipeListeners = new ArrayList<>();
 
     private boolean basicWalletInitalizationFinished = false;
 
@@ -183,7 +188,7 @@ public class WalletApplication extends MultiDexApplication
 
     public static final long TIME_CREATE_APPLICATION = System.currentTimeMillis();
 
-    private static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
+    public static final Logger log = LoggerFactory.getLogger(WalletApplication.class);
 
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
@@ -212,6 +217,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     PlatformSyncService platformSyncService;
     @Inject
+    TopUpRepository topUpRepository;
+    @Inject
     PackageInfoProvider packageInfoProvider;
     @Inject
     WalletFactory walletFactory;
@@ -239,6 +246,88 @@ public class WalletApplication extends MultiDexApplication
         super.onCreate();
         initLogging();
         FirebaseApp.initializeApp(this);
+        // Initialize AppsFlyer after checking Google Play Services availability
+        new Thread(() -> {
+            try {
+                // Check if Google Play Services is available
+                com.google.android.gms.common.GoogleApiAvailability availability = 
+                    com.google.android.gms.common.GoogleApiAvailability.getInstance();
+                int result = availability.isGooglePlayServicesAvailable(this);
+                
+                if (result == com.google.android.gms.common.ConnectionResult.SUCCESS) {
+                    AppsFlyerLib.getInstance().init(BuildConfig.APPSFLYER_ID, null, this);
+                    AppsFlyerLib.getInstance().setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
+                    AppsFlyerLib.getInstance().setDebugLog(true);
+                    AppsFlyerLib.getInstance().setCustomerUserId(UUID.randomUUID().toString());
+                    AppsFlyerLib.getInstance().start(this);
+                    
+                    // Register conversion listener after successful initialization
+                    AppsFlyerLib.getInstance().registerConversionListener(this, new com.appsflyer.AppsFlyerConversionListener() {
+                        @Override
+                        public void onConversionDataSuccess(java.util.Map<String, Object> data) {
+                            log.info("AppsFlyer conversion received: " + data);
+                            if (data != null) {
+                                log.info("Available keys: " + data.keySet());
+                                handleDeepLinkData(data);
+                            }
+                        }
+
+                        @Override
+                        public void onConversionDataFail(String error) {
+                            log.error("AppsFlyer conversion failed: " + error);
+                        }
+
+                        @Override
+                        public void onAppOpenAttribution(java.util.Map<String, String> data) {
+                            log.info("AppsFlyer app open attribution: " + data);
+                            if (data != null) {
+                                log.info("Available attribution keys: " + data.keySet());
+                                java.util.Map<String, Object> objectData = new java.util.HashMap<>();
+                                for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
+                                    objectData.put(entry.getKey(), entry.getValue());
+                                }
+                                handleDeepLinkData(objectData);
+                            }
+                        }
+
+                        @Override
+                        public void onAttributionFailure(String error) {
+                            log.error("AppsFlyer attribution failure: " + error);
+                        }
+                        
+                        private void handleDeepLinkData(java.util.Map<String, Object> data) {
+                            String[] possibleKeys = {"af_dp", "deep_link_value", "link", "af_sub1"};
+                            String deepLinkValue = null;
+                            
+                            for (String key : possibleKeys) {
+                                if (data.containsKey(key)) {
+                                    Object value = data.get(key);
+                                    if (value != null && !value.toString().trim().isEmpty()) {
+                                        deepLinkValue = value.toString();
+                                        log.info("Found deep link in key '" + key + "': " + deepLinkValue);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (deepLinkValue != null) {
+                                log.info("Processing deep link: " + deepLinkValue);
+                                android.content.Intent intent = new android.content.Intent(getApplicationContext(), de.schildbach.wallet.ui.InviteHandlerActivity.class);
+                                intent.setData(android.net.Uri.parse(deepLinkValue));
+                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                startActivity(intent);
+                            } else {
+                                log.warn("No deep link found in AppsFlyer data");
+                            }
+                        }
+                    });
+                } else {
+                    log.warn("Google Play Services not available, skipping AppsFlyer initialization: " + result);
+                }
+            } catch (Exception e) {
+                log.warn("Failed to initialize AppsFlyer: " + e.getMessage());
+            }
+        }).start();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -349,6 +438,16 @@ public class WalletApplication extends MultiDexApplication
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.Q) {
             Security.insertProviderAt(Conscrypt.newProvider(), 1);
         }
+
+
+    }
+
+    @Override
+    public void onTerminate() {
+        super.onTerminate();
+        walletBalanceObserver.close();
+        topUpRepository.close();
+        anrSupervisor.stop();
     }
 
     private void syncExploreData() {
@@ -1110,8 +1209,18 @@ public class WalletApplication extends MultiDexApplication
     }
 
     private void notifyWalletWipe() {
-        for (Function0<Unit> listener : wipeListeners) {
-            listener.invoke();
+        // Since these are now suspended listeners, we need to call them in a blocking way
+        // to ensure all clearing operations complete before proceeding
+        for (Function1<? super Continuation<? super Unit>, ? extends Object> listener : wipeListeners) {
+            try {
+                // Call the suspended function synchronously using runBlocking
+                kotlinx.coroutines.BuildersKt.runBlocking(
+                    kotlinx.coroutines.Dispatchers.getIO(),
+                    (scope, continuation) -> listener.invoke(continuation)
+                );
+            } catch (Exception e) {
+                log.error("Error in wallet wipe listener", e);
+            }
         }
     }
 
@@ -1332,12 +1441,12 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @Override
-    public void attachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+    public void attachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
         wipeListeners.add(listener);
     }
 
     @Override
-    public void detachOnWalletWipedListener(@NonNull Function0<Unit> listener) {
+    public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
         wipeListeners.remove(listener);
     }
 

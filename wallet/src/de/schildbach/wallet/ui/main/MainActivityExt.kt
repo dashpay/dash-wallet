@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
@@ -54,6 +55,7 @@ import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
@@ -91,7 +93,7 @@ object MainActivityExt {
 
         viewModel.blockchainIdentity.observe(this) { identityData ->
 
-            if (identityData?.creationComplete == true) {
+            if (identityData?.hasUsername == true) {
                 navView.menu.getItem(CONTACTS_BUTTON_INDEX).isVisible = true
                 navView.menu.getItem(EXPLORE_BUTTON_INDEX).isVisible = true
             } else {
@@ -427,3 +429,11 @@ object MainActivityExt {
         }
     }
 }
+
+fun Fragment.isLockScreenActive(): Boolean = if (activity is LockScreenActivity) {
+    (activity as LockScreenActivity).lockScreenDisplayed
+} else {
+    false
+}
+
+

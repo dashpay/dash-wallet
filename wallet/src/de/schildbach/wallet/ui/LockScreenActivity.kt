@@ -35,6 +35,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -58,6 +59,7 @@ import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
@@ -79,6 +81,7 @@ open class LockScreenActivity : SecureActivity() {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
+        const val INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE = "LockScreenActivity.no_blockchain_service"
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
@@ -127,6 +130,7 @@ open class LockScreenActivity : SecureActivity() {
     protected var isLocked: Boolean = false
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
+    private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -184,7 +188,7 @@ open class LockScreenActivity : SecureActivity() {
         lifecycleScope.launch {
             // we need the total wallet balance to trigger showing backup reminder
             // a better way is to track transaction count > 0
-            val hasBalance = walletApplication.observeTotalBalance().first().isPositive
+            val hasBalance = walletApplication.observeTotalBalance().firstOrNull()?.isPositive ?: false
             if (hasBalance && configuration.lastBackupSeedTime == 0L) {
                 configuration.setLastBackupSeedTime()
             }
@@ -258,7 +262,9 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun startBlockchainService() {
-        walletApplication.startBlockchainService(false)
+        if (intent.extras?.getBoolean(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE) != true) {
+            walletApplication.startBlockchainService(false)
+        }
     }
 
     /* DEBUG: Commented out for production
@@ -544,6 +550,7 @@ open class LockScreenActivity : SecureActivity() {
     override fun onDestroy() {
         super.onDestroy()
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
+        lockScreenDeactivatedListeners.clear()
     }
 
     private fun showFingerprintKeyChangedDialog() {
@@ -576,7 +583,11 @@ open class LockScreenActivity : SecureActivity() {
 
     open fun onLockScreenActivated() { }
 
-    open fun onLockScreenDeactivated() { }
+    open fun onLockScreenDeactivated() {
+        lockScreenDeactivatedListeners.forEach {
+            it.invoke()
+        }
+    }
 
     private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments
@@ -619,5 +630,25 @@ open class LockScreenActivity : SecureActivity() {
                 throw e
             }
         }
+    }
+
+    fun registerLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.add(listener)
+    }
+
+    fun unregisterLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.remove(listener)
+    }
+}
+
+fun Fragment.registerLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).registerLockScreenDeactivated(listener)
+    }
+}
+
+fun Fragment.unregisterLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).unregisterLockScreenDeactivated(listener)
     }
 }
