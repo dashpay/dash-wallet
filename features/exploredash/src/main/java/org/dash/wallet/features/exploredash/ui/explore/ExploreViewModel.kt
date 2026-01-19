@@ -31,6 +31,7 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
@@ -41,6 +42,7 @@ import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.getCountryCodeFromLocation
+import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
 import kotlin.String
@@ -116,6 +118,8 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+
+        private val log = LoggerFactory.getLogger(ExploreViewModel::class.java)
 
         // Session-only memory for filter modes (not persisted)
         private var lastSelectedMerchantFilterMode: FilterMode? = null
@@ -252,7 +256,7 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
-    private val excludedCountriesForPiggyCards = listOf("US")
+    private val excludedCountriesForPiggyCards = listOf("RU", "CU")
 
     // GPS-based country detection (higher priority)
     private val gpsCountryFlow: Flow<String?> = _isLocationEnabled.asFlow()
@@ -260,7 +264,6 @@ class ExploreViewModel @Inject constructor(
             if (locationEnabled) {
                 flow {
                     try {
-                        @SuppressLint("MissingPermission") // Checked by locationEnabled flag
                         val countryFromGPS = getCountryCodeFromLocation(context)
                         if (countryFromGPS.isNotBlank()) {
                             emit(countryFromGPS)
@@ -272,7 +275,7 @@ class ExploreViewModel @Inject constructor(
                     } catch (e: Exception) {
                         emit(null) // GPS location failed
                     }
-                }
+                }.flowOn(Dispatchers.IO) // Run GPS location fetching on IO dispatcher
             } else {
                 flowOf(null) // Location not enabled
             }
@@ -281,6 +284,7 @@ class ExploreViewModel @Inject constructor(
     // IP-based country detection (lower priority, fallback)
     private val ipCountryFlow: Flow<String?> = networkState.observeCountryFromIP()
         .map { it.takeIf { country -> country.isNotBlank() } }
+        .flowOn(Dispatchers.IO) // Run IP detection on IO dispatcher
 
     // Combined location with GPS priority over IP
     val location: StateFlow<String> = combine(
@@ -288,6 +292,7 @@ class ExploreViewModel @Inject constructor(
         ipCountryFlow
     ) { gpsCountry, ipCountry ->
         // GPS takes priority, fall back to IP, then default locale
+        log.info("country: $gpsCountry, $ipCountry")
         gpsCountry ?: ipCountry ?: Locale.getDefault().country
     }.stateIn(
         scope = viewModelScope,
@@ -297,7 +302,7 @@ class ExploreViewModel @Inject constructor(
 
     private fun getExcludeProvider(): String {
         return if (location.value in excludedCountriesForPiggyCards) {
-            "PiggyCards"
+            GiftCardProviderType.PiggyCards.name
         } else {
             ""
         }
