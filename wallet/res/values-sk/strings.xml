@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
     <string name="report_issue_dialog_generating_report">Generovanie prehľadu</string>
+    <string name="report_issue_dialog_status_device_info">informácie o zariadení</string>
+    <string name="report_issue_dialog_status_installed_packages">zoznam nainštalovaných balíkov</string>
+    <string name="report_issue_dialog_status_application_log">protokol aplikácie</string>
+    <string name="report_issue_dialog_status_application_info">informácie o aplikácii</string>
+    <string name="report_issue_dialog_status_wallet_dump">výpis z peňaženky (pomalý)</string>
+    <string name="report_issue_dialog_status_contextual_info">kontextové informácie</string>
+    <string name="report_issue_dialog_status_background_traces">stopy v pozadí</string>
+    <string name="report_issue_dialog_status_stack_trace">stopy v zásobníku</string>
+    <string name="report_issue_dialog_status_finishing">dokončovanie</string>
     <string name="report_transaction_history_export">Exportovať</string>
     <string name="report_transaction_history_title">Export CSV</string>
     <string name="report_transaction_history_not_synced_title">Export CSV</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">O aplikácií</string>
+    <string name="about_dash_title">O Dash</string>
     <string name="about_version_title">Verzia</string>
     <string name="about_copyright_title">Autorské práva</string>
     <string name="about_license_title">Licencia</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
     <string name="notification_bluetooth_service_listening">Pripravené na prijímanie platieb cez Bluetooth</string>
+    <string name="notification_sync_paused">Synchronizácia blockchainu pozastavená</string>
+    <string name="notification_background_processes_paused">Spracovanie na pozadí pozastavené</string>
+    <string name="notification_background_processes_paused_text">Dosiahli ste 6-hodinový limit služby Android na popredí pre mixovanie alebo synchronizáciu blockchainu. Klepnutím resetujete…</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>
 
     <!-- generic buttons -->

@@ -31,6 +31,7 @@ import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.service.RestartService
@@ -46,11 +47,11 @@ import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SetPinActivity : InteractionAwareActivity() {
-
     private lateinit var numericKeyboardView: NumericKeyboardView
     private lateinit var confirmButtonView: View
     private lateinit var pinProgressSwitcherView: ViewSwitcher
@@ -63,6 +64,7 @@ class SetPinActivity : InteractionAwareActivity() {
     @Inject lateinit var restartService: RestartService
     @Inject lateinit var authManager: SecurityFunctions
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var walletApplication: WalletApplication
 
     val pin = arrayListOf<Int>()
     var seed = listOf<String>()
@@ -100,6 +102,8 @@ class SetPinActivity : InteractionAwareActivity() {
         private const val EXTRA_ONBOARDING_PATH = "onboarding_path"
         private const val EXTRA_ONBOARDING_INVITE = "onboarding_invite"
         private const val UPGRADING_WALLET = "upgrading_wallet"
+        private const val REQUIRES_RESCAN = "requires_rescan"
+        private val log = LoggerFactory.getLogger(SetPinActivity::class.java)
 
         @JvmOverloads
         @JvmStatic
@@ -109,7 +113,8 @@ class SetPinActivity : InteractionAwareActivity() {
             onboarding: Boolean = false,
             onboardingPath: OnboardingPath = OnboardingPath.Create,
             onboardingInvite: Boolean = false,
-            upgradingWallet: Boolean = false
+            upgradingWallet: Boolean = false,
+            requiresRescan: Boolean = false
         ): Intent {
             val intent = Intent(context, SetPinActivity::class.java)
             intent.putExtra(EXTRA_TITLE_RES_ID, titleResId)
@@ -119,6 +124,7 @@ class SetPinActivity : InteractionAwareActivity() {
             intent.putExtra(EXTRA_ONBOARDING_PATH, onboardingPath)
             intent.putExtra(EXTRA_ONBOARDING_INVITE, onboardingInvite)
             intent.putExtra(UPGRADING_WALLET, upgradingWallet)
+            intent.putExtra(REQUIRES_RESCAN, requiresRescan)
             return intent
         }
 
@@ -563,12 +569,19 @@ class SetPinActivity : InteractionAwareActivity() {
 
     private fun goHome() {
         startActivity(MainActivity.createIntent(this))
+        val isOnboarding = intent.getBooleanExtra(EXTRA_ONBOARDING, false)
+        val requiresRescan = intent.getBooleanExtra(REQUIRES_RESCAN, false)
 
-        if (intent.getBooleanExtra(EXTRA_ONBOARDING, false)) {
+        if (!requiresRescan && isOnboarding) {
             val path = intent.getSerializableExtra(EXTRA_ONBOARDING_PATH) as OnboardingPath
             logSuccess(path)
             finishAffinity()
         } else {
+            if (requiresRescan) {
+                log.info("automatically initiated blockchain reset, due to security system recovery")
+                viewModel.logEvent(AnalyticsConstants.Settings.RESCAN_BLOCKCHAIN_RESET)
+                walletApplication.resetBlockchain()
+            }
             finish()
         }
     }

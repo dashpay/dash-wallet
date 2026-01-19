@@ -116,10 +116,10 @@ interface TopUpRepository {
     /** top up identity and save topup state to the db */
     suspend fun topUpIdentity(
         topupAssetLockTransaction: AssetLockTransaction,
-        aesKeyParameter: KeyParameter
+        aesKeyParameter: KeyParameter?
     )
 
-    suspend fun checkTopUps(aesKeyParameter: KeyParameter)
+    suspend fun checkTopUps(aesKeyParameter: KeyParameter?)
 
     // invitation related methods
     suspend fun createInviteFundingTransaction(
@@ -138,7 +138,7 @@ interface TopUpRepository {
         aesKeyParameter: KeyParameter
     ): DynamicLink
 
-    suspend fun checkInvites(encryptionKey: KeyParameter)
+    suspend fun checkInvites(encryptionKey: KeyParameter?)
     suspend fun updateInvitations()
     fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long)
     /**
@@ -379,7 +379,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun topUpIdentity(
         topUpTx: AssetLockTransaction,
-        aesKeyParameter: KeyParameter
+        aesKeyParameter: KeyParameter?
     ) {
         val topUp = topUpsDao.getByTxId(
             topUpTx.txId
@@ -428,8 +428,8 @@ class TopUpRepositoryImpl @Inject constructor(
 
     override suspend fun waitForTransaction(confidence: TransactionConfidence) {
         // Check if transaction is already confirmed before waiting
-        if (confidence.isTransactionLocked || 
-            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || 
+        if (confidence.isTransactionLocked ||
+            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
             confidence.isChainLocked) {
             log.info("topup: transaction already confirmed, no need to wait")
             return
@@ -443,7 +443,7 @@ class TopUpRepositoryImpl @Inject constructor(
                         // Check again if transaction got confirmed while setting up the listener
                         log.info("wait for credit funding transaction: ${confidence.transactionHash}")
                         if (confidence.isTransactionLocked ||
-                            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING || 
+                            confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
                             confidence.isChainLocked) {
                             log.info("wait: transaction confirmed during listener setup")
                             continuation.resumeWith(Result.success(Unit))
@@ -510,7 +510,7 @@ class TopUpRepositoryImpl @Inject constructor(
 
     private var checkedPreviousTopUps = false
 
-    override suspend fun checkTopUps(aesKeyParameter: KeyParameter) {
+    override suspend fun checkTopUps(aesKeyParameter: KeyParameter?) {
         val topUps = topUpsDao.getUnused()
         topUps.forEach { topUp ->
             try {
@@ -648,9 +648,9 @@ class TopUpRepositoryImpl @Inject constructor(
 
     private var checkedPreviousInvitations = false
 
-    override suspend fun checkInvites(encryptionKey: KeyParameter) {
+    override suspend fun checkInvites(encryptionKey: KeyParameter?) {
         try {
-            if (!checkedPreviousInvitations) {
+            if (!checkedPreviousInvitations && encryptionKey != null) {
                 // get a list of all invite funding transactions
                 val fundingTxes = authExtension.invitationFundingTransactions.associateBy { it.txId }.toMutableMap()
                 // get a list of all created invites from the DB

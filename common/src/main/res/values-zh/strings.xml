@@ -11,6 +11,7 @@
     <string name="buy_dash">购买Dash</string>
     <string name="copied">已复制</string>
     <string name="staking_title">质押</string>
+    <string name="spend_title">消费</string>
     <string name="email">邮箱</string>
     <string name="email_placeholder">例 johndoe@mail.com</string>
     <string name="error">错误</string>

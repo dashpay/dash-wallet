@@ -428,9 +428,6 @@
     <string name="launch_reset_wallet_extra_message">Зробіть резервну копію фрази відновлення</string>
     <string name="start_reset_wallet_title">Ви можете втратити %s</string>
     <string name="reset_wallet_text">Скидання гаманця</string>
-
-
-
     <!-- Tax category -->
     <string name="reclassify_transactions_title">Перекласифікуйте свої транзакції</string>
     <string name="reclassify_transactions_title_message">Ці класифікації буде відображено в файлі експорту CSV, який можна використовувати для імпорту в служби податкової звітності.</string>

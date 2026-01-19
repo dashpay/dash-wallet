@@ -86,6 +86,11 @@ object AnalyticsConstants {
         const val COINJOIN = "settings_coinjoin"
     }
 
+    object Tools {
+        const val EXPORT_CSV = "tools_export_csv"
+        const val ZENLEDGER = "tools_export_zenledger"
+    }
+
     object SendReceive {
         const val SEND_TX = "send_tx" // also include amount sent
         const val SEND_TX_CONTACT = "send_tx_to_contact"  // also include amount sent

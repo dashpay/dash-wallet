@@ -80,7 +80,6 @@
     <string name="explore_filter">منقي</string>
     <string name="explore_filters">عوامل التصفية</string>
     <string name="explore_apply_filter">تطبيق</string>
-    <string name="explore_payment_method">طريقة الدفع</string>
     <string name="explore_payment_dash">داش</string>
     <string name="explore_payment_gift_card">كرت هدية</string>
     <string name="explore_filter_gift_cards">بطاقات الهدايا</string>
@@ -186,4 +185,7 @@
     <string name="retry">إعادة المحاولة</string>
     <string name="try_again">حاول ثانية</string>
     <string name="cancel">إلغاء</string>
-    </resources>
+    <string name="gift_card_contact_support">اتصل بالدعم</string>
+    <string name="address">عنوان</string>
+    <string name="save">حفظ</string>
+</resources>

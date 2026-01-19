@@ -71,8 +71,10 @@
     <string name="explore_filter">篩選</string>
     <string name="explore_filters">過濾器</string>
     <string name="explore_apply_filter">應用</string>
-    <string name="explore_payment_method">付款方法</string>
+    <string name="explore_spending_options">消費選擇</string>
     <string name="explore_payment_dash">達世幣</string>
+    <string name="ctx_gift_cards">CTX 禮品卡</string>
+    <string name="piggycards_gift_cards">Piggy Cards 禮品卡</string>
     <string name="explore_payment_gift_card">禮物卡</string>
     <string name="explore_filter_gift_cards">禮物卡</string>
     <string name="explore_radius">半徑</string>
@@ -87,6 +89,7 @@
     <string name="gift_card_types">禮品卡類型</string>
     <string name="flexible_amount_option">彈性的金額</string>
     <string name="fixed_denom_option">固定金額</string>
+    <string name="gift_card_providers">禮品卡提供商</string>
 
     <string-array name="merchants_filter_options">
         <item>在線的</item>
@@ -184,7 +187,7 @@
     <string name="purchase_gift_card_confirm">確認:</string>
     <string name="purchase_gift_card_details">禮品卡詳細信息</string>
     <string name="purchase_original_purchase">原先購買</string>
-    <string name="purchase_check_current_balance">檢查當前餘額</string>
+    <string name="purchase_check_current_balance">查看卡的餘額</string>
     <string name="purchase_card_number">卡號</string>
     <string name="purchase_card_pin">卡密碼</string>
     <string name="purchase_view_transaction">查看交易詳情</string>
@@ -221,19 +224,25 @@
     <string name="try_again">再試一次</string>
     <string name="cancel">取消</string>
     <string name="gift_card_error">由於某些原因，我們無法購買禮品卡。請再試一次。</string>
+    <string name="gift_card_out_of_stock_error">該禮品卡缺貨。請再試一次。</string>
     <string name="gift_card_details_error">由於某些原因，我們無法購買禮品卡。請聯絡支援人員。</string>
     <string name="gift_card_limit_error">該商人的購買限額已更改。請聯繫CTX客戶服務以獲取更多信息。</string>
+    <string name="gift_card_server_error">由於某種原因，我們無法購買禮品卡。請聯繫 %s 支援人員報告相關問題。</string>
+    <string name="gift_card_server_region_error">您所在地區無法購買此禮品卡。</string>
+    <string name="gift_card_error_wrong_network">付款請求針對不同的網絡。請聯繫支援人員。</string>
     <string name="gift_card_unknown_error">由於某些原因，我們無法購買禮品卡。請透過 txid %s聯繫支援人員。</string>
-    <string name="gift_card_rejected">付款已被拒絕。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s and 和交易 ID %s。</string>
-    <string name="gift_card_redeem_url_not_supported">已向提供兌換 URL 的商家進行付款，但目前不支援。請聯絡 CTX，並提供禮品卡 ID %s 、付款 ID %s 和交易 ID %s。</string>
+    <string name="gift_card_delay">取回這張卡需要比平常需要更多的時間。如果持續無法取得所需卡，請聯繫 <a href="contact:support">support@dash.org</a> 。</string>
+    <string name="gift_card_rejected">付款已被拒絕。請聯繫 %s 支援人員並提供禮品卡 ID %s and 、付款 ID %s 和交易 ID%s。</string>
+    <string name="gift_card_redeem_url_not_supported">已向提供兌換 URL 的商家進行付款，但目前不支持該付款。請聯繫 %s 支援人員並提供禮品卡 ID %s 、付款 ID %s 和交易 ID %s。</string>
     <string name="dashspend_terms_conditions">接受條款和條件</string>
     <string name="accept_terms_conditions">我接受 DashSpend 條款和條件</string>
     <string name="tap_link_to_proceed">要在 DashSpend 建立帳戶，您必須點擊下面的連結才能繼續</string>
     <string name="accept_to_proceed">要在 DashSpend 建立帳戶，您必須接受 DashSpend 條款和條件</string>
     <string name="view_terms_conditions">條款 &amp; 條件</string>
-    <string name="barcode_placeholder">一旦生成代碼，它將在此處顯示。</string>
+    <string name="barcode_placeholder">請等待禮品卡詳細信息發送給您。</string>
     <string name="gift_card_contact_ctx">聯繫CTX客戶服務</string>
-
+    <string name="gift_card_contact_piggycards">聯繫 PiggyCards 支援</string>
+    <string name="gift_card_contact_support">聯繫支援服務</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">創建賬戶</string>
     <string name="log_in_to_ctxspend_account">登錄到您的帳戶</string>
@@ -241,5 +250,23 @@
     <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 帳戶購買禮品卡</string>
     <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">建立 DashSpend 帳戶或登入現有帳戶</string>
     <string name="temporarily_unavailable">暫時不可用</string>
+    <string name="country_availability">該卡僅適用於美國</string>
     <string name="token_expired_title">您的工作階段已經過期</string>
-    </resources>
+    <string name="token_expired_message">您似乎有一段時間沒有使用 DashSpend 了。出於安全原因，您已註銷。 \n\n請重新登錄以繼續探索如何使用您的 達世幣。</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">您的電子郵件地址不會與 PiggyCards 以外的任何人共享。</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">選擇禮品卡提供商</string>
+    <string name="flexible_amounts">彈性的金額</string>
+    <string name="fixed_amounts">固定金額</string>
+    <string name="address">地址</string>
+    <string name="phone">電話</string>
+    <string name="website">網站</string>
+    <string name="call">稱呼</string>
+    <string name="directions">路線</string>
+    <string name="explore_show_all_locations">顯示所有地點 (%d)</string>
+    <string name="provider">提供者</string>
+    <string name="save">儲存</string>
+</resources>

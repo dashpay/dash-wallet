@@ -116,6 +116,7 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import kotlin.collections.set
 import kotlin.math.abs
+import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -127,12 +128,12 @@ class MainViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
-    val platformService: PlatformService,
-    val platformSyncService: PlatformSyncService,
+    private val platformService: PlatformService,
+    private val platformSyncService: PlatformSyncService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val savedStateHandle: SavedStateHandle,
-    private val metadataProvider: TransactionMetadataProvider,
-    private val blockchainStateProvider: BlockchainStateProvider,
+    metadataProvider: TransactionMetadataProvider,
+    blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
     private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
@@ -183,7 +184,9 @@ class MainViewModel @Inject constructor(
     private val _blockchainSyncPercentage = MutableLiveData<Int>()
     val blockchainSyncPercentage: LiveData<Int>
         get() = _blockchainSyncPercentage
+    private var chainHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
     private var chainLockBlockHeight: Int = 0
+    private var headersHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
     private val _syncStage = MutableStateFlow(SyncStage.OFFLINE)
     val syncStage: StateFlow<SyncStage>
         get() = _syncStage
@@ -347,6 +350,8 @@ class MainViewModel @Inject constructor(
             .onEach { state ->
                 updateSyncStatus(state)
                 updatePercentage(state)
+                headersHeight = state.mnlistHeight
+                chainHeight = state.bestChainHeight
                 chainLockBlockHeight = state.chainlockHeight
             }
             .launchIn(viewModelWorkerScope)
@@ -391,8 +396,9 @@ class MainViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach { lastSeenNotification ->
                 startContactRequestTimer()
-                forceUpdateNotificationCount()
-
+                if (_isBlockchainSynced.value == true) {
+                    forceUpdateNotificationCount()
+                }
                 if (lastSeenNotification != DashPayConfig.DISABLE_NOTIFICATIONS) {
                     userAlertDao.observe(lastSeenNotification)
                         .filterNotNull()
@@ -474,7 +480,6 @@ class MainViewModel @Inject constructor(
                 if (timeSkew > 0) MAX_ALLOWED_AHEAD_TIMESKEW * 3 else MAX_ALLOWED_BEHIND_TIMESKEW * 2
             }
             coinJoinService.updateTimeSkew(timeSkew)
-            log.info("timeskew: {} ms", timeSkew)
             return Pair(abs(timeSkew) > maxAllowedTimeSkew, timeSkew)
         } catch (_: Exception) {
             // Ignore errors
@@ -535,6 +540,7 @@ class MainViewModel @Inject constructor(
                         Constants.CONTEXT,
                         null,
                         metadata[tx.txId],
+                        chainHeight,
                         chainLockBlockHeight
                     )
                     txByHash[rowView.id] = rowView
@@ -603,7 +609,7 @@ class MainViewModel @Inject constructor(
 
             // is the item currently in our list
             val rowView = txByHash[itemId]
-
+            val oneHourAgo = System.currentTimeMillis() - 1.hours.inWholeMilliseconds
             val transactionRow = if (!included || wrapper == null) {
                 TransactionRowView.fromTransaction(
                     tx,
@@ -612,6 +618,7 @@ class MainViewModel @Inject constructor(
                     metadata[tx.txId],
                     contacts[tx.txId] ?: rowView?.contact,
                     TxResourceMapper(),
+                    if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                     chainLockBlockHeight
                 )
             } else {
@@ -621,6 +628,7 @@ class MainViewModel @Inject constructor(
                     Constants.CONTEXT,
                     null,
                     metadata[tx.txId],
+                    if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                     chainLockBlockHeight
                 )
             }
@@ -724,6 +732,7 @@ class MainViewModel @Inject constructor(
                 walletData.getTransaction(txId)?.let { tx ->
                     // Use new metadata if exists, otherwise create empty metadata
                     val txMetadata = metadata[txId] ?: PresentableTxMetadata(txId)
+                    val oneHourAgo = System.currentTimeMillis() - 1.hours.inWholeMilliseconds
                     val updatedRowView = TransactionRowView.fromTransaction(
                         tx,
                         walletData.transactionBag,
@@ -731,6 +740,7 @@ class MainViewModel @Inject constructor(
                         txMetadata,
                         contacts[txId] ?: rowView.contact,
                         TxResourceMapper(),
+                        if (tx.updateTime.time > oneHourAgo) chainHeight else headersHeight,
                         chainLockBlockHeight
                     )
                     txByHash[txId.toString()] = updatedRowView
@@ -762,7 +772,7 @@ class MainViewModel @Inject constructor(
 
         if (state.replaying && state.percentageSync == 100) {
             // This is to prevent showing 100% when using the Rescan blockchain function.
-            // The first few broadcasted blockchainStates are with percentage sync at 100%
+            // The first few broadcast blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
@@ -934,8 +944,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun addCoinJoinToWallet() {
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        try {
+            val encryptionKey = platformRepo.getWalletEncryptionKey()
+                ?: throw IllegalStateException("cannot obtain wallet encryption key")
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        } catch (e: Exception) {
+            log.error("problem adding CoinJoin support to wallet: ", e)
+        }
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()

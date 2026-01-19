@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">Voeg portemonnee dump toe</string>
     <string name="report_issue_dialog_mail_intent_failed">Versturen van rapport is mislukt.</string>
     <string name="report_issue_dialog_generating_report">Rapport wordt gegenereerd.</string>
+    <string name="report_issue_dialog_status_device_info">apparaat informatie</string>
+    <string name="report_issue_dialog_status_installed_packages">lijst van geïnstalleerde pakketten</string>
+    <string name="report_issue_dialog_status_application_log">applicatie logboek</string>
+    <string name="report_issue_dialog_status_application_info">applicatie informatie</string>
+    <string name="report_issue_dialog_status_wallet_dump">portemonnee dump (traag)</string>
+    <string name="report_issue_dialog_status_contextual_info">contextuele informatie</string>
+    <string name="report_issue_dialog_status_background_traces">achtergrond traceringen</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traceringen</string>
+    <string name="report_issue_dialog_status_finishing">bezig met afronden</string>
     <string name="report_transaction_history_export">Exporteer</string>
     <string name="report_transaction_history_title">CSV exporteren</string>
     <string name="report_transaction_history_not_synced_title">CSV exporteren</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">Over</string>
+    <string name="about_dash_title">Over Dash</string>
     <string name="about_version_title">Versie</string>
     <string name="about_copyright_title">Auteursrecht</string>
     <string name="about_license_title">Licentie</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">Herinner me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Herinner me niet</string>
     <string name="notification_bluetooth_service_listening">Klaar om betalingen via Bluetooth te ontvangen</string>
+    <string name="notification_sync_paused">Blockchain synchronisatie gepauzeerd</string>
+    <string name="notification_background_processes_paused">Achtergrond verwerking gepauzeerd</string>
+    <string name="notification_background_processes_paused_text">Je hebt het Android limiet van 6 uur bereikt voor voorgrondservices. Dit betreft blockchain synchronisatie of mixen. Tik om te resetten…</string>
     <string name="appwidget_wallet_balance_title">Dashsaldo</string>
 
     <!-- generic buttons -->

@@ -11,6 +11,7 @@
     <string name="buy_dash">購買達世幣</string>
     <string name="copied">已複製</string>
     <string name="staking_title">質押</string>
+    <string name="spend_title">消費</string>
     <string name="email">電子郵件</string>
     <string name="email_placeholder">例如 johndoe@mail.com</string>
     <string name="error">錯誤</string>

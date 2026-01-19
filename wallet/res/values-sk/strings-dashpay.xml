@@ -413,8 +413,8 @@ používateľské meno</b></string>
     <string name="coinjoin_start">Začať miešanie</string>
     <string name="coinjoin_stop">Zastaviť miešanie</string>
     <string name="coinjoin_mixing">Miešanie</string>
-    <string name="coinjoin_mixing_finishing">Dokončenie miešania</string>
-    <string name="coinjoin_paused">Miešanie pozastavené</string>
+    <string name="coinjoin_mixing_finishing">Dokončovanie</string>
+    <string name="coinjoin_paused">Pozastavené</string>
     <string name="coinjoin_not_started">Nespustené</string>
     <string name="coinjoin_progress_balance">%1$s z %2$s</string>
     <string name="coinjoin_progress_finished">Plne zmiešané</string>
@@ -463,4 +463,48 @@ používateľské meno</b></string>
     <string name="voting_period_ends_tomorrow">Hlasovanie končí zajtra</string>
     <string name="link_included">pridaný odkaz</string>
     <string name="group_by">Zoskupiť podľa</string>
+    <string name="transaction_metadata_title">Metadáta transakcie</string>
+    <string name="transaction_metadata_data_being_saved">Naplánované</string>
+    <string name="transaction_metadata_payment_category_description">Označuje, či je transakcia spojená s Coinbase, Uphold, Topper alebo CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Historická cena v čase transakcie</string>
+    <string name="transaction_metadata_description">Vaše údaje sú uložené vo vašom zariadení, ale stratia sa, ak resetujete alebo obnovíte svoju peňaženku. Nižšie sú uvedené príklady informácií, ktoré sa uložia pri ukladaní do siete.</string>
+    <string name="transaction_metadata_cost">Koľko to stojí\?</string>
+    <string name="transaction_metadata_payment_category">Kategórie platieb</string>
+    <string name="transaction_metadata_save_data">Uložiť dáta</string>
+    <string name="transaction_metadata_tax_category">Daňové kategórie</string>
+    <string name="transaction_metadata_fiat_prices">Cena v štandardnej mene</string>
+    <string name="transaction_metadata_private_memos">Súkromné ​​poznámky</string>
+    <string name="transaction_metadata_gift_card_info">Údaje o darčekovej karte</string>
+    <string name="transaction_metadata_private_memo_description">Krátke poznámky, ktoré opisujú účel transakcie</string>
+    <string name="transaction_metadata_tax_category_description">Označuje, či je transakcia prevodom, príjmom alebo výdavkom</string>
+    <string name="transaction_metadata_gift_card_info_description">Zahŕňa číslo karty, PIN kód a ďalšie informácie</string>
+    <string name="transaction_metadata_costs_title">Náklady spojené s ukladaním dát do siete</string>
+    <string name="transaction_metadata_costs_description">Súčasťou vytvorenia používateľského mena je získanie kreditov, ktoré sa používajú na rôzne aktivity v sieti. Uloženie metadát transakcií v sieti tieto kredity spotrebuje rýchlejšie. Po vyčerpaní všetkých kreditov si môžete zakúpiť ďalšie.\n\nCena je približne %s za jedno nahranie údajov do siete, preto sa odporúča nahrávať viacero transakcií naraz.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Po desiatich transakciách</item>
+        <item>Raz týždenne</item>
+        <item>Po každej transakcii</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Chcete resetovať peňaženku bez uloženia metadát do siete\?</string>
+    <string name="reset_wallet_metadata_message">Resetovanie peňaženky bez uloženia údajov do siete spôsobí stratu niektorých transakčných metadát.</string>
+    <string name="reset_wallet_metadata_button_without">Resetovať peňaženku bez uloženia</string>
+    <string name="reset_wallet_metadata_button_with">Uložiť dáta a resetovať peňaženku</string>
+    <string name="reset_wallet_metadata_button_saving">Ukladá sa</string>
+    <string name="transaction_metadata_save_to_network">Uložiť do siete</string>
+    <string name="transaction_metadata_save_frequency">Ako často ukladať\?</string>
+    <string name="transaction_metadata_what_to_save">Čo ukladať\?</string>
+    <string name="transaction_metadata_past_title">Minulé</string>
+    <string name="transaction_metadata_future_title">Budúce</string>
+    <string name="transaction_metadata_past_subtitle">Uložiť všetky transakcie uskutočnené do %s</string>
+    <string name="transaction_metadata_future_subtitle">Automaticky ukladať všetky transakcie, ktoré vykonáte po %s</string>
+    <string name="transaction_metadata_gift_card_data">Údaje o darčekovej karte</string>
+    <string name="transaction_metadata_saving_to_network">Ukladá sa do siete - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Naposledy uložené %s</string>
+    <string name="transaction_metadata_past_already_saved">Všetky vytvorené transakcie do %s už boli uložené</string>
+    <string name="transaction_metadata_past_already_saved_none">Neboli uložené žiadne transakcie</string>
+    <string name="transaction_metadata_past_syncing">Všetky vytvorené transakcie do %s sa synchronizujú</string>
+    <string name="transaction_metadata_save_new_tx_title">Chcete uložiť neuložené transakcie\?</string>
+    <string name="transaction_metadata_you_have_n_tx">Máte %d neuložených transakcií od %s</string>
+    <string name="transaction_metadata_save_transactions">Uložiť neuložené transakcie</string>
+    <string name="transaction_metadata_continue_without_saving">Pokračovať bez uloženia</string>
 </resources>

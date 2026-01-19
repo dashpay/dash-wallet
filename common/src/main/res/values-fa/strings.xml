@@ -11,6 +11,7 @@
     <string name="buy_dash">خرید دش</string>
     <string name="copied">کپی شد</string>
     <string name="staking_title">سپرده‌گذاری</string>
+    <string name="spend_title">خرج کردن</string>
     <string name="email">ایمیل</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">خطا</string>

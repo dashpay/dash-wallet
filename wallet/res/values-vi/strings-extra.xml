@@ -296,7 +296,7 @@
     <string name="sent_transactions">Đã gửi</string>
     <string name="continue_reset">Tiếp tục</string>
     <string name="reset_wallet_text">Thiết lập lại ví</string>
-
+    <string name="reset_wallet_button">Thiết lập lại ví</string>
 
 
     <string name="masternode_key_type_owner">Khoá của chủ sở hữu</string>

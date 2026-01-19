@@ -50,7 +50,6 @@ class OnboardingViewModel @Inject constructor(
     }
 
     internal val showToastAction = SingleLiveEvent<String>()
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
     internal val startActivityAction = SingleLiveEvent<Intent>()

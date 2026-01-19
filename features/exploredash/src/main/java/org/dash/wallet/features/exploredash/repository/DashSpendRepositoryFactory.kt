@@ -44,7 +44,7 @@ class DashSpendRepositoryFactory @Inject constructor(
     }
 
     private fun createCTXSpend(): CTXSpendRepository {
-        val remoteDataSource = RemoteDataSource(ctxSpendConfig)
+        val remoteDataSource = RemoteDataSource(ctxSpendConfig, walletDataProvider)
         val api = remoteDataSource.buildApi(CTXSpendApi::class.java)
         val tokenApi = remoteDataSource.buildApi(CTXSpendTokenApi::class.java)
         val tokenAuthenticator = TokenAuthenticator(tokenApi, ctxSpendConfig)

@@ -51,6 +51,7 @@ import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
+import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.utils.ExchangeRate
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.SendRequest
@@ -261,7 +262,8 @@ class SendCoinsViewModel @Inject constructor(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean,
-        key: ECKey
+        key: ECKey,
+        emptyWallet: Boolean
     ): Transaction {
         _state.value = State.SENDING
         if (!isAssetLock) {
@@ -270,7 +272,7 @@ class SendCoinsViewModel @Inject constructor(
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
         val transaction = try {
-            val finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
+            var finalSendRequest = sendCoinsTaskRunner.createAssetLockSendRequest(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
@@ -279,6 +281,25 @@ class SendCoinsViewModel @Inject constructor(
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
+
+            if (emptyWallet) {
+                sendCoinsTaskRunner.signSendRequest(finalSendRequest)
+                wallet.completeTx(finalSendRequest)
+
+                // make sure that the asset lock payload matches the OP_RETURN output
+                val outputValue = finalSendRequest.tx.outputs.first().value
+                val assetLockedValue = (finalSendRequest.tx as AssetLockTransaction).assetLockPayload.creditOutputs.first().value
+                if (assetLockedValue != outputValue) {
+                    val newRequest = SendRequest.assetLock(wallet.params, key, outputValue, true)
+                    newRequest.coinSelector = finalSendRequest.coinSelector
+                    newRequest.returnChange = finalSendRequest.returnChange
+                    newRequest.aesKey = finalSendRequest.aesKey
+                    finalSendRequest = newRequest
+                } else {
+                    // this shouldn't happen
+                    error("The asset lock value is the same as the output though emptying the wallet")
+                }
+            }
 
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
@@ -534,7 +555,7 @@ class SendCoinsViewModel @Inject constructor(
         }
     }
 
-    fun getNextTopupKey(): ECKey {
+    fun getNextKey(): ECKey {
         val authGroup = wallet.getKeyChainExtension(
             AuthenticationGroupExtension.EXTENSION_ID
         ) as AuthenticationGroupExtension

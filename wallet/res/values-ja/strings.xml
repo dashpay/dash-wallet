@@ -134,7 +134,7 @@
     <string name="edit_address_book_entry_dialog_title_edit_receive">自分のアドレスのラベルを編集</string>
     <string name="edit_address_book_entry_dialog_address_label">アドレス</string>
     <string name="edit_address_book_entry_dialog_label_label">ラベル</string>
-    <string name="edit_address_book_entry_dialog_button_edit">保存</string>
+    <string name="edit_address_book_entry_dialog_button_edit">保存する</string>
     <string name="transaction_row_fee">ネットワーク手数料</string>
     <string name="transaction_row_message_purpose_key_rotation">このトランザクションはウォレットの窃盗に対する強度を上げます。&lt;u&gt;より詳細な情報。&lt;/u&gt;</string>
     <string name="transaction_row_message_purpose_raise_fee">このトランザクションは前の支払いのネットワーク手数料を増額します。</string>
@@ -296,6 +296,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">ウォレットダンプを追加</string>
     <string name="report_issue_dialog_mail_intent_failed">報告に失敗しました。</string>
     <string name="report_issue_dialog_generating_report">報告を生成中</string>
+    <string name="report_issue_dialog_status_device_info">デバイス情報</string>
+    <string name="report_issue_dialog_status_installed_packages">インストール済みのパッケージのリスト</string>
+    <string name="report_issue_dialog_status_application_log">アプリケーションログ</string>
+    <string name="report_issue_dialog_status_application_info">アプリ情報</string>
+    <string name="report_issue_dialog_status_wallet_dump">ウォレットダンプ(遅延あり)</string>
+    <string name="report_issue_dialog_status_contextual_info">コンテクスチュアル情報</string>
+    <string name="report_issue_dialog_status_background_traces">バックグラウンドの追跡調査</string>
+    <string name="report_issue_dialog_status_stack_trace">スタッキングの追跡調査</string>
+    <string name="report_issue_dialog_status_finishing">完了中</string>
     <string name="report_transaction_history_export">エクスポート</string>
     <string name="report_transaction_history_title">CSVのエクスポート</string>
     <string name="report_transaction_history_not_synced_title">CSVのエクスポート</string>
@@ -315,6 +324,7 @@
 
 
     <string name="about_title">アプリについて</string>
+    <string name="about_dash_title">Dashについて</string>
     <string name="about_version_title">バージョン</string>
     <string name="about_copyright_title">コピーライト</string>
     <string name="about_license_title">ライセンス</string>
@@ -337,6 +347,9 @@
     <string name="notification_inactivity_action_dismiss">後で通知する</string>
     <string name="notification_inactivity_action_dismiss_forever">今後通知しない</string>
     <string name="notification_bluetooth_service_listening">Bluetoothで支払いを受け取れるようになっています</string>
+    <string name="notification_sync_paused">ブロックチェーンの同期を一時停止しました</string>
+    <string name="notification_background_processes_paused">バックグラウンドの処理が一時停止しました</string>
+    <string name="notification_background_processes_paused_text">ミキシングまたはブロックチェーンの同期で、Androidのフォアグラウンドサービスの6時間制限に達しました。タップしてリセットしてください...</string>
     <string name="appwidget_wallet_balance_title">Dash残高</string>
 
     <!-- generic buttons -->

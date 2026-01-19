@@ -298,6 +298,15 @@
     <string name="report_issue_dialog_collect_wallet_dump">پیوست کردن والت دامپ</string>
     <string name="report_issue_dialog_mail_intent_failed">ارسال گزارش ناموفق بود</string>
     <string name="report_issue_dialog_generating_report"> ایجاد گزارش</string>
+    <string name="report_issue_dialog_status_device_info">اطلاعات دستگاه</string>
+    <string name="report_issue_dialog_status_installed_packages">فهرست دستگاه‌های نصب شده</string>
+    <string name="report_issue_dialog_status_application_log">لاگ اپلیکیشن</string>
+    <string name="report_issue_dialog_status_application_info">اطلاعات اپلیکیشن</string>
+    <string name="report_issue_dialog_status_wallet_dump">دامپ کیف پول (آهسته)</string>
+    <string name="report_issue_dialog_status_contextual_info">اطلاعات زمینه‌ای</string>
+    <string name="report_issue_dialog_status_background_traces">دنباله‌های پس‌زمینه</string>
+    <string name="report_issue_dialog_status_stack_trace">دنباله‌های استک</string>
+    <string name="report_issue_dialog_status_finishing">در حال پایان</string>
     <string name="report_transaction_history_export">بیرون دادن</string>
     <string name="report_transaction_history_title">بیرون دادن فرمت CSV</string>
     <string name="report_transaction_history_not_synced_title">بیرون دادن فرمت CSV</string>
@@ -317,6 +326,7 @@
 
 
     <string name="about_title">اطلاعات بیشتر</string>
+    <string name="about_dash_title">درباره دش</string>
     <string name="about_version_title">نسخه</string>
     <string name="about_copyright_title">کپی‌رایت</string>
     <string name="about_license_title">لیسانس</string>
@@ -339,6 +349,9 @@
     <string name="notification_inactivity_action_dismiss">بعدا یادآوری کن!</string>
     <string name="notification_inactivity_action_dismiss_forever">دیگر یادآوری نکن!</string>
     <string name="notification_bluetooth_service_listening">آماده دریافت پرداختی از طریق بلوتوث</string>
+    <string name="notification_sync_paused">همزمان‌سازی با بلاکچین متوقف شد</string>
+    <string name="notification_background_processes_paused">فرایند پس‌زمینه متوقف شد</string>
+    <string name="notification_background_processes_paused_text">به سقف ۶ ساعته اندروید برای عملیات ترکیب یا همزمان‌سازی با بلاکچین رسیدید. برای ریست، اینجا را لمس کنید...</string>
     <string name="appwidget_wallet_balance_title">موجودی دش</string>
 
     <!-- generic buttons -->

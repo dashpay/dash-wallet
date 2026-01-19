@@ -58,6 +58,7 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
+import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
@@ -522,7 +523,11 @@ class DashSpendViewModel @Inject constructor(
 
     suspend fun checkToken(): Boolean {
         return try {
-            !ctxSpendRepository.isUserSignedIn() || ctxSpendRepository.refreshToken()
+            if (!ctxSpendRepository.isUserSignedIn()) {
+                true
+            } else {
+                (ctxSpendRepository as CTXSpendRepository).checkToken()
+            }
         } catch (ex: Exception) {
             false
         }

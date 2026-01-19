@@ -359,7 +359,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
             platformRepo.init()
-            platformSyncService.initSync()
+            platformSyncService.initSync(true)
         } catch (e: Exception) {
             val blockchainIdentityData = identityConfig.load()
             blockchainIdentityData?.let {

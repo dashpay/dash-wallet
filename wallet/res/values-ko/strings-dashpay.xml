@@ -413,8 +413,8 @@
     <string name="coinjoin_start">믹싱 시작</string>
     <string name="coinjoin_stop">믹싱 중지</string>
     <string name="coinjoin_mixing">믹싱</string>
-    <string name="coinjoin_mixing_finishing">믹싱을 마치는 중</string>
-    <string name="coinjoin_paused">믹싱이 멈춰짐</string>
+    <string name="coinjoin_mixing_finishing">마치는 중</string>
+    <string name="coinjoin_paused">멈춤</string>
     <string name="coinjoin_not_started">시작되지 않음</string>
     <string name="coinjoin_progress_balance">%2$s 중 %1$s</string>
     <string name="coinjoin_progress_finished">완전히 믹싱됨</string>
@@ -463,4 +463,48 @@
     <string name="voting_period_ends_tomorrow">투표는 내일 종료됩니다</string>
     <string name="link_included">포함된 링크</string>
     <string name="group_by">다음으로 그룹화</string>
+    <string name="transaction_metadata_title">거래 메타데이터</string>
+    <string name="transaction_metadata_data_being_saved">예정됨</string>
+    <string name="transaction_metadata_payment_category_description">거래가 Coinbase, Uphold, Topper 또는 CrowdNode와 연관되어 있는지 여부를 나타냅니다.</string>
+    <string name="transaction_metadata_fiat_price_description">거래 당시의 가격 내역</string>
+    <string name="transaction_metadata_description">당신의 데이터는 당신의 기기에 저장되나, 지갑을 리셋하거나 새로 저장하는 경우 사라집니다. 아래는 네트워크에 저장되는 경우 저장될 정보의 예시입니다.</string>
+    <string name="transaction_metadata_cost">비용은 얼마나 드나요\?</string>
+    <string name="transaction_metadata_payment_category">지불 카테고리</string>
+    <string name="transaction_metadata_save_data">데이터 저장</string>
+    <string name="transaction_metadata_tax_category">세금 카테고리</string>
+    <string name="transaction_metadata_fiat_prices">법정 화폐 가격</string>
+    <string name="transaction_metadata_private_memos">비공개 메모</string>
+    <string name="transaction_metadata_gift_card_info">기프트 카드 데이터</string>
+    <string name="transaction_metadata_private_memo_description">거래의 목적을 설명하는 짧은 메모</string>
+    <string name="transaction_metadata_tax_category_description">거래가 송금, 수입 혹은 지출인지 여부를 나타냅니다</string>
+    <string name="transaction_metadata_gift_card_info_description">카드 번호, 핀 코드 및 기타 정보를 포함합니다</string>
+    <string name="transaction_metadata_costs_title">네트워크에 데이터를 저장하는 데 따르는 비용</string>
+    <string name="transaction_metadata_costs_description">사용자 이름을 생성시, 네트워크상의 다양한 활동에 사용될 수 있는 크레딧을 받습니다. 네트워크상에 거래 메타데이터를 저장하는 경우 이 크레딧을 빠르게 소진합니다. 모든 크레딧이 사용되면 더 구매할 수 있습니다.\n\n네트워크에 데이터를 업로드할 때마다 발생하는 비용은 약 %s 이므로 다중 거래를 한번에 업로드할 것을 권장합니다.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>거래 10회 이후</item>
+        <item>일주일에 한 번</item>
+        <item>모든 거래시마다</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">네트워크에 메타데이터를 저장하지 않고 지갑을 리셋하시겠습니까\?</string>
+    <string name="reset_wallet_metadata_message">네트워크에 데이터를 저장하지 않고 지갑을 리셋하는 경우 거래 메타데이터 일부가 사라집니다.</string>
+    <string name="reset_wallet_metadata_button_without">저장하지 않고 지갑 리셋하기</string>
+    <string name="reset_wallet_metadata_button_with">데이터 저장 후 지갑 리셋하기</string>
+    <string name="reset_wallet_metadata_button_saving">저장중</string>
+    <string name="transaction_metadata_save_to_network">네트워크에 저장하기</string>
+    <string name="transaction_metadata_save_frequency">얼마나 자주 저정하나요\?</string>
+    <string name="transaction_metadata_what_to_save">무엇을 저장하나요\?</string>
+    <string name="transaction_metadata_past_title">과거</string>
+    <string name="transaction_metadata_future_title">미래</string>
+    <string name="transaction_metadata_past_subtitle">%s 까지의 모든 거래 저장하기</string>
+    <string name="transaction_metadata_future_subtitle">%s 이후 발생한 모든 거래를 자동으로 저장하기</string>
+    <string name="transaction_metadata_gift_card_data">기프트 카드 데이터</string>
+    <string name="transaction_metadata_saving_to_network">네트워크에 저장중 - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">마지막 저장 %s</string>
+    <string name="transaction_metadata_past_already_saved">%s 까지 발생한 모든 거래는 이미 저장되었습니다</string>
+    <string name="transaction_metadata_past_already_saved_none">저장된 거래 없음</string>
+    <string name="transaction_metadata_past_syncing">%s 까지 발생한 모든 거래를 동기화중입니다</string>
+    <string name="transaction_metadata_save_new_tx_title">저장하지 않은 거래를 저장하시겠습니까\?</string>
+    <string name="transaction_metadata_you_have_n_tx">%s 이후 저장되지 않은 거래가 %d 건 있습니다</string>
+    <string name="transaction_metadata_save_transactions">저장하지 않은 거래 저장하기</string>
+    <string name="transaction_metadata_continue_without_saving">저장하지 않고 계속하기</string>
 </resources>

@@ -334,24 +334,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel.showToastAction.observe(this) {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         }
-        viewModel.showRestoreWalletFailureAction.observe(this) {
-            val message = when {
-                TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
-                else -> it.message!!
-            }
 
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                title = getString(R.string.import_export_keys_dialog_failure_title),
-                message = getString(R.string.import_keys_dialog_failure, message),
-                positiveButtonText = getString(R.string.button_dismiss),
-                negativeButtonText = getString(R.string.retry)
-            ).show(this) { dismiss ->
-                if (dismiss == false) {
-                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-                }
-            }
-        }
         viewModel.finishCreateNewWalletAction.observe(this) {
             startActivityForResult(
                 SetPinActivity.createIntent(

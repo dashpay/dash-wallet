@@ -47,11 +47,17 @@ interface DashPayContactRequestDao {
     @Query("SELECT EXISTS (SELECT * FROM dashpay_contact_request WHERE userId = :userId AND toUserId = :toUserId AND accountReference = :accountReference)")
     suspend fun exists(userId: String, toUserId: String, accountReference: Int): Boolean
 
-    @Query("SELECT MAX(timestamp) FROM dashpay_contact_request")
-    suspend fun getLastTimestamp() : Long
+    @Query("SELECT MAX(timestamp) FROM dashpay_contact_request WHERE toUserId = :userId")
+    suspend fun getLastTimestampToUser(userId: String) : Long
 
-    @Query("SELECT COUNT(*) FROM dashpay_contact_request")
-    suspend fun countAllRequests(): Int
+    @Query("SELECT MAX(timestamp) FROM dashpay_contact_request WHERE userId = :userId")
+    suspend fun getLastTimestampFromUser(userId: String) : Long
+
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request WHERE toUserId = :userId")
+    suspend fun countAllRequestsToUser(userId: String): Int
+    @Query("SELECT COUNT(*) FROM dashpay_contact_request WHERE userId = :userId")
+    suspend fun countAllRequestsFromUser(userId: String): Int
+
     @Query("SELECT COUNT(*) FROM dashpay_contact_request WHERE toUserId = :userId")
     fun observeReceivedRequestsCount(userId: String): Flow<Int>
     @Query("DELETE FROM dashpay_contact_request")

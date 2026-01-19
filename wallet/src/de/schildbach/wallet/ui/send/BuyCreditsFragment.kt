@@ -131,13 +131,13 @@ class BuyCreditsFragment : SendCoinsFragment() {
                 // TODO: there are no events for Topups
                 // viewModel.logEvent(AnalyticsConstants.Topup.ENTER_AMOUNT_TOPUP)
 
-                if (enterAmountFragment?.maxSelected == true) {
+                val maxSelected = enterAmountFragment?.maxSelected ?: false
+                if (maxSelected) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
-
                 // buy do an asset lock transaction or we do this in the worker?
-                val topUpKey = viewModel.getNextTopupKey()
-                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey)
+                val topUpKey = viewModel.getNextKey()
+                val tx = viewModel.signAndSendAssetLock(editedAmount, exchangeRate, checkBalance, topUpKey, maxSelected)
                 buyCreditsViewModel.topUpTransaction = tx
 
                 onSignAndSendPaymentSuccess(tx)
@@ -150,6 +150,7 @@ class BuyCreditsFragment : SendCoinsFragment() {
             } catch (ex: InsufficientMoneyException) {
                 showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
             } catch (ex: KeyCrypterException) {
+                log.info("send topup failure (encryption)", ex)
                 showFailureDialog(ex)
             } catch (ex: Wallet.CouldNotAdjustDownwards) {
                 showEmptyWalletFailedDialog()
