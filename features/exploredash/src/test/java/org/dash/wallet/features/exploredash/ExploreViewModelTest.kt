@@ -30,8 +30,6 @@ import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import org.junit.rules.TestWatcher
-import org.junit.runner.Description
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -52,6 +50,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TestRule
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import org.mockito.kotlin.*
 
 @ExperimentalCoroutinesApi
@@ -402,14 +402,15 @@ class ExploreViewModelTest {
 
             val dataSource =
                 mock<ExploreDataSource> {
-                    on { observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any(), any()) } doReturn
-                        flow {
-                            emit(
-                                merchants.filter {
-                                    (it.name?.lowercase()?.startsWith(query) ?: false) && it.territory == territory
-                                }
-                            )
-                        }
+                    on {
+                        observePhysicalMerchants(eq(query), eq(territory), eq(""), any(), any(), any(), any())
+                    } doReturn flow {
+                        emit(
+                            merchants.filter {
+                                (it.name?.lowercase()?.startsWith(query) ?: false) && it.territory == territory
+                            }
+                        )
+                    }
                 }
 
             val locationState =
