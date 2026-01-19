@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.verify
 
 import android.os.Bundle
 import android.view.View
+import android.view.WindowManager
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
@@ -67,5 +68,15 @@ class ShowSeedFragment : Fragment(R.layout.fragment_show_seed) {
         binding.explanationBtn.setOnClickListener {
             OffsetDialogFragment(R.layout.dialog_verify_seed_warning).show(requireActivity())
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        requireActivity().window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        requireActivity().window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
     }
 }

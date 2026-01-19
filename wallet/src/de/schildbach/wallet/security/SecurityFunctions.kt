@@ -26,6 +26,8 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
@@ -35,7 +37,9 @@ import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.Wallet
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SecuritySystemStatus
 import org.dash.wallet.common.services.AuthenticationManager
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -46,9 +50,12 @@ class SecurityFunctions @Inject constructor(
     private val walletData: WalletDataProvider,
     private val context: Context,
     private val biometricHelper: BiometricHelper,
-    private val pinRetryController: PinRetryController
+    private val pinRetryController: PinRetryController,
+    private val analyticsService: AnalyticsService
 ): AuthenticationManager {
     private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
+    private val status = MutableStateFlow(SecuritySystemStatus.HEALTHY)
+    private var healthListenerInitialized = false
 
     /**
      * Low memory devices (currently 1GB or less) and 32 bit devices will require
@@ -148,6 +155,32 @@ class SecurityFunctions @Inject constructor(
         val keyParameter = deriveKey(walletData.wallet!!, password)
         val key = walletData.wallet?.findKeyFromAddress(address)
         return key?.signMessage(message, keyParameter) ?: ""
+    }
+
+    override fun getHealth(): SecuritySystemStatus {
+        val securityGuard = SecurityGuard.getInstance()
+        return when {
+            securityGuard.isHealthyWithFallbacks -> SecuritySystemStatus.HEALTHY_WITH_FALLBACKS
+            securityGuard.isHealthy -> SecuritySystemStatus.HEALTHY
+            securityGuard.hasFallbacks() -> SecuritySystemStatus.FALLBACKS
+            else -> SecuritySystemStatus.DEAD
+        }
+    }
+
+    private val healthListener = SecurityGuard.HealthListener { securitySystemStatus ->
+        if (status.value.isHealthy && !securitySystemStatus.isHealthy) {
+            analyticsService.logError(Exception("Android Key Store corrupted"))
+        }
+        status.value = securitySystemStatus
+    }
+
+    override fun observeHealth(): Flow<SecuritySystemStatus> {
+        if (!healthListenerInitialized) {
+            val securityGuard = SecurityGuard.getInstance()
+            securityGuard.addHealthListener(healthListener)
+            healthListenerInitialized = true
+        }
+        return status
     }
 
     @Throws(KeyCrypterException::class)
