@@ -30,30 +30,39 @@ import java.nio.charset.StandardCharsets
 import java.security.GeneralSecurityException
 import java.security.KeyStore
 import java.security.KeyStoreException
+import java.security.ProviderException
+import java.security.UnrecoverableKeyException
+import javax.crypto.AEADBadTagException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /** This class provides GCM encryption via the KeyStore
- *  It uses a common IV
+ *
+ *  IMPORTANT: This implementation uses proper GCM encryption with unique IVs
+ *  - Each encryption operation generates a fresh IV
+ *  - IV is prepended to the encrypted data
+ *  - No shared IV is stored (eliminates corruption issues)
  */
 class ModernEncryptionProvider(
-    private val keyStore: KeyStore,
+    val keyStore: KeyStore,
     private val securityPrefs: SharedPreferences
 ): EncryptionProvider {
-    
+
     private var backupConfig: SecurityConfig? = null
     companion object {
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
+        private const val GCM_TAG_LENGTH = 128
+
+        // Legacy keys for migration only
         const val ENCRYPTION_IV_KEY = "encryption_iv"
         const val MIGRATION_COMPLETED_FILE = "iv_backup_migration_completed"
         const val BACKUP_FILE_PREFIX = "encryption_iv"
         private val log = LoggerFactory.getLogger(ModernEncryptionProvider::class.java)
     }
 
-    private var encryptionIv = restoreIv()
-    
     // Lock for atomic key generation
     private val keyGenerationLock = Any()
     
@@ -62,197 +71,108 @@ class ModernEncryptionProvider(
      */
     fun setBackupConfig(backupConfig: SecurityConfig) {
         this.backupConfig = backupConfig
-        // Run migration after backup config is set
-        migrateExistingIvToBackups()
     }
 
     @Throws(GeneralSecurityException::class)
-    override fun encrypt(keyAlias: String, textToEncrypt: String): ByteArray? {
+    override fun encrypt(keyAlias: String, textToEncrypt: String): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)
         val secretKey = getSecretKey(keyAlias)
 
-        if (encryptionIv == null) {
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey)
-            saveIv(cipher.iv)
-        } else {
-            val spec = GCMParameterSpec(128, encryptionIv)
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec)
-        }
+        // Always generate a new IV for each encryption (proper GCM usage)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey)
+        val iv = cipher.iv
 
-        return cipher.doFinal(textToEncrypt.toByteArray(StandardCharsets.UTF_8))
-    }
+        val encryptedData = cipher.doFinal(textToEncrypt.toByteArray(StandardCharsets.UTF_8))
 
-    private fun saveIv(encryptionIv: ByteArray) {
-        this.encryptionIv = encryptionIv
-        val encryptionIvStr = Base64.encodeToString(encryptionIv, Base64.NO_WRAP)
-        securityPrefs.edit { putString(ENCRYPTION_IV_KEY, encryptionIvStr) }
-        
-        // Backup IV to multiple locations
-        backupIv(encryptionIvStr)
-    }
-    
-    private fun backupIv(ivString: String) {
-        // DataStore backup
-        backupConfig?.let { config ->
-            try {
-                kotlinx.coroutines.runBlocking {
-                    config.backupEncryptionIv(ivString)
-                }
-                log.info("Successfully backed up IV to DataStore")
-            } catch (e: Exception) {
-                log.error("Failed to backup IV to DataStore", e)
-            }
-        }
-        
-        // File backup - primary
-        try {
-            val filesDir = WalletApplication.getInstance().filesDir
-            val backupFile = java.io.File(SecurityFileUtils.createBackupDir(filesDir), BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP_FILE_SUFFIX)
-            SecurityFileUtils.writeToFile(backupFile, ivString)
-            
-            // Secondary file backup
-            val backup2File = java.io.File(SecurityFileUtils.createBackupDir(filesDir), BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP2_FILE_SUFFIX)
-            SecurityFileUtils.writeToFile(backup2File, ivString)
-            
-            log.info("Successfully backed up IV to files")
-        } catch (e: Exception) {
-            log.error("Failed to backup IV to files", e)
-        }
-    }
+        // Package the IV with the encrypted data
+        // Format: [IV_LENGTH(4 bytes)][IV][ENCRYPTED_DATA]
+        val buffer = java.nio.ByteBuffer.allocate(4 + iv.size + encryptedData.size)
+        buffer.putInt(iv.size)
+        buffer.put(iv)
+        buffer.put(encryptedData)
 
-    private fun restoreIv(): ByteArray? {
-        // Try primary SharedPreferences first
-        var encryptionIvStr = securityPrefs.getString(ENCRYPTION_IV_KEY, null)
-        
-        if (encryptionIvStr != null) {
-            log.info("Retrieved IV from primary SharedPreferences")
-            return Base64.decode(encryptionIvStr, Base64.NO_WRAP)
-        }
-        
-        // Try DataStore backup
-        backupConfig?.let { config ->
-            try {
-                encryptionIvStr = kotlinx.coroutines.runBlocking {
-                    config.getEncryptionIv()
-                }
-                if (encryptionIvStr != null) {
-                    log.info("Recovered IV from DataStore backup")
-                    // Restore to primary SharedPreferences
-                    securityPrefs.edit { putString(ENCRYPTION_IV_KEY, encryptionIvStr) }
-                    return Base64.decode(encryptionIvStr, Base64.NO_WRAP)
-                }
-            } catch (e: Exception) {
-                log.warn("Failed to recover IV from DataStore backup", e)
-            }
-        }
-        
-        // Try file backups
-        val fileRecoveredIv = recoverIvFromFiles()
-        if (fileRecoveredIv != null) {
-            log.info("Recovered IV from file backup")
-            // Restore to primary SharedPreferences and re-backup to all locations
-            securityPrefs.edit { putString(ENCRYPTION_IV_KEY, fileRecoveredIv) }
-            backupIv(fileRecoveredIv)  // Re-backup to all locations
-            return Base64.decode(fileRecoveredIv, Base64.NO_WRAP)
-        }
-        
-        log.warn("No IV found in any location")
-        return null
-    }
-    
-    private fun recoverIvFromFiles(): String? {
-        val fileNames = listOf(
-            BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP_FILE_SUFFIX,
-            BACKUP_FILE_PREFIX + SecurityFileUtils.BACKUP2_FILE_SUFFIX
-        )
-        
-        for (fileName in fileNames) {
-            try {
-                val backupFile = java.io.File(
-                    SecurityFileUtils.createBackupDir(WalletApplication.getInstance().filesDir),
-                    fileName
-                )
-                if (backupFile.exists()) {
-                    val ivData = SecurityFileUtils.readFromFile(backupFile)
-                    if (!ivData.isNullOrEmpty()) {
-                        log.info("Recovered IV from file: {}", fileName)
-                        return ivData
-                    }
-                }
-            } catch (e: Exception) {
-                log.warn("Failed to recover IV from file: {}", fileName, e)
-            }
-        }
-        return null
+        log.debug("Encrypted data for alias: {} (IV: {} bytes, Data: {} bytes)",
+                  keyAlias, iv.size, encryptedData.size)
+
+        return buffer.array()
     }
 
     @Throws(GeneralSecurityException::class)
     override fun decrypt(keyAlias: String, encryptedData: ByteArray): String {
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val secretKey = getSecretKey(keyAlias)
-        val spec = GCMParameterSpec(128, encryptionIv)
-        cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+        try {
+            val buffer = java.nio.ByteBuffer.wrap(encryptedData)
 
-        return String(cipher.doFinal(encryptedData), StandardCharsets.UTF_8)
+            // Extract IV length
+            val ivLength = buffer.int
+
+            // Validate IV length
+            if (ivLength < 1 || ivLength > 32) {
+                throw GeneralSecurityException("Invalid IV length: $ivLength")
+            }
+
+            // Extract IV
+            val iv = ByteArray(ivLength)
+            buffer.get(iv)
+
+            // Extract encrypted data
+            val encrypted = ByteArray(buffer.remaining())
+            buffer.get(encrypted)
+
+            // Decrypt with exception handling for keystore and decryption issues
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+
+            val secretKey = try {
+                getSecretKey(keyAlias)
+            } catch (e: UnrecoverableKeyException) {
+                log.error("Key recovery failed for alias: $keyAlias", e)
+                throw GeneralSecurityException("Failed to recover encryption key. The key may be corrupted or inaccessible.", e)
+            } catch (e: KeyStoreException) {
+                log.error("KeyStore access error for alias: $keyAlias", e)
+                throw GeneralSecurityException("Failed to access KeyStore. The encryption system may be compromised.", e)
+            } catch (e: ProviderException) {
+                log.error("Keystore provider error for alias: $keyAlias", e)
+                throw GeneralSecurityException("KeyStore provider error. The device security may have changed.", e)
+            }
+
+            val spec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec)
+
+            val decryptedBytes = try {
+                cipher.doFinal(encrypted)
+            } catch (e: AEADBadTagException) {
+                log.error("Authentication tag verification failed for alias: $keyAlias", e)
+                throw GeneralSecurityException("Decryption failed: data has been tampered with or wrong key used.", e)
+            } catch (e: BadPaddingException) {
+                log.error("Bad padding during decryption for alias: $keyAlias", e)
+                throw GeneralSecurityException("Decryption failed: invalid key or corrupted data.", e)
+            }
+
+            log.info("Decrypted data for alias: {}", keyAlias)
+
+            return String(decryptedBytes, StandardCharsets.UTF_8)
+        } catch (e: GeneralSecurityException) {
+            // Re-throw security exceptions as-is
+            throw e
+        } catch (e: Exception) {
+            // Catch any other unexpected exceptions and wrap them
+            log.error("Unexpected error during decryption for alias: $keyAlias", e)
+            throw GeneralSecurityException("Unexpected error during decryption: ${e.message}", e)
+        }
     }
 
     @Throws(KeyStoreException::class)
     override fun deleteKey(keyAlias: String) {
+        log.info("deleting $keyAlias")
         keyStore.deleteEntry(keyAlias)
-    }
-
-    /**
-     * Force IV recovery from backup sources when corruption is detected
-     * This allows SecurityGuard to trigger IV recovery after initialization
-     */
-    fun recoverIvFromBackups(): Boolean {
-        try {
-            log.info("Attempting to recover IV from backup sources...")
-            var recoveredIv: String? = null
-            // Try DataStore backup
-            backupConfig?.let { config ->
-                try {
-                    recoveredIv = kotlinx.coroutines.runBlocking {
-                        config.getEncryptionIv()
-                    }
-                    if (recoveredIv != null) {
-                        log.info("Recovered IV from DataStore backup")
-                        // Restore to primary SharedPreferences
-                        securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
-                    }
-                } catch (e: Exception) {
-                    log.warn("Failed to recover IV from DataStore backup", e)
-                }
-            }
-
-            if (recoveredIv == null) {
-                // Try file backups
-                recoveredIv = recoverIvFromFiles()
-                if (recoveredIv != null) {
-                    log.info("Recovered IV from file backup")
-                    // Restore to primary SharedPreferences and re-backup to all locations
-                    securityPrefs.edit { putString(ENCRYPTION_IV_KEY, recoveredIv) }
-                }
-            }
-
-            if (recoveredIv != null) {
-                encryptionIv = Base64.decode(recoveredIv, Base64.NO_WRAP)
-                log.info("Successfully recovered IV from backups")
-                return true
-            } else {
-                log.warn("No valid IV found in any backup source")
-                return false
-            }
-        } catch (e: Exception) {
-            log.error("Failed to recover IV from backups", e)
-            return false
-        }
     }
 
     @Throws(GeneralSecurityException::class)
     private fun getSecretKey(alias: String): SecretKey {
         if (!keyStore.containsAlias(alias)) {
             synchronized(keyGenerationLock) {
+                log.info("key store does not have $alias, but has {}, generating new key. Stack trace:\n{}",
+                    keyStore.aliases(),
+                    Thread.currentThread().stackTrace.joinToString("\n") { "  at $it" })
                 // Check again inside synchronized block
                 if (!keyStore.containsAlias(alias)) {
                     val keyGenerator: KeyGenerator = KeyGenerator
@@ -271,35 +191,5 @@ class ModernEncryptionProvider(
             }
         }
         return (keyStore.getEntry(alias, null) as KeyStore.SecretKeyEntry).secretKey
-    }
-    
-    
-    /**
-     * Migrate existing IV from previous versions that didn't have backup system
-     */
-    private fun migrateExistingIvToBackups() {
-        try {
-            // Check if migration has already been done using file flag
-            if (SecurityFileUtils.isMigrationCompleted(WalletApplication.getInstance().filesDir, MIGRATION_COMPLETED_FILE)) {
-                log.info("IV backup migration already completed")
-                return
-            }
-            
-            log.info("Starting IV backup migration for existing data")
-            
-            // Check if there's an existing IV in SharedPreferences
-            val existingIv = securityPrefs.getString(ENCRYPTION_IV_KEY, null)
-            if (existingIv != null && existingIv.isNotEmpty()) {
-                log.info("Migrating existing IV to backup system")
-                backupIv(existingIv)
-            }
-            
-            // Mark migration as completed using file flag
-            SecurityFileUtils.setMigrationCompleted(WalletApplication.getInstance().filesDir, MIGRATION_COMPLETED_FILE)
-            log.info("IV backup migration completed successfully")
-            
-        } catch (e: Exception) {
-            log.error("Failed to migrate existing IV to backup system", e)
-        }
     }
 }

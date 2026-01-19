@@ -65,7 +65,6 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SettingsFragment : Fragment(R.layout.fragment_settings) {
     private val log = LoggerFactory.getLogger(SettingsFragment::class.java)
-    //private val binding by viewBinding(FragmentSettingsBinding::bind)
     private val viewModel: SettingsViewModel by viewModels()
     @OptIn(ExperimentalCoroutinesApi::class)
     private val transactionMetadataSettingsViewModel: TransactionMetadataSettingsViewModel by viewModels()

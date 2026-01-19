@@ -22,8 +22,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.livedata.CheckPinLiveData
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.security.SecurityGuard
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
@@ -34,11 +36,14 @@ open class CheckPinViewModel @Inject constructor(
     val configuration: Configuration,
     private val pinRetryController: PinRetryController,
     val biometricHelper: BiometricHelper,
-    private val analytics: AnalyticsService
+    private val analytics: AnalyticsService,
+    private val authenticationManager: AuthenticationManager
 ) : ViewModel() {
 
     val pin = StringBuilder()
     internal val checkPinLiveData = CheckPinLiveData(walletData.wallet!!)
+
+    val authenticationHealth = authenticationManager.observeHealth()
 
     val isWalletLocked: Boolean
         get() = pinRetryController.isLocked
@@ -86,5 +91,9 @@ open class CheckPinViewModel @Inject constructor(
 
     fun logEvent(eventName: String) {
         analytics.logEvent(eventName, mapOf())
+    }
+
+    fun checkHealth(): Boolean {
+        return SecurityGuard.getInstance().validateKeyIntegrity()
     }
 }

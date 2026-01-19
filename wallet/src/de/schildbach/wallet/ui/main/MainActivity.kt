@@ -34,6 +34,7 @@ import androidx.activity.viewModels
 import androidx.annotation.NavigationRes
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
 import androidx.core.view.isVisible
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
@@ -263,10 +264,10 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }
         }
-        viewModel.sendContactRequestState.observe(this) {
+        viewModel.sendContactRequestState.observe(this) { workInfoMap ->
             config.inviter?.also { initInvitationUserId ->
                 if (!config.inviterContactRequestSentInfoShown) {
-                    it?.get(initInvitationUserId)?.apply {
+                    workInfoMap[initInvitationUserId]?.apply {
                         if (status == Status.SUCCESS) {
                             log.info("showing successfully sent contact request dialog")
                             showInviteSendContactRequestDialog(initInvitationUserId)
@@ -395,7 +396,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         if (NfcAdapter.ACTION_NDEF_DISCOVERED == action) {
             val inputType = intent.type
 
-            @Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
             val ndefMessage = intent
                 .getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)!![0] as NdefMessage
             val input = Nfc.extractMimePayload(Constants.MIMETYPE_TRANSACTION, ndefMessage)
@@ -473,7 +473,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         }
     }
 
-    fun handleEncryptKeysRestoredWallet() {
+    private fun handleEncryptKeysRestoredWallet() {
         EncryptKeysDialogFragment.show(false, supportFragmentManager) { resetBlockchain() }
     }
 

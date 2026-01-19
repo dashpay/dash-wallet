@@ -41,7 +41,7 @@ data class BlockchainState(var bestChainDate: Date?,
         }
 
     enum class Impediment {
-        STORAGE, NETWORK
+        STORAGE, NETWORK, SECURITY
     }
 
     fun syncFailed(): Boolean {

@@ -15,13 +15,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.features.exploredash.utils
+package org.dash.wallet.common.data
 
-object PiggyCardsConstants {
-    const val REPORT_EMAIL = "support@piggy.cards"
-    const val BASE_URL_DEV = "https://api.piggy.cards/dash/v1/"
-    const val BASE_URL_PROD = "https://api.piggy.cards/dash/v1/"
-    const val BASE_URL = BASE_URL_PROD
-
-    const val TOKEN_EXPIRES_IN_SECONDS = 3600
+enum class SecuritySystemStatus(
+    val value: Int,
+    val isHealthy: Boolean,
+    val hasFallback: Boolean
+) {
+    DEAD(0, false, false),
+    FALLBACKS(2, false, true),
+    HEALTHY(1, true, false),
+    HEALTHY_WITH_FALLBACKS(3, true, true);
 }
