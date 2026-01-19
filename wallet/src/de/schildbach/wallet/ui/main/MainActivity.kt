@@ -363,24 +363,6 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
         // TODO: can we remove this?
     }
 
-    private fun showRestoreWalletFromSeedDialog() {
-        RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-    }
-
-    fun handleRestoreWalletFromSeed() {
-        showRestoreWalletFromSeedDialog()
-    }
-
-    fun restoreWallet(wallet: Wallet?) {
-        walletApplication.replaceWallet(wallet)
-        getSharedPreferences(Constants.WALLET_LOCK_PREFS_NAME, Context.MODE_PRIVATE).edit(true) {
-            clear()
-        }
-        config.disarmBackupReminder()
-        upgradeWalletKeyChains(Constants.BIP44_PATH, true)
-        upgradeWalletCoinJoin(true)
-    }
-
     private fun handleInvite(invite: InvitationLinkData) {
         val acceptInviteIntent = AcceptInviteActivity.createIntent(this, invite, false)
         startActivity(acceptInviteIntent)

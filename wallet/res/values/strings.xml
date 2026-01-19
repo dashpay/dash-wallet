@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Your wallet was successfully restored. Its balance will be determined next. This will take some time.</string>
     <string name="restore_wallet_dialog_success_encrypted">Warning: Your wallet is protected by a spending PIN. Make sure you still remember it before you receive to this wallet.</string>
     <string name="import_keys_dialog_failure">Wallet could not be restored:\n\n%s\n\nBad password?</string>
+    <string name="restore_wallet_creation_date_label">Wallet Creation Date (Optional)</string>
+    <string name="restore_wallet_creation_date_info">Selecting when your wallet was created allows faster sync by scanning only from that date forward.</string>
+    <string name="restore_wallet_select_date">Select Creation Date</string>
+    <string name="restore_wallet_selected_date">Selected: %s</string>
+    <string name="restore_wallet_date_picker_title">When was your wallet created?</string>
+    <string name="wallet_creation_date_info_title">How can the wallet creation date speed up the process?</string>
+    <string name="wallet_creation_date_info_description">If you know the approximate date that you created your wallet, you can enter it and transactions from that date will be retrieved making the sync faster. Please note, if you enter a date that is later than when you created the wallet, older transactions will not be downloaded.</string>
     <string name="export_keys_dialog_title">Back up wallet</string>
     <string name="backup_wallet_dialog_message">Your backup will be encrypted with the chosen password and written to external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Rescan blockchain, transactions and wallet balance. Replay will take a while, so only do this if you know why.</string>
     <string name="preferences_initiate_reset_dialog_message">Would you like to rescan the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as the blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Rescan</string>
+    <string name="rescan_blockchain_dialog_title">Are you sure you want to rescan blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">This will temporarily hide your wallet balance and remove transactions. Both will recover as blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
+    <string name="rescan_blockchain_select_date_label">Select wallet creation date (optional)</string>
+    <string name="rescan_blockchain_date_info_description">Information about wallet creation date</string>
+    <string name="rescan_blockchain_select_date_placeholder">Select</string>
+    <string name="rescan_blockchain_confirm_button">Rescan</string>
     <string name="preferences_extended_public_key_title">Show xpub</string>
     <string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
     <string name="bitmap_fragment_share">Share…</string>
