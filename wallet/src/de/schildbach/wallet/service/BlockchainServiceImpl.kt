@@ -515,8 +515,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             oldTransactionsToMonitor.forEach { (_, tx) ->
                 val transactionConfidence = tx.getConfidence(application.wallet!!.context)
                 val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
-                    transactionConfidence.depthInBlocks =
-                        application.wallet!!.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+//                    log.info(
+//                        "tx {}; {} == {}",
+//                        transactionConfidence.transactionHash,
+//                        transactionConfidence.depthInBlocks,
+//                        application.wallet!!.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+//                    )
 
                     val requiredDepth = if (tx.isCoinBase) {
                         wallet.params.spendableCoinbaseDepth
@@ -569,7 +573,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             TransactionConfidence.ConfidenceType.PENDING -> true
             TransactionConfidence.ConfidenceType.BUILDING -> when {
                 tx.isCoinBase -> confidence.depthInBlocks < wallet.params.spendableCoinbaseDepth
-                confidence.isChainLocked -> false
                 else -> confidence.depthInBlocks < 6
             }
 
@@ -719,13 +722,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
             override fun onHeadersDownloadStarted(peer: Peer?, blocksLeft: Int) {
                 super.onHeadersDownloadStarted(peer, blocksLeft)
-                // application.wallet!!.updateTransactionDepth()
             }
 
             override fun onChainDownloadStarted(peer: Peer?, blocksLeft: Int) {
                 super.onChainDownloadStarted(peer, blocksLeft)
-                watch.start();
-                // application.wallet!!.updateTransactionDepth()
+                if (!watch.isRunning) {
+                    watch.start();
+                }
             }
 
             override fun onBlocksDownloaded(
@@ -783,8 +786,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
              */
             override fun doneDownload() {
                 super.doneDownload()
-                // application.wallet!!.updateTransactionDepth()
-                watch.stop()
+                if (watch.isRunning) {
+                    watch.stop()
+                }
                 log.info("DoneDownload {} in {}", syncPercentage, watch)
                 // if the chain is already synced from a previous session, then syncPercentage = 0
                 // set to 100% so that observers will see that sync is completed
@@ -1575,8 +1579,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 )
                 wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
-                // propagateContext()
-                //wallet.updateTransactionDepth()
                 blockChain?.addNewBestBlockListener(newBestBlockListener)
                 config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
@@ -1882,8 +1884,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
-                    // propagateContext()
-                    // wallet.updateTransactionDepth()
                     stopMonitoringOlderTransactions(wallet)
                 }
                 blockChain?.removeNewBestBlockListener(newBestBlockListener)
