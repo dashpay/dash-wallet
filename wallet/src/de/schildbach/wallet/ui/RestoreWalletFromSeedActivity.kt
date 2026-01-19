@@ -219,19 +219,34 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                 if (!recoveryData.requiresReset) {
                     startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
                 } else {
-                    viewModel.restoreWalletFromSeed(words, onboarding = false, requireBlockchainReset = true)
+                    // recovery that requires a blockchain rescan
+                    if (viewModel.restoreWalletFromSeed(words)) {
+                        startActivityForResult(
+                            SetPinActivity.createIntent(
+                                walletApplication,
+                                R.string.set_pin_restore_wallet,
+                                onboarding = false,
+                                onboardingPath = OnboardingPath.RestoreSeed,
+                                requiresRescan = true
+                            ),
+                            SET_PIN_REQUEST_CODE
+                        )
+                    } else {
+                        showErrorDialog(getString(R.string.restore_wallet_from_invalid_seed_failure, getString(R.string.error)))
+                    }
                 }
             } else {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
         } else {
-            if (viewModel.restoreWalletFromSeed(words, onboarding = true, requireBlockchainReset = false)) {
+            if (viewModel.restoreWalletFromSeed(words)) {
                 startActivityForResult(
                     SetPinActivity.createIntent(
                         walletApplication,
                         R.string.set_pin_restore_wallet,
                         onboarding = true,
-                        onboardingPath = OnboardingPath.RestoreSeed
+                        onboardingPath = OnboardingPath.RestoreSeed,
+                        requiresRescan = false
                     ),
                     SET_PIN_REQUEST_CODE
                 )

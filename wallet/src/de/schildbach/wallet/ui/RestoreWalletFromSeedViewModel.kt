@@ -188,7 +188,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
         return words.map { it.lowercase(Locale.getDefault()) }
     }
 
-    suspend fun restoreWalletFromSeed(words: List<String>, onboarding: Boolean, requireBlockchainReset: Boolean): Boolean {
+    suspend fun restoreWalletFromSeed(words: List<String>): Boolean = withContext(Dispatchers.IO) {
         if (isSeedValid(words)) {
             val creationTime = selectedCreationDate.value
             val wallet = walletFactory.restoreFromSeed(Constants.NETWORK_PARAMETERS, normalize(words), creationTime)
