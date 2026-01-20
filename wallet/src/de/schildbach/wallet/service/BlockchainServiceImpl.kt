@@ -508,6 +508,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private val oldTransactionsToMonitor = ConcurrentHashMap<Sha256Hash, Transaction>()
+    private var txConfidenceJob: Job? = null
 
     private fun updateTxConfidence() {
         application.wallet?.let { wallet ->
@@ -1613,7 +1614,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
 
-                merge(
+                txConfidenceJob = merge(
                     currentBlock.filterNotNull().sample(APPWIDGET_THROTTLE_MS),
                     currentBlock.filterNotNull().debounce(APPWIDGET_THROTTLE_MS)
                 ).distinctUntilChanged()
@@ -1879,14 +1880,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                 log.info("detaching from wallet")
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
+                blockChain?.removeNewBestBlockListener(newBestBlockListener)
+                // Cancel tx confidence monitoring job before cleanup to prevent CME
+                txConfidenceJob?.cancel()
+                txConfidenceJob?.join()
+                txConfidenceJob = null
+
                 val wallet = application.wallet
                 if (wallet != null) {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
+
                     stopMonitoringOlderTransactions(wallet)
                 }
-                blockChain?.removeNewBestBlockListener(newBestBlockListener)
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
                 if (peerGroup != null) {
