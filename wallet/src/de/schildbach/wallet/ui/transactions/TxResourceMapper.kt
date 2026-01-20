@@ -34,6 +34,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 open class TxResourceMapper {
     companion object {
@@ -158,6 +159,7 @@ open class TxResourceMapper {
         context: Context,
         bestChainLockBlockHeight: Int
     ): Int {
+        val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
         val confidence = tx.getConfidence(context)
         var statusId = -1
         if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
@@ -170,7 +172,7 @@ open class TxResourceMapper {
                 if (confirmations < Constants.NETWORK_PARAMETERS.spendableCoinbaseDepth) {
                     statusId = R.string.transaction_row_status_locked
                 }
-            } else if (confirmations < 6 && !isChainLocked && confidence.ixType != TransactionConfidence.IXType.IX_LOCKED) {
+            } else if (confirmations < 6 && !isChainLocked && confidence.ixType != TransactionConfidence.IXType.IX_LOCKED && tx.updateTime.time > oneHourAgo) {
                 // confirmations < 6
                 // not ChainLocked
                 // not InstantSendLocked
