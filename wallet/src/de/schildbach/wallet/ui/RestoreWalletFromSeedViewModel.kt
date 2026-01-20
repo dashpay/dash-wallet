@@ -122,7 +122,7 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
             true
         } catch (x: MnemonicException) {
             log.info("problem restoring wallet from seed: ", x)
-            throw x
+            false
         }
     }
 }
