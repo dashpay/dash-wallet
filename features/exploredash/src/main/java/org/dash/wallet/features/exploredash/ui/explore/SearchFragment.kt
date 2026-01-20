@@ -82,11 +82,13 @@ import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.DashSpendTermsD
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.ui.extensions.*
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
 class SearchFragment : Fragment(R.layout.fragment_search) {
     companion object {
         private const val SCROLL_OFFSET_FOR_UP = 700
+        private val log = LoggerFactory.getLogger(SearchFragment::class.java)
     }
 
     private val binding by viewBinding(FragmentSearchBinding::bind)
@@ -263,6 +265,10 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
                     }
                 }
             }
+        }
+        viewLifecycleOwner.lifecycleScope.launch {
+            log.info("purchase from IP:  {}", getPublicIPAddress())
+            log.info("country from IP: {}", getCountryCodeFromIP())
         }
     }
 
