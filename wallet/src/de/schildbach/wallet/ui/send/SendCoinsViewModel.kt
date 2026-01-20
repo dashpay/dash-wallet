@@ -232,7 +232,7 @@ class SendCoinsViewModel @Inject constructor(
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
     ): Transaction = withContext(Dispatchers.IO) {
-        _state.value = State.SENDING
+        _state.postValue(State.SENDING)
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
         }
@@ -250,11 +250,11 @@ class SendCoinsViewModel @Inject constructor(
 
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
-            _state.value = State.FAILED
+            _state.postValue(State.FAILED)
             throw ex
         }
 
-        _state.value = State.SENT
+        _state.postValue(State.SENT)
         transaction
     }
 
