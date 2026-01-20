@@ -193,9 +193,14 @@ constructor(private val context: Context, private val client: FusedLocationProvi
         return suspendCancellableCoroutine { continuation ->
             client.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
-                    val results = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                    continuation.resume(results?.firstOrNull()?.countryCode ?: "")
+                    try {
+                        val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
+                        val results = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                        continuation.resume(results?.firstOrNull()?.countryCode ?: "")
+                    } catch (e: Exception) {
+                        log.info("GeocoderException ${e.message}")
+                        continuation.resume("")
+                    }
                 } else {
                     continuation.resume("")
                 }
