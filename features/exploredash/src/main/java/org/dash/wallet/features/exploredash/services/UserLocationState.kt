@@ -199,8 +199,7 @@ constructor(private val context: Context, private val client: FusedLocationProvi
                 } else {
                     continuation.resume("")
                 }
-            }
-            client.lastLocation.addOnFailureListener {
+            }.addOnFailureListener {
                 continuation.resume("")
             }
         }
