@@ -213,10 +213,28 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
 
     private suspend fun restoreWallet(words: ArrayList<String>) {
         if (recoveryPinMode) {
-            val pin = viewModel.recoverPin(words)
+            val recoveryData = viewModel.recoverPin(words)
 
-            if (pin != null) {
-                startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, pin))
+            if (recoveryData != null) {
+                if (!recoveryData.requiresReset) {
+                    startActivity(SetPinActivity.createIntent(this, R.string.set_pin_set_pin, true, recoveryData.pin))
+                } else {
+                    // recovery that requires a blockchain rescan
+                    if (viewModel.restoreWalletFromSeed(words)) {
+                        startActivityForResult(
+                            SetPinActivity.createIntent(
+                                walletApplication,
+                                R.string.set_pin_restore_wallet,
+                                onboarding = false,
+                                onboardingPath = OnboardingPath.RestoreSeed,
+                                requiresRescan = true
+                            ),
+                            SET_PIN_REQUEST_CODE
+                        )
+                    } else {
+                        showErrorDialog(getString(R.string.restore_wallet_from_invalid_seed_failure, getString(R.string.error)))
+                    }
+                }
             } else {
                 showErrorDialog(getString(R.string.forgot_pin_passphrase_doesnt_match))
             }
@@ -227,7 +245,8 @@ class RestoreWalletFromSeedActivity : RestoreFromFileActivity() {
                         walletApplication,
                         R.string.set_pin_restore_wallet,
                         onboarding = true,
-                        onboardingPath = OnboardingPath.RestoreSeed
+                        onboardingPath = OnboardingPath.RestoreSeed,
+                        requiresRescan = false
                     ),
                     SET_PIN_REQUEST_CODE
                 )

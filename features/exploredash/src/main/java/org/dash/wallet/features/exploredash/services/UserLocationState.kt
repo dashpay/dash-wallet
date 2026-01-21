@@ -17,10 +17,12 @@
 
 package org.dash.wallet.features.exploredash.services
 
+import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.os.Looper
+import androidx.annotation.RequiresPermission
 import com.google.android.gms.location.*
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
@@ -28,11 +30,13 @@ import com.google.maps.android.SphericalUtil
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
+import kotlin.coroutines.resume
 import kotlin.math.*
 
 data class UserLocation(var latitude: Double, var longitude: Double, var accuracy: Double)
@@ -45,6 +49,7 @@ interface UserLocationStateInt {
     fun distanceBetween(location1: UserLocation, location2: UserLocation): Double
     fun distanceBetween(lat1: Double, lng1: Double, lat2: Double, lng2: Double): Double
     fun getRadiusBounds(centerLat: Double, centerLng: Double, radius: Double): GeoBounds
+    suspend fun getCountryCodeFromLocation(): String
 }
 
 class UserLocationState
@@ -182,4 +187,42 @@ constructor(private val context: Context, private val client: FusedLocationProvi
             latLngBounds.center.longitude
         )
     }
+
+    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+    override suspend fun getCountryCodeFromLocation(): String {
+        return suspendCancellableCoroutine { continuation ->
+            client.lastLocation.addOnSuccessListener { location ->
+                if (location != null) {
+                    try {
+                        val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
+                        val results = geocoder.getFromLocation(location.latitude, location.longitude, 1)
+                        continuation.resume(results?.firstOrNull()?.countryCode ?: "")
+                    } catch (e: Exception) {
+                        log.info("GeocoderException ${e.message}")
+                        continuation.resume("")
+                    }
+                } else {
+                    continuation.resume("")
+                }
+            }.addOnFailureListener {
+                continuation.resume("")
+            }
+        }
+    }
+
+    // TODO: this doesn't give the country name, though it doesn't use callbacks
+//    @RequiresPermission(anyOf = [Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION])
+//    override suspend fun getCountryCodeFromLocation(): String = withContext(Dispatchers.IO) {
+//        try {
+//            val location = client.lastLocation.await() ?: return@withContext ""
+//            val geocoder = Geocoder(context, GenericUtils.getDeviceLocale())
+//            geocoder.getFromLocation(location.latitude, location.longitude, 1)
+//                ?.firstOrNull()
+//                ?.countryCode
+//                        .orEmpty()
+//        } catch (e: Exception) {
+//            log.info("GeocoderException ${e.message}")
+//            ""
+//        }
+//    }
 }

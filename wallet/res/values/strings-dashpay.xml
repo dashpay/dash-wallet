@@ -16,9 +16,10 @@
     <string name="new_account_confirm_accept">I Accept</string>
     <string name="new_account_confirm_upgrade_fee">Upgrade Fee</string>
     <string name="new_account_confirm_message">You have chosen %s as your username. Please note that the username can NOT be changed once it is registered.</string>
+    <string name="new_account_secondary_confirm_message">You chose %s as an instant username. Please note that the username can NOT be changed once it is registered.</string>
     <string name="invitation_confirm_title">Invitation Fee</string>
     <string name="invitation_confirm_message">Each invitation will be funded with this amount so that the receiver can quickly create their username on the Dash Network</string>
-    <string name="invitation_init_title">Invite</string>
+    <string name="invitation_title">Invitation</string>
     <string name="invitation_init_header">Invite your friends &amp; family</string>
     <string name="invitation_init_message">Help your friends and family join the Dash Network. Invite them to the world of social banking.</string>
     <string name="invitation_init_button_text">Create a new Invitation</string>
@@ -52,8 +53,12 @@
     <string name="invitation_invalid_invite_message">Your invitation from %s is not valid</string>
     <string name="invitation_username_already_found_title">Username already found</string>
     <string name="invitation_username_already_found_message">You cannot claim this invite since you already have a Dash username</string>
+    <string name="invitation_username_already_found_voting_title">Username already requested</string>
+    <string name="invitation_username_already_found_voting_message">You cannot claim this invite since you have already requested a Dash username</string>
     <string name="invitation_onboarding_has_began_error_title">Onboarding Error</string>
+    <string name="invitation_error_title">Invitation Error</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is in process, please claim your invite after you have created your wallet.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay is currently processing an invite.</string>
     <string name="invitation_accept_title_1">Get your Username</string>
     <string name="invitation_accept_title_2">Add your Friends &amp; Family</string>
     <string name="invitation_accept_message_2">Invite your family, find your friends by searching their usernames</string>
@@ -210,6 +215,8 @@
 
     <string name="join_dashpay_subtitle">Create Username, add your friends…</string>
     <string name="join_dashpay_more_subtitle">Create your Username, find your friends and add them to your contacts</string>
+    <string name="join_dashpay_more_subtitle_two">Create a username and say goodbye to numerical addresses</string>
+    <string name="join_dashpay_wait">Wait until syncing is finished to create a username</string>
     <string name="join">Join</string>
 
     <string name="more_suggestions">More Suggestions</string>
@@ -306,6 +313,7 @@
         <item>Has Blocked votes</item>
     </string-array>
     <string name="request_your_username">Create your username</string>
+    <string name="request_instant_username">Create instant username</string>
     <string name="request_your_hint">Please note that you will not be able to change it in the future</string>
     <string name="request_username">Request Username</string>
     <string name="request_voting_range">The Dash network will vote on this username. We will notify you of the results on %s.</string>
@@ -382,6 +390,8 @@
     <string name="requested_voting_duration">Results on %s.</string>
     <string name="cancel_request">Cancel Request</string>
     <string name="after_the_voting">After the voting ends we will notify you about its results</string>
+    <string name="after_the_voting_result">Voting has ended</string>
+    <string name="voting_period_error">Voting period not found</string>
     <string name="none">None</string>
     <string name="verify_now">Verify Now</string>
     <string name="if_you_tap_cancel">If you tap “Cancel Request”, you will still have a chance to request another username without paying again</string>
@@ -438,8 +448,12 @@
 
     <string name="request_username_username_voting_message">+ what is username voting?</string>
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
+    <string name="request_username_character_requirement_invite_noncontested">Numbers 2-9</string>
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
+    <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
+    <string name="request_username_length_requirement_noncontested">Between 20 and 23 characters</string>
     <string name="request_username_confirm">I accept</string>
     <string name="username_vote_one_left_message">You have already voted for this username %d times. You can only cast one more vote for this username.</string>
     <string name="username_vote_one_left">One vote left</string>
@@ -512,4 +526,27 @@
     <string name="transaction_metadata_you_have_n_tx">You have %d unsaved transactions since %s</string>
     <string name="transaction_metadata_save_transactions">Save unsaved transactions</string>
     <string name="transaction_metadata_continue_without_saving">Continue without saving</string>
+    <string name="invitation_fee_title">Invitation Fee</string>
+    <string name="invitation_fee_message">Each invitation will be funded so that the receiver can quickly create their username on the Dash Network.</string>
+    <string name="invitation_fee_noncontested">Non-contested</string>
+    <string name="invitation_fee_contested">Contested</string>
+    <string name="invitation_fee_contested_message">The person that you send this invitation to can request any username they want and the network will vote to approve it.</string>
+    <string name="invitation_fee_noncontested_message">The person that you send this invitation to can request a username that has a number 2-9, is more than 20 characters.</string>
+    <string name="invitation_creating_progress_loading">Loading Invite...</string>
+    <string name="invitation_creating_progress_wip">Creating Invitation...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Confirm and pay</string>
+    <string name="error_sending_invite_transaction">Error sending invite transaction</string>
+    <string name="request_username_invitation_not_mixed_message">The invitation was created with unmixed funds</string>
+    <string name="request_username_invitation_only_noncontested_message">You can only create a non-contested username using this invitation</string>
+    <string name="username_types_title">What are contested and non-contested usernames?</string>
+    <string name="username_types_message">There are two types of usernames: contested and non-contested.\n\nNon-contested usernames have at least one number (2-9) or are longer than 20 characters and will be automatically approved.\n\nIf you want to create a contested username which is shorter and without numbers, you need to register with DashPay without an invitation, pay the required fee and wait for approval upon completion of the voting period.</string>
+    <string name="accept_invitation_hide">Hide</string>
+    <string name="accept_invitation_create">Create</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Create an instant username</string>
+    <string name="create_instant_username_description">Your requested username will be voted on for 2 weeks. For immediate contacts and payments, you can create a similar instant username.\n\nIf your original request is approved, it replaces the instant one, preserving contacts and history. If not, continue using the instant one uninterrupted.</string>
+    <string name="create_instant_username_button">Create instant username</string>
+    <string name="create_instant_username_cancel">Cancel</string>
+
 </resources>

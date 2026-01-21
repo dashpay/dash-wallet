@@ -17,14 +17,16 @@
 
 package de.schildbach.wallet.ui.invite
 
+import android.app.Activity
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.isVisible
 import androidx.core.widget.doAfterTextChanged
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 
 import de.schildbach.wallet.database.entity.Invitation
@@ -34,51 +36,37 @@ import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInviteDetailsBinding
 import de.schildbach.wallet_test.databinding.InvitationBitmapTemplateBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.util.KeyboardUtil
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
+import org.slf4j.LoggerFactory
 
+@ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
-
     companion object {
-        private const val ARG_IDENTITY_ID = "identity_id"
-        private const val ARG_SOURCE = "source"
-        private const val ARG_INVITE_INDEX = "invite_index"
-
-        fun newInstance(identity: String, inviteIndex: Int, source: String = ""): InviteDetailsFragment {
-            val fragment = InviteDetailsFragment()
-            fragment.arguments = Bundle().apply {
-                putString(ARG_IDENTITY_ID, identity)
-                putString(ARG_SOURCE, source)
-                putInt(ARG_INVITE_INDEX, inviteIndex)
-            }
-            return fragment
-        }
+        val log = LoggerFactory.getLogger(InviteDetailsFragment::class.java)
     }
-    private lateinit var binding: FragmentInviteDetailsBinding
+    private val binding by viewBinding(FragmentInviteDetailsBinding::bind)
+    private val args by navArgs<InviteDetailsFragmentArgs>()
     override val invitationBitmapTemplateBinding: InvitationBitmapTemplateBinding
         get() = binding.invitationBitmapTemplate
 
-    var tagModified = false
-    var inviteIndex = -1
+    private var tagModified = false
+    private var inviteIndex = -1
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentInviteDetailsBinding.bind(view)
-        setHasOptionsMenu(true)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
-        toolbar.title = getString(R.string.menu_invite_title)
-        val appCompatActivity = requireActivity() as AppCompatActivity
-        appCompatActivity.setSupportActionBar(toolbar)
-
-        val actionBar = appCompatActivity.supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+        toolbar.title = getString(R.string.invitation_title)
+        toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
         }
 
         binding.previewButton.setOnClickListener {
@@ -89,7 +77,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_COPY_LINK)
             copyInvitationLink()
         }
-        binding. sendButton.setOnClickListener {
+        binding.sendButton.setOnClickListener {
             shareInvitation(true)
         }
         binding.sendButton.setOnLongClickListener {
@@ -111,7 +99,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 if (profile != null) {
                     startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
                 } else {
-                    /*not sure why this is happening*/
+                    /* not sure why this is happening */
                     AdaptiveDialog.create(
                         R.drawable.ic_warning,
                         getString(R.string.invitation_creating_error_message_not_synced),
@@ -126,14 +114,21 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         binding.claimedView.isVisible = false
 
         initViewModel()
+
+        sendInviteLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            if (it.resultCode == Activity.RESULT_OK) {
+                findNavController().popBackStack()
+            }
+        }
     }
 
     private fun initViewModel() {
-        val identityId = requireArguments().getString(ARG_IDENTITY_ID)
-        inviteIndex = requireArguments().getInt(ARG_INVITE_INDEX)
-        viewModel.identityIdLiveData.value = identityId
+        val identityId = args.identityId
+        inviteIndex = args.inviteIndex
+        viewModel.identityId.value = identityId
 
-        viewModel.invitationLiveData.observe(viewLifecycleOwner) {
+        viewModel.invitation.filterNotNull().observe(viewLifecycleOwner) {
+            log.info("invitation changed: $it")
             if (it.memo.isNotEmpty()) {
                 binding.tagEdit.setText(it.memo)
                 binding.memo.text = it.memo
@@ -158,8 +153,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         viewModel.logEvent(AnalyticsConstants.Invites.DETAILS)
     }
 
-    private fun getTagHint() =
-        requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
+    private fun getTagHint() = requireContext().getString(R.string.invitation_created_title) + " " + inviteIndex
 
     private fun showPending(it: Invitation) {
         binding.sendButton.isVisible = it.canSendAgain()
@@ -169,6 +163,9 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
         if (!it.canSendAgain()) {
             binding.memo.setText(R.string.invitation_invalid_invite_title)
             binding.pendingView.isVisible = false
+            // binding.recoverView.isVisible = true
+        } else {
+            // binding.recoverView.isVisible = false
         }
     }
 
@@ -178,6 +175,7 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 binding.icon.setImageResource(R.drawable.ic_claimed_invite)
                 binding.claimedView.isVisible = true
                 binding.pendingView.isVisible = false
+                // binding.recoverView.isVisible = false
                 binding.previewButton.isVisible = false
                 binding.profileButton.isVisible = true
                 binding.status.setText(R.string.invitation_details_invite_used_by)
@@ -208,30 +206,11 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
             viewModel.logEvent(AnalyticsConstants.Invites.DETAILS_TAG)
         }
 
-        super.shareInvitation(shareImage, viewModel.invitation.shortDynamicLink)
+        super.shareInvitation(shareImage, viewModel.invitation.value!!.shortDynamicLink)
     }
 
     private fun copyInvitationLink() {
-        super.copyInvitationLink(viewModel.invitation.shortDynamicLink)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.option_close -> {
-                requireActivity().run {
-                    KeyboardUtil.hideKeyboard(this, binding.tagEdit)
-                    finish()
-                }
-                true
-            }
-            android.R.id.home -> {
-                requireActivity().onBackPressed()
-                return true
-            }
-            else -> {
-                super.onOptionsItemSelected(item)
-            }
-        }
+        super.copyInvitationLink(viewModel.invitation.value!!.shortDynamicLink)
     }
 
     override fun onStop() {

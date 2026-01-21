@@ -26,4 +26,7 @@
 
     <include android:id="@+id/identity_creation"
         layout="@layout/identity_creation_state" />
+
+    <include android:id="@+id/accept_invitation"
+        layout="@layout/accept_invitation_row" />
 </LinearLayout>

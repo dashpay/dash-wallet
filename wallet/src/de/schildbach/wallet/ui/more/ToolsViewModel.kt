@@ -19,23 +19,21 @@ package de.schildbach.wallet.ui.more
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.transactions.TransactionExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import java.util.*
 import javax.inject.Inject
 
@@ -46,7 +44,8 @@ class ToolsViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider,
     val blockchainStateDao: BlockchainStateDao,
     val dashPayConfig: DashPayConfig,
-    val identityConfig: BlockchainIdentityConfig
+    val identityConfig: BlockchainIdentityConfig,
+    val analyticsService: AnalyticsService
 ) : ViewModel() {
     val blockchainState = blockchainStateDao.observeState()
 
@@ -73,33 +72,24 @@ class ToolsViewModel @Inject constructor(
         )
     }
 
-    val transactionExporter = MutableLiveData<TransactionExporter>()
-    fun getTransactionExporter() {
-        viewModelScope.launch {
-            val list = transactionMetadataProvider.getAllTransactionMetadata()
-
-            val map = if (list.isNotEmpty()) {
-                list.associateBy({ it.txId }, { it })
-            } else {
-                mapOf()
-            }
-            transactionExporter.value = TaxBitExporter(
-                walletData.wallet!!,
-                map,
-            )
-        }
+    suspend fun getTransactionExporter(): TransactionExporter = withContext(Dispatchers.IO) {
+        TaxBitExporter(
+            transactionMetadataProvider,
+            walletData.wallet!!,
+        )
     }
 
-    suspend fun setCreditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
-    }
-    suspend fun creditsExplained() = withContext(Dispatchers.IO) {
-        dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
+    suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)
+
+    suspend fun creditsExplained() = dashPayConfig.get(DashPayConfig.CREDIT_INFO_SHOWN) ?: false
+
+    suspend fun hasUsername(): Boolean {
+        return identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
+                (IdentityCreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
+                    ?: "NONE") >= IdentityCreationState.DONE)
     }
 
-    suspend fun hasUsername(): Boolean = withContext(Dispatchers.IO) {
-        identityConfig.get(BlockchainIdentityConfig.IDENTITY_ID) != null &&
-                BlockchainIdentityData.CreationState.valueOf(identityConfig.get(BlockchainIdentityConfig.CREATION_STATE)
-                    ?: "NONE") >= BlockchainIdentityData.CreationState.DONE
+    fun logEvent(event: String) {
+        analyticsService.logEvent(event, mapOf())
     }
 }

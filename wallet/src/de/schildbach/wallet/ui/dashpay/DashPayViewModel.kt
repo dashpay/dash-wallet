@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -310,7 +311,8 @@ open class DashPayViewModel @Inject constructor(
         return msg
     }
 
-    suspend fun getInviteHistory() = invitations.loadAll()
+    suspend fun getInviteHistory() = withContext(Dispatchers.IO) { invitations.loadAll() }
+    suspend fun getInviteCount() = withContext(Dispatchers.IO) { invitations.count() }
 
     fun contactRequestsTo(userId: String): LiveData<List<DashPayContactRequest>> =
         contactRequestDao.observeToOthers(userId).distinctUntilChanged().asLiveData()

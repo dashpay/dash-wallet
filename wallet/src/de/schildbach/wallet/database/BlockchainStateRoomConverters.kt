@@ -19,9 +19,8 @@ package de.schildbach.wallet.database
 
 import android.net.Uri
 import androidx.room.TypeConverter
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.data.InvitationLinkData
-import org.dashj.platform.dashpay.BlockchainIdentity
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import org.dashj.platform.dpp.identity.Identity
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.bitcoinj.core.Coin
@@ -60,12 +59,12 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toIdentityCreationState(value: Int): BlockchainIdentityData.CreationState {
-        return BlockchainIdentityData.CreationState.values()[value]
+    fun toIdentityCreationState(value: Int): IdentityCreationState {
+        return IdentityCreationState.values()[value]
     }
 
     @TypeConverter
-    fun fromIdentityCreationState(identityCreationState: BlockchainIdentityData.CreationState): Int {
+    fun fromIdentityCreationState(identityCreationState: IdentityCreationState): Int {
         return identityCreationState.ordinal
     }
 

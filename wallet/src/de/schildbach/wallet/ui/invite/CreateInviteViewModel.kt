@@ -17,9 +17,7 @@
 
 package de.schildbach.wallet.ui.invite
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MediatorLiveData
-import androidx.lifecycle.asLiveData
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
@@ -27,14 +25,17 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
+import org.bitcoinj.core.Coin
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -42,49 +43,58 @@ import javax.inject.Inject
 class CreateInviteViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val analytics: AnalyticsService,
-     blockchainStateDao: BlockchainStateDao,
+    blockchainStateDao: BlockchainStateDao,
     invitationsDao: InvitationsDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    val blockchainStateData = blockchainStateDao.observeState().asLiveData(viewModelScope.coroutineContext)
-    //val blockchainState: LiveData<BlockchainState>
-    //    get() = blockchainStateData.asLiveData(viewModelScope)
+    private val blockchainStateData = MutableStateFlow<BlockchainState?>(null)
+    private val spendableBalance = MutableStateFlow(Coin.ZERO)
+    val invitations = MutableStateFlow<List<Invitation>>(listOf())
 
-    val isAbleToCreateInviteLiveData = MediatorLiveData<Boolean>().apply {
-        addSource(blockchainStateData) {
-            value = combineLatestData()
-        }
-        addSource(blockchainIdentity) {
-            value = combineLatestData()
-        }
-        addSource(walletData.observeSpendableBalance().asLiveData()) {
-            value = combineLatestData()
-        }
+    init {
+        invitationsDao.observe()
+            .onEach { invitations.value = it }
+            .launchIn(viewModelScope)
+
+        blockchainStateDao.observeState()
+            .onEach { blockchainStateData.value = it }
+            .launchIn(viewModelScope)
+
+        walletData.observeSpendableBalance()
+            .onEach {
+                spendableBalance.value = it
+            }
+            .launchIn(viewModelScope)
     }
+
+    val isAbleToCreateInviteFlow = combine(
+        blockchainStateData,
+        blockchainIdentity.asFlow(),
+        spendableBalance
+    ) { _, _, balance ->
+        combineLatestData(balance)
+    }.stateIn(viewModelScope, SharingStarted.Lazily, initialValue = combineLatestData(spendableBalance.value))
+
     val isAbleToCreateInvite: Boolean
-        get() = isAbleToCreateInviteLiveData.value ?: false
+        get() = isAbleToCreateInviteFlow.value
 
-    private fun combineLatestData(): Boolean {
+    private fun combineLatestData(balance: Coin): Boolean {
         val isSynced = blockchainStateData.value?.isSynced() ?: false
-        val noIdentityCreatedOrInProgress = (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
-        return isSynced && !noIdentityCreatedOrInProgress
+        val identityCreated = blockchainIdentity.value?.creationComplete ?: false
+        return isSynced && identityCreated && balance >= Constants.DASH_PAY_FEE
     }
-
-    val invitationsLiveData = invitationsDao.observe().asLiveData()
 
     val invitationCount: Int
-        get() = invitationsLiveData.value?.size ?: 0
+        get() = invitations.value.size
 
-    val isAbleToPerformInviteAction = MediatorLiveData<Boolean>().apply {
-        addSource(isAbleToCreateInviteLiveData) {
-            value = combineLatestInviteActionData()
-        }
-        addSource(invitationsLiveData) {
-            value = combineLatestInviteActionData()
-        }
-    }
+    val isAbleToPerformInviteAction = combine(
+        isAbleToCreateInviteFlow,
+        invitations
+    ) { _, _ ->
+        combineLatestInviteActionData()
+    }.stateIn(viewModelScope, SharingStarted.Lazily, initialValue = combineLatestData(spendableBalance.value))
 
     fun logEvent(event: String) {
         analytics.logEvent(event, mapOf())
@@ -95,7 +105,4 @@ class CreateInviteViewModel @Inject constructor(
         val canAffordInviteCreation = isAbleToCreateInvite
         return hasInviteHistory || canAffordInviteCreation
     }
-
-    private fun canAffordIdentityCreation(): Boolean =
-        !walletData.getWalletBalance().isLessThan(Constants.DASH_PAY_FEE)
 }

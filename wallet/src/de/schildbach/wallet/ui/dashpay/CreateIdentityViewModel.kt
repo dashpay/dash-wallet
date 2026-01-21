@@ -5,17 +5,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
@@ -28,8 +26,8 @@ class CreateIdentityViewModel @Inject constructor(
     val dashPayConfig: DashPayConfig
 ) : BaseProfileViewModel(blockchainIdentityDataDao, dashPayProfileDao) {
 
-    private val _creationState = MutableStateFlow(BlockchainIdentityData.CreationState.NONE)
-    val creationState: StateFlow<BlockchainIdentityData.CreationState>
+    private val _creationState = MutableStateFlow(IdentityCreationState.NONE)
+    val creationState: StateFlow<IdentityCreationState>
         get() = _creationState
 
     private val _creationException = MutableStateFlow<String?>(null)
@@ -39,7 +37,7 @@ class CreateIdentityViewModel @Inject constructor(
         blockchainIdentityDataDao.observe(BlockchainIdentityConfig.CREATION_STATE)
             .filterNotNull()
             .onEach {
-                _creationState.value = BlockchainIdentityData.CreationState.valueOf(it)
+                _creationState.value = IdentityCreationState.valueOf(it)
             }
             .launchIn(viewModelScope)
 
@@ -53,24 +51,43 @@ class CreateIdentityViewModel @Inject constructor(
 
     fun retryCreateIdentity() {
         viewModelScope.launch {
-            val isRestoring = withContext(Dispatchers.IO) { blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false }
+            val isRestoring = blockchainIdentityDataDao.get(BlockchainIdentityConfig.RESTORING) ?: false
 
             if (isRestoring) {
-                val identityId = withContext(Dispatchers.IO) {blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID) }
+                val identityId = blockchainIdentityDataDao.get(BlockchainIdentityConfig.IDENTITY_ID)
                 identityId?.let {
                     RestoreIdentityOperation(walletApplication)
                         .create(identityId, true)
                         .enqueue()
                 }
             } else {
-                walletApplication.startService(
-                    CreateIdentityService.createIntentForRetry(
-                        walletApplication
+                val usingInvite = blockchainIdentityDataDao.get(BlockchainIdentityConfig.USING_INVITE) ?: false
+                if (usingInvite) {
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForRetryFromInvite(
+                            walletApplication,
+                            true
+                        )
                     )
-                )
+                } else {
+                    walletApplication.startService(
+                        CreateIdentityService.createIntentForRetry(
+                            walletApplication
+                        )
+                    )
+                }
             }
         }
     }
 
     suspend fun shouldShowMixDash(): Boolean = dashPayConfig.get(DashPayConfig.MIX_DASH_SHOWN)?.not() ?: true
+
+    fun hideRequestedUsernameContainer() {
+        viewModelScope.launch {
+            blockchainIdentityDataDao.set(
+                BlockchainIdentityConfig.CREATION_STATE,
+                IdentityCreationState.DONE_AND_DISMISS.name
+            )
+        }
+    }
 }

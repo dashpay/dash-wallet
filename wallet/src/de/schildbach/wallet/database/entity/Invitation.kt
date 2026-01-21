@@ -21,8 +21,8 @@ import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
-import kotlinx.android.parcel.IgnoredOnParcel
-import kotlinx.android.parcel.Parcelize
+import kotlinx.parcelize.IgnoredOnParcel
+import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Sha256Hash
 import org.dashj.platform.dpp.identifier.Identifier
 
@@ -39,15 +39,17 @@ import org.dashj.platform.dpp.identifier.Identifier
  */
 @Parcelize
 @Entity(tableName = "invitation_table")
-data class Invitation(@PrimaryKey val userId: String,
-                      val txid: Sha256Hash,
-                      val createdAt: Long,
-                      var memo: String = "",
-                      var sentAt: Long = 0,
-                      var acceptedAt: Long = 0,
-                      var shortDynamicLink: String? = null,
-                      var dynamicLink: String? = null) : Parcelable {
-
+data class Invitation(
+    @PrimaryKey val fundingAddress: String,
+    val userId: String,
+    val txid: Sha256Hash? = null,
+    val createdAt: Long,
+    val memo: String = "",
+    val sentAt: Long = 0,
+    val acceptedAt: Long = 0,
+    val shortDynamicLink: String? = null,
+    val dynamicLink: String? = null
+) : Parcelable {
     @IgnoredOnParcel
     @delegate:Ignore
     val userIdentifier by lazy {
@@ -65,6 +67,7 @@ data class Invitation(@PrimaryKey val userId: String,
 
         other as Invitation
 
+        if (fundingAddress != other.fundingAddress) return false
         if (userId != other.userId) return false
         if (txid != other.txid) return false
         if (createdAt != other.createdAt) return false
@@ -79,5 +82,9 @@ data class Invitation(@PrimaryKey val userId: String,
 
     fun canSendAgain(): Boolean {
         return shortDynamicLink != null
+    }
+
+    fun hasTransaction(): Boolean {
+        return txid != null
     }
 }
