@@ -514,7 +514,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         application.wallet?.let { wallet ->
             val txesToRemove = arrayListOf<Sha256Hash>()
             oldTransactionsToMonitor.forEach { (_, tx) ->
-                val transactionConfidence = tx.getConfidence(application.wallet!!.context)
+                val transactionConfidence = tx.getConfidence(wallet.context)
                 val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
 //                    log.info(
 //                        "tx {}; {} == {}",
@@ -529,7 +529,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         CONFIRMED_DEPTH
                     }
 
-                    val result = wallet.lastBlockSeenHeight >= transactionConfidence.appearedAtChainHeight + requiredDepth
+                    val result = transactionConfidence.depthInBlocks >= requiredDepth
                     transactionConfidence.queueListeners(TransactionConfidence.Listener.ChangeReason.DEPTH)
                     result
                 } else {

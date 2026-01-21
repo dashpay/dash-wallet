@@ -154,7 +154,7 @@ class WalletObserver(
                                 // log.info("tx depth {} for {}", transactionConfidence.depthInBlocks, transactionConfidence.transactionHash)
                                 // get the current height?
                                 val requiredDepth = if (isCoinBase) wallet.params.spendableCoinbaseDepth else CONFIRMED_DEPTH
-                                wallet.lastBlockSeenHeight + 1 >= transactionConfidence.appearedAtChainHeight + requiredDepth
+                                transactionConfidence.depthInBlocks >= requiredDepth
                             }
                             else -> false
                         }
