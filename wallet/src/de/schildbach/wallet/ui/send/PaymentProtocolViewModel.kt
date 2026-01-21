@@ -56,6 +56,7 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
+import androidx.core.net.toUri
 
 @OptIn(FlowPreview::class)
 @HiltViewModel
@@ -180,7 +181,7 @@ class PaymentProtocolViewModel @Inject constructor(
         backgroundHandler.post {
             Context.propagate(Constants.CONTEXT)
             try {
-                var sendRequest = sendCoinsTaskRunner.createSendRequest(
+                val sendRequest = sendCoinsTaskRunner.createSendRequest(
                     false,
                     paymentIntent,
                     signInputs = false,
@@ -188,15 +189,27 @@ class PaymentProtocolViewModel @Inject constructor(
                 )
 
                 wallet.completeTx(sendRequest)
-                if (checkDust(sendRequest)) {
-                    sendRequest = sendCoinsTaskRunner.createSendRequest(
-                        false,
-                        paymentIntent,
-                        signInputs = false,
-                        forceEnsureMinRequiredFee = true
-                    )
-                    wallet.completeTx(sendRequest)
-                }
+//                if (checkDust(sendRequest)) {
+//                    sendRequest = sendCoinsTaskRunner.createSendRequest(
+//                        false,
+//                        paymentIntent,
+//                        signInputs = false,
+//                        forceEnsureMinRequiredFee = true
+//                    )
+//                    wallet.completeTx(sendRequest)
+//                }
+//                // check for high fees and coinjoin
+//                if (sendCoinsTaskRunner.isFeeTooHigh(sendRequest.tx)) {
+//                    sendRequest = sendCoinsTaskRunner.createSendRequest(
+//                            false,
+//                            finalPaymentIntent!!,
+//                            signInputs = sendRequest.signInputs,
+//                            forceEnsureMinRequiredFee = sendRequest.ensureMinRequiredFee,
+//                            useCoinJoinGreedy = false
+//                        )
+//                    log.info("  start completeTx again")
+//                    wallet.completeTx(sendRequest)
+//                }
                 callbackHandler?.post {
                     baseSendRequest = sendRequest
                     _sendRequestLiveData.value = Resource.success(sendRequest)
@@ -223,6 +236,22 @@ class PaymentProtocolViewModel @Inject constructor(
 
     fun directPay(sendRequest: SendRequest) {
         wallet.completeTx(sendRequest)
+        // check for high fees/coinjoin
+        // check for high fees and coinjoin
+//        val finalSendRequest = if (sendCoinsTaskRunner.isFeeTooHigh(sendRequest.tx)) {
+//            val sendRequest = sendCoinsTaskRunner.createSendRequest(
+//                false,
+//                finalPaymentIntent!!,
+//                signInputs = false,
+//                forceEnsureMinRequiredFee = true,
+//                useCoinJoinGreedy = false
+//            )
+//            log.info("  start completeTx again")
+//            wallet.completeTx(sendRequest)
+//            sendRequest
+//        } else {
+//            sendRequest
+//        }
         val refundAddress = wallet.freshAddress(KeyPurpose.REFUND)
         val payment = PaymentProtocol.createPaymentMessage(
             listOf(sendRequest.tx),
@@ -240,7 +269,8 @@ class PaymentProtocolViewModel @Inject constructor(
             override fun onFail(messageResId: Int, vararg messageArgs: Any) {
                 val message = StringBuilder().apply {
                     if (BuildConfig.DEBUG && messageArgs[0] == 415) {
-                        val host = Uri.parse(finalPaymentIntent!!.paymentUrl).host
+                        val host = finalPaymentIntent!!.paymentUrl?.toUri()?.host ?:
+                            walletApplication.getString(R.string.send_coins_fragment_payee_verified_by_unknown)
                         appendLine(host)
                         appendLine(walletApplication.getString(messageResId, *messageArgs))
                         appendLine(PaymentProtocol.MIMETYPE_PAYMENT)

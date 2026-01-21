@@ -51,7 +51,6 @@ import org.bitcoinj.crypto.KeyCrypterException
 import org.bitcoinj.protocols.payments.PaymentProtocol
 import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
-import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.DirectPayException
@@ -84,6 +83,7 @@ class SendCoinsTaskRunner @Inject constructor(
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
+        private val MAX_NO_CHANGE_FEE = Coin.valueOf(10_0000) // 0.001 DASH
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
     private var coinJoinSend = false
@@ -132,7 +132,8 @@ class SendCoinsTaskRunner @Inject constructor(
             walletData.checkSendingConditions(address, amount)
         }
 
-        val sendRequest = createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
+        val sendRequest =
+            createSendRequest(address, amount, coinSelector, emptyWallet, canSendLockedOutput = canSendLockedOutput)
         return sendCoins(
             sendRequest,
             checkBalanceConditions = false,
@@ -185,16 +186,15 @@ class SendCoinsTaskRunner @Inject constructor(
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent, serviceName: String?): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
-
-        log.info("requesting payment request from {}", requestUrl)
-        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
+            log.info("requesting payment request from {}", requestUrl)
+            val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
             val request = buildOkHttpPaymentRequest(requestUrl)
             val response = Constants.HTTP_CLIENT.call(request)
             response.ensureSuccessful()
-        requestUrl.toUri().host?.let {
-            timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
-        }
-        log.info("payment request received")
+            requestUrl.toUri().host?.let {
+                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+            }
+            log.info("payment request received")
 
             val contentType = response.header("Content-Type")
             val byteStream = response.body?.byteStream()
@@ -226,24 +226,36 @@ class SendCoinsTaskRunner @Inject constructor(
 
     private fun createRequestFromPaymentIntent(paymentIntent: PaymentIntent): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        Context.propagate(de.schildbach.wallet.Constants.CONTEXT)
-        var sendRequest = createSendRequest(
+        Context.propagate(wallet.context)
+        val sendRequest = createSendRequest(
             false,
             paymentIntent,
             signInputs = false,
             forceEnsureMinRequiredFee = false
         )
 
-        wallet.completeTx(sendRequest)
-        if (checkDust(sendRequest)) {
-            sendRequest = createSendRequest(
-                false,
-                paymentIntent,
-                signInputs = false,
-                forceEnsureMinRequiredFee = true
-            )
-            wallet.completeTx(sendRequest)
-        }
+//        wallet.completeTx(sendRequest)
+//        if (checkDust(sendRequest)) {
+//            sendRequest = createSendRequest(
+//                false,
+//                paymentIntent,
+//                signInputs = false,
+//                forceEnsureMinRequiredFee = true
+//            )
+//            wallet.completeTx(sendRequest)
+//        }
+//
+//        if (isFeeTooHigh(sendRequest.tx)) {
+//            sendRequest = createSendRequest(
+//                false,
+//                paymentIntent,
+//                signInputs = sendRequest.signInputs,
+//                forceEnsureMinRequiredFee = sendRequest.ensureMinRequiredFee,
+//                useCoinJoinGreedy = false
+//            )
+//            log.info("  start completeTx again")
+//            wallet.completeTx(sendRequest)
+//        }
 
         return sendRequest
     }
@@ -253,7 +265,7 @@ class SendCoinsTaskRunner @Inject constructor(
         sendRequest: SendRequest,
         serviceName: String?
     ): Transaction {
-        log.info("creating final sendRequest({}, ..., {}", finalPaymentIntent.paymentUrl, serviceName)
+        log.info("creating final sendRequest({}, ..., {})", finalPaymentIntent.paymentUrl, serviceName)
         val finalSendRequest = createSendRequest(
             false,
             finalPaymentIntent,
@@ -273,6 +285,21 @@ class SendCoinsTaskRunner @Inject constructor(
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         wallet.completeTx(sendRequest)
+        // check fee
+//        val sendRequest = if (isFeeTooHigh(sendRequest.tx)) {
+//            val newSendRequest = createSendRequest(
+//                false,
+//                finalPaymentIntent,
+//                signInputs = sendRequest.signInputs,
+//                forceEnsureMinRequiredFee = sendRequest.ensureMinRequiredFee,
+//                useCoinJoinGreedy = false
+//            )
+//            log.info("  start completeTx again to lower fees")
+//            wallet.completeTx(sendRequest)
+//            newSendRequest
+//        } else {
+//            sendRequest
+//        }
         log.info("completed sendRequest transaction")
         serviceName?.let {
             metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
@@ -355,11 +382,12 @@ class SendCoinsTaskRunner @Inject constructor(
         mayEditAmount: Boolean,
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
-        forceEnsureMinRequiredFee: Boolean
+        forceEnsureMinRequiredFee: Boolean,
+        useCoinJoinGreedy: Boolean
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         val sendRequest = paymentIntent.toSendRequest()
-        sendRequest.coinSelector = getCoinSelector()
+        sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
@@ -367,6 +395,86 @@ class SendCoinsTaskRunner @Inject constructor(
 
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+        if (!sendRequest.emptyWallet && useCoinJoinGreedy) {
+            sendRequest.returnChange = false
+        }
+
+        return sendRequest
+    }
+
+    fun createSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean
+    ): SendRequest {
+        val firstSendRequest = createSendRequest(
+            mayEditAmount,
+            paymentIntent,
+            signInputs = true,
+            forceEnsureMinRequiredFee,
+            useCoinJoinGreedy = true
+        )
+        signSendRequest(firstSendRequest)
+        walletData.wallet!!.completeTx(firstSendRequest)
+
+        // check for dust
+        val secondSendRequest = if (checkDust(firstSendRequest)) {
+            val sendRequest = createSendRequest(
+                false,
+                paymentIntent,
+                signInputs = false,
+                forceEnsureMinRequiredFee = true,
+                useCoinJoinGreedy = true
+            )
+            signSendRequest(sendRequest)
+            walletData.wallet!!.completeTx(sendRequest)
+            sendRequest
+        } else {
+            firstSendRequest
+        }
+
+        // check for high fees when using coinjoin/greedy
+        return if (isFeeTooHigh(secondSendRequest.tx)) {
+            createSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                useCoinJoinGreedy = false
+            )
+        } else {
+            createSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                useCoinJoinGreedy = true
+            )
+        }
+    }
+
+    fun createAssetLockSendRequest(
+        mayEditAmount: Boolean,
+        paymentIntent: PaymentIntent,
+        signInputs: Boolean,
+        forceEnsureMinRequiredFee: Boolean,
+        topUpKey: ECKey,
+        useCoinJoinGreedy: Boolean = true
+    ): SendRequest {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
+        sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
+        sendRequest.useInstantSend = false
+        sendRequest.feePerKb = Constants.ECONOMIC_FEE
+        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
+        sendRequest.signInputs = signInputs
+
+        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
+        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+        if (!sendRequest.emptyWallet && useCoinJoinGreedy) {
+            sendRequest.returnChange = false
+        }
 
         return sendRequest
     }
@@ -378,18 +486,52 @@ class SendCoinsTaskRunner @Inject constructor(
         forceEnsureMinRequiredFee: Boolean,
         topUpKey: ECKey
     ): SendRequest {
-        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
-        val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
-        sendRequest.coinSelector = getCoinSelector()
-        sendRequest.useInstantSend = false
-        sendRequest.feePerKb = Constants.ECONOMIC_FEE
-        sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
-        sendRequest.signInputs = signInputs
+        val firstSendRequest = createAssetLockSendRequest(
+            mayEditAmount,
+            paymentIntent,
+            signInputs = true,
+            forceEnsureMinRequiredFee,
+            topUpKey,
+            useCoinJoinGreedy = true
+        )
+        walletData.wallet!!.completeTx(firstSendRequest)
 
-        val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
-        sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
+        // check for dust
+        val secondSendRequest = if (checkDust(firstSendRequest)) {
+            val sendRequest = createAssetLockSendRequest(
+                false,
+                paymentIntent,
+                signInputs = false,
+                forceEnsureMinRequiredFee = true,
+                topUpKey,
+                useCoinJoinGreedy = true
+            )
+            walletData.wallet!!.completeTx(sendRequest)
+            sendRequest
+        } else {
+            firstSendRequest
+        }
 
-        return sendRequest
+        // check for high fees when using coinjoin/greedy
+        return if (isFeeTooHigh(secondSendRequest.tx)) {
+            createAssetLockSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                topUpKey,
+                useCoinJoinGreedy = false
+            )
+        } else {
+            createAssetLockSendRequest(
+                mayEditAmount,
+                paymentIntent,
+                signInputs,
+                forceEnsureMinRequiredFee,
+                topUpKey,
+                useCoinJoinGreedy = true
+            )
+        }
     }
 
     @VisibleForTesting
@@ -399,14 +541,15 @@ class SendCoinsTaskRunner @Inject constructor(
         coinSelector: CoinSelector? = null,
         emptyWallet: Boolean = false,
         forceMinFee: Boolean = true,
-        canSendLockedOutput: Predicate<TransactionOutput>? = null
+        canSendLockedOutput: Predicate<TransactionOutput>? = null,
+        useCoinJoinGreedy: Boolean = true
     ): SendRequest {
         return SendRequest.to(address, amount).apply {
             this.feePerKb = Constants.ECONOMIC_FEE
             this.ensureMinRequiredFee = forceMinFee
             this.emptyWallet = emptyWallet
 
-            val selector = coinSelector ?: getCoinSelector()
+            val selector = coinSelector ?: getCoinSelector(useCoinJoinGreedy)
             this.canUseLockedOutputPredicate = canSendLockedOutput
             this.coinSelector = selector
 
@@ -416,9 +559,9 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private fun getCoinSelector() = if (coinJoinSend) {
+    private fun getCoinSelector(useCoinJoinGreedy: Boolean) = if (coinJoinSend) {
         // mixed only
-        CoinJoinCoinSelector(walletData.wallet)
+        CoinJoinCoinSelector(walletData.wallet, false, useCoinJoinGreedy)
     } else {
         // collect all coins, mixed and unmixed
         ZeroConfCoinSelector.get()
@@ -578,5 +721,13 @@ class SendCoinsTaskRunner @Inject constructor(
                 }
             })
             .build()
+    }
+
+    override fun isFeeTooHigh(tx: Transaction): Boolean {
+        return if (coinJoinSend) {
+            tx.fee > MAX_NO_CHANGE_FEE
+        } else {
+            false
+        }
     }
 }
