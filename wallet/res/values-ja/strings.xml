@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">あなたのウォレットは正常に復元されました。続いて残高を計算します。これには多少時間がかかる場合があります。</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: お客様の財ウォレットは支出暗証番号で保護されています。このウォレットで受け取る前に、現在でもそれを覚えているかを確認してください。</string>
     <string name="import_keys_dialog_failure">ウォレットが復元できませんでした:\n\n%s\n\nパスワード間違い？</string>
+    <string name="restore_wallet_creation_date_label">ウォレットの作成日(任意)</string>
+    <string name="restore_wallet_creation_date_info">ウォレットの作成日を選択すると、その日付以降のみをスキャンして同期を高速化できます。</string>
+    <string name="restore_wallet_select_date">作成日を選択する</string>
+    <string name="restore_wallet_selected_date">選択したもの: %s</string>
+    <string name="restore_wallet_date_picker_title">いつウォレットを作成しましたか?</string>
+    <string name="wallet_creation_date_info_title">ウォレットの作成日を指定してどのように手続きを高速化できますか?</string>
+    <string name="wallet_creation_date_info_description">ウォレットを作成したおよその日付がわかっている場合は、その日付を入力すると、その日付以降の取引が取得され、同期がより速くなります。ただし、ウォレットの作成日より後の日付を入力した場合、それ以前の取引はダウンロードされませんのでご注意ください。</string>
     <string name="export_keys_dialog_title">ウォレットのバックアップ</string>
     <string name="backup_wallet_dialog_message">バックアップはあなたが決めたパスワードで暗号化され、外部ストレージに書き込まれます。</string>
     <string name="backup_wallet_dialog_warning_encrypted">あなたのウォレットは送金用PINで保護されています。バックアップ用パスワードに加えてPINも忘れないようにしてください。</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">ブロックチェーン、取引、ウォレット残高を再スキャンします。再スキャンにはしばらく時間がかかりますので、理由がわかっている場合のみ行ってください。</string>
     <string name="preferences_initiate_reset_dialog_message">ブロックチェーンの再スキャンを行いますか。\n\nこれにより、一時的にウォレット残高が非表示になり、取引も削除されます。ブロックチェーンの同期が進むと、どちらも回復します。インターネットの接続が安定していることをご確認のうえ行ってください。</string>
     <string name="preferences_initiate_reset_dialog_positive">再スキャン</string>
+    <string name="rescan_blockchain_dialog_title">本当にブロックチェーンを再スキャンしますか?</string>
+    <string name="rescan_blockchain_dialog_message">これにより、ウォレットの残高が一時的に非表示になり、取引履歴が削除されます。ブロックチェーンの同期が進むにつれて、どちらも復元されます。安定したインターネット接続を確保するようにして下さい。</string>
+    <string name="rescan_blockchain_select_date_label">ウォレットの作成日を選択する(任意)</string>
+    <string name="rescan_blockchain_date_info_description">ウォレットの作成日の情報</string>
+    <string name="rescan_blockchain_select_date_placeholder">選択する</string>
+    <string name="rescan_blockchain_confirm_button">再スキャン</string>
     <string name="preferences_extended_public_key_title">xpubを表示</string>
     <string name="preferences_extended_public_key_summary">他のアプリやサービスにインポートできるように、ウォレットの拡張公開鍵を表示します。注意：その場合アプリに金銭的なプライバシー情報を公開することになります。</string>
     <string name="bitmap_fragment_share">共有…</string>
@@ -433,4 +446,9 @@
     <string name="select_option">オプションを選択する</string>
     <string name="customize_shortcuts">ショートカットバーをカスタマイズする</string>
     <string name="customize_shortcuts_description">上記のいずれかのボタンを長押しすると、そのボタンを必要な機能に置き換えることができます</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">PINコードのアップグレードが必要です</string>
+    <string name="upgrade_pin_description">新しいPINを設定する</string>
+    <string name="upgrade_pin_continue">続ける</string>
 </resources>

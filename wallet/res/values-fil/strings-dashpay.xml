@@ -19,7 +19,7 @@ Username</b></string>
     <string name="new_account_confirm_message">Pinili mo ang %s bilang iyong username. Pakitandaan na HINDI maaaring baguhin ang username kapag ito ay nakarehistro na.</string>
     <string name="invitation_confirm_title">Bayad sa Imbitasyon</string>
     <string name="invitation_confirm_message">Ang bawat imbitasyon ay popondohan ng halagang ito upang mabilis na magawa ng tatanggap ang kanilang username sa Dash Network</string>
-    <string name="invitation_init_title">Mag-imbita</string>
+    <string name="invitation_title">Imbitasyon</string>
     <string name="invitation_init_header">Imbitahin ang iyong mga kaibigan at pamilya</string>
     <string name="invitation_init_message">Tulungan ang iyong mga kaibigan at pamilya na sumali sa Dash Network. Anyayahan sila sa mundo ng social banking.</string>
     <string name="invitation_init_button_text">Gumawa ng bagong Imbitasyon</string>
@@ -53,8 +53,12 @@ Username</b></string>
     <string name="invitation_invalid_invite_message">Ang iyong imbitasyon mula sa %s ay hindi wasto</string>
     <string name="invitation_username_already_found_title">Nahanap na ang username</string>
     <string name="invitation_username_already_found_message">Hindi mo ma-claim ang imbitasyong ito dahil mayroon ka nang Dash username</string>
+    <string name="invitation_username_already_found_voting_title">Hiniling na ang username</string>
+    <string name="invitation_username_already_found_voting_message">Hindi mo ma-claim ang imbitasyong ito dahil humiling ka na ng Dash username</string>
     <string name="invitation_onboarding_has_began_error_title">Pagkakamali sa Onboarding</string>
+    <string name="invitation_error_title">Error sa Imbitasyon</string>
     <string name="invitation_onboarding_has_began_error">Nasa proseso ang onboarding, paki-claim ang iyong imbitasyon pagkatapos mong gawin ang iyong wallet.</string>
+    <string name="invitation_accept_invite_has_began_error">Kasalukuyang pinoproseso ng DashPay ang isang imbitasyon.</string>
     <string name="invitation_accept_title_1">Kunin ang iyong Username</string>
     <string name="invitation_accept_title_2">Idagdag ang iyong Mga Kaibigan at Pamilya</string>
     <string name="invitation_accept_message_2">Imbitahin ang iyong pamilya, hanapin ang iyong mga kaibigan sa pamamagitan ng paghahanap sa kanilang mga username</string>
@@ -211,6 +215,8 @@ Username</b></string>
 
     <string name="join_dashpay_subtitle">Lumikha ng isang username, idagdag ang iyong mga kaibigan...</string>
     <string name="join_dashpay_more_subtitle">Lumikha ng iyong Username, maghanap ng mga kaibigan at idagdag sila sa iyong mga contact</string>
+    <string name="join_dashpay_more_subtitle_two">Gumawa ng username at magpaalam sa mga numerical address</string>
+    <string name="join_dashpay_wait">Maghintay hanggang matapos ang pag-sync upang lumikha ng isang username</string>
     <string name="join">Sumali</string>
 
     <string name="more_suggestions">Higit pang mga Mungkahi</string>
@@ -435,8 +441,12 @@ Username</b></string>
 
     <string name="request_username_username_voting_message">+ ano ang pagboto ng username\?</string>
     <string name="request_username_character_requirement">Mga titik, numero at gitling lamang</string>
+    <string name="request_username_character_requirement_invite_noncontested">Bilang 2-9</string>
     <string name="request_username_balance_requirement">Kailangan mong magkaroon ng 0.25 DASH para magawa ang username na ito</string>
+    <string name="request_username_requirements_message_invite_noncontested">Dapat matugunan ng username ang isa sa mga pamantayang ito</string>
+    <string name="request_username_requirements_message">Dapat matugunan ng username ang mga pamantayang ito</string>
     <string name="request_username_length_requirement">Sa pagitan ng 3 at 23 na mga karakter</string>
+    <string name="request_username_length_requirement_noncontested">Sa pagitan ng 20 at 23 na mga karakter</string>
     <string name="request_username_confirm">Tinatanggap Ko</string>
     <string name="username_vote_one_left_message">Nakaboto ka na para sa username na ito %d beses. Maaari ka lamang magsumite ng isa pang boto para sa username na ito.</string>
     <string name="username_vote_one_left">Isang boto ang natitira</string>
@@ -507,4 +517,23 @@ Username</b></string>
     <string name="transaction_metadata_you_have_n_tx">meron kang %d hindi na-save na mga transaksyon mula noon %s</string>
     <string name="transaction_metadata_save_transactions">I-save ang mga hindi na-save na transaksyon</string>
     <string name="transaction_metadata_continue_without_saving">Magpatuloy nang hindi sine-save</string>
+    <string name="invitation_fee_title">Bayad sa Imbitasyon</string>
+    <string name="invitation_fee_message">Ang bawat imbitasyon ay popondohan upang ang tatanggap ay mabilis na makalikha ng kanilang username sa Dash Network.</string>
+    <string name="invitation_fee_noncontested">Hindi pinagtatalunan</string>
+    <string name="invitation_fee_contested">Pinagtatalunan</string>
+    <string name="invitation_fee_contested_message">Ang taong pinadalhan mo ng imbitasyong ito ay maaaring humiling ng anumang username na gusto nila at ang network ay boboto para aprubahan ito.</string>
+    <string name="invitation_fee_noncontested_message">Ang taong pinadalhan mo ng imbitasyong ito ay maaaring humiling ng username na mayroong numero 2-9, ay higit sa 20 na karakter</string>
+    <string name="invitation_creating_progress_loading">Nilo-load ang Imbitasyon...</string>
+    <string name="invitation_creating_progress_wip">Gumagawa ng Imbitasyon...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Kumpirmahin at magbayad</string>
+    <string name="error_sending_invite_transaction">Error sa pagpapadala ng transaksyon ng imbitasyon</string>
+    <string name="request_username_invitation_not_mixed_message">Ang imbitasyon ay ginawa gamit ang walang halong pondo</string>
+    <string name="request_username_invitation_only_noncontested_message">Maaari ka lamang lumikha ng hindi pinagtatalunang username gamit ang imbitasyong ito</string>
+    <string name="username_types_title">Ano ang pinagtatalunan at hindi pinagtatalunan na mga username\?</string>
+    <string name="username_types_message">Mayroong dalawang uri ng mga username: pinagtatalunan at hindi pinagtatalunan.\n\nAng mga hindi nilalabanang username ay may kahit isang numero (2-9) o mas mahaba sa 20 character at awtomatikong maaaprubahan.\n\nKung gusto mong lumikha ng isang pinagtatalunang username na mas maikli at walang mga numero, kailangan mong magparehistro sa DashPay nang walang imbitasyon, bayaran ang kinakailangang bayad at maghintay ng pag-apruba sa pagtatapos ng panahon ng pagboto.</string>
+    <string name="accept_invitation_hide">Magtago</string>
+    <string name="accept_invitation_create">Gumawa</string>
+
+    <string name="create_instant_username_cancel">Kanselahin</string>
+
 </resources>
