@@ -524,7 +524,9 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun updateFrequentContacts(newTx: Transaction) {
-        if (hasIdentity() && blockchainIdentity.getContactForTransaction(newTx) != null) {
+        // since we are accessing the blockchainIdentity object, we better check that it is valid
+        // previously, we were using hasUsername() which can return true during a wallet reset
+        if (hasBlockchainIdentity && blockchainIdentity.getContactForTransaction(newTx) != null) {
             updateFrequentContacts()
         }
     }
