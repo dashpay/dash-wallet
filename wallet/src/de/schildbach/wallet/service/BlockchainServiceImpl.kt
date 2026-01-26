@@ -2200,13 +2200,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private var handleContactPaymentsJob: Job? = null
+    private val pendingContactPaymentTxs = mutableListOf<Transaction>()
 
     private fun handleContactPayments(tx: Transaction) {
         if (blockchainState?.replaying != true) {
+            synchronized(pendingContactPaymentTxs) {
+                pendingContactPaymentTxs.add(tx)
+            }
             handleContactPaymentsJob?.cancel()
             handleContactPaymentsJob = serviceScope.launch {
                 delay(TimeUnit.SECONDS.toMillis(1)) // debounce delay, 1 second
-                platformRepo.updateFrequentContacts(tx)
+                val txsToProcess = synchronized(pendingContactPaymentTxs) {
+                    pendingContactPaymentTxs.toList().also { pendingContactPaymentTxs.clear() }
+                }
+                txsToProcess.forEach { platformRepo.updateFrequentContacts(it) }
             }
         }
     }
