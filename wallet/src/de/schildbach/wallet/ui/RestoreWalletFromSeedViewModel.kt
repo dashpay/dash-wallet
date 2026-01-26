@@ -58,7 +58,6 @@ class RestoreWalletFromSeedViewModel @Inject constructor(
 
     val selectedCreationDate = MutableLiveData<Long?>() // timestamp in seconds, null = not selected
 
-    private suspend fun recover(words: List<String>): String? = withContext(Dispatchers.Default) {
     /**
      * Verify that the provided mnemonic matches the wallet by comparing derived keys
      * This works even when encryption is completely broken
