@@ -1189,11 +1189,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener)
             } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
-                try {
-                    dashSystemService.system.close()
-                } catch (e: Exception) {
-                    log.error("Error closing dash system service", e)
-                }
                 log.info("stopping peergroup")
                 peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1201,6 +1196,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.removeWallet(wallet)
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                 peerGroup!!.stopAsync()
+                try {
+                    dashSystemService.system.close()
+                } catch (e: Exception) {
+                    log.error("Error closing dash system service", e)
+                }
                 // use the offline risk analyzer
                 if (wallet != null) {
                     wallet.riskAnalyzer =
@@ -1928,20 +1928,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (peerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
-                    log.info("CLEANUP STEP 1: About to close dashSystemService.system")
-                        dashSystemService.system.close()
-                    log.info("CLEANUP STEP 1: Dash system services are shutdown")
-                    peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-                    peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-                    peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    // we may need to skip these, or move them to after the forceStop because they grab a lock
+                    if (!peerGroup!!.lock.isLocked) {
+                        peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
+                        peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
+                        peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    }
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
-                    log.info("CLEANUP STEP 2: peerGroup listeners and wallet removed")
+                    log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 3: About to call peerGroup.forceStop(7000)")
+                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
                     peerGroup!!.forceStop(7_000)
-                    log.info("CLEANUP STEP 3: peerGroup.forceStop() completed")
+                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
+                    log.info("CLEANUP STEP 3: About to close dashSystemService.system")
+                    dashSystemService.system.close()
+                    log.info("CLEANUP STEP 3: Dash system services are shutdown")
                     if (wallet != null) {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
                     }
