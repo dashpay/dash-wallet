@@ -231,8 +231,8 @@ class SendCoinsViewModel @Inject constructor(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
-    ): Transaction {
-        _state.value = State.SENDING
+    ): Transaction = withContext(Dispatchers.IO) {
+        _state.postValue(State.SENDING)
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
         }
@@ -250,12 +250,12 @@ class SendCoinsViewModel @Inject constructor(
 
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
-            _state.value = State.FAILED
+            _state.postValue(State.FAILED)
             throw ex
         }
 
-        _state.value = State.SENT
-        return transaction
+        _state.postValue(State.SENT)
+        transaction
     }
 
     suspend fun signAndSendAssetLock(
@@ -264,7 +264,7 @@ class SendCoinsViewModel @Inject constructor(
         checkBalance: Boolean,
         key: ECKey,
         emptyWallet: Boolean
-    ): Transaction {
+    ): Transaction = withContext(Dispatchers.IO) {
         _state.value = State.SENDING
         if (!isAssetLock) {
             error("isAssetLock must be true, but is true")
@@ -308,7 +308,7 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         _state.value = State.SENT
-        return transaction
+        transaction
     }
 
     fun allowBiometric(): Boolean {

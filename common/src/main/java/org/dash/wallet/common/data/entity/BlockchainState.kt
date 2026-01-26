@@ -20,7 +20,8 @@ package org.dash.wallet.common.data.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.*
-
+// TODO: chainlockHeight is not updated when chainlocks are received
+// TODO: not updated on new blocks after sync has finished
 @Entity(tableName = "blockchain_state")
 data class BlockchainState(var bestChainDate: Date?,
                            var bestChainHeight: Int,

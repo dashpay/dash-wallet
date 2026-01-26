@@ -14,6 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+@file:OptIn(FlowPreview::class)
 package de.schildbach.wallet.service
 
 import android.annotation.SuppressLint
@@ -58,6 +59,7 @@ import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.ExchangeRatesDao
 import de.schildbach.wallet.service.extensions.registerCrowdNodeConfirmedAddressFilter
 import de.schildbach.wallet.service.platform.PlatformSyncService
+import de.schildbach.wallet.transactions.WalletObserver.Companion.CONFIRMED_DEPTH
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.OnboardingActivity.Companion.createIntent
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -75,9 +77,18 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -165,6 +176,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 import javax.inject.Inject
 import kotlin.math.max
+import org.bitcoinj.core.listeners.NewBestBlockListener
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * @author Andreas Schildbach
@@ -280,7 +293,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var resetBlockchainOnShutdown = false
     private var deleteWalletFileOnShutdown = false
 
-    //Settings to bypass dashj default dns seeds
+    // Settings to bypass dashj default dns seeds
     private val seedPeerDiscovery = SeedPeers(Constants.NETWORK_PARAMETERS)
     private val dnsDiscovery = DnsDiscovery(Constants.DNS_SEED, Constants.NETWORK_PARAMETERS)
     var peerDiscoveryList = ArrayList<PeerDiscovery>(2)
@@ -314,6 +327,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             transactionMetadataProvider.syncTransaction(tx)
         }
     }
+    private val currentBlock = MutableStateFlow<StoredBlock?>(null)
 
     private val walletEventListener: ThrottlingWalletChangeListener =
         object : ThrottlingWalletChangeListener(
@@ -392,6 +406,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         }
                     }
                 }
+                maybeAddMonitoring(tx, wallet)
                 handleMetadata(tx)
                 handleContactPayments(tx)
                 updateAppWidget()
@@ -412,6 +427,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                     // TODO: if we detect a username creation that we haven't processed, should we?
                 }
+                maybeAddMonitoring(tx, wallet)
                 handleMetadata(tx)
                 updateAppWidget()
             }
@@ -495,6 +511,83 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         notification.setWhen(System.currentTimeMillis())
         notification.setSound(Uri.parse("android.resource://" + packageName + "/" + R.raw.coins_received))
         nm!!.notify(Constants.NOTIFICATION_ID_COINS_RECEIVED, notification.build())
+    }
+
+    private val oldTransactionsToMonitor = ConcurrentHashMap<Sha256Hash, Transaction>()
+    private var txConfidenceJob: Job? = null
+
+    private fun updateTxConfidence() {
+        application.wallet?.let { wallet ->
+            val txesToRemove = arrayListOf<Sha256Hash>()
+            oldTransactionsToMonitor.forEach { (_, tx) ->
+                val transactionConfidence = tx.getConfidence(wallet.context)
+                val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
+//                    log.info(
+//                        "tx {}; {} == {}",
+//                        transactionConfidence.transactionHash,
+//                        transactionConfidence.depthInBlocks,
+//                        application.wallet!!.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+//                    )
+
+                    val requiredDepth = if (tx.isCoinBase) {
+                        wallet.params.spendableCoinbaseDepth
+                    } else {
+                        CONFIRMED_DEPTH
+                    }
+
+                    val result = transactionConfidence.depthInBlocks >= requiredDepth
+                    transactionConfidence.queueListeners(TransactionConfidence.Listener.ChangeReason.DEPTH)
+                    result
+                } else {
+                    false
+                }
+
+                if (shouldStopListening) {
+                    txesToRemove.add(transactionConfidence.transactionHash)
+                }
+            }
+            txesToRemove.forEach {
+                oldTransactionsToMonitor.remove(it)
+            }
+        }
+    }
+
+    private fun stopMonitoringOlderTransactions(wallet: Wallet) {
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
+        }
+        log.info("stop monitoring {} old transactions", oldTransactionsToMonitor.size)
+        oldTransactionsToMonitor.clear()
+    }
+
+    private fun monitorOlderTransactions(wallet: Wallet) {
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
+        }
+        val transactions = wallet.getTransactions(true)
+        transactions.forEach { tx ->
+            maybeAddMonitoring(tx, wallet)
+        }
+        log.info("monitoring {} old transactions", oldTransactionsToMonitor.size)
+    }
+
+    private fun maybeAddMonitoring(tx: Transaction, wallet: Wallet) {
+        if (wallet.isNotifyTxOnNextBlock) {
+            return
+        }
+        val confidence = tx.getConfidence(wallet.context)
+        val shouldMonitor = when (confidence.confidenceType) {
+            TransactionConfidence.ConfidenceType.PENDING -> true
+            TransactionConfidence.ConfidenceType.BUILDING -> when {
+                tx.isCoinBase -> confidence.depthInBlocks < wallet.params.spendableCoinbaseDepth
+                else -> confidence.depthInBlocks < 6
+            }
+
+            else -> false
+        }
+        if (shouldMonitor) {
+            oldTransactionsToMonitor[tx.txId] = tx
+        }
     }
 
     private inner class PeerConnectivityListener : PeerConnectedEventListener,
@@ -617,7 +710,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
         // alarmManager.cancel(alarmIntent)
 
-
         val restartTime = System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(1)
         alarmManager.setInexactRepeating(
             AlarmManager.RTC_WAKEUP,
@@ -631,8 +723,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private val blockchainDownloadListener: MyDownloadProgressTracker =
         object : MyDownloadProgressTracker() {
+            val watch = Stopwatch.createUnstarted()
             private val lastMessageTime = AtomicLong(0)
             private var throttleDelay: Long = -1
+
+            override fun onHeadersDownloadStarted(peer: Peer?, blocksLeft: Int) {
+                super.onHeadersDownloadStarted(peer, blocksLeft)
+            }
+
+            override fun onChainDownloadStarted(peer: Peer?, blocksLeft: Int) {
+                super.onChainDownloadStarted(peer, blocksLeft)
+                if (!watch.isRunning) {
+                    watch.start();
+                }
+            }
+
             override fun onBlocksDownloaded(
                 peer: Peer, block: Block, filteredBlock: FilteredBlock?,
                 blocksLeft: Int
@@ -684,11 +789,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
 
             /** This method is called by super.onBlocksDownloaded when the percentage
-                of the chain downloaded is 100.0% (completely done)
-            */
+             *  of the chain downloaded is 100.0% (completely done)
+             */
             override fun doneDownload() {
                 super.doneDownload()
-                log.info("DoneDownload {}", syncPercentage)
+                if (watch.isRunning) {
+                    watch.stop()
+                }
+                log.info("DoneDownload {} in {}", syncPercentage, watch)
                 // if the chain is already synced from a previous session, then syncPercentage = 0
                 // set to 100% so that observers will see that sync is completed
                 syncPercentage = 100
@@ -1494,12 +1602,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     networkCallbackRegistered = true
                     log.info("network callback registered with NetworkRequest: {}", networkCallback)
                 }
+                monitorOlderTransactions(wallet)
                 wallet.addCoinsReceivedEventListener(
                     Threading.SAME_THREAD,
                     walletEventListener
                 )
                 wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletEventListener)
                 wallet.addChangeEventListener(Threading.SAME_THREAD, walletEventListener)
+                blockChain?.addNewBestBlockListener(newBestBlockListener)
                 config.registerOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 withContext(Dispatchers.Main) {
                     registerReceiver(tickReceiver, IntentFilter(Intent.ACTION_TIME_TICK))
@@ -1523,6 +1633,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                     balance = it
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                    updateAppWidget()
                 }
 
                 // we need the mixed balance for the CoinJoin notification
@@ -1530,6 +1641,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     mixedBalance = it
                     handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
+
+
+                txConfidenceJob = merge(
+                    currentBlock.filterNotNull().sample(APPWIDGET_THROTTLE_MS),
+                    currentBlock.filterNotNull().debounce(APPWIDGET_THROTTLE_MS)
+                ).distinctUntilChanged()
+                    .onEach { updateTxConfidence() }
+                    .launchIn(serviceScope)
 
                 onCreateCompleted.complete(Unit)
                 log.info(".onCreate() finished")
@@ -1790,11 +1909,19 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                 log.info("detaching from wallet")
                 WalletApplication.scheduleStartBlockchainService(this@BlockchainServiceImpl) //disconnect feature
+                blockChain?.removeNewBestBlockListener(newBestBlockListener)
+                // Cancel tx confidence monitoring job before cleanup to prevent CME
+                txConfidenceJob?.cancel()
+                txConfidenceJob?.join()
+                txConfidenceJob = null
+
                 val wallet = application.wallet
                 if (wallet != null) {
                     wallet.removeChangeEventListener(walletEventListener)
                     wallet.removeCoinsSentEventListener(walletEventListener)
                     wallet.removeCoinsReceivedEventListener(walletEventListener)
+
+                    stopMonitoringOlderTransactions(wallet)
                 }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
@@ -2076,7 +2203,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private fun updateAppWidget() {
-        val balance = application.getWalletBalance()
+        // val balance = application.getWalletBalance()
         WalletBalanceWidgetProvider.updateWidgets(this@BlockchainServiceImpl, balance)
     }
 
@@ -2113,14 +2240,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
-    // TODO: should we have a backup blockchain file?
-    //    private NewBestBlockListener newBestBlockListener = block -> {
-    //        try {
-    //            backupBlockStore.put(block);
-    //        } catch (BlockStoreException x) {
-    //            throw new RuntimeException(x);
-    //        }
-    //    };
+     //TODO: should we have a backup blockchain file?
+    private val newBestBlockListener: NewBestBlockListener = NewBestBlockListener {
+        currentBlock.value = it
+    }
+
     @Throws(BlockStoreException::class)
     private fun verifyBlockStore(store: BlockStore?): Boolean {
         val watch = Stopwatch.createStarted()

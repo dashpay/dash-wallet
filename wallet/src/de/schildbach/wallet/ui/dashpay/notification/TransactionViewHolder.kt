@@ -194,7 +194,6 @@ class TransactionViewHolder(val binding: NotificationTransactionRowBinding) :
             secondaryStatusId = txResourceMapper.getReceivedStatusString(
                 tx,
                 de.schildbach.wallet.Constants.CONTEXT,
-                chainHeight,
                 chainLockBlockHeight
             )
         }
