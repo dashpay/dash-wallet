@@ -207,7 +207,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                 currentlyContestedNames.forEach { name ->
                     if (maybeDualUsernames && instantUsername?.contains(name) == false) {
-                        // skip this name if it doesn't appear to be the contest name for the found username
+                        // skip this name if it doesn't appear to be the contested name for the found username
                         log.info("getVoteContenders: skipping {} because its not related to {}", name, instantUsername)
                         return@forEach
                     }
@@ -322,7 +322,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     // now much of this can be put in BlockchainIdentity
                     contestedNames.forEach { name ->
                         if (maybeDualUsernames && instantUsername?.contains(name) == false) {
-                            // skip this name if it doesn't appear to be the contest name for the found username
+                            // skip this name if it doesn't appear to be the contested name for the found username
                             log.info("getVoteContenders: skipping {} because its not related to {}", name, instantUsername)
                             return@forEach
                         }
