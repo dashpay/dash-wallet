@@ -281,6 +281,7 @@ class SendCoinsViewModel @Inject constructor(
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
+            Context.propagate(wallet.context)
 
             if (emptyWallet) {
                 sendCoinsTaskRunner.signSendRequest(finalSendRequest)
