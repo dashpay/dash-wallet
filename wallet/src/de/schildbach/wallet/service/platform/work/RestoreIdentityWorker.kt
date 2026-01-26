@@ -20,6 +20,7 @@ import android.content.Context
 import androidx.hilt.work.HiltWorker
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.google.common.base.Stopwatch
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.WalletApplication
@@ -123,15 +124,15 @@ class RestoreIdentityWorker @AssistedInject constructor(
             val creditFundingTransaction: AssetLockTransaction? =
                 cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
 
-            val existingBlockchainIdentityData = identityConfig.load()
-            if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingCreationStateErrorMessage != null*/)) {
-                log.info("Attempting restore of existing identity and username; save credit funding txid")
-                val blockchainIdentity = platformRepo.blockchainIdentity
-                blockchainIdentity.assetLockTransaction = creditFundingTransaction
-                existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
-                platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
-                return
-            }
+//            val existingBlockchainIdentityData = identityConfig.load()
+//            if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingCreationStateErrorMessage != null*/)) {
+//                log.info("Attempting restore of existing identity and username; save credit funding txid")
+//                val blockchainIdentity = platformRepo.blockchainIdentity
+//                blockchainIdentity.assetLockTransaction = creditFundingTransaction
+//                existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
+//                platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
+//                return
+//            }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
             val loadingFromAssetLockTransaction = creditFundingTransaction != null
@@ -193,7 +194,10 @@ class RestoreIdentityWorker @AssistedInject constructor(
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 4)
 
-            if (blockchainIdentity.currentUsername == null || !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)) {
+            var foundContestedNameInVotingPeriod = false
+            val maybeDualUsernames = blockchainIdentity.currentUsername != null && !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)
+            val instantUsername = blockchainIdentity.currentUsername
+            if (blockchainIdentity.currentUsername == null || maybeDualUsernames) {
                 platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // find active voting here
@@ -315,108 +319,119 @@ class RestoreIdentityWorker @AssistedInject constructor(
                     val contestedNames = platformRepo.platform.names.getAllContestedNames()
                     log.info("getAllContestedNames returns {} names and took {}", contestedNames.size, watch2)
 
-                // now much of this can be put in BlockchainIdentity
-                contestedNames.forEach { name ->
-                    val voteContenders = platformRepo.getVoteContenders(name)
-                    val winner = voteContenders.winner
-                    voteContenders.map.forEach { (identifier, documentWithVotes) ->
-                        if (blockchainIdentity.uniqueIdentifier == identifier) {
-                            if (blockchainIdentity.currentUsername != null) {
-                                blockchainIdentity.secondaryUsername = blockchainIdentity.currentUsername
-                            }
-                            blockchainIdentity.currentUsername = name
-                            blockchainIdentity.primaryUsername = name
-                            // load the serialized doc to get voting period and status...
-                            val usernameRequestStatus = if (winner.isEmpty) {
-                                UsernameRequestStatus.VOTING
-                            } else {
-                                val winnerInfo = winner.get().first
-                                when {
-                                    winnerInfo.isLocked -> UsernameRequestStatus.LOCKED
-                                    winnerInfo.isWinner(blockchainIdentity.uniqueIdentifier) -> UsernameRequestStatus.APPROVED
-                                    else -> UsernameRequestStatus.LOST_VOTE
+                    // now much of this can be put in BlockchainIdentity
+                    contestedNames.forEach { name ->
+                        if (maybeDualUsernames && instantUsername?.contains(name) == false) {
+                            // skip this name if it doesn't appear to be the contest name for the found username
+                            log.info("getVoteContenders: skipping {} because its not related to {}", name, instantUsername)
+                            return@forEach
+                        }
+                        val voteContenders = platformRepo.getVoteContenders(name)
+                        val winner = voteContenders.winner
+                        voteContenders.map.forEach { (identifier, documentWithVotes) ->
+                            if (blockchainIdentity.uniqueIdentifier == identifier) {
+                                foundContestedNameInVotingPeriod = true
+                                if (blockchainIdentity.currentUsername != null) {
+                                    blockchainIdentity.secondaryUsername = blockchainIdentity.currentUsername
                                 }
-                            }
-
-                            blockchainIdentity.usernameStatuses.apply {
-                                // clear()
-                                val usernameInfo = UsernameInfo(
-                                    null,
-                                    UsernameStatus.CONFIRMED,
-                                    blockchainIdentity.currentUsername!!,
-                                    usernameRequestStatus,
-                                    0
-                                )
-                                put(blockchainIdentity.currentUsername!!, usernameInfo)
-                            }
-                            var votingStartedAt = -1L
-                            var label = name
-                            if (winner.isEmpty) {
-                                val contestedDocument = DomainDocument(
-                                    platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
-                                )
-                                blockchainIdentity.currentUsername = contestedDocument.label
-                                votingStartedAt = contestedDocument.createdAt!!
-                                label = contestedDocument.label
-                            }
-                            val verifyDocument = IdentityVerify(platformRepo.platform.platform).get(
-                                blockchainIdentity.uniqueIdentifier,
-                                name
-                            )
-
-                            usernameRequestDao.insert(
-                                UsernameRequest(
-                                    UsernameRequest.getRequestId(
-                                        blockchainIdentity.uniqueIdString,
-                                        blockchainIdentity.currentUsername!!
-                                    ),
-                                    label,
-                                    name,
-                                    votingStartedAt,
-                                    blockchainIdentity.uniqueIdString,
-                                    verifyDocument?.url, // get it from the document
-                                    documentWithVotes.votes,
-                                    voteContenders.lockVoteTally,
-                                    false
-                                )
-                            )
-                            // what if usernameInfo would have been null, we should create it.
-                            var usernameInfo = blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]
-                            if (usernameInfo == null) {
-                                usernameInfo = UsernameInfo(
-                                    null,
-                                    UsernameStatus.CONFIRMED,
-                                    blockchainIdentity.currentUsername!!,
+                                blockchainIdentity.currentUsername = name
+                                blockchainIdentity.primaryUsername = name
+                                // load the serialized doc to get voting period and status...
+                                val usernameRequestStatus = if (winner.isEmpty) {
                                     UsernameRequestStatus.VOTING
-                                )
-                                blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!] = usernameInfo
-                            }
+                                } else {
+                                    val winnerInfo = winner.get().first
+                                    when {
+                                        winnerInfo.isLocked -> UsernameRequestStatus.LOCKED
+                                        winnerInfo.isWinner(blockchainIdentity.uniqueIdentifier) -> UsernameRequestStatus.APPROVED
+                                        else -> UsernameRequestStatus.LOST_VOTE
+                                    }
+                                }
 
-                            // determine when voting started by finding the minimum timestamp
-                            val earliestCreatedAt = voteContenders.map.values.minOf {
-                                val document = documentWithVotes.serializedDocument?.let { platformRepo.platform.names.deserialize(it) }
-                                document?.createdAt ?: 0
-                            }
-
-                            usernameInfo.votingStartedAt = earliestCreatedAt
-                            usernameInfo.requestStatus = usernameRequestStatus
-                            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-
-                            // schedule work to check the status after voting has ended
-                            if (usernameInfo.votingStartedAt != 0L) {
-                                GetUsernameVotingResultOperation(walletApplication)
-                                    .create(
-                                        usernameInfo.username!!,
-                                        blockchainIdentity.uniqueIdentifier.toString(),
-                                        earliestCreatedAt
+                                blockchainIdentity.usernameStatuses.apply {
+                                    // clear()
+                                    val usernameInfo = UsernameInfo(
+                                        null,
+                                        UsernameStatus.CONFIRMED,
+                                        blockchainIdentity.currentUsername!!,
+                                        usernameRequestStatus,
+                                        0
                                     )
-                                    .enqueue()
+                                    put(blockchainIdentity.currentUsername!!, usernameInfo)
+                                }
+                                var votingStartedAt = -1L
+                                var label = name
+                                if (winner.isEmpty) {
+                                    val contestedDocument = DomainDocument(
+                                        platformRepo.platform.names.deserialize(documentWithVotes.serializedDocument!!)
+                                    )
+                                    blockchainIdentity.currentUsername = contestedDocument.label
+                                    votingStartedAt = contestedDocument.createdAt!!
+                                    label = contestedDocument.label
+                                }
+                                val verifyDocument = IdentityVerify(platformRepo.platform.platform).get(
+                                    blockchainIdentity.uniqueIdentifier,
+                                    name
+                                )
+
+                                usernameRequestDao.insert(
+                                    UsernameRequest(
+                                        UsernameRequest.getRequestId(
+                                            blockchainIdentity.uniqueIdString,
+                                            blockchainIdentity.currentUsername!!
+                                        ),
+                                        label,
+                                        name,
+                                        votingStartedAt,
+                                        blockchainIdentity.uniqueIdString,
+                                        verifyDocument?.url, // get it from the document
+                                        documentWithVotes.votes,
+                                        voteContenders.lockVoteTally,
+                                        false
+                                    )
+                                )
+                                // what if usernameInfo would have been null, we should create it.
+                                var usernameInfo =
+                                    blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!]
+                                if (usernameInfo == null) {
+                                    usernameInfo = UsernameInfo(
+                                        null,
+                                        UsernameStatus.CONFIRMED,
+                                        blockchainIdentity.currentUsername!!,
+                                        UsernameRequestStatus.VOTING
+                                    )
+                                    blockchainIdentity.usernameStatuses[blockchainIdentity.currentUsername!!] =
+                                        usernameInfo
+                                }
+
+                                // determine when voting started by finding the minimum timestamp
+                                val earliestCreatedAt = voteContenders.map.values.minOf {
+                                    val document = documentWithVotes.serializedDocument?.let {
+                                        platformRepo.platform.names.deserialize(it)
+                                    }
+                                    document?.createdAt ?: 0
+                                }
+
+                                usernameInfo?.votingStartedAt = earliestCreatedAt
+                                usernameInfo?.requestStatus = usernameRequestStatus
+                                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+
+                                // schedule work to check the status after voting has ended
+                                if (usernameInfo?.votingStartedAt != 0L) {
+                                    GetUsernameVotingResultOperation(walletApplication)
+                                        .create(
+                                            usernameInfo?.username!!,
+                                            blockchainIdentity.uniqueIdentifier.toString(),
+                                            earliestCreatedAt
+                                        )
+                                        .enqueue()
+                                }
                             }
                         }
                     }
                 }
 
-                if (blockchainIdentity.currentUsername != null) {
+                if (blockchainIdentity.currentUsername != null && foundContestedNameInVotingPeriod) {
 
                     platformRepo.updateIdentityCreationState(
                         blockchainIdentityData,

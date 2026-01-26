@@ -280,7 +280,10 @@ class PlatformRepo @Inject constructor(
 
     fun getVoteContenders(username: String): Contenders {
         return try {
-            platform.names.getVoteContenders(Names.normalizeString(username))
+            val watch = Stopwatch.createStarted()
+            val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
+            log.info("getVoteContenders took {}", watch)
+            contenders
         } catch (e: Exception) {
             Contenders(Optional.empty(), mapOf(), 0, 0)
         }
