@@ -862,7 +862,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-
+    private val availableNetworks: MutableSet<Network> = ConcurrentHashMap.newKeySet()
     private inner class NetworkCallbackImpl : ConnectivityManager.NetworkCallback() {
         init {
             // Setup security health monitoring
@@ -909,6 +909,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
                 if (hasInternet && hasValidated) {
+                    availableNetworks.add(network)
                     impediments.remove(Impediment.NETWORK)
                     updateBlockchainStateImpediments()
                     check()
@@ -918,11 +919,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         override fun onLost(network: Network) {
             serviceScope.launch {
-                log.info("network lost: $network")
+                availableNetworks.remove(network)
+                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
 
-                impediments.add(Impediment.NETWORK)
-                updateBlockchainStateImpediments()
-                check()
+                // Only add impediment if no suitable networks remain
+                if (availableNetworks.isEmpty()) {
+                    impediments.add(Impediment.NETWORK)
+                    updateBlockchainStateImpediments()
+                    check()
+                }
             }
         }
 
@@ -1841,6 +1846,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (networkCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
+            availableNetworks.clear()
         }
         ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
