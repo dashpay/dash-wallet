@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.send
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AnimationUtils
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -256,9 +257,14 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         binding.paymentRequest.totalAmount.text = amount.add(txFee).toPlainString()
 
         binding.paymentRequest.memo.text = paymentIntent.memo
-        binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
-            ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
-
+        if (paymentIntent.payeeVerifiedBy != null) {
+            binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_secured_by)
+            binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
+        } else {
+            binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_connected_to_unsecured)
+            binding.paymentRequest.payeeSecuredBy.text = paymentIntent.paymentUrl?.toUri()?.host
+                        ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
+        }
         val forceMarqueeOnClickListener = View.OnClickListener {
             it.isSelected = false
             it.isSelected = true
