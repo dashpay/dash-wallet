@@ -176,40 +176,78 @@ class SendCoinsTaskRunner @Inject constructor(
         return SendPaymentService.TransactionDetails(txFee?.toPlainString() ?: "", amountToSend, totalAmount)
     }
 
-    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction {
-        return withContext(Dispatchers.IO) {
+    override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction =
+        withContext(Dispatchers.IO) {
             val paymentIntent = PaymentIntentParser.parse(dashUri, false)
             createPaymentRequest(paymentIntent, serviceName)
         }
+
+    /**
+     * Fetches a BIP70/BIP270 payment request from the given URL.
+     * @param basePaymentIntent The base payment intent containing the payment request URL
+     * @return The parsed PaymentIntent from the payment request
+     * @throws IOException if the request fails
+     * @throws IllegalStateException if BIP72 trust check fails
+     */
+    suspend fun fetchPaymentRequest(basePaymentIntent: PaymentIntent): PaymentIntent = withContext(Dispatchers.IO) {
+        val requestUrl = basePaymentIntent.paymentRequestUrl
+            ?: throw IllegalArgumentException("Payment intent must have a payment request URL")
+
+        log.info("requesting payment request from {}", requestUrl)
+        val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
+        val request = buildOkHttpPaymentRequest(requestUrl)
+        val response = Constants.HTTP_CLIENT.call(request)
+        response.ensureSuccessful()
+        requestUrl.toUri().host?.let {
+            timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
+        }
+        log.info("payment request received")
+
+        val contentType = response.header("Content-Type")
+        val byteStream = response.body?.byteStream()
+
+        if (byteStream == null || contentType.isNullOrEmpty()) {
+            throw IOException("Null response for the payment request: $requestUrl")
+        }
+
+        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+            log.info("BIP72 trust check failed")
+            throw IllegalStateException("BIP72 trust check failed: $requestUrl")
+        }
+
+        paymentIntent
+    }
+
+    /**
+     * Sends a direct payment via BIP70/BIP270 protocol.
+     * This method signs the transaction, completes it, sends it via HTTP to the payment URL,
+     * and handles the payment acknowledgment.
+     *
+     * @param sendRequest The send request (should already be created via createSendRequest)
+     * @param paymentIntent The payment intent containing the payment URL
+     * @param serviceName Optional service name for transaction metadata
+     * @return The committed transaction
+     * @throws DirectPayException if the payment is not acknowledged
+     * @throws IOException if the HTTP request fails
+     */
+    suspend fun sendDirectPayment(
+        sendRequest: SendRequest,
+        paymentIntent: PaymentIntent,
+        serviceName: String? = null
+    ): Transaction = withContext(Dispatchers.IO) {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
+
+        signSendRequest(sendRequest)
+        directPay(sendRequest, paymentIntent, serviceName)
     }
 
     private suspend fun createPaymentRequest(basePaymentIntent: PaymentIntent, serviceName: String?): Transaction {
         val requestUrl = basePaymentIntent.paymentRequestUrl
         if (requestUrl != null) {
-            log.info("requesting payment request from {}", requestUrl)
-            val timer = AnalyticsTimer(analyticsService, log, AnalyticsConstants.Process.PROCESS_BIP7O_GET_PAYMENT_REQUEST)
-            val request = buildOkHttpPaymentRequest(requestUrl)
-            val response = Constants.HTTP_CLIENT.call(request)
-            response.ensureSuccessful()
-            requestUrl.toUri().host?.let {
-                timer.logTiming(hashMapOf(AnalyticsConstants.Parameter.ARG1 to it))
-            }
-            log.info("payment request received")
-
-            val contentType = response.header("Content-Type")
-            val byteStream = response.body?.byteStream()
-
-            if (byteStream == null || contentType.isNullOrEmpty()) {
-                throw IOException("Null response for the payment request: $requestUrl")
-            }
-
-            val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
-
-            if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
-                log.info("BIP72 trust check failed")
-                throw IllegalStateException("BIP72 trust check failed: $requestUrl")
-            }
-
+            val paymentIntent = fetchPaymentRequest(basePaymentIntent)
             val sendRequest = createRequestFromPaymentIntent(paymentIntent)
             return sendPayment(paymentIntent, sendRequest, serviceName)
         } else {

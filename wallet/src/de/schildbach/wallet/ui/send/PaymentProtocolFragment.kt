@@ -167,7 +167,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                 }
                 Status.SUCCESS -> {
                     userAuthorizedDuring = true
-                    commitSendRequest(ack.data!!.first)
+                    showTransactionResult(ack.data!!)
                 }
                 Status.ERROR -> {
                     if (isAdded) {
@@ -175,34 +175,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         binding.errorView.title = R.string.payment_request_problem_title
                         binding.errorView.setMessage(ack.message)
                         binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            viewModel.directPay(ack.data!!.first)
+                            viewModel.sendPayment()
                         }
-                        binding.errorView.setOnCancelClickListener(R.string.payment_request_skip) {
-                            showTransactionResult(ack.data!!.first.tx)
-                        }
-                    } else {
-                        showTransactionResult(ack.data!!.first.tx)
+                        binding.errorView.hideCancelButton()
                     }
                 }
 
                 else -> {}
-            }
-        }
-    }
-
-    private fun commitSendRequest(sendRequest: SendRequest) {
-        lifecycleScope.launch {
-            try {
-                binding.viewFlipper.displayedChild = VIEW_LOADING
-                val transaction = viewModel.commitAndBroadcast(sendRequest)
-                showTransactionResult(transaction)
-            } catch (ex: Exception) {
-                binding.viewFlipper.displayedChild = VIEW_ERROR
-                binding.errorView.title = R.string.payment_request_unable_to_send
-                binding.errorView.message = R.string.payment_request_please_try_again
-                binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                    commitSendRequest(sendRequest)
-                }
             }
         }
     }
