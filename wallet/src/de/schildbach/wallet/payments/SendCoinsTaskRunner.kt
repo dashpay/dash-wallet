@@ -662,7 +662,7 @@ class SendCoinsTaskRunner @Inject constructor(
         }
     }
 
-    private suspend fun logSendTxEvent(
+    suspend fun logSendTxEvent(
         transaction: Transaction,
         wallet: Wallet
     ) {

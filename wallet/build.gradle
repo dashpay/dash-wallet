@@ -163,6 +163,8 @@ dependencies {
     testImplementation "io.mockk:mockk:1.13.8"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+    testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"
+    testImplementation "org.robolectric:robolectric:4.15.1"
 
     // Instrumental tests
     androidTestImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
