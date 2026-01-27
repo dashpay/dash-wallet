@@ -83,7 +83,7 @@ class SendCoinsTaskRunner @Inject constructor(
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
-        private val MAX_NO_CHANGE_FEE = Coin.valueOf(10_0000) // 0.001 DASH
+        private val MAX_NO_CHANGE_FEE = Coin.valueOf(10_0000).multiply(2) // 0.002 DASH
         private val log = LoggerFactory.getLogger(SendCoinsTaskRunner::class.java)
     }
     private var coinJoinSend = false
@@ -272,29 +272,6 @@ class SendCoinsTaskRunner @Inject constructor(
             forceEnsureMinRequiredFee = false
         )
 
-//        wallet.completeTx(sendRequest)
-//        if (checkDust(sendRequest)) {
-//            sendRequest = createSendRequest(
-//                false,
-//                paymentIntent,
-//                signInputs = false,
-//                forceEnsureMinRequiredFee = true
-//            )
-//            wallet.completeTx(sendRequest)
-//        }
-//
-//        if (isFeeTooHigh(sendRequest.tx)) {
-//            sendRequest = createSendRequest(
-//                false,
-//                paymentIntent,
-//                signInputs = sendRequest.signInputs,
-//                forceEnsureMinRequiredFee = sendRequest.ensureMinRequiredFee,
-//                useCoinJoinGreedy = false
-//            )
-//            log.info("  start completeTx again")
-//            wallet.completeTx(sendRequest)
-//        }
-
         return sendRequest
     }
 
@@ -474,6 +451,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
         // check for high fees when using coinjoin/greedy
         return if (isFeeTooHigh(secondSendRequest.tx)) {
+            log.info("fee was found to be too high: {}", secondSendRequest.tx.fee)
             createSendRequest(
                 mayEditAmount,
                 paymentIntent,

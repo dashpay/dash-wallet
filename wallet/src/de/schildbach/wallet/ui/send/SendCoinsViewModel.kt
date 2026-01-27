@@ -471,7 +471,7 @@ class SendCoinsViewModel @Inject constructor(
 //                wallet.completeTx(sendRequest)
 //                dryRunGreedy = false
 //            }
-            dryRunGreedy = sendRequest.coinControl is CoinJoinCoinSelector && !sendRequest.returnChange
+            dryRunGreedy = sendRequest.coinSelector is CoinJoinCoinSelector && !sendRequest.returnChange
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
             _dryRunSuccessful.postValue(true)
