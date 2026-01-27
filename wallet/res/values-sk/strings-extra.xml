@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Vytvoriť novú peňaženku</string>
-    <string name="onboarding_recover_wallet">Obnoviť peňaženku z frázy pre obnovenie</string>
+    <string name="onboarding_recover_wallet">Obnoviť peňaženku</string>
     <string name="onboarding_restore_wallet">Obnoviť peňaženku zo súboru</string>
     <string name="onboarding_load_wallet_error">Peňaženku sa nepodarilo načítať!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Nebola skopírovaná žiadna adresa</string>
 
     <string name="forgot_pin_title">Zabudli ste PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Nastaviť nový PIN kód</string>
     <string name="forgot_pin_message">Pomocou frázy pre obnovenie môžete nastaviť nový PIN kód.</string>
     <string name="forgot_pin_instruction_1">Ak chcete získať späť svoju peňaženku, zadajte frázu pre obnovenie</string>
     <string name="forgot_pin_instruction_2">Nastaviť nový PIN kód</string>
@@ -267,7 +268,7 @@
     <string name="authenticate_switch_to_fingerprint">Použiť odtlačok prsta</string>
     <string name="authenticate_switch_to_pin">Použiť PIN</string>
 
-    <string name="menu_invite_title">Pozvať</string>
+    <string name="menu_invite_title">Pozvánky</string>
     <string name="menu_invite_subtitle">Pomôžte svojim priateľom a rodine sa pripojiť k Dashu</string>
     <string name="menu_buy_and_sell_title">Kúpiť a predať Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojiť s burzami tretích strán</string>
@@ -280,7 +281,7 @@
     <string name="menu_tools_title">Nástroje</string>
     <string name="menu_tools_subtitle">Importovať privátny kľúč…</string>
     <string name="menu_local_currency">Miestna mena</string>
-    <string name="menu_rescan_blockchain">Znova prehľadať reťazec blokov</string>
+    <string name="menu_rescan_blockchain">Znova prehľadať blockchain</string>
     <string name="menu_contact_support_title">Kontaktovať podporu</string>
     <string name="menu_contact_support_subtitle">Nahlásiť problém</string>
     <string name="menu_explore_title">Objaviť</string>
@@ -340,13 +341,9 @@
 
     <string name="skip">preskočiť</string>
     <string name="get_started">Začať</string>
-    <string name="welcome_screen_title_1_new_install">Vitajte</string>
-    <string name="welcome_screen_title_1_upgrade">Aktualizovali sme</string>
-    <string name="welcome_screen_subtitle_1">Intuitívny a známy zážitok vo všetkých vašich zariadeniach</string>
-    <string name="welcome_screen_title_2">Plaťte jednoducho</string>
-    <string name="welcome_screen_subtitle_2">Plaťte a dostaňte okamžite zaplatené pomocou ľahko použiteľných platobných tokov</string>
-    <string name="welcome_screen_title_3">Viac kontroly</string>
-    <string name="welcome_screen_subtitle_3">Majte úplnú kontrolu a prispôsobte si vašu peňaženku podľa svojich potrieb</string>
+    <string name="welcome_screen_title_1">Posielaj a prijímaj Dash pomocou používateľských mien</string>
+    <string name="welcome_screen_title_2">Míňaj Dash v tisíckach obchodov</string>
+    <string name="welcome_screen_title_3">Najbezpečnejší spôsob uchovávania vašich Dash</string>
 
     <string-array name="history_filter">
         <item>Všetko</item>
@@ -355,7 +352,7 @@
     </string-array>
 
     <string name="sync_status_wait">Počkajte na dokončenie synchronizácie</string>
-    <string name="sync_status_syncing_sub_title">s reťazcom blokov Dash</string>
+    <string name="sync_status_syncing_sub_title">s Dash blockchainom</string>
     <string name="sync_status_unable_to_connect">Nedá sa pripojiť</string>
     <string name="sync_status_check_connection">Skontrolujte pripojenie</string>
     <string name="sync_status_sync_title">Synchronizovať</string>

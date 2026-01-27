@@ -37,8 +37,6 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
@@ -48,6 +46,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 import java.util.Date
 import javax.inject.Inject
@@ -237,14 +236,12 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             }
             is NotificationItemUserAlert -> {
                 lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
                     userAlertItem = null
                     viewModel.dismissUserAlert(R.string.invitation_notification_text)
-
-                    if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity())
+                    if (dashPayViewModel.getInviteCount() == 0) {
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteFee("notifications"))
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(requireActivity()))
+                        safeNavigate(NotificationsFragmentDirections.notificationsToInviteHistory("notifications"))
                     }
                 }
             }

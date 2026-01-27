@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Crear una Nueva Billetera</string>
-    <string name="onboarding_recover_wallet">Restaurar billetera desde la frase de recuperación</string>
+    <string name="onboarding_create_wallet">Crear una nueva billetera</string>
+    <string name="onboarding_recover_wallet">Restaurar billetera</string>
     <string name="onboarding_restore_wallet">Restaurar billetera desde un archivo</string>
     <string name="onboarding_load_wallet_error">¡No se puede cargar la billetera!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Ninguna dirección copiada</string>
 
     <string name="forgot_pin_title">¿Olvidaste el PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Configura un nuevo PIN</string>
     <string name="forgot_pin_message">Puedes establecer un nuevo PIN con la ayuda de tu frase de recuperación</string>
     <string name="forgot_pin_instruction_1">Ingresa la frase de recuperación para recuperar tu billetera</string>
     <string name="forgot_pin_instruction_2">Configura un nuevo PIN</string>
@@ -264,7 +265,7 @@
     <string name="authenticate_switch_to_fingerprint">Usar huella dactilar</string>
     <string name="authenticate_switch_to_pin">Usar PIN</string>
 
-    <string name="menu_invite_title">Invitar</string>
+    <string name="menu_invite_title">Invitaciónes</string>
     <string name="menu_invite_subtitle">Ayuda a tus amigos y familiares a unirse a Dash</string>
     <string name="menu_buy_and_sell_title">Comprar &amp; Vender Dash</string>
     <string name="menu_buy_and_sell_subtitle">Conectar con exchanges de terceros</string>
@@ -337,13 +338,9 @@
 
     <string name="skip">salta</string>
     <string name="get_started">Comenza</string>
-    <string name="welcome_screen_title_1_new_install">Bienvenido</string>
-    <string name="welcome_screen_title_1_upgrade">Nos actualizamos</string>
-    <string name="welcome_screen_subtitle_1">Una experiencia intuitiva y familiar a través de todos tus dispositivos</string>
-    <string name="welcome_screen_title_2">Paga con facilidad</string>
-    <string name="welcome_screen_subtitle_2">Paga y recibe instantáneamente con flujos de pagos fáciles de usar</string>
-    <string name="welcome_screen_title_3">Más Control</string>
-    <string name="welcome_screen_subtitle_3">Ten control completo y configura tu billetera de acuerdo a tus necesidades</string>
+    <string name="welcome_screen_title_1">Envíe y reciba Dash mediante nombre de usuario</string>
+    <string name="welcome_screen_title_2">Gaste Dash en miles de comercios</string>
+    <string name="welcome_screen_title_3">La manera más segura de almacenar su Dash</string>
 
     <string-array name="history_filter">
         <item>Todos</item>

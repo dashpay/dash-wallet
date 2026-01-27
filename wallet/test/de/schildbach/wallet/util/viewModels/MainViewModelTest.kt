@@ -40,7 +40,7 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.BiometricHelper
@@ -121,7 +121,7 @@ class MainViewModelTest {
     }
     private val platformService = mockk<PlatformService>()
     private val platformSyncService = mockk<PlatformSyncService>()
-    private val mockIdentityData = BlockchainIdentityBaseData(-1, BlockchainIdentityData.CreationState.NONE, null, null, null, false,null, false)
+    private val mockIdentityData = BlockchainIdentityBaseData(IdentityCreationState.NONE, null, null, null, null, false,null, false)
     private val blockchainIdentityConfigMock = mockk<BlockchainIdentityConfig> {
         coEvery { loadBase() } returns mockIdentityData
         every { observeBase() } returns MutableStateFlow(mockIdentityData)

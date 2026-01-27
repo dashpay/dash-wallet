@@ -19,6 +19,7 @@ import android.os.Parcelable
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import kotlinx.android.parcel.Parcelize
+import java.util.ArrayList
 
 @Parcelize
 data class UsernameSearchResult(val username: String,
@@ -71,5 +72,23 @@ data class UsernameSearchResult(val username: String,
         return toContactRequest?.toUserId
             ?: fromContactRequest?.userId
             ?: throw IllegalStateException("Cannot get identity: no contact request available")
+    }
+}
+
+fun ArrayList<UsernameSearchResult>.orderBy(orderBy: UsernameSortOrderBy) {
+    when (orderBy) {
+        UsernameSortOrderBy.DISPLAY_NAME -> this.sortBy {
+            if (it.dashPayProfile.displayName.isNotEmpty())
+                it.dashPayProfile.displayName.lowercase()
+            else it.dashPayProfile.username.lowercase()
+        }
+        UsernameSortOrderBy.USERNAME -> this.sortBy {
+            it.dashPayProfile.username.lowercase()
+        }
+        UsernameSortOrderBy.DATE_ADDED -> this.sortByDescending {
+            it.date
+        }
+        else -> { /* ignore */ }
+        //TODO: sort by last activity or date added
     }
 }

@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Vaša peňaženka bola úspešne obnovená. Jej bilancia bude následne vypočítaná. Zaberie to nejaký čas.</string>
     <string name="restore_wallet_dialog_success_encrypted">Upozornenie: Vaša peňaženka je chránená výdavkovým PIN-om. Uistite sa, že si ho stale pamätáte pred prijatím do tejto peňaženky.</string>
     <string name="import_keys_dialog_failure">Peňaženku sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
+    <string name="restore_wallet_creation_date_label">Dátum vytvorenia peňaženky (voliteľné)</string>
+    <string name="restore_wallet_creation_date_info">Vybraním dátumu vytvorenia peňaženky umožníte rýchlejšiu synchronizáciu tým, že sa naskenujú iba údaje od tohto dátumu.</string>
+    <string name="restore_wallet_select_date">Vybrať dátum vytvorenia</string>
+    <string name="restore_wallet_selected_date">Vybrané: %s</string>
+    <string name="restore_wallet_date_picker_title">Kedy ste vytvorili svoju peňaženku?</string>
+    <string name="wallet_creation_date_info_title">Ako môže dátum vytvorenia peňaženky urýchliť proces?</string>
+    <string name="wallet_creation_date_info_description">Ak poznáte približný dátum vytvorenia peňaženky, môžete ho zadať a transakcie sa načítajú len od tohto dátumu, čím sa synchronizácia zrýchli. Upozorňujeme, že ak zadáte dátum neskorší ako skutočný dátum vytvorenia peňaženky, staršie transakcie nebudú stiahnuté.</string>
     <string name="export_keys_dialog_title">Zálohovať peňaženku</string>
     <string name="backup_wallet_dialog_message">Vaša záloha bude zašifrovaná zvoleným heslom a uložená na externú pamäť.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša peňaženka je zabezpečená PIN-om. Uistite sa že si pamätáte nie len PIN ale tiež heslo k zálohe! </string>
@@ -274,10 +281,16 @@
     <string name="preferences_show_disclaimer_title">Ukázať vyhlásenie</string>
     <string name="preferences_show_disclaimer_summary">Naozaj ste si prečítali bezpečnostné pokyny? Zálohovali ste už peňaženku na bezpečné miesto?</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
-    <string name="preferences_initiate_reset_title">Znova prehľadať reťazec blokov</string>
-    <string name="preferences_initiate_reset_summary">Znova naskenovať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
-    <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
+    <string name="preferences_initiate_reset_title">Znova prehľadať blockchain</string>
+    <string name="preferences_initiate_reset_summary">Znova naskenovať blockchain, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
+    <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať blockchain?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie blockchainu. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
     <string name="preferences_initiate_reset_dialog_positive">Pre-skenovať</string>
+    <string name="rescan_blockchain_dialog_title">Ste si istí, že chcete znovu preskenovať blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Týmto sa dočasne skryje zostatok peňaženky a odstránia transakcie. Obe sa obnovia s postupom synchronizácie blockchainu. Uistite sa, že máte spoľahlivé internetové pripojenie.</string>
+    <string name="rescan_blockchain_select_date_label">Vybrať dátum vytvorenia peňaženky (voliteľné)</string>
+    <string name="rescan_blockchain_date_info_description">Informácie o dátume vytvorenia peňaženky</string>
+    <string name="rescan_blockchain_select_date_placeholder">Vybrať</string>
+    <string name="rescan_blockchain_confirm_button">Pre-skenovať</string>
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
     <string name="bitmap_fragment_share">Zdieľať...</string>
@@ -425,7 +438,7 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcete dostávať platby na pozadí?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Táto aplikácia je nakonfigurovaná tak, aby bola spustená aj vtedy, keď nebude nejaký čas viditeľná.\n\nOdporúčame tejto aplikácii povoliť, aby mala vždy aktuálne informácie o blockchaine, a to aj na pozadí.\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
     <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
-    <string name="credits_profile_change_message">Aktualizujte informácie o profile</string>
+    <string name="credits_profile_change_message">Aktualizovanie informácií o profile</string>
 
     <string name="block_explorer_selection_title">Vyberte prieskumníka blokov</string>
 
@@ -433,4 +446,9 @@
     <string name="select_option">Vyberte možnosť</string>
     <string name="customize_shortcuts">Prispôsobiť panel skratiek</string>
     <string name="customize_shortcuts_description">Pre nahradenie požadovanou funkciou, podržte ľubovoľné vyššie umiestnené tlačidlo</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Musíte aktualizovať svoj PIN</string>
+    <string name="upgrade_pin_description">Nastaviť nový PIN kód</string>
+    <string name="upgrade_pin_continue">Pokračovať</string>
 </resources>

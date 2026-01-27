@@ -280,6 +280,7 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
 
     public static int USERNAME_MIN_LENGTH = 3;
+    public static int USERNAME_NON_CONTESTED_MIN_LENGTH = 20;
     public static int USERNAME_MAX_LENGTH = 23;
     public static int DISPLAY_NAME_MAX_LENGTH = 25;
     public static int ABOUT_ME_MAX_LENGTH = 140;

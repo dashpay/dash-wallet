@@ -34,6 +34,7 @@ dependencies {
     }
     implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
     implementation 'com.google.android.gms:play-services-auth:21.3.0'
+    implementation 'com.google.android.gms:play-services-ads-identifier:18.2.0'
 
     coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:$desugaringLibraryVersion"
     implementation 'com.google.android.material:material:1.3.0'
@@ -133,7 +134,9 @@ dependencies {
     implementation 'com.google.firebase:firebase-inappmessaging-display'
     implementation 'com.google.firebase:firebase-installations'
     implementation 'com.google.firebase:firebase-messaging-ktx'
-    implementation 'com.google.firebase:firebase-dynamic-links'
+
+    // AppsFlyer SDK for deep linking
+    implementation 'com.appsflyer:af-android-sdk:6.17.0'
 
     // Google Drive Dependencies
     implementation ('com.google.api-client:google-api-client-android:1.26.0') {
@@ -309,6 +312,10 @@ android {
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
             buildConfigField("String", "COINBASE_CLIENT_SECRET", coinbaseClientSecret)
+            def appsFlyerId = props.getProperty("APPSFLYER_ID", "\"\"")
+            def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID", "\"\"")
+            buildConfigField("String", "APPSFLYER_ID", appsFlyerId)
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
         }
         prod {
             applicationId = "hashengineering.darkcoin.wallet"
@@ -391,13 +398,16 @@ android {
         }
     }
 
-    packagingOptions {
+    packaging {
         jniLibs {
             excludes += [
                 // android libscrypt.so is in dashj-x11-android
                 'lib/x86_64/freebsd/libscrypt.so',
                 'lib/x86_64/linux/libscrypt.so',
                 'lib/x86_64/darwin/libscrypt.dylib',
+                '**/lib/x86_64/darwin/libscrypt.dylib',
+                'root/lib/x86_64/darwin/libscrypt.dylib',
+                //'**/lib/**',
                 // 32-bit Platform SDK is not supported
                 'lib/x86/libsdklib.so',
                 'lib/armeabi-v7a/libsdklib.so'
@@ -414,7 +424,9 @@ android {
                     'google/protobuf/*.proto',
                     'META-INF/DEPENDENCIES',
                     'META-INF/AL2.0',
-                    'META-INF/LGPL2.1'
+                    'META-INF/LGPL2.1',
+                    'lib/**',
+                    'root/lib/**'
             ]
         }
     }

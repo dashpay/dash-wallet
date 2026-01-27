@@ -16,19 +16,18 @@
 
 package de.schildbach.wallet.transactions
 
-import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.wallet.Wallet
-import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.services.TransactionMetadataProvider
 
 /**
  * Exports in the TaxBit CSV format
  */
 class TaxBitExporter(
+    transactionMetadataProvider: TransactionMetadataProvider,
     wallet: Wallet,
-    metadataMap: Map<Sha256Hash, TransactionMetadata>
 ) : CSVExporter(
+    transactionMetadataProvider,
     wallet,
-    metadataMap,
     listOf("Income", "Expense", "Transfer-in", "Transfer-out")
 ) {
 

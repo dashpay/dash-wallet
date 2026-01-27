@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">새로운 지갑 생성하기</string>
-    <string name="onboarding_recover_wallet">복원 문구로 지갑 복구하기</string>
-    <string name="onboarding_restore_wallet">파일을 통해 지갑 복구하기</string>
+    <string name="onboarding_recover_wallet">지갑 복구</string>
     <string name="onboarding_load_wallet_error">지갑을 로딩할 수 없습니다!</string>
 
     <string name="set_pin_create_new_wallet">새로운 지갑 생성하기</string>
@@ -86,6 +84,7 @@
     <string name="payments_pay_to_clipboard_sub_title">복사된 주소가 없습니다</string>
 
     <string name="forgot_pin_title">PIN을 잊어버리셨나요?</string>
+    <string name="forgot_pin_setup_new_pin_title">새 PIN 설정하기</string>
     <string name="forgot_pin_message">당신의 복원 문구를 통해 새 PIN을 설정할 수 있습니다.</string>
     <string name="forgot_pin_instruction_1">당신의 지갑을 복원하시려면 복원 문구를 입력하세요</string>
     <string name="forgot_pin_instruction_2">새 PIN 설정하기</string>
@@ -258,7 +257,6 @@
     <string name="authenticate_switch_to_fingerprint">지문 사용하기</string>
     <string name="authenticate_switch_to_pin">PIN 사용하기</string>
 
-    <string name="menu_invite_title">초대하기</string>
     <string name="menu_invite_subtitle">당신의 친구와 가족이 대시에 가입하도록 도와주세요</string>
     <string name="menu_buy_and_sell_title">대시 매수 &amp; 매도</string>
     <string name="menu_buy_and_sell_subtitle">제3자 거래소에 연결</string>
@@ -331,14 +329,6 @@
 
     <string name="skip">건너뛰기</string>
     <string name="get_started">시작하기</string>
-    <string name="welcome_screen_title_1_new_install">환영합니다</string>
-    <string name="welcome_screen_title_1_upgrade">다음을 업그레이드 하였습니다</string>
-    <string name="welcome_screen_subtitle_1">당신의 모든 기기에 걸친 직관적이고 친근한 경험</string>
-    <string name="welcome_screen_title_2">쉬운 지불</string>
-    <string name="welcome_screen_subtitle_2">사용하기 쉬운 지불 플로우로 즉시 송금하고 송금 받으세요</string>
-    <string name="welcome_screen_title_3">보다 확실한 통제</string>
-    <string name="welcome_screen_subtitle_3">지갑에 대한 완전한 통제를 행사하고 당신의 필요에 따라 지갑을 커스터마이징 하세요</string>
-
     <string-array name="history_filter">
         <item>모두</item>
         <item>받음</item>

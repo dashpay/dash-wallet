@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 object Constants {
+    const val EARLIEST_HD_SEED_CREATION_TIME = 1427610960L
     private val log: Logger = LoggerFactory.getLogger(Constants::class.java)
 
     const val CHAR_HAIR_SPACE = '\u200a'

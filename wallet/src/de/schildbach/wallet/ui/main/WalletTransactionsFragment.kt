@@ -18,7 +18,6 @@
 package de.schildbach.wallet.ui.main
 
 import android.content.Context
-import android.content.Intent
 import android.graphics.Rect
 import android.graphics.Typeface
 import android.os.Bundle
@@ -29,11 +28,9 @@ import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.SearchUserActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
@@ -45,10 +42,16 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
+import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
 import de.schildbach.wallet.ui.transactions.TransactionRowView
+import de.schildbach.wallet.ui.unregisterLockScreenDeactivated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
 import kotlinx.coroutines.awaitCancellation
@@ -60,6 +63,7 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
+import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -69,9 +73,12 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
+    private val inviteHandlerViewModel by activityViewModels<InviteHandlerViewModel>()
 
     val isHistoryEmpty: Boolean
         get() = (binding.walletTransactionsList.adapter?.itemCount ?: 0) == 0
+
+    private lateinit var header: HistoryHeaderAdapter
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -130,7 +137,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             dialogFragment.show(requireActivity())
         }
 
-        val header = HistoryHeaderAdapter(
+        header = HistoryHeaderAdapter(
             requireContext().getSharedPreferences(
                 HistoryHeaderAdapter.PREFS_FILE_NAME,
                 Context.MODE_PRIVATE
@@ -140,6 +147,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         header.setOnIdentityRetryClicked { retryIdentityCreation(header) }
         header.setOnIdentityClicked { openIdentityCreation() }
         header.setOnJoinDashPayClicked { onJoinDashPayClicked() }
+        header.setOnAcceptInviteCreateClicked { onAcceptInvite() }
+        header.setOnAcceptInviteHideClicked { onHideInvite() }
 
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
@@ -168,14 +177,23 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         })
 
-        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
+        viewModel.isBlockchainSynced.observe(viewLifecycleOwner) {
+            header.isSynced = it
+            if (inviteHandlerViewModel.isUsingInvite) {
+                lifecycleScope.launch {
+                    processInvitation(inviteHandlerViewModel.invitation.value!!, isSynced = it, isLockScreenActive())
+                }
+            }
+            updateSyncState()
+        }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
+
         viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
             binding.loading.isVisible = false
 
-            if (transactionViews.isEmpty()) {
+            if (transactionViews.isEmpty() && header.isEmpty()) {
                 showEmptyView()
-            } else {
+            } else if (transactionViews.isNotEmpty()) {
                 val groupedByDate = transactionViews.entries
                     .sortedByDescending { it.key }
                     .map {
@@ -185,6 +203,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }.reduce { acc, list -> acc.apply { addAll(list) } }
 
                 adapter.submitList(groupedByDate)
+                showTransactionList()
+            } else {
                 showTransactionList()
             }
         }
@@ -196,13 +216,118 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
-            header.canJoinDashPay = canJoinDashPay
+        inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
+            val isSynced = viewModel.isBlockchainSynced.value == true
+            if (invitation != null && isSynced) {
+                processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
+            }
+            header.invitation = invitation
+            header.isSynced = isSynced
+            if (invitation != null) {
+                showTransactionList()
+                header.canJoinDashPay = false
+            }
         }
+
+        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
+            header.canJoinDashPay = canJoinDashPay && header.invitation == null
+        }
+
+        val myListener = { onLockScreenDeactivated() }
+
+        registerLockScreenDeactivated(myListener)
 
         viewLifecycleOwner.observeOnDestroy {
             binding.walletTransactionsList.adapter = null
+            unregisterLockScreenDeactivated(myListener)
         }
+    }
+
+    private fun onLockScreenDeactivated() {
+        lifecycleScope.launch {
+            inviteHandlerViewModel.invitation.value?.let {
+                // only process for the dialog
+                processInvitation(
+                    it,
+                    viewModel.isBlockchainSynced.value == true,
+                    false
+                )
+            }
+        }
+    }
+
+    private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
+        if (isSynced) {
+            if (invitation.expired) {
+                inviteHandlerViewModel.validateInvitation()
+            }
+
+            if (!isLockScreenActive) {
+                showInviteValidationDialog(invitation)
+            }
+        }
+    }
+
+    private suspend fun showInviteValidationDialog(invitation: InvitationLinkData) {
+        when (invitation.validationState) {
+            InvitationValidationState.INVALID -> {
+                InviteHandler(
+                    requireActivity(),
+                    viewModel.analytics
+                ).showInvalidInviteDialog(invitation.displayName)
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.ALREADY_HAS_IDENTITY -> {
+                // show dialog
+                InviteHandler(requireActivity(), viewModel.analytics).showUsernameAlreadyDialog()
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.ALREADY_HAS_REQUESTED_USERNAME -> {
+                // show dialog
+                InviteHandler(requireActivity(), viewModel.analytics).showContestedUsernameAlreadyDialog()
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.VALID -> {
+
+            }
+
+            InvitationValidationState.ALREADY_CLAIMED -> {
+                InviteHandler(requireActivity(), viewModel.analytics).showInviteAlreadyClaimedDialog(invitation)
+                // remove invite
+                inviteHandlerViewModel.clearInvitation()
+            }
+
+            InvitationValidationState.NONE -> {
+
+            }
+
+            InvitationValidationState.NOT_SYNCED -> {
+
+            }
+
+            else -> {}
+        }
+    }
+
+    private fun onHideInvite() {
+        lifecycleScope.launch {
+            inviteHandlerViewModel.clearInvitation()
+        }
+    }
+
+    private fun onAcceptInvite() {
+        val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
+            requireContext(),
+            inviteHandlerViewModel.invitation.value!!,
+            inviteHandlerViewModel.fromOnboarding
+        )
+        startActivity(createUsernameActivityIntent)
     }
 
     private fun updateSyncState() {
@@ -264,17 +389,19 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 )
             } else {
                 // handle errors from using an invite
-                val handler = InviteHandler(requireActivity(), viewModel.analytics)
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val handler = InviteHandler(requireActivity(), viewModel.analytics)
 
-                if (handler.handleError(blockchainIdentityData)) {
-                    header.blockchainIdentityData = null
-                } else {
-                    requireActivity().startService(
-                        CreateIdentityService.createIntentForRetryFromInvite(
-                            requireActivity(),
-                            false
+                    if (handler.handleError(blockchainIdentityData)) {
+                        header.blockchainIdentityData = null
+                    } else {
+                        requireActivity().startService(
+                            CreateIdentityService.createIntentForRetryFromInvite(
+                                requireActivity(),
+                                false
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
@@ -292,13 +419,16 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     // Do we need to have the user request a new username
                     val errorMessage = blockchainIdentityData.creationStateErrorMessage
                     val needsNewUsername =
-                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.USERNAME_REGISTERING &&
-                                (errorMessage.contains("Document transitions with duplicate unique properties") ||
-                                        errorMessage.contains("missing domain document for"))
+                        (blockchainIdentityData.creationState == IdentityCreationState.USERNAME_REGISTERING ||
+                                blockchainIdentityData.creationState == IdentityCreationState.USERNAME_SECONDARY_REGISTERING) &&
+                                (errorMessage?.contains("Document transitions with duplicate unique properties") == true ||
+                                        errorMessage?.contains("missing domain document for") == true ||
+                                errorMessage?.contains("DuplicateUniqueIndexError") == true)
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
-                        blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.REQUESTED_NAME_CHECKING &&
-                        !errorMessage.contains("invalid quorum: quorum not found")
+                        blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
+                        (errorMessage?.contains("invalid quorum: quorum not found") != true ||
+                                errorMessage.contains("invalid peer certificate: certificate expired") == true)
                     ) {
                         startActivity(
                             CreateUsernameActivity.createIntentReuseTransaction(
@@ -315,8 +445,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         ).show()
                     }
                 }
-            } else if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.DONE) {
-                startActivity(Intent(requireActivity(), SearchUserActivity::class.java))
+            } else if (blockchainIdentityData.creationState == IdentityCreationState.DONE) {
+                safeNavigate(WalletFragmentDirections.homeToSearchUser())
                 // hide "Hello Card" after first click
                 viewModel.dismissUsernameCreatedCard()
             } else {

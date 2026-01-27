@@ -39,7 +39,6 @@
     <dimen name="verify_seed_word_text_button_size">14dp</dimen>
     <dimen name="verify_seed_word_button_padding">20dp</dimen>
 
-    <dimen name="create_username_orbits_translation_x">140dp</dimen>
     <dimen name="identity_complete_text_size">18sp</dimen>
     <dimen name="invite_header_size">20sp</dimen>
     <dimen name="transaction_row_divider_margin_start">68dp</dimen>

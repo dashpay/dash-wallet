@@ -278,6 +278,8 @@
     <string name="preferences_initiate_reset_summary">I-scan muli ang blockchain, mga transaksyon at balanse ng wallet. Magtatagal ang replay, kaya gawin lang ito kung alam mo kung bakit.</string>
     <string name="preferences_initiate_reset_dialog_message">Gusto mo bang i-scan muli ang blockchain?\n\nPansamantala nitong itatago ang balanse ng iyong wallet at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">I-scan muli</string>
+    <string name="rescan_blockchain_select_date_placeholder">Pumili</string>
+    <string name="rescan_blockchain_confirm_button">I-scan muli</string>
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
     <string name="bitmap_fragment_share">Ipamahagi...</string>
@@ -433,4 +435,7 @@
     <string name="select_option">Pumili ng opsyon</string>
     <string name="customize_shortcuts">I-customize ang shortcut bar</string>
     <string name="customize_shortcuts_description">Pindutin ang anumang pindutan sa itaas upang palitan ito ng function na kailangan mo</string>
+
+    <string name="upgrade_pin_description">Mag set up ng bagong PIN</string>
+    <string name="upgrade_pin_continue">Ipagpatuloy</string>
 </resources>

@@ -51,11 +51,4 @@
                 app:menu="@menu/bottom_navigation_menu" />
         </FrameLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
-
-    <de.schildbach.wallet.ui.widget.PleaseWaitRestoringWalletView
-        android:id="@+id/restoring_wallet_cover"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="@color/background_primary"
-        android:visibility="gone" />
 </androidx.constraintlayout.widget.ConstraintLayout>

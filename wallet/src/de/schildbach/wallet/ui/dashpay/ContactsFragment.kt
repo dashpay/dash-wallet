@@ -41,8 +41,6 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.*
-import de.schildbach.wallet.ui.invite.InviteFriendActivity
-import de.schildbach.wallet.ui.invite.InvitesHistoryActivity
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -166,13 +164,11 @@ class ContactsFragment : Fragment(),
             emptyStatePane.inviteHintLayout.inviteFriendHint.setOnClickListener {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.INVITE_CONTACTS)
 
-                lifecycleScope.launch {
-                    val inviteHistory = dashPayViewModel.getInviteHistory()
-
-                    if (inviteHistory.isEmpty()) {
-                        InviteFriendActivity.startOrError(requireActivity(), source = "contacts")
+                viewLifecycleOwner.lifecycleScope.launch {
+                    if (dashPayViewModel.getInviteCount() == 0) {
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteFee("contacts"))
                     } else {
-                        startActivity(InvitesHistoryActivity.createIntent(requireContext()))
+                        safeNavigate(ContactsFragmentDirections.contactsToInviteHistory("contacts"))
                     }
                 }
             }
@@ -188,7 +184,7 @@ class ContactsFragment : Fragment(),
             }
         )
 
-        lifecycleScope.launch {
+        viewLifecycleOwner.lifecycleScope.launch {
             mainViewModel.dismissUsernameCreatedCardIfDone()
         }
     }
@@ -336,7 +332,8 @@ class ContactsFragment : Fragment(),
     }
 
     private fun searchUser() {
-        startActivity(SearchUserActivity.createIntent(requireContext(), query))
+        safeNavigate(ContactsFragmentDirections.contactsToSearchUser())
+        //startActivity(SearchUserActivity.createIntent(requireContext(), query))
     }
 
     private fun searchContacts() {

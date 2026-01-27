@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Създай нов портфейл</string>
-    <string name="onboarding_recover_wallet">Възстановяване на портфейл чрез фразата за възстановяване</string>
-    <string name="onboarding_restore_wallet">Възстановяване на портфейл от файл</string>
+    <string name="onboarding_recover_wallet">Възстанови портфейл</string>
     <string name="onboarding_load_wallet_error">Не може да се зареди портфейла!</string>
 
     <string name="set_pin_create_new_wallet">Създай нов портфейл</string>
@@ -68,6 +66,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Няма копиран адрес</string>
 
     <string name="forgot_pin_title">Забравен ПИН?</string>
+    <string name="forgot_pin_setup_new_pin_title">Задайте нов ПИН</string>
     <string name="forgot_pin_message">Можете да зададете нов ПИН с помощта на вашата фраза за възстановяване.</string>
     <string name="forgot_pin_instruction_1">Въведете фразата си за възстановяване, за да възстановите  вашият портфейл.</string>
     <string name="forgot_pin_instruction_2">Задайте нов ПИН</string>
@@ -254,14 +253,6 @@
 
     <string name="skip">пропусни</string>
     <string name="get_started">Първи стъпки</string>
-    <string name="welcome_screen_title_1_new_install">Добре дошли</string>
-    <string name="welcome_screen_title_1_upgrade">Надградихме</string>
-    <string name="welcome_screen_subtitle_1">Интуитивно и познато преживяване на всичките Ви устройства</string>
-    <string name="welcome_screen_title_2">Платете с лекота</string>
-    <string name="welcome_screen_subtitle_2">Платете и вземете плащане незабавно с лесни за използване потоци на плащане</string>
-    <string name="welcome_screen_title_3">Повече контрол</string>
-    <string name="welcome_screen_subtitle_3">Имате пълен контрол и персонализиране на портфейла според  нужди Ви</string>
-
     <string-array name="history_filter">
         <item>Всички</item>
         <item>Получени</item>

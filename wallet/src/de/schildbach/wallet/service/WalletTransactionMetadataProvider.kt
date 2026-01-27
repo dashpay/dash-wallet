@@ -494,10 +494,10 @@ class WalletTransactionMetadataProvider @Inject constructor(
 
     override suspend fun getAllTransactionMetadata(): List<TransactionMetadata> {
         val metadataList = transactionMetadataDao.load()
-
+        val hasAddressMetadata = addressMetadataDao.count() != 0
         // look up the transaction metadata and merge with address metadata
         for (metadata in metadataList) {
-            if (metadata.taxCategory == null) {
+            if (metadata.taxCategory == null && hasAddressMetadata) {
                 // if there is no user specified tax category, then look at address_metadata
                 val taxCategory = getDefaultTaxCategory(metadata.txId)
 

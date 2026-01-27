@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Tạo một ví mới</string>
-    <string name="onboarding_recover_wallet">Khôi phục ví từ câu phục hồi</string>
-    <string name="onboarding_restore_wallet">Khôi phục ví từ file</string>
+    <string name="onboarding_recover_wallet">Nhập dữ liệu từ khóa Dash</string>
     <string name="onboarding_load_wallet_error">Không thể nạp ví!</string>
 
     <string name="set_pin_create_new_wallet">Tạo một ví mới</string>
@@ -69,6 +67,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Không có địa chỉ nào được copy</string>
 
     <string name="forgot_pin_title">Quên mã PIN</string>
+    <string name="forgot_pin_setup_new_pin_title">Thiết lập mã PIN mới</string>
     <string name="forgot_pin_message">Bạn có thể thiết lập mã PIN mới với sự giúp đỡ của câu phục hồi.</string>
     <string name="forgot_pin_instruction_1">Nhập câu phục hồi để khôi phục lại ví của bạn</string>
     <string name="forgot_pin_instruction_2">Thiết lập mã PIN mới</string>
@@ -256,14 +255,6 @@
 
     <string name="skip">bỏ qua</string>
     <string name="get_started">Bắt đầu</string>
-    <string name="welcome_screen_title_1_new_install">Chào mừng</string>
-    <string name="welcome_screen_title_1_upgrade">Chúng tôi đã Nâng cấp</string>
-    <string name="welcome_screen_subtitle_1">Một giao diện trực quan và quen thuộc trên tất cả các thiết bị của bạn</string>
-    <string name="welcome_screen_title_2">Giao dịch một cách đơn giản</string>
-    <string name="welcome_screen_subtitle_2">Trả và nhận một cách tức thời một cách dễ dàng bằng cách sử dụng các quy trình thanh toán</string>
-    <string name="welcome_screen_title_3">Kiểm soát nhiều hơn</string>
-    <string name="welcome_screen_subtitle_3">Bạn có toàn quyền kiểm soát và tuỳ chỉnh ví dựa trên nhu cầu của mình</string>
-
     <string-array name="history_filter">
         <item>Tất cả</item>
         <item>Đã nhận</item>

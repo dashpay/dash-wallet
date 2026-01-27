@@ -19,6 +19,7 @@ package org.dash.wallet.common.ui.avatar
 
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.view.View
 import android.widget.ImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource

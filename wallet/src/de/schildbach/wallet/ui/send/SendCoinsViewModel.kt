@@ -250,7 +250,7 @@ class SendCoinsViewModel @Inject constructor(
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
-
+            Context.propagate(wallet.context)
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
             _state.postValue(State.FAILED)
@@ -285,6 +285,7 @@ class SendCoinsViewModel @Inject constructor(
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
+            Context.propagate(wallet.context)
 
             if (emptyWallet) {
                 sendCoinsTaskRunner.signSendRequest(finalSendRequest)
@@ -311,7 +312,7 @@ class SendCoinsViewModel @Inject constructor(
             throw ex
         }
 
-        _state.postValue(State.SENT)
+        _state.value = State.SENT
         transaction
     }
 

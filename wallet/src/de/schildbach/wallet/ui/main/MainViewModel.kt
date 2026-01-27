@@ -23,6 +23,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.common.base.Stopwatch
@@ -36,7 +37,7 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.SeriousErrorLiveData
 import de.schildbach.wallet.security.BiometricHelper
@@ -73,14 +74,13 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
-import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.PeerGroup
+import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.utils.MonetaryFormat
@@ -105,11 +105,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
-import java.text.DecimalFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -131,12 +128,12 @@ class MainViewModel @Inject constructor(
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
     val platformRepo: PlatformRepo,
-    val platformService: PlatformService,
-    val platformSyncService: PlatformSyncService,
+    private val platformService: PlatformService,
+    private val platformSyncService: PlatformSyncService,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     private val savedStateHandle: SavedStateHandle,
-    private val metadataProvider: TransactionMetadataProvider,
-    private val blockchainStateProvider: BlockchainStateProvider,
+    metadataProvider: TransactionMetadataProvider,
+    blockchainStateProvider: BlockchainStateProvider,
     val biometricHelper: BiometricHelper,
     private val deviceInfo: DeviceInfoProvider,
     private val invitationsDao: InvitationsDao,
@@ -154,6 +151,7 @@ class MainViewModel @Inject constructor(
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
+    var restoringBackup: Boolean = false
     private val workerJob = SupervisorJob()
 
     @VisibleForTesting
@@ -189,6 +187,9 @@ class MainViewModel @Inject constructor(
     private var chainHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
     private var chainLockBlockHeight: Int = 0
     private var headersHeight: Int = walletData.wallet?.lastBlockSeenHeight ?: 0
+    private val _syncStage = MutableStateFlow(SyncStage.OFFLINE)
+    val syncStage: StateFlow<SyncStage>
+        get() = _syncStage
 
     private val _exchangeRate = MutableLiveData<ExchangeRate>()
     val exchangeRate: LiveData<ExchangeRate>
@@ -253,21 +254,32 @@ class MainViewModel @Inject constructor(
     // DashPay
     private val isPlatformAvailable = MutableStateFlow(false)
 
-
     val isAbleToCreateIdentityLiveData = MediatorLiveData<Boolean>().apply {
         addSource(isPlatformAvailable.asLiveData()) {
             value = combineLatestData()
         }
-        addSource(_isBlockchainSynced) {
-            value = combineLatestData()
-        }
+//        addSource(_isBlockchainSynced) {
+//            value = combineLatestData()
+//        }
         addSource(blockchainIdentity) {
             value = combineLatestData()
         }
-        addSource(_totalBalance) {
-            value = combineLatestData()
-        }
+//        addSource(_totalBalance) {
+//            value = combineLatestData()
+//        }
     }
+
+    val isAbleToCreateIdentityFlow: StateFlow<Boolean> = combine(
+        isPlatformAvailable,
+        blockchainIdentity.asFlow()
+    ) { isPlatformAvailable, identity ->
+        combineLatestData()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
 
     val isAbleToCreateIdentity: Boolean
         get() = isAbleToCreateIdentityLiveData.value ?: false
@@ -409,8 +421,10 @@ class MainViewModel @Inject constructor(
                         false
                     }
                 }
+                _syncStage.value = syncStage ?: SyncStage.OFFLINE
             }
             .launchIn(viewModelScope)
+        restoringBackup = config.isRestoringBackup
     }
 
     fun logEvent(event: String) {
@@ -755,7 +769,7 @@ class MainViewModel @Inject constructor(
 
         if (state.replaying && state.percentageSync == 100) {
             // This is to prevent showing 100% when using the Rescan blockchain function.
-            // The first few broadcasted blockchainStates are with percentage sync at 100%
+            // The first few broadcast blockchainStates are with percentage sync at 100%
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
@@ -871,7 +885,7 @@ class MainViewModel @Inject constructor(
     suspend fun dismissUsernameCreatedCardIfDone(): Boolean {
         val data = blockchainIdentityDataDao.loadBase()
 
-        if (data.creationState == BlockchainIdentityData.CreationState.DONE) {
+        if (data.creationState == IdentityCreationState.DONE) {
             platformRepo.doneAndDismiss()
             return true
         }
@@ -907,16 +921,14 @@ class MainViewModel @Inject constructor(
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
-            val isSynced = _isBlockchainSynced.value ?: false
             val noIdentityCreatedOrInProgress =
-                (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == BlockchainIdentityData.CreationState.NONE
+                (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == IdentityCreationState.NONE
             log.info(
-                "platform available: {}; isSynced: {}: no identity creation is progress: {}",
+                "platform available: {}; no identity creation is progress: {}",
                 isPlatformAvailable,
-                isSynced,
                 noIdentityCreatedOrInProgress
             )
-            return isSynced && isPlatformAvailable && noIdentityCreatedOrInProgress
+            return /*isSynced &&*/ isPlatformAvailable && noIdentityCreatedOrInProgress
         }
     }
 
@@ -929,8 +941,13 @@ class MainViewModel @Inject constructor(
     }
 
     fun addCoinJoinToWallet() {
-        val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
-        (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        try {
+            val encryptionKey = platformRepo.getWalletEncryptionKey()
+                ?: throw IllegalStateException("cannot obtain wallet encryption key")
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(encryptionKey, 0)
+        } catch (e: Exception) {
+            log.error("problem adding CoinJoin support to wallet: ", e)
+        }
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()

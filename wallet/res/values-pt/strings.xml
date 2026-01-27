@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Sua carteira foi restaurada com sucesso. O saldo será determinado em seguida. Isso poderá levar algum tempo.</string>
     <string name="restore_wallet_dialog_success_encrypted">Aviso: Sua carteira está protegida por um código PIN. Certifique-se de que ainda lembra deste código antes de receber nesta carteira.</string>
     <string name="import_keys_dialog_failure">A carteira não pôde ser restaurada:\n\n%s\n\nSenha incorreta?</string>
+    <string name="restore_wallet_creation_date_label">Data de criação da carteira (opcional)</string>
+    <string name="restore_wallet_creation_date_info">Selecionando quando sua carteira foi criada permite uma sincronização mais rápida, pois a varredura é feita a partir dessa data. </string>
+    <string name="restore_wallet_select_date">Selecionar data de criação</string>
+    <string name="restore_wallet_selected_date">Selecionado: %s</string>
+    <string name="restore_wallet_date_picker_title">Quando a sua carteira foi criada?</string>
+    <string name="wallet_creation_date_info_title">Como a data de criação da carteira pode acelerar o processo?</string>
+    <string name="wallet_creation_date_info_description">Se você souber a data aproximada em que criou sua carteira, pode informá-la e as transações a partir dessa data serão recuperadas, tornando a sincronização mais rápida. Observe que, se você inserir uma data posterior à criação da carteira, as transações mais antigas não serão baixadas.</string>
     <string name="export_keys_dialog_title">Fazer back up da carteira</string>
     <string name="backup_wallet_dialog_message">Seu backup será criptografado com a senha escolhida e será salvo no armazenamento externo.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Sua carteira é protegida por um PIN. Certifique-se de que você se lembra do PIN, além da senha de backup!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Varrer novamente blockchain, transações e saldo da carteira. Repetir esse processo vai demorar um pouco, então só faça isso se você souber o porquê.</string>
     <string name="preferences_initiate_reset_dialog_message">Deseja verificar novamente o blockchain?\n\nIsso ocultará temporariamente o saldo da sua carteira e removerá as transações. Ambos serão recuperados à medida que a sincronização do blockchain progride. Certifique-se de que você tem uma conexão confiável com a Internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Reescanear</string>
+    <string name="rescan_blockchain_dialog_title">Você tem certeza de que deseja reescanear a blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Isso irá ocultar temporariamente o saldo da sua carteira e remover as transações. Ambos serão restaurados à medida que a sincronização da blockchain avançar. Certifique-se de ter uma conexão de internet confiável.</string>
+    <string name="rescan_blockchain_select_date_label">Selecione a data de criação da carteira (opcional)</string>
+    <string name="rescan_blockchain_date_info_description">Informações sobre a data de criação da carteira</string>
+    <string name="rescan_blockchain_select_date_placeholder">Selecionar</string>
+    <string name="rescan_blockchain_confirm_button">Reescanear</string>
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ver a chave pública estendida de sua carteira, para que possa ser importada para outros aplicativos e serviços. Tenha cuidado: isso irá divulgar a sua privacidade monetária para o app.</string>
     <string name="bitmap_fragment_share">Compartilhar…</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Selecionar opção</string>
     <string name="customize_shortcuts">Personalizar barra de atalho</string>
     <string name="customize_shortcuts_description">Mantenha pressionado qualquer botão acima para substituí-lo pela função que você deseja</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Você precisa atualizar seu PIN</string>
+    <string name="upgrade_pin_description">Definir um novo PIN</string>
+    <string name="upgrade_pin_continue">Continuar</string>
 </resources>

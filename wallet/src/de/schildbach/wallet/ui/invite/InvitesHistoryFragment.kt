@@ -18,33 +18,32 @@
 package de.schildbach.wallet.ui.invite
 
 import android.os.Bundle
-import android.view.MenuItem
 import android.view.View
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentInvitesHistoryBinding
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class InvitesHistoryFragment(private val caller: String) :
-    Fragment(R.layout.fragment_invites_history), InvitesAdapter.OnItemClickListener {
-
+class InvitesHistoryFragment :
+    Fragment(R.layout.fragment_invites_history),
+    InvitesAdapter.OnItemClickListener {
     companion object {
         private val log = LoggerFactory.getLogger(InvitesHistoryFragment::class.java)
-
-        fun newInstance(caller: String = "") = InvitesHistoryFragment(caller)
     }
 
-    // need default constructor to prevent crashes
-    constructor() :this("")
-    private lateinit var binding: FragmentInvitesHistoryBinding
-
+    private val binding by viewBinding(FragmentInvitesHistoryBinding::bind)
+    private val args by navArgs<InvitesHistoryFragmentArgs>()
+    private val source by lazy { args.source }
     private val invitesHistoryViewModel: InvitesHistoryViewModel by viewModels()
     private val filterViewModel: InvitesHistoryFilterViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
@@ -53,32 +52,25 @@ class InvitesHistoryFragment(private val caller: String) :
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding = FragmentInvitesHistoryBinding.bind(view)
-        setHasOptionsMenu(true)
 
         val toolbar = view.findViewById<Toolbar>(R.id.toolbar)
         toolbar.title = requireContext().getString(R.string.menu_invite_title)
-        val appCompatActivity = requireActivity() as AppCompatActivity
-        appCompatActivity.setSupportActionBar(toolbar)
-        val actionBar = appCompatActivity.supportActionBar
-        actionBar?.apply {
-            setDisplayHomeAsUpEnabled(true)
-            setDisplayShowHomeEnabled(true)
+        toolbar.setNavigationOnClickListener {
+            findNavController().popBackStack()
         }
-
-
-        initViewModel()
 
         invitesAdapter = InvitesAdapter(this, invitesHistoryViewModel.filterClick)
         binding.historyRv.layoutManager = LinearLayoutManager(requireContext())
         binding.historyRv.adapter = this.invitesAdapter
 
+        initViewModel()
         initHistoryView()
     }
 
     private fun initViewModel() {
         invitesHistoryViewModel.filterClick.observe(viewLifecycleOwner) {
-            InviteFilterSelectionDialog.createDialog(this)
+            InviteFilterSelectionDialog
+                .createDialog(this)
                 .show(requireActivity().supportFragmentManager, "inviteFilterDialog")
         }
 
@@ -86,10 +78,8 @@ class InvitesHistoryFragment(private val caller: String) :
             invitesAdapter.onFilter(it)
         }
 
-        createInviteViewModel.isAbleToCreateInviteLiveData.observe(requireActivity()) {
-            if (it != null) {
-                invitesAdapter.showCreateInvite(it)
-            }
+        createInviteViewModel.isAbleToCreateInviteFlow.observe(requireActivity()) {
+            invitesAdapter.showCreateInvite(it)
         }
     }
 
@@ -103,36 +93,22 @@ class InvitesHistoryFragment(private val caller: String) :
         }
     }
 
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            android.R.id.home -> {
-                requireActivity().onBackPressed()
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     override fun onItemClicked(view: View, invitationItem: InvitationItem) {
         when (invitationItem.type) {
             InvitesAdapter.INVITE_HEADER,
             InvitesAdapter.EMPTY_HISTORY -> {
-
+                // no action
             }
             InvitesAdapter.INVITE_CREATE -> {
-                createInviteViewModel.logEvent(when(caller) {
-                    "more" -> AnalyticsConstants.Invites.CREATE_MORE
-                    else -> AnalyticsConstants.Invites.CREATE_HISTORY
-                })
-                InviteFriendActivity.startOrError(requireActivity(), source = "history")
+                safeNavigate(InvitesHistoryFragmentDirections.toCreateInvite("history"))
             }
             else -> {
                 log.info("showing invitation for ${invitationItem.invitation!!.userId}")
-                startActivity(
-                    InviteFriendActivity.createIntentExistingInvite(
-                        requireActivity(),
+                safeNavigate(
+                    InvitesHistoryFragmentDirections.toInviteDetails(
+                        invitationItem.uniqueIndex,
                         invitationItem.invitation.userId,
-                        invitationItem.uniqueIndex
+                        "history"
                     )
                 )
             }

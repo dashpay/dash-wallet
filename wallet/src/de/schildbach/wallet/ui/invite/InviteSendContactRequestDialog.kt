@@ -19,44 +19,74 @@ package de.schildbach.wallet.ui.invite
 import android.content.Context
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
+import android.widget.ImageView
+import android.widget.TextView
+import androidx.annotation.DrawableRes
+import androidx.core.text.HtmlCompat
+import androidx.core.view.isVisible
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.InviteSendContactRequestViewBinding
-import org.dash.wallet.common.ui.FancyAlertDialog
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
-open class InviteSendContactRequestDialog : FancyAlertDialog() {
-
+open class InviteSendContactRequestDialog : AdaptiveDialog(R.layout.invite_send_contact_request_view) {
     companion object {
-
         private const val EXTRA_PROFILE = "profile"
         private const val EXTRA_ICON = "icon"
 
-        fun newInstance(context: Context, profile: DashPayProfile): FancyAlertDialog {
+        fun newInstance(context: Context, profile: DashPayProfile): InviteSendContactRequestDialog {
             val messageHtml = context.getString(R.string.invitation_contact_request_sent_message, "<b>${profile.nameLabel}</b>")
+            return create(null, "", messageHtml, context.getString(R.string.button_ok))
+        }
+
+        @JvmStatic
+        fun create(
+            @DrawableRes icon: Int?,
+            title: String,
+            message: String,
+            negativeButtonText: String
+        ): InviteSendContactRequestDialog {
+            return custom(
+                icon, title, message, negativeButtonText
+            )
+        }
+
+        @JvmStatic
+        fun custom(
+            @DrawableRes icon: Int?,
+            title: String?,
+            message: String,
+            negativeButtonText: String
+        ): InviteSendContactRequestDialog {
+            val args = Bundle().apply {
+                icon?.let { putInt(ICON_RES_ARG, icon) }
+                putString(TITLE_ARG, title)
+                putString(MESSAGE_ARG, message)
+                putString(NEG_BUTTON_ARG, negativeButtonText)
+                putBoolean(CUSTOM_DIALOG_ARG, true)
+            }
             return InviteSendContactRequestDialog().apply {
-                arguments = createBaseArguments(Type.INFO, 0, R.string.okay, 0)
-                        .apply {
-                            putString("message", messageHtml)
-                            putInt(EXTRA_ICON, R.drawable.ic_invitation_contact_request_sent)
-                            putParcelable(EXTRA_PROFILE, profile)
-                        }
+                arguments = args
             }
         }
     }
 
-    override val customContentViewResId: Int
-        get() = R.layout.invite_send_contact_request_view
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val binding = InviteSendContactRequestViewBinding.bind(view)
+        val avatar: ImageView = view.findViewById(R.id.avatar)
+        val icon: ImageView = view.findViewById(R.id.icon)
+        view.findViewById<TextView>(R.id.dialog_title).isVisible = false
+        view.findViewById<Button>(R.id.dialog_positive_button)!!.isVisible = false
         requireArguments().apply {
+            val messageObj = getString(MESSAGE_ARG)!!
+            val message: TextView = view.findViewById(R.id.dialog_message)!!
+            message.text = HtmlCompat.fromHtml(messageObj, HtmlCompat.FROM_HTML_MODE_COMPACT)
             val profile = getParcelable<DashPayProfile>(EXTRA_PROFILE)
-            ProfilePictureDisplay.display(binding.avatar, profile)
+            ProfilePictureDisplay.display(avatar, profile)
             val iconResId = getInt(EXTRA_ICON)
-            binding.icon.setImageResource(iconResId)
+            icon.setImageResource(iconResId)
         }
     }
 }
