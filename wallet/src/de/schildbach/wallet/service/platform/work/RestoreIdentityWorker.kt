@@ -121,29 +121,10 @@ class RestoreIdentityWorker @AssistedInject constructor(
             //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
             val cftxs = authExtension.assetLockTransactions
 
-            val creditFundingTransaction: AssetLockTransaction? =
-                cftxs.find { it.identityId.bytes!!.contentEquals(identity) }
-
-//            val existingBlockchainIdentityData = identityConfig.load()
-//            if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingCreationStateErrorMessage != null*/)) {
-//                log.info("Attempting restore of existing identity and username; save credit funding txid")
-//                val blockchainIdentity = platformRepo.blockchainIdentity
-//                blockchainIdentity.assetLockTransaction = creditFundingTransaction
-//                existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
-//                platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
-//                return
-//            }
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
-            val loadingFromAssetLockTransaction = creditFundingTransaction != null
-            val existingIdentity: Identity?
-
-            if (!loadingFromAssetLockTransaction) {
-                existingIdentity = platformRepo.getIdentityFromPublicKeyId()
-                if (existingIdentity == null) {
-                    throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
-                }
-            }
+            val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
 
             val wallet = walletDataProvider.wallet!!
             val encryptionKey = platformRepo.getWalletEncryptionKey()
@@ -166,15 +147,13 @@ class RestoreIdentityWorker @AssistedInject constructor(
             //
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_2), 5, 2)
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
-            if (loadingFromAssetLockTransaction) {
-                platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
-            } else {
-                val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
-                platformRepo.recoverIdentityAsync(
-                    blockchainIdentity,
-                    firstIdentityKey.pubKeyHash
-                )
-            }
+
+            val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
+            platformRepo.recoverIdentityAsync(
+                blockchainIdentity,
+                firstIdentityKey.pubKeyHash
+            )
+
             platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
