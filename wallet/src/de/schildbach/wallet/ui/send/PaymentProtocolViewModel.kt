@@ -123,7 +123,7 @@ class PaymentProtocolViewModel @Inject constructor(
     fun requestPaymentRequest(basePaymentIntent: PaymentIntent) {
         _sendRequestLiveData.value = Resource.loading(null)
 
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 val paymentIntent = sendCoinsTaskRunner.fetchPaymentRequest(basePaymentIntent)
 
@@ -174,7 +174,7 @@ class PaymentProtocolViewModel @Inject constructor(
      * Updates [directPaymentAckLiveData] with the result.
      */
     fun sendPayment() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             try {
                 directPaymentAckLiveData.value = Resource.loading(null)
 
