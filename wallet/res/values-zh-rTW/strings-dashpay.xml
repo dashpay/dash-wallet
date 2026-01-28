@@ -17,9 +17,10 @@
     <string name="new_account_confirm_accept">我接受</string>
     <string name="new_account_confirm_upgrade_fee">升級費用</string>
     <string name="new_account_confirm_message">您已選擇 %s 作為您的用戶名。請注意，用戶名一旦註冊就無法更改。</string>
+    <string name="new_account_secondary_confirm_message">您選擇 %s 作為即時用戶名。請注意，用戶名一旦註冊就無法更改。</string>
     <string name="invitation_confirm_title">邀請費</string>
     <string name="invitation_confirm_message">每個邀請都將獲得該金額的資助，以便接收者可以在達世幣網絡上快速創建他們的用戶名</string>
-    <string name="invitation_init_title">邀請</string>
+    <string name="invitation_title">邀請</string>
     <string name="invitation_init_header">邀請您的朋友和家人</string>
     <string name="invitation_init_message">幫助您的朋友和家人加入達世幣網路。邀請他們進入社交銀行的世界。</string>
     <string name="invitation_init_button_text">創建新的邀請</string>
@@ -53,8 +54,12 @@
     <string name="invitation_invalid_invite_message">您來自 %s 的邀請無效</string>
     <string name="invitation_username_already_found_title">已找到用戶名</string>
     <string name="invitation_username_already_found_message">由於您已經有達世幣用戶名，因此您無法認領此邀請</string>
+    <string name="invitation_username_already_found_voting_title">已申請的用戶名</string>
+    <string name="invitation_username_already_found_voting_message">您無法領取此邀請，因為您已經申請了另一個DASH用戶名稱</string>
     <string name="invitation_onboarding_has_began_error_title">加載錯誤</string>
+    <string name="invitation_error_title">邀請錯誤</string>
     <string name="invitation_onboarding_has_began_error">加載正在進行中，請在創建錢包後領取邀請函。</string>
+    <string name="invitation_accept_invite_has_began_error">Dashpay 當前正在處理邀請。</string>
     <string name="invitation_accept_title_1">獲取您的用戶名</string>
     <string name="invitation_accept_title_2">添加您的朋友和家人</string>
     <string name="invitation_accept_message_2">邀請您的家人，通過搜索用戶名來找到您的朋友</string>
@@ -211,6 +216,8 @@
 
     <string name="join_dashpay_subtitle">建立用戶名，新增您的朋友...</string>
     <string name="join_dashpay_more_subtitle">建立您的用戶名，找到您的朋友並將他們添加到您的聯絡人中</string>
+    <string name="join_dashpay_more_subtitle_two">創建一個用戶名稱並向數字位址說再見</string>
+    <string name="join_dashpay_wait">等到同步完成以創建用戶名</string>
     <string name="join">加入</string>
 
     <string name="more_suggestions">更多建議</string>
@@ -307,6 +314,7 @@
         <item>已阻止投票</item>
     </string-array>
     <string name="request_your_username">建立您的用戶名</string>
+    <string name="request_instant_username">創建即時用戶名</string>
     <string name="request_your_hint">請注意，您未來將無法更改它</string>
     <string name="request_username">申请用戶名</string>
     <string name="request_voting_range">達世幣網路將對該用戶名進行投票。我們將在 %s通知您結果。</string>
@@ -382,6 +390,8 @@
     <string name="requested_voting_duration"> %s的結果。</string>
     <string name="cancel_request">取消申请</string>
     <string name="after_the_voting">投票結束後，我們將通知您投票結果</string>
+    <string name="after_the_voting_result">投票已結束</string>
+    <string name="voting_period_error">未找到投票日期</string>
     <string name="none">沒有</string>
     <string name="verify_now">立即驗證</string>
     <string name="if_you_tap_cancel">如果您點擊“取消請求”，您仍然有機會要求另一個用戶名，而無需再次付款</string>
@@ -435,8 +445,12 @@
 
     <string name="request_username_username_voting_message">+ 什麼是用戶名投票\?</string>
     <string name="request_username_character_requirement">僅限字母、數字和連字符</string>
+    <string name="request_username_character_requirement_invite_noncontested">數字 2-9</string>
     <string name="request_username_balance_requirement">您需要 0.25 DASH 才能建立此使用這個用戶名</string>
+    <string name="request_username_requirements_message_invite_noncontested">用戶名必須符合以下標準之一</string>
+    <string name="request_username_requirements_message">用戶名必須符合這些標準</string>
     <string name="request_username_length_requirement">名稱介乎3 到 23 個字元之間</string>
+    <string name="request_username_length_requirement_noncontested">在20到23個字符之間</string>
     <string name="request_username_confirm">我接受</string>
     <string name="username_vote_one_left_message">您已為此用戶名投票 %d 次。您只能對該用戶名再投一票。</string>
     <string name="username_vote_one_left">還剩一票</string>
@@ -507,4 +521,27 @@
     <string name="transaction_metadata_you_have_n_tx">自%s以來，您有%d筆未保存的交易。</string>
     <string name="transaction_metadata_save_transactions">保存尚未儲存的交易</string>
     <string name="transaction_metadata_continue_without_saving">放棄保存並繼續</string>
+    <string name="invitation_fee_title">邀請費</string>
+    <string name="invitation_fee_message">每個邀請將需要得到資助，以便接收者可以在儀表板網絡上快速創建其用戶名稱。</string>
+    <string name="invitation_fee_noncontested">沒有爭議的</string>
+    <string name="invitation_fee_contested">有爭議的</string>
+    <string name="invitation_fee_contested_message">您發送此邀請的人可以申請他們想要的任何用戶名稱，並且網絡將投票批准它。</string>
+    <string name="invitation_fee_noncontested_message">您發送此邀請的人可以要求具有2-9數字或超過20個字符的用戶名稱。</string>
+    <string name="invitation_creating_progress_loading">加載邀請中...</string>
+    <string name="invitation_creating_progress_wip">創建邀請中...</string>
+    <string name="invitation_fee_confirm_and_pay_button">確認並付款</string>
+    <string name="error_sending_invite_transaction">發送邀請交易時發生錯誤</string>
+    <string name="request_username_invitation_not_mixed_message">邀請是由未混合資金所創建的</string>
+    <string name="request_username_invitation_only_noncontested_message">您只能使用此邀請來創建一個非競爭的用戶名</string>
+    <string name="username_types_title">什麼是有爭議的和沒有爭議的的用戶名？</string>
+    <string name="username_types_message">用戶名有兩種類型：有爭議的和沒有爭議的。.\n\n沒有爭議的用戶名至少有一個數字（2-9）或超過20個字符，該用戶名稱將自動批准.\n\n如果您想創建一個較短且沒有數字的有爭議的用戶名，則需要在沒有邀請的情況下註冊Dashpay，支付所需的費用並在投票期完成後等待批准。</string>
+    <string name="accept_invitation_hide">隱藏</string>
+    <string name="accept_invitation_create">創建</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">創建即時用戶名</string>
+    <string name="create_instant_username_description">您請求的用戶名將在 2 週內進行投票。為了立即聯繫和付款，您可以創建類似的即時用戶名。.\n\n如果您的原始請求獲得批准，它將取代即時用戶名，並保留聯繫人和歷史記錄。如果沒有獲批，請繼續使用即時用戶名。</string>
+    <string name="create_instant_username_button">創建即時用戶名</string>
+    <string name="create_instant_username_cancel">取消</string>
+
 </resources>

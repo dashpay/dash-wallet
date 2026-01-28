@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Je portemonnee is met succes hersteld. Nu zal het saldo worden vastgesteld. Dit kan enige tijd duren.</string>
     <string name="restore_wallet_dialog_success_encrypted">Waarschuwing: je portemonnee is beveiligd met een pincode. Zorg ervoor dat je deze onthoudt voordat je met deze portemonnee geld ontvangt.</string>
     <string name="import_keys_dialog_failure">Portemonnee kon niet hersteld worden:\n\n%s\n\nVerkeerd wachtwoord?</string>
+    <string name="restore_wallet_creation_date_label">Aanmaakdatum van de portemonnee (optioneel)</string>
+    <string name="restore_wallet_creation_date_info">Door te selecteren wanneer je portemonnee is aangemaakt, kan de synchronisatie sneller verlopen doordat alleen vanaf die datum wordt gescand.</string>
+    <string name="restore_wallet_select_date">Selecteer aanmaakdatum</string>
+    <string name="restore_wallet_selected_date">Geselecteerd: %s</string>
+    <string name="restore_wallet_date_picker_title">Wanneer is je portemonnee aangemaakt?</string>
+    <string name="wallet_creation_date_info_title">Hoe kan de aanmaakdatum van de portemonnee het proces versnellen?</string>
+    <string name="wallet_creation_date_info_description">Als je de geschatte datum weet waarop je portemonnee is aangemaakt, kun je deze invoeren en worden transacties vanaf die datum opgehaald, wat de synchronisatie versnelt. Let op: als je een datum invoert die later is dan de daadwerkelijke aanmaakdatum van de portemonnee, worden oudere transacties niet gedownload.</string>
     <string name="export_keys_dialog_title">Back-upportemonnee</string>
     <string name="backup_wallet_dialog_message">Je back-up zal versleuteld worden met het gekozen wachtwoord en weggeschreven naar een externe opslaglocatie.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Je portemonnee is beveiligd met een pincode om te kunnen betalen. Onthoud deze pincode net als je back-upwachtwoord! </string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Scan de blockchain, transacties en portemonnee saldo opnieuw. Dit duurt even, dus doe dit alleen als je weet waarom.</string>
     <string name="preferences_initiate_reset_dialog_message">Wil je de blockchain opnieuw scannen?\n\nHierdoor wordt uw portemonnee saldo tijdelijk verborgen en worden transacties verwijderd. Beide zullen herstellen naarmate de synchronisatie vordert. Zorg voor een betrouwbare internetverbinding.</string>
     <string name="preferences_initiate_reset_dialog_positive">Scan opnieuw</string>
+    <string name="rescan_blockchain_dialog_title">Weet je zeker dat je de blockchain opnieuw wilt scannen?</string>
+    <string name="rescan_blockchain_dialog_message">Dit zal tijdelijk het saldo van je portemonnee verbergen en transacties verwijderen. Beide worden hersteld naarmate de blockchain synchronisatie vordert. Zorg ervoor dat je een betrouwbare internetverbinding hebt.</string>
+    <string name="rescan_blockchain_select_date_label">Selecteer aanmaakdatum van de portemonnee (optioneel)</string>
+    <string name="rescan_blockchain_date_info_description">Informatie over de aanmaakdatum van de portemonnee</string>
+    <string name="rescan_blockchain_select_date_placeholder">Selecteer</string>
+    <string name="rescan_blockchain_confirm_button">Scan opnieuw</string>
     <string name="preferences_extended_public_key_title">Toon xpub</string>
     <string name="preferences_extended_public_key_summary">Weergeef de uitgebreide publieke sleutel van je portemonnee zodat deze geïmporteerd kan worden in andere apps en diensten. Let op: door deze actie zal je je privacy vrijgeven aan de app in kwestie.</string>
     <string name="bitmap_fragment_share">Deel...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Selecteer optie</string>
     <string name="customize_shortcuts">Werkbalk voor snelkoppelingen aanpassen</string>
     <string name="customize_shortcuts_description">Houd hier boven een willekeurige knop ingedrukt om deze te vervangen door de functie die je nodig hebt.</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Je moet je pincode upgraden</string>
+    <string name="upgrade_pin_description">Stel een nieuwe pin in</string>
+    <string name="upgrade_pin_continue">Doorgaan</string>
 </resources>

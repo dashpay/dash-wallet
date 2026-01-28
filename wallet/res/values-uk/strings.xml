@@ -282,6 +282,8 @@
     <string name="preferences_initiate_reset_summary">Пересканувати блокчейн, транзакції та баланс гаманця. Повторне відтворення займе деякий час, тому робіть це, лише якщо знаєте чому.</string>
     <string name="preferences_initiate_reset_dialog_message">Ви хочете пересканувати блокчейн?\n\nЦе зробить тимчасово недоступними ваші баланс та список транзакцій. Вони будуть відновлені у процесі синхронізації блокчейна. Переконайтеся, що у вас є надійне підключення до інтернету.</string>
     <string name="preferences_initiate_reset_dialog_positive">Повторне сканування</string>
+    <string name="rescan_blockchain_select_date_placeholder">Вибрати</string>
+    <string name="rescan_blockchain_confirm_button">Повторне сканування</string>
     <string name="preferences_extended_public_key_title">Показати xpub</string>
     <string name="preferences_extended_public_key_summary">Перегляньте розширений відкритий ключ свого гаманця, щоб його можна було імпортувати в інші програми та служби. Будьте обережні: це призведе до розкриття вашої грошової конфіденційності цій програмі.</string>
     <string name="bitmap_fragment_share">Поділитися...</string>
@@ -437,4 +439,7 @@
     <string name="select_option">Виберіть опцію</string>
     <string name="customize_shortcuts">Налаштуйте панель швидкого доступу</string>
     <string name="customize_shortcuts_description">Утримуйте будь-яку кнопку вище, щоб замінити її на потрібну вам функцію.</string>
+
+    <string name="upgrade_pin_description">Задайте новий PIN-код</string>
+    <string name="upgrade_pin_continue">Продовжити</string>
 </resources>

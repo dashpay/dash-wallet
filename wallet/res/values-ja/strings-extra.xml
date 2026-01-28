@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">新しいウォレットを作成する</string>
-    <string name="onboarding_recover_wallet">復元フレーズからウォレットを復元する</string>
+    <string name="onboarding_recover_wallet">ウォレットを復元する</string>
     <string name="onboarding_restore_wallet">ファイルからウォレットを復元する</string>
     <string name="onboarding_load_wallet_error">ウォレットをロードできません</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">アドレスがコピーされていません</string>
 
     <string name="forgot_pin_title">PINを忘れましたか?</string>
+    <string name="forgot_pin_setup_new_pin_title">新しいPINを設定する</string>
     <string name="forgot_pin_message">復元フレーズを用いて新しいPINを設定することができます。</string>
     <string name="forgot_pin_instruction_1">ウォレットを復元するために復元フレーズを入力してください</string>
     <string name="forgot_pin_instruction_2">新しいPINを設定する</string>
@@ -260,7 +261,7 @@
     <string name="authenticate_switch_to_fingerprint">指紋認証を使う</string>
     <string name="authenticate_switch_to_pin">PINを使う</string>
 
-    <string name="menu_invite_title">招待する</string>
+    <string name="menu_invite_title">招待状</string>
     <string name="menu_invite_subtitle">お友達やご家族のDashの加入をサポートしましょう</string>
     <string name="menu_buy_and_sell_title">Dashを買う &amp; 売る</string>
     <string name="menu_buy_and_sell_subtitle">サードパーティーの取引所に接続する</string>
@@ -335,13 +336,9 @@
 
     <string name="skip">スキップする</string>
     <string name="get_started">始める</string>
-    <string name="welcome_screen_title_1_new_install">ようこそ</string>
-    <string name="welcome_screen_title_1_upgrade">アップグレード済み</string>
-    <string name="welcome_screen_subtitle_1">全てのデバイスで直感的かつ使いやすい使用感</string>
-    <string name="welcome_screen_title_2">簡単支払い</string>
-    <string name="welcome_screen_subtitle_2">簡単な支払い手順で速やかに送金と入金</string>
-    <string name="welcome_screen_title_3">コントロールの追加</string>
-    <string name="welcome_screen_subtitle_3">自分のウォレットを完全に制御していて、ニーズに基づいてカスタマイズする</string>
+    <string name="welcome_screen_title_1">ユーザー名からDashを送金および入金する</string>
+    <string name="welcome_screen_title_2">数千もの店舗でDashを使用する</string>
+    <string name="welcome_screen_title_3">お客様のDashを一番安全に保管する方法</string>
 
     <string-array name="history_filter">
         <item>全て</item>

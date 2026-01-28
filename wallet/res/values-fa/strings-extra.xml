@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">ایجاد یک کیف پول جدید</string>
-    <string name="onboarding_recover_wallet">بازگردانی کیف پول از طریق عبارت بازیابی</string>
-    <string name="onboarding_restore_wallet">بازگردانی کیف پول از طریق فایل</string>
+    <string name="onboarding_create_wallet">ایجاد کیف پول جدید</string>
+    <string name="onboarding_recover_wallet">بازگردانی کیف پول</string>
+    <string name="onboarding_restore_wallet">بازیابی کیف پول از فایل</string>
     <string name="onboarding_load_wallet_error">امکان بارگذاری کیف پول وجود ندارد!</string>
 
     <string name="set_pin_create_new_wallet">ایجاد یک کیف پول جدید</string>
@@ -88,6 +88,7 @@
     <string name="payments_pay_to_clipboard_sub_title">هیچ آدرسی کپی نشد</string>
 
     <string name="forgot_pin_title">پین کد را فراموش کردید؟</string>
+    <string name="forgot_pin_setup_new_pin_title">تعریف پین کد جدید</string>
     <string name="forgot_pin_message">با استفاده از عبارت بازیابی، می‌توانید یک پین کد جدید تعیین کنید.</string>
     <string name="forgot_pin_instruction_1">برای بازیابی کیف پول‌‌تان، عبارت بازیابی را وارد کنید</string>
     <string name="forgot_pin_instruction_2">تعریف پین کد جدید</string>
@@ -263,7 +264,7 @@
     <string name="authenticate_switch_to_fingerprint">استفاده از اثرانگشت</string>
     <string name="authenticate_switch_to_pin">استفاده از پین کد</string>
 
-    <string name="menu_invite_title">دعوت</string>
+    <string name="menu_invite_title">دعوتنامه‌ها</string>
     <string name="menu_invite_subtitle">به دوستان و خانواده‌تان کمک کنید به دش بپیوندند</string>
     <string name="menu_buy_and_sell_title">خرید &amp;؛ فروش دش </string>
     <string name="menu_buy_and_sell_subtitle">ارتباط با صرافی‌های طرف سوم</string>
@@ -336,13 +337,9 @@
 
     <string name="skip">رد کردن</string>
     <string name="get_started">شروع</string>
-    <string name="welcome_screen_title_1_new_install">خوش آمدید</string>
-    <string name="welcome_screen_title_1_upgrade">ما ارتقاء دادیم</string>
-    <string name="welcome_screen_subtitle_1">تجربه‌ای ساده و آشنا روی همه دستگاه‌ها</string>
-    <string name="welcome_screen_title_2">به راحتی پرداخت کنید</string>
-    <string name="welcome_screen_subtitle_2">به شکلی ساده و سریع مبلغی را پرداخت یا دریافت کنید</string>
-    <string name="welcome_screen_title_3">کنترل بیشتر</string>
-    <string name="welcome_screen_subtitle_3">کنترل بیشتری روی کیف پول‌تان داشته باشید و آن را بر اساس نیازهایتان، تغییر دهید. </string>
+    <string name="welcome_screen_title_1">ارسال و دریافت دش از طریق نام کاربری</string>
+    <string name="welcome_screen_title_2">خرج کردن دش در هزاران فروشگاه</string>
+    <string name="welcome_screen_title_3">امن‌ترین روش برای پس‌انداز دش</string>
 
     <string-array name="history_filter">
         <item>همه</item>

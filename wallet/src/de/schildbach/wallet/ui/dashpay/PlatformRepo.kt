@@ -280,7 +280,10 @@ class PlatformRepo @Inject constructor(
 
     fun getVoteContenders(username: String): Contenders {
         return try {
-            platform.names.getVoteContenders(Names.normalizeString(username))
+            val watch = Stopwatch.createStarted()
+            val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
+            log.info("getVoteContenders took {}", watch)
+            contenders
         } catch (e: Exception) {
             Contenders(Optional.empty(), mapOf(), 0, 0)
         }
@@ -524,7 +527,9 @@ class PlatformRepo @Inject constructor(
     }
 
     suspend fun updateFrequentContacts(newTx: Transaction) {
-        if (hasIdentity() && blockchainIdentity.getContactForTransaction(newTx) != null) {
+        // since we are accessing the blockchainIdentity object, we better check that it is valid
+        // previously, we were using hasUsername() which can return true during a wallet reset
+        if (hasBlockchainIdentity && blockchainIdentity.getContactForTransaction(newTx) != null) {
             updateFrequentContacts()
         }
     }

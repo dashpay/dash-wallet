@@ -18,7 +18,7 @@
     <string name="new_account_confirm_message">Kullanıcı adınız olarak %s\'i seçtiniz. Lütfen kullanıcı adınızı kaydettikten sonra DEĞİŞTİRİLEMEYECEĞİNİ unutmayın.</string>
     <string name="invitation_confirm_title">Davet Ücreti</string>
     <string name="invitation_confirm_message">Her davetiye, alıcının Dash Ağında kullanıcı adını hızlı bir şekilde oluşturabilmesi için bu tutarla finanse edilecektir.</string>
-    <string name="invitation_init_title">Davet etmek</string>
+    <string name="invitation_title">Davetiye</string>
     <string name="invitation_init_header">Arkadaşlarınızı ve ailenizi davet edin</string>
     <string name="invitation_init_message">Arkadaşlarınızın ve ailenizin Dash Ağına katılmasına yardımcı olun. Onları sosyal bankacılık dünyasına davet edin.</string>
     <string name="invitation_init_button_text">Yeni bir Davetiye oluştur</string>
@@ -388,4 +388,7 @@
     <string name="request_username_confirm">Kabul ediyorum</string>
     <string name="tools_credits_buy_button">Al</string>
     <string name="platform_credits_error">Hata</string>
-    </resources>
+    <string name="invitation_fee_title">Davet Ücreti</string>
+    <string name="create_instant_username_cancel">İptal et</string>
+
+</resources>

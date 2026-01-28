@@ -18,7 +18,7 @@
     <string name="new_account_confirm_message">Ви вибрали %s як своє ім\'я користувача. Ім\'я користувача не можна змінити після реєстрації.</string>
     <string name="invitation_confirm_title">Комісія за запрошення</string>
     <string name="invitation_confirm_message">Кожне запрошення фінансуватиметься цією сумою, щоб одержувач міг швидко створити своє ім’я користувача в Dash Network</string>
-    <string name="invitation_init_title">Запросити</string>
+    <string name="invitation_title">Запрошення</string>
     <string name="invitation_init_header">Запрошуйте своїх друзів і сім\'ю</string>
     <string name="invitation_init_message">Дозвольте своїм друзям і родині приєднатися до Dash Network. Запросіть їх у світ соціального банкінгу.</string>
     <string name="invitation_init_button_text">Створити нове запрошення</string>
@@ -52,8 +52,12 @@
     <string name="invitation_invalid_invite_message">Ваше запрошення від %s недійсне</string>
     <string name="invitation_username_already_found_title">Ім\'я користувача вже існує</string>
     <string name="invitation_username_already_found_message">Ви не можете отримати це запрошення, оскільки у вас уже є ім’я користувача Dash</string>
+    <string name="invitation_username_already_found_voting_title">Ім’я користувача вже запитано</string>
+    <string name="invitation_username_already_found_voting_message">Ви не можете прийняти це запрошення, оскільки вже запитали ім’я користувача Dash</string>
     <string name="invitation_onboarding_has_began_error_title">Помилка процессу оформлення</string>
+    <string name="invitation_error_title">Помилка запрошення</string>
     <string name="invitation_onboarding_has_began_error">Процес оформлення триває, будь ласка, заберіть своє запрошення після того, як створите свій гаманець.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay наразі обробляє запрошення.</string>
     <string name="invitation_accept_title_1">Отримайте своє ім\'я користувача</string>
     <string name="invitation_accept_title_2">Додавайте своїх друзів і сім\'ю</string>
     <string name="invitation_accept_message_2">Запросіть свою родину, знайдіть друзів, ввівши в пошук їхні імена користувачів</string>
@@ -210,6 +214,8 @@
 
     <string name="join_dashpay_subtitle">Створіть ім\'я користувача, додайте друзів...</string>
     <string name="join_dashpay_more_subtitle">Створіть своє ім’я користувача, знайдіть друзів і додайте їх до своїх контактів</string>
+    <string name="join_dashpay_more_subtitle_two">Створіть ім’я користувача та забудьте про числові адреси</string>
+    <string name="join_dashpay_wait">Дочекайтеся завершення синхронізації, щоб створити ім’я користувача</string>
     <string name="join">Приєднатись</string>
 
     <string name="more_suggestions">Більше порад</string>
@@ -434,8 +440,12 @@
 
     <string name="request_username_username_voting_message">+ що таке голосування за імʼя користувача\?</string>
     <string name="request_username_character_requirement">Лише літери, цифри та дефіси</string>
+    <string name="request_username_character_requirement_invite_noncontested">Числа 2-9</string>
     <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
+    <string name="request_username_requirements_message_invite_noncontested">Ім’я користувача повинно відповідати одному з цих критеріїв</string>
+    <string name="request_username_requirements_message">Ім’я користувача повинно відповідати цим критеріям</string>
     <string name="request_username_length_requirement">Від 3 до 23 символів</string>
+    <string name="request_username_length_requirement_noncontested">Від 20 до 23 символів</string>
     <string name="request_username_confirm">Я приймаю</string>
     <string name="username_vote_one_left_message">Ви вже голосували за %d це ім\'я користувача кілька разів. За це ім’я користувача можна віддати лише ще один голос.</string>
     <string name="username_vote_one_left">Залишився один голос</string>
@@ -462,4 +472,23 @@
     <string name="voting_period_ends_tomorrow">Голосування закінчується завтра</string>
     <string name="link_included">посилання включено</string>
     <string name="group_by">Групувати за</string>
-    </resources>
+    <string name="invitation_fee_title">Комісія за запрошення</string>
+    <string name="invitation_fee_message">Кожне запрошення буде профінансовано, щоб одержувач міг швидко створити своє ім’я користувача в мережі Dash.</string>
+    <string name="invitation_fee_noncontested">Без конкуренції</string>
+    <string name="invitation_fee_contested">Із конкуренцією</string>
+    <string name="invitation_fee_contested_message">Людина, якій ви надішлете це запрошення, може запитати будь-яке ім’я користувача, яке забажає, і мережа голосуватиме за його схвалення.</string>
+    <string name="invitation_fee_noncontested_message">Людина, якій ви надішлете це запрошення, може запитати ім’я користувача, яке містить цифру від 2-9 або має понад 20 символів.</string>
+    <string name="invitation_creating_progress_loading">Завантаження запрошення…</string>
+    <string name="invitation_creating_progress_wip">Створення запрошення...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Підтвердити та сплатити</string>
+    <string name="error_sending_invite_transaction">Помилка під час надсилання транзакції запрошення</string>
+    <string name="request_username_invitation_not_mixed_message">Запрошення було створено з неміксованих коштів</string>
+    <string name="request_username_invitation_only_noncontested_message">За допомогою цього запрошення ви можете створити лише ім’я користувача без конкуренції</string>
+    <string name="username_types_title">Що таке імена користувачів із конкуренцією та без конкуренції\?</string>
+    <string name="username_types_message">Існує два типи імен користувачів: із конкуренцією та без конкуренції.\n\nІмена користувачів без конкуренції містять принаймні одну цифру (від 2-9) або мають довжину понад 20 символів і будуть автоматично схвалені.\n\nЯкщо ви хочете створити ім’я користувача із конкуренцією, яке є коротшим і не містить цифр, потрібно зареєструватися в DashPay без запрошення, сплатити необхідний збір і чекати схвалення після завершення періоду голосування.</string>
+    <string name="accept_invitation_hide">Сховати</string>
+    <string name="accept_invitation_create">Створити</string>
+
+    <string name="create_instant_username_cancel">Відміна</string>
+
+</resources>

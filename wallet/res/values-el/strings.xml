@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Το πορτοφόλι σας αποκαταστάθηκε με επιτυχία. Το ποσό του θα καθοριστεί στη συνέχεια. Αυτό θα πάρει κάποιο χρόνο.</string>
     <string name="restore_wallet_dialog_success_encrypted">Προειδοποίηση: Το πορτοφόλι σας προστατεύεται από ένα PIN ξοδέματος. Βεβαιωθείτε ότι το θυμάστε ακόμα πριν να λάβετε σε αυτό το πορτοφόλι.</string>
     <string name="import_keys_dialog_failure">Το πορτοφόλι δεν θα μπορούσε να αποκατασταθεί:\n\n%s\n\nΛάθος κωδικός;</string>
+    <string name="restore_wallet_creation_date_label">Ημερομηνία δημιουργίας πορτοφολιού (προαιρετικό)</string>
+    <string name="restore_wallet_creation_date_info">Επιλέγοντας την ημερομηνία δημιουργίας του πορτοφολιού σας, επιτρέπει συγχρονισμό πιο γρήγορα, σαρώνοντας μόνο από εκείνη την ημερομηνία και μετά.</string>
+    <string name="restore_wallet_select_date">Επιλέξτε ημερομηνία δημιουργίας</string>
+    <string name="restore_wallet_selected_date">Επιλεγμένη: %s</string>
+    <string name="restore_wallet_date_picker_title">Πότε δημιουργήθηκε το πορτοφόλι σας;</string>
+    <string name="wallet_creation_date_info_title">Πώς μπορεί η ημερομηνία δημιουργίας του πορτοφολιού να επιταχύνει τη διαδικασία;</string>
+    <string name="wallet_creation_date_info_description">Εάν γνωρίζετε την κατά προσέγγιση ημερομηνία δημιουργίας του πορτοφολιού σας, μπορείτε να την εισαγάγετε και οι συναλλαγές από την ημερομηνία αυτή θα ανακτηθούν, επιταχύνοντας τη συγχρονισμό. Λάβετε υπόψη ότι, εάν εισαγάγετε ημερομηνία μεταγενέστερη της ημερομηνίας δημιουργίας του πορτοφολιού, οι παλαιότερες συναλλαγές δεν θα μεταφορτωθούν.</string>
     <string name="export_keys_dialog_title">Αντίγραφο ασφαλείας πορτοφολιού</string>
     <string name="backup_wallet_dialog_message">Το αντίγραφο ασφαλείας σας θα κρυπτογραφηθεί με τον επιλεγμένο κωδικό και θα αποθηκευτεί στον εξωτερικό χώρο αποθήκευσης.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Βεβαιωθείτε ότι θυμάστε το PIN εκτός από τον εφεδρικό κωδικό πρόσβασης!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Επανασάρωση του blockchain, συναλλαγών και του υπόλοιπου του πορτοφολιού. Η επανάληψη θα πάρει λίγο χρόνο, για αυτό καταφύγετε σε αυτή την λύση μόνο όταν το κρίνετε απαραίτητο</string>
     <string name="preferences_initiate_reset_dialog_message">Θέλετε να επανασαρώσετε το blockchain;\n\nΑυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα επανέλθουν μόλις ο συγχρονισμός του blockchain προχωρήσει. Σιγουρευτείτε ότι έχετε σταθερή σύνδεση στο ίντερνετ.</string>
     <string name="preferences_initiate_reset_dialog_positive">Επανάληψη της σάρωσης</string>
+    <string name="rescan_blockchain_dialog_title">Είστε σίγουροι ότι θέλετε να επαναλάβετε τη σάρωση του blockchain;</string>
+    <string name="rescan_blockchain_dialog_message">Αυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα αποκατασταθούν καθώς προχωρά ο συγχρονισμός του blockchain. Βεβαιωθείτε ότι έχετε αξιόπιστη σύνδεση στο διαδίκτυο.</string>
+    <string name="rescan_blockchain_select_date_label">Επιλέξτε την ημερομηνία δημιουργίας του πορτοφολιού (προαιρετικό)</string>
+    <string name="rescan_blockchain_date_info_description">Πληροφορίες σχετικά με την ημερομηνία δημιουργίας του πορτοφολιού</string>
+    <string name="rescan_blockchain_select_date_placeholder">Επιλογή</string>
+    <string name="rescan_blockchain_confirm_button">Επανάληψη της σάρωσης</string>
     <string name="preferences_extended_public_key_title">Δείξε xpub</string>
     <string name="preferences_extended_public_key_summary">Δείτε το εκτετεμένο δημόσιο κλειδί από το πορτοφόλι σας, έτσι ώστε να μπορέσετε να το εισάγετε σε άλλες εφαρμογές και υπηρεσίες. Να είστε προσεκτικοί: με αυτό τον τρόπο θα αποκαλύψετε τη νομισματική προστασία της ιδιωτικής σας ζωής σε αυτή την εφαρμογή.</string>
     <string name="bitmap_fragment_share">Μοιραστείτε...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Επιλέξτε επιλογή</string>
     <string name="customize_shortcuts">Προσαρμογή της γραμμής συντομεύσεων</string>
     <string name="customize_shortcuts_description">Κρατήστε πατημένο οποιοδήποτε κουμπί παραπάνω για να το αντικαταστήσετε με τη λειτουργία που χρειάζεστε</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Πρέπει να αναβαθμίσετε τον PIN σας</string>
+    <string name="upgrade_pin_description">Ορίστε ένα νέο PIN</string>
+    <string name="upgrade_pin_continue">Συνέχεια</string>
 </resources>

@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Vytvořit novou peněženku</string>
-    <string name="onboarding_recover_wallet">Obnovit peněženku pomocí fráze</string>
-    <string name="onboarding_restore_wallet">Obnovit peněženku ze souboru</string>
+    <string name="onboarding_recover_wallet">Obnovit peněženku</string>
     <string name="onboarding_load_wallet_error">Nelze načíst peněženku!</string>
 
     <string name="set_pin_create_new_wallet">Vytvořit novou peněženku</string>
@@ -80,6 +78,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Žádná zkopírovaná adresa</string>
 
     <string name="forgot_pin_title">Zapomenutý PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Nastavit nový PIN</string>
     <string name="forgot_pin_message">Nový PIN můžete nastavit pomocí vaší fráze pro obnovení.</string>
     <string name="forgot_pin_instruction_1">Zadejte frázi pro obnovení vaší peněženky</string>
     <string name="forgot_pin_instruction_2">Nastavit nový PIN</string>
@@ -238,7 +237,6 @@
     <string name="authenticate_switch_to_fingerprint">Použít otisk prstu</string>
     <string name="authenticate_switch_to_pin">Použít PIN</string>
 
-    <string name="menu_invite_title">Pozvat</string>
     <string name="menu_buy_and_sell_title">Nákup a Prodej Dash</string>
     <string name="menu_buy_and_sell_subtitle">Spojte se s burzami třetích stran</string>
     <string name="menu_security_title">Zabezpečení</string>
@@ -296,14 +294,6 @@
 
     <string name="skip">přeskočit</string>
     <string name="get_started">Jdu na to</string>
-    <string name="welcome_screen_title_1_new_install">Vítej</string>
-    <string name="welcome_screen_title_1_upgrade">Vylepšovali jsme</string>
-    <string name="welcome_screen_subtitle_1">Intuitivní používání napříč všemi tvými zařízeními</string>
-    <string name="welcome_screen_title_2">Plaťte jednoduše</string>
-    <string name="welcome_screen_subtitle_2">Plať a přijímej platby zcela okamžitě</string>
-    <string name="welcome_screen_title_3">Více možností</string>
-    <string name="welcome_screen_subtitle_3">Měj naprostou kontrolu a přizpůsob si svojí peněženku</string>
-
     <string-array name="history_filter">
         <item>Vše</item>
         <item>Přijato</item>

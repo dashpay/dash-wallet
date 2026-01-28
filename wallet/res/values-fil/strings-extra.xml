@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Gumawa ng bagong pitaka</string>
-    <string name="onboarding_recover_wallet">Manumbalik sa dating kalagayan ng pitaka mula sa parirala ng muling pagbawi</string>
-    <string name="onboarding_restore_wallet">Ibalik ang pitaka mula sa File</string>
+    <string name="onboarding_recover_wallet">Ibalik ang pitaka</string>
     <string name="onboarding_load_wallet_error">Hindi makakarga sa pitaka</string>
 
     <string name="set_pin_create_new_wallet">Gumawa ng bagong pitaka</string>
@@ -86,6 +84,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Walang address na nakopya</string>
 
     <string name="forgot_pin_title">Nakalimutan ang PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Mag set up ng bagong PIN</string>
     <string name="forgot_pin_message">Maaari kang mag set ng bagong PIN sa tulong ng iyong recovery phrase</string>
     <string name="forgot_pin_instruction_1">Itala ang iyong parirala ng muling pagbawi para marekober ang iyong pitaka</string>
     <string name="forgot_pin_instruction_2">Mag set up ng bagong PIN</string>
@@ -261,7 +260,6 @@
     <string name="authenticate_switch_to_fingerprint">Gamitin ang Fingerprint</string>
     <string name="authenticate_switch_to_pin">Gamitin ang PIN</string>
 
-    <string name="menu_invite_title">Mag-imbita</string>
     <string name="menu_invite_subtitle">Tulungan ang iyong mga kaibigan at pamilya na sumali sa Dash</string>
     <string name="menu_buy_and_sell_title">Bumili at magbenta ng Dash</string>
     <string name="menu_buy_and_sell_subtitle">Ikonekta sa mga third party na palitan</string>
@@ -334,14 +332,6 @@
 
     <string name="skip">laktawan</string>
     <string name="get_started">Magsimula</string>
-    <string name="welcome_screen_title_1_new_install">Maligayang pagdating</string>
-    <string name="welcome_screen_title_1_upgrade">Kami ay nag-upgrade</string>
-    <string name="welcome_screen_subtitle_1">Ang sapantaha at pamilyar na karanasan sa lahat ng iyong aparato</string>
-    <string name="welcome_screen_title_2">Magbayad ng walang kahirap-hirap</string>
-    <string name="welcome_screen_subtitle_2">Magbayad at mabayaran agad dahil sa madaling paraan ng pagbabayad.</string>
-    <string name="welcome_screen_title_3">Mas marami pang kontrol</string>
-    <string name="welcome_screen_subtitle_3">Magkaroon ng kumpletong kontrol at pinasadyang pitaka base sa iyong nais</string>
-
     <string-array name="history_filter">
         <item>Lahat</item>
         <item>Natanggap</item>

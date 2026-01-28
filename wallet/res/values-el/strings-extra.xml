@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Δημιουργία Νέου Πορτοφολιού</string>
-    <string name="onboarding_recover_wallet">Επαναφορά Πορτοφολιού με την φράση ανάκτησης</string>
+    <string name="onboarding_recover_wallet">Επαναφορά πορτοφολιού</string>
     <string name="onboarding_restore_wallet">Επαναφορά Πορτοφολιού από Αρχείο</string>
     <string name="onboarding_load_wallet_error">Δεν είναι δυνατή η φόρτωση του πορτοφολιού!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Δεν αντιγράφηκε καμία διεύθυνση</string>
 
     <string name="forgot_pin_title">Ξεχάσατε το PIN;</string>
+    <string name="forgot_pin_setup_new_pin_title">Ορίστε ένα νέο PIN</string>
     <string name="forgot_pin_message">Μπορείτε να ορίσετε ένα νέο PIN με τη βοήθεια της φράσης ανάκτησης σας.</string>
     <string name="forgot_pin_instruction_1">Εισάγετε την φράση ανάκτησης σας για να επαναφέρετε το πορτοφόλι σας.</string>
     <string name="forgot_pin_instruction_2">Ορίστε ένα νέο PIN</string>
@@ -261,7 +262,7 @@
     <string name="authenticate_switch_to_fingerprint">Χρησιμοποιήστε το δακτυλικό σας αποτύπωμα</string>
     <string name="authenticate_switch_to_pin">Χρησιμοποιήστε το PIN</string>
 
-    <string name="menu_invite_title">Πρόσκληση</string>
+    <string name="menu_invite_title">Προσκλήσεις</string>
     <string name="menu_invite_subtitle">Βοηθήστε τους φίλους και την οικογένειά σας να συμμετάσχουν στο Dash</string>
     <string name="menu_buy_and_sell_title">Αγορά και Πώληση Dash</string>
     <string name="menu_buy_and_sell_subtitle">Συνδεθείτε με ανταλλακτήρια τρίτων</string>
@@ -334,13 +335,9 @@
 
     <string name="skip">παράλειψη</string>
     <string name="get_started">Ξεκινήστε</string>
-    <string name="welcome_screen_title_1_new_install">Καλώς ορίσατε</string>
-    <string name="welcome_screen_title_1_upgrade">Αναβαθμίσαμε</string>
-    <string name="welcome_screen_subtitle_1">Μια διαισθητική και οικεία εμπειρία σε όλες τις συσκευές σας</string>
-    <string name="welcome_screen_title_2">Πληρώστε με ευκολία</string>
-    <string name="welcome_screen_subtitle_2">Πληρώστε και πληρωθείτε άμεσα με εύκολες στην χρήση πληρωμές</string>
-    <string name="welcome_screen_title_3">Περισσότερος Έλεγχος</string>
-    <string name="welcome_screen_subtitle_3">Έχετε τον πλήρη έλεγχο να προσαρμόσετε το πορτοφόλι σας ανάλογα με τις ανάγκες σας</string>
+    <string name="welcome_screen_title_1">Στείλτε και λάβετε Dash χωρίς μέσω ονομάτων χρήσης</string>
+    <string name="welcome_screen_title_2">Ξοδέψτε Dash σε χιλιάδες καταστήματα</string>
+    <string name="welcome_screen_title_3">Ο ασφαλέστερος τρόπος για να αποθηκεύσετε τα Dash σας</string>
 
     <string-array name="history_filter">
         <item>Όλα</item>

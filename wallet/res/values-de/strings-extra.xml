@@ -2,8 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Neue Wallet erstellen</string>
-    <string name="onboarding_recover_wallet">Wallet mit Hilfe der Phrase wiederherstellen</string>
-    <string name="onboarding_restore_wallet">Wallet mit Hilfe der Datei wiederherstellen</string>
+    <string name="onboarding_recover_wallet">Wallet wiederherstellen</string>
+    <string name="onboarding_restore_wallet">Wallet aus Datei wiederherstellen</string>
     <string name="onboarding_load_wallet_error">Wallet kann nicht geladen werden!</string>
 
     <string name="set_pin_create_new_wallet">Neue Wallet erstellen</string>
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Keine Adresse kopiert</string>
 
     <string name="forgot_pin_title">PIN vergessen?</string>
+    <string name="forgot_pin_setup_new_pin_title">Neue PIN einrichten</string>
     <string name="forgot_pin_message">Du kannst eine neue PIN mit Hilfe deiner Wiederherstellungsphrase erstellen.</string>
     <string name="forgot_pin_instruction_1">Phrase zur Wiederherstellung der Wallet eingeben</string>
     <string name="forgot_pin_instruction_2">Neue PIN einrichten</string>
@@ -261,7 +262,7 @@
     <string name="authenticate_switch_to_fingerprint">Fingerabdruck verwenden</string>
     <string name="authenticate_switch_to_pin">PIN verwenden</string>
 
-    <string name="menu_invite_title">Einladen</string>
+    <string name="menu_invite_title">Einladungen</string>
     <string name="menu_invite_subtitle">Helfe deinen Freunden und deiner Familie dabei, Dash zu nutzen</string>
     <string name="menu_buy_and_sell_title">Kaufe &amp; Verkaufe Dash</string>
     <string name="menu_buy_and_sell_subtitle">Mit Drittanbieter-Börsen verknüpfen</string>
@@ -334,13 +335,9 @@
 
     <string name="skip">Überspringen</string>
     <string name="get_started">Beginnen</string>
-    <string name="welcome_screen_title_1_new_install">Willkommen</string>
-    <string name="welcome_screen_title_1_upgrade">Wir haben ein Upgrade durchgeführt</string>
-    <string name="welcome_screen_subtitle_1">Eine intuitive und gewohnte Erfahrung über alle Gerätetypen hinweg</string>
-    <string name="welcome_screen_title_2">Mit Leichtigkeit bezahlen</string>
-    <string name="welcome_screen_subtitle_2">Zahle und lass dich bezahlen, ohne Wartezeit und auf einfache Art und Weise</string>
-    <string name="welcome_screen_title_3">Mehr Kontrolle</string>
-    <string name="welcome_screen_subtitle_3">Habe die volle Kontrolle über deine Wallet und passe sie an deine Bedürfnisse an</string>
+    <string name="welcome_screen_title_1">Dash über Nutzernamen senden und erhalten</string>
+    <string name="welcome_screen_title_2">Dash bei tausenden Händlern ausgeben</string>
+    <string name="welcome_screen_title_3">Die sicherste Art, deine Dash zu lagern</string>
 
     <string-array name="history_filter">
         <item>Alles</item>

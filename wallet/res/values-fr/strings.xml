@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Votre portefeuille a été restauré avec succès. Son solde va maintenant être calculé. Cela prendra un certain temps.</string>
     <string name="restore_wallet_dialog_success_encrypted">Attention : les dépenses depuis votre portefeuille sont protégées par un code PIN. Assurez-vous de vous souvenir de ce code PIN avant de recevoir dans ce portefeuille.</string>
     <string name="import_keys_dialog_failure">Impossible de restaurer le portefeuille :\n\n%s\n\nMot de passe erroné ?</string>
+    <string name="restore_wallet_creation_date_label">Date de création du portefeuille (facultatif)</string>
+    <string name="restore_wallet_creation_date_info">Choisir la date de création de votre portefeuille permet une synchronisation plus rapide grâce à une analyse uniquement à partir de cette date.</string>
+    <string name="restore_wallet_select_date">Choisir la date de création</string>
+    <string name="restore_wallet_selected_date">Choisi : %s</string>
+    <string name="restore_wallet_date_picker_title">Quand votre portefeuille a-t-il été créé ?</string>
+    <string name="wallet_creation_date_info_title">Comment la date de création du portefeuille peut-elle accélérer le processus ?</string>
+    <string name="wallet_creation_date_info_description">Si vous connaissez la date approximative de création de votre portefeuille, vous pouvez la saisir ; les transactions postérieures à cette date seront alors récupérées, ce qui accélérera la synchronisation. Attention : si vous saisissez une date postérieure à la création de votre portefeuille, les transactions plus anciennes ne seront pas téléchargées.</string>
     <string name="export_keys_dialog_title">Sauvegarder le portefeuille</string>
     <string name="backup_wallet_dialog_message">Votre sauvegarde sera chiffrée avec le mot de passe choisi et enregistrée sur le stockage externe.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Votre portefeuille est protégé par un code PIN de paiement. Assurez-vous de retenir le code PIN en plus du mot de passe de sauvegarde !</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Réinitialise la chaîne de blocs, les transactions et le solde de portefeuille. Le rebalayage prendra du temps ; ne faites donc ceci qu\'en connaissance de cause.</string>
     <string name="preferences_initiate_reset_dialog_message">Souhaitez-vous rebalayer la chaîne de blocs ?\n\nCela masquera provisoirement le solde de votre portefeuille et enlèvera les transactions. Les deux réapparaîtront à mesure qu\'avancera la synchronisation de la chaîne de blocs. Veuillez vous assurer d\'avoir une connexion Internet fiable.</string>
     <string name="preferences_initiate_reset_dialog_positive">Réanalyser</string>
+    <string name="rescan_blockchain_dialog_title">Voulez-vous vraiment rescanner la blockchain ?</string>
+    <string name="rescan_blockchain_dialog_message">Cela masquera provisoirement le solde de votre portefeuille et ôtera les transactions. Ces informations seront rétablies au fur et à mesure de la synchronisation de la blockchain. Assurez-vous de disposer d\'une connexion Internet stable.</string>
+    <string name="rescan_blockchain_select_date_label">Choisissez la date de création du portefeuille (facultatif)</string>
+    <string name="rescan_blockchain_date_info_description">Infos sur la date de création du portefeuille</string>
+    <string name="rescan_blockchain_select_date_placeholder">Choisir</string>
+    <string name="rescan_blockchain_confirm_button">Réanalyser</string>
     <string name="preferences_extended_public_key_title">Afficher la xpub</string>
     <string name="preferences_extended_public_key_summary">Visualisez la clé privée étendue de votre portefeuille afin qu\'elle puisse être importée dans d\'autres applications et services. Attention : ceci divulguera vos informations monétaires à cette application.</string>
     <string name="bitmap_fragment_share">Partager…</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Choisissez l\'option</string>
     <string name="customize_shortcuts">Personnaliser la barre de raccourcis</string>
     <string name="customize_shortcuts_description">Touchez un bouton ci-dessus pour le remplacer par toute fonction dont vous avez besoin</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Vous devez mettre à jour votre PIN</string>
+    <string name="upgrade_pin_description">Choisir un nouveau code PIN</string>
+    <string name="upgrade_pin_continue">Continuer</string>
 </resources>

@@ -17,9 +17,10 @@ Dash</b></string>
     <string name="new_account_confirm_accept">Принимаю</string>
     <string name="new_account_confirm_upgrade_fee">Комиссия за обновление</string>
     <string name="new_account_confirm_message">Вы выбрали %s в качестве имени пользователя. Обратите внимание, что имя пользователя нельзя изменить после регистрации.</string>
+    <string name="new_account_secondary_confirm_message">Вы выбрали %s в качестве быстрого имени пользователя. Обратите внимание, что имя пользователя НЕЛЬЗЯ изменить после регистрации.</string>
     <string name="invitation_confirm_title">Комиссия за приглашение</string>
     <string name="invitation_confirm_message">Каждое приглашение сопровождается этой суммой, чтобы получатель мог тут же создать своё имя пользователя в сети Dash</string>
-    <string name="invitation_init_title">Пригласить</string>
+    <string name="invitation_title">Приглашение</string>
     <string name="invitation_init_header">Пригласить семью и друзей</string>
     <string name="invitation_init_message">Помогите друзьям и семье подключиться к Dash Network. Пригласите их в мир социального банкинга.</string>
     <string name="invitation_init_button_text">Создать новое приглашение</string>
@@ -53,8 +54,12 @@ Dash</b></string>
     <string name="invitation_invalid_invite_message">Ваше приглашение от %s недействительно</string>
     <string name="invitation_username_already_found_title">Имя пользователя уже найдено</string>
     <string name="invitation_username_already_found_message">Вы не можете принять это приглашение, потому что у вас уже есть имя пользователя</string>
+    <string name="invitation_username_already_found_voting_title">Запрос на это имя пользователя уже отправлен</string>
+    <string name="invitation_username_already_found_voting_message">Вы не можете принять это приглашение, потому что вы уже отправили запрос на имя пользователя</string>
     <string name="invitation_onboarding_has_began_error_title">Ошибка подлючения</string>
+    <string name="invitation_error_title">Ошибка приглашения</string>
     <string name="invitation_onboarding_has_began_error">Идёт подключение. Пожалуйста, запросите приглашение после создания кошелька.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay обрабатывает приглашение</string>
     <string name="invitation_accept_title_1">Создайте ваше имя пользователя</string>
     <string name="invitation_accept_title_2">Добавить друзей и семью</string>
     <string name="invitation_accept_message_2">Пригласите семью и найдите друзей по имени пользователя</string>
@@ -211,6 +216,8 @@ Dash</b></string>
 
     <string name="join_dashpay_subtitle">Создайте имя пользователя, добавьте друзей…</string>
     <string name="join_dashpay_more_subtitle">Создайте имя пользователя, найдите друзей и добавьте их в список контактов</string>
+    <string name="join_dashpay_more_subtitle_two">Создайте имя пользователя и забудьте о буквенно-цифровых адресах</string>
+    <string name="join_dashpay_wait">Дождитесь завершения синхронизации, чтобы создать имя пользователя</string>
     <string name="join">Присоединиться</string>
 
     <string name="more_suggestions">Больше предложений</string>
@@ -307,6 +314,7 @@ Dash</b></string>
         <item>Есть заблокированные голоса</item>
     </string-array>
     <string name="request_your_username">Создать имя пользователя</string>
+    <string name="request_instant_username">Создать быстрое имя пользователя</string>
     <string name="request_your_hint">Обратите внимание, что в будущем вы не сможете его изменить</string>
     <string name="request_username">Запросить имя пользователя</string>
     <string name="request_voting_range">Сеть Dash проведёт голосование за это имя пользователя. Мы пришлём уведомление о результатах по %s.</string>
@@ -382,6 +390,8 @@ Dash</b></string>
     <string name="requested_voting_duration">Результаты по %s.</string>
     <string name="cancel_request">Отменить запрос</string>
     <string name="after_the_voting">Когда голосование закончится, вы получите уведомление о его результатах</string>
+    <string name="after_the_voting_result">Голосование завершено</string>
+    <string name="voting_period_error">Период голосования не найден</string>
     <string name="none">Не указана</string>
     <string name="verify_now">Подтвердить сейчас</string>
     <string name="if_you_tap_cancel">Если вы нажмёте \"Отменить Запрос\", то у вас останется возможность запросить другое имя пользователя без повторной оплаты</string>
@@ -435,8 +445,12 @@ Dash</b></string>
 
     <string name="request_username_username_voting_message">+ что такое голосование за имя пользователя\?</string>
     <string name="request_username_character_requirement">Только буквы, цифры и дефисы</string>
+    <string name="request_username_character_requirement_invite_noncontested">Цифры 2-9</string>
     <string name="request_username_balance_requirement">Чтобы создать это имя пользователя, у вас должно быть 0.25 DASH</string>
+    <string name="request_username_requirements_message_invite_noncontested">Имя пользователя должно соответствовать одному из этих условий:</string>
+    <string name="request_username_requirements_message">Имя пользователя должно соответствовать этим условиям:</string>
     <string name="request_username_length_requirement">От 3 до 23 символов</string>
+    <string name="request_username_length_requirement_noncontested">От 20 до 23 символов</string>
     <string name="request_username_confirm">Принимаю</string>
     <string name="username_vote_one_left_message">Вы уже проголосовали за это имя пользователя %d раз(а). За него можно проголосовать ещё один раз. </string>
     <string name="username_vote_one_left">Остался один голос</string>
@@ -507,4 +521,27 @@ Dash</b></string>
     <string name="transaction_metadata_you_have_n_tx">С %s у вас %d несохранённых транзакций</string>
     <string name="transaction_metadata_save_transactions">Сохранить несохранённые транзакции</string>
     <string name="transaction_metadata_continue_without_saving">Продолжить без сохранения</string>
+    <string name="invitation_fee_title">Комиссия за приглашение</string>
+    <string name="invitation_fee_message">Каждое приглашение сопровождается определённой суммой, чтобы получатель мог тут же создать своё имя пользователя в сети Dash.</string>
+    <string name="invitation_fee_noncontested">Неоспариваемое</string>
+    <string name="invitation_fee_contested">Оспариваемое</string>
+    <string name="invitation_fee_contested_message">Человек, которому вы отправили это приглашение, может отправить запрос на любое имя пользователя по своему желанию, и сеть проведёт голосование о его принятии. </string>
+    <string name="invitation_fee_noncontested_message">Человек, которому вы отправили это приглашение, может отправить запрос на любое имя пользователя, в котором есть цифры от 2-9 или оно состоит из 20 символов и более. </string>
+    <string name="invitation_creating_progress_loading">Загрузка приглашения...</string>
+    <string name="invitation_creating_progress_wip">Создание приглашения...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Подтвердить и оплатить</string>
+    <string name="error_sending_invite_transaction">Ошибка при отправке приглашения</string>
+    <string name="request_username_invitation_not_mixed_message">Приглашение было создано с помощью несмешанных средств</string>
+    <string name="request_username_invitation_only_noncontested_message">С этим приглашением можно создать только неоспариваемое имя пользователя</string>
+    <string name="username_types_title">Что такое оспариваемое и неоспариваемое имя пользователя\?</string>
+    <string name="username_types_message">Существуют два вида имени пользователя: оспариваемые и неоспариваемые.\n\nВ неоспариваемых именах пользователя присутствует хотя бы одна цифра (2-9), или они содержат больше 20 символов, и утверждаются автоматически. \n\nЕсли вы хотите оспариваемое имя пользователя, короче и без цифр, вам нужно зарегистрироваться через DashPay без приглашения, оплатить необходимую комиссию и дождаться, пока завершится период голосования за утверждение имён пользователей.</string>
+    <string name="accept_invitation_hide">Свернуть</string>
+    <string name="accept_invitation_create">Создать</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Создать быстрое имя пользователя</string>
+    <string name="create_instant_username_description">Голосование по запрошенному имени пользователя будет проходить в течение 2 недель. Чтобы сразу воспользоваться контактами и платежами, вы можете создать такое же быстрое имя пользователя.\n\nЕсли ваш первоначальный запрос одобрят, это имя пользователя заменит быстрое, сохранив при этом контакты и историю. Если нет, вы продолжите беспрепятственно пользоваться быстрым именем.</string>
+    <string name="create_instant_username_button">Создать быстрое имя пользователя</string>
+    <string name="create_instant_username_cancel">Отмена</string>
+
 </resources>

@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">创建一个新钱包</string>
-    <string name="onboarding_recover_wallet">通过助记词还原钱包</string>
+    <string name="onboarding_create_wallet">创建新钱包</string>
+    <string name="onboarding_recover_wallet">恢复钱包</string>
     <string name="onboarding_restore_wallet">通过文件还原钱包</string>
     <string name="onboarding_load_wallet_error">无法加载钱包!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">未复制地址</string>
 
     <string name="forgot_pin_title">忘记PIN？</string>
+    <string name="forgot_pin_setup_new_pin_title">设置一个新PIN</string>
     <string name="forgot_pin_message">您可以借助助记词来设置新的PIN</string>
     <string name="forgot_pin_instruction_1">输入助记词来找回您的钱包</string>
     <string name="forgot_pin_instruction_2">设置一个新PIN</string>
@@ -331,13 +332,9 @@
 
     <string name="skip">跳过</string>
     <string name="get_started">开始使用</string>
-    <string name="welcome_screen_title_1_new_install">欢迎</string>
-    <string name="welcome_screen_title_1_upgrade">我们升级了</string>
-    <string name="welcome_screen_subtitle_1">所有设备上的直观熟悉体验</string>
-    <string name="welcome_screen_title_2">轻松付款</string>
-    <string name="welcome_screen_subtitle_2">易用的付款流程即时支付和接收交易</string>
-    <string name="welcome_screen_title_3">更多控制</string>
-    <string name="welcome_screen_subtitle_3">完全控制并根据需求定制您的钱包</string>
+    <string name="welcome_screen_title_1">通过用户名发送和接收 Dash</string>
+    <string name="welcome_screen_title_2">在数千商户使用 Dash 消费</string>
+    <string name="welcome_screen_title_3">存储 Dash 的最安全方式</string>
 
     <string-array name="history_filter">
         <item>所有</item>

@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Створити новий гаманець</string>
-    <string name="onboarding_recover_wallet">Відновити гаманець фразою відновлення</string>
-    <string name="onboarding_restore_wallet">Відновити гаманець з файлу</string>
+    <string name="onboarding_recover_wallet">Відновити гаманець</string>
     <string name="onboarding_load_wallet_error">Неможливо завантажити гаманець!</string>
 
     <string name="set_pin_create_new_wallet">Створити новий гаманець</string>
@@ -86,6 +84,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Немає скопійованої адреси</string>
 
     <string name="forgot_pin_title">Забули PIN-код?</string>
+    <string name="forgot_pin_setup_new_pin_title">Задайте новий PIN-код</string>
     <string name="forgot_pin_message">Ви можете встановити новий PIN-код за допомогою фрази відновлення.</string>
     <string name="forgot_pin_instruction_1">Введіть фразу відновлення, щоб відновити гаманець</string>
     <string name="forgot_pin_instruction_2">Задайте новий PIN-код</string>
@@ -267,7 +266,6 @@
     <string name="authenticate_switch_to_fingerprint">Використати відбиток пальця</string>
     <string name="authenticate_switch_to_pin">Використати PIN-код</string>
 
-    <string name="menu_invite_title">Запросити</string>
     <string name="menu_invite_subtitle">Допоможіть друзям і родині приєднатися до Dash</string>
     <string name="menu_buy_and_sell_title">Купити &amp; Продати Dash</string>
     <string name="menu_buy_and_sell_subtitle">Підключитися до сторонніх бірж</string>
@@ -340,14 +338,6 @@
 
     <string name="skip">пропустити</string>
     <string name="get_started">Почати</string>
-    <string name="welcome_screen_title_1_new_install">Ласкаво просимо</string>
-    <string name="welcome_screen_title_1_upgrade">Ми оновились</string>
-    <string name="welcome_screen_subtitle_1">Інтуїтивний та звичний інтерфейс на всіх ваших пристроях</string>
-    <string name="welcome_screen_title_2">Платіть з легкістю</string>
-    <string name="welcome_screen_subtitle_2">Платіть і отримуйте гроші миттєво за допомогою простих у використанні платіжних потоків</string>
-    <string name="welcome_screen_title_3">Більше контролю</string>
-    <string name="welcome_screen_subtitle_3">Отримайте повний контроль і налаштуйте свій гаманець для своїх потреб</string>
-
     <string-array name="history_filter">
         <item>Все</item>
         <item>Отримано</item>

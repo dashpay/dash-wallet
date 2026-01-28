@@ -16,9 +16,10 @@
     <string name="new_account_confirm_accept">قبول می‌کنم</string>
     <string name="new_account_confirm_upgrade_fee">کارمزد ارتقاء</string>
     <string name="new_account_confirm_message">شما %s را به عنوان نام کاربری انتخاب کردید. لطفا به خاطر ذاشته باشبد که پس از ثبت نام کاربری، دیگر نمی‌توانید آن را تغییر دهید.</string>
+    <string name="new_account_secondary_confirm_message">می‌توانید %sرا به عنوان نام کاربری فوری انتخاب کنید. دقت داشته باشید که پس از ثبت نام کاربری، دیگر امکان تغییر آن وجود ندارد.  </string>
     <string name="invitation_confirm_title">کارمزد دعوت</string>
     <string name="invitation_confirm_message">برای هر دعوت، این مبلغ اختصاص می‌یابد تا دریافت‌کننده بتواند نام کاربری‌اش را در شبکه دش ایجاد کتد.</string>
-    <string name="invitation_init_title">دعوت</string>
+    <string name="invitation_title">دعوتنامه</string>
     <string name="invitation_init_header">دوستان و اعضای خانواده‌تان را دعوت کنید.</string>
     <string name="invitation_init_message">به دوستان و اعضای خانواده‌تان کمک کنید به شبکه دش بپیوندند. آنها را به دنیای بانکداری اجتماعی دعوت کنید. </string>
     <string name="invitation_init_button_text">دعوتنامه جدید ایجاد کنید</string>
@@ -52,8 +53,12 @@
     <string name="invitation_invalid_invite_message">دعوتنامه شما از %s معتبر نیست</string>
     <string name="invitation_username_already_found_title">نام کاربری قبلا پیدا شده</string>
     <string name="invitation_username_already_found_message">نمی‌توانید این دعوتنامه را بپذیرید، چون قبلا نام کاربری دش به آن اختصاص یافته است</string>
+    <string name="invitation_username_already_found_voting_title">نام کاربردی قبلاً درخواست شده است</string>
+    <string name="invitation_username_already_found_voting_message">نمی‌توانید این دعوتنامه را بپذیرید چون قبلاً درخواست یک نام کاربری دش را داده‌اید. </string>
     <string name="invitation_onboarding_has_began_error_title">خطا در ادامه فرایند</string>
+    <string name="invitation_error_title">خطا در دعوت</string>
     <string name="invitation_onboarding_has_began_error">فرایند در جریان است. لطفا پس از ایجاد کیف پول، این دعوتنامه را بپذیرید.</string>
+    <string name="invitation_accept_invite_has_began_error">دش‌پی در حال پردازش دعوتنامه است</string>
     <string name="invitation_accept_title_1">انتتخاب نام کاربری</string>
     <string name="invitation_accept_title_2">اضافه کردن دوستان و اعضای خانواده</string>
     <string name="invitation_accept_message_2">با جستجوی نام‌های کاربری، دوستان‌تان را بیابید و اعضای خانواده‌تان را دعوت کنید.</string>
@@ -210,6 +215,8 @@
 
     <string name="join_dashpay_subtitle">نام کاربری بسازید، دوستان‌تان را اضافه کنید...</string>
     <string name="join_dashpay_more_subtitle">نام کاربری بسازید، دوستان‌تان را بیابید و آنها را به فهرست مخاطبان‌تان اضافه کنید.</string>
+    <string name="join_dashpay_more_subtitle_two">یک نام کاربری ایجاد کنید و با نشانی‌های رقمی خداحافظی کنید</string>
+    <string name="join_dashpay_wait">برای ایجاد نام کاربری، منتظر بمانید تا همزمان‌سازی تمام شود</string>
     <string name="join">پیوستم</string>
 
     <string name="more_suggestions">پیشنهادات بیشتر</string>
@@ -306,6 +313,7 @@
         <item>دارای رای‌های مسدود است</item>
     </string-array>
     <string name="request_your_username">نام کاربری‌تان را ایجاد کنید</string>
+    <string name="request_instant_username">ایجاد نام کاربری فوری</string>
     <string name="request_your_hint">لطفاً دقت داشته باشید که نمی‌توانید بعدا آن را تغییر دهید</string>
     <string name="request_username">درخواست نام کاربری</string>
     <string name="request_voting_range">شبکه دش برای این نام کاربری رای‌گیری می‌کند. نتیجه را در %s به شما اطلاع می‌دهیم. </string>
@@ -381,6 +389,8 @@
     <string name="requested_voting_duration">نتایج برای %s.</string>
     <string name="cancel_request">لغو درخواست</string>
     <string name="after_the_voting">پس از پایان رای‌گیری، نتایج به اطلاع‌تان می‌رسد</string>
+    <string name="after_the_voting_result">رای‌گیری به پایان رسید</string>
+    <string name="voting_period_error">دوره رای‌گیری یافت نشد</string>
     <string name="none">هیچ کدام</string>
     <string name="verify_now">همین حالا اعتبارسنجی کن</string>
     <string name="if_you_tap_cancel">اگر دگمه «لغو درخواست» را بزنید، همچنان این فرصت را دارید تا یک نام کاربری دیگر را بدون پرداخت دوباره درخواست کنید</string>
@@ -434,8 +444,12 @@
 
     <string name="request_username_username_voting_message">+ رای‌گیری نام کاربری چیست</string>
     <string name="request_username_character_requirement">حرف، عدد و خط‌تیره</string>
+    <string name="request_username_character_requirement_invite_noncontested">اعداد ۲ تا ۹</string>
     <string name="request_username_balance_requirement">برا ایجاد نام کاربری باید ۰.۲۵ دش داشته باشید</string>
+    <string name="request_username_requirements_message_invite_noncontested">نام کاربری باید یکی از معیارهای زیر را شامل شود</string>
+    <string name="request_username_requirements_message">نام کاربری باید معیارهای زیر را شامل شود</string>
     <string name="request_username_length_requirement">بین ۳ تا ۲۳ کاراکتر</string>
+    <string name="request_username_length_requirement_noncontested">بین ۲۰ تا ۲۳ کاراکتر</string>
     <string name="request_username_confirm">قبول می‌کنم</string>
     <string name="username_vote_one_left_message">قبلاً با این نام کاربری %dبار رای داده‌اید. با این نام کاربری می‌توانید فقط یک بار رای دهید. </string>
     <string name="username_vote_one_left">فقط یک رای باقی مانده است. </string>
@@ -506,4 +520,27 @@
     <string name="transaction_metadata_you_have_n_tx">شما تعداد %d تراکنش ذخیره‌نشده از تاریخ %s دارید</string>
     <string name="transaction_metadata_save_transactions">تراکنش‌های ذخیره‌نشده را ذخیره کن</string>
     <string name="transaction_metadata_continue_without_saving">بدون ذخیره‌کردن ادامه بده</string>
+    <string name="invitation_fee_title">کارمزد دعوت</string>
+    <string name="invitation_fee_message">هر دعوتنامه شامل مبلغی خواهد بود تا دریافت‌کننده بتواند به سرعت نام کاربری‌اش را روی شبکه دش ایجاد کند</string>
+    <string name="invitation_fee_noncontested">مورد موافقت قرار نگرفت</string>
+    <string name="invitation_fee_contested">مورد موافقت قرار گرفت</string>
+    <string name="invitation_fee_contested_message">فردی که این دعوتنامه را برایش می‌فرستید می‌تواند هر نام کاربری که می‌خواهد را انتخاب کند و شبکه برای تائید نام کاربری رأی‌گیری خواهد کرد.</string>
+    <string name="invitation_fee_noncontested_message">فردی که این دعوتنامه را برایش می‌فرستید می‌تواند یک نام کاربری را درخواست کند که شامل اعداد ۲ تا ۹ بوده و بیش از ۲۰ کاراکتر دارد. </string>
+    <string name="invitation_creating_progress_loading">بارگذاری دعوتنامه...</string>
+    <string name="invitation_creating_progress_wip">ایجاد دعوتنامه...</string>
+    <string name="invitation_fee_confirm_and_pay_button">تائید و پرداخت</string>
+    <string name="error_sending_invite_transaction">خطا در ارسال تراکنش دعوتنامه</string>
+    <string name="request_username_invitation_not_mixed_message">دعوتنامه با موجودی ترکیب‌نشده ایجاد شد</string>
+    <string name="request_username_invitation_only_noncontested_message">با استفاده از این دعوتنامه فقط می‌توانید نام کاربری توافق‌نشده ایجاد کنید</string>
+    <string name="username_types_title">نام کاربری توافق‌شده و توافق‌نشده چیست؟</string>
+    <string name="username_types_message">دو نوع نام کاربری نداریم: توافق‌شده و توافق‌نشده.\nنام‌های کاربری توافق‌نشده شامل حداقل یک عدد (۲ تا ۹) هستید و یا بیش از ۲۰ کاراکتر دارند و به صورت خودکار مورد تائید قرار می‌گیرند.\nاگر می‌خواهید نام‌ کابری توافق‌شده ایجاد کنید که کوتاه‌تر و بدون عدد است، باید بدون دعوتنامه در دش‌پی ثبت‌نام کنید، کارمزد مربوطه را بپردازید و منتظر تائید پس از تکمیل دوره رأی‌گیری بمانید.</string>
+    <string name="accept_invitation_hide">پنهان کردن</string>
+    <string name="accept_invitation_create">ایجاد</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">ایجاد نام کاربری فوری</string>
+    <string name="create_instant_username_description">نام کاربری درخواستی شما طی دو هفته آینده به رای گذاشته می‌شود. برای ارتباط‌گیری و پرداخت‌های فوری، می‌توانید یک نام کاربری مشابه فوری بسازید.\nاگر درخواست اصلی‌تان مورد پذیرش قرار گرفت، آن نام کاربری جایگزین این نام کاربری فوری می‌شود و همه مخاطبان و سابقه آن نیز حفظ خواهد شد. در عیر این صورت، می‌توانید همچنان به استفاده از این نام کاربری فوری ادامه دهید. </string>
+    <string name="create_instant_username_button">ایجاد نام کاربری فوری</string>
+    <string name="create_instant_username_cancel">لغو</string>
+
 </resources>

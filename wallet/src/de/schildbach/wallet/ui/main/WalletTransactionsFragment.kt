@@ -427,7 +427,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     if (needsNewUsername ||
                         // do we need this, cause the error could be due to a stale node
                         blockchainIdentityData.creationState == IdentityCreationState.REQUESTED_NAME_CHECKING &&
-                        errorMessage?.contains("invalid quorum: quorum not found") != true
+                        (errorMessage?.contains("invalid quorum: quorum not found") != true ||
+                                errorMessage.contains("invalid peer certificate: certificate expired") == true)
                     ) {
                         startActivity(
                             CreateUsernameActivity.createIntentReuseTransaction(

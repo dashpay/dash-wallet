@@ -2,8 +2,8 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Buat Dompet Baru</string>
-    <string name="onboarding_recover_wallet">Pulihkan dari frasa pemulihan</string>
-    <string name="onboarding_restore_wallet">Kembalikan Dompet Dari File</string>
+    <string name="onboarding_recover_wallet">Pulihkan kunci pribadi</string>
+    <string name="onboarding_restore_wallet">Pulihkan dompet dari file</string>
     <string name="onboarding_load_wallet_error">Tidak dapat memuat dompet!</string>
 
     <string name="set_pin_create_new_wallet">Buat Dompet Baru</string>
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Tak ada alamat tersalin</string>
 
     <string name="forgot_pin_title">Lupa PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Siapkan PIN baru</string>
     <string name="forgot_pin_message">Anda dapat mengatur PIN baru dengan bantuan frasa pemulihan Anda.</string>
     <string name="forgot_pin_instruction_1">Masukkan Frasa pemulihan untuk memulihakan dompet anda</string>
     <string name="forgot_pin_instruction_2">Siapkan PIN baru</string>
@@ -258,7 +259,7 @@
     <string name="authenticate_switch_to_fingerprint">Gunakan sidik jari </string>
     <string name="authenticate_switch_to_pin">Gunakan PIN</string>
 
-    <string name="menu_invite_title">Undang</string>
+    <string name="menu_invite_title">Undangan</string>
     <string name="menu_invite_subtitle">Bantu teman dan keluarga anda bergabung dengam Dash</string>
     <string name="menu_buy_and_sell_title">Beli &amp; Jual Dash</string>
     <string name="menu_buy_and_sell_subtitle">Terhubung dengan pertukaran pihak ketiga</string>
@@ -331,13 +332,9 @@
 
     <string name="skip">lewati</string>
     <string name="get_started">Memulai</string>
-    <string name="welcome_screen_title_1_new_install">Selamat Datang</string>
-    <string name="welcome_screen_title_1_upgrade">Kami meningkatkan</string>
-    <string name="welcome_screen_subtitle_1">Pengalaman intuitif dan akrab di semua perangkat Anda</string>
-    <string name="welcome_screen_title_2">Bayar dengan Mudah</string>
-    <string name="welcome_screen_subtitle_2">Bayar dan dapatkan bayaran instan dengan aliran pembayaran yang mudah digunakan</string>
-    <string name="welcome_screen_title_3">Kontrol lebih lanjut</string>
-    <string name="welcome_screen_subtitle_3">Memiliki kendali penuh dan sesuaikan dompet Anda berdasarkan kebutuhan Anda</string>
+    <string name="welcome_screen_title_1">Kirim dan terima Dash melalui nama pengguna</string>
+    <string name="welcome_screen_title_2">Belanjakan Dash di ribuan toko.</string>
+    <string name="welcome_screen_title_3">Cara paling aman untuk menyimpan Dash anda</string>
 
     <string-array name="history_filter">
         <item>Semua</item>
