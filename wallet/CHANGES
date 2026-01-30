@@ -1,4 +1,7 @@
 Dash Wallet / DashPay
+v11.6.1
+* Fix Send Flows (don't show error dialogs)
+
 v11.6.0
 * Support non-contested username and DashPay related features while contested username is in the voting period
 * Upgrade security system to handle rare case of invalid Android Keystore keys
