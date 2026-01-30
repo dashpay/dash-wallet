@@ -147,6 +147,7 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
@@ -299,6 +300,7 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction {
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         wallet.completeTx(sendRequest)
         // check fee
 //        val sendRequest = if (isFeeTooHigh(sendRequest.tx)) {
@@ -401,13 +403,13 @@ class SendCoinsTaskRunner @Inject constructor(
         useCoinJoinGreedy: Boolean
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
-
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
         if (!sendRequest.emptyWallet && useCoinJoinGreedy) {
@@ -479,6 +481,7 @@ class SendCoinsTaskRunner @Inject constructor(
         useCoinJoinGreedy: Boolean = true
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
         sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
         sendRequest.useInstantSend = false
@@ -674,6 +677,7 @@ class SendCoinsTaskRunner @Inject constructor(
 
     fun signSendRequest(sendRequest: SendRequest) {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
+        Context.propagate(wallet.context)
 
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()

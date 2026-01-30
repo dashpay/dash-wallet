@@ -34,7 +34,11 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -234,6 +238,7 @@ class SendCoinsViewModel @Inject constructor(
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
     ): Transaction = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
@@ -322,6 +327,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     suspend fun getPendingBalance(): Coin = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
         val estimated = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
         val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
 
@@ -432,6 +438,17 @@ class SendCoinsViewModel @Inject constructor(
             return
         }
         log.info("executeDryRun started")
+        val currentThread = Thread.currentThread()
+        val monitorJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(1000)
+            log.warn("executeDryrun is taking longer than 1 second")
+            try {
+                val anrException = AnrException(currentThread)
+                anrException.logProcessMap()
+            } catch (e: Exception) {
+                log.error("Failed to dump thread traces during executeDryrun", e)
+            }
+        }
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
 
@@ -448,32 +465,10 @@ class SendCoinsViewModel @Inject constructor(
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
-//            if (checkDust(sendRequest)) {
-//                sendRequest = createSendRequest(
-//                    basePaymentIntent.mayEditAmount(),
-//                    finalPaymentIntent,
-//                    signInputs = false,
-//                    forceEnsureMinRequiredFee = true
-//                )
-//                log.info("  start completeTx again")
-//                wallet.completeTx(sendRequest)
-//            }
-
-//            if (sendCoinsTaskRunner.isFeeTooHigh(sendRequest.tx)) {
-//                sendRequest = createSendRequest(
-//                    basePaymentIntent.mayEditAmount(),
-//                    finalPaymentIntent,
-//                    signInputs = false,
-//                    forceEnsureMinRequiredFee = true,
-//                    useGreedyAlgorithm = false
-//                )
-//                log.info("  start completeTx again")
-//                wallet.completeTx(sendRequest)
-//                dryRunGreedy = false
-//            }
             dryRunGreedy = sendRequest.coinSelector is CoinJoinCoinSelector && !sendRequest.returnChange
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
             dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
@@ -481,6 +476,7 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 ex
             }
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(false)
         }
     }

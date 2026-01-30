@@ -182,6 +182,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (isReplaying == true) {
             errorMessage = getString(R.string.send_coins_fragment_hint_replaying)
         } else if (dryRunException != null) {
+            log.info("dryRunException:", dryRunException)
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
                 is InsufficientCoinJoinMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_mixed_money)
@@ -267,6 +268,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
                 }
             } catch (ex: Exception) {
                 viewModel.logSendError(args.paymentIntent.source)
+                log.info("send exception: ", ex)
                 when (ex) {
                     is InsufficientMoneyException -> showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
                     is KeyCrypterException -> showFailureDialog(ex)
