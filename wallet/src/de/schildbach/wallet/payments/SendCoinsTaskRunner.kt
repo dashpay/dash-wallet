@@ -146,6 +146,7 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         var sendRequest = createSendRequest(address, amount, null, emptyWallet, false)
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
@@ -272,6 +273,7 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction {
         log.info("completing sendRequest transaction")
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         wallet.completeTx(sendRequest)
         log.info("completed sendRequest transaction")
         serviceName?.let {
@@ -358,6 +360,7 @@ class SendCoinsTaskRunner @Inject constructor(
         forceEnsureMinRequiredFee: Boolean
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         val sendRequest = paymentIntent.toSendRequest()
         sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
@@ -379,13 +382,13 @@ class SendCoinsTaskRunner @Inject constructor(
         topUpKey: ECKey
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        Context.propagate(wallet.context)
         val sendRequest = SendRequest.assetLock(wallet.params, topUpKey, paymentIntent.amount)
         sendRequest.coinSelector = getCoinSelector()
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE
         sendRequest.ensureMinRequiredFee = forceEnsureMinRequiredFee
         sendRequest.signInputs = signInputs
-
         val walletBalance = wallet.getBalance(getMaxOutputCoinSelector())
         sendRequest.emptyWallet = mayEditAmount && walletBalance == paymentIntent.amount
 
