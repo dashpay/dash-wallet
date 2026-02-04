@@ -275,7 +275,7 @@ class SendCoinsViewModel @Inject constructor(
     ): Transaction = withContext(Dispatchers.IO) {
         _state.postValue(State.SENDING)
         if (!isAssetLock) {
-            error("isAssetLock must be true, but is true")
+            error("isAssetLock must be true, but is false")
         }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
