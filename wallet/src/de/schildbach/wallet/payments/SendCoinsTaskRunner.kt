@@ -293,6 +293,18 @@ class SendCoinsTaskRunner @Inject constructor(
         return directPay(finalSendRequest, finalPaymentIntent, serviceName)
     }
 
+    /**
+     * Completes and submits a direct payment via BIP70/BIP270 protocol.
+     * This method completes the transaction, sends it via HTTP to the payment URL,
+     * and handles the payment acknowledgment.
+     *
+     * @param sendRequest The send request (should already be created via createSendRequest)
+     * @param finalPaymentIntent The payment intent containing the payment URL
+     * @param serviceName Optional service name for transaction metadata
+     * @return The committed transaction
+     * @throws DirectPayException if the payment is not acknowledged
+     * @throws IOException if the HTTP request fails
+     */
     private suspend fun directPay(
         sendRequest: SendRequest,
         finalPaymentIntent: PaymentIntent,
@@ -302,21 +314,6 @@ class SendCoinsTaskRunner @Inject constructor(
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
         wallet.completeTx(sendRequest)
-        // check fee
-//        val sendRequest = if (isFeeTooHigh(sendRequest.tx)) {
-//            val newSendRequest = createSendRequest(
-//                false,
-//                finalPaymentIntent,
-//                signInputs = sendRequest.signInputs,
-//                forceEnsureMinRequiredFee = sendRequest.ensureMinRequiredFee,
-//                useCoinJoinGreedy = false
-//            )
-//            log.info("  start completeTx again to lower fees")
-//            wallet.completeTx(sendRequest)
-//            newSendRequest
-//        } else {
-//            sendRequest
-//        }
         log.info("completed sendRequest transaction")
         serviceName?.let {
             metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)

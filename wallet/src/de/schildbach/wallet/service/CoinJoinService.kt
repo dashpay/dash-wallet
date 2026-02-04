@@ -135,7 +135,7 @@ class CoinJoinMixingService @Inject constructor(
     companion object {
         val log: Logger = LoggerFactory.getLogger(CoinJoinMixingService::class.java)
         const val DEFAULT_MULTISESSION = false // for stability, need to investigate
-        const val DEFAULT_ROUNDS = 1
+        const val DEFAULT_ROUNDS = 4
         const val DEFAULT_SESSIONS = 6
         const val DEFAULT_DENOMINATIONS_GOAL = 50
         const val DEFAULT_DENOMINATIONS_HARDCAP = 300

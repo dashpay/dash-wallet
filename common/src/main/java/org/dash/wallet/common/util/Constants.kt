@@ -22,6 +22,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import org.bitcoinj.core.Coin
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.BuildConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -66,7 +67,13 @@ object Constants {
         .writeTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(
-            HttpLoggingInterceptor { log.info(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
+            HttpLoggingInterceptor { log.info(it) }.setLevel(
+                //if (BuildConfig.DEBUG) {
+                //    HttpLoggingInterceptor.Level.BODY
+                //} else {
+                    HttpLoggingInterceptor.Level.BASIC
+                //}
+            )
         )
         .build()
 }

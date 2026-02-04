@@ -176,7 +176,7 @@ class PaymentProtocolViewModel @Inject constructor(
     fun sendPayment() {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                directPaymentAckLiveData.value = Resource.loading(null)
+                directPaymentAckLiveData.postValue(Resource.loading(null))
 
                 val sendRequest = sendCoinsTaskRunner.createSendRequest(
                     basePaymentIntent.mayEditAmount(),
