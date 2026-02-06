@@ -232,6 +232,7 @@ class SendCoinsViewModel @Inject constructor(
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
     ): Transaction = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
         _state.postValue(State.SENDING)
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
@@ -318,6 +319,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     suspend fun getPendingBalance(): Coin = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
         val estimated = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
         val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
 
