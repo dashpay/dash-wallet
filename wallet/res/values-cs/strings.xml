@@ -267,6 +267,8 @@
     <string name="preferences_report_issue_title">Nahlásit problém</string>
     <string name="preferences_initiate_reset_title">Znovu skenovat blockchain</string>
     <string name="preferences_initiate_reset_dialog_positive">Znovu skenovat</string>
+    <string name="rescan_blockchain_select_date_placeholder">Zvolit</string>
+    <string name="rescan_blockchain_confirm_button">Znovu skenovat</string>
     <string name="preferences_extended_public_key_title">Zobrazit xpub</string>
     <string name="preferences_extended_public_key_summary">Zobrazit rozšířený veřejný klíč vaší peněženky za účelem importování do jiných aplikací a služeb. Buďte opatrní: tímto sdílíte Vaše peněžní soukromí s danou aplikaci.</string>
     <string name="bitmap_fragment_share">Sdílet…</string>
@@ -370,4 +372,6 @@
     <string name="clear_filter">Zrušit filtr</string>
     <string name="send_to_address">Odeslat na adresu</string>
 
-    </resources>
+    <string name="upgrade_pin_description">Nastavit nový PIN</string>
+    <string name="upgrade_pin_continue">Pokračovat</string>
+</resources>

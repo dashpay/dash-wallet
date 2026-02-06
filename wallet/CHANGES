@@ -1,4 +1,15 @@
 Dash Wallet / DashPay
+v11.6.0
+* Support non-contested username and DashPay related features while contested username is in the voting period
+* Upgrade security system to handle rare case of invalid Android Keystore keys
+* Optimize platform data synchronization
+* Improve blockchain sync speed
+* Hide PiggyCards for restricted countries (Russia and Cuba)
+* Allow user to specify the sync start date when restoring a wallet
+* Allow user to specify the sync start date when rescanning the blockchain
+* Improve the CSV Export features
+* Minor fixes
+
 v11.5.0
 * Added Transaction metadata feature
 * Addressed Sync issues and sync stalls

@@ -862,7 +862,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     private var networkCallbackRegistered = false
     private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-
+    private val availableNetworks: MutableSet<Network> = ConcurrentHashMap.newKeySet()
     private inner class NetworkCallbackImpl : ConnectivityManager.NetworkCallback() {
         init {
             // Setup security health monitoring
@@ -909,6 +909,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
                 if (hasInternet && hasValidated) {
+                    availableNetworks.add(network)
                     impediments.remove(Impediment.NETWORK)
                     updateBlockchainStateImpediments()
                     check()
@@ -918,11 +919,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
         override fun onLost(network: Network) {
             serviceScope.launch {
-                log.info("network lost: $network")
+                availableNetworks.remove(network)
+                log.info("network lost: $network, remaining networks: ${availableNetworks.size}")
 
-                impediments.add(Impediment.NETWORK)
-                updateBlockchainStateImpediments()
-                check()
+                // Only add impediment if no suitable networks remain
+                if (availableNetworks.isEmpty()) {
+                    impediments.add(Impediment.NETWORK)
+                    updateBlockchainStateImpediments()
+                    check()
+                }
             }
         }
 
@@ -1189,11 +1194,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener)
             } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
-                try {
-                    dashSystemService.system.close()
-                } catch (e: Exception) {
-                    log.error("Error closing dash system service", e)
-                }
                 log.info("stopping peergroup")
                 peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
@@ -1201,6 +1201,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.removeWallet(wallet)
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                 peerGroup!!.stopAsync()
+                try {
+                    dashSystemService.system.close()
+                } catch (e: Exception) {
+                    log.error("Error closing dash system service", e)
+                }
                 // use the offline risk analyzer
                 if (wallet != null) {
                     wallet.riskAnalyzer =
@@ -1841,6 +1846,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         if (networkCallbackRegistered) {
             connectivityManager.unregisterNetworkCallback(networkCallback)
             networkCallbackRegistered = false
+            availableNetworks.clear()
         }
         ProcessLifecycleOwner.get().lifecycle.removeObserver(appLifecycleObserver)
 
@@ -1928,20 +1934,23 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (peerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
-                    log.info("CLEANUP STEP 1: About to close dashSystemService.system")
-                        dashSystemService.system.close()
-                    log.info("CLEANUP STEP 1: Dash system services are shutdown")
-                    peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-                    peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-                    peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    // we may need to skip these, or move them to after the forceStop because they grab a lock
+                    if (!peerGroup!!.lock.isLocked) {
+                        peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
+                        peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
+                        peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    }
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
-                    log.info("CLEANUP STEP 2: peerGroup listeners and wallet removed")
+                    log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 3: About to call peerGroup.forceStop(7000)")
+                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
                     peerGroup!!.forceStop(7_000)
-                    log.info("CLEANUP STEP 3: peerGroup.forceStop() completed")
+                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
+                    log.info("CLEANUP STEP 3: About to close dashSystemService.system")
+                    dashSystemService.system.close()
+                    log.info("CLEANUP STEP 3: Dash system services are shutdown")
                     if (wallet != null) {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
                     }
@@ -2191,13 +2200,20 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     }
 
     private var handleContactPaymentsJob: Job? = null
+    private val pendingContactPaymentTxs = mutableListOf<Transaction>()
 
     private fun handleContactPayments(tx: Transaction) {
         if (blockchainState?.replaying != true) {
+            synchronized(pendingContactPaymentTxs) {
+                pendingContactPaymentTxs.add(tx)
+            }
             handleContactPaymentsJob?.cancel()
             handleContactPaymentsJob = serviceScope.launch {
                 delay(TimeUnit.SECONDS.toMillis(1)) // debounce delay, 1 second
-                platformRepo.updateFrequentContacts(tx)
+                val txsToProcess = synchronized(pendingContactPaymentTxs) {
+                    pendingContactPaymentTxs.toList().also { pendingContactPaymentTxs.clear() }
+                }
+                txsToProcess.forEach { platformRepo.updateFrequentContacts(it) }
             }
         }
     }

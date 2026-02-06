@@ -61,7 +61,7 @@ dependencies {
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.1"
     implementation "org.dashj.android:dashj-x11-android:1.0.0"
-    implementation "org.dashj.android:dashj-scrypt-android:1.0.0"
+    implementation "org.dashj.android:dashj-scrypt-android:1.0.1"
     implementation 'com.google.guava:guava:29.0-android'
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
@@ -219,8 +219,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11050008
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.5.0"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11060005
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.6.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true

@@ -17,9 +17,10 @@ používateľské meno</b></string>
     <string name="new_account_confirm_accept">Súhlasím</string>
     <string name="new_account_confirm_upgrade_fee">Poplatok za inováciu</string>
     <string name="new_account_confirm_message">Ako svoje používateľské meno ste si vybrali %s. Vezmite prosím na vedomie, že používateľské meno sa NEDÁ po registrácii zmeniť.</string>
+    <string name="new_account_secondary_confirm_message">Vybrali ste si %s ako okamžité používateľské meno. Upozorňujeme, že používateľské meno sa po registrácii NEMÔŽE zmeniť.</string>
     <string name="invitation_confirm_title">Poplatok za pozvanie</string>
     <string name="invitation_confirm_message">Každá pozvánka bude financovaná touto sumou, aby si príjemca mohol rýchlo vytvoriť svoje používateľské meno v sieti Dash</string>
-    <string name="invitation_init_title">Pozvať</string>
+    <string name="invitation_title">Pozvánka</string>
     <string name="invitation_init_header">Pozvať svojich priateľov a rodinu</string>
     <string name="invitation_init_message">Pomôžte svojim priateľom a rodine pripojiť sa k sieti Dash. Pozvite ich do sveta sociálneho bankovníctva.</string>
     <string name="invitation_init_button_text">Vytvoriť novú pozvánku</string>
@@ -53,8 +54,12 @@ používateľské meno</b></string>
     <string name="invitation_invalid_invite_message">Vaša pozvánka od %s nie je platná</string>
     <string name="invitation_username_already_found_title">Používateľské meno sa už našlo</string>
     <string name="invitation_username_already_found_message">Túto pozvánku si nemôžete nárokovať, pretože už máte používateľské meno Dash</string>
+    <string name="invitation_username_already_found_voting_title">O používateľské meno už bolo požiadané</string>
+    <string name="invitation_username_already_found_voting_message">Túto pozvánku si nemôžete uplatniť, pretože ste už požiadali o používateľské meno Dash.</string>
     <string name="invitation_onboarding_has_began_error_title">Chyba pri registrácii</string>
+    <string name="invitation_error_title">Chyba pozvánky</string>
     <string name="invitation_onboarding_has_began_error">Prebieha registrácia. Využite pozvánku až po vytvorení peňaženky.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay momentálne spracováva pozvánku.</string>
     <string name="invitation_accept_title_1">Získajte svoje používateľské meno</string>
     <string name="invitation_accept_title_2">Pridať vašich priateľov a rodinu</string>
     <string name="invitation_accept_message_2">Pozvite svoju rodinu, nájdite svojich priateľov vyhľadaním ich používateľských mien</string>
@@ -211,6 +216,8 @@ používateľské meno</b></string>
 
     <string name="join_dashpay_subtitle">Vytvorte si používateľské meno, pridajte svojich priateľov…</string>
     <string name="join_dashpay_more_subtitle">Vytvorte si používateľské meno, nájdite svojich priateľov a pridajte si ich do kontaktov</string>
+    <string name="join_dashpay_more_subtitle_two">Vytvorte si používateľské meno a rozlúčte sa s číselnými adresami</string>
+    <string name="join_dashpay_wait">Pred vytvorením používateľského mena počkajte na dokončenie synchronizácie.</string>
     <string name="join">Pridať sa</string>
 
     <string name="more_suggestions">Ďalšie návrhy</string>
@@ -307,6 +314,7 @@ používateľské meno</b></string>
         <item>Má zablokované hlasy</item>
     </string-array>
     <string name="request_your_username">Vytvorte si používateľské meno</string>
+    <string name="request_instant_username">Vytvoriť okamžité používateľské meno</string>
     <string name="request_your_hint">Upozorňujeme, že v budúcnosti ho už nebudete môcť zmeniť</string>
     <string name="request_username">Požiadať o používateľské meno</string>
     <string name="request_voting_range">Sieť Dash bude hlasovať o tomto mene. O výsledkoch vás budeme informovať dňa %s.</string>
@@ -382,6 +390,8 @@ používateľské meno</b></string>
     <string name="requested_voting_duration">Výsledky dňa %s.</string>
     <string name="cancel_request">Zrušiť požiadavku</string>
     <string name="after_the_voting">Po ukončení hlasovania vás budeme informovať o výsledkoch</string>
+    <string name="after_the_voting_result">Hlasovanie skončilo</string>
+    <string name="voting_period_error">Hlasovacie obdobie sa nenašlo</string>
     <string name="none">Žiadne</string>
     <string name="verify_now">Overiť teraz</string>
     <string name="if_you_tap_cancel">Ak klepnete na „Zrušiť žiadosť“, stále budete mať možnosť požiadať o ďalšie používateľské meno bez opätovnej platby</string>
@@ -435,8 +445,12 @@ používateľské meno</b></string>
 
     <string name="request_username_username_voting_message">+ čo je to hlasovanie o používateľskom mene\?</string>
     <string name="request_username_character_requirement">Iba písmená, čísla a spojovníky</string>
+    <string name="request_username_character_requirement_invite_noncontested">Čísla 2-9</string>
     <string name="request_username_balance_requirement">Na vytvorenie tohto používateľského mena potrebujete mať 0,25 DASH</string>
+    <string name="request_username_requirements_message_invite_noncontested">Používateľské meno musí spĺňať jedno z týchto kritérií</string>
+    <string name="request_username_requirements_message">Používateľské meno musí spĺňať tieto kritériá</string>
     <string name="request_username_length_requirement">Medzi 3 a 23 znakmi</string>
+    <string name="request_username_length_requirement_noncontested">20 až 23 znakov</string>
     <string name="request_username_confirm">Prijímam</string>
     <string name="username_vote_one_left_message">Za toto používateľské meno ste už hlasovali %d krát. Pre toto používateľské meno môžete odovzdať už len jeden hlas.</string>
     <string name="username_vote_one_left">Zostáva jeden hlas</string>
@@ -453,7 +467,7 @@ používateľské meno</b></string>
     <string name="tools_credits_buy_button">Kúpiť</string>
     <string name="dashpay_what_are_credits_title">Čo sú to kredity\?</string>
     <string name="dashpay_what_are_credits_message">Používatelia platia transakčné poplatky za interakciu so sieťou Dash. To je dôvod, prečo všetky zmeny vo vašom profile vyžadujú zaplatenie malého poplatku, ktorý je možné zaplatiť kreditmi.\n\nVaše kredity môžete použiť na:</string>
-    <string name="credits_send_and_accept_contact_requests">Posielať a prijímať žiadosti o kontakt</string>
+    <string name="credits_send_and_accept_contact_requests">Posielanie a prijímanie žiadostí o kontakt</string>
     <string name="platform_credits">Platformové kredity</string>
     <string name="platform_credits_error">Chyba</string>
     <string name="platform_credits_not_transferred">Čakajúce kredity platformy</string>
@@ -507,4 +521,27 @@ používateľské meno</b></string>
     <string name="transaction_metadata_you_have_n_tx">Máte %d neuložených transakcií od %s</string>
     <string name="transaction_metadata_save_transactions">Uložiť neuložené transakcie</string>
     <string name="transaction_metadata_continue_without_saving">Pokračovať bez uloženia</string>
+    <string name="invitation_fee_title">Poplatok za pozvanie</string>
+    <string name="invitation_fee_message">Každá pozvánka bude zafinancovaná, aby si príjemca mohol rýchlo vytvoriť svoje používateľské meno v sieti Dash.</string>
+    <string name="invitation_fee_noncontested">Nie je sporné</string>
+    <string name="invitation_fee_contested">Sporné</string>
+    <string name="invitation_fee_contested_message">Osoba, ktorej pošlete túto pozvánku, si môže vyžiadať ľubovoľné používateľské meno a sieť bude hlasovať za jeho schválenie.</string>
+    <string name="invitation_fee_noncontested_message">Osoba, ktorej pošlete túto pozvánku, si môže vyžiadať používateľské meno obsahujúce čísla od 2 do 9 a ktoré je dlhšie ako 20 znakov.</string>
+    <string name="invitation_creating_progress_loading">Načítava sa pozvánka...</string>
+    <string name="invitation_creating_progress_wip">Vytvára sa pozvánka...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Potvrdiť a zaplatiť</string>
+    <string name="error_sending_invite_transaction">Chyba pri odosielaní transakcie pozvánky</string>
+    <string name="request_username_invitation_not_mixed_message">Pozvánka bola vytvorená z nezmiešaných prostriedkov</string>
+    <string name="request_username_invitation_only_noncontested_message">Pomocou tejto pozvánky si môžete vytvoriť iba nesporné používateľské meno.</string>
+    <string name="username_types_title">Čo sú sporné a nesporné používateľské mená\?</string>
+    <string name="username_types_message">Existujú dva typy používateľských mien: sporné a nesporné.\n\nNesporné používateľské mená majú aspoň jedno číslo (2 – 9) alebo sú dlhšie ako 20 znakov. Tieto budú automaticky schválené.\n\nAk si chcete vytvoriť sporné používateľské meno, ktoré je kratšie a bez čísel, musíte sa zaregistrovať na DashPay bez pozvánky, zaplatiť požadovaný poplatok a počkať na schválenie po ukončení hlasovacieho obdobia.</string>
+    <string name="accept_invitation_hide">Skryť</string>
+    <string name="accept_invitation_create">Vytvoriť</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Vytvoriť okamžité používateľské meno</string>
+    <string name="create_instant_username_description">O vašom požadovanom používateľskom mene bude hlasované o 2 týždne. Pre okamžité kontakty a platby si môžete vytvoriť podobné okamžité používateľské meno.\n\nAk bude vaša pôvodná požiadavka schválená, nahradí to okamžité, pričom zachová kontakty a históriu. Ak nie, pokračujte v používaní okamžitého mena bez prerušenia.</string>
+    <string name="create_instant_username_button">Vytvoriť okamžité používateľské meno</string>
+    <string name="create_instant_username_cancel">Zrušiť</string>
+
 </resources>

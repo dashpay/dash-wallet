@@ -278,6 +278,8 @@
     <string name="preferences_initiate_reset_summary">블록체인, 거래 및 지갑 잔고를 재스캔합니다. 이 과정에는 다소의 시간이 소요될 수 있으므로 정당한 이유가 있는 때에만 이용하십시오.</string>
     <string name="preferences_initiate_reset_dialog_message">블록체인을 다시 스캔하시겠습니까?\n\n이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않으며, 블록체인 동기화가 완료되면 다시 정상적으로 표시됩니다. 인터넷 연결이 충분한지 확인하십시오.</string>
     <string name="preferences_initiate_reset_dialog_positive">재스캔</string>
+    <string name="rescan_blockchain_select_date_placeholder">선택</string>
+    <string name="rescan_blockchain_confirm_button">재스캔</string>
     <string name="preferences_extended_public_key_title">xpub 보이기</string>
     <string name="preferences_extended_public_key_summary">지갑의 확장된 공개 키를 확인합니다. 이로써 다른 어플이나 서비스에 내보낼 수 있습니다. 주의하십시오: 이 경우 당신의 금융 프라이버시가 해당 어플에 공개됩니다.</string>
     <string name="bitmap_fragment_share">공유하기...</string>
@@ -433,4 +435,7 @@
     <string name="select_option">옵션 선택하기</string>
     <string name="customize_shortcuts">바로가기 모음 사용자 지정하기 </string>
     <string name="customize_shortcuts_description">위의 버튼을 길게 눌러 필요한 기능으로 변경하세요</string>
+
+    <string name="upgrade_pin_description">새 PIN 설정하기</string>
+    <string name="upgrade_pin_continue">계속</string>
 </resources>

@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Ваш кошелёк успешно восстановлен. Сейчас определится его баланс. Это может занять какое-то время.</string>
     <string name="restore_wallet_dialog_success_encrypted">Предупреждение: Ваш кошелёк защищён PIN-кодом. Прежде чем получить средства на этот кошелёк, убедитесь, что Вы его помните.</string>
     <string name="import_keys_dialog_failure">Кошелёк не может быть восстановлен:\n\n%s\n\nПроверьте правильность набора пароля.</string>
+    <string name="restore_wallet_creation_date_label">Дата создания кошелька (опционально)</string>
+    <string name="restore_wallet_creation_date_info">При выборе даты создания кошелька синхронизация будет идти быстрее - сканироваться будут только последующие дни.</string>
+    <string name="restore_wallet_select_date">Выберите дату создания</string>
+    <string name="restore_wallet_selected_date">Выбрано: %s</string>
+    <string name="restore_wallet_date_picker_title">Когда был создан ваш кошелёк?</string>
+    <string name="wallet_creation_date_info_title">Как дата создания кошелька может ускорить процесс?</string>
+    <string name="wallet_creation_date_info_description">Если вы помните примерную дату создания кошелька, вы можете ввести её, и синхронизация пойдёт быстрее, потому что транзакции будут восстанавливаться только начиная с этого времени. Пожалуйста, обратите внимание: если была введена более поздняя дата, транзакции до этого дня не будут скачаны. </string>
     <string name="export_keys_dialog_title">Резервная копия кошелька</string>
     <string name="backup_wallet_dialog_message">Резервная копия будет зашифрована выбранным паролем и сохранена на внешнем устройстве.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш кошелёк защищен PIN-кодом. Запомните ваш PIN-код и пароль для восстановления резервной копии.</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Повторное сканирование блокчейна, транзакций и баланса. Перезагрузка займёт некоторое время, поэтому прибегайте к этому только тогда, когда точно знаете, что Вы делаете.</string>
     <string name="preferences_initiate_reset_dialog_message">Вы хотите повторно сканировать блокчейн?\n\nЭто сделает временно недоступными ваши баланс и список транзакций. Они будут восстановлены в процессе синхронизации блокчейна. Убедитесь, что у Вас надёжное подключение к интернету.</string>
     <string name="preferences_initiate_reset_dialog_positive">Синхронизировать снова</string>
+    <string name="rescan_blockchain_dialog_title">Вы уверены, что хотите повторно просканировать блокчейн?</string>
+    <string name="rescan_blockchain_dialog_message">Это сделает временно недоступными ваши баланс и список транзакций. Они будут восстановлены в процессе синхронизации блокчейна. Убедитесь, что у Вас надёжное подключение к интернету.</string>
+    <string name="rescan_blockchain_select_date_label">Выберите дату создания кошелька (по желанию)</string>
+    <string name="rescan_blockchain_date_info_description">Информация о дате создания кошелька</string>
+    <string name="rescan_blockchain_select_date_placeholder">Выбрать</string>
+    <string name="rescan_blockchain_confirm_button">Синхронизировать снова</string>
     <string name="preferences_extended_public_key_title">Показать xpub</string>
     <string name="preferences_extended_public_key_summary">Просмотр расширенного открытого ключа Вашего кошелька может быть полезен для импортирования в другие приложения и услуги. Будьте осторожны: этим Вы нарушаете свою финансовую конфиденциальность.</string>
     <string name="bitmap_fragment_share">Поделиться…</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Выбрать опцию</string>
     <string name="customize_shortcuts">Настроить меню быстрого доступа</string>
     <string name="customize_shortcuts_description">Зажмите любую кнопку, чтобы заменить её нужной вам функцией</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Вам необходимо обновить пин-код</string>
+    <string name="upgrade_pin_description">Задайте новый PIN-код</string>
+    <string name="upgrade_pin_continue">Продолжить</string>
 </resources>

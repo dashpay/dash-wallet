@@ -19,7 +19,7 @@
     <string name="new_account_confirm_message">%s을/를 사용자 이름으로 선택하였습니다. 사용자 이름의 등록이 완료되면 변경할 수 없음에 주의하세요.</string>
     <string name="invitation_confirm_title">초대 수수료</string>
     <string name="invitation_confirm_message">각 초대는 이 금액을 통해 지원되며, 이로써 받는 이가 재빨리 대시 네트워크에 사용자 이름을 생성할 수 있습니다</string>
-    <string name="invitation_init_title">초대하기</string>
+    <string name="invitation_title">초대</string>
     <string name="invitation_init_header">당신의 친구와 가족을 초대하세요</string>
     <string name="invitation_init_message">당신의 친구와 가족들이 대시 네트워크에 가입할 수 있도록 도와주세요. 소셜 뱅킹의 세계에 초대하세요.</string>
     <string name="invitation_init_button_text">새로운 초대 생성하기</string>
@@ -53,8 +53,12 @@
     <string name="invitation_invalid_invite_message">%s으로부터의 초대장이 유효하지 않습니다</string>
     <string name="invitation_username_already_found_title">사용자 이름을 이미 사용중입니다</string>
     <string name="invitation_username_already_found_message">이미 대시 사용자 이름을 가지고 있어 이 초대를 수락할 수 없습니다.</string>
+    <string name="invitation_username_already_found_voting_title">이미 요청된 사용자 이름입니다</string>
+    <string name="invitation_username_already_found_voting_message">이미 대시 사용자 이름을 요청하여 이 초대를 수락할 수 없습니다</string>
     <string name="invitation_onboarding_has_began_error_title">온보딩 오류</string>
+    <string name="invitation_error_title">초대 오류</string>
     <string name="invitation_onboarding_has_began_error">온보딩을 처리하는 중이니, 당신의 지갑을 생성한 후 초대장을 사용해주십시오.</string>
+    <string name="invitation_accept_invite_has_began_error">현재 대시페이가 초대를 처리하고 있습니다.</string>
     <string name="invitation_accept_title_1">사용자 이름을 설정하세요</string>
     <string name="invitation_accept_title_2">친구와 가족 추가</string>
     <string name="invitation_accept_message_2">가족을 초대하고, 친구들을 사용자 이름으로 검색해 찾아보세요</string>
@@ -211,6 +215,8 @@
 
     <string name="join_dashpay_subtitle">사용자 이름을 생성하고, 친구를 추가하세요...</string>
     <string name="join_dashpay_more_subtitle">당신의 사용자 이름을 생성하고, 친구를 찾아 연락처에 추가하세요</string>
+    <string name="join_dashpay_more_subtitle_two">사용자 이름을 생성하고, 숫자로 이루어진 주소에 작별을 고하세요.</string>
+    <string name="join_dashpay_wait">사용자 이름을 생성하시려면 동기화가 끝날 때까지 기다려주세요</string>
     <string name="join">가입하기</string>
 
     <string name="more_suggestions">더욱 다양한 제안</string>
@@ -435,8 +441,12 @@
 
     <string name="request_username_username_voting_message">+ 사용자 이름 투표란 무엇인가요\?</string>
     <string name="request_username_character_requirement">글자, 숫자 및 하이픈만 사용할 수 있습니다.</string>
+    <string name="request_username_character_requirement_invite_noncontested">숫자 2-9</string>
     <string name="request_username_balance_requirement">이 사용자 이름을 생성하기 위해서는 0.25 DASH가 필요합니다</string>
+    <string name="request_username_requirements_message_invite_noncontested">사용자 이름은 다음의 조건 중 하나를 충족해야 합니다</string>
+    <string name="request_username_requirements_message">사용자 이름은 다음의 조건을 충족해야 합니다</string>
     <string name="request_username_length_requirement">3에서 23글자 사이</string>
+    <string name="request_username_length_requirement_noncontested">20에서 23글자 사이</string>
     <string name="request_username_confirm">수락합니다</string>
     <string name="username_vote_one_left_message">이미 이 사용자이름에 대해 %d회 투표하였습니다. 이 사용자 이름에 대하여 한 번의 투표만 남았습니다.</string>
     <string name="username_vote_one_left">한 번의 투표만 남음</string>
@@ -507,4 +517,23 @@
     <string name="transaction_metadata_you_have_n_tx">%s 이후 저장되지 않은 거래가 %d 건 있습니다</string>
     <string name="transaction_metadata_save_transactions">저장하지 않은 거래 저장하기</string>
     <string name="transaction_metadata_continue_without_saving">저장하지 않고 계속하기</string>
+    <string name="invitation_fee_title">초대 수수료</string>
+    <string name="invitation_fee_message">각 초대에 발생하는 비용을 통해, 받는 이가 대시 네트워크 상에 사용자 이름을 빠르게 생성할 수 있습니다.</string>
+    <string name="invitation_fee_noncontested">비경쟁</string>
+    <string name="invitation_fee_contested">경쟁</string>
+    <string name="invitation_fee_contested_message">당신의 초대를 받는 사람은 원하는 사용자 이름을 요청할 수 있으며, 네트워크의 투표를 통해 승인됩니다.</string>
+    <string name="invitation_fee_noncontested_message">당신의 초대를 받는 사람은 2-9 사이의 숫자를 포함하고, 20글자 이상인 사용자 이름을 요청할 수 있습니다.</string>
+    <string name="invitation_creating_progress_loading">초대 로딩중...</string>
+    <string name="invitation_creating_progress_wip">초대 생성중...</string>
+    <string name="invitation_fee_confirm_and_pay_button">승인 및 지불</string>
+    <string name="error_sending_invite_transaction">초대 거래 중 오류 발생</string>
+    <string name="request_username_invitation_not_mixed_message">믹싱되지 않은 자금으로 초대장이 생성되었습니다</string>
+    <string name="request_username_invitation_only_noncontested_message">이 초대장을 사용하면 비경쟁형 사용자 이름만을 생성할 수 있습니다.</string>
+    <string name="username_types_title">경쟁형 혹은 비경쟁형 사용자 이름은 무엇인가요\?</string>
+    <string name="username_types_message">사용자 이름에는 경쟁형과 비경쟁형의 두 가지 유형이 있습니다.\n\n비경쟁형 사용자 이름은 숫자(2-9)가 하나 이상 포함되거나, 20자 이상이어야 하며 자동으로 승인됩니다.\n\n더 짧고 숫자가 포함되지 않은 경쟁형 사용자 이름을 생성하려면, 초대 없이 대시페이에 등록하고 필요한 수수료를 지불한 후 투표 기간이 완료될 때까지 승인을 기다려야 합니다.</string>
+    <string name="accept_invitation_hide">숨기기</string>
+    <string name="accept_invitation_create">생성하기</string>
+
+    <string name="create_instant_username_cancel">취소</string>
+
 </resources>

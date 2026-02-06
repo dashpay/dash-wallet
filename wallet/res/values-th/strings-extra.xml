@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">สร้างกระเป๋าสตางค์ใหม่</string>
-    <string name="onboarding_recover_wallet">การกู้คืนกระเป๋าสตางค์จากวลีรหัสผ่าน</string>
-    <string name="onboarding_restore_wallet">การกู้คืนกระเป๋าสตางค์จากแฟ้มเอกสาร</string>
+    <string name="onboarding_recover_wallet">กู้คืน wallet</string>
     <string name="onboarding_load_wallet_error">ไม่สามารถเข้าถึงกระเป๋าสตางค์</string>
 
     <string name="set_pin_create_new_wallet">สร้างกระเป๋าสตางค์ใหม่</string>
@@ -84,6 +82,7 @@
     <string name="payments_pay_to_clipboard_sub_title">ไม่มีที่อยู่คัดลอก</string>
 
     <string name="forgot_pin_title">ลืม PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">ตั้งเลขรหัสผ่านใหม่</string>
     <string name="forgot_pin_message">คุณสามารถตั้งเลขรหัสส่วนตัวใหม่ได้ด้วยกลไกการข่วยเหลือของการกู้คืนวลีรหัสผ่านของคุณ</string>
     <string name="forgot_pin_instruction_1">ป้อนวลีรหัสผ่านของคุณเพื่อกู้คืนกระเป๋าสตางค์ของคุณ</string>
     <string name="forgot_pin_instruction_2">ตั้งเลขรหัสผ่านใหม่</string>
@@ -250,7 +249,6 @@
     <string name="authenticate_switch_to_fingerprint">ใช้ลายนิ้วมือ</string>
     <string name="authenticate_switch_to_pin">ใช้รหัส PIN</string>
 
-    <string name="menu_invite_title">การเชิญ</string>
     <string name="menu_buy_and_sell_title">ซื้อ &amp; ขาย Dash</string>
     <string name="menu_buy_and_sell_subtitle">เชื่อมต่อกับการแลกเปลี่ยนบุคคลที่สาม</string>
     <string name="liquid_unavailable">ไม่มีการรวม Liquid กับกระเป๋าเงิน Dash อีกต่อไป</string>
@@ -320,14 +318,6 @@
 
     <string name="skip">ข้าม</string>
     <string name="get_started">เริ่มต้น</string>
-    <string name="welcome_screen_title_1_new_install">ยินดีต้อนรับ</string>
-    <string name="welcome_screen_title_1_upgrade">อัพเกรด</string>
-    <string name="welcome_screen_subtitle_1">ประสบการณ์ที่ใช้งานง่ายและคุ้นเคย</string>
-    <string name="welcome_screen_title_2">ชำระเงินได้อย่างง่ายดาย</string>
-    <string name="welcome_screen_subtitle_2">ชำระเงินและรับเงินทันทีด้วยกระบวนการชำระเงินที่ใช้งานง่าย</string>
-    <string name="welcome_screen_title_3">ควบคุมมากขึ้น</string>
-    <string name="welcome_screen_subtitle_3">มีการควบคุมที่สมบูรณ์และกำหนดกระเป๋าสตางค์ของคุณตามความต้องการของคุณ</string>
-
     <string-array name="history_filter">
         <item>ทั้งหมด</item>
         <item>ได้รับ</item>

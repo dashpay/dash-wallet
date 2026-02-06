@@ -269,6 +269,8 @@
     <string name="preferences_initiate_reset_summary">Blok zincirini, işlemleri ve cüzdan bakiyesini yeniden tara. Eski haline gelmesi vakit alacaktır, bu yüzden bunu neden yaptığınızı biliyorsanız yapınız.</string>
     <string name="preferences_initiate_reset_dialog_message">Blok zincirini yeniden taramak ister misiniz?\n\nBu geçici olarak bakiyenizi gizler ve işlemlerinizi kaldırır. Blok zinciri senkronize oldukça ikiside yeniden gösterilecektir. Güvenilir bir internet bağlantınız olduğundan emin olun.</string>
     <string name="preferences_initiate_reset_dialog_positive">Yeniden tara</string>
+    <string name="rescan_blockchain_select_date_placeholder">Seç</string>
+    <string name="rescan_blockchain_confirm_button">Yeniden tara</string>
     <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
     <string name="preferences_extended_public_key_summary">Başka uygulama ve servislere iç aktarım yapılabilmesi için cüzdanınızın genişletilmiş genel anahtarını gösterir. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
     <string name="bitmap_fragment_share">Paylaş…</string>
@@ -401,4 +403,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Arka planda ödeme almak ister misiniz?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Bu uygulama bir süre görünmez kaldıktan sonra çalışmaya devam edecek şekilde yapılandırılmıştır.\n\nBu uygulamanın arka planda bile her zaman blockchain ile güncel kalmasına izin vermenizi öneririz.\n\nMerak etmeyin, pil kullanımınıza her zaman önem vereceğiz.</string>
     <string name="battery_optimization_dialog_button_change">Ayarları aç</string>
-    </resources>
+    <string name="upgrade_pin_description">Yeni PİN oluşturun</string>
+    <string name="upgrade_pin_continue">Devam</string>
+</resources>

@@ -17,9 +17,10 @@ gebruikersnaam</b></string>
     <string name="new_account_confirm_accept">Ik accepteer</string>
     <string name="new_account_confirm_upgrade_fee">Upgradevergoeding</string>
     <string name="new_account_confirm_message">Je hebt%s als je gebruikersnaam gekozen. Let op dat de gebruikersnaam NIET kan worden gewijzigd nadat deze is geregistreerd.</string>
+    <string name="new_account_secondary_confirm_message">Je hebt %s als je gebruikersnaam gekozen. Let op dat de gebruikersnaam NIET kan worden gewijzigd nadat deze is geregistreerd.</string>
     <string name="invitation_confirm_title">Vergoeding uitnodiging</string>
     <string name="invitation_confirm_message">Elke uitnodiging wordt met dit bedrag gefinancierd, zodat de ontvanger snel zijn gebruikersnaam op het Dash Network kan aanmaken</string>
-    <string name="invitation_init_title">Nodig uit</string>
+    <string name="invitation_title">Uitnodiging</string>
     <string name="invitation_init_header">Nodig je vrienden en familie uit</string>
     <string name="invitation_init_message">Help je vrienden en familie om lid te worden van het Dash Netwerk. Nodig ze uit in de wereld van sociaal bankieren.</string>
     <string name="invitation_init_button_text">Een nieuwe uitnodiging maken</string>
@@ -53,8 +54,12 @@ gebruikersnaam</b></string>
     <string name="invitation_invalid_invite_message">Je uitnodiging van %s is niet geldig</string>
     <string name="invitation_username_already_found_title">Gebruikersnaam al gevonden</string>
     <string name="invitation_username_already_found_message">Je kunt deze uitnodiging niet claimen omdat je al een Dash gebruikersnaam hebt</string>
+    <string name="invitation_username_already_found_voting_title">Gebruikersnaam is al aangevraagd</string>
+    <string name="invitation_username_already_found_voting_message">Je kunt deze uitnodiging niet accepteren omdat je al een Dash gebruikersnaam hebt aangevraagd.</string>
     <string name="invitation_onboarding_has_began_error_title">Onboarding fout</string>
+    <string name="invitation_error_title">Fout bij uitnodigen</string>
     <string name="invitation_onboarding_has_began_error">Onboarding is bezig, claim je uitnodiging nadat je je portemonnee hebt aangemaakt.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay is momenteel bezig met het verwerken van een uitnodiging.</string>
     <string name="invitation_accept_title_1">Verkrijg je gebruikersnaam</string>
     <string name="invitation_accept_title_2">Voeg vrienden en familie toe</string>
     <string name="invitation_accept_message_2">Nodig je familie uit, vind je vrienden door hun gebruikersnamen te zoeken</string>
@@ -212,6 +217,8 @@ gebruikersnaam</b></string>
 
     <string name="join_dashpay_subtitle">Maak een gebruikersnaam aan, voeg je vrienden toe...</string>
     <string name="join_dashpay_more_subtitle">Maak je gebruikersnaam aan, zoek je vrienden en voeg ze toe aan je contacten</string>
+    <string name="join_dashpay_more_subtitle_two">Maak een gebruikersnaam aan en zeg vaarwel tegen numerieke adressen</string>
+    <string name="join_dashpay_wait">Wacht tot het synchroniseren is voltooid om een gebruikersnaam aan te maken</string>
     <string name="join">Doe mee</string>
 
     <string name="more_suggestions">Meer suggesties</string>
@@ -308,6 +315,7 @@ gebruikersnaam</b></string>
         <item>Heeft geblokkeerde stemmen </item>
     </string-array>
     <string name="request_your_username">Maak je gebruikersnaam aan</string>
+    <string name="request_instant_username">Directe gebruikersnaam aanmaken</string>
     <string name="request_your_hint">Let op dat je deze in de toekomst niet meer kunt wijzigen</string>
     <string name="request_username">Vraag gebruikersnaam aan</string>
     <string name="request_voting_range">Het Dash Netwerk zal over deze gebruikersnaam stemmen. We laten je weten wat de resultaten zijn op %s.</string>
@@ -383,6 +391,8 @@ gebruikersnaam</b></string>
     <string name="requested_voting_duration">Resultaten op %s.</string>
     <string name="cancel_request">Annuleer verzoek</string>
     <string name="after_the_voting">Nadat de stemming is afgelopen, zullen wij je op de hoogte stellen van de resultaten</string>
+    <string name="after_the_voting_result">Het stemmen is beëindigd</string>
+    <string name="voting_period_error">De stemperiode is niet gevonden</string>
     <string name="none">Geen</string>
     <string name="verify_now">Nu verifiëren</string>
     <string name="if_you_tap_cancel">Als je op “Verzoek annuleren” drukt, heb je nog steeds de mogelijkheid om een ​​andere gebruikersnaam aan te vragen zonder opnieuw te hoeven betalen</string>
@@ -436,8 +446,12 @@ gebruikersnaam</b></string>
 
     <string name="request_username_username_voting_message">+ wat is stemmen met gebruikersnaam\?</string>
     <string name="request_username_character_requirement">Alleen letters, cijfers en koppeltekens</string>
+    <string name="request_username_character_requirement_invite_noncontested">Cijfers 2-9</string>
     <string name="request_username_balance_requirement">Je hebt 0,25 DASH nodig om deze gebruikersnaam aan te maken</string>
+    <string name="request_username_requirements_message_invite_noncontested">De gebruikersnaam moet aan een van deze criteria voldoen</string>
+    <string name="request_username_requirements_message">De gebruikersnaam moet aan deze criteria voldoen</string>
     <string name="request_username_length_requirement">Tussen 3 en 23 tekens</string>
+    <string name="request_username_length_requirement_noncontested"> Tussen 20 en 23 tekens</string>
     <string name="request_username_confirm">Ik accepteer</string>
     <string name="username_vote_one_left_message">Je hebt al %d keer gestemd op deze gebruikersnaam. Je kan nog maar één stem uitbrengen op deze gebruikersnaam.</string>
     <string name="username_vote_one_left">Eén stem over</string>
@@ -508,4 +522,27 @@ gebruikersnaam</b></string>
     <string name="transaction_metadata_you_have_n_tx">Je hebt %d niet opgeslagen transacties sinds %s</string>
     <string name="transaction_metadata_save_transactions">Niet opgeslagen transacties opslaan</string>
     <string name="transaction_metadata_continue_without_saving">Doorgaan zonder op te slaan</string>
+    <string name="invitation_fee_title">Vergoeding uitnodiging</string>
+    <string name="invitation_fee_message">Elke uitnodiging wordt gefinancierd zodat de ontvanger snel zijn gebruikersnaam op het Dash netwerk kan aanmaken.</string>
+    <string name="invitation_fee_noncontested"> Niet betwist</string>
+    <string name="invitation_fee_contested">Betwist</string>
+    <string name="invitation_fee_contested_message">De persoon aan wie je deze uitnodiging stuurt kan elke gewenste gebruikersnaam aanvragen. Het netwerk zal stemmen om deze goed te keuren.</string>
+    <string name="invitation_fee_noncontested_message">De persoon aan wie je deze uitnodiging stuurt kan een gebruikersnaam aanvragen die een cijfer (2-9) bevat, of langer is dan 20 tekens.</string>
+    <string name="invitation_creating_progress_loading">Uitnodiging laden...</string>
+    <string name="invitation_creating_progress_wip">Uitnodiging aanmaken...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Bevestigen en betalen</string>
+    <string name="error_sending_invite_transaction">Fout bij het verzenden van de uitnodiging</string>
+    <string name="request_username_invitation_not_mixed_message">De uitnodiging is aangemaakt met een niet gemixt saldo.</string>
+    <string name="request_username_invitation_only_noncontested_message">Je kunt alleen een niet-betwiste gebruikersnaam aanmaken met deze uitnodiging</string>
+    <string name="username_types_title">Wat zijn betwiste en niet-betwiste gebruikersnamen\?</string>
+    <string name="username_types_message">Er zijn twee soorten gebruikersnamen: betwist en niet-betwist.\n\nNiet-betwiste gebruikersnamen bevatten minstens één cijfer (2-9) of zijn langer dan 20 tekens en worden automatisch goedgekeurd.\n\nAls je een betwiste gebruikersnaam wilt aanmaken die korter is en zonder cijfers, moet je je registreren bij DashPay zonder uitnodiging, de vereiste vergoeding betalen en wachten op goedkeuring na voltooiing van de stemperiode.</string>
+    <string name="accept_invitation_hide">Verbergen</string>
+    <string name="accept_invitation_create">Aanmaken</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Een directe gebruikersnaam aanmaken</string>
+    <string name="create_instant_username_description">De door jou aangevraagde gebruikersnaam zal gedurende 2 weken in stemming worden gebracht. Als je meteen gebruik wil maken van contacten en betalingen kun je een vergelijkbare directe gebruikersnaam aanmaken.\n\nAls je oorspronkelijke aanvraag wordt goedgekeurd, vervangt deze de directe gebruikersnaam, waarbij contacten en geschiedenis behouden blijven. Zo niet, dan kun je de directe gebruikersnaam zonder onderbreking blijven gebruiken.</string>
+    <string name="create_instant_username_button">Directe gebruikersnaam aanmaken</string>
+    <string name="create_instant_username_cancel">Annuleer</string>
+
 </resources>

@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">您的钱包已经成功恢复. 下一步将会确定您的余额, 这将会花费一些时间.</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: 您的钱包受消费PIN码保护. 在您通过此钱包收款前, 确保您仍记得PIN码.</string>
     <string name="import_keys_dialog_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的密码?</string>
+    <string name="restore_wallet_creation_date_label">钱包创建日期 (可选的)</string>
+    <string name="restore_wallet_creation_date_info">选择您钱包创建时间来扫描此后的区块以完成更快的同步.</string>
+    <string name="restore_wallet_select_date">选择创建日期</string>
+    <string name="restore_wallet_selected_date">已选择: %s</string>
+    <string name="restore_wallet_date_picker_title">您什么时候创建的钱包?</string>
+    <string name="wallet_creation_date_info_title">钱包创建时间如何加速同步过程?</string>
+    <string name="wallet_creation_date_info_description">如果您知道您钱包创建的大概时间, 在输入后将会获取自那时间后的交易以帮助更快同步. 请注意, 若您输入的时间比您钱包创建的时间要晚, 那么更早的交易将不会被下载.</string>
     <string name="export_keys_dialog_title">备份钱包</string>
     <string name="backup_wallet_dialog_message">您的备份将会使用选定的密码进行加密, 然后放置在外部存储设备上.</string>
     <string name="backup_wallet_dialog_warning_encrypted">您的钱包受支付PIN码保护. 除了备份密码以外, 请确保您记住该PIN码!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">重新扫描区块链, 交易和钱包余额. 这个过程需要一点时间, 所以只有在你知道原因的状况下才这样做.</string>
     <string name="preferences_initiate_reset_dialog_message">你想重新扫描区块链吗?\n\n这将暂时隐藏您的钱包余额并删除交易. 随着区块链同步的进行, 它们都将恢复. 在进行前请确保您有可靠网络连接.</string>
     <string name="preferences_initiate_reset_dialog_positive">重新扫描</string>
+    <string name="rescan_blockchain_dialog_title">您确定想要重新扫描区块链?</string>
+    <string name="rescan_blockchain_dialog_message">这将暂时隐藏您的钱包余额并删除交易. 随着区块链同步的进行, 它们都将恢复. 在进行前请确保您有可靠网络连接.</string>
+    <string name="rescan_blockchain_select_date_label">选择钱包创建日期 (可选的)</string>
+    <string name="rescan_blockchain_date_info_description">有关钱包创建日期的信息</string>
+    <string name="rescan_blockchain_select_date_placeholder">选择</string>
+    <string name="rescan_blockchain_confirm_button">重新扫描</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
     <string name="bitmap_fragment_share">分享...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">选择一个选项</string>
     <string name="customize_shortcuts">自定义快捷栏</string>
     <string name="customize_shortcuts_description">长按上方任意按钮将其替换为您需要的功能</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">您需要升级您的PIN密钥</string>
+    <string name="upgrade_pin_description">设置一个新PIN</string>
+    <string name="upgrade_pin_continue">继续</string>
 </resources>

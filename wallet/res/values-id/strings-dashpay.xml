@@ -17,9 +17,10 @@ Dash</b> anda</string>
     <string name="new_account_confirm_accept">Saya terima</string>
     <string name="new_account_confirm_upgrade_fee">Biaya peningkatan</string>
     <string name="new_account_confirm_message">Anda telah memilih %s sebagai nama pengguna. Perlu dicatat nama pengguna tidak bisa diubah setelah didaftarkan.</string>
+    <string name="new_account_secondary_confirm_message">Anda telah memilih %s sebagai nama pengguna instant. Perlu dicatat nama pengguna TIDAK bisa diubah setelah didaftarkan.</string>
     <string name="invitation_confirm_title">Biaya Undangan</string>
     <string name="invitation_confirm_message">Setiap undangan akan didanai dengan jumlah ini sehingga penerima dapat dengan cepat membuat nama pengguna mereka di Jaringan Dash</string>
-    <string name="invitation_init_title">Undang</string>
+    <string name="invitation_title">Undangan</string>
     <string name="invitation_init_header">Ajak teman &amp; keluargamu</string>
     <string name="invitation_init_message">Bantu teman dan keluarga anda bergabung ke Jaringan Dash. Undang mereka kedunia perbankan sosial.</string>
     <string name="invitation_init_button_text">Buat Undangan baru</string>
@@ -53,8 +54,12 @@ Dash</b> anda</string>
     <string name="invitation_invalid_invite_message">Undangan anda dari %s tidak valid</string>
     <string name="invitation_username_already_found_title">Nama pengguna sudah ditemukan</string>
     <string name="invitation_username_already_found_message">Anda tidak dapat mengklaim undangan ini karena Anda sudah memiliki nama pengguna Dash</string>
+    <string name="invitation_username_already_found_voting_title">Nama pengguna sudah diminta</string>
+    <string name="invitation_username_already_found_voting_message">Anda tidak dapat mengklaim undangan ini karena Anda telah meminta nama pengguna Dash</string>
     <string name="invitation_onboarding_has_began_error_title">Kesalahan Pendaftaran</string>
+    <string name="invitation_error_title">Kesalahan Undangan</string>
     <string name="invitation_onboarding_has_began_error">Pendaftaran sedang dalam proses, silakan klaim undangan Anda setelah Anda membuat dompet.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay saat ini sedang memproses undangan.</string>
     <string name="invitation_accept_title_1">Dapatkan Nama Pengguna Anda</string>
     <string name="invitation_accept_title_2">Tambahkan Teman &amp; Keluarga Anda</string>
     <string name="invitation_accept_message_2">Undang keluarga Anda, temukan teman Anda dengan mencari nama pengguna mereka</string>
@@ -211,6 +216,8 @@ Dash</b> anda</string>
 
     <string name="join_dashpay_subtitle">Buat Nama Pengguna, tambahkan teman Anda…</string>
     <string name="join_dashpay_more_subtitle">Buat Nama Pengguna Anda, temukan teman Anda dan tambahkan mereka ke kontak Anda</string>
+    <string name="join_dashpay_more_subtitle_two">Buat nama pengguna dan ucapkan selamat tinggal pada alamat numerik</string>
+    <string name="join_dashpay_wait">Tunggu hingga sinkronisasi selesai untuk membuat nama pengguna</string>
     <string name="join">Bergabung</string>
 
     <string name="more_suggestions">Lebih Banyak Saran</string>
@@ -307,6 +314,7 @@ Dash</b> anda</string>
         <item>Telah memblokir suara</item>
     </string-array>
     <string name="request_your_username">Buat Nama Pengguna anda</string>
+    <string name="request_instant_username">Buat Nama Instan</string>
     <string name="request_your_hint">Harap dicatat bahwa Anda tidak akan dapat mengubahnya di masa mendatang</string>
     <string name="request_username">Minta Nama Pengguna</string>
     <string name="request_voting_range">Jaringan Dash akan memberikan suara pada nama pengguna ini. Kami akan memberitahukan Anda hasilnya pada %s.</string>
@@ -382,6 +390,8 @@ Dash</b> anda</string>
     <string name="requested_voting_duration">Hasil pada %s.</string>
     <string name="cancel_request">Batalkan Permintaan</string>
     <string name="after_the_voting">Setelah voting berakhir kami akan memberitahu anda hasilnya</string>
+    <string name="after_the_voting_result">Pemungutan suara telah berakhir</string>
+    <string name="voting_period_error">Waktu Pemilihan tidak ditemukan</string>
     <string name="none">Tidak ada</string>
     <string name="verify_now">Periksa Sekarang</string>
     <string name="if_you_tap_cancel">Jika Anda mengetuk “Batalkan Permintaan”, Anda masih memiliki kesempatan untuk meminta nama pengguna lain tanpa membayar lagi</string>
@@ -435,8 +445,12 @@ Dash</b> anda</string>
 
     <string name="request_username_username_voting_message">+ apa itu voting nama pengguna\?</string>
     <string name="request_username_character_requirement">Hanya huruf, angka, dan tanda hubung</string>
+    <string name="request_username_character_requirement_invite_noncontested">Nomor 2-9</string>
     <string name="request_username_balance_requirement">Anda perlu memiliki 0.25 DASH untuk membuat nama pengguna ini</string>
+    <string name="request_username_requirements_message_invite_noncontested">Nama pengguna harus memenuhi salah satu kriteria berikut</string>
+    <string name="request_username_requirements_message">Nama pengguna harus memenuhi kriteria berikut</string>
     <string name="request_username_length_requirement">Antara 3 dan 23 karakter</string>
+    <string name="request_username_length_requirement_noncontested">Antara 20 dan 23 karakter</string>
     <string name="request_username_confirm">Saya terima</string>
     <string name="username_vote_one_left_message">Anda sudah memberikan suara untuk nama pengguna ini %d kali. Anda hanya dapat memberikan suara satu kali lagi untuk nama pengguna ini.</string>
     <string name="username_vote_one_left">Satu suara tersisa</string>
@@ -507,4 +521,27 @@ Dash</b> anda</string>
     <string name="transaction_metadata_you_have_n_tx">Anda mempunyai %d transaksi yang belum disimpan sejak %s</string>
     <string name="transaction_metadata_save_transactions">Simpan transaksi yang belum disimpan</string>
     <string name="transaction_metadata_continue_without_saving">Lanjutkan tanpa menyimpan</string>
+    <string name="invitation_fee_title">Biaya Undangan</string>
+    <string name="invitation_fee_message">Setiap undangan akan didanai sehingga penerima dapat dengan cepat membuat nama pengguna mereka di Dash Network.</string>
+    <string name="invitation_fee_noncontested">Tidak diperebutkan</string>
+    <string name="invitation_fee_contested">Diperebutkan</string>
+    <string name="invitation_fee_contested_message">Orang yang Anda kirimi undangan ini dapat meminta nama pengguna apa pun yang mereka inginkan dan jaringan akan memberikan suara untuk menyetujuinya.</string>
+    <string name="invitation_fee_noncontested_message">Orang yang Anda kirimi undangan ini dapat meminta nama pengguna yang terdiri dari angka 2-9 dan lebih dari 20 karakter.</string>
+    <string name="invitation_creating_progress_loading">Memuat Undangan...</string>
+    <string name="invitation_creating_progress_wip">Membuat Undangan...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Konfirmasi dan bayar</string>
+    <string name="error_sending_invite_transaction">Terjadi error saat mengirim transaksi undangan</string>
+    <string name="request_username_invitation_not_mixed_message">Undangan dibuat dengan dana yang tidak di mixing</string>
+    <string name="request_username_invitation_only_noncontested_message">Anda hanya dapat membuat nama pengguna yang tidak diperebutkan menggunakan undangan ini</string>
+    <string name="username_types_title">Apa itu nama pengguna yang diperebutkan dan yang tidak\?</string>
+    <string name="username_types_message">Ada dua jenis nama pengguna: yang diperebutkan dan yang tidak diperebutkan.\n\nNama pengguna yang tidak diperebutkan memiliki setidaknya satu angka (2-9) atau lebih dari 20 karakter dan akan disetujui secara otomatis.\n\njika Anda ingin membuat nama pengguna yang diperebutkan yang lebih pendek dan tanpa angka, Anda perlu mendaftar di DashPay tanpa undangan, membayar biaya yang diperlukan, dan menunggu persetujuan setelah periode pemungutan suara selesai.</string>
+    <string name="accept_invitation_hide">Sembunyikan</string>
+    <string name="accept_invitation_create">Buat</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Buat  sebuah nama pengguna instan</string>
+    <string name="create_instant_username_description">Nama pengguna yang Anda minta akan dipertimbangkan selama 2 minggu. Untuk kontak dan pembayaran segera, Anda dapat membuat nama pengguna instan yang serupa.\n\nJika permintaan asli Anda disetujui, maka akan menggantikan nama pengguna instan, sehingga kontak dan riwayat tetap tersimpan. Jika tidak, Anda dapat terus menggunakan nama pengguna instan tanpa gangguan.</string>
+    <string name="create_instant_username_button">Buat Nama Instan</string>
+    <string name="create_instant_username_cancel">Batal</string>
+
 </resources>

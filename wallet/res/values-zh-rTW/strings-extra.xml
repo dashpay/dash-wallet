@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">創建一個新錢包</string>
-    <string name="onboarding_recover_wallet">從恢復詞組還原錢包</string>
+    <string name="onboarding_create_wallet">創建新錢包</string>
+    <string name="onboarding_recover_wallet">回復錢包</string>
     <string name="onboarding_restore_wallet">從文件還原錢包</string>
     <string name="onboarding_load_wallet_error">無法加載錢包!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">未能復制位址</string>
 
     <string name="forgot_pin_title">忘記密碼了嗎?</string>
+    <string name="forgot_pin_setup_new_pin_title">設置一個新的密碼</string>
     <string name="forgot_pin_message">您可以在恢復詞組的幫助下設置新的密碼。</string>
     <string name="forgot_pin_instruction_1">輸入恢復詞組以恢復您的錢包</string>
     <string name="forgot_pin_instruction_2">設置一個新的密碼</string>
@@ -258,7 +259,7 @@
     <string name="authenticate_switch_to_fingerprint">使用指紋</string>
     <string name="authenticate_switch_to_pin">使用密碼</string>
 
-    <string name="menu_invite_title">邀請</string>
+    <string name="menu_invite_title">邀請函</string>
     <string name="menu_invite_subtitle">幫助您的朋友和家人加入達世幣</string>
     <string name="menu_buy_and_sell_title">購買 &amp; 出售達世幣</string>
     <string name="menu_buy_and_sell_subtitle">與第三方交易所連結</string>
@@ -331,13 +332,9 @@
 
     <string name="skip">略過</string>
     <string name="get_started">開始使用</string>
-    <string name="welcome_screen_title_1_new_install">歡迎</string>
-    <string name="welcome_screen_title_1_upgrade">我們升級了</string>
-    <string name="welcome_screen_subtitle_1">跨所有設備的直觀熟悉的體驗</string>
-    <string name="welcome_screen_title_2">輕鬆付款</string>
-    <string name="welcome_screen_subtitle_2">易於使用的付款流程，可立即付款並能即時確認付款</string>
-    <string name="welcome_screen_title_3">更多控制選項</string>
-    <string name="welcome_screen_subtitle_3">能夠讓您完全控制並根據您的個人需要自定義錢包</string>
+    <string name="welcome_screen_title_1">通過用戶名發送和接收達世幣</string>
+    <string name="welcome_screen_title_2">在數千家商店花費 達世幣</string>
+    <string name="welcome_screen_title_3">存儲 達世幣 最安全的方式</string>
 
     <string-array name="history_filter">
         <item>所有</item>
