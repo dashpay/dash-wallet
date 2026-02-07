@@ -34,7 +34,10 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -428,6 +431,17 @@ class SendCoinsViewModel @Inject constructor(
             return
         }
         log.info("executeDryRun started")
+        val currentThread = Thread.currentThread()
+        val monitorJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(1000)
+            log.warn("executeDryrun is taking longer than 1 second")
+            try {
+                val anrException = AnrException(currentThread)
+                anrException.logProcessMap()
+            } catch (e: Exception) {
+                log.error("Failed to dump thread traces during executeDryrun", e)
+            }
+        }
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
 
@@ -456,6 +470,7 @@ class SendCoinsViewModel @Inject constructor(
 
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
             dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
@@ -463,6 +478,7 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 ex
             }
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(false)
         }
     }
