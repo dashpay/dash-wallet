@@ -477,7 +477,8 @@ public class WalletApplication extends MultiDexApplication
         }
 
         Threading.throwOnLockCycles();
-        org.bitcoinj.core.Context.enableStrictMode();
+        // TODO: do we need this commented out for saving
+        // org.bitcoinj.core.Context.enableStrictMode();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
@@ -1262,7 +1263,7 @@ public class WalletApplication extends MultiDexApplication
     @NotNull
     @Override
     public Address currentReceiveAddress() {
-        return wallet.freshReceiveAddress();
+        return wallet.currentReceiveAddress();
     }
 
     @NotNull
