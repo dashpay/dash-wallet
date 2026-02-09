@@ -671,6 +671,7 @@ class TopUpRepositoryImpl @Inject constructor(
                                     dynamicLink = appsFlyerLink.link
                                 )
                             )
+                            fundingTxes.remove(invitation.txid)
                         }
                     }
                 }
