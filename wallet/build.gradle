@@ -360,7 +360,7 @@ android {
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
-            buildConfigField("String", "APPSFLYER_TEMPLATE_ID_TESTNET", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -384,7 +384,7 @@ android {
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
-            buildConfigField("String", "APPSFLYER_TEMPLATE_ID_TESTNET", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
