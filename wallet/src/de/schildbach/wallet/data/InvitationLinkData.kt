@@ -24,6 +24,7 @@ import kotlinx.parcelize.Parcelize
 import org.bitcoinj.evolution.AssetLockTransaction
 import org.bouncycastle.crypto.params.KeyParameter
 import java.util.concurrent.TimeUnit
+import androidx.core.net.toUri
 
 enum class InvitationValidationState {
     /** there is no invitation present */
@@ -61,7 +62,7 @@ data class InvitationLinkData(
 
         fun create(username: String, displayName: String, avatarUrl: String, cftx: AssetLockTransaction, aesKeyParameter: KeyParameter): InvitationLinkData {
             val privateKey = cftx.assetLockPublicKey.decrypt(aesKeyParameter)
-            val linkBuilder = Uri.parse(URI_PREFIX).buildUpon()
+            val linkBuilder = URI_PREFIX.toUri().buildUpon()
                 .appendQueryParameter(PARAM_USER, username)
                 .appendQueryParameter(PARAM_CFTX, cftx.txId.toString())
                 .appendQueryParameter(PARAM_PRIVATE_KEY, privateKey.getPrivateKeyAsWiF(Constants.NETWORK_PARAMETERS))
@@ -77,10 +78,19 @@ data class InvitationLinkData(
         }
 
         fun isValid(link: Uri): Boolean {
-            val queryParams = link.queryParameterNames
-            return queryParams.contains(PARAM_USER) &&
-                queryParams.contains(PARAM_PRIVATE_KEY) &&
-                queryParams.contains(PARAM_IS_LOCK)
+            return try {
+                val queryParams = link.queryParameterNames
+                    queryParams.contains(PARAM_USER) &&
+                    queryParams.contains(PARAM_PRIVATE_KEY) &&
+                    queryParams.contains(PARAM_IS_LOCK) &&
+                    queryParams.contains(PARAM_CFTX) &&
+                    !link.getQueryParameter(PARAM_USER).isNullOrBlank() &&
+                    !link.getQueryParameter(PARAM_PRIVATE_KEY).isNullOrBlank() &&
+                    !link.getQueryParameter(PARAM_IS_LOCK).isNullOrBlank() &&
+                    !link.getQueryParameter(PARAM_CFTX).isNullOrBlank()
+            } catch (e: Exception) {
+                false
+            }
         }
     }
 
@@ -117,7 +127,7 @@ data class InvitationLinkData(
     }
 
     @Deprecated("use link")
-    fun getUri(): Uri = Uri.parse("https://invitations.dashpay.io/applink").buildUpon()
+    fun getUri(): Uri = "https://invitations.dashpay.io/applink".toUri().buildUpon()
         .appendQueryParameter(PARAM_USER, user)
         .appendQueryParameter(PARAM_DISPLAY_NAME, displayName)
         .appendQueryParameter(PARAM_AVATAR_URL, avatarUrl)
