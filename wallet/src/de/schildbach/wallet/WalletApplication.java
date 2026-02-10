@@ -122,6 +122,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -255,14 +256,17 @@ public class WalletApplication extends MultiDexApplication
                 int result = availability.isGooglePlayServicesAvailable(this);
                 
                 if (result == com.google.android.gms.common.ConnectionResult.SUCCESS) {
-                    AppsFlyerLib.getInstance().init(BuildConfig.APPSFLYER_ID, null, this);
-                    AppsFlyerLib.getInstance().setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
-                    AppsFlyerLib.getInstance().setDebugLog(true);
-                    AppsFlyerLib.getInstance().setCustomerUserId(UUID.randomUUID().toString());
-                    AppsFlyerLib.getInstance().start(this);
+                    AppsFlyerLib appsFlyerLib = AppsFlyerLib.getInstance();
+                    appsFlyerLib.init(BuildConfig.APPSFLYER_ID, null, this);
+                    appsFlyerLib.setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
+                    appsFlyerLib.setDebugLog(true);
+                    appsFlyerLib.setCustomerUserId(UUID.randomUUID().toString());
+                    String customerId = config.getUniqueId();
+                    appsFlyerLib.setCustomerUserId(customerId);
+                    appsFlyerLib.start(this);
                     
                     // Register conversion listener after successful initialization
-                    AppsFlyerLib.getInstance().registerConversionListener(this, new com.appsflyer.AppsFlyerConversionListener() {
+                    appsFlyerLib.registerConversionListener(this, new com.appsflyer.AppsFlyerConversionListener() {
                         @Override
                         public void onConversionDataSuccess(java.util.Map<String, Object> data) {
                             log.info("AppsFlyer conversion received: " + data);
@@ -294,31 +298,36 @@ public class WalletApplication extends MultiDexApplication
                         public void onAttributionFailure(String error) {
                             log.error("AppsFlyer attribution failure: " + error);
                         }
-                        
+
                         private void handleDeepLinkData(java.util.Map<String, Object> data) {
-                            String[] possibleKeys = {"af_dp", "deep_link_value", "link", "af_sub1"};
-                            String deepLinkValue = null;
-                            
-                            for (String key : possibleKeys) {
-                                if (data.containsKey(key)) {
-                                    Object value = data.get(key);
-                                    if (value != null && !value.toString().trim().isEmpty()) {
-                                        deepLinkValue = value.toString();
-                                        log.info("Found deep link in key '" + key + "': " + deepLinkValue);
-                                        break;
-                                    }
-                                }
-                            }
-                            
+                            String deepLinkValue = extractDeepLink(data);
                             if (deepLinkValue != null) {
                                 log.info("Processing deep link: " + deepLinkValue);
-                                android.content.Intent intent = new android.content.Intent(getApplicationContext(), de.schildbach.wallet.ui.InviteHandlerActivity.class);
-                                intent.setData(android.net.Uri.parse(deepLinkValue));
-                                intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                                startActivity(intent);
+                                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                                        android.content.Intent intent = new android.content.Intent(getApplicationContext(), de.schildbach.wallet.ui.InviteHandlerActivity.class);
+                                        intent.setData(android.net.Uri.parse(deepLinkValue));
+                                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+                                        startActivity(intent);
+                                    });
                             } else {
                                 log.warn("No deep link found in AppsFlyer data");
                             }
+                        }
+
+                        private String extractDeepLink(Map<String, Object> data) {
+                            // Define keys in order of preference
+                            String[] possibleKeys = {"af_dp", "deep_link_value", "link", "af_sub1"};
+                            for (String key : possibleKeys) {
+                                Object value = data.get(key);
+                                if (value instanceof String) {
+                                    String stringValue = (String) value;
+                                    if (!stringValue.trim().isEmpty()) {
+                                        log.info("Found deep link in key '" + key + "': " + stringValue);
+                                        return stringValue;
+                                    }
+                                }
+                            }
+                            return null;
                         }
                     });
                 } else {

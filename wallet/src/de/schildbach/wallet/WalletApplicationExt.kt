@@ -19,17 +19,10 @@
 
 package de.schildbach.wallet
 
-import androidx.core.net.toUri
 import androidx.work.WorkManager
-import com.appsflyer.AppsFlyerConversionListener
-import com.appsflyer.AppsFlyerLib
-import de.schildbach.wallet.WalletApplication.log
-import de.schildbach.wallet.data.InvitationLinkData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.launch
-import java.util.concurrent.Executors
 
 object WalletApplicationExt {
     /**
@@ -48,39 +41,5 @@ object WalletApplicationExt {
             platformRepo.clearDatabase(isWalletWipe)
             WorkManager.getInstance(context).cancelAllWork()
         }
-    }
-
-    fun WalletApplication.initAppsFlyer() {
-        AppsFlyerLib.getInstance().registerConversionListener(this, object : AppsFlyerConversionListener {
-            override fun onConversionDataSuccess(data: Map<String, Any>?) {
-                // Handle conversion data
-                log.info("AppsFlyer conversion received: $data")
-                data?.let {
-                    log.info("All conversion data keys: ${it.keys}")
-                    if (it.containsKey("af_dp")) {
-                        val deepLinkValue = it["af_dp"] as? String
-                        // Process the deep link
-                        log.info("af_dp: {}", deepLinkValue)
-                        deepLinkValue?.let {
-                            // handleInvite(InvitationLinkData(it.toUri()))
-                        }
-                    } else {
-                        log.info("No af_dp found in conversion data")
-                    }
-                }
-            }
-
-            override fun onConversionDataFail(error: String?) {
-                // Handle error
-            }
-
-            override fun onAppOpenAttribution(data: Map<String, String>?) {
-                // Handle app open attribution
-            }
-
-            override fun onAttributionFailure(error: String?) {
-                // Handle attribution failure
-            }
-        })
     }
 }
