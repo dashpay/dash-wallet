@@ -230,9 +230,14 @@ class TopUpRepositoryImpl @Inject constructor(
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
         // TODO: when all instantsend locks are deterministic, we don't need the catch block
-        val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-
-        assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        if (invite.instantSendLock != "null") {
+            val instantSendLock = InstantSendLock(
+                platform.params,
+                Utils.HEX.decode(invite.instantSendLock),
+                InstantSendLock.ISDLOCK_VERSION
+            )
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        }
         return assetLockTx
     }
 
@@ -274,9 +279,14 @@ class TopUpRepositoryImpl @Inject constructor(
         assetLockTx.addAssetLockPublicKey(privateKey)
 
         // TODO: when all instantsend locks are deterministic, we don't need the catch block
-        val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-
-        assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        if (invite.instantSendLock != "null") {
+            val instantSendLock = InstantSendLock(
+                platform.params,
+                Utils.HEX.decode(invite.instantSendLock),
+                InstantSendLock.ISDLOCK_VERSION
+            )
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        }
         blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
     }
 
