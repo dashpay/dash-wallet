@@ -247,96 +247,7 @@ public class WalletApplication extends MultiDexApplication
         super.onCreate();
         initLogging();
         FirebaseApp.initializeApp(this);
-        // Initialize AppsFlyer after checking Google Play Services availability
-        new Thread(() -> {
-            try {
-                // Check if Google Play Services is available
-                com.google.android.gms.common.GoogleApiAvailability availability = 
-                    com.google.android.gms.common.GoogleApiAvailability.getInstance();
-                int result = availability.isGooglePlayServicesAvailable(this);
-                
-                if (result == com.google.android.gms.common.ConnectionResult.SUCCESS) {
-                    AppsFlyerLib appsFlyerLib = AppsFlyerLib.getInstance();
-                    appsFlyerLib.init(BuildConfig.APPSFLYER_ID, null, this);
-                    appsFlyerLib.setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
-                    appsFlyerLib.setDebugLog(true);
-                    appsFlyerLib.setCustomerUserId(UUID.randomUUID().toString());
-                    String customerId = config.getUniqueId();
-                    appsFlyerLib.setCustomerUserId(customerId);
-                    appsFlyerLib.start(this);
-                    
-                    // Register conversion listener after successful initialization
-                    appsFlyerLib.registerConversionListener(this, new com.appsflyer.AppsFlyerConversionListener() {
-                        @Override
-                        public void onConversionDataSuccess(java.util.Map<String, Object> data) {
-                            log.info("AppsFlyer conversion received: " + data);
-                            if (data != null) {
-                                log.info("Available keys: " + data.keySet());
-                                handleDeepLinkData(data);
-                            }
-                        }
-
-                        @Override
-                        public void onConversionDataFail(String error) {
-                            log.error("AppsFlyer conversion failed: " + error);
-                        }
-
-                        @Override
-                        public void onAppOpenAttribution(java.util.Map<String, String> data) {
-                            log.info("AppsFlyer app open attribution: " + data);
-                            if (data != null) {
-                                log.info("Available attribution keys: " + data.keySet());
-                                java.util.Map<String, Object> objectData = new java.util.HashMap<>();
-                                for (java.util.Map.Entry<String, String> entry : data.entrySet()) {
-                                    objectData.put(entry.getKey(), entry.getValue());
-                                }
-                                handleDeepLinkData(objectData);
-                            }
-                        }
-
-                        @Override
-                        public void onAttributionFailure(String error) {
-                            log.error("AppsFlyer attribution failure: " + error);
-                        }
-
-                        private void handleDeepLinkData(java.util.Map<String, Object> data) {
-                            String deepLinkValue = extractDeepLink(data);
-                            if (deepLinkValue != null) {
-                                log.info("Processing deep link: " + deepLinkValue);
-                                new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                                        android.content.Intent intent = new android.content.Intent(getApplicationContext(), de.schildbach.wallet.ui.InviteHandlerActivity.class);
-                                        intent.setData(android.net.Uri.parse(deepLinkValue));
-                                        intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
-                                        startActivity(intent);
-                                    });
-                            } else {
-                                log.warn("No deep link found in AppsFlyer data");
-                            }
-                        }
-
-                        private String extractDeepLink(Map<String, Object> data) {
-                            // Define keys in order of preference
-                            String[] possibleKeys = {"af_dp", "deep_link_value", "link", "af_sub1"};
-                            for (String key : possibleKeys) {
-                                Object value = data.get(key);
-                                if (value instanceof String) {
-                                    String stringValue = (String) value;
-                                    if (!stringValue.trim().isEmpty()) {
-                                        log.info("Found deep link in key '" + key + "': " + stringValue);
-                                        return stringValue;
-                                    }
-                                }
-                            }
-                            return null;
-                        }
-                    });
-                } else {
-                    log.warn("Google Play Services not available, skipping AppsFlyer initialization: " + result);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to initialize AppsFlyer: " + e.getMessage());
-            }
-        }).start();
+        new Thread(this::initializeAppsFlyer).start();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
@@ -449,6 +360,97 @@ public class WalletApplication extends MultiDexApplication
         }
 
 
+    }
+
+    // Initialize AppsFlyer after checking Google Play Services availability
+    private void initializeAppsFlyer() {
+        try {
+            // Check if Google Play Services is available
+            com.google.android.gms.common.GoogleApiAvailability availability =
+                com.google.android.gms.common.GoogleApiAvailability.getInstance();
+            int result = availability.isGooglePlayServicesAvailable(this);
+
+            if (result == com.google.android.gms.common.ConnectionResult.SUCCESS) {
+                AppsFlyerLib appsFlyerLib = AppsFlyerLib.getInstance();
+                appsFlyerLib.init(BuildConfig.APPSFLYER_ID, null, this);
+                appsFlyerLib.setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
+                appsFlyerLib.setDebugLog(true);
+                appsFlyerLib.setCustomerUserId(UUID.randomUUID().toString());
+                String customerId = config.getUniqueId();
+                appsFlyerLib.setCustomerUserId(customerId);
+                appsFlyerLib.start(this);
+
+                // Register conversion listener after successful initialization
+                appsFlyerLib.registerConversionListener(this, new com.appsflyer.AppsFlyerConversionListener() {
+                    @Override
+                    public void onConversionDataSuccess(Map<String, Object> data) {
+                        log.info("AppsFlyer conversion received: {}", data);
+                        if (data != null) {
+                            log.info("Available keys: {}", data.keySet());
+                            handleDeepLinkData(data);
+                        }
+                    }
+
+                    @Override
+                    public void onConversionDataFail(String error) {
+                        log.error("AppsFlyer conversion failed: {}", error);
+                    }
+
+                    @Override
+                    public void onAppOpenAttribution(Map<String, String> data) {
+                        log.info("AppsFlyer app open attribution: {}", data);
+                        if (data != null) {
+                            log.info("Available attribution keys: {}", data.keySet());
+                            Map<String, Object> objectData = new java.util.HashMap<>();
+                            for (Map.Entry<String, String> entry : data.entrySet()) {
+                                objectData.put(entry.getKey(), entry.getValue());
+                            }
+                            handleDeepLinkData(objectData);
+                        }
+                    }
+
+                    @Override
+                    public void onAttributionFailure(String error) {
+                        log.error("AppsFlyer attribution failure: {}", error);
+                    }
+
+                    private void handleDeepLinkData(Map<String, Object> data) {
+                        String deepLinkValue = extractDeepLink(data);
+                        if (deepLinkValue != null) {
+                            log.info("Processing deep link: {}", deepLinkValue);
+                            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
+                                    Intent intent = new Intent(getApplicationContext(), de.schildbach.wallet.ui.InviteHandlerActivity.class);
+                                    intent.setData(Uri.parse(deepLinkValue));
+                                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                                    startActivity(intent);
+                                });
+                        } else {
+                            log.warn("No deep link found in AppsFlyer data");
+                        }
+                    }
+
+                    private String extractDeepLink(Map<String, Object> data) {
+                        // Define keys in order of preference
+                        String[] possibleKeys = {"af_dp", "deep_link_value", "link", "af_sub1"};
+                        for (String key : possibleKeys) {
+                            Object value = data.get(key);
+                            if (value instanceof String) {
+                                String stringValue = (String) value;
+                                if (!stringValue.trim().isEmpty()) {
+                                    log.info("Found deep link in key '{}': {}", key, stringValue);
+                                    return stringValue;
+                                }
+                            }
+                        }
+                        return null;
+                    }
+                });
+            } else {
+                log.warn("Google Play Services not available, skipping AppsFlyer initialization: {}", result);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to initialize AppsFlyer: {}", e.getMessage());
+        }
     }
 
     @Override
