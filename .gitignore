@@ -23,7 +23,7 @@ out/
 .externalNativeBuild/
 .cxx/
 gradle-wrapper.jar
-wallet/prod
+wallet/prod/release
 wallet/.cxx
 wallet/cpp
 vendor/

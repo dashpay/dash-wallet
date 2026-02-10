@@ -18,8 +18,6 @@
 package de.schildbach.wallet;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlarmManager;
 import android.app.NotificationChannel;
@@ -33,9 +31,8 @@ import android.content.Intent;
 import android.media.AudioAttributes;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.StrictMode;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.text.format.DateUtils;
 import android.util.Log;
 import android.webkit.CookieManager;
@@ -43,6 +40,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.hilt.work.HiltWorkerFactory;
@@ -51,6 +49,7 @@ import androidx.multidex.MultiDexApplication;
 import androidx.work.WorkManager;
 
 import com.appsflyer.AppsFlyerLib;
+import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.util.Lists;
 import com.google.common.base.Stopwatch;
 import com.google.firebase.FirebaseApp;
@@ -121,6 +120,7 @@ import java.security.Security;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -143,7 +143,6 @@ import de.schildbach.wallet.service.BlockchainSyncJobService;
 import de.schildbach.wallet.service.platform.PlatformSyncService;
 import de.schildbach.wallet.transactions.TransactionWrapperHelper;
 import de.schildbach.wallet.service.RestartService;
-import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.transactions.WalletObserver;
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter;
 import de.schildbach.wallet.ui.dashpay.PlatformRepo;
@@ -173,9 +172,9 @@ public class WalletApplication extends MultiDexApplication
     private static WalletApplication instance;
     private Configuration config;
     private ActivityManager activityManager;
-    private final List<Function1<? super Continuation<? super Unit>, ? extends Object>> wipeListeners = new ArrayList<>();
+    private final List<Function1<? super Continuation<? super Unit>, ?>> wipeListeners = new ArrayList<>();
 
-    private boolean basicWalletInitalizationFinished = false;
+    private boolean basicWalletInitializationFinished = false;
 
     private Intent blockchainServiceIntent;
 
@@ -194,8 +193,6 @@ public class WalletApplication extends MultiDexApplication
     private static final int BLOCKCHAIN_SYNC_JOB_ID = 1;
 
     public boolean myPackageReplaced = false;
-
-    public Activity currentActivity;
 
     private AutoLogout autoLogout;
     private AnrSupervisor anrSupervisor;
@@ -253,80 +250,7 @@ public class WalletApplication extends MultiDexApplication
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
-        registerActivityLifecycleCallbacks(new ActivitiesTracker() {
-            int activityCount = 0;
-            int foregroundActivityCount = 0;
-            int visibleActivityCount = 0;
-            final String logName = "activity lifecycle";
-            @Override
-            protected void onStartedFirst(Activity activity) {
-
-            }
-
-            @Override
-            protected void onStartedAny(boolean isTheFirstOne, Activity activity) {
-                super.onStartedAny(isTheFirstOne, activity);
-                // force restart if the app was updated
-                // this ensures that v6.x or previous will go through the PIN upgrade process
-                if (!BuildConfig.DEBUG && myPackageReplaced) {
-                    log.info("restarting app due to upgrade");
-                    myPackageReplaced = false;
-                    restartService.performRestart(activity, true, true);
-                }
-            }
-
-            @Override
-            protected void onStoppedLast() {
-                autoLogout.setAppWentBackground(true);
-                if (config.getAutoLogoutEnabled() && config.getAutoLogoutMinutes() == 0) {
-                    sendBroadcast(new Intent(InteractionAwareActivity.FORCE_FINISH_ACTION));
-                }
-            }
-
-            public void onActivityCreated(@NonNull Activity activity, Bundle bundle) {
-                if (activityCount == 0)
-                    log.info("{}: app started", logName);
-                activityCount++;
-                log.info("{}: activity {} created", logName, activity.getClass().getSimpleName());
-                logState();
-                currentActivity = activity;
-            }
-
-            public void onActivityDestroyed(@NonNull Activity activity) {
-                log.info("{}: activity {} destroyed", logName, activity.getClass().getSimpleName());
-                activityCount--;
-                logState();
-                if (activityCount == 0)
-                    log.info("{}: app closed", logName);
-            }
-
-            public void onActivityResumed(@NonNull Activity activity) {
-                foregroundActivityCount++;
-                logState();
-                currentActivity = activity;
-            }
-
-            public void onActivityPaused(@NonNull Activity activity) {
-                foregroundActivityCount--;
-                logState();
-            }
-
-            public void onActivityStarted(@NonNull Activity activity) {
-                visibleActivityCount++;
-                logState();
-                currentActivity = activity;
-            }
-
-            public void onActivityStopped(Activity activity) {
-                visibleActivityCount--;
-                logState();
-            }
-
-            private void logState() {
-                log.info("{}: activities: {} visible: {} foreground: {}", logName,
-                        activityCount, visibleActivityCount, foregroundActivityCount);
-            }
-        });
+        registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
             fullInitialization();
@@ -366,8 +290,7 @@ public class WalletApplication extends MultiDexApplication
     private void initializeAppsFlyer() {
         try {
             // Check if Google Play Services is available
-            com.google.android.gms.common.GoogleApiAvailability availability =
-                com.google.android.gms.common.GoogleApiAvailability.getInstance();
+            GoogleApiAvailability availability = GoogleApiAvailability.getInstance();
             int result = availability.isGooglePlayServicesAvailable(this);
 
             if (result == com.google.android.gms.common.ConnectionResult.SUCCESS) {
@@ -401,10 +324,7 @@ public class WalletApplication extends MultiDexApplication
                         log.info("AppsFlyer app open attribution: {}", data);
                         if (data != null) {
                             log.info("Available attribution keys: {}", data.keySet());
-                            Map<String, Object> objectData = new java.util.HashMap<>();
-                            for (Map.Entry<String, String> entry : data.entrySet()) {
-                                objectData.put(entry.getKey(), entry.getValue());
-                            }
+                            Map<String, Object> objectData = new HashMap<>(data);
                             handleDeepLinkData(objectData);
                         }
                     }
@@ -472,13 +392,13 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void initEnvironmentIfNeeded() {
-        if (!basicWalletInitalizationFinished) {
+        if (!basicWalletInitializationFinished) {
             initEnvironment();
         }
     }
 
     private void initEnvironment() {
-        basicWalletInitalizationFinished = true;
+        basicWalletInitializationFinished = true;
 
         new LinuxSecureRandom(); // init proper random number generator
 
@@ -703,9 +623,9 @@ public class WalletApplication extends MultiDexApplication
         try {
             wallet.cleanup();
         } catch (IllegalStateException x) {
-            //Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
-            //txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
-            //the fees were fixed, then those stuck transactions became inconsistant and the exception is thrown.
+            // Catch an inconsistent exception here and reset the blockchain.  This is for loading older wallets that had
+            // txes with fees that were too low or dust that were stuck and could not be sent.  In a later version
+            // the fees were fixed, then those stuck transactions became inconsistent and the exception is thrown.
             if (x.getMessage().contains("Inconsistent spent tx:")) {
                 deleteBlockchainFiles();
             } else throw x;
@@ -733,9 +653,6 @@ public class WalletApplication extends MultiDexApplication
         blockChainFile.delete();
         File headerChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.HEADERS_FILENAME);
         headerChainFile.delete();
-        // TODO: should we have a backup blockchain file?
-        // File backupBlockChainFile = new File(getDir("blockstore", Context.MODE_PRIVATE), Constants.Files.BACKUP_BLOCKCHAIN_FILENAME);
-        // backupBlockChainFile.delete();
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
@@ -913,7 +830,7 @@ public class WalletApplication extends MultiDexApplication
 
             Toast.makeText(this, R.string.toast_wallet_reset, Toast.LENGTH_LONG).show();
 
-            log.info("wallet restored from backup: '" + Constants.Files.WALLET_KEY_BACKUP_PROTOBUF + "'");
+            log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
 
             return wallet;
         } catch (final IOException x) {
@@ -1069,7 +986,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @Override
-    public void processDirectTransaction(final Transaction tx) throws VerificationException {
+    public void processDirectTransaction(@NonNull final Transaction tx) throws VerificationException {
         if (wallet.isTransactionRelevant(tx)) {
             wallet.receivePending(tx, null);
             broadcastTransaction(tx);
@@ -1079,7 +996,7 @@ public class WalletApplication extends MultiDexApplication
     public void broadcastTransaction(final Transaction tx) {
         final Intent intent = new Intent(BlockchainService.ACTION_BROADCAST_TRANSACTION, null, this,
                 BlockchainServiceImpl.class);
-        intent.putExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH, tx.getHash().getBytes());
+        intent.putExtra(BlockchainService.ACTION_BROADCAST_TRANSACTION_HASH, tx.getTxId().getBytes());
         startService(intent);
     }
     public boolean isLowRamDevice() {
@@ -1224,7 +1141,7 @@ public class WalletApplication extends MultiDexApplication
     private void notifyWalletWipe() {
         // Since these are now suspended listeners, we need to call them in a blocking way
         // to ensure all clearing operations complete before proceeding
-        for (Function1<? super Continuation<? super Unit>, ? extends Object> listener : wipeListeners) {
+        for (Function1<? super Continuation<? super Unit>, ?> listener : wipeListeners) {
             try {
                 // Call the suspended function synchronously using runBlocking
                 kotlinx.coroutines.BuildersKt.runBlocking(
@@ -1454,12 +1371,12 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @Override
-    public void attachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
+    public void attachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,?> listener) {
         wipeListeners.add(listener);
     }
 
     @Override
-    public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,? extends Object> listener) {
+    public void detachOnWalletWipedListener(@NonNull Function1<? super Continuation<? super Unit>,?> listener) {
         wipeListeners.remove(listener);
     }
 
