@@ -293,7 +293,11 @@ android {
             resources.srcDirs = ['androidTest/java']
             res.srcDirs = ['androidTest/testNet3/res']
         }
+        prod {
+            manifest.srcFile 'prod/AndroidManifest.xml'
+        }
         _testNet3 {
+            manifest.srcFile 'testNet3/AndroidManifest.xml'
             res.srcDirs = ["testNet3/res"]
         }
         staging {
@@ -334,6 +338,9 @@ android {
             def zenLedgerClientSecret = props.getProperty("ZENLEDGER_CLIENT_SECRET", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", zenLedgerClientId)
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", zenLedgerClientSecret)
+
+            def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID", "\"\"")
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -351,6 +358,9 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+
+            def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID_TESTNET", appsFlyerTemplateId)
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -372,6 +382,9 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+
+            def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
+            buildConfigField("String", "APPSFLYER_TEMPLATE_ID_TESTNET", appsFlyerTemplateId)
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
