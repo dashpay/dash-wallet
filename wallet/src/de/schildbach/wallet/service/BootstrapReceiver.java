@@ -36,6 +36,7 @@ import de.schildbach.wallet.WalletApplication;
 import de.schildbach.wallet.ui.OnboardingActivity;
 import de.schildbach.wallet_test.R;
 
+import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -57,6 +58,7 @@ import javax.inject.Inject;
 /**
  * @author Andreas Schildbach
  */
+@SuppressLint("WrongConstant")
 @AndroidEntryPoint
 public class BootstrapReceiver extends BroadcastReceiver {
     private final Executor executor = Executors.newSingleThreadExecutor(new ContextPropagatingThreadFactory("bootstrap"));

@@ -636,7 +636,7 @@ public class WalletApplication extends MultiDexApplication
         // X-Client-Id will be set as "dcg_android"
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.O)
     private void createNotificationChannels() {
         // Transactions
         createNotificationChannel(Constants.NOTIFICATION_CHANNEL_ID_TRANSACTIONS,
@@ -669,7 +669,7 @@ public class WalletApplication extends MultiDexApplication
                 NotificationManager.IMPORTANCE_LOW);
     }
 
-    @TargetApi(Build.VERSION_CODES.O)
+    @RequiresApi(Build.VERSION_CODES.O)
     private void createNotificationChannel(String channelId, @StringRes int channelName,
                                            @StringRes int channelDescription, int importance) {
         CharSequence name = getString(channelName);
@@ -1027,6 +1027,7 @@ public class WalletApplication extends MultiDexApplication
         }
     }
 
+    @Deprecated(message = "not used")
     public void stopBlockchainService() {
         stopService(blockchainServiceIntent);
     }
@@ -1051,6 +1052,7 @@ public class WalletApplication extends MultiDexApplication
         blockchainStateDataProvider.resetBlockchainSyncProgress();
     }
 
+    @Deprecated(message = "not used")
     public void replaceWallet(final Wallet newWallet) {
         resetBlockchain();
         if (wallet != null) {
@@ -1099,7 +1101,7 @@ public class WalletApplication extends MultiDexApplication
         scheduleStartBlockchainService(this, true);
     }
 
-    @SuppressLint("NewApi")
+    @SuppressLint({"NewApi", "WrongConstant"})
     public static void scheduleStartBlockchainService(final Context context, Boolean cancelOnly) {
         final Configuration config = new Configuration(PreferenceManager.getDefaultSharedPreferences(context));
         final long lastUsedAgo = config.getLastUsedAgo();

@@ -455,6 +455,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
     private var resetMNListsOnPeerGroupStart = false
+    @SuppressLint("WrongConstant")
     private fun notifyCoinsReceived(
         address: Address?, amount: Coin,
         exchangeRate: ExchangeRate?
@@ -619,6 +620,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             if (Configuration.PREFS_KEY_CONNECTIVITY_NOTIFICATION == key) changed(peerCount)
         }
 
+        @SuppressLint("WrongConstant")
         private fun changed(numPeers: Int) {
             if (stopped.get()) return
             val networkStatus = blockchainStateDataProvider.getNetworkStatus()
@@ -689,6 +691,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
     }
 
+    @SuppressLint("WrongConstant")
     private fun rescheduleService() {
         // Schedule restart in 1 minute
         val alarmManager = getSystemService(ALARM_SERVICE) as AlarmManager
@@ -1339,6 +1342,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT)
     }
 
+    @SuppressLint("WrongConstant")
     override fun onCreate() {
         serviceCreatedAt = System.currentTimeMillis()
         log.info(".onCreate()")
@@ -1785,6 +1789,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         return START_NOT_STICKY
     }
 
+    @SuppressLint("WrongConstant")
     private fun startForeground(notification: Notification) {
         //Shows ongoing notification promoting service to foreground service and
         //preventing it from being killed in Android 26 or later
@@ -2042,6 +2047,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         super.onTimeout(startId, fgsType)
     }
 
+    @SuppressLint("WrongConstant")
     private fun showTimeoutNotification() {
         val mainActivityIntent = MainActivity.createIntent(this).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
