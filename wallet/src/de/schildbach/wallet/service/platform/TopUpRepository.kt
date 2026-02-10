@@ -818,18 +818,22 @@ class TopUpRepositoryImpl @Inject constructor(
                 return try {
                     DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
                     // TODO: when all instantsend locks are deterministic, we don't need the catch block
-                    try {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISDLOCK_VERSION
-                        )
-                    } catch (e: Exception) {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISLOCK_VERSION
-                        )
+                    if (invite.instantSendLock != "null") {
+                        try {
+                            InstantSendLock(
+                                Constants.NETWORK_PARAMETERS,
+                                Utils.HEX.decode(invite.instantSendLock),
+                                InstantSendLock.ISDLOCK_VERSION
+                            )
+                        } catch (e: Exception) {
+                            InstantSendLock(
+                                Constants.NETWORK_PARAMETERS,
+                                Utils.HEX.decode(invite.instantSendLock),
+                                InstantSendLock.ISLOCK_VERSION
+                            )
+                        }
+                    } else {
+                        log.info("Invite doesn't have InstantSendLock")
                     }
                     log.info("Invite is valid and took $stopWatch")
                     true
