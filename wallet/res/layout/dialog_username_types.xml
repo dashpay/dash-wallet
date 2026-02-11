@@ -61,7 +61,7 @@
 
         <Button
             android:id="@+id/dismiss_btn"
-            style="@style/Button.Primary.Large.Grey"
+            style="@style/Button.Primary.Large.Blue"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
