@@ -296,6 +296,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                         binding.requestedUsernameIcon.setImageResource(R.drawable.ic_join_dashpay_red)
                         binding.requestedUsernameArrow.isVisible = false
                     }
+                    UsernameRequestStatus.NONE,
                     UsernameRequestStatus.APPROVED -> {
                         // swallow to prevent crash
                     }
