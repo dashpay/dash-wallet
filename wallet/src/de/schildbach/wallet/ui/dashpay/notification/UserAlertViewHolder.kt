@@ -32,7 +32,9 @@ class UserAlertViewHolder(val binding: NotificationAlertItemBinding) :
             text.setText(notificationItem.stringResId)
             icon.setImageResource(notificationItem.iconResId)
             closeBtn.setOnClickListener {
-                onUserAlertDismiss.invoke(notificationItem.stringResId)
+                notificationItem.getUserAlertId()?.let { id ->
+                    onUserAlertDismiss.invoke(id)
+                }
             }
         }
     }
