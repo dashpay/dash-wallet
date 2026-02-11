@@ -67,13 +67,7 @@ object Constants {
         .writeTimeout(20, TimeUnit.SECONDS)
         .readTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(
-            HttpLoggingInterceptor { log.info(it) }.setLevel(
-                //if (BuildConfig.DEBUG) {
-                //    HttpLoggingInterceptor.Level.BODY
-                //} else {
-                    HttpLoggingInterceptor.Level.BASIC
-                //}
-            )
+            HttpLoggingInterceptor { log.info(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
         )
         .build()
 }

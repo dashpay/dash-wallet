@@ -131,11 +131,6 @@ abstract class AppModule {
         }
     }
 
-//    @Binds
-//    abstract fun bindAnalyticsService(
-//        analyticsService: FirebaseAnalyticsServiceImpl
-//    ): AnalyticsService
-
     @Binds
     abstract fun bindConfirmTransactionService(
         confirmTransactionLauncher: ConfirmTransactionLauncher
