@@ -509,6 +509,7 @@ class SendCoinsTaskRunner @Inject constructor(
             topUpKey,
             useCoinJoinGreedy = true
         )
+        signSendRequest(firstSendRequest)
         walletData.wallet!!.completeTx(firstSendRequest)
 
         // check for dust
@@ -521,6 +522,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 topUpKey,
                 useCoinJoinGreedy = true
             )
+            signSendRequest(sendRequest)
             walletData.wallet!!.completeTx(sendRequest)
             sendRequest
         } else {
