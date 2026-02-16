@@ -44,13 +44,14 @@ import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @ExperimentalCoroutinesApi
 @AndroidEntryPoint
 class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_details) {
     companion object {
-        val log = LoggerFactory.getLogger(InviteDetailsFragment::class.java)
+        private val log: Logger = LoggerFactory.getLogger(InviteDetailsFragment::class.java)
     }
     private val binding by viewBinding(FragmentInviteDetailsBinding::bind)
     private val args by navArgs<InviteDetailsFragmentArgs>()

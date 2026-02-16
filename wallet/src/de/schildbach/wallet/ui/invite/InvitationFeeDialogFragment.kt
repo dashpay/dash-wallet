@@ -24,9 +24,11 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import org.bitcoinj.core.Coin
 import de.schildbach.wallet.ui.CheckPinDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogInvitationFeeBinding
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -35,9 +37,12 @@ import org.dash.wallet.common.util.observe
 class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitation_fee) {
     private val binding by viewBinding(DialogInvitationFeeBinding::bind)
     private var selectedFee = Constants.DASH_PAY_FEE_CONTESTED
+    private var spendableBalance = Coin.ZERO
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val viewModel by viewModels<InvitationFragmentViewModel>()
     private val args by navArgs<InvitationFeeDialogFragmentArgs>()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setMode(true)
@@ -52,8 +57,10 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
                 }
             }
         }
-        viewModel.walletData.observeBalance().observe(viewLifecycleOwner) { walletBalance ->
+        viewModel.walletData.observeSpendableBalance().observe(viewLifecycleOwner) { walletBalance ->
+            spendableBalance = walletBalance
             binding.contestedName.isEnabled = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
+            updateContinueButton()
         }
         binding.contestedName.setOnClickListener {
             setMode(true)
@@ -74,5 +81,10 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
             binding.nonContestedName.isSelected = true
             selectedFee = Constants.DASH_PAY_FEE
         }
+        updateContinueButton()
+    }
+
+    private fun updateContinueButton() {
+        binding.mixButton.isEnabled = spendableBalance >= selectedFee
     }
 }
