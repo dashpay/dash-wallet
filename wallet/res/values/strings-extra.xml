@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Confirm</string>
     <string name="dialog_confirm_pay_to">Send to</string>
     <string name="dialog_confirm_secured_by">Secured by</string>
+    <string name="dialog_confirm_connected_to_unsecured">Connected to (not secured)</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Accept contact request</string>

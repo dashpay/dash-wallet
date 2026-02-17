@@ -61,6 +61,7 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/secured_by"
             style="@style/Body2.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -75,9 +76,11 @@
             style="@style/Subtitle2.Bold.Secondary"
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
+            android:layout_gravity="center_horizontal"
             android:ellipsize="marquee"
             android:marqueeRepeatLimit="1"
             android:singleLine="true"
+            android:textAlignment="center"
             android:text="Digital Signature Trust CO." />
 
     </LinearLayout>
