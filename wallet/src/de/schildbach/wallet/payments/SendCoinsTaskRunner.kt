@@ -18,6 +18,7 @@ package de.schildbach.wallet.payments
 
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
+import com.google.common.base.Stopwatch
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.PaymentIntent
@@ -31,6 +32,7 @@ import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
@@ -602,11 +604,22 @@ class SendCoinsTaskRunner @Inject constructor(
     ): Transaction = withContext(Dispatchers.IO) {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
+        val watch = Stopwatch.createStarted()
+        val currentThread = Thread.currentThread()
+        val monitorJob = launch(Dispatchers.IO) {
+            delay(1000)
+            log.warn("sendCoins is taking longer than 1 second")
+            try {
+                val anrException = AnrException(currentThread)
+                anrException.logProcessMap()
+            } catch (e: Exception) {
+                log.error("Failed to dump thread traces during executeDryrun", e)
+            }
+        }
 
         if (checkBalanceConditions) {
             checkBalanceConditions(wallet, sendRequest.tx)
         }
-        signSendRequest(sendRequest)
 
         try {
             log.info("sending: {}", sendRequest)
@@ -614,6 +627,7 @@ class SendCoinsTaskRunner @Inject constructor(
             if (txCompleted) {
                 wallet.commitTx(sendRequest.tx)
             } else {
+                signSendRequest(sendRequest)
                 wallet.sendCoinsOffline(sendRequest)
             }
 
@@ -622,12 +636,14 @@ class SendCoinsTaskRunner @Inject constructor(
             serviceName?.let {
                 metadataProvider.setTransactionService(sendRequest.tx.txId, serviceName)
             }
-            log.info("send successful, transaction committed: {}", transaction.txId.toString())
+            log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
             logSendTxEvent(transaction, wallet)
+            monitorJob.cancel()
             transaction
         } catch (ex: Exception) {
+            monitorJob.cancel()
             when (ex) {
                 is InsufficientMoneyException -> ex.missing?.run {
                     log.info("send failed, {} missing", toFriendlyString())

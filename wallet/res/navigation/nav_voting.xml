@@ -60,7 +60,7 @@
 
     <dialog
         android:id="@+id/usernameRequestFilterDialog"
-        android:name="de.schildbach.wallet.ui.username.UsernameRequestFilterDialog"
+        android:name="de.schildbach.wallet.ui.username.voting.UsernameRequestFilterDialog"
         android:label="UsernameRequestFilterDialog"
         tools:layout="@layout/dialog_username_request_filters" />
 
