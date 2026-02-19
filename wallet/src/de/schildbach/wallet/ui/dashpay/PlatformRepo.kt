@@ -880,8 +880,14 @@ class PlatformRepo @Inject constructor(
                     preorderSalt = blockchainIdentity.saltForUsername(blockchainIdentity.currentUsername!!, false)
                     usernameStatus = blockchainIdentity.statusOfUsername(blockchainIdentity.currentUsername!!)
                 }
-                usernameRequested = blockchainIdentity.getUsernameRequestStatus(username!!)
-                votingPeriodStart = blockchainIdentity.getUsernameVotingStart(username!!)
+                val requestStatus = blockchainIdentity.getUsernameRequestStatus(username!!)
+                if (requestStatus != UsernameRequestStatus.NONE) {
+                    usernameRequested = requestStatus
+                }
+                val votingStart = blockchainIdentity.getUsernameVotingStart(username!!)
+                if (votingStart != -1L) {
+                    votingPeriodStart = votingStart
+                }
 
                 log.info("creation: blockchainIdentity.secondaryUsername = {}", blockchainIdentity.secondaryUsername)
                 blockchainIdentity.secondaryUsername?.let { name ->
