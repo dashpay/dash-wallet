@@ -17,10 +17,13 @@
 
 package de.schildbach.wallet.ui.payments
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import de.schildbach.wallet.ui.AbstractBindServiceActivity
+import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySweepWalletBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
@@ -46,6 +49,26 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
 
     private lateinit var binding: ActivitySweepWalletBinding
 
+    /** Scan result to be consumed by [SweepWalletFragment] via [getScanResult]. */
+    var scanResult: String? = null
+        private set
+
+    private val scanLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            scanResult = result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)
+            // Fragment will pick up scanResult in onResume
+            val fragment = supportFragmentManager.findFragmentById(R.id.sweep_wallet_fragment)
+            if (fragment is SweepWalletFragment) {
+                fragment.handleScanResult(scanResult)
+            }
+        } else {
+            // User cancelled the scanner — close the activity
+            finish()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -54,6 +77,11 @@ class SweepWalletActivity: AbstractBindServiceActivity() {
         binding.appbar.toolbar.title = getString(R.string.sweep_wallet_activity_title)
         binding.appbar.toolbar.setNavigationOnClickListener { finish() }
         walletApplication.startBlockchainService(false)
+
+        // If no key was provided, launch the scanner immediately
+        if (savedInstanceState == null && !intent.hasExtra(INTENT_EXTRA_KEY)) {
+            scanLauncher.launch(Intent(this, ScanActivity::class.java))
+        }
     }
 
     fun isUserAuthorized(): Boolean {

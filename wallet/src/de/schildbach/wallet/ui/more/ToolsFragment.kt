@@ -37,6 +37,7 @@ import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
 import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
@@ -86,7 +87,11 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
         binding.importKeys.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
-            startActivity(Intent(requireContext(), SweepWalletActivity::class.java))
+            createImportPrivateKeyDialog(
+                onScanPrivateKey = {
+                    SweepWalletActivity.start(requireContext(), false)
+                }
+            ).show(parentFragmentManager, "import_private_key")
         }
         binding.networkMonitor.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
