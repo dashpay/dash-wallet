@@ -23,7 +23,7 @@
     android:clickable="true"
     android:focusable="true"
     android:background="?attr/selectableItemBackground"
-    tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
+    tools:context="de.schildbach.wallet.ui.username.voting.UsernameRequestDetailsFragment">
 
     <TextView
         android:id="@+id/block_description"

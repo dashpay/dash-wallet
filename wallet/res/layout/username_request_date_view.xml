@@ -20,7 +20,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="36dp"
-    tools:context="de.schildbach.wallet.ui.username.adapters.DateViewHolder">
+    tools:context="de.schildbach.wallet.ui.username.voting.UsernameRequestsFragment">
 
     <TextView
         android:id="@+id/date_heading"

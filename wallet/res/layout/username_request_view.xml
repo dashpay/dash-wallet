@@ -25,7 +25,7 @@
     android:layout_marginHorizontal="4dp"
     android:layout_marginVertical="4dp"
     android:background="?attr/selectableItemBackground"
-    tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestViewHolder">
+    tools:context="de.schildbach.wallet.ui.username.voting.UsernameRequestsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/info"
