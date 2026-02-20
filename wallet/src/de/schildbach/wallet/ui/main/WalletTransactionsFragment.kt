@@ -218,7 +218,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         inviteHandlerViewModel.invitation.observe(viewLifecycleOwner) { invitation ->
             val isSynced = viewModel.isBlockchainSynced.value == true
-            if (invitation != null && isSynced) {
+            if (invitation != null && isSynced && invitation.validationState == null) {
                 processInvitation(invitation, viewModel.isBlockchainSynced.value == true, isLockScreenActive())
             }
             header.invitation = invitation
@@ -262,8 +262,9 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 inviteHandlerViewModel.validateInvitation()
             }
 
+            val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
             if (!isLockScreenActive) {
-                showInviteValidationDialog(invitation)
+                showInviteValidationDialog(currentInvitation)
             }
         }
     }
