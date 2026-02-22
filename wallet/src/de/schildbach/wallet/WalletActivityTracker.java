@@ -88,8 +88,12 @@ public class WalletActivityTracker extends ActivitiesTracker {
         log.info("{}: activity {} destroyed", logName, activity.getClass().getSimpleName());
         activityCount--;
         logState();
-        if (activityCount == 0)
+        if (currentActivity == activity) {
+            currentActivity = null;
+        }
+        if (activityCount == 0) {
             log.info("{}: app closed", logName);
+        }
     }
 
     public void onActivityResumed(@NonNull Activity activity) {
@@ -117,8 +121,11 @@ public class WalletActivityTracker extends ActivitiesTracker {
     }
 
     private void logState() {
+        String activityName = currentActivity != null
+                ? currentActivity.getClass().getSimpleName()
+                : "none";
         log.info("{}: current: {}, activities: {} visible: {} foreground: {}", logName,
-                currentActivity.getClass().getSimpleName(), activityCount,
+                activityName, activityCount,
                 visibleActivityCount, foregroundActivityCount);
     }
 }

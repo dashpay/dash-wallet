@@ -248,6 +248,7 @@ public class WalletApplication extends MultiDexApplication
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
+        new Thread(this::initializeAppsFlyer).start();
         autoLogout = new AutoLogout(config);
         autoLogout.registerDeviceInteractiveReceiver(this);
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
