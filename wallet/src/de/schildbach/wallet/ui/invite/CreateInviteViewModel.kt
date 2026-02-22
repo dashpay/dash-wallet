@@ -77,7 +77,7 @@ class CreateInviteViewModel @Inject constructor(
         combineLatestData(balance)
     }.stateIn(viewModelScope, SharingStarted.Lazily, initialValue = combineLatestData(spendableBalance.value))
 
-    val isAbleToCreateInvite: Boolean
+    private val isAbleToCreateInvite: Boolean
         get() = isAbleToCreateInviteFlow.value
 
     private fun combineLatestData(balance: Coin): Boolean {

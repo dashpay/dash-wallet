@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet;
 
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
@@ -24,7 +25,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
+import androidx.preference.PreferenceManager;
 import android.text.Spannable;
 import android.text.style.ForegroundColorSpan;
 import android.view.View;
@@ -110,6 +111,7 @@ public class WalletBalanceWidgetProvider extends AppWidgetProvider {
         }
     }
 
+    @SuppressLint("WrongConstant")
     private static void updateWidget(final Context context, final AppWidgetManager appWidgetManager,
                                      final int appWidgetId, final Bundle appWidgetOptions, final Coin balance) {
 

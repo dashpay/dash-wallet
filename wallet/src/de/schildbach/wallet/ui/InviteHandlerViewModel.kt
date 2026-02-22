@@ -123,6 +123,7 @@ class InviteHandlerViewModel @Inject constructor(
     suspend fun clearInvitation() {
         dashPayConfig.set(DashPayConfig.INVITATION_LINK, "")
         dashPayConfig.set(DashPayConfig.INVITATION_FROM_ONBOARDING, false)
+        _invitation.value = null
     }
 
     suspend fun validateInvitation(): InvitationValidationState = withContext(Dispatchers.IO) {
