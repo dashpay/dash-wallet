@@ -298,8 +298,7 @@ public class WalletApplication extends MultiDexApplication
                 AppsFlyerLib appsFlyerLib = AppsFlyerLib.getInstance();
                 appsFlyerLib.init(BuildConfig.APPSFLYER_ID, null, this);
                 appsFlyerLib.setAppInviteOneLink(BuildConfig.APPSFLYER_TEMPLATE_ID);
-                appsFlyerLib.setDebugLog(true);
-                appsFlyerLib.setCustomerUserId(UUID.randomUUID().toString());
+                appsFlyerLib.setDebugLog(BuildConfig.DEBUG);
                 String customerId = config.getUniqueId();
                 appsFlyerLib.setCustomerUserId(customerId);
                 appsFlyerLib.start(this);
