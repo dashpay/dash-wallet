@@ -1,4 +1,10 @@
 Dash Wallet / DashPay
+v11.6.2
+* CoinJoin spending does not return change (unless fee is high)
+* fix CoinJoin Mixing fee issues
+* Speed up sending from a CoinJoin Wallet
+* Support Compressed Headers from Dash Network
+
 v11.6.1
 * Fix Send Flows (don't show error dialogs)
 
