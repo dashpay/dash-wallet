@@ -287,6 +287,7 @@
 
     <string name="tools_address_book">Address Book</string>
     <string name="tools_import_private_key">Import Private Key</string>
+    <string name="import_private_key_description">This action will move all coins from the Dash paper wallet to your DashPay app on this device.</string>
     <string name="tools_network_monitor">Network Monitor</string>
     <string name="tools_show_xpub">Extended Public Key</string>
 
