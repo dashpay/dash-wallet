@@ -19,3 +19,13 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Paging Library (used in exploredash)
+-keep class androidx.paging.** { *; }
+-keepclassmembers class * extends androidx.paging.DataSource { *; }
+
+# Google Maps/Location Services (used in exploredash)
+-keep class com.google.android.gms.maps.** { *; }
+-keep class com.google.android.gms.location.** { *; }
+-dontwarn com.google.android.gms.maps.**
+-dontwarn com.google.android.gms.location.**

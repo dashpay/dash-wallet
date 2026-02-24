@@ -257,13 +257,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private suspend fun processInvitation(invitation: InvitationLinkData, isSynced: Boolean, isLockScreenActive: Boolean) {
+        if (invitation.validationState != null) return
         if (isSynced) {
             if (invitation.expired) {
                 inviteHandlerViewModel.validateInvitation()
             }
 
+            val currentInvitation = inviteHandlerViewModel.invitation.value ?: invitation
             if (!isLockScreenActive) {
-                showInviteValidationDialog(invitation)
+                showInviteValidationDialog(currentInvitation)
             }
         }
     }

@@ -29,13 +29,11 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.ui.invite.InvitationFragmentViewModel
 import de.schildbach.wallet.ui.more.tools.ConfirmTopupDialogViewModel
-import de.schildbach.wallet.ui.send.SendCoinsViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.DialogConfirmTopupBinding
-import de.schildbach.wallet_test.databinding.DialogConfirmUsernameRequestBinding
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -58,8 +56,18 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
         binding.confirmBtn.setOnClickListener {
             lifecycleScope.launch {
                 try {
+                    val inviteAmount = Coin.valueOf(args.amount)
+                    val spendableBalance = invitationFragmentViewModel.walletData.observeSpendableBalance().first()
+                    if (spendableBalance < inviteAmount) {
+                        binding.confirmMessage.text = getString(
+                            R.string.invitation_cant_afford_message,
+                            inviteAmount.toFriendlyString()
+                        )
+                        binding.confirmMessage.isVisible = true
+                        return@launch
+                    }
                     // invitationFragmentViewModel.logEvent(AnalyticsConstants.UsersContacts.TOPUP_CONFIRM)
-                    val identityId = invitationFragmentViewModel.sendInviteTransaction(Coin.valueOf(args.amount))
+                    val identityId = invitationFragmentViewModel.sendInviteTransaction(inviteAmount)
                     findNavController().navigate(
                         ConfirmInviteDialogFragmentDirections.toInviteCreatedFragment(identityId, args.source)
                     )

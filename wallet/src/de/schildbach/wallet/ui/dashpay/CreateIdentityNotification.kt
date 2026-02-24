@@ -1,5 +1,6 @@
 package de.schildbach.wallet.ui.dashpay
 
+import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -54,6 +55,7 @@ class CreateIdentityNotification(
         updateNotification(R.string.processing_done_subtitle, 0, 0, 0)
     }
 
+    @SuppressLint("WrongConstant")
     fun displayErrorAndStopService(isInvite: Boolean) {
         val messageResId = if (isInvite) R.string.processing_error_title_from_invite else R.string.processing_error_title
         val notification: Notification = createNotification(R.string.processing_home_title, messageResId, 0, 0).run {

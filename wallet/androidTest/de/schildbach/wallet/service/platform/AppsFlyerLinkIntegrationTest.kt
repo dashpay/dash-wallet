@@ -100,6 +100,7 @@ class AppsFlyerLinkIntegrationTest {
         linkGenerator.setBaseDeeplink(baseDeeplink)
         linkGenerator.setChannel("test")
         linkGenerator.setCampaign("test_domain")
+        linkGenerator.setBrandDomain(brandDomain)
 
         linkGenerator.generateLink(context, object : LinkGenerator.ResponseListener {
             override fun onResponse(link: String?) {

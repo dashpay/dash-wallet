@@ -36,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -92,6 +93,9 @@ public class Configuration {
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
     public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
+
+    // UUID
+    public static final String PREFS_UUID = "prefs_uuid";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -498,5 +502,15 @@ public class Configuration {
 
     public void setPrefsKeyCrowdNodeStakingApy(float apy) {
         prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
+    }
+
+    public String getUniqueId() {
+        if (prefs.contains(PREFS_UUID)) {
+            return prefs.getString(PREFS_UUID, UUID.randomUUID().toString());
+        } else {
+            String uuid = UUID.randomUUID().toString();
+            prefs.edit().putString(PREFS_UUID, uuid).apply();
+            return uuid;
+        }
     }
 }

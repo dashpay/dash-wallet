@@ -38,7 +38,9 @@ open class InviteSendContactRequestDialog : AdaptiveDialog(R.layout.invite_send_
 
         fun newInstance(context: Context, profile: DashPayProfile): InviteSendContactRequestDialog {
             val messageHtml = context.getString(R.string.invitation_contact_request_sent_message, "<b>${profile.nameLabel}</b>")
-            return create(null, "", messageHtml, context.getString(R.string.button_ok))
+            return create(null, "", messageHtml, context.getString(R.string.button_ok)).apply {
+                arguments?.putParcelable(EXTRA_PROFILE, profile)
+            }
         }
 
         @JvmStatic

@@ -230,9 +230,14 @@ class TopUpRepositoryImpl @Inject constructor(
         val privateKey = DumpedPrivateKey.fromBase58(platform.params, invite.privateKey).key
         assetLockTx.addAssetLockPublicKey(privateKey)
         // TODO: when all instantsend locks are deterministic, we don't need the catch block
-        val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-
-        assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        if (invite.instantSendLock != "null") {
+            val instantSendLock = InstantSendLock(
+                platform.params,
+                Utils.HEX.decode(invite.instantSendLock),
+                InstantSendLock.ISDLOCK_VERSION
+            )
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        }
         return assetLockTx
     }
 
@@ -274,9 +279,14 @@ class TopUpRepositoryImpl @Inject constructor(
         assetLockTx.addAssetLockPublicKey(privateKey)
 
         // TODO: when all instantsend locks are deterministic, we don't need the catch block
-        val instantSendLock = InstantSendLock(platform.params, Utils.HEX.decode(invite.instantSendLock), InstantSendLock.ISDLOCK_VERSION)
-
-        assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        if (invite.instantSendLock != "null") {
+            val instantSendLock = InstantSendLock(
+                platform.params,
+                Utils.HEX.decode(invite.instantSendLock),
+                InstantSendLock.ISDLOCK_VERSION
+            )
+            assetLockTx.confidence.setInstantSendLock(instantSendLock)
+        }
         blockchainIdentity.initializeAssetLockTransaction(assetLockTx)
     }
 
@@ -671,6 +681,7 @@ class TopUpRepositoryImpl @Inject constructor(
                                     dynamicLink = appsFlyerLink.link
                                 )
                             )
+                            fundingTxes.remove(invitation.txid)
                         }
                     }
                 }
@@ -807,18 +818,22 @@ class TopUpRepositoryImpl @Inject constructor(
                 return try {
                     DumpedPrivateKey.fromBase58(Constants.NETWORK_PARAMETERS, invite.privateKey)
                     // TODO: when all instantsend locks are deterministic, we don't need the catch block
-                    try {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISDLOCK_VERSION
-                        )
-                    } catch (e: Exception) {
-                        InstantSendLock(
-                            Constants.NETWORK_PARAMETERS,
-                            Utils.HEX.decode(invite.instantSendLock),
-                            InstantSendLock.ISLOCK_VERSION
-                        )
+                    if (invite.instantSendLock != "null") {
+                        try {
+                            InstantSendLock(
+                                Constants.NETWORK_PARAMETERS,
+                                Utils.HEX.decode(invite.instantSendLock),
+                                InstantSendLock.ISDLOCK_VERSION
+                            )
+                        } catch (e: Exception) {
+                            InstantSendLock(
+                                Constants.NETWORK_PARAMETERS,
+                                Utils.HEX.decode(invite.instantSendLock),
+                                InstantSendLock.ISLOCK_VERSION
+                            )
+                        }
+                    } else {
+                        log.info("Invite doesn't have InstantSendLock")
                     }
                     log.info("Invite is valid and took $stopWatch")
                     true
