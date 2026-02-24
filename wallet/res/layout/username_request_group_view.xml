@@ -24,7 +24,7 @@
     android:background="@drawable/rounded_background"
     android:theme="@style/SecondaryBackground"
     style="@style/ViewRaised"
-    tools:context="de.schildbach.wallet.ui.username.adapters.UsernameRequestGroupViewHolder">
+    tools:context="de.schildbach.wallet.ui.username.voting.UsernameRequestsFragment">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/header"

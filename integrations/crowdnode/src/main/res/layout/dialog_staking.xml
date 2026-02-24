@@ -21,7 +21,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:paddingBottom="40dp"
-    tools:context="ui.dialogs.StakingDialog">
+    tools:context="org.dash.wallet.integrations.crowdnode.ui.dialogs.StakingDialog">
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollbar"

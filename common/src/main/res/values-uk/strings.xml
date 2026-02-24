@@ -11,6 +11,7 @@
     <string name="buy_dash">Купити Dash</string>
     <string name="copied">Скопійовано</string>
     <string name="staking_title">Стейкінг</string>
+    <string name="spend_title">Витратити</string>
     <string name="email">Електронна адреса</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Помилка</string>

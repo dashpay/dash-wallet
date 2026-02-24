@@ -17,6 +17,7 @@ Username</b></string>
     <string name="new_account_confirm_accept">Tinatanggap Ko</string>
     <string name="new_account_confirm_upgrade_fee">Bayad sa Pag-upgrade</string>
     <string name="new_account_confirm_message">Pinili mo ang %s bilang iyong username. Pakitandaan na HINDI maaaring baguhin ang username kapag ito ay nakarehistro na.</string>
+    <string name="new_account_secondary_confirm_message">Pinili mo ang %sbilang instant username. Pakitandaan na HINDI maaaring baguhin ang username kapag ito ay nakarehistro.</string>
     <string name="invitation_confirm_title">Bayad sa Imbitasyon</string>
     <string name="invitation_confirm_message">Ang bawat imbitasyon ay popondohan ng halagang ito upang mabilis na magawa ng tatanggap ang kanilang username sa Dash Network</string>
     <string name="invitation_title">Imbitasyon</string>
@@ -313,6 +314,7 @@ Username</b></string>
         <item>May Naka-block na mga boto</item>
     </string-array>
     <string name="request_your_username">Gumawa ng iyong username</string>
+    <string name="request_instant_username">Gumawa ng madaliang  username</string>
     <string name="request_your_hint">Pakitandaan na hindi mo na ito mababago sa hinaharap</string>
     <string name="request_username">Humiling ng Username</string>
     <string name="request_voting_range">Ang Dash network ay boboto sa username na ito. Aabisuhan ka namin ng mga resulta sa %s.</string>
@@ -388,6 +390,8 @@ Username</b></string>
     <string name="requested_voting_duration">Mga resulta sa %s.</string>
     <string name="cancel_request">Kanselahin ang Kahilingan</string>
     <string name="after_the_voting">Pagkatapos ng pagboto ay aabisuhan ka namin tungkol sa mga resulta nito</string>
+    <string name="after_the_voting_result">Natapos na ang botohan</string>
+    <string name="voting_period_error">Hindi nahanap ang panahon ng pagboto</string>
     <string name="none">Wala</string>
     <string name="verify_now">I-verify Ngayon</string>
     <string name="if_you_tap_cancel">Kung tapikin mo ang \"Kanselahin ang Kahilingan\", magkakaroon ka pa rin ng pagkakataong humiling ng isa pang username nang hindi nagbabayad muli</string>
@@ -534,6 +538,10 @@ Username</b></string>
     <string name="accept_invitation_hide">Magtago</string>
     <string name="accept_invitation_create">Gumawa</string>
 
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Gumawa ng madaliang  username</string>
+    <string name="create_instant_username_description">Ang iyong hiniling na username ay iboboto sa loob ng 2 linggo. Para sa mga agarang contact at pagbabayad, maaari kang lumikha ng katulad na instant na username.\n\nKung naaprubahan ang iyong orihinal na kahilingan, papalitan nito ang instant, pinapanatili ang mga contact at kasaysayan. Kung hindi, ipagpatuloy ang paggamit ng instant nang walang patid.</string>
+    <string name="create_instant_username_button">Gumawa ng instant na username</string>
     <string name="create_instant_username_cancel">Kanselahin</string>
 
 </resources>

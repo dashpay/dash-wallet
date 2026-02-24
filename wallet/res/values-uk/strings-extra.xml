@@ -1,7 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
+    <string name="onboarding_create_wallet">Створити новий гаманець</string>
     <string name="onboarding_recover_wallet">Відновити гаманець</string>
+    <string name="onboarding_restore_wallet">Відновити гаманець з файлу</string>
     <string name="onboarding_load_wallet_error">Неможливо завантажити гаманець!</string>
 
     <string name="set_pin_create_new_wallet">Створити новий гаманець</string>
@@ -266,6 +268,7 @@
     <string name="authenticate_switch_to_fingerprint">Використати відбиток пальця</string>
     <string name="authenticate_switch_to_pin">Використати PIN-код</string>
 
+    <string name="menu_invite_title">Запрошання</string>
     <string name="menu_invite_subtitle">Допоможіть друзям і родині приєднатися до Dash</string>
     <string name="menu_buy_and_sell_title">Купити &amp; Продати Dash</string>
     <string name="menu_buy_and_sell_subtitle">Підключитися до сторонніх бірж</string>
@@ -338,6 +341,10 @@
 
     <string name="skip">пропустити</string>
     <string name="get_started">Почати</string>
+    <string name="welcome_screen_title_1">Надсилайте та отримуйте Dash через імена користувачів</string>
+    <string name="welcome_screen_title_2">Витрачайте Dash у тисячах магазинів</string>
+    <string name="welcome_screen_title_3">Найбезпечніший спосіб зберігання вашого Dash</string>
+
     <string-array name="history_filter">
         <item>Все</item>
         <item>Отримано</item>
@@ -418,6 +425,9 @@
     <string name="launch_reset_wallet_extra_message">Зробіть резервну копію фрази відновлення</string>
     <string name="start_reset_wallet_title">Ви можете втратити %s</string>
     <string name="reset_wallet_text">Скидання гаманця</string>
+    <string name="reset_wallet_button">Скидання гаманця</string>
+
+
     <!-- Tax category -->
     <string name="reclassify_transactions_title">Перекласифікуйте свої транзакції</string>
     <string name="reclassify_transactions_title_message">Ці класифікації буде відображено в файлі експорту CSV, який можна використовувати для імпорту в служби податкової звітності.</string>
