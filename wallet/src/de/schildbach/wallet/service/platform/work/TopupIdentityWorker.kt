@@ -25,12 +25,11 @@ import dagger.assisted.AssistedInject
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
-import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.service.work.BaseWorker
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.crypto.KeyCrypterException
@@ -49,6 +48,7 @@ class TopupIdentityWorker @AssistedInject constructor(
     private val topUpRepository: TopUpRepository,
     private val walletDataProvider: WalletDataProvider,
     private val platformRepo: PlatformRepo,
+    private val identityRepo: IdentityRepository,
     private val coinJoinConfig: CoinJoinConfig,
     private val topUpsDao: TopUpsDao
 ) : BaseWorker(context, parameters) {
@@ -88,7 +88,7 @@ class TopupIdentityWorker @AssistedInject constructor(
                     workDataOf(
                         KEY_IDENTITY to identity,
                         KEY_TOPUP_TX to existingTopup.txId.toString(),
-                        KEY_BALANCE to platformRepo.getIdentityBalance()?.balance
+                        KEY_BALANCE to identityRepo.getIdentityBalance()?.balance
                     )
                 )
             } else {
@@ -102,7 +102,7 @@ class TopupIdentityWorker @AssistedInject constructor(
                     workDataOf(
                         KEY_IDENTITY to identity,
                         KEY_TOPUP_TX to topupTx.txId.toString(),
-                        KEY_BALANCE to platformRepo.blockchainIdentity.creditBalance.value * 1000
+                        KEY_BALANCE to identityRepo.getIdentityBalance()?.balance
                     )
                 )
             }

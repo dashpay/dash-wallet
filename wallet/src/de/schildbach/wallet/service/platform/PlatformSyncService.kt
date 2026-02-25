@@ -148,6 +148,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val identityConfig: BlockchainIdentityConfig,
     private val topUpRepository: TopUpRepository,
+    private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletDataProvider,
 ) : PlatformSyncService {
     companion object {
@@ -179,7 +180,10 @@ class PlatformSynchronizationService @Inject constructor(
     private var lastMetadataUpdateTime = 0L
 
     override fun init() {
-        syncScope.launch { platformRepo.init() }
+        syncScope.launch {
+            platformRepo.init()
+            identityRepository.upgradeIdentity(platformRepo.getWalletEncryptionKey())
+        }
         log.info("Starting the platform sync job")
     }
 
