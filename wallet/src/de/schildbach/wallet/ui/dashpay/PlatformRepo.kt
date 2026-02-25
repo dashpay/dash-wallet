@@ -123,7 +123,6 @@ class PlatformRepo @Inject constructor(
         return if (this::blockchainIdentity.isInitialized) {
             blockchainIdentity.uniqueIdString
         } else {
-            blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)!!
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
                 ?: throw IllegalStateException("IdentityId not found")
         }
@@ -814,6 +813,7 @@ class PlatformRepo @Inject constructor(
                 }
                 identity = blockchainIdentityData.identity
             }
+            blockchainIdentity.updateIdentity()
             log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
@@ -863,6 +863,12 @@ class PlatformRepo @Inject constructor(
 
             creditBalance = blockchainIdentityData.creditBalance ?: Coin.ZERO
             log.info("loading identity: {}", watch)
+        }
+    }
+
+    suspend fun updateBlockchainIdentityData() {
+        blockchainIdentityDataStorage.load()?.let {
+            updateBlockchainIdentityData(it, blockchainIdentity)
         }
     }
 
