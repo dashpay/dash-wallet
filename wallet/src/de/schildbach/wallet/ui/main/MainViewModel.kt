@@ -68,6 +68,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -565,11 +567,17 @@ class MainViewModel @Inject constructor(
     private fun resolveContactsForPage(txs: List<Transaction>) {
         if (contacts.isEmpty()) return
         viewModelWorkerScope.launch {
-            val resolved = txs.mapNotNull { tx ->
-                platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
-                    contacts[id]?.let { profile -> tx.txId.toString() to profile }
+            val resolved = txs
+                .map { tx ->
+                    async(Dispatchers.IO) {
+                        platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
+                            contacts[id]?.let { profile -> tx.txId.toString() to profile }
+                        }
+                    }
                 }
-            }.toMap()
+                .awaitAll()
+                .filterNotNull()
+                .toMap()
             if (resolved.isNotEmpty()) {
                 contactsByTxId = contactsByTxId + resolved
                 currentPagingSource?.invalidate()

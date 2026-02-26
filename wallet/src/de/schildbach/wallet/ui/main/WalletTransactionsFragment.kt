@@ -57,6 +57,7 @@ import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
@@ -199,13 +200,15 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         // Handle loading/empty states via loadStateFlow
         viewLifecycleOwner.lifecycleScope.launch {
-            adapter.loadStateFlow.collectLatest { loadStates ->
-                val isLoading = loadStates.refresh is LoadState.Loading
-                val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
+            adapter.loadStateFlow
+                .distinctUntilChanged()
+                .collectLatest { loadStates ->
+                    val isLoading = loadStates.refresh is LoadState.Loading
+                    val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
 
-                binding.loading.isVisible = isLoading
-                if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
-            }
+                    binding.loading.isVisible = isLoading
+                    if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
+                }
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
