@@ -30,6 +30,7 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.work.BaseForegroundWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -59,6 +60,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
     val analytics: AnalyticsService,
     val platformSyncService: PlatformSyncService,
     val walletDataProvider: WalletDataProvider,
+    val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val coinJoinConfig: CoinJoinConfig,
     val identityConfig: BlockchainIdentityConfig,
@@ -121,9 +123,9 @@ class RestoreIdentityWorker @AssistedInject constructor(
             //authExtension.setWallet(walletApplication.wallet!!) // why is the wallet not set?  we didn't deserialize it probably!
             val cftxs = authExtension.assetLockTransactions
 
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_1), 5, 1)
-            val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+            val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 ?: throw IllegalArgumentException("identity $identity doesn't exist on the network")
 
             val wallet = walletDataProvider.wallet!!
@@ -146,7 +148,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
             // Step 3: Find the identity
             //
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_2), 5, 2)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
 
             val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
             platformRepo.recoverIdentityAsync(
@@ -154,8 +156,8 @@ class RestoreIdentityWorker @AssistedInject constructor(
                 firstIdentityKey.pubKeyHash
             )
 
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 3)
 
@@ -166,10 +168,10 @@ class RestoreIdentityWorker @AssistedInject constructor(
             //
             // Step 5: Find the username
             //
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
             platformRepo.recoverUsernames(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 4)
 
@@ -177,7 +179,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
             val maybeDualUsernames = blockchainIdentity.currentUsername != null && !Names.isUsernameContestable(blockchainIdentity.currentUsername!!)
             val instantUsername = blockchainIdentity.currentUsername
             if (blockchainIdentity.currentUsername == null || maybeDualUsernames) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // find active voting here
                 val watch = Stopwatch.createStarted()
@@ -274,7 +276,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                             usernameInfo.votingStartedAt = earliestCreatedAt
                             usernameInfo.requestStatus = usernameRequestStatus
-                            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                             // schedule work to check the status after voting has ended
                             if (usernameInfo.votingStartedAt != 0L) {
@@ -393,7 +395,7 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                                 usernameInfo?.votingStartedAt = earliestCreatedAt
                                 usernameInfo?.requestStatus = usernameRequestStatus
-                                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                                 // schedule work to check the status after voting has ended
                                 if (usernameInfo?.votingStartedAt != 0L) {
@@ -412,28 +414,28 @@ class RestoreIdentityWorker @AssistedInject constructor(
 
                 if (blockchainIdentity.currentUsername != null && foundContestedNameInVotingPeriod) {
 
-                    platformRepo.updateIdentityCreationState(
+                    identityRepository.updateIdentityCreationState(
                         blockchainIdentityData,
                         IdentityCreationState.REQUESTED_NAME_CHECKED
                     )
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-                    platformRepo.updateIdentityCreationState(
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateIdentityCreationState(
                         blockchainIdentityData,
                         IdentityCreationState.REQUESTED_NAME_CHECKING
                     )
 
                     // recover the verification link
-                    platformRepo.updateIdentityCreationState(
+                    identityRepository.updateIdentityCreationState(
                         blockchainIdentityData,
                         IdentityCreationState.REQUESTED_NAME_CHECKED
                     )
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
                     // set voting state
-                    platformRepo.updateIdentityCreationState(
+                    identityRepository.updateIdentityCreationState(
                         blockchainIdentityData,
                         IdentityCreationState.VOTING
                     )
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
                 }
             }
             updateNotification(applicationContext.getString(R.string.processing_home_title), applicationContext.getString(R.string.processing_home_step_3_restoring), 5, 5)
@@ -443,37 +445,37 @@ class RestoreIdentityWorker @AssistedInject constructor(
             if (blockchainIdentity.identity != null && blockchainIdentity.currentUsername == null) {
                 blockchainIdentityData.creationState = IdentityCreationState.USERNAME_REGISTERING
                 blockchainIdentityData.restoring = false
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 error("missing domain document for ${blockchainIdentity.uniqueId}")
             }
 
             //
             // Step 6: Find the profile
             //
-            platformRepo.recoverDashPayProfile(blockchainIdentity)
+            identityRepository.recoverDashPayProfile(blockchainIdentity)
             // blockchainIdentity hasn't changed
             platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
 
-            platformRepo.addInviteUserAlert()
+            identityRepository.addInviteUserAlert()
 
             // We are finished recovering
             blockchainIdentityData.finishRestoration()
             if (blockchainIdentityData.creationState != IdentityCreationState.VOTING ||
                 (blockchainIdentityData.creationState == IdentityCreationState.VOTING && blockchainIdentityData.lostVote && blockchainIdentityData.showSecondaryUsername)) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 // Complete the entire process
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
             }
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
 
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
-            platformRepo.init()
+            identityRepository.init()
             platformSyncService.initSync(true)
         } catch (e: Exception) {
             val blockchainIdentityData = identityConfig.load()
             blockchainIdentityData?.let {
-                platformRepo.updateIdentityCreationState(it, it.creationState, e)
+                identityRepository.updateIdentityCreationState(it, it.creationState, e)
             }
             // triggering the end of the preBlockDownload stage as complete
             // could be problematic, what if there were errors

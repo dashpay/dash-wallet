@@ -26,6 +26,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
 import de.schildbach.wallet.livedata.Resource.Companion.loading
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -45,7 +46,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
 
     private var inviteLoadingDialog: AdaptiveDialog? = null
     @Inject lateinit var platformRepo: PlatformRepo
-
+    @Inject lateinit var identityRepository: IdentityRepository
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
@@ -218,7 +219,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                 exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
 
@@ -226,13 +227,13 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                     handle(loading(blockchainIdentityData.invite, 0))
                     handle(error(exception.message!!, blockchainIdentityData.invite))
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
                 exception is BalanceIsNotEnoughException -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
             }

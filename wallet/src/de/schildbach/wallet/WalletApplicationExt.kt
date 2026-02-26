@@ -38,7 +38,7 @@ object WalletApplicationExt {
             if (isWalletWipe) {
                 transactionMetadataProvider.clear()
             }
-            platformRepo.clearDatabase(isWalletWipe)
+            identityRepository.clearDatabase(isWalletWipe)
             WorkManager.getInstance(context).cancelAllWork()
         }
     }

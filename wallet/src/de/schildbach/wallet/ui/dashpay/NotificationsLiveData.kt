@@ -20,12 +20,14 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.*
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 open class NotificationsLiveData(
+    private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     platformSyncService: PlatformSyncService,
     protected val scope: CoroutineScope,
@@ -45,12 +47,12 @@ open class NotificationsLiveData(
             //TODO: remove the if when INVITES are supported
             if (Constants.SUPPORTS_INVITES) {
                 val userAlert = userAlertDao.load(0L)
-                if (userAlert != null && platformRepo.shouldShowAlert()) {
+                if (userAlert != null && identityRepository.shouldShowAlert()) {
                     results.add(NotificationItemUserAlert(userAlert.stringResourceId, userAlert.iconResourceId))
                 }
             }
 
-            val contactRequests = platformRepo.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
+            val contactRequests = identityRepository.searchContacts(query, UsernameSortOrderBy.DATE_ADDED)
 
             //TODO: gather other notification types
             // * invitations

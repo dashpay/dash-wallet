@@ -104,7 +104,7 @@ class DashPayUserActivityViewModel @Inject constructor(
             }
 
             try {
-                platformRepo.getUser(username).firstOrNull()?.let {
+                identityRepository.getUser(username).firstOrNull()?.let {
                     _userData.value = it
                 }
             } catch (ex: Exception) {
@@ -149,7 +149,7 @@ class DashPayUserActivityViewModel @Inject constructor(
 
     private fun observeContactNotifications(dashPayProfile: DashPayProfile) {
         combine(
-            platformRepo.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
+            identityRepository.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
                 .distinctUntilChanged(),
             walletData.observeMostRecentTransaction()
                 .distinctUntilChanged()
@@ -191,8 +191,8 @@ class DashPayUserActivityViewModel @Inject constructor(
                 }
             }
 
-            val blockchainIdentity = platformRepo.blockchainIdentity
-            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
+            val blockchainIdentity = identityRepository.blockchainIdentity
+            val txs = blockchainIdentity!!.getContactTransactions(Identifier.from(userId), accountReference)
 
             txs.forEach {
                 results.add(NotificationItemPayment(it))

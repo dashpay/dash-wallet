@@ -21,6 +21,7 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.ui.dashpay.UserAlert.Companion.INVITATION_NOTIFICATION_ICON
@@ -142,6 +143,7 @@ class CreateIdentityService : LifecycleService() {
 
     private val walletApplication by lazy { application as WalletApplication }
     @Inject lateinit var configuration: Configuration
+    @Inject lateinit var identityRepository: IdentityRepository
     @Inject lateinit var platformRepo: PlatformRepo
     @Inject lateinit var platformSyncService: PlatformSyncService
     @Inject lateinit var topUpRepository: TopUpRepository
@@ -188,9 +190,9 @@ class CreateIdentityService : LifecycleService() {
             var isInvite = false
             if (this@CreateIdentityService::blockchainIdentityData.isInitialized) {
                 log.error("[${blockchainIdentityData.creationState}(error)]", exception)
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, blockchainIdentityData.creationState, exception)
                 if (this@CreateIdentityService::blockchainIdentity.isInitialized) {
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
                 }
                 isInvite = blockchainIdentityData.usingInvite
             }
@@ -222,7 +224,7 @@ class CreateIdentityService : LifecycleService() {
         if (intent == null) {
             // the service has been restarted by the system
             val blockchainIdentityData = runBlocking {
-                platformRepo.loadBlockchainIdentityBaseData()
+                identityRepository.loadBlockchainIdentityBaseData()
             }
             if (blockchainIdentityData != null && blockchainIdentityData.creationState != IdentityCreationState.DONE && !blockchainIdentityData.restoring) {
                 handleCreateIdentityAction(null, null)
@@ -283,8 +285,8 @@ class CreateIdentityService : LifecycleService() {
         val timerEntireProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE)
         val timerStep1 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_1)
 
-        val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
-        val blockchainIdentityDataBase = platformRepo.loadBlockchainIdentityBaseData() // for other info
+        val blockchainIdentityDataTmp = identityRepository.loadBlockchainIdentityData()
+        val blockchainIdentityDataBase = identityRepository.loadBlockchainIdentityBaseData() // for other info
         when {
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
                 blockchainIdentityData = blockchainIdentityDataTmp
@@ -303,7 +305,7 @@ class CreateIdentityService : LifecycleService() {
                     false,
                     verificationLink = blockchainIdentityDataBase?.verificationLink
                 )
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
                 throw IllegalStateException()
@@ -342,10 +344,10 @@ class CreateIdentityService : LifecycleService() {
                     // dash-sdk doesn't give us the above
                     errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process
@@ -362,10 +364,10 @@ class CreateIdentityService : LifecycleService() {
                     // dash-sdk doesn't give us the above
                     errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process
@@ -376,20 +378,20 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
+        identityRepository.resetIdentityCreationStateError(blockchainIdentityData)
 
         val wallet = walletApplication.wallet!!
 
         val encryptionKey = platformRepo.getWalletEncryptionKey() ?: throw IllegalStateException("cannot obtain wallet encryption key")
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.UPGRADING_WALLET) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
             val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
             platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
         }
 
         val authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID) as AuthenticationGroupExtension
-        val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
+        val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
         // look for the credit funding tx in case there was an error in the next step previously
         for (tx in authenticationGroupExtension.assetLockTransactions) {
             tx as AssetLockTransaction
@@ -399,7 +401,7 @@ class CreateIdentityService : LifecycleService() {
         }
         var assetLockTransaction: AssetLockTransaction? = null
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
@@ -442,7 +444,7 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_SENDING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_SENDING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_SENDING)
             val timerIsLock = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_ISLOCK)
             // check to see if the funding transaction has been sent previously
             org.bitcoinj.core.Context.propagate(wallet.context)
@@ -467,9 +469,9 @@ class CreateIdentityService : LifecycleService() {
 
         //TODO: check to see if the funding transaction has been been confirmed
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
             // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         // did we fail in the previous attempt - lost the vote
@@ -477,18 +479,18 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentityData.usernameRequested == UsernameRequestStatus.LOST_VOTE ||
                 blockchainIdentityData.usernameRequested == UsernameRequestStatus.LOCKED
         if (retryAfterLostUsernameRequest) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
         }
 
         timerStep1.logTiming()
         val timerStep2 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_2)
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.IDENTITY_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
             //
             // Step 3: Register the identity
             //
-            val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+            val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
             if (existingIdentity != null) {
                 val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
                 platformRepo.recoverIdentityAsync(blockchainIdentity, firstIdentityKey.pubKeyHash)
@@ -498,7 +500,7 @@ class CreateIdentityService : LifecycleService() {
             } else {
                 platformRepo.registerIdentity(blockchainIdentity, encryptionKey)
             }
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
         timerStep2.logTiming()
 
@@ -519,7 +521,7 @@ class CreateIdentityService : LifecycleService() {
         log.info("username registration starting from invitation")
         val timerInviteProcess = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_INVITATION_CLAIM)
 
-        val blockchainIdentityDataTmp = platformRepo.loadBlockchainIdentityData()
+        val blockchainIdentityDataTmp = identityRepository.loadBlockchainIdentityData()
 
         when {
             (blockchainIdentityDataTmp != null && !retryWithNewUserName) -> {
@@ -532,14 +534,14 @@ class CreateIdentityService : LifecycleService() {
                 blockchainIdentityData = BlockchainIdentityData(IdentityCreationState.NONE,
                         null, username, usernameSecondary, null, false,
                         usingInvite = true, invite = invite)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
             }
             else -> {
                 throw IllegalStateException()
             }
         }
         blockchainIdentityData.usingInvite = true
-        platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+        identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
 
         var isRetry = false
         if (blockchainIdentityData.creationState != IdentityCreationState.NONE || blockchainIdentityData.creationStateErrorMessage != null) {
@@ -571,10 +573,10 @@ class CreateIdentityService : LifecycleService() {
                     // dash-sdk doesn't give us the above
                     errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process
@@ -591,10 +593,10 @@ class CreateIdentityService : LifecycleService() {
                     // dash-sdk doesn't give us the above
                     errorMessage.contains("state transition broadcast error: Unknown error")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (errorMessage.contains("missing domain document for")) {
                     blockchainIdentityData.creationState = IdentityCreationState.PREORDER_SECONDARY_REGISTERING
-                    platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                    identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 } else if (retryWithNewUserName) {
                     // lets rewind the state to allow for a new username registration or request
                     // it may have failed later in the process
@@ -605,23 +607,23 @@ class CreateIdentityService : LifecycleService() {
             }
         }
 
-        platformRepo.resetIdentityCreationStateError(blockchainIdentityData)
+        identityRepository.resetIdentityCreationStateError(blockchainIdentityData)
 
         val wallet = walletApplication.wallet!!
 
         val encryptionKey = platformRepo.getWalletEncryptionKey()  ?: throw IllegalStateException("cannot obtain wallet encryption key")
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.UPGRADING_WALLET) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.UPGRADING_WALLET)
             val seed = wallet.keyChainSeed ?: throw IllegalStateException("cannot obtain wallet seed")
             platformRepo.addWalletAuthenticationKeys(seed, encryptionKey)
         }
 
-        val blockchainIdentity = platformRepo.initBlockchainIdentity(blockchainIdentityData, wallet)
+        val blockchainIdentity = identityRepository.initBlockchainIdentity(blockchainIdentityData, wallet)
 
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CREATING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CREATING)
             //
             // Step 2: Create and send the credit funding transaction
             //
@@ -632,24 +634,24 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_SENDING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_SENDING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_SENDING)
             // invite transactions have already been sent
         }
 
         if (blockchainIdentityData.creationState <= IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.CREDIT_FUNDING_TX_CONFIRMED)
             // If the tx is in a block, seen by a peer, InstantSend lock, then it is considered confirmed
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         // This step will fail because register identity
         if (blockchainIdentityData.creationState <= IdentityCreationState.IDENTITY_REGISTERING) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
             //
             // Step 3: Register the identity
             //
             try {
-                val existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                val existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 if (existingIdentity != null) {
                     val encryptionKey = platformRepo.getWalletEncryptionKey()
                     val firstIdentityKey = platformRepo.getBlockchainIdentityKey(0, encryptionKey)!!
@@ -677,7 +679,7 @@ class CreateIdentityService : LifecycleService() {
                 }
                 throw e
             }
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         topUpRepository.clearInvitation()
@@ -685,7 +687,7 @@ class CreateIdentityService : LifecycleService() {
         finishRegistration(blockchainIdentity, encryptionKey, usernameSecondary)
 
         invite?.apply {
-            val results = platformRepo.getUser(user)
+            val results = identityRepository.getUser(user)
             if (results.isNotEmpty()) {
                 val inviterUserId = results[0].dashPayProfile.userId
                 SendContactRequestOperation(walletApplication)
@@ -704,11 +706,11 @@ class CreateIdentityService : LifecycleService() {
     private suspend fun finishRegistration(blockchainIdentity: BlockchainIdentity, encryptionKey: KeyParameter, usernameSecondary: String?) {
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= IdentityCreationState.IDENTITY_REGISTERED) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             //
             // Step 3: Verify that the identity was registered
             //
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
         val timerStep3 = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_USERNAME_CREATE_STEP_3)
 
@@ -728,7 +730,7 @@ class CreateIdentityService : LifecycleService() {
             // save the verification link in a new document
 
             if (blockchainIdentityData.creationState <= IdentityCreationState.REQUESTED_NAME_CHECKING) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
 
                 val contenders = platformRepo.getVoteContenders(blockchainIdentityData.username!!)
@@ -772,7 +774,7 @@ class CreateIdentityService : LifecycleService() {
                 usernameInfo.votingStartedAt = earliestCreatedAt
                 usernameInfo.requestStatus = UsernameRequestStatus.VOTING
 
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 // schedule work to check the status after voting has ended
                 GetUsernameVotingResultOperation(walletApplication)
@@ -786,8 +788,8 @@ class CreateIdentityService : LifecycleService() {
 
 
             if (blockchainIdentityData.creationState <= IdentityCreationState.REQUESTED_NAME_CHECKED) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_LINK_SAVING)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_LINK_SAVING)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 blockchainIdentityData.verificationLink?.let { verificationLink ->
                     if (verificationLink.matches(Regex("^https?:\\/\\/.+\$"))) {
@@ -802,19 +804,19 @@ class CreateIdentityService : LifecycleService() {
             }
 
             if (blockchainIdentityData.creationState <= IdentityCreationState.REQUESTED_NAME_LINK_SAVING) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_LINK_SAVED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_LINK_SAVED)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
                 // save the verification link
             }
 
             if (blockchainIdentityData.creationState <= IdentityCreationState.REQUESTED_NAME_LINK_SAVED) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
         } else {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
         }
 
         // Step 6: A profile will not be created, since the user has not yet specified
@@ -829,7 +831,7 @@ class CreateIdentityService : LifecycleService() {
                 AnalyticsConstants.UsersContacts.CREATE_USERNAME_SUCCESS
             }, mapOf()
         )
-        platformRepo.init()
+        identityRepository.init()
         platformSyncService.initSync()
 
         timerStep3.logTiming()
@@ -881,39 +883,39 @@ class CreateIdentityService : LifecycleService() {
         }
 
         if (blockchainIdentityData.creationState <= preorderRegistering) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistering)
             //
             // Step 4: Preorder the username
 
             platformRepo.preorderName(blockchainIdentity, encryptionKey, username)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= preorderRegistered) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, preorderRegistered)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, preorderRegistered)
             //
             // Step 4: Verify that the username was preordered
             //
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         if (blockchainIdentityData.creationState <= domainRegistering) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistering)
             //
             // Step 5: Register the username
             //
             platformRepo.registerName(blockchainIdentity, encryptionKey, username)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
         }
 
         // This Step is obsolete, verification is handled by the previous block, lets leave it in for now
         if (blockchainIdentityData.creationState <= domainRegistered) {
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, domainRegistered)
             //
             // Step 5: Verify that the username was registered
             //
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             when (usernameType) {
                 UsernameType.Primary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME, mapOf())
                 UsernameType.Secondary -> analytics.logEvent(AnalyticsConstants.UsersContacts.CREATE_USERNAME_INSTANT, mapOf())
@@ -951,10 +953,10 @@ class CreateIdentityService : LifecycleService() {
             val existingBlockchainIdentityData = blockchainIdentityDataDao.load()
             if (existingBlockchainIdentityData != null && !(existingBlockchainIdentityData.restoring /*&& existingCreationStateErrorMessage != null*/)) {
                 log.info("Attempting restore of existing identity and username; save credit funding txid")
-                val blockchainIdentity = platformRepo.blockchainIdentity
+                val blockchainIdentity = identityRepository.blockchainIdentity!!
                 blockchainIdentity.assetLockTransaction = creditFundingTransaction
                 existingBlockchainIdentityData.creditFundingTxId = creditFundingTransaction!!.txId
-                platformRepo.updateBlockchainIdentityData(existingBlockchainIdentityData)
+                identityRepository.updateBlockchainIdentityData(existingBlockchainIdentityData)
                 return
             }
 
@@ -962,7 +964,7 @@ class CreateIdentityService : LifecycleService() {
             val existingIdentity: Identity?
 
             if (!loadingFromAssetLockTransaction) {
-                existingIdentity = platformRepo.getIdentityFromPublicKeyId()
+                existingIdentity = identityRepository.getIdentityFromPublicKeyId()
                 if (existingIdentity == null) {
                     throw IllegalArgumentException("identity $identity does not match a credit funding transaction or it doesn't exist on the network")
                 }
@@ -987,7 +989,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 3: Find the identity
             //
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERING)
             if (loadingFromAssetLockTransaction) {
                 platformRepo.recoverIdentityAsync(blockchainIdentity, creditFundingTransaction!!)
             } else {
@@ -997,8 +999,8 @@ class CreateIdentityService : LifecycleService() {
                     firstIdentityKey.pubKeyHash
                 )
             }
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.IDENTITY_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetIdentity)
 
 
@@ -1009,14 +1011,14 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 5: Find the username
             //
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERING)
             platformRepo.recoverUsernames(blockchainIdentity)
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
-            platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+            identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.USERNAME_REGISTERED)
             platformSyncService.updateSyncStatus(PreBlockStage.GetName)
 
             if (blockchainIdentity.currentUsername == null) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
 
                 // check if the network has this name in the queue for voting
                 val contestedNames = platformRepo.platform.names.getAllContestedNames()
@@ -1115,18 +1117,18 @@ class CreateIdentityService : LifecycleService() {
                     }
                 }
 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
                 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKING)
                 
                 // recover the verification link
 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.REQUESTED_NAME_CHECKED)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
 
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.VOTING)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData, blockchainIdentity)
             }
 
             // At this point, let's see what has been recovered.  It is possible that only the identity was recovered.
@@ -1140,7 +1142,7 @@ class CreateIdentityService : LifecycleService() {
             //
             // Step 6: Find the profile
             //
-            platformRepo.recoverDashPayProfile(blockchainIdentity)
+            identityRepository.recoverDashPayProfile(blockchainIdentity)
             // blockchainIdentity hasn't changed
             platformSyncService.updateSyncStatus(PreBlockStage.GetProfile)
 
@@ -1149,15 +1151,15 @@ class CreateIdentityService : LifecycleService() {
             // We are finished recovering
             blockchainIdentityData.finishRestoration()
             if (blockchainIdentityData.creationState != IdentityCreationState.VOTING) {
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
-                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE)
+                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                 // Complete the entire process
-                platformRepo.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
+                identityRepository.updateIdentityCreationState(blockchainIdentityData, IdentityCreationState.DONE_AND_DISMISS)
             }
-            platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+            identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
 
             platformSyncService.updateSyncStatus(PreBlockStage.RecoveryComplete)
-            platformRepo.init()
+            identityRepository.init()
             platformSyncService.initSync()
         } catch (e: Exception) {
             platformSyncService.triggerPreBlockDownloadComplete()

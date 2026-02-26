@@ -173,7 +173,7 @@ open class DashPayViewModel @Inject constructor(
                     log,
                     AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY
                 )
-                var result = platformRepo.searchUsernames(search.text, false, search.limit)
+                var result = identityRepository.searchUsernames(search.text, false, search.limit)
                 result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
                     val limit = result.size.coerceAtMost(search.limit)
@@ -211,7 +211,7 @@ open class DashPayViewModel @Inject constructor(
         searchContactsJob = Job()
         liveData(context = searchContactsJob + Dispatchers.IO) {
             emit(Resource.loading(null))
-            emit(platformRepo.searchContacts(usernameSearch.text, usernameSearch.orderBy))
+            emit(identityRepository.searchContacts(usernameSearch.text, usernameSearch.orderBy))
         }
     }
 
@@ -221,7 +221,7 @@ open class DashPayViewModel @Inject constructor(
 
     fun usernameDoneAndDismiss() {
         viewModelScope.launch(Dispatchers.IO) {
-            platformRepo.doneAndDismiss()
+            identityRepository.doneAndDismiss()
         }
     }
 
@@ -326,6 +326,6 @@ open class DashPayViewModel @Inject constructor(
     )
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo? {
-        return platformRepo.getIdentityBalance()
+        return identityRepository.getIdentityBalance()
     }
 }

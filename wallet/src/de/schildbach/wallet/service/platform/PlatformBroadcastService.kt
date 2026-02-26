@@ -61,6 +61,7 @@ interface PlatformBroadcastService {
 class PlatformDocumentBroadcastService @Inject constructor(
     val dashSystemService: DashSystemService,
     val platform: PlatformService,
+    val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
@@ -87,7 +88,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
     override suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
         val potentialContactIdentity = platform.identities.get(toUserId)
         log.info("potential contact identity: $potentialContactIdentity")
-        val blockchainIdentity = platformRepo.blockchainIdentity
+        val blockchainIdentity = identityRepository.blockchainIdentity!!
 
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -108,14 +109,14 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
         log.info("contact request: $cr")
         val dashPayContactRequest = DashPayContactRequest.fromDocument(cr)
-        platformRepo.updateDashPayContactRequest(dashPayContactRequest) // update the database since the cr was accepted
+        identityRepository.updateDashPayContactRequest(dashPayContactRequest) // update the database since the cr was accepted
         platformRepo.updateDashPayProfile(toUserId) // update the profile
         platformSyncService.fireContactsUpdatedListeners() // trigger listeners
         return dashPayContactRequest
     }
 
     override suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument {
-        val blockchainIdentity = platformRepo.blockchainIdentity
+        val blockchainIdentity = identityRepository.blockchainIdentity!!
 
         // Create Identity Verify
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -184,7 +185,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
     @Throws(Exception::class)
     override suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile {
         log.info("broadcast profile")
-        val blockchainIdentity = platformRepo.blockchainIdentity
+        val blockchainIdentity = identityRepository.blockchainIdentity!!
 
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null

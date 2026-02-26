@@ -97,6 +97,7 @@ import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
+import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
@@ -212,6 +213,8 @@ public class WalletApplication extends MultiDexApplication
     TransactionMetadataProvider transactionMetadataProvider;
     @Inject
     PlatformRepo platformRepo;
+    @Inject
+    IdentityRepository identityRepository;
     @Inject
     PlatformSyncService platformSyncService;
     @Inject
