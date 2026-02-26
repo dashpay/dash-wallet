@@ -42,6 +42,13 @@
             app:destination="@id/contactsFragment" />
 
         <action
+            android:id="@+id/home_to_searchUser"
+            app:destination="@id/searchUserFragment"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
             android:id="@+id/home_to_notifications"
             app:destination="@id/showNotificationsFragment">
 
@@ -149,6 +156,32 @@
         <action
             android:id="@+id/contacts_to_contacts"
             app:destination="@id/contactsFragment" />
+
+        <action android:id="@+id/contacts_to_invite_fee"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="source"
+                app:argType="string"/>
+        </action>
+
+        <action android:id="@+id/contacts_to_invite_history"
+            app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="source"
+                app:argType="string"/>
+        </action>
+
+        <action android:id="@+id/contacts_to_search_user"
+            app:destination="@id/searchUserFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
 
         <argument
             android:name="ShowNavBar"
@@ -289,6 +322,26 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action android:id="@+id/more_to_invite_fee"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="source"
+                app:argType="string"/>
+        </action>
+
+        <action android:id="@+id/more_to_invite_history"
+            app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
     </fragment>
 
     <fragment
@@ -502,10 +555,60 @@
         android:label="ShowSeed"
         tools:layout="@layout/fragment_notifications">
 
+        <action android:id="@+id/notifications_to_invite_fee"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument android:name="source" app:argType="string"/>
+        </action>
+
+        <action android:id="@+id/notifications_to_invite_history"
+            app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
+
         <argument
             android:name="mode"
             app:argType="integer"
             android:defaultValue="2" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/searchUserFragment"
+        android:name="de.schildbach.wallet.ui.SearchUserFragment"
+        android:label="ShowSeed"
+        tools:layout="@layout/activity_search_dashpay_profile_root">
+
+        <action android:id="@+id/search_user_to_invite_fee"
+            app:destination="@id/nav_host_create_invite"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="source"
+                app:argType="string"/>
+        </action>
+
+        <action android:id="@+id/search_user_to_invite_history"
+            app:destination="@id/nav_host_invite_history"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left">
+            <argument
+                android:name="caller"
+                app:argType="string"/>
+        </action>
+
+        <argument
+            android:name="query"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
     <fragment
@@ -519,4 +622,6 @@
     <include app:graph="@navigation/nav_voting" />
     <!--include app:graph="@navigation/nav_settings" /-->
     <!--include app:graph="@navigation/nav_metadata_settings" /-->
+    <include app:graph="@navigation/nav_create_invite" />
+    <include app:graph="@navigation/nav_invite_history" />
 </navigation>

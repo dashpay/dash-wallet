@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Dompet Anda berhasil dipulihkan. Saldonya akan ditentukan selanjutnya. Ini akan memakan waktu.</string>
     <string name="restore_wallet_dialog_success_encrypted">Peringatan: Dompet Anda dilindungi oleh PIN. Pastikan Anda masih mengingatnya sebelum menerima dompet ini.</string>
     <string name="import_keys_dialog_failure">Kunci pribadi tidak dpt dipulihkan:\n\n%s\n\nKata sandi salah?</string>
+    <string name="restore_wallet_creation_date_label">Tanggal Pembuatan Dompet (Opsional)</string>
+    <string name="restore_wallet_creation_date_info">Memilih tanggal pembuatan dompet Anda memungkinkan sinkronisasi yang lebih cepat dengan hanya memindai dari tanggal tersebut dan seterusnya.</string>
+    <string name="restore_wallet_select_date">Pilih Tanggal Pembuatan</string>
+    <string name="restore_wallet_selected_date">Terpilih: %s</string>
+    <string name="restore_wallet_date_picker_title">Kapan dompet anda dibuat?</string>
+    <string name="wallet_creation_date_info_title">Bagaimana tanggal pembuatan dompet dapat mempercepat prosesnya?</string>
+    <string name="wallet_creation_date_info_description">Jika Anda mengetahui perkiraan tanggal pembuatan dompet Anda, Anda dapat memasukkannya dan transaksi dari tanggal tersebut akan diambil sehingga sinkronisasi menjadi lebih cepat. Harap dicatat, jika Anda memasukkan tanggal yang lebih baru dari tanggal pembuatan dompet, transaksi yang lebih lama tidak akan diunduh.</string>
     <string name="export_keys_dialog_title">Cadangkan kunci pribadi</string>
     <string name="backup_wallet_dialog_message">Kunci pribadi Anda akan dienkripsi dgn kata sandi terpilih dan akan disimpan ke penyimpanan eksternal.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Dompet Anda dilindungi oleh PIN pengiriman. Pastikan Anda mengingat PIN sebagai tambahan kata sandi cadangan!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Pindai ulang blockchain, transaksi, dan saldo dompet. Pemutaran ulang akan memakan waktu cukup lama, jadi lakukan ini hanya jika Anda tahu alasannya.</string>
     <string name="preferences_initiate_reset_dialog_message">Apakah Anda ingin memindai ulang blockchain?\n\nIni akan menyembunyikan sementara saldo dompet Anda dan menghapus transaksi. Keduanya akan pulih saat sinkronisasi blockchain berlangsung. Pastikan Anda memiliki koneksi internet yang andal.</string>
     <string name="preferences_initiate_reset_dialog_positive">Pindai ulang</string>
+    <string name="rescan_blockchain_dialog_title">Apakah Anda yakin ingin memindai ulang blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Ini akan menyembunyikan sementara saldo dompet Anda dan menghapus transaksi. Keduanya akan pulih seiring berjalannya sinkronisasi blockchain. Pastikan Anda memiliki koneksi internet yang andal.</string>
+    <string name="rescan_blockchain_select_date_label">Pilih tanggal pembuatan dompet (Opsional)</string>
+    <string name="rescan_blockchain_date_info_description">Informasi tentang tanggal pembuatan dompet</string>
+    <string name="rescan_blockchain_select_date_placeholder">Pilih</string>
+    <string name="rescan_blockchain_confirm_button">Pindai ulang</string>
     <string name="preferences_extended_public_key_title">Tampilkan xpub</string>
     <string name="preferences_extended_public_key_summary">Lihat kunci publik yang diperluas dari dompet Anda, sehingga dapat diimpor ke aplikasi dan layanan lain. Hati-hati: melakukannya akan mengungkapkan moneter pribadi anda di aplikasi tersebut.</string>
     <string name="bitmap_fragment_share">Bagikan...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Pilih opsi</string>
     <string name="customize_shortcuts">Sesuaikan bilah pintasan</string>
     <string name="customize_shortcuts_description">Tahan tombol apa pun di atas untuk menggantinya dengan fungsi yang Anda butuhkan</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Anda perlu memperbarui PIN Anda.</string>
+    <string name="upgrade_pin_description">Siapkan PIN baru</string>
+    <string name="upgrade_pin_continue">Teruskan</string>
 </resources>

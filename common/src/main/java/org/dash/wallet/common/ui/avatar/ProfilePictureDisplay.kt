@@ -19,6 +19,7 @@ package org.dash.wallet.common.ui.avatar
 
 import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.view.View
 import android.widget.ImageView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DataSource
@@ -28,10 +29,12 @@ import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.bumptech.glide.signature.ObjectKey
 import org.dash.wallet.common.ui.avatar.UserAvatarPlaceholderDrawable.Companion.getDrawable
+import org.slf4j.LoggerFactory
 
 class ProfilePictureDisplay {
 
     companion object {
+        private val log = LoggerFactory.getLogger(ProfilePictureDisplay::class.java)
 
         @JvmStatic
         fun display(avatarView: ImageView, avatarUrlStr: String, avatarHash: ByteArray?, username: String) {
@@ -64,6 +67,12 @@ class ProfilePictureDisplay {
                             isFirstResource: Boolean
                         ): Boolean {
                             listener?.onResourceReady(null)
+                            log.error("glide error loading icon $avatarUrl")
+                            e?.let { exception ->
+                                exception.causes.forEach { cause ->
+                                    log.error("  ${cause.message} with cause: ${cause.cause?.message}")
+                                }
+                            }
                             return false
                         }
 

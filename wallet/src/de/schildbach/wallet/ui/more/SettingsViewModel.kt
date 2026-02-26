@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.onEach
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
@@ -71,6 +72,7 @@ class SettingsViewModel @Inject constructor(
     private val configuration: Configuration,
     private val dashPayConfig: DashPayConfig,
     private val blockchainIdentityConfig: BlockchainIdentityConfig,
+    private val blockchainServiceConfig: BlockchainServiceConfig,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(
     blockchainIdentityConfig,
@@ -199,4 +201,11 @@ class SettingsViewModel @Inject constructor(
     fun updateTransactionMetadataSubtitle(subtitle: String?) {
         _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
     }
+
+    suspend fun setWalletCreationDate(creationDate: Long?) {
+        blockchainServiceConfig.setWalletCreationDate(creationDate)
+    }
+
+    suspend fun getWalletCreationDate(): Long? =
+        blockchainServiceConfig.getWalletCreationDate()
 }

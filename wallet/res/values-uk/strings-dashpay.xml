@@ -16,9 +16,10 @@
     <string name="new_account_confirm_accept">Я приймаю</string>
     <string name="new_account_confirm_upgrade_fee">Комісія за оновлення</string>
     <string name="new_account_confirm_message">Ви вибрали %s як своє ім\'я користувача. Ім\'я користувача не можна змінити після реєстрації.</string>
+    <string name="new_account_secondary_confirm_message">Ви обрали %s ім\'я користувача як миттєве. Зверніть увагу, що ім\'я користувача НЕ можна змінити після реєстрації.</string>
     <string name="invitation_confirm_title">Комісія за запрошення</string>
     <string name="invitation_confirm_message">Кожне запрошення фінансуватиметься цією сумою, щоб одержувач міг швидко створити своє ім’я користувача в Dash Network</string>
-    <string name="invitation_init_title">Запросити</string>
+    <string name="invitation_title">Запрошення</string>
     <string name="invitation_init_header">Запрошуйте своїх друзів і сім\'ю</string>
     <string name="invitation_init_message">Дозвольте своїм друзям і родині приєднатися до Dash Network. Запросіть їх у світ соціального банкінгу.</string>
     <string name="invitation_init_button_text">Створити нове запрошення</string>
@@ -52,8 +53,12 @@
     <string name="invitation_invalid_invite_message">Ваше запрошення від %s недійсне</string>
     <string name="invitation_username_already_found_title">Ім\'я користувача вже існує</string>
     <string name="invitation_username_already_found_message">Ви не можете отримати це запрошення, оскільки у вас уже є ім’я користувача Dash</string>
+    <string name="invitation_username_already_found_voting_title">Ім’я користувача вже запитано</string>
+    <string name="invitation_username_already_found_voting_message">Ви не можете прийняти це запрошення, оскільки вже запитали ім’я користувача Dash</string>
     <string name="invitation_onboarding_has_began_error_title">Помилка процессу оформлення</string>
+    <string name="invitation_error_title">Помилка запрошення</string>
     <string name="invitation_onboarding_has_began_error">Процес оформлення триває, будь ласка, заберіть своє запрошення після того, як створите свій гаманець.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay наразі обробляє запрошення.</string>
     <string name="invitation_accept_title_1">Отримайте своє ім\'я користувача</string>
     <string name="invitation_accept_title_2">Додавайте своїх друзів і сім\'ю</string>
     <string name="invitation_accept_message_2">Запросіть свою родину, знайдіть друзів, ввівши в пошук їхні імена користувачів</string>
@@ -210,6 +215,8 @@
 
     <string name="join_dashpay_subtitle">Створіть ім\'я користувача, додайте друзів...</string>
     <string name="join_dashpay_more_subtitle">Створіть своє ім’я користувача, знайдіть друзів і додайте їх до своїх контактів</string>
+    <string name="join_dashpay_more_subtitle_two">Створіть ім’я користувача та забудьте про числові адреси</string>
+    <string name="join_dashpay_wait">Дочекайтеся завершення синхронізації, щоб створити ім’я користувача</string>
     <string name="join">Приєднатись</string>
 
     <string name="more_suggestions">Більше порад</string>
@@ -306,6 +313,7 @@
         <item>Має заблоковані голоси</item>
     </string-array>
     <string name="request_your_username">Створити ім\'я користувача</string>
+    <string name="request_instant_username">Створити миттєве ім\'я користувача</string>
     <string name="request_your_hint">Зверніть увагу, що ви не зможете змінити це в майбутньому</string>
     <string name="request_username">Запит імені користувача</string>
     <string name="request_voting_range">Мережа Dash голосуватиме за це ім’я користувача. Ми повідомимо вас про результати в %s.</string>
@@ -381,6 +389,8 @@
     <string name="requested_voting_duration">Результати в %s.</string>
     <string name="cancel_request">Скасувати запит</string>
     <string name="after_the_voting">Після завершення голосування ми повідомимо вам про його результати</string>
+    <string name="after_the_voting_result">Голосування завершилося</string>
+    <string name="voting_period_error">Період голосування не знайдено</string>
     <string name="none">Відсутній</string>
     <string name="verify_now">Підтвердити зараз</string>
     <string name="if_you_tap_cancel">Якщо ви торкнетеся «Скасувати запит», ви все одно матимете можливість подати запит на інше ім’я користувача без повторної оплати</string>
@@ -434,8 +444,12 @@
 
     <string name="request_username_username_voting_message">+ що таке голосування за імʼя користувача\?</string>
     <string name="request_username_character_requirement">Лише літери, цифри та дефіси</string>
+    <string name="request_username_character_requirement_invite_noncontested">Числа 2-9</string>
     <string name="request_username_balance_requirement">Для створення цього імені користувача потрібно мати 0,25 DASH</string>
+    <string name="request_username_requirements_message_invite_noncontested">Ім’я користувача повинно відповідати одному з цих критеріїв</string>
+    <string name="request_username_requirements_message">Ім’я користувача повинно відповідати цим критеріям</string>
     <string name="request_username_length_requirement">Від 3 до 23 символів</string>
+    <string name="request_username_length_requirement_noncontested">Від 20 до 23 символів</string>
     <string name="request_username_confirm">Я приймаю</string>
     <string name="username_vote_one_left_message">Ви вже голосували за %d це ім\'я користувача кілька разів. За це ім’я користувача можна віддати лише ще один голос.</string>
     <string name="username_vote_one_left">Залишився один голос</string>
@@ -462,4 +476,71 @@
     <string name="voting_period_ends_tomorrow">Голосування закінчується завтра</string>
     <string name="link_included">посилання включено</string>
     <string name="group_by">Групувати за</string>
-    </resources>
+    <string name="transaction_metadata_title">Метадані транзакцій</string>
+    <string name="transaction_metadata_data_being_saved">Заплановано</string>
+    <string name="transaction_metadata_payment_category_description">Вказує, чи пов\'язана транзакція з Coinbase, Uphold, Topper або CrowdNode</string>
+    <string name="transaction_metadata_fiat_price_description">Історична ціна на момент угоди</string>
+    <string name="transaction_metadata_description">Ваші дані зберігаються на вашому пристрої, але будуть втрачені, якщо ви скинете або відновите свій гаманець. Нижче наведено приклади інформації, яка буде збережена під час збереження в мережі.</string>
+    <string name="transaction_metadata_cost">Скільки це коштує\?</string>
+    <string name="transaction_metadata_payment_category">Категорії платежів</string>
+    <string name="transaction_metadata_save_data">Збереження даних</string>
+    <string name="transaction_metadata_tax_category">Податкові категорії</string>
+    <string name="transaction_metadata_fiat_prices">Ціни на Фіат</string>
+    <string name="transaction_metadata_private_memos">Приватні нотатки</string>
+    <string name="transaction_metadata_gift_card_info">Дані подарункової картки</string>
+    <string name="transaction_metadata_private_memo_description">Короткі доповідні записки, що описують мету транзакції</string>
+    <string name="transaction_metadata_tax_category_description">Вказує, чи є транзакція переказом, доходом чи витратою</string>
+    <string name="transaction_metadata_gift_card_info_description">Включає номер картки, PIN-код та іншу інформацію</string>
+    <string name="transaction_metadata_costs_title">Витрати, пов\'язані зі збереженням даних у мережі</string>
+    <string name="transaction_metadata_costs_description">Під час створення імені користувача ви отримуєте кредити, які використовуються для різних дій у мережі; збереження метаданих транзакцій у мережі призведе до швидшого витрачання цих кредитів. Після використання всіх кредитів ви можете придбати додаткові.\n\nВартість становить приблизно %s кожне завантаження даних у мережу, тому рекомендується завантажувати кілька транзакцій одночасно.</string>
+    <string-array name="transaction_metadata_save_frequency">
+        <item>Після 10 транзакцій</item>
+        <item>Раз на тиждень</item>
+        <item>Після кожної транзакції</item>
+    </string-array>
+    <string name="reset_wallet_metadata_title">Ви хочете скинути налаштування гаманця, не зберігаючи метадані в мережі\?</string>
+    <string name="reset_wallet_metadata_message">Скидання налаштувань гаманця без збереження даних у мережі призведе до втрати деяких метаданих транзакцій.</string>
+    <string name="reset_wallet_metadata_button_without">Скинути гаманець без збереження</string>
+    <string name="reset_wallet_metadata_button_with">Зберегти дані та скинути налаштування гаманця</string>
+    <string name="reset_wallet_metadata_button_saving">Збереження</string>
+    <string name="transaction_metadata_save_to_network">Зберегти в мережі</string>
+    <string name="transaction_metadata_save_frequency">Як часто зберігати\?</string>
+    <string name="transaction_metadata_what_to_save">Що зберегти\?</string>
+    <string name="transaction_metadata_past_title">Минулий</string>
+    <string name="transaction_metadata_future_title">Майбутнє</string>
+    <string name="transaction_metadata_past_subtitle">Зберігайте всі транзакції, здійснені до %s</string>
+    <string name="transaction_metadata_future_subtitle">Автоматично зберігати всі транзакції, які ви здійснюєте після %s</string>
+    <string name="transaction_metadata_gift_card_data">Дані подарункової картки</string>
+    <string name="transaction_metadata_saving_to_network">Збереження в мережі - %d%%</string>
+    <string name="transaction_metadata_last_saved_date">Останнє збереження %s</string>
+    <string name="transaction_metadata_past_already_saved">Усі транзакції, що вже були здійснені %s, вже збережені </string>
+    <string name="transaction_metadata_past_already_saved_none">Жодних транзакцій не збережено</string>
+    <string name="transaction_metadata_past_syncing">Усі транзакції, здійснені до %s синхронізуються </string>
+    <string name="transaction_metadata_save_new_tx_title">Ви хочете зберегти незбережені транзакції\?</string>
+    <string name="transaction_metadata_you_have_n_tx">У вас є %d незбережених транзакцій з %s</string>
+    <string name="transaction_metadata_save_transactions">Зберегти незбережені транзакції</string>
+    <string name="transaction_metadata_continue_without_saving">Продовжити без збереження</string>
+    <string name="invitation_fee_title">Комісія за запрошення</string>
+    <string name="invitation_fee_message">Кожне запрошення буде профінансовано, щоб одержувач міг швидко створити своє ім’я користувача в мережі Dash.</string>
+    <string name="invitation_fee_noncontested">Без конкуренції</string>
+    <string name="invitation_fee_contested">Із конкуренцією</string>
+    <string name="invitation_fee_contested_message">Людина, якій ви надішлете це запрошення, може запитати будь-яке ім’я користувача, яке забажає, і мережа голосуватиме за його схвалення.</string>
+    <string name="invitation_fee_noncontested_message">Людина, якій ви надішлете це запрошення, може запитати ім’я користувача, яке містить цифру від 2-9 або має понад 20 символів.</string>
+    <string name="invitation_creating_progress_loading">Завантаження запрошення…</string>
+    <string name="invitation_creating_progress_wip">Створення запрошення...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Підтвердити та сплатити</string>
+    <string name="error_sending_invite_transaction">Помилка під час надсилання транзакції запрошення</string>
+    <string name="request_username_invitation_not_mixed_message">Запрошення було створено з неміксованих коштів</string>
+    <string name="request_username_invitation_only_noncontested_message">За допомогою цього запрошення ви можете створити лише ім’я користувача без конкуренції</string>
+    <string name="username_types_title">Що таке імена користувачів із конкуренцією та без конкуренції\?</string>
+    <string name="username_types_message">Існує два типи імен користувачів: із конкуренцією та без конкуренції.\n\nІмена користувачів без конкуренції містять принаймні одну цифру (від 2-9) або мають довжину понад 20 символів і будуть автоматично схвалені.\n\nЯкщо ви хочете створити ім’я користувача із конкуренцією, яке є коротшим і не містить цифр, потрібно зареєструватися в DashPay без запрошення, сплатити необхідний збір і чекати схвалення після завершення періоду голосування.</string>
+    <string name="accept_invitation_hide">Сховати</string>
+    <string name="accept_invitation_create">Створити</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Створіть миттєве ім\'я користувача</string>
+    <string name="create_instant_username_description">Ваше запитуване ім\'я користувача буде проголосоване протягом 2 тижнів. Для безпосередніх контактів та платежів ви можете створити аналогічне миттєве ім\'я користувача.\n\nЯкщо ваш початковий запит буде схвалено, воно замінить миттєве, зберігаючи контакти та історію. Якщо ні, продовжуйте використовувати миттєве ім\'я користувача без перерв.</string>
+    <string name="create_instant_username_button">Створити миттєве ім\'я користувача</string>
+    <string name="create_instant_username_cancel">Відміна</string>
+
+</resources>

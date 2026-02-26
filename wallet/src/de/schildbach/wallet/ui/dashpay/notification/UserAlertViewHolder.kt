@@ -19,10 +19,13 @@ package de.schildbach.wallet.ui.dashpay.notification
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemUserAlert
 import de.schildbach.wallet_test.databinding.NotificationAlertItemBinding
+import org.slf4j.LoggerFactory
 
 class UserAlertViewHolder(val binding: NotificationAlertItemBinding) :
         NotificationViewHolder(binding.root) {
-
+    companion object {
+        private val log = LoggerFactory.getLogger(UserAlertViewHolder::class.java)
+    }
     override fun bind(notificationItem: NotificationItem, vararg args: Any) {
         bind(notificationItem as NotificationItemUserAlert, args[0] as (Int) -> Unit)
     }
@@ -32,7 +35,15 @@ class UserAlertViewHolder(val binding: NotificationAlertItemBinding) :
             text.setText(notificationItem.stringResId)
             icon.setImageResource(notificationItem.iconResId)
             closeBtn.setOnClickListener {
-                onUserAlertDismiss.invoke(notificationItem.stringResId)
+                notificationItem.getUserAlertId()?.let { id ->
+                    onUserAlertDismiss.invoke(id)
+                }
+                val alertId = notificationItem.getUserAlertId()
+                if (alertId != null) {
+                    onUserAlertDismiss.invoke(alertId)
+                } else {
+                    log.warn("No alert ID found for stringResId={}", notificationItem.stringResId)
+                }
             }
         }
     }

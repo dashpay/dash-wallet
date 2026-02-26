@@ -93,6 +93,8 @@
     <string name="gift_card_types">Tipos de cartão-presente</string>
     <string name="flexible_amount_option">Valores flexíveis</string>
     <string name="fixed_denom_option">Valores fixos denominados</string>
+    <string name="gift_card_providers">Provedores de cartões presente</string>
+
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Próximo</item>
@@ -230,15 +232,24 @@
     <string name="try_again">Tentar Novamente</string>
     <string name="cancel">Cancelar</string>
     <string name="gift_card_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, tente novamente. </string>
+    <string name="gift_card_out_of_stock_error">Este cartão presente está sem estoque. Por favor, tente novamente.</string>
     <string name="gift_card_details_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, entre em contato com o suporte.</string>
     <string name="gift_card_limit_error">Os limites de compra para este comerciante foram alterados. Por favor, entre em contato com o Suporte CTX para mais informações.</string>
+    <string name="gift_card_server_error">Por algum motivo, não foi possível comprar o cartão presente. Por favor, entre em contato com o Suporte %s para relatar o problema.</string>
+    <string name="gift_card_server_region_error">A compra deste cartão presente não pode ser feita a partir da sua região.</string>
+    <string name="gift_card_error_wrong_network">A solicitação de pagamento é para uma rede diferente. Por favor, entre em contato com o suporte.</string>
     <string name="gift_card_unknown_error">Por alguma razão, não foi possível comprar um cartão-presente. Por favor, entre em contato com o suporte com o txid %s.</string>
+    <string name="gift_card_delay">Está levando mais tempo que o normal para recuperar este cartão. Por favor, contate <a href="contact:support">support@dash.org</a> se a demora persistir.</string>
+    <string name="gift_card_rejected">O pagamento foi rejeitado. Por favor, entre em contato com o Suporte %s informando o ID do cartão presente %s, o ID do pagamento %s e o ID da transação %s.</string>
+    <string name="gift_card_redeem_url_not_supported">O pagamento foi feito para um comerciante que fornece uma URL de resgate, mas isso não é suportado no momento. Entre em contato com o Suporte %s informando o ID do cartão presente %s, o ID do pagamento %s e o ID da transação %s.</string>
     <string name="dashspend_terms_conditions">Aceitar termos e condições</string>
     <string name="accept_terms_conditions">Eu aceito os termos e condições do DashSpend</string>
     <string name="tap_link_to_proceed">Para criar uma conta no DashSpend, você deve clicar no link abaixo</string>
     <string name="accept_to_proceed">Para criar uma conta no DashSpend, você deve aceitar os termos e condições do DashSpend</string>
     <string name="view_terms_conditions">Termos &amp; condições</string>
+    <string name="barcode_placeholder">Aguarde enquanto os detalhes do cartão presente são enviados.</string>
     <string name="gift_card_contact_ctx">Entrar em contato com o Suporte CTX</string>
+    <string name="gift_card_contact_piggycards">Contato com o suporte PiggyCards</string>
     <string name="gift_card_contact_support">Contato com o Suporte</string>
     <!-- ctx spend login-->
     <string name="create_ctx_spend_account">Criar conta</string>
@@ -251,10 +262,19 @@
     <string name="token_expired_title">Sua sessão expirou</string>
     <string name="token_expired_message">Parece que você não usa o DashSpend há algum tempo. Por motivos de segurança, você foi desconectado.\n\nPor favor, faça login novamente para continuar explorando onde gastar seu Dash.</string>
 
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Seu e-mail não será compartilhado com ninguém além da PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Selecione um provedor de cartão presente</string>
     <string name="flexible_amounts">Valores flexíveis</string>
+    <string name="fixed_amounts">Valores fixos</string>
     <string name="address">Endereço</string>
     <string name="phone">Fone</string>
     <string name="website">Website</string>
     <string name="call">Ligar</string>
+    <string name="directions">Direções</string>
+    <string name="explore_show_all_locations">Mostrar todas as localidades (%d)</string>
+    <string name="provider">Provedor</string>
     <string name="save">Salvar</string>
 </resources>

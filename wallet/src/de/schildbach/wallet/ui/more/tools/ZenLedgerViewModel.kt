@@ -20,6 +20,8 @@ package de.schildbach.wallet.ui.more.tools
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.KeyChain
@@ -45,7 +47,7 @@ class ZenLedgerViewModel @Inject constructor(
 
     var signUpUrl: String? = null
 
-    suspend fun sendTransactionInformation(): Boolean {
+    suspend fun sendTransactionInformation(): Boolean = withContext(Dispatchers.IO) {
         val wallet = walletDataProvider.wallet!!
         val transactions = wallet.getTransactions(false)
         val addresses = if (transactions.isEmpty()) {
@@ -86,7 +88,7 @@ class ZenLedgerViewModel @Inject constructor(
             addresses
         }
 
-        return try {
+        try {
             if (zenLedgerClient.hasValidCredentials) {
                 zenLedgerClient.getToken()
                 log.info("zenledger: obtained token successfully")

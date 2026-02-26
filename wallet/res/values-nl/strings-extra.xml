@@ -2,7 +2,7 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="onboarding_create_wallet">Maak een nieuwe portemonnee aan</string>
-    <string name="onboarding_recover_wallet">Herstellen met herstelzin</string>
+    <string name="onboarding_recover_wallet">Herstel portemonnee</string>
     <string name="onboarding_restore_wallet">Herstel portemonnee uit bestand</string>
     <string name="onboarding_load_wallet_error">Kan portemonnee niet laden!</string>
 
@@ -86,6 +86,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Geen adres gekopieerd</string>
 
     <string name="forgot_pin_title">PIN vergeten?</string>
+    <string name="forgot_pin_setup_new_pin_title">Stel een nieuwe pin in</string>
     <string name="forgot_pin_message">Je kan een nieuwe pin instellen met behulp van je herstelzin</string>
     <string name="forgot_pin_instruction_1">Voer herstelzin in om je wallet te herstellen</string>
     <string name="forgot_pin_instruction_2">Stel een nieuwe pin in</string>
@@ -261,7 +262,7 @@
     <string name="authenticate_switch_to_fingerprint">Vingerafdruk gebruiken</string>
     <string name="authenticate_switch_to_pin">gebruik PIN</string>
 
-    <string name="menu_invite_title">Nodig uit</string>
+    <string name="menu_invite_title">Uitnodigingen</string>
     <string name="menu_invite_subtitle">Help je vrienden en familie lid te worden van Dash</string>
     <string name="menu_buy_and_sell_title">Koop &amp; verkoop Dash</string>
     <string name="menu_buy_and_sell_subtitle">Verbind met beurzen van derden</string>
@@ -334,13 +335,9 @@
 
     <string name="skip">Overslaan</string>
     <string name="get_started">Ga aan de slag</string>
-    <string name="welcome_screen_title_1_new_install">Welkom</string>
-    <string name="welcome_screen_title_1_upgrade">We hebben een upgrade uitgevoerd</string>
-    <string name="welcome_screen_subtitle_1">Een intuïtieve en vertrouwde ervaring op al je apparaten</string>
-    <string name="welcome_screen_title_2">Betaal met gemak</string>
-    <string name="welcome_screen_subtitle_2">Betaal en word betaald met eenvoudig te gebruiken betaalverkeer</string>
-    <string name="welcome_screen_title_3">Meer controle</string>
-    <string name="welcome_screen_subtitle_3">Heb volledige controle en pas je portemonnee aan op basis van je behoeften</string>
+    <string name="welcome_screen_title_1">Dash verzenden en ontvangen via gebruikersnamen</string>
+    <string name="welcome_screen_title_2">Geef Dash uit bij duizenden winkels</string>
+    <string name="welcome_screen_title_3">De veiligste manier om je Dash op te slaan</string>
 
     <string-array name="history_filter">
         <item>Alles</item>

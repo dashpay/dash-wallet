@@ -35,6 +35,7 @@ import de.schildbach.wallet.database.dao.UsernameRequestDao
 import de.schildbach.wallet.database.dao.UsernameVoteDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityData
+import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
@@ -78,9 +79,11 @@ import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import org.dashj.platform.contracts.wallet.TxMetadataDocument
 import org.dashj.platform.dashpay.ContactRequest
 import org.dashj.platform.dashpay.UsernameRequestStatus
+import org.dashj.platform.dpp.document.Document
 import org.dashj.platform.dpp.identifier.Identifier
 import org.dashj.platform.dpp.voting.ContestedDocumentResourceVotePoll
 import org.dashj.platform.sdk.platform.DomainDocument
+import org.dashj.platform.sdk.platform.Names
 import org.dashj.platform.wallet.IdentityVerify
 import org.dashj.platform.wallet.TxMetadataItem
 import org.slf4j.Logger
@@ -153,10 +156,11 @@ class PlatformSynchronizationService @Inject constructor(
 
         val UPDATE_TIMER_DELAY = 15.seconds
         val PUSH_PERIOD = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
-        val WEEKLY_PUSH_PERIOD = 7.days
+        val WEEKLY_PUSH_PERIOD = 7.days.inWholeMilliseconds
         val CUTOFF_MIN = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 3.minutes else 3.hours
         val CUTOFF_MAX = if (BuildConfig.DEBUG || Constants.IS_TESTNET_BUILD) 6.minutes else 6.hours
         private val PUBLISH = MarkerFactory.getMarker("PUBLISH")
+        val NON_CONTACTS_UPDATE_PERIOD = 1.minutes.inWholeMilliseconds
     }
 
     private var platformSyncJob: Job? = null
@@ -171,6 +175,8 @@ class PlatformSynchronizationService @Inject constructor(
     // TODO: cancel these on shutdown?
     private val syncJob = SupervisorJob()
     private val syncScope = CoroutineScope(Dispatchers.IO + syncJob)
+    private var lastTopupUpdateTime = 0L
+    private var lastMetadataUpdateTime = 0L
 
     override fun init() {
         syncScope.launch { platformRepo.init() }
@@ -234,7 +240,7 @@ class PlatformSynchronizationService @Inject constructor(
         val meetsSaveFrequency = when (saveSettings.saveFrequency) {
             TxMetadataSaveFrequency.afterTenTransactions -> newDataItems >= 10
             TxMetadataSaveFrequency.afterEveryTransaction -> newDataItems >= 1
-            TxMetadataSaveFrequency.oncePerWeek -> lastPush < now - WEEKLY_PUSH_PERIOD.inWholeMilliseconds && newDataItems >= 1
+            TxMetadataSaveFrequency.oncePerWeek -> lastPush < now - WEEKLY_PUSH_PERIOD && newDataItems >= 1
         }
         // publish no more frequently than every 3 hours
         val shouldPushToNetwork = (lastPush < now - PUSH_PERIOD.inWholeMilliseconds)
@@ -281,7 +287,8 @@ class PlatformSynchronizationService @Inject constructor(
         }
         log.info("updateContactRequests($initialSync) checking if can run")
         // only allow this method to execute once at a time
-        if (updatingContacts.get()) {
+        // allow it to continue if the last state was recovery complete
+        if (updatingContacts.get() && lastPreBlockStage != PreBlockStage.RecoveryComplete) {
             log.info("updateContactRequests is already running: {}", lastPreBlockStage)
             return
         }
@@ -294,9 +301,9 @@ class PlatformSynchronizationService @Inject constructor(
 
         try {
             val blockchainIdentityData = blockchainIdentityDataDao.load() ?: return
-            if (blockchainIdentityData.creationState < BlockchainIdentityData.CreationState.DONE) {
+            if (blockchainIdentityData.creationState < IdentityCreationState.DONE) {
                 // Is the Voting Period complete?
-                if (blockchainIdentityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+                if (blockchainIdentityData.creationState == IdentityCreationState.VOTING) {
                     val timeWindow = UsernameRequest.VOTING_PERIOD_MILLIS
                     val votingPeriodStart = blockchainIdentityData.votingPeriodStart ?: 0L
                     if (System.currentTimeMillis() - votingPeriodStart >= timeWindow) {
@@ -305,18 +312,20 @@ class PlatformSynchronizationService @Inject constructor(
                             val domainDocument = DomainDocument(resource.data)
                             if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
                                 blockchainIdentityData.creationState =
-                                    BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                                    IdentityCreationState.DONE_AND_DISMISS
                                 platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
                             }
                         }
                     }
                 }
-                log.info("update contacts not completed username registration/recovery is not complete")
-                // if username creation or request is not complete, then allow the sync process to finish
-                if (preDownloadBlocks.get()) {
-                    finishPreBlockDownload()
+                if (blockchainIdentityData.votingInProgress && !blockchainIdentityData.showSecondaryUsername) {
+                    log.info("update contacts not completed username registration/recovery is not complete")
+                    // if username creation or request is not complete, then allow the sync process to finish
+                    if (preDownloadBlocks.get()) {
+                        finishPreBlockDownload()
+                    }
+                    return
                 }
-                return
             }
 
             if (blockchainIdentityData.username == null || blockchainIdentityData.userId == null) {
@@ -361,9 +370,10 @@ class PlatformSynchronizationService @Inject constructor(
             updatingContacts.set(true)
             updateSyncStatus(PreBlockStage.Starting)
             updateSyncStatus(PreBlockStage.Initialization)
-            checkDatabaseIntegrity(userId)
-
-            updateSyncStatus(PreBlockStage.FixMissingProfiles)
+            if (!initialSync) {
+                checkDatabaseIntegrity(userId)
+                updateSyncStatus(PreBlockStage.FixMissingProfiles)
+            }
 
             // Get all out our contact requests
             val toContactDocuments = platform.contactRequests.get(
@@ -435,29 +445,49 @@ class PlatformSynchronizationService @Inject constructor(
                 updateSyncStatus(PreBlockStage.GetNewProfiles)
 
                 coroutineScope {
-                    awaitAll(
-                        // fetch updated invitations
-                        async {
-                            updateInvitations()
-                            updateSyncStatus(PreBlockStage.GetInvites)
-                        },
-                        // fetch updated transaction metadata
-                        async {
-                            updateTransactionMetadata()
-                            updateSyncStatus(PreBlockStage.TransactionMetadata)
-                        },  // TODO: this is skipped in VOTING state, but shouldn't be
-                        // fetch updated profiles from the network
-                        async {
-                            updateContactProfiles(userId, min(lastContactRequestTimeToMe, lastContactRequestTimeFromMe))
-                            updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
-                        },
-                        // check for unused topups
-                        async {
-                            checkTopUps()
-                            updateSyncStatus(PreBlockStage.Topups)
-                        }
-                    )
+                    try {
+                        val myEncryptionKey = platformRepo.getWalletEncryptionKey()
+
+                        awaitAll(
+                            // fetch updated invitations
+                            async {
+                                if (Constants.SUPPORTS_INVITES) {
+                                    topUpRepository.updateInvitations()
+                                    // check for unused invites
+                                    topUpRepository.checkInvites(myEncryptionKey)
+                                    updateSyncStatus(PreBlockStage.GetInvites)
+                                }
+                            },
+                            // fetch updated transaction metadata
+                            async {
+                                val shouldUpdate = System.currentTimeMillis() - lastMetadataUpdateTime >= NON_CONTACTS_UPDATE_PERIOD
+                                if (shouldUpdate) {
+                                    updateTransactionMetadata(myEncryptionKey)
+                                    updateSyncStatus(PreBlockStage.TransactionMetadata)
+                                    lastMetadataUpdateTime = System.currentTimeMillis()
+                                }
+                            }, // TODO: this is skipped in VOTING state, but shouldn't be
+                            // fetch updated profiles from the network
+                            async {
+                                updateContactProfiles(userId, min(lastContactRequestTimeToMe, lastContactRequestTimeFromMe))
+                                updateSyncStatus(PreBlockStage.GetUpdatedProfiles)
+                            },
+                            // check for unused topups
+                            async {
+                                val shouldUpdate = System.currentTimeMillis() - lastTopupUpdateTime >= NON_CONTACTS_UPDATE_PERIOD
+                                if (shouldUpdate) {
+                                    checkTopUps(myEncryptionKey)
+                                    updateSyncStatus(PreBlockStage.Topups)
+                                    lastTopupUpdateTime = System.currentTimeMillis()
+                                }
+                            }
+                        )
+                    } catch (e: Exception) {
+                        log.error("error obtaining encryption key", e)
+                        return@coroutineScope
+                    }
                 }
+
             } else {
                 if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
                     platformRepo.updateFrequentContacts()
@@ -598,23 +628,6 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     /**
-     * Updates invitation status
-     */
-    private suspend fun updateInvitations() {
-        val invitations = invitationsDao.loadAll()
-        for (invitation in invitations) {
-            if (invitation.acceptedAt == 0L) {
-                val identity = platform.identities.get(invitation.userId)
-                if (identity != null) {
-                    platformRepo.updateDashPayProfile(identity.id.toString())
-                    invitation.acceptedAt = System.currentTimeMillis()
-                    platformRepo.updateInvitation(invitation)
-                }
-            }
-        }
-    }
-
-    /**
      * Fetches updated profiles associated with contacts of userId after lastContactRequestTime
      */
     private suspend fun updateContactProfiles(userId: String, lastContactRequestTime: Long) {
@@ -663,30 +676,39 @@ class PlatformSynchronizationService @Inject constructor(
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
-                val nameById =
-                    nameDocuments.associateBy({ platformRepo.getIdentityForName(it) }, { it })
+                val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
+                val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
+
+                val nameById = hashMapOf<Identifier, DomainDocument>()
+
+                idByNameMap.forEach { (name, identifier) ->
+                    val otherNames = idByNameMap.filter { it.value == identifier && name != it.key }
+
+                    val shouldAddName = when {
+                        otherNames.isEmpty() -> true
+                        Names.isUsernameContestable(name) -> true
+                        else -> {
+                            !otherNames.keys.any { name.contains(it) }
+                        }
+                    }
+                    if (shouldAddName) {
+                        documentsByName[name]?.let {
+                            nameById[it.ownerId] = it
+                        }
+                    }
+                }
 
                 for (id in profileById.keys) {
                     if (nameById.containsKey(id)) {
-                        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
-                        val username = nameDocument.label
-                        val identityId = platformRepo.getIdentityForName(nameDocument)
-
-                        val profileDocument = profileById[id]
-
-                        val profile = if (profileDocument != null) {
-                            DashPayProfile.fromDocument(profileDocument, username)
-                        } else {
-                            DashPayProfile(identityId.toString(), username)
-                        }
-
-                        dashPayProfileDao.insert(profile)
-                        if (checkingIntegrity) {
-                            log.info("check database integrity: adding missing profile $username:$id")
-                        }
+                        updateDashPayProfile(nameById, id, profileById, checkingIntegrity)
                     } else {
                         log.info("domain document for $id could not be found, though a profile exists")
                     }
+                }
+                // handle any domain documents without a profile
+                val remainingNames = nameById.filter { !profileById.keys.contains(it.key) }
+                for (id in remainingNames) {
+                    updateDashPayProfile(nameById, id.key, mapOf(), checkingIntegrity)
                 }
 
                 // add a blank profile for any identity that is still missing a profile
@@ -716,6 +738,30 @@ class PlatformSynchronizationService @Inject constructor(
             }
         } catch (e: Exception) {
             platformRepo.formatExceptionMessage("update contact profiles", e)
+        }
+    }
+
+    private suspend fun updateDashPayProfile(
+        nameById: HashMap<Identifier, DomainDocument>,
+        id: Identifier,
+        profileById: Map<Identifier, Document>,
+        checkingIntegrity: Boolean
+    ) {
+        val nameDocument = nameById[id]!! // what happens if there is no username for the identity? crash
+        val username = nameDocument.label
+        val identityId = platformRepo.getIdentityForName(nameDocument)
+
+        val profileDocument = profileById[id]
+
+        val profile = if (profileDocument != null) {
+            DashPayProfile.fromDocument(profileDocument, username)
+        } else {
+            DashPayProfile(identityId.toString(), username)
+        }
+
+        dashPayProfileDao.insert(profile)
+        if (checkingIntegrity) {
+            log.info("check database integrity: adding missing profile $username:$id")
         }
     }
 
@@ -788,12 +834,8 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    private suspend fun updateTransactionMetadata() {
-        if (!Constants.SUPPORTS_TXMETADATA) {
-            return
-        }
+    private suspend fun updateTransactionMetadata(myEncryptionKey: KeyParameter?) {
         val watch = Stopwatch.createStarted()
-        val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
         val lastTxMetadataRequestTime = if (transactionMetadataDocumentDao.countAllRequests() > 0) {
             val lastTimeStamp = transactionMetadataDocumentDao.getLastTimestamp()
@@ -1058,6 +1100,7 @@ class PlatformSynchronizationService @Inject constructor(
 
     private suspend fun publishTransactionMetadata(
         txMetadataItems: List<TransactionMetadataCacheItem>,
+        myEncryptionKey: KeyParameter?,
         progressListener: (suspend (Int) -> Unit)? = null
     ): Int {
         if (!platformRepo.hasBlockchainIdentity) {
@@ -1085,11 +1128,11 @@ class PlatformSynchronizationService @Inject constructor(
             )
         }
         progressListener?.invoke(10)
-        val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
+        //val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
         platformRepo.blockchainIdentity.publishTxMetaData(
             metadataList,
-            walletEncryptionKey,
+            myEncryptionKey,
             keyIndex,
             TxMetadataDocument.VERSION_PROTOBUF
         ) { progress ->
@@ -1291,7 +1334,8 @@ class PlatformSynchronizationService @Inject constructor(
             log.info("publishing ${itemsToPublish.values.size} tx metadata items to platform")
 
             // publish non-empty items
-            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }) {
+            val myEncryptionKey = platformRepo.getWalletEncryptionKey()
+            publishTransactionMetadata(itemsToPublish.values.filter { it.isNotEmpty() }, myEncryptionKey) {
                 progressListener?.invoke(10 + it * 90 / 100)
             }
             log.info("published ${itemsToPublish.values.size} tx metadata items to platform")
@@ -1302,7 +1346,7 @@ class PlatformSynchronizationService @Inject constructor(
             config.set(DashPayConfig.LAST_METADATA_PUSH, System.currentTimeMillis())
             itemsSaved = changedItems.size
 
-            updateTransactionMetadata()
+            updateTransactionMetadata(myEncryptionKey)
         } catch (_: CancellationException) {
             log.info("publishing updates canceled")
         } catch (e: Exception) {
@@ -1536,7 +1580,6 @@ class PlatformSynchronizationService @Inject constructor(
                 log.info("preBlockDownload: checking for existing associated identity")
 
                 val identity = platformRepo.getIdentityFromPublicKeyId()
-                platformRepo.onIdentityResolved?.invoke(identity)
 
                 if (identity != null) {
                     log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
@@ -1568,8 +1611,9 @@ class PlatformSynchronizationService @Inject constructor(
         }
     }
 
-    suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
-        if (identityData.username != null && identityData.creationState == BlockchainIdentityData.CreationState.VOTING) {
+    private suspend fun checkVotingStatus(identityData: BlockchainIdentityData) {
+        if (identityData.username != null && identityData.creationState == IdentityCreationState.VOTING) {
+            log.info("checking the vote status of {}", identityData.username)
             // query username first to load the data contract cache
             val resource = platformRepo.getUsername(identityData.username!!)
             val voteResults = platformRepo.getVoteContenders(identityData.username!!)
@@ -1583,7 +1627,12 @@ class PlatformSynchronizationService @Inject constructor(
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
-                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch {
+                            platformRepo.updateBlockchainIdentityData(identityData)
+                            platformRepo.getLocalUserProfile()?.let {
+                                dashPayProfileDao.insert(it.copy(username = identityData.username!!))
+                            }
+                        }
                     }
 
                     winner.noWinner -> {
@@ -1598,7 +1647,7 @@ class PlatformSynchronizationService @Inject constructor(
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
                     if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
-                        identityData.creationState = BlockchainIdentityData.CreationState.DONE_AND_DISMISS
+                        identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
                         platformRepo.updateBlockchainIdentityData(identityData)
                     }
                 } else {
@@ -1646,12 +1695,10 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     private var hasCheckedTopups = false // only run once
-    private suspend fun checkTopUps() {
+    private suspend fun checkTopUps(myEncryptionKey: KeyParameter?) {
         if (!hasCheckedTopups) {
-            platformRepo.getWalletEncryptionKey()?.let {
-                topUpRepository.checkTopUps(it)
-                hasCheckedTopups = true
-            }
+            topUpRepository.checkTopUps(myEncryptionKey)
+            hasCheckedTopups = true
         }
     }
 }

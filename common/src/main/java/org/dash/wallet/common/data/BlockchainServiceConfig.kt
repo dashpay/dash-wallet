@@ -19,8 +19,10 @@ package org.dash.wallet.common.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -47,9 +49,27 @@ open class BlockchainServiceConfig @Inject constructor(
         private const val PREFERENCES_NAME = "blockchain_service"
         val BLOCKCHAIN_STORE_MEMORY_FAILURE = booleanPreferencesKey("blockchain_store_memory_failure")
         val BLOCKCHAIN_STORE_LAST_FIX = stringPreferencesKey("blockchain_store_last_fix")
+        val WALLET_CREATION_DATE = longPreferencesKey("wallet_creation_date")
     }
 
     suspend fun getBlockStoreLastFix(): BlockStoreLastFix {
         return BlockStoreLastFix.valueOf(get(BLOCKCHAIN_STORE_LAST_FIX) ?: "NONE")
+    }
+
+    suspend fun getWalletCreationDate(): Long? {
+        val creationDate = get(WALLET_CREATION_DATE)
+        return if (creationDate != null && creationDate > Constants.EARLIEST_HD_SEED_CREATION_TIME) {
+            creationDate
+        } else {
+            null
+        }
+    }
+
+    suspend fun setWalletCreationDate(date: Long?) {
+        if (date != null) {
+            set(WALLET_CREATION_DATE, date)
+        } else {
+            set(WALLET_CREATION_DATE, Constants.EARLIEST_HD_SEED_CREATION_TIME)
+        }
     }
 }

@@ -264,6 +264,7 @@
     <string name="preferences_report_issue_title">Báo cáo về lỗi</string>
     <string name="preferences_initiate_reset_title">Quét lại blockchain</string>
     <string name="preferences_initiate_reset_dialog_positive">Quét lại</string>
+    <string name="rescan_blockchain_confirm_button">Quét lại</string>
     <string name="preferences_extended_public_key_title">Hiển thị xpub</string>
     <string name="preferences_extended_public_key_summary">Xem khoá công khai mở rộng trong ví của bạn, nó có thể được nhập vào  qua các ứng dụng và dịch vụ khác. Cẩn thận: thực hiện điều này có thể làm lộ thông tin riêng tư về số tiền của bạn cho các ứng dụng đó.</string>
     <string name="bitmap_fragment_share">Chia sẻ...</string>
@@ -357,4 +358,6 @@
     <string name="activity_buy_and_sell_dash_filter">Lọc</string>
     <string name="send_to_address">Gửi đến địa chỉ</string>
 
-    </resources>
+    <string name="upgrade_pin_description">Thiết lập mã PIN mới</string>
+    <string name="upgrade_pin_continue">Tiếp tục</string>
+</resources>

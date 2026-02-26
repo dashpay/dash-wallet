@@ -17,6 +17,9 @@
 package de.schildbach.wallet.transactions
 
 import de.schildbach.wallet.Constants.HEX
+import io.mockk.coEvery
+import io.mockk.mockk
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
@@ -25,11 +28,10 @@ import org.bitcoinj.wallet.*
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.transactions.TransactionCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
-import org.dash.wallet.common.transactions.TransactionUtils
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.junit.Assert.assertEquals
 import org.junit.Test
-
 
 class TransactionExportTest {
 
@@ -66,29 +68,30 @@ class TransactionExportTest {
         }
 
         wallet.addWalletTransaction(WalletTransaction(WalletTransaction.Pool.UNSPENT, tx))
-        val txMetadataMap = mapOf(
-            tx.txId to TransactionMetadata(
-                tx.txId,
-                tx.updateTime?.time ?: System.currentTimeMillis(),
-                tx.outputSum,
-                TransactionCategory.fromTransaction(tx.type, tx.outputSum, tx.isEntirelySelf(wallet)),
-                TaxCategory.TransferIn
+        val txMetadata = TransactionMetadata(
+            tx.txId,
+            tx.updateTime?.time ?: System.currentTimeMillis(),
+            tx.outputSum,
+            TransactionCategory.fromTransaction(tx.type, tx.outputSum, tx.isEntirelySelf(wallet)),
+            TaxCategory.TransferIn
+        )
+        val transactionMetadataProvider = mockk<TransactionMetadataProvider>()
+        coEvery { transactionMetadataProvider.getAllTransactionMetadata() } returns listOf(txMetadata)
+
+        val exporter = TaxBitExporter(transactionMetadataProvider, wallet)
+
+        runBlocking {
+            val csvString = exporter.exportString()
+            val csvLines = csvString.split("\n")
+
+            assertEquals(
+                "Date and Time,Transaction Type,Sent Quantity,Sent Currency,Sending Source,Received Quantity,Received Currency,Receiving Destination,Fee,Fee Currency,Exchange Transaction ID,Blockchain Transaction Hash",
+                csvLines[0]
             )
-        )
-
-        val exporter = TaxBitExporter(wallet, txMetadataMap)
-
-        val csvString = exporter.exportString()
-        val csvLines = csvString.split("\n")
-
-        assertEquals(
-            "Date and Time,Transaction Type,Sent Quantity,Sent Currency,Sending Source,Received Quantity,Received Currency,Receiving Destination,Fee,Fee Currency,Exchange Transaction ID,Blockchain Transaction Hash",
-            csvLines[0]
-        )
-        assertEquals(
-            "1970-01-01T00:00:00Z,Transfer-in,,DASH,DASH Wallet,0.01,DASH,DASH Wallet,,,,dd07f79a86185f3b5eeb2b19bdbc1d97eb9db0b887dcedb0fc30c622c43a27ba",
-            csvLines[1]
-        )
-
+            assertEquals(
+                "1970-01-01T00:00:00Z,Transfer-in,,DASH,DASH Wallet,0.01,DASH,DASH Wallet,,,,dd07f79a86185f3b5eeb2b19bdbc1d97eb9db0b887dcedb0fc30c622c43a27ba",
+                csvLines[1]
+            )
+        }
     }
 }

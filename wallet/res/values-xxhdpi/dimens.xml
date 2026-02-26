@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <dimen name="backup_buttons_margin">42dp</dimen>
-    <dimen name="create_username_orbits_translation_x">170dp</dimen>
 </resources>

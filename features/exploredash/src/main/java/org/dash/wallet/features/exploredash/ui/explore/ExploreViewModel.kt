@@ -30,6 +30,7 @@ import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.ExploreDataSource
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
@@ -39,6 +40,7 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel.Companio
 import org.dash.wallet.features.exploredash.ui.extensions.Const
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.slf4j.LoggerFactory
 import java.util.*
 import javax.inject.Inject
 import kotlin.String
@@ -113,6 +115,8 @@ class ExploreViewModel @Inject constructor(
         const val DEFAULT_RADIUS_OPTION = 20
         const val MAX_MARKERS = 100
         val DEFAULT_SORT_OPTION = SortOption.Name
+
+        private val log = LoggerFactory.getLogger(ExploreViewModel::class.java)
 
         // Session-only memory for filter modes (not persisted)
         private var lastSelectedMerchantFilterMode: FilterMode? = null
@@ -249,22 +253,78 @@ class ExploreViewModel @Inject constructor(
             }
         }
 
+    private val excludedCountriesForPiggyCards = listOf("RU", "CU")
+
+    // GPS-based country detection (higher priority)
+    private val gpsCountryFlow: Flow<String?> = _isLocationEnabled.asFlow()
+        .flatMapLatest { locationEnabled ->
+            if (locationEnabled) {
+                flow {
+                    try {
+                        val countryFromGPS = locationProvider.getCountryCodeFromLocation()
+                        if (countryFromGPS.isNotBlank()) {
+                            emit(countryFromGPS)
+                        } else {
+                            emit(null)
+                        }
+                    } catch (e: SecurityException) {
+                        emit(null) // Location permissions not granted
+                    } catch (e: Exception) {
+                        emit(null) // GPS location failed
+                    }
+                }.flowOn(Dispatchers.IO) // Run GPS location fetching on IO dispatcher
+            } else {
+                flowOf(null) // Location not enabled
+            }
+        }
+
+    // IP-based country detection (lower priority, fallback)
+    private val ipCountryFlow: Flow<String?> = networkState.observeCountryFromIP()
+        .map { it.takeIf { country -> country.isNotBlank() } }
+        .flowOn(Dispatchers.IO) // Run IP detection on IO dispatcher
+
+    // Combined location with GPS priority over IP
+    val location: StateFlow<String> = combine(
+        gpsCountryFlow,
+        ipCountryFlow
+    ) { gpsCountry, ipCountry ->
+        // GPS takes priority, fall back to IP, then default locale
+        log.info("country: $gpsCountry, $ipCountry")
+        gpsCountry ?: ipCountry ?: Locale.getDefault().country
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Eagerly,
+        initialValue = Locale.getDefault().country
+    )
+
+    private fun getExcludeProvider(): String {
+        return if (location.value in excludedCountriesForPiggyCards) {
+            GiftCardProviderType.PiggyCards.name
+        } else {
+            ""
+        }
+    }
+
     // Used for the list of search results
     private val pagingSearchFlow: Flow<PagingData<SearchResult>> =
-        _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE).flatMapLatest { filters ->
-            _filterMode
-                .filter { screenState.value == ScreenState.SearchResults }
-                .flatMapLatest { mode ->
-                    clearSearchResults()
-                    _searchBounds
-                        .filter { mode != FilterMode.Nearby || _isLocationEnabled.value == true }
-                        .map { transformBounds(it, mode) }
-                        .flatMapLatest { bounds ->
-                            getPagingFlow(filters, mode, bounds)
-                                .cachedIn(viewModelScope)
-                        }
-                }
-        }
+        combine(
+            _appliedFilters.debounce(QUERY_DEBOUNCE_VALUE),
+            location // React to location changes for filtering
+        ) { filters, _ -> filters }
+            .flatMapLatest { filters ->
+                _filterMode
+                    .filter { screenState.value == ScreenState.SearchResults }
+                    .flatMapLatest { mode ->
+                        clearSearchResults()
+                        _searchBounds
+                            .filter { mode != FilterMode.Nearby || _isLocationEnabled.value == true }
+                            .map { transformBounds(it, mode) }
+                            .flatMapLatest { bounds ->
+                                getPagingFlow(filters, mode, bounds)
+                                    .cachedIn(viewModelScope)
+                            }
+                    }
+            }
 
     // Used for the map - combine both _filterMode and _appliedFilters so either can restart the flow
     val boundedSearchFlow: Flow<List<SearchResult>> =
@@ -447,7 +507,13 @@ class ExploreViewModel @Inject constructor(
     suspend fun openMerchantDetails(merchant: Merchant, isGrouped: Boolean = false) {
         merchant.merchantId?.let { id ->
             val providers = exploreData.getGiftCardProvidersFor(id)
-            merchant.giftCardProviders = providers
+            // Filter out excluded providers based on location
+            val excludeProvider = getExcludeProvider()
+            merchant.giftCardProviders = if (excludeProvider.isNotBlank()) {
+                providers.filter { !it.provider.equals(excludeProvider, ignoreCase = true) }
+            } else {
+                providers
+            }
         }
 
         _selectedItem.value = merchant
@@ -568,6 +634,15 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun updateSelectedItem(item: SearchResult) {
+        // Filter providers if it's a merchant
+        if (item is Merchant && item.giftCardProviders.isNotEmpty()) {
+            val excludeProvider = getExcludeProvider()
+            if (excludeProvider.isNotBlank()) {
+                item.giftCardProviders = item.giftCardProviders.filter {
+                    !it.provider.equals(excludeProvider, ignoreCase = true)
+                }
+            }
+        }
         _selectedItem.value = item
     }
 
@@ -611,7 +686,8 @@ class ExploreViewModel @Inject constructor(
                 filters.payment,
                 filters.denominationType,
                 filters.provider,
-                bounds
+                bounds,
+                getExcludeProvider()
             )
         } else {
             val types = getAtmTypes(filterMode)
@@ -660,7 +736,21 @@ class ExploreViewModel @Inject constructor(
                     onlineFirst
                 )
             }.flow.map { data ->
+                val excludeProvider = getExcludeProvider()
                 data.filter { it.merchant != null }
+                    .filter { merchantInfo ->
+                        // Filter out merchants that only have excluded providers
+                        if (excludeProvider.isBlank()) {
+                            true
+                        } else {
+                            val merchant = merchantInfo.merchant!!
+                            merchant.merchantId?.let { id ->
+                                val providers = exploreData.getGiftCardProvidersFor(id)
+                                // Keep merchant if it has at least one provider that's not the excluded one
+                                providers.any { !it.provider.equals(excludeProvider, ignoreCase = true) }
+                            } ?: true
+                        }
+                    }
                     .map {
                         it.merchant!!.apply {
                             this.physicalAmount = it.physicalAmount ?: 0

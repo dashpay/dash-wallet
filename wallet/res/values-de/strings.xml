@@ -204,6 +204,13 @@
     <string name="restore_wallet_dialog_success_replay">Deine Wallet wurde erfolgreich wiederhergestellt. Jetzt wird das Guthaben ermittelt. Das wird einige Zeit dauern.</string>
     <string name="restore_wallet_dialog_success_encrypted">Warnung: Deine Wallet ist durch eine Ausgabe-PIN geschützt. Vergewissere dich, dass du dich noch an diese erinnern kannst, bevor du Geld mit dieser Wallet empfängst.</string>
     <string name="import_keys_dialog_failure">Die Wallet konnte nicht wieder hergestellt werden:\n\n%s\n\nFalsches Passwort?</string>
+    <string name="restore_wallet_creation_date_label">Erstelldatum deiner Wallet (Optional)</string>
+    <string name="restore_wallet_creation_date_info">Durch die Auswahl des Erstellungsdatums Ihrer Wallet wird die Synchronisierung beschleunigt, da nur Daten ab diesem Datum gescannt werden.</string>
+    <string name="restore_wallet_select_date">Erstelldatum auswählen</string>
+    <string name="restore_wallet_selected_date">Ausgewählt: %s</string>
+    <string name="restore_wallet_date_picker_title">Wann wurde deine Wallet erstellt?</string>
+    <string name="wallet_creation_date_info_title">Wie kann dein Wallet-Erstelldatum den Prozess beschleunigen?</string>
+    <string name="wallet_creation_date_info_description">Wenn du das ungefähre Datum kennst, an dem deine Wallet erstellt wurde, kannst du dieses eingeben, damit die Transaktionen ab diesem Datum abgerufen werden und die Synchronisierung schneller erfolgt. Bitte beachte: Wenn du ein Datum eingibst, das nach dem Erstellungsdatum deiner Wallet liegt, werden ältere Transaktionen nicht heruntergeladen.</string>
     <string name="export_keys_dialog_title">Wallet sichern</string>
     <string name="backup_wallet_dialog_message">Dein Backup wird mit dem gewählten Passwort verschlüsselt und auf dem externen Speicher gesichert.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Deine Wallet ist durch eine Ausgabe-PIN geschützt. Stell bitte sicher, dass Du die PIN, sowie das Backup-Passwort nicht vergisst!</string>
@@ -279,6 +286,12 @@
     <string name="preferences_initiate_reset_summary">Blockchain, Transaktionen und Guthaben erneut scannen. Bitte beachte, dass dieser Vorgang einige Zeit in Anspruch nehmen wird.</string>
     <string name="preferences_initiate_reset_dialog_message">Möchtest du die Blockchain erneut scannen?\n\nGuthaben und Transaktionen werden für einige Zeit nicht einsehbar sein. Mit dem Fortschreiten der Blockchain-Synchronisierung werden die Daten wieder sichtbar. Stelle sicher, dass du über eine gute Internetverbindung verfügst.</string>
     <string name="preferences_initiate_reset_dialog_positive">Erneut scannen</string>
+    <string name="rescan_blockchain_dialog_title">Bist du sicher, dass du Blockchain erneut scannen willst?</string>
+    <string name="rescan_blockchain_dialog_message">Dadurch wird dein Wallet-Guthaben vorübergehend ausgeblendet und Transaktionen entfernt. Beides wird im Laufe der Blockchain-Synchronisierung wiederhergestellt. Stelle sicher, dass du über eine zuverlässige Internetverbindung verfügst.</string>
+    <string name="rescan_blockchain_select_date_label">Wallet-Erstelldatum auswählen (optional)</string>
+    <string name="rescan_blockchain_date_info_description">Information über das Wallet-Erstelldatum</string>
+    <string name="rescan_blockchain_select_date_placeholder">Auswählen</string>
+    <string name="rescan_blockchain_confirm_button">Erneut scannen</string>
     <string name="preferences_extended_public_key_title">Xpub anzeigen</string>
     <string name="preferences_extended_public_key_summary">Zeigt den Extended Public Key Ihrer Wallet an, sodass er in andere Apps oder Dienste importiert werden kann. Sei dabei jedoch bitte vorsichtig, da dies Deine finanzielle Situation gegenüber jener anderen App offenlegen könnte.</string>
     <string name="bitmap_fragment_share">Teilen…</string>
@@ -434,4 +447,9 @@
     <string name="select_option">Option auswählen</string>
     <string name="customize_shortcuts">Shortcut-Leiste anpassen</string>
     <string name="customize_shortcuts_description">Halte eine beliebige Taste oben gedrückt, um sie durch die gewünschte Funktion zu ersetzen</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Du musst deinen PIN aktualisieren</string>
+    <string name="upgrade_pin_description">Neue PIN einrichten</string>
+    <string name="upgrade_pin_continue">Fortfahren</string>
 </resources>

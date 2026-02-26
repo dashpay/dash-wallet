@@ -64,7 +64,6 @@ import org.dash.wallet.common.services.ExchangeRatesProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.CurrencyTextView;
-import org.dash.wallet.common.ui.FancyAlertDialog;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -317,6 +316,43 @@ public class SweepWalletFragment extends Fragment {
                 }.parse();
             }
         }
+    }
+
+    /**
+     * Called by {@link SweepWalletActivity} when the scanner returns a result.
+     */
+    public void handleScanResult(@javax.annotation.Nullable final String input) {
+        if (input == null) return;
+
+        new StringInputParser(input, false) {
+            @Override
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
+                privateKeyToSweep = key;
+                setState(State.DECODE_KEY);
+                maybeDecodeKey();
+            }
+
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void error(Exception x, final int messageResId, final Object... messageArgs) {
+                AdaptiveDialog.create(
+                        null,
+                        getString(R.string.button_scan),
+                        getString(messageResId, messageArgs),
+                        getString(R.string.button_dismiss),
+                        null
+                ).show(requireActivity(), result -> Unit.INSTANCE);
+            }
+        }.parse();
     }
 
     private void showProgress(int messageResId) {

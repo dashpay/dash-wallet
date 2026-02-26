@@ -77,4 +77,6 @@ class FakeDashSpendService @Inject constructor(
             realService.payWithDashUrl(dashUri, serviceName)
         }
     }
+
+    override fun isFeeTooHigh(tx: Transaction): Boolean = false
 }

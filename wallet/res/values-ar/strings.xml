@@ -270,6 +270,7 @@
     <string name="preferences_initiate_reset_summary">إعادة تعيين سلسلة كتلة والمعاملات ورصيد المحفظة. سيستغرق إعادة التشغيل بعض الوقت ، لذلك افعل ذلك فقط إذا كنت تعرف السبب.</string>
     <string name="preferences_initiate_reset_dialog_message">هل ترغب في إعادة تعيين سلسلة الكتلة وإعادة تشغيلها؟\n\nسيؤدي ذلك إلى إخفاء رصيد محفظتك مؤقتًا وإزالة المعاملات. كلاهما سوف يتعافى مع تقدم مزامنة سلسلة الكتل. تأكد من أن لديك اتصالاً موثوقًا بالإنترنت.</string>
     <string name="preferences_initiate_reset_dialog_positive">إعادة تفحص</string>
+    <string name="rescan_blockchain_confirm_button">إعادة تفحص</string>
     <string name="preferences_extended_public_key_title">عرض xpub</string>
     <string name="preferences_extended_public_key_summary">عرض المفتاح العام الموسع لمحفظتك ، بحيث يمكن استيراده إلى تطبيقات وخدمات أخرى. كن حذرًا: سيؤدي ذلك إلى الكشف عن خصوصيتك المالية لهذا التطبيق.</string>
     <string name="bitmap_fragment_share">شارك…</string>
@@ -382,4 +383,6 @@
     <string name="not_dash_address">ليس عنوان داش صالح او الاتصال عبر الرابط غير صالح</string>
     <string name="send_to_address">إرسال إلى عنوان</string>
 
-    </resources>
+    <string name="upgrade_pin_description">قم بإعداد رقم سري جديد</string>
+    <string name="upgrade_pin_continue">استمر</string>
+</resources>

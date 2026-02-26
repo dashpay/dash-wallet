@@ -36,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -71,17 +72,12 @@ public class Configuration {
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
-    public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
     private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
     private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
     private static final String PREFS_INVITER = "inviter";
     private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
     private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
-    private static final String PREFS_ONBOARDING_INVITE = "inviter_onboarding_invite";
-    private static final String PREFS_ONBOARDING_INVITE_USERNAME = "inviter_onboarding_invite_username";
-    private static final String PREFS_ONBOARDING_INVITE_PROCESSING = "inviter_onboarding_invite_processing";
-
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
@@ -97,6 +93,9 @@ public class Configuration {
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
     public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
+
+    // UUID
+    public static final String PREFS_UUID = "prefs_uuid";
 
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
@@ -333,14 +332,6 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 
-    public boolean getV7TutorialCompleted() {
-        return prefs.getBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, false);
-    }
-
-    public void setV7TutorialCompleted() {
-        prefs.edit().putBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, true).apply();
-    }
-
     public boolean getEnableFingerprint() {
         return prefs.getBoolean(PREFS_ENABLE_FINGERPRINT, false);
     }
@@ -389,38 +380,12 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
     }
 
-    public boolean getOnboardingInviteProcessing() {
-        return getOnboardingInvite() != null && prefs.getBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true);
-    }
-
-    public void setOnboardingInviteProcessingDone() {
-        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, false).apply();
-    }
-
     public int getOnboardingStage() {
         return prefs.getInt(PREFS_ONBOARDING_STAGE, 0);
     }
 
     public void setOnboardingStage(final int onboardingStage) {
         prefs.edit().putInt(PREFS_ONBOARDING_STAGE, onboardingStage).apply();
-    }
-
-    public Uri getOnboardingInvite() {
-        String invite = prefs.getString(PREFS_ONBOARDING_INVITE, null);
-        return invite != null ? Uri.parse(invite) : null;
-    }
-
-    public void setOnboardingInvite(final Uri onboardingInvite) {
-        prefs.edit().putBoolean(PREFS_ONBOARDING_INVITE_PROCESSING, true).apply();
-        prefs.edit().putString(PREFS_ONBOARDING_INVITE, onboardingInvite.toString()).apply();
-    }
-
-    public String getOnboardingInviteUsername() {
-        return prefs.getString(PREFS_ONBOARDING_INVITE_USERNAME, null);
-    }
-
-    public void setOnboardingInviteUsername(final String username) {
-        prefs.edit().putString(PREFS_ONBOARDING_INVITE_USERNAME, username).apply();
     }
 
     public long getLastEncryptKeysTime() {
@@ -537,5 +502,15 @@ public class Configuration {
 
     public void setPrefsKeyCrowdNodeStakingApy(float apy) {
         prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
+    }
+
+    public String getUniqueId() {
+        if (prefs.contains(PREFS_UUID)) {
+            return prefs.getString(PREFS_UUID, UUID.randomUUID().toString());
+        } else {
+            String uuid = UUID.randomUUID().toString();
+            prefs.edit().putString(PREFS_UUID, uuid).apply();
+            return uuid;
+        }
     }
 }

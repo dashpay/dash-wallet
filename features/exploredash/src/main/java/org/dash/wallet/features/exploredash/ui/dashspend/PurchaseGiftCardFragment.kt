@@ -45,7 +45,6 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
-import org.dash.wallet.common.util.getPublicIPAddress
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
@@ -195,9 +194,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         viewLifecycleOwner.observeOnDestroy {
             viewModel.resetSelectedDenomination()
-        }
-        viewLifecycleOwner.lifecycleScope.launch {
-            log.info("purchase from IP:  {}", getPublicIPAddress())
         }
     }
 

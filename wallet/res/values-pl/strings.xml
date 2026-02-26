@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Twój portfel został przywrócony pomyślnie. Następnie zostanie określone jego saldo. Może to zająć chwilę.</string>
     <string name="restore_wallet_dialog_success_encrypted">Uwaga! Twój portfel jest zabezpieczony za pomocą kodu PIN. Upewnij się, że  pamiętasz swój PIN zanim wyślesz tam fundusze. </string>
     <string name="import_keys_dialog_failure">Nie udało się zaimportować kluczy prywatnych:\n\n%s\n\nBłędne hasło?</string>
+    <string name="restore_wallet_creation_date_label">Data Stworzenia Portfela (Opcjonalne)</string>
+    <string name="restore_wallet_creation_date_info">Zaznaczenie kiedy twój portfel został stworzony, pozwala na szybszą synchronizację, poprzez skanowanie tylko od daty zaznaczenia.</string>
+    <string name="restore_wallet_select_date">Wybierz Date Stworzenia</string>
+    <string name="restore_wallet_selected_date">Zaznaczono: %s</string>
+    <string name="restore_wallet_date_picker_title">Kiedy twój portfel został stworzony?</string>
+    <string name="wallet_creation_date_info_title">Jak data stworzenia portfela może przyspieszyć proces?</string>
+    <string name="wallet_creation_date_info_description">Jeśli znasz przybliżoną datę utworzenia portfela, możesz ją wprowadzić, a transakcje z tego dnia zostaną pobrane, co przyspieszy synchronizację. Pamiętaj, że jeśli podasz datę późniejszą niż data utworzenia portfela, starsze transakcje nie zostaną pobrane.</string>
     <string name="export_keys_dialog_title">Eksportuj prywatne klucze</string>
     <string name="backup_wallet_dialog_message">Twoje prywatne klucze zostaną zaszyfrowane wybranym hasłem a następnie zapisane na zewnętrznym nośniku.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Twój portfel jest chroniony przez PIN do wydawania. Miej pewność, że pamiętasz PIN w dodatku hasło zapasowe!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Ponownie przeskanuj blockchain, transakcje i saldo portfela. Powtórka zajmie trochę czasu, więc rób to tylko wtedy, gdy masz dobry powód.</string>
     <string name="preferences_initiate_reset_dialog_message">Chcesz ponownie przeskanować łańcuch bloków?\n\nSpowoduje to tymczasowe ukrycie salda portfela i usunięcie transakcji. Oba zostaną odzyskane w miarę postępu synchronizacji łańcucha bloków. Upewnij się, że masz niezawodne połączenie z internetem.</string>
     <string name="preferences_initiate_reset_dialog_positive">Ponownie zeskanuj</string>
+    <string name="rescan_blockchain_dialog_title">Czy na pewno chcesz przeskanować portfel?</string>
+    <string name="rescan_blockchain_dialog_message">Spowoduje to tymczasowe ukrycie salda w portfelu i usunięcie transakcji. Oba zostaną przywrócone w miarę postępu synchronizacji blockchain. Upewnij się, że masz stabilne połączenie z internetem.</string>
+    <string name="rescan_blockchain_select_date_label">Zaznacz data stworzenia portfela (opcjonalne)</string>
+    <string name="rescan_blockchain_date_info_description">Informacje dotyczące daty utworzenia portfela</string>
+    <string name="rescan_blockchain_select_date_placeholder">Wybierz</string>
+    <string name="rescan_blockchain_confirm_button">Ponownie zeskanuj</string>
     <string name="preferences_extended_public_key_title">Pokaż xpub</string>
     <string name="preferences_extended_public_key_summary">Sprawdź rozszerzony klucz publiczny twojego portfela, tak aby mógł być zaimportowany do innych aplikacji i usług. Bądź ostrożny: ta operacja ujawni poufne dane twojego portfela.</string>
     <string name="bitmap_fragment_share">Udostępnij…</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Wybierz opcje</string>
     <string name="customize_shortcuts">Dostosuj pasek skrótów</string>
     <string name="customize_shortcuts_description">Przytrzymaj dowolny powyższy przycisk, aby zastąpić go potrzebną funkcją</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Musisz zaktualizować swój PIN</string>
+    <string name="upgrade_pin_description">Ustaw nowy PIN</string>
+    <string name="upgrade_pin_continue">Dalej</string>
 </resources>

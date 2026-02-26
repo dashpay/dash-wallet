@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Ang iyong pitaka ay matagumpay na naibalik. Ang balanse nito ay sunod na malalaman. Ito ay maaaring tumagal.</string>
     <string name="restore_wallet_dialog_success_encrypted">Babala: Ang iyong pitaka ay protektado ng isang paggastos na PIN. Tiyaking naaalala mo pa ito bago mo matanggap sa wallet na ito.</string>
     <string name="import_keys_dialog_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling password?</string>
+    <string name="restore_wallet_creation_date_label">Petsa ng Paggawa ng Pitaka (Opsyonal)</string>
+    <string name="restore_wallet_creation_date_info">Ang pagpili kung kailan ginawa ang iyong pitaka ay nagbibigay-daan sa mas mabilis na pag-sync sa pamamagitan ng pag-scan lamang mula sa petsang iyon.</string>
+    <string name="restore_wallet_select_date">Piliin ang Petsa ng Paglikha</string>
+    <string name="restore_wallet_selected_date">Napili: %s</string>
+    <string name="restore_wallet_date_picker_title">Kailan ginawa ang iyong pitaka?</string>
+    <string name="wallet_creation_date_info_title">Paano mapabilis ng petsa ng paglikha ng pitaka ang proseso?</string>
+    <string name="wallet_creation_date_info_description">Kung alam mo ang tinatayang petsa kung kailan mo ginawa ang iyong pitaka, maaari mo itong ilagay at ang mga transaksyon mula sa petsang iyon ay makukuha para mas mabilis ang pag-sync. Pakitandaan, kung maglalagay ka ng petsa na mas huli kaysa noong ginawa mo ang pitaka, hindi mada-download ang mga mas lumang transaksyon.</string>
     <string name="export_keys_dialog_title">I-back up ang wallet</string>
     <string name="backup_wallet_dialog_message">Ang iyong backup ay mae-encrypt sa piniling password at masusulat sa external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ang iyong wallet ay protektado ng spending PIN. Siguraduhin na naalala mo ang iyong PIN at saka ang iyong backup password!</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">I-scan muli ang blockchain, mga transaksyon at balanse ng wallet. Magtatagal ang replay, kaya gawin lang ito kung alam mo kung bakit.</string>
     <string name="preferences_initiate_reset_dialog_message">Gusto mo bang i-scan muli ang blockchain?\n\nPansamantala nitong itatago ang balanse ng iyong wallet at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">I-scan muli</string>
+    <string name="rescan_blockchain_dialog_title">Sigurado ka bang gusto mong muling i-scan ang blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Pansamantala nitong itatago ang balanse ng iyong pitaka at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
+    <string name="rescan_blockchain_select_date_label">Piliin ang petsa ng paggawa ng pitaka (opsyonal)</string>
+    <string name="rescan_blockchain_date_info_description">Impormasyon tungkol sa petsa ng paggawa ng pitaka</string>
+    <string name="rescan_blockchain_select_date_placeholder">Pumili</string>
+    <string name="rescan_blockchain_confirm_button">I-scan muli</string>
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
     <string name="bitmap_fragment_share">Ipamahagi...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">Pumili ng opsyon</string>
     <string name="customize_shortcuts">I-customize ang shortcut bar</string>
     <string name="customize_shortcuts_description">Pindutin ang anumang pindutan sa itaas upang palitan ito ng function na kailangan mo</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Kailangan mong i-upgrade ang iyong PIN</string>
+    <string name="upgrade_pin_description">Mag set up ng bagong PIN</string>
+    <string name="upgrade_pin_continue">Ipagpatuloy</string>
 </resources>

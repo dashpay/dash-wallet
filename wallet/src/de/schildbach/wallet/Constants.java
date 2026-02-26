@@ -96,7 +96,7 @@ public final class Constants {
                 WALLET_NAME_CURRENCY_CODE = "dash";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4.db");
                 SUPPORTS_PLATFORM = !is32Bit;
-                SUPPORTS_INVITES = false;
+                SUPPORTS_INVITES = true;
                 SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
@@ -115,7 +115,7 @@ public final class Constants {
                 FEE_NETWORK_SUFFIX = FILENAME_NETWORK_SUFFIX;
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = !is32Bit;
-                SUPPORTS_INVITES = false;
+                SUPPORTS_INVITES = true;
                 SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 if (SUPPORTS_PLATFORM) {
@@ -136,8 +136,8 @@ public final class Constants {
                 FEE_NETWORK_SUFFIX = "-testnet"; // use the same fee file as testnet
                 WALLET_NAME_CURRENCY_CODE = "tdash";
                 SUPPORTS_PLATFORM = !is32Bit;
-                SUPPORTS_INVITES = false;
-                SUPPORTS_TXMETADATA = false;
+                SUPPORTS_INVITES = true;
+                SUPPORTS_TXMETADATA = true;
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_HEADERS_MN_LIST_FIRST);
                 SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 org.dash.wallet.common.util.Constants.FAUCET_URL = String.format("http://faucet.%s.networks.dash.org/", devNetName);
@@ -280,6 +280,7 @@ public final class Constants {
     public static String NOTIFICATION_CHANNEL_ID_DASHPAY = "dash.notifications.dashpay";
 
     public static int USERNAME_MIN_LENGTH = 3;
+    public static int USERNAME_NON_CONTESTED_MIN_LENGTH = 20;
     public static int USERNAME_MAX_LENGTH = 23;
     public static int DISPLAY_NAME_MAX_LENGTH = 25;
     public static int ABOUT_ME_MAX_LENGTH = 140;

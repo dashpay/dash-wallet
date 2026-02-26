@@ -34,7 +34,11 @@ import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.debounce
@@ -45,6 +49,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -116,6 +121,7 @@ class SendCoinsViewModel @Inject constructor(
     private val _dryRunSuccessful = MutableLiveData(false)
     val dryRunSuccessful: LiveData<Boolean>
         get() = _dryRunSuccessful
+    private var dryRunGreedy: Boolean = true
 
     private val _isBlockchainReplaying = MutableLiveData<Boolean>()
     val isBlockchainReplaying: LiveData<Boolean>
@@ -231,8 +237,9 @@ class SendCoinsViewModel @Inject constructor(
         editedAmount: Coin,
         exchangeRate: ExchangeRate?,
         checkBalance: Boolean
-    ): Transaction {
-        _state.value = State.SENDING
+    ): Transaction = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
+        _state.postValue(State.SENDING)
         if (isAssetLock) {
             error("isAssetLock must be false, but is true")
         }
@@ -243,19 +250,20 @@ class SendCoinsViewModel @Inject constructor(
                 basePaymentIntent.mayEditAmount(),
                 finalPaymentIntent,
                 true,
-                dryrunSendRequest!!.ensureMinRequiredFee
+                dryrunSendRequest!!.ensureMinRequiredFee,
+                dryRunGreedy
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
-
+            Context.propagate(wallet.context)
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
-            _state.value = State.FAILED
+            _state.postValue(State.FAILED)
             throw ex
         }
 
-        _state.value = State.SENT
-        return transaction
+        _state.postValue(State.SENT)
+        transaction
     }
 
     suspend fun signAndSendAssetLock(
@@ -264,10 +272,10 @@ class SendCoinsViewModel @Inject constructor(
         checkBalance: Boolean,
         key: ECKey,
         emptyWallet: Boolean
-    ): Transaction {
-        _state.value = State.SENDING
+    ): Transaction = withContext(Dispatchers.IO) {
+        _state.postValue(State.SENDING)
         if (!isAssetLock) {
-            error("isAssetLock must be true, but is true")
+            error("isAssetLock must be true, but is false")
         }
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(editedAmount, null)
 
@@ -277,10 +285,12 @@ class SendCoinsViewModel @Inject constructor(
                 finalPaymentIntent,
                 true,
                 dryrunSendRequest!!.ensureMinRequiredFee,
-                key
+                key,
+                dryRunGreedy
             )
             finalSendRequest.memo = basePaymentIntent.memo
             finalSendRequest.exchangeRate = exchangeRate
+            Context.propagate(wallet.context)
 
             if (emptyWallet) {
                 sendCoinsTaskRunner.signSendRequest(finalSendRequest)
@@ -303,12 +313,12 @@ class SendCoinsViewModel @Inject constructor(
 
             sendCoinsTaskRunner.sendCoins(finalSendRequest, checkBalanceConditions = checkBalance)
         } catch (ex: Exception) {
-            _state.value = State.FAILED
+            _state.postValue(State.FAILED)
             throw ex
         }
 
         _state.value = State.SENT
-        return transaction
+        transaction
     }
 
     fun allowBiometric(): Boolean {
@@ -317,6 +327,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     suspend fun getPendingBalance(): Coin = withContext(Dispatchers.IO) {
+        Context.propagate(wallet.context)
         val estimated = wallet.getBalance(Wallet.BalanceType.ESTIMATED)
         val available = wallet.getBalance(Wallet.BalanceType.AVAILABLE)
 
@@ -393,6 +404,7 @@ class SendCoinsViewModel @Inject constructor(
         paymentIntent: PaymentIntent,
         signInputs: Boolean,
         forceEnsureMinRequiredFee: Boolean
+        //useGreedyAlgorithm: Boolean = true
     ): SendRequest {
         return if (!isAssetLock) {
             sendCoinsTaskRunner.createSendRequest(
@@ -419,12 +431,24 @@ class SendCoinsViewModel @Inject constructor(
     private fun executeDryrun(amount: Coin) {
         dryrunSendRequest = null
         dryRunException = null
+        dryRunGreedy = false
 
         if (state.value != State.INPUT || amount == Coin.ZERO) {
             _dryRunSuccessful.postValue(false)
             return
         }
         log.info("executeDryRun started")
+        val currentThread = Thread.currentThread()
+        val monitorJob = viewModelScope.launch(Dispatchers.Default) {
+            delay(1000)
+            log.warn("executeDryrun is taking longer than 1 second")
+            try {
+                val anrException = AnrException(currentThread)
+                anrException.logProcessMap()
+            } catch (e: Exception) {
+                log.error("Failed to dump thread traces during executeDryrun", e)
+            }
+        }
         val dummyAddress = wallet.currentReceiveAddress() // won't be used, tx is never committed
         val finalPaymentIntent = basePaymentIntent.mergeWithEditedValues(amount, dummyAddress)
 
@@ -437,22 +461,14 @@ class SendCoinsViewModel @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = false
             )
+            dryRunGreedy = true
             log.info("  start completeTx")
             wallet.completeTx(sendRequest)
 
-            if (checkDust(sendRequest)) {
-                sendRequest = createSendRequest(
-                    basePaymentIntent.mayEditAmount(),
-                    finalPaymentIntent,
-                    signInputs = false,
-                    forceEnsureMinRequiredFee = true
-                )
-                log.info("  start completeTx again")
-                wallet.completeTx(sendRequest)
-            }
-
+            dryRunGreedy = sendRequest.coinSelector is CoinJoinCoinSelector && !sendRequest.returnChange
             dryrunSendRequest = sendRequest
             log.info("executeDryRun finished")
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(true)
         } catch (ex: Exception) {
             dryRunException = if (ex is InsufficientMoneyException && _coinJoinActive.value && !currentAmount.isGreaterThan(wallet.getBalance(MaxOutputAmountCoinSelector()))) {
@@ -460,6 +476,7 @@ class SendCoinsViewModel @Inject constructor(
             } else {
                 ex
             }
+            monitorJob.cancel()
             _dryRunSuccessful.postValue(false)
         }
     }

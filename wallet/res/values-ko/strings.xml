@@ -203,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">지갑이 성공적으로 복구되었습니다. 지갑의 잔액 갱신에 다소 시간이 소요될 수 있습니다.</string>
     <string name="restore_wallet_dialog_success_encrypted">경고: 당신의 지갑은 지출 PIN으로 보호되고 있습니다. 이 지갑을 받기 전 해당 내용을 기억하여야 합니다.</string>
     <string name="import_keys_dialog_failure">전자 지갑을 복구할 수 없습니다. :\n\n%s\n\n비밀번호를 잘못 입력하셨나요?</string>
+    <string name="restore_wallet_creation_date_label">지갑 생성 일자 (선택 사항)</string>
+    <string name="restore_wallet_creation_date_info">지갑 생성 시점을 선택하면 해당 날짜 이후부터 스캔함으로써 더 빠르게 동기화할 수 있습니다.</string>
+    <string name="restore_wallet_select_date">생성 일자 선택하기</string>
+    <string name="restore_wallet_selected_date">선택됨: %s</string>
+    <string name="restore_wallet_date_picker_title">언제 지갑이 생성되었나요?</string>
+    <string name="wallet_creation_date_info_title">지갑 생성 일자가 어떻게 과정을 가속화할 수 있나요?</string>
+    <string name="wallet_creation_date_info_description">당신이 지갑을 생성한 대략적 날짜를 알고 있다면, 이를 입력하고 그 일자부터 데이터를 복구하여 빠르게 동기화할 수 있습니다. 지갑 생성 시점 이후의 날짜를 입력하는 경우 지난 거래 내역이 다운로드 되지 않는 점에 주의하세요.</string>
     <string name="export_keys_dialog_title">지갑 백업하기</string>
     <string name="backup_wallet_dialog_message">전자 지갑이 선택된 패스워드로 암호화되고 기기의 저장 장치에 백업됩니다.</string>
     <string name="backup_wallet_dialog_warning_encrypted">전자 지갑이 송금 PIN으로 보호됩니다. 백업 패스워드와 함께 PIN 번호를 꼭 기억하세요.</string>
@@ -278,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">블록체인, 거래 및 지갑 잔고를 재스캔합니다. 이 과정에는 다소의 시간이 소요될 수 있으므로 정당한 이유가 있는 때에만 이용하십시오.</string>
     <string name="preferences_initiate_reset_dialog_message">블록체인을 다시 스캔하시겠습니까?\n\n이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않으며, 블록체인 동기화가 완료되면 다시 정상적으로 표시됩니다. 인터넷 연결이 충분한지 확인하십시오.</string>
     <string name="preferences_initiate_reset_dialog_positive">재스캔</string>
+    <string name="rescan_blockchain_dialog_title">블록체인을 정말 재스캔하시겠습니까?</string>
+    <string name="rescan_blockchain_dialog_message">이 작업을 진행하면 지갑의 잔액과 거래 내역이 일시적으로 표시되지 않습니다. 블록체인 동기화 과정이 진행되면 두 가지 모두 복구됩니다. 인터넷 연결이 충분한지 확인하십시오.</string>
+    <string name="rescan_blockchain_select_date_label">지갑 생성 일자 선택하기 (선택 사항)</string>
+    <string name="rescan_blockchain_date_info_description">지갑 생성 일자에 관한 정보</string>
+    <string name="rescan_blockchain_select_date_placeholder">선택</string>
+    <string name="rescan_blockchain_confirm_button">재스캔</string>
     <string name="preferences_extended_public_key_title">xpub 보이기</string>
     <string name="preferences_extended_public_key_summary">지갑의 확장된 공개 키를 확인합니다. 이로써 다른 어플이나 서비스에 내보낼 수 있습니다. 주의하십시오: 이 경우 당신의 금융 프라이버시가 해당 어플에 공개됩니다.</string>
     <string name="bitmap_fragment_share">공유하기...</string>
@@ -433,4 +446,9 @@
     <string name="select_option">옵션 선택하기</string>
     <string name="customize_shortcuts">바로가기 모음 사용자 지정하기 </string>
     <string name="customize_shortcuts_description">위의 버튼을 길게 눌러 필요한 기능으로 변경하세요</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">당신의 PIN을 업그레이드 하십시오</string>
+    <string name="upgrade_pin_description">새 PIN 설정하기</string>
+    <string name="upgrade_pin_continue">계속</string>
 </resources>

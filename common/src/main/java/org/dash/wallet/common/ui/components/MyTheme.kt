@@ -132,6 +132,422 @@ object MyTheme {
         fontWeight = FontWeight(700)
     )
 
+    object Typography {
+        // Display styles - Largest text, typically for hero sections
+        val DisplayLargeBold = TextStyle(
+            fontSize = 57.sp,
+            lineHeight = 64.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val DisplayLargeMedium = TextStyle(
+            fontSize = 57.sp,
+            lineHeight = 64.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val DisplayLarge = TextStyle(
+            fontSize = 57.sp,
+            lineHeight = 64.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val DisplayMediumBold = TextStyle(
+            fontSize = 45.sp,
+            lineHeight = 52.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val DisplayMediumMedium = TextStyle(
+            fontSize = 45.sp,
+            lineHeight = 52.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val DisplayMedium = TextStyle(
+            fontSize = 45.sp,
+            lineHeight = 52.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val DisplaySmallBold = TextStyle(
+            fontSize = 36.sp,
+            lineHeight = 44.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val DisplaySmallMedium = TextStyle(
+            fontSize = 36.sp,
+            lineHeight = 44.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val DisplaySmall = TextStyle(
+            fontSize = 36.sp,
+            lineHeight = 44.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Headline styles - Large headers
+        val HeadlineLargeBold = TextStyle(
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(650)
+        )
+
+        val HeadlineLargeSemibold = TextStyle(
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val HeadlineLargeMedium = TextStyle(
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val HeadlineLarge = TextStyle(
+            fontSize = 32.sp,
+            lineHeight = 40.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val HeadlineMediumBold = TextStyle(
+            fontSize = 28.sp,
+            lineHeight = 36.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(650)
+        )
+
+        val HeadlineMediumSemibold = TextStyle(
+            fontSize = 28.sp,
+            lineHeight = 36.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val HeadlineMediumMedium = TextStyle(
+            fontSize = 28.sp,
+            lineHeight = 36.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val HeadlineMedium = TextStyle(
+            fontSize = 28.sp,
+            lineHeight = 36.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val HeadlineSmallBold = TextStyle(
+            fontSize = 24.sp,
+            lineHeight = 32.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(650)
+        )
+
+        val HeadlineSmallSemibold = TextStyle(
+            fontSize = 24.sp,
+            lineHeight = 32.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val HeadlineSmallMedium = TextStyle(
+            fontSize = 24.sp,
+            lineHeight = 32.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val HeadlineSmall = TextStyle(
+            fontSize = 24.sp,
+            lineHeight = 32.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Title styles - Smaller headers and section titles
+        val TitleLargeBold = TextStyle(
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val TitleLargeSemibold = TextStyle(
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val TitleLargeMedium = TextStyle(
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val TitleLarge = TextStyle(
+            fontSize = 22.sp,
+            lineHeight = 28.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val TitleMediumBold = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val TitleMediumSemibold = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val TitleMediumMedium = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val TitleMedium = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val TitleSmallBold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val TitleSmallSemibold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val TitleSmallMedium = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val TitleSmall = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Body styles - Main body text
+        val BodyLargeBold = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val BodyLargeSemibold = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val BodyLargeMedium = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val BodyLarge = TextStyle(
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val BodyMediumBold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val BodyMediumSemibold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val BodyMediumMedium = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val BodyMedium = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val BodySmallBold = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val BodySmallSemibold = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val BodySmallMedium = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val BodySmall = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Label styles - Labels, captions, and metadata text
+        val LabelLargeBold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val LabelLargeSemibold = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val LabelLargeMedium = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val LabelLarge = TextStyle(
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val LabelMediumBold = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val LabelMediumSemibold = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val LabelMediumMedium = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val LabelMedium = TextStyle(
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        val LabelSmallBold = TextStyle(
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            fontFamily = interBold,
+            fontWeight = FontWeight(700)
+        )
+
+        val LabelSmallSemibold = TextStyle(
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            fontFamily = interSemibold,
+            fontWeight = FontWeight(600)
+        )
+
+        val LabelSmallMedium = TextStyle(
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            fontFamily = interMedium,
+            fontWeight = FontWeight(500)
+        )
+
+        val LabelSmall = TextStyle(
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            fontFamily = interRegular,
+            fontWeight = FontWeight(400)
+        )
+
+        // Legacy aliases for backward compatibility
+        @Deprecated("Use HeadlineLargeBold instead", ReplaceWith("HeadlineLargeBold"))
+        val HeadlineLBold = HeadlineLargeBold
+
+        @Deprecated("Use HeadlineMediumBold instead", ReplaceWith("HeadlineMediumBold"))
+        val HeadlineMBold = HeadlineMediumBold
+
+        @Deprecated("Use HeadlineSmallBold instead", ReplaceWith("HeadlineSmallBold"))
+        val HeadlineSBold = HeadlineSmallBold
+    }
+
     object Colors {
         val backgroundPrimary = Color(0xFFF5F6F7)
         val textPrimary = Color(0xFF191C1F)

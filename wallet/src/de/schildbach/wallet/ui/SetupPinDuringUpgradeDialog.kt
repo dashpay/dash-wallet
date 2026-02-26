@@ -79,13 +79,49 @@ class SetupPinDuringUpgradeDialog(
                 }
             }
         }
+    }
+
+    override fun initViewModel() {
+        // Observe encryptWalletLiveData for when wallet is being encrypted for the first time
         setPinViewModel.encryptWalletLiveData.observe(viewLifecycleOwner) {
             when (it.status) {
                 Status.SUCCESS -> {
                     onResult?.invoke(true, viewModel.pin.toString())
+                    dismiss()
                 }
                 Status.ERROR -> {
                     onResult?.invoke(false, null)
+                    dismiss()
+                }
+                Status.LOADING -> {
+                    setState(State.DECRYPTING)
+                }
+                else -> {
+                    // ignore
+                }
+            }
+        }
+        // Observe checkPinLiveData for when wallet is already encrypted
+        viewModel.checkPinLiveData.observe(viewLifecycleOwner) {
+            when (it.status) {
+                Status.SUCCESS -> {
+                    onResult?.invoke(true, it.data!!)
+                    dismiss()
+                }
+                Status.ERROR -> {
+                    // Handle errors similar to parent class
+                    if (viewModel.isLockedAfterAttempt(it.data!!)) {
+                        restartService.performRestart(requireActivity(), true)
+                        return@observe
+                    }
+
+                    if (viewModel.isWalletLocked) {
+                        val message = viewModel.getLockedMessage(requireContext().resources)
+                        showLockedAlert(requireActivity(), message)
+                        dismiss()
+                        return@observe
+                    }
+                    setState(State.INVALID_PIN)
                 }
                 Status.LOADING -> {
                     setState(State.DECRYPTING)
@@ -109,7 +145,13 @@ class SetupPinDuringUpgradeDialog(
     }
 
     override fun checkPin(pin: String) {
-        setPinViewModel.savePinAndEncrypt(pin, false)
+        if (setPinViewModel.isWalletEncrypted) {
+            // Wallet is already encrypted, verify the PIN
+            viewModel.checkPin(pin)
+        } else {
+            // Wallet is not encrypted, set up new PIN and encrypt
+            setPinViewModel.savePinAndEncrypt(pin, false)
+        }
     }
 
     override fun showLockedAlert(activity: FragmentActivity, lockedTimeMessage: String) {

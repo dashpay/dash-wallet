@@ -30,6 +30,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsReceiveBinding
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -84,7 +85,11 @@ class PaymentsReceiveFragment : Fragment(R.layout.fragment_payments_receive) {
         binding.importPrivateKeyBtn.isVisible = args.showImportPrivateKey
         binding.importPrivateKeyBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY)
-            SweepWalletActivity.start(requireContext(), false)
+            createImportPrivateKeyDialog(
+                onScanPrivateKey = {
+                    SweepWalletActivity.start(requireContext(), false)
+                }
+            ).show(parentFragmentManager, "import_private_key")
         }
 
         if (args.centerVertically) {

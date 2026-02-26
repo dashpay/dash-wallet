@@ -29,7 +29,6 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
-import org.bitcoinj.crypto.MnemonicException
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
@@ -46,7 +45,6 @@ class RestoreWalletFromFileViewModel @Inject constructor(
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromFileViewModel::class.java)
 
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val showUpgradeWalletAction = SingleLiveEvent<Wallet>()
     internal val showUpgradeDisclaimerAction = SingleLiveEvent<Wallet>()
     internal val startActivityAction = SingleLiveEvent<Intent>()

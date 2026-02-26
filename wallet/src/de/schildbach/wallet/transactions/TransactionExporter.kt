@@ -18,6 +18,8 @@ package de.schildbach.wallet.transactions
 
 import android.annotation.SuppressLint
 import de.schildbach.wallet.util.WalletUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -25,6 +27,7 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.data.entity.TransactionMetadata
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionUtils
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import java.text.DateFormat
@@ -33,8 +36,8 @@ import java.util.*
 
 @SuppressLint("SimpleDateFormat")
 abstract class TransactionExporter(
+    val transactionMetadataProvider: TransactionMetadataProvider,
     val wallet: Wallet,
-    val metadataMap: Map<Sha256Hash, TransactionMetadata>,
     val taxCategories: List<String>
 ) {
 
@@ -63,12 +66,25 @@ abstract class TransactionExporter(
                 ?: WalletUtils.getTransactionDate(tx))
         }
     }
+    protected lateinit var metadataMap: Map<Sha256Hash, TransactionMetadata>
+    suspend fun initMetadataMap() = withContext(Dispatchers.IO) {
+        val list = transactionMetadataProvider.getAllTransactionMetadata()
 
-    protected val sortedTransactions = wallet.getTransactions(false).sortedBy {
-        if (it.confidence != null && it.confidence.sentAt != null && it.confidence.sentAt < it.updateTime) {
-            it.confidence.sentAt
+        metadataMap = if (list.isNotEmpty()) {
+            list.associateBy({ it.txId }, { it })
         } else {
-            it.updateTime
+            mapOf()
+        }
+    }
+
+    protected val sortedTransactions by lazy {
+        wallet.getTransactions(false).sortedBy {
+            val confidence = it.getConfidence(wallet.context)
+            if (confidence != null && confidence.sentAt != null && confidence.sentAt < it.updateTime) {
+                confidence.sentAt
+            } else {
+                it.updateTime
+            }
         }
     }
 
@@ -151,5 +167,5 @@ abstract class TransactionExporter(
         "DASH Wallet"
     }
 
-    abstract fun exportString(): String
+    abstract suspend fun exportString(): String
 }

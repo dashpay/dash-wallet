@@ -269,6 +269,8 @@
     <string name="preferences_initiate_reset_summary">การสแกนการตรวจสอบบล็อกเชน, ธุรกรรม และยอดคงเหลือซ้ำ ๆ นั้นจะใช้เวลาสักพักดังนั้นคุณควรทำในกรณีที่มีความจำเป็นเท่านั้น</string>
     <string name="preferences_initiate_reset_dialog_message">คุณต้องการจะตรวจสอบบล็อกเชนอีกครั้ง?\n\nซึ่งจะมีการซ่อนยอดคงเหลือของกระเป๋าเงินของคุณชั่วคราวและลบธุรกรรมทั้งหมด ทั้งสองจะกู้คืนอีกครั้งเมื่อมีการซิงค์กับบล็อกเชน กรุณาตรวจสอบให้แน่ใจว่าคุณมีการเชื่อมต่อที่เชื่อถือได้กับอินเทอร์เน็ตที่คุณใช้งานอยู่</string>
     <string name="preferences_initiate_reset_dialog_positive">สแกนอีกครั้ง</string>
+    <string name="rescan_blockchain_select_date_placeholder">เลือก</string>
+    <string name="rescan_blockchain_confirm_button">สแกนอีกครั้ง</string>
     <string name="preferences_extended_public_key_title">แสดง xpub</string>
     <string name="preferences_extended_public_key_summary">ดูส่วนขยาย public key  wallet ของคุณ  มันสามารถนำเข้าไปยังแอพพลิเคชั่นและบริการอื่น ๆ ได้   โปรดระวัง: การทำเช่นนี้จะเป็นการเปิดเผยข้อมูลทางการเงินส่วนบุคคลของคุณไปยังแอพพลิเคชั่นนั้น</string>
     <string name="bitmap_fragment_share">แบ่งปัน...</string>
@@ -391,4 +393,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">คุณต้องการรับการชำระเงินในเบื้องหลังหรือไม่?</string>
     <string name="battery_optimization_dialog_message_not_optimized">แอปนี้ได้รับการกำหนดค่าให้ทำงานต่อไปหลังจากที่ไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n เราขอแนะนำให้อนุญาตให้แอปนี้อัปเดตบล็อกเชนอยู่เสมอ แม้จะอยู่เบื้องหลังก็ตาม \n\n อย่ากังวล เราจะ คำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
     <string name="battery_optimization_dialog_button_change">เปิดการตั้งค่า</string>
-    </resources>
+    <string name="upgrade_pin_description">ตั้งเลขรหัสผ่านใหม่</string>
+    <string name="upgrade_pin_continue">ดำเนินการต่อ</string>
+</resources>

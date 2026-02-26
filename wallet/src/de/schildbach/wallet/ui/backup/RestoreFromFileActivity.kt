@@ -20,21 +20,17 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
-import android.text.TextUtils
 import androidx.activity.viewModels
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.ui.AbstractPINDialogFragment
 import de.schildbach.wallet.ui.EncryptNewKeyChainDialogFragment
 import de.schildbach.wallet.ui.RestoreWalletFromFileViewModel
-import de.schildbach.wallet.ui.RestoreWalletFromSeedDialogFragment
 import de.schildbach.wallet.ui.SET_PIN_REQUEST_CODE
 import de.schildbach.wallet.ui.widget.UpgradeWalletDisclaimerDialog
-import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.SecureActivity
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 
 
 @Suppress("DEPRECATION")
@@ -54,31 +50,12 @@ open class RestoreFromFileActivity : SecureActivity(), AbstractPINDialogFragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // viewModel = ViewModelProvider(this)[RestoreWalletFromFileViewModel::class.java]
         walletApplication = (application as WalletApplication)
         initViewModel()
     }
 
     @SuppressLint("StringFormatInvalid")
     private fun initViewModel() {
-        viewModel.showRestoreWalletFailureAction.observe(this) {
-            val message = when {
-                TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
-                else -> it.message!!
-            }
-
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.import_export_keys_dialog_failure_title),
-                getString(R.string.import_keys_dialog_failure, message),
-                getString(R.string.button_dismiss),
-                getString(R.string.button_retry)
-            ).show(this) { shouldRetry ->
-                if (shouldRetry == true) {
-                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-                }
-            }
-        }
         viewModel.showUpgradeWalletAction.observe(this) {
             walletBuffer = it
             EncryptNewKeyChainDialogFragment.show(supportFragmentManager, Constants.BIP44_PATH)

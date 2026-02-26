@@ -34,6 +34,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
+import java.util.concurrent.TimeUnit
 
 open class TxResourceMapper {
     companion object {
@@ -153,20 +154,25 @@ open class TxResourceMapper {
      * @return the secondary status or -1 if there is none
      */
     @StringRes
-    open fun getReceivedStatusString(tx: Transaction, context: Context, bestChainLockBlockHeight: Int): Int {
+    open fun getReceivedStatusString(
+        tx: Transaction,
+        context: Context,
+        bestChainLockBlockHeight: Int
+    ): Int {
+        val oneHourAgo = System.currentTimeMillis() - TimeUnit.HOURS.toMillis(1)
         val confidence = tx.getConfidence(context)
         var statusId = -1
         if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
             val confirmations = confidence.depthInBlocks
-            val isChainLocked = bestChainLockBlockHeight >= confidence.depthInBlocks
+            val isChainLocked = bestChainLockBlockHeight >= confidence.appearedAtChainHeight
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase) {
                 // coinbase transactions are locked if they have less than 100 confirmations
-                if (confidence.depthInBlocks < Constants.NETWORK_PARAMETERS.spendableCoinbaseDepth) {
+                if (confirmations < Constants.NETWORK_PARAMETERS.spendableCoinbaseDepth) {
                     statusId = R.string.transaction_row_status_locked
                 }
-            } else if (confirmations < 6 && !isChainLocked && confidence.ixType != TransactionConfidence.IXType.IX_LOCKED) {
+            } else if (confirmations < 6 && !isChainLocked && confidence.ixType != TransactionConfidence.IXType.IX_LOCKED && tx.updateTime.time > oneHourAgo) {
                 // confirmations < 6
                 // not ChainLocked
                 // not InstantSendLocked

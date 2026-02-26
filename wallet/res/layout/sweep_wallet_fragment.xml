@@ -36,7 +36,7 @@
                 android:layout_marginTop="48dp"
                 android:gravity="center"
                 android:textAlignment="gravity"
-                android:text="@string/scan_private_key"
+                android:text="@string/tools_import_private_key"
                 app:layout_constraintTop_toTopOf="parent" />
 
             <ImageView
@@ -57,7 +57,7 @@
                 android:layout_marginLeft="12dp"
                 android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
-                android:text="@string/scan_private_key_intro_1"
+                android:text="@string/import_private_key_description"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/imageView3"
                 app:layout_constraintTop_toTopOf="@id/imageView3" />
@@ -67,6 +67,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:visibility="gone"
                 app:tint="@color/content_primary"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/text_1"
@@ -81,6 +82,7 @@
                 android:layout_marginEnd="12dp"
                 android:layout_marginRight="12dp"
                 android:text="@string/scan_private_key_intro_2"
+                android:visibility="gone"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/imageView4"
                 app:layout_constraintTop_toTopOf="@id/imageView4" />

@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.send
 import android.os.Bundle
 import android.view.View
 import android.view.animation.AnimationUtils
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
@@ -167,7 +168,7 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                 }
                 Status.SUCCESS -> {
                     userAuthorizedDuring = true
-                    commitSendRequest(ack.data!!.first)
+                    showTransactionResult(ack.data!!)
                 }
                 Status.ERROR -> {
                     if (isAdded) {
@@ -175,34 +176,13 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
                         binding.errorView.title = R.string.payment_request_problem_title
                         binding.errorView.setMessage(ack.message)
                         binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                            viewModel.directPay(ack.data!!.first)
+                            viewModel.sendPayment()
                         }
-                        binding.errorView.setOnCancelClickListener(R.string.payment_request_skip) {
-                            showTransactionResult(ack.data!!.first.tx)
-                        }
-                    } else {
-                        showTransactionResult(ack.data!!.first.tx)
+                        binding.errorView.hideCancelButton()
                     }
                 }
 
                 else -> {}
-            }
-        }
-    }
-
-    private fun commitSendRequest(sendRequest: SendRequest) {
-        lifecycleScope.launch {
-            try {
-                binding.viewFlipper.displayedChild = VIEW_LOADING
-                val transaction = viewModel.commitAndBroadcast(sendRequest)
-                showTransactionResult(transaction)
-            } catch (ex: Exception) {
-                binding.viewFlipper.displayedChild = VIEW_ERROR
-                binding.errorView.title = R.string.payment_request_unable_to_send
-                binding.errorView.message = R.string.payment_request_please_try_again
-                binding.errorView.setOnConfirmClickListener(R.string.payment_request_try_again) {
-                    commitSendRequest(sendRequest)
-                }
             }
         }
     }
@@ -277,9 +257,14 @@ class PaymentProtocolFragment : Fragment(R.layout.fragment_payment_protocol) {
         binding.paymentRequest.totalAmount.text = amount.add(txFee).toPlainString()
 
         binding.paymentRequest.memo.text = paymentIntent.memo
-        binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
-            ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
-
+        if (paymentIntent.payeeVerifiedBy != null) {
+            binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_secured_by)
+            binding.paymentRequest.payeeSecuredBy.text = paymentIntent.payeeVerifiedBy
+        } else {
+            binding.paymentRequest.securedBy.text = getString(R.string.dialog_confirm_connected_to_unsecured)
+            binding.paymentRequest.payeeSecuredBy.text = paymentIntent.paymentUrl?.toUri()?.host
+                        ?: getString(R.string.send_coins_fragment_payee_verified_by_unknown)
+        }
         val forceMarqueeOnClickListener = View.OnClickListener {
             it.isSelected = false
             it.isSelected = true

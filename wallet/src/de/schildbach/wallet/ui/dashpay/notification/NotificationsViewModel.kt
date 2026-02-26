@@ -39,7 +39,6 @@ class NotificationsViewModel @Inject constructor(
     platformRepo: PlatformRepo,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
-    private val userAlert: UserAlertDao,
     platformSyncService: PlatformSyncService,
     private val userAlertDao: UserAlertDao,
     private val dashPayConfig: DashPayConfig,
@@ -53,7 +52,7 @@ class NotificationsViewModel @Inject constructor(
     }
     fun dismissUserAlert(alertId: Int) {
         viewModelScope.launch(Dispatchers.IO) {
-            userAlert.dismiss(alertId)
+            userAlertDao.dismiss(alertId)
             notificationsLiveData.onContactsUpdated()
         }
     }

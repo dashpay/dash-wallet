@@ -234,6 +234,7 @@
     <string name="preferences_report_issue_title">Raportează problema</string>
     <string name="preferences_initiate_reset_title">scanează din nou blockchain-ul</string>
     <string name="preferences_initiate_reset_dialog_positive">Scanează din nou</string>
+    <string name="rescan_blockchain_confirm_button">Scanează din nou</string>
     <string name="preferences_extended_public_key_title">Arată xpub</string>
     <string name="preferences_extended_public_key_summary">Arată Cheia Publică Extinsă a portofelului tau, pentru a putea fi importată in alte aplicaţii și servicii. Ai grijă: acest lucru va dezvălui confidențialitatea ta monetară aplicației respective.</string>
     <string name="bitmap_fragment_share">Distribuie...</string>

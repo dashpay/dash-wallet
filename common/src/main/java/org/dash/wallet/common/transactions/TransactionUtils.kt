@@ -97,16 +97,21 @@ object TransactionUtils {
         return result
     }
 
-    fun getOpReturnsOfSent(tx: Transaction, bag: TransactionBag): List<String> {
+    /** get OP_RETURNS of sent tx's */
+    fun getOpReturnsOfSent(
+        tx: Transaction,
+        bag: TransactionBag
+    ): List<String> {
         val result = mutableListOf<String>()
-
-        for (output in tx.outputs) {
-            try {
-                if (!output.isMine(bag) && ScriptPattern.isOpReturn(output.scriptPubKey)) {
-                    result.add("OP RETURN")
+        if (!tx.isCoinBase) {
+            for (output in tx.outputs) {
+                try {
+                    if (!output.isMine(bag) && ScriptPattern.isOpReturn(output.scriptPubKey)) {
+                        result.add("OP RETURN")
+                    }
+                } catch (x: ScriptException) {
+                    // swallow
                 }
-            } catch (x: ScriptException) {
-                // swallow
             }
         }
 

@@ -17,9 +17,10 @@
     <string name="new_account_confirm_accept">我同意</string>
     <string name="new_account_confirm_upgrade_fee">升级费用</string>
     <string name="new_account_confirm_message">您已经选择了%s作为您的用户名. 请注意用户名一旦注册, 便无法再更改.</string>
+    <string name="new_account_secondary_confirm_message">您选择%s作为一个即时用户名. 请注意用户名一旦注册, 便无法再更改.</string>
     <string name="invitation_confirm_title">邀请费用</string>
     <string name="invitation_confirm_message">每个邀请都将获得该金额的资助, 以便收款人可以在Dash网络上快速创建他们的用户名</string>
-    <string name="invitation_init_title">邀请</string>
+    <string name="invitation_title">邀请</string>
     <string name="invitation_init_header">邀请您的朋友和家人</string>
     <string name="invitation_init_message">帮助您的亲友加入Dash网络. 邀请他们进入社交银行.</string>
     <string name="invitation_init_button_text">创建新的邀请</string>
@@ -53,8 +54,12 @@
     <string name="invitation_invalid_invite_message">您来自%s的邀请无效</string>
     <string name="invitation_username_already_found_title">已找到的用户名</string>
     <string name="invitation_username_already_found_message">由于您已经有了 Dash用户名, 因此无法认领此邀请</string>
+    <string name="invitation_username_already_found_voting_title">已申请的用户名</string>
+    <string name="invitation_username_already_found_voting_message">由于您已经申请了一个 Dash 用户名, 因此无法认领此邀请</string>
     <string name="invitation_onboarding_has_began_error_title">登入错误</string>
+    <string name="invitation_error_title">邀请错误</string>
     <string name="invitation_onboarding_has_began_error">登入正在进行, 请在完成钱包创建后接受您的邀请.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay 当前正在处理一个邀请.</string>
     <string name="invitation_accept_title_1">获取您的用户名</string>
     <string name="invitation_accept_title_2">添加您的朋友和家人</string>
     <string name="invitation_accept_message_2">邀请您的家人, 通过搜索用户名找到您的朋友</string>
@@ -211,6 +216,8 @@
 
     <string name="join_dashpay_subtitle">创建用户名, 添加您的好友...</string>
     <string name="join_dashpay_more_subtitle">创建您的用户名, 查找您的好友并添加他们到您的联系人</string>
+    <string name="join_dashpay_more_subtitle_two">创建一个用户名并告别字母数字地址</string>
+    <string name="join_dashpay_wait">等待同步完成后创建一个用户名</string>
     <string name="join">加入</string>
 
     <string name="more_suggestions">更多建议</string>
@@ -307,6 +314,7 @@
         <item>已阻止投票</item>
     </string-array>
     <string name="request_your_username">创建您的用户名</string>
+    <string name="request_instant_username">创建即时用户名</string>
     <string name="request_your_hint">请注意您在之后将无法进行修改</string>
     <string name="request_username">申请用户名</string>
     <string name="request_voting_range">Dash 网络将对此用户名进行投票. 我们将通知您之后的结果 %s.</string>
@@ -382,6 +390,8 @@
     <string name="requested_voting_duration">结果在 %s.</string>
     <string name="cancel_request">取消申请</string>
     <string name="after_the_voting">当投票结束后我们将向您通知结果</string>
+    <string name="after_the_voting_result">投票已结束</string>
+    <string name="voting_period_error">投票期未找到</string>
     <string name="none">无</string>
     <string name="verify_now">现在验证</string>
     <string name="if_you_tap_cancel">如果您点击 “取消申请”, 您仍然可以再申请另一个用户名无需再次付款</string>
@@ -435,8 +445,12 @@
 
     <string name="request_username_username_voting_message">+ 什么是用户名投票\?</string>
     <string name="request_username_character_requirement">仅限字母, 数字和连字符</string>
+    <string name="request_username_character_requirement_invite_noncontested">数字 2-9</string>
     <string name="request_username_balance_requirement">您需要拥有 0.25 DASH 来创建此用户名</string>
+    <string name="request_username_requirements_message_invite_noncontested">用户名必须符合以下任一条件</string>
+    <string name="request_username_requirements_message">用户名必须符合以下条件</string>
     <string name="request_username_length_requirement">3-23个字符之间</string>
+    <string name="request_username_length_requirement_noncontested">20-23个字符之间</string>
     <string name="request_username_confirm">我同意</string>
     <string name="username_vote_one_left_message">您已为此用户名投票 %d次. 您只能对该用户名再投一票.</string>
     <string name="username_vote_one_left">还剩一票</string>
@@ -507,4 +521,27 @@
     <string name="transaction_metadata_you_have_n_tx">自 %s 以来, 您有%d 笔为保存的交易</string>
     <string name="transaction_metadata_save_transactions">保存未保存的交易</string>
     <string name="transaction_metadata_continue_without_saving">放弃保存并继续</string>
+    <string name="invitation_fee_title">邀请费用</string>
+    <string name="invitation_fee_message">每个邀请都将获得资金支持, 以便接收者能够快速在 Dash 网络上创建用户名.</string>
+    <string name="invitation_fee_noncontested">非竞争的</string>
+    <string name="invitation_fee_contested">竞争的</string>
+    <string name="invitation_fee_contested_message">收到您发送邀请的人可以申请任何他们想要的用户名, 网络将进行投票以批准该用户名.</string>
+    <string name="invitation_fee_noncontested_message">收到您发送邀请的人可以申请包含数字2-9且长度超过20个字符的用户名.</string>
+    <string name="invitation_creating_progress_loading">加载邀请中...</string>
+    <string name="invitation_creating_progress_wip">创建邀请中...</string>
+    <string name="invitation_fee_confirm_and_pay_button">确认并付款</string>
+    <string name="error_sending_invite_transaction">发送邀请交易时错误</string>
+    <string name="request_username_invitation_not_mixed_message">此邀请是使用未混币的资金创建的</string>
+    <string name="request_username_invitation_only_noncontested_message">您只能使用此邀请创建一个无争议的用户名</string>
+    <string name="username_types_title">什么是竞争的和非竞争的用户名\?</string>
+    <string name="username_types_message">用户名有两种类型: 竞争的和非竞争的. \n\n非竞争的用户名至少包含一个数字 (2-9) 或长度超过20个字符, 能够自动获得批准. \n\n如果您想创建一个较短且不含数字的竞争的用户名, 则需要在没有邀请的情况下注册DashPay, 支付相应费用, 并在投票期结束后等待批准.</string>
+    <string name="accept_invitation_hide">隐藏</string>
+    <string name="accept_invitation_create">创建</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">创建一个即时用户名</string>
+    <string name="create_instant_username_description">您申请的用户名将在2周内被投票. 为了立刻使用联系人和付款, 您可以创建一个相似的即时用户名.\n\n如果您原先的申请被通过, 它将会替换即时用户名, 并保存联系人和历史. 如果未通过, 您仍可继续使用即时用户名.</string>
+    <string name="create_instant_username_button">创建即时用户名</string>
+    <string name="create_instant_username_cancel">取消</string>
+
 </resources>

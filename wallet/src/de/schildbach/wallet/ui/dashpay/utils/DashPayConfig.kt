@@ -123,6 +123,8 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_SAVE_ON_RESET = booleanPreferencesKey("transaction_metadata_save_on_reset")
         val TRANSACTION_METADATA_LAST_SAVE_WORK_ID = stringPreferencesKey("transaction_metadata_last_save_work_id")
         val TRANSACTION_METADATA_LAST_PAST_SAVE = longPreferencesKey("transaction_metadata_last_save_work_timestamp")
+        val INVITATION_LINK = stringPreferencesKey("invitation_link")
+        val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

@@ -17,9 +17,10 @@ Dash</b></string>
     <string name="new_account_confirm_accept">Eu Aceito</string>
     <string name="new_account_confirm_upgrade_fee">Taxa de Upgrade</string>
     <string name="new_account_confirm_message">Você escolheu %s como seu nome de usuário. Por favor, observe que o nome de usuário não pode ser alterado depois de ser registrado.</string>
+    <string name="new_account_secondary_confirm_message">Você escolheu %s como um nome de usuário instantâneo. Observe que o nome de usuário NÃO pode ser alterado após o registro.</string>
     <string name="invitation_confirm_title">Taxa de Convite</string>
     <string name="invitation_confirm_message">Cada convite será financiado com esse valor para que o destinatário possa criar rapidamente seu nome de usuário na Rede Dash</string>
-    <string name="invitation_init_title">Convidar</string>
+    <string name="invitation_title">Convite</string>
     <string name="invitation_init_header">Convide seus amigos ­​­e família</string>
     <string name="invitation_init_message">Ajude seus amigos e familiares a ingressarem na Rede Dash. Convide-os para o mundo do social banking.</string>
     <string name="invitation_init_button_text">Criar Novo Convite</string>
@@ -53,8 +54,12 @@ Dash</b></string>
     <string name="invitation_invalid_invite_message">Seu convite de %s não é válido</string>
     <string name="invitation_username_already_found_title">Nome de usuário já encontrado</string>
     <string name="invitation_username_already_found_message">Você não pode reivindicar este convite porque já tem um nome de usuário Dash</string>
+    <string name="invitation_username_already_found_voting_title">O nome de usuário já foi solicitado</string>
+    <string name="invitation_username_already_found_voting_message">Você não pode aceitar este convite, pois já solicitou um nome de usuário Dash</string>
     <string name="invitation_onboarding_has_began_error_title">Erro de Integração</string>
+    <string name="invitation_error_title">Erro de Convite</string>
     <string name="invitation_onboarding_has_began_error">A integração está em andamento. Por favor, reivindique seu convite após ter criado sua carteira.</string>
+    <string name="invitation_accept_invite_has_began_error">O DashPay está processando um convite no momento.</string>
     <string name="invitation_accept_title_1">Obtenha seu nome de usuário</string>
     <string name="invitation_accept_title_2">Adicionar seus Amigos e Família</string>
     <string name="invitation_accept_message_2">Convide sua família e encontre seus amigos pesquisando seus nomes de usuário</string>
@@ -211,6 +216,8 @@ Dash</b></string>
 
     <string name="join_dashpay_subtitle">Crie um Nome de Usuário, adicione seus amigos…</string>
     <string name="join_dashpay_more_subtitle">Crie seu Nome de Usuário, encontre seus amigos e adicione-os aos seus contatos</string>
+    <string name="join_dashpay_more_subtitle_two">Crie um nome de usuário e diga adeus aos endereços numéricos</string>
+    <string name="join_dashpay_wait">Aguarde até a sincronização ser concluída para criar um nome de usuário</string>
     <string name="join">Juntar-se</string>
 
     <string name="more_suggestions">Mais Sugestões</string>
@@ -307,6 +314,7 @@ Dash</b></string>
         <item>Tem votos bloqueados</item>
     </string-array>
     <string name="request_your_username">Criar seu nome de usuário</string>
+    <string name="request_instant_username">Criar nome de usuário instantâneo</string>
     <string name="request_your_hint">Por favor, observe que você não poderá alterar isso no futuro</string>
     <string name="request_username">Solicitar Nome de Usuário</string>
     <string name="request_voting_range">A rede Dash fará uma votação para escolher este nome de usuário. Você será notificado sobre o resultado em %s.</string>
@@ -382,6 +390,8 @@ Dash</b></string>
     <string name="requested_voting_duration">Resultados em %s.</string>
     <string name="cancel_request">Cancelar Solicitação</string>
     <string name="after_the_voting">Após o término da votação, iremos notificá-lo sobre os resultados</string>
+    <string name="after_the_voting_result">A votação foi encerrada</string>
+    <string name="voting_period_error">Período de votação não encontrado</string>
     <string name="none">Nenhuma</string>
     <string name="verify_now">Verificar Agora</string>
     <string name="if_you_tap_cancel">Se você tocar em \"Cancelar Solicitação\", ainda terá a chance de solicitar outro nome de usuário sem pagar novamente</string>
@@ -435,8 +445,12 @@ Dash</b></string>
 
     <string name="request_username_username_voting_message">+ o que é votação de nome de usuário\? </string>
     <string name="request_username_character_requirement">Apenas letras, números e hífens</string>
+    <string name="request_username_character_requirement_invite_noncontested">Números 2-9</string>
     <string name="request_username_balance_requirement">Você precisa ter 0,25 DASH para criar este nome de usuário</string>
+    <string name="request_username_requirements_message_invite_noncontested">O nome de usuário deve atender a um dos seguintes critérios</string>
+    <string name="request_username_requirements_message">O nome de usuário deve atender a estes critérios</string>
     <string name="request_username_length_requirement">Entre 3 e 23 caracteres</string>
+    <string name="request_username_length_requirement_noncontested">Entre 20 e 23 caracteres</string>
     <string name="request_username_confirm">Eu aceito</string>
     <string name="username_vote_one_left_message">Você já votou para este nome de usuário %d vezes. Você pode votar apenas mais uma vez.  </string>
     <string name="username_vote_one_left">Um voto restante</string>
@@ -507,4 +521,27 @@ Dash</b></string>
     <string name="transaction_metadata_you_have_n_tx">Você tem %d transações não salvas desde %s</string>
     <string name="transaction_metadata_save_transactions">Salvar transações não salvas</string>
     <string name="transaction_metadata_continue_without_saving">Continuar sem salvar</string>
+    <string name="invitation_fee_title">Taxa de Convite</string>
+    <string name="invitation_fee_message">Cada convite será financiado para que o destinatário possa criar rapidamente seu nome de usuário na Rede Dash.</string>
+    <string name="invitation_fee_noncontested">Não contestado</string>
+    <string name="invitation_fee_contested">Contestado</string>
+    <string name="invitation_fee_contested_message">A pessoa que receber este convite poderá escolher qualquer nome de usuário que desejar, e a rede votará para aprovar a solicitação.</string>
+    <string name="invitation_fee_noncontested_message">A pessoa que receber este convite poderá solicitar um nome de usuário que inclua um número de 2 a 9 e tenha mais de 20 caracteres.</string>
+    <string name="invitation_creating_progress_loading">Carregando convite...</string>
+    <string name="invitation_creating_progress_wip">Criando convite...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Confirme e pague</string>
+    <string name="error_sending_invite_transaction">Erro ao enviar a transação do convite</string>
+    <string name="request_username_invitation_not_mixed_message">O convite foi criado com fundos não misturados</string>
+    <string name="request_username_invitation_only_noncontested_message">Com este convite, você só pode criar um nome de usuário não contestado</string>
+    <string name="username_types_title">O que são nomes de usuário contestados e não contestados\?</string>
+    <string name="username_types_message">Existem dois tipos de nomes de usuário: contestados e não contestados.\n\nNomes de usuário não contestados possuem pelo menos um número (2-9) ou têm mais de 20 caracteres e serão aprovados automaticamente.\n\nSe você quiser criar um nome de usuário contestado, que seja mais curto e sem números, precisará se registrar no DashPay sem convite, pagar a taxa exigida e aguardar a aprovação ao final do período de votação.</string>
+    <string name="accept_invitation_hide">Ocultar</string>
+    <string name="accept_invitation_create">Criar</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Criar um nome de usuário instantâneo</string>
+    <string name="create_instant_username_description">O nome de usuário solicitado será submetido à votação por 2 semanas. Para contatos e pagamentos imediatos, você pode criar um nome de usuário instantâneo semelhante.\n\nSe sua solicitação original for aprovada, ela substituirá o atual, preservando contatos e histórico. Caso contrário, você poderá continuar usando o usuário instantâneo sem interrupções.</string>
+    <string name="create_instant_username_button">Criar nome de usuário instantâneo</string>
+    <string name="create_instant_username_cancel">Cancelar</string>
+
 </resources>

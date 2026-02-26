@@ -17,9 +17,10 @@ Benutzernamen</b></string>
     <string name="new_account_confirm_accept">Ich akzeptiere</string>
     <string name="new_account_confirm_upgrade_fee">Upgradegebühr</string>
     <string name="new_account_confirm_message">Du hast %s als Benutzernamen ausgewählt. Bitte beachte, dass der Benutzername nach der Registrierung NICHT mehr geändert werden kann.</string>
+    <string name="new_account_secondary_confirm_message">Du hast %s als Nutzernamen ausgewählt. Bitte beachte, dass der Nutzername nach der Registrierung NICHT mehr geändert werden kann.</string>
     <string name="invitation_confirm_title">Einladungsgebühr</string>
     <string name="invitation_confirm_message">Jede Einladung wird mit diesem Betrag versehen damit der Empfänger schnell einen eigenen Nutzernamen im Dash-Netzwerk beanspruchen kann</string>
-    <string name="invitation_init_title">Einladen</string>
+    <string name="invitation_title">Einladung</string>
     <string name="invitation_init_header">Lade Freund und Familie ein</string>
     <string name="invitation_init_message">Hilf Freunden und Familie dem Dash-Netzwerk beizutreten. Lade sie in die Welt des Social Bankings ein.</string>
     <string name="invitation_init_button_text">Neue Einladung erstellen</string>
@@ -53,8 +54,12 @@ Benutzernamen</b></string>
     <string name="invitation_invalid_invite_message">Deine Einladung ist %s ist ungültig.</string>
     <string name="invitation_username_already_found_title">Nutzername bereits gefunden</string>
     <string name="invitation_username_already_found_message">Du kannst diese Einladung nicht beanspruchen, da du bereits einen Dash-Benutzernamen besitzt.</string>
+    <string name="invitation_username_already_found_voting_title">Nutzername bereits angefragt</string>
+    <string name="invitation_username_already_found_voting_message">Du kannst diese Einladung nicht beanspruchen, da du bereits einen Dash-Nutzernamen hast.</string>
     <string name="invitation_onboarding_has_began_error_title">Fehler beim Onboarding</string>
+    <string name="invitation_error_title">Einladungsfehler</string>
     <string name="invitation_onboarding_has_began_error">Das Onboarding wird durchgeführt. Bitte beanspruche deine Einladung, nachdem du deine Wallet erstellt hast.</string>
+    <string name="invitation_accept_invite_has_began_error">DashPay verarbeitet gerade eine Einladung.</string>
     <string name="invitation_accept_title_1">Erhalte deinen Nutzernamen</string>
     <string name="invitation_accept_title_2">Füge Freunde und Familie hinzu</string>
     <string name="invitation_accept_message_2">Lade Freund und Familie ein, indem du ihre Nutzernamen suchst</string>
@@ -78,7 +83,7 @@ Benutzernamen</b></string>
     <string name="restore_identity">Identität wiederherstellen</string>
     <string name="processing_done_title">Hallo %s,</string>
     <string name="processing_done_subtitle">Dein Konto ist fertig.</string>
-    <string name="processing_voting_subtitle">Die Abstimmung für deinen Benutzernamen hat begonnen.</string>
+    <string name="processing_voting_subtitle">Die Abstimmung für deinen Nutzernamen hat begonnen.</string>
     <string name="processing_error_title">Fehler beim Aktualisieren</string>
     <string name="processing_error_title_from_invite">Fehler beim Upgraden der Einladung</string>
     <string name="processing_error_retry">Wiederholen</string>
@@ -211,6 +216,8 @@ Benutzernamen</b></string>
 
     <string name="join_dashpay_subtitle">Benutzernamen erstellen, Freunde hinzufügen...</string>
     <string name="join_dashpay_more_subtitle">Erstelle deinen Benutzernamen, finde Freunde und füge sie zu deinen Kontakten hinzu</string>
+    <string name="join_dashpay_more_subtitle_two">Erstelle einen Nutzernamen und lasse numerische Adressen hinter dir</string>
+    <string name="join_dashpay_wait">Warte bis die Synchronisierung abgeschlossen ist, um einen Nutzernamen zu erstellen.</string>
     <string name="join">Beitreten</string>
 
     <string name="more_suggestions">Mehr Vorschläge</string>
@@ -270,7 +277,7 @@ Benutzernamen</b></string>
     <string name="what_is_username_voting">Was ist das Abstimmen über Nutzernamen\?</string>
     <string name="usernames_blocked_title">Manche Benutzernamen können blockiert werden</string>
     <string name="usernames_blocked_subtitle">Wenn genügend Mitglieder des Netzwerkes feststellen, dass ein Benutzername unangemessen ist, könne diese ihn sperren</string>
-    <string name="username_voting">Abstimmung über Benutzernamen</string>
+    <string name="username_voting">Abstimmung über Nutzernamen</string>
     <string name="username_voting_subtitle">Als Masternode-Besitzer kannst du abstimmen, um beantragte Nutzernamen zu bewilligen, bevor diese im Netzwerk erstellt werden.</string>
     <string name="username_voting_subtitle_two">Du kannst das Erstellen von Nutzernamen blockieren, wenn du sie für unangemessen hälst</string>
     <string name="voting_duplicates_only_title">Standardmäßige Filtereinstellung</string>
@@ -307,6 +314,7 @@ Benutzernamen</b></string>
         <item>Beinhalted blockierte Votes</item>
     </string-array>
     <string name="request_your_username">Benutzernamen erstellen</string>
+    <string name="request_instant_username">Nutzername sofort erstellen</string>
     <string name="request_your_hint">Bitte beachte, dass du dies in der Zukunft nicht mehr ändern kannst</string>
     <string name="request_username">Nutzernamen beantragen</string>
     <string name="request_voting_range">Das Dash-Netzwerk wird über diesen Benutzernamen abstimmen. Wir werden dich über das Ergebnis am %s benachrichtigen.</string>
@@ -382,6 +390,8 @@ Benutzernamen</b></string>
     <string name="requested_voting_duration">Ergebnisse für %s.</string>
     <string name="cancel_request">Anfrage abbrechen</string>
     <string name="after_the_voting">Nachdem die Abstimmung endet, wirst du über das Ergebnis benachrichtigt werden.</string>
+    <string name="after_the_voting_result">Die Abstimmung ist beendet</string>
+    <string name="voting_period_error">Abstimmungszeitraum nicht gefunden</string>
     <string name="none">Kein</string>
     <string name="verify_now">Jetzt verifizieren</string>
     <string name="if_you_tap_cancel">Wenn du \"Anfrage abbrechen\" tippst, kannst du immer noch einen anderen Nutzernamen auswählen, ohne erneut dafür zu zahlen.</string>
@@ -433,10 +443,14 @@ Benutzernamen</b></string>
     <string name="credit_balance_insufficient_error_message">Du hast nicht genügend Guthaben, um Credits zu kaufen</string>
     <string name="buy_credits_estimated_items">%s - %d Kontakte/ %d Profilupdates</string>
 
-    <string name="request_username_username_voting_message">+ was ist die Abstimmung über Benutzernamen\?</string>
+    <string name="request_username_username_voting_message">+ was ist die Abstimmung über Nutzernamen\?</string>
     <string name="request_username_character_requirement">Nur Buchstaben, Zahlen und Bindestriche</string>
+    <string name="request_username_character_requirement_invite_noncontested">Nummern 2-9</string>
     <string name="request_username_balance_requirement">Du benötigst 0,25 DASH um einen Benutzernamen erstellen zu können</string>
+    <string name="request_username_requirements_message_invite_noncontested">Der Nutzername muss eine dieser Kriterien entsprechen</string>
+    <string name="request_username_requirements_message">Der Nutzername muss diesen Kriterien entsprechen</string>
     <string name="request_username_length_requirement">Zwischen 3 und 23 Zeichen</string>
+    <string name="request_username_length_requirement_noncontested">Zwischen 20 und 23 Zeichen</string>
     <string name="request_username_confirm">Ich akzeptiere</string>
     <string name="username_vote_one_left_message">Du hast bereits %d Mal für diesen Benutzernamen abgestimmt. Du kannst nur noch einmal für diesen Benutzernamen abstimmen.</string>
     <string name="username_vote_one_left">Ein Vote übrig</string>
@@ -445,7 +459,7 @@ Benutzernamen</b></string>
     <string name="request_username_blocked">Angefragter Benutzername wurde blockiert</string>
     <string name="request_username_lost_vote">Angefragter Benutzername wurde an eine andere Person vergeben</string>
     <string name="request_username_blocked_message">Der Benutzername %s wurde vom Dash Netzwerk blockiert. Bitte versuche es erneut, aber mit einem anderen Benutzernamen.</string>
-    <string name="request_username_lost_vote_message">Aufgrund des Voting-Prozesses hat das Dash Netzwerk entschieden, den Benutzernamen %s an jemand anderen zu vergeben. Bitte versuche es erneut mit einem anderen Benutzernamen.</string>
+    <string name="request_username_lost_vote_message">Aufgrund des Voting-Prozesses hat das Dash Netzwerk entschieden, den Nutzernamen %s an jemand anderen zu vergeben. Bitte versuche es erneut mit einem anderen Benutzernamen.</string>
     <string name="mix_dash_mix">Gemixtes Guthaben</string>
     <string name="mix_dash_title">Mixe deine Dash</string>
     <string name="mix_dash_message">Um zu verhindern, dass andere Personen sehen können, an wen du Zahlungen vornimmst, wird empfohlen, dein Guthaben zu mixen, bevor du deinen Benutzernamen erstellst.</string>
@@ -507,4 +521,27 @@ Benutzernamen</b></string>
     <string name="transaction_metadata_you_have_n_tx">Es gibt %d nicht gespeicherte Transaktionen seit dem %s</string>
     <string name="transaction_metadata_save_transactions">Ungespeicherte Transaktionen speichern</string>
     <string name="transaction_metadata_continue_without_saving">Ohne Speichern fortfahren</string>
+    <string name="invitation_fee_title">Einladungsgebühr</string>
+    <string name="invitation_fee_message">Jede Einladung ist bereits vorfinanziert, damit jeder Empfänger seinen Nutzernamen schnell im Dash-Netzwerk erstellen kann.</string>
+    <string name="invitation_fee_noncontested">Unangefochten</string>
+    <string name="invitation_fee_contested">Angefochten</string>
+    <string name="invitation_fee_contested_message">Der Person, der du diese Einladung sendest, kann einen Nutzernamen nach ihren wünschen erstellen und das Netzwerk wird darüber abstimmen.</string>
+    <string name="invitation_fee_noncontested_message">Der Person, die du diese Einladung sendest, kann einen Nutzernamen beanspruchen der die Nummer 2-9 beinhaltet und mehr als 20 Zeichen hat.</string>
+    <string name="invitation_creating_progress_loading">Einladung laden...</string>
+    <string name="invitation_creating_progress_wip">Einladung erstellen...</string>
+    <string name="invitation_fee_confirm_and_pay_button">Bestätigen und bezahlen</string>
+    <string name="error_sending_invite_transaction">Fehler beim Senden der Einladungs-Transaktion</string>
+    <string name="request_username_invitation_not_mixed_message">Die Einladung wurde mit ungemixten Guthaben erstellt.</string>
+    <string name="request_username_invitation_only_noncontested_message">Du kannst nur unangefochtene Nutzernamen für diese Einladung nutzen.</string>
+    <string name="username_types_title">Was sind angefochtene und unangefochtene Nutzernamen\?</string>
+    <string name="username_types_message">Es gibt zwei Arten von Nutzernamen: angefochtene und unangefochtene.\n\nUnangefochtene Nutzernamen besitzen mindestens eine Nummer (2-9) oder sind länger als 20 Zeichen. Diese Nutzernamen werden automatisch bestätigt.\n\nAngefochtene Nutzernamen sind kürzer als 20 Zeichen und beinhalten keine Nummer außer der 1. Diese Art von Nutzernamen kannst du nur ohne Einladung erstellen. Die Gebühr muss selber bezahlt werden. Die Bestätigung erfolgt nach dem Ablauf der Abstimmungsperiode.</string>
+    <string name="accept_invitation_hide">Ausblenden</string>
+    <string name="accept_invitation_create">Erstellen</string>
+
+    <!-- Create Instant Username Dialog -->
+    <string name="create_instant_username_title">Einen Nutzernamen sofort erstellen</string>
+    <string name="create_instant_username_description">Der Abstimmungszeitraum für deinen gewünschten Nutzernamen beträgt 2 Wochen. Um sofort Kontakte und Zahlungen nutzen zu können, kannst du einen ähnlichen Nutzernamen sofort erstellen\n\nWenn deine ursprüngliche Auswahl vom Netzwerk bestätigt wurde, tritt der neue Nutzername anstelle des sofort erstellten Nutzernamens. Die Kontakte sowie die Zahlungshistorie bleibt erhalten. Ist dies nicht der Fall, kannst du den \"Instant-Namen\" weiter nutzen.</string>
+    <string name="create_instant_username_button">Nutzername sofort erstellen</string>
+    <string name="create_instant_username_cancel">Abbrechen</string>
+
 </resources>

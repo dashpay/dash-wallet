@@ -19,6 +19,7 @@ package org.dash.wallet.features.exploredash.data.explore
 
 import androidx.paging.PagingSource
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.model.*
@@ -32,7 +33,8 @@ interface ExploreDataSource {
         paymentMethod: String,
         denomType: DenomOption,
         provider: String,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        excludeProvider: String = ""
     ): Flow<List<Merchant>>
 
     fun observeMerchantsPaging(
@@ -103,7 +105,8 @@ open class MerchantAtmDataSource @Inject constructor(
         paymentMethod: String,
         denomType: DenomOption,
         provider: String,
-        bounds: GeoBounds
+        bounds: GeoBounds,
+        excludeProvider: String
     ): Flow<List<Merchant>> {
         val denominationType = if (denomType == DenomOption.Both) {
             ""
@@ -113,7 +116,7 @@ open class MerchantAtmDataSource @Inject constructor(
             "min-max"
         }
 
-        return if (territory.isNotBlank()) {
+        val baseFlow = if (territory.isNotBlank()) {
             if (query.isNotBlank()) {
                 merchantDao.searchByTerritory(
                     sanitizeQuery(query),
@@ -163,6 +166,19 @@ open class MerchantAtmDataSource @Inject constructor(
                     -1
                 )
             }
+        }
+
+        return if (excludeProvider.isNotBlank()) {
+            baseFlow.map { merchants ->
+                merchants.filter { merchant ->
+                    merchant.merchantId?.let { id ->
+                        val providers = giftCardProviderDao.getProvidersByMerchantId(id)
+                        providers.none { it.provider.equals(excludeProvider, ignoreCase = true) }
+                    } ?: true
+                }
+            }
+        } else {
+            baseFlow
         }
     }
 

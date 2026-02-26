@@ -33,14 +33,14 @@ import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
-import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
 import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
@@ -48,6 +48,7 @@ import de.schildbach.wallet_test.R
 // import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.FlowPreview
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
@@ -168,15 +169,18 @@ class ToolsFragment : Fragment() {
             )
             dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
         } else {
-            viewModel.getTransactionExporter()
-            viewModel.transactionExporter.observe(viewLifecycleOwner) {
-                val alertDialog =
-                    ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
-                        requireActivity(),
-                        WalletApplication.getInstance(),
-                        it
-                    ).buildAlertDialog()
-                alertDialog.show()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val watch = Stopwatch.createStarted()
+                        val transactionExporter = viewModel.getTransactionExporter()
+                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
+                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                        }
+                    } catch (e: Exception) {
+                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                    }
             }
         }
     }

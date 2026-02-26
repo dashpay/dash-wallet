@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Yeni Cüzdan Oluştur</string>
-    <string name="onboarding_recover_wallet">Kurtarma Sözcük Grubundan Geri Yükle</string>
-    <string name="onboarding_restore_wallet">Dosyadan Geri Yükle</string>
+    <string name="onboarding_recover_wallet">Cüzdanı geri yükle</string>
     <string name="onboarding_load_wallet_error">Cüzdanı yükleme başarısız!</string>
 
     <string name="set_pin_create_new_wallet">Yeni Cüzdan Oluştur</string>
@@ -84,6 +82,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Kopyalanan adres yok</string>
 
     <string name="forgot_pin_title">PİN\'inizi unuttunuz mu?</string>
+    <string name="forgot_pin_setup_new_pin_title">Yeni PİN oluşturun</string>
     <string name="forgot_pin_message">Kurtarma sözcük grubuyla yeni bir PİN oluşturabilirsiniz.</string>
     <string name="forgot_pin_instruction_1">Cüzdanınızı kurtarmak için kurtarma sözcük grubunu girin.</string>
     <string name="forgot_pin_instruction_2">Yeni PİN oluşturun</string>
@@ -253,7 +252,6 @@
     <string name="authenticate_switch_to_fingerprint">Parmak izinizi kullanın</string>
     <string name="authenticate_switch_to_pin">PİN Kullan</string>
 
-    <string name="menu_invite_title">Davet etmek</string>
     <string name="menu_buy_and_sell_title">Dash Al &amp; Sat</string>
     <string name="menu_buy_and_sell_subtitle">Üçüncü parti borsalara bağlanın</string>
     <string name="liquid_unavailable">Dash Cüzdanı ile Liquid entegrasyonu artık yok</string>
@@ -323,14 +321,6 @@
 
     <string name="skip">atla</string>
     <string name="get_started">Başla</string>
-    <string name="welcome_screen_title_1_new_install">Hoşgeldiniz</string>
-    <string name="welcome_screen_title_1_upgrade">Yeni sürüme geçtik</string>
-    <string name="welcome_screen_subtitle_1">Tüm cihazlarınızda tanıdık sezgisel bir deneyim</string>
-    <string name="welcome_screen_title_2">Kolaylıkla öde</string>
-    <string name="welcome_screen_subtitle_2">Kullanımı kolay ödeme akımlarıyla anında ödeme yapın ve alın</string>
-    <string name="welcome_screen_title_3">Daha Fazla Kontrol</string>
-    <string name="welcome_screen_subtitle_3">Tam kontrol sahibi olun ve cüzdanınızı ihtiyacınıza göre özelleştirin</string>
-
     <string-array name="history_filter">
         <item>Hepsi</item>
         <item>Alınan</item>

@@ -21,15 +21,21 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.LayerDrawable
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.core.view.isVisible
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.lifecycleScope
+import androidx.viewpager2.widget.ViewPager2
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.InvitationLinkData
@@ -39,12 +45,17 @@ import de.schildbach.wallet.security.PinRetryController
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.ui.onboarding.SelectSecurityLevelActivity
+import de.schildbach.wallet.ui.invite.InviteHandler
+import de.schildbach.wallet.ui.onboarding.WelcomePagerAdapter
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityOnboardingBinding
 import de.schildbach.wallet_test.databinding.ActivityOnboardingPermLockBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.ButtonLarge
+import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
@@ -106,6 +117,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private val viewModel by viewModels<OnboardingViewModel>()
+    private val inviteHandlerViewModel by viewModels<InviteHandlerViewModel>()
     private lateinit var binding: ActivityOnboardingBinding
 
     @Inject
@@ -117,22 +129,22 @@ class OnboardingActivity : RestoreFromFileActivity() {
 
     private val selectWordCountLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
-            val onboardingInvite = intent.getParcelableExtra<InvitationLinkData>(EXTRA_INVITE)
             viewModel.createNewWallet(
-                onboardingInvite,
                 result.data!!.extras!!.getInt(SelectSecurityLevelActivity.EXTRA_WORD_COUNT)
             )
         }
     }
 
+    private val onPageChanged = object : ViewPager2.OnPageChangeCallback() {
+
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         if (pinRetryController.isLockedForever) {
             val binding = ActivityOnboardingPermLockBinding.inflate(layoutInflater)
             setContentView(binding.root)
             getStatusBarHeightPx()
-            hideSlogan()
             binding.closeApp.setOnClickListener {
                 finish()
             }
@@ -180,10 +192,77 @@ class OnboardingActivity : RestoreFromFileActivity() {
             }
         }
 
+        // Welcome Page View
+        binding.viewpager.adapter = WelcomePagerAdapter(this)
+        binding.pageIndicator.setViewPager2(binding.viewpager)
+
+
+        binding.viewpager.registerOnPageChangeCallback(onPageChanged)
+
         // during an upgrade, for some reason the previous screen is still in the recent app list
         // this will find it and close it
         if (intent.extras?.getBoolean(EXTRA_UPGRADE) == true) {
             removePreviousTask(this)
+        }
+        val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
+        lifecycleScope.launch {
+            invite?.let {
+                log.info("saving invite for later: ${invite?.link}")
+                inviteHandlerViewModel.setInvitationLink(it, true)
+            }
+        }
+
+        binding.composeContainer.setContent {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp, 10.dp, 20.dp, 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ButtonLarge(
+                    onClick = { createNewWallet() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.whiteWithBlueText(),
+                    R.string.onboarding_create_wallet
+                )
+                ButtonLarge(
+                    onClick = { recoverWalletFromSeedPhrase() },
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    colors = ButtonStyles.white10WithWhiteText(),
+                    R.string.onboarding_recover_wallet
+                )
+                if (BuildConfig.DEBUG) {
+                    ButtonLarge(
+                        onClick = { restoreWallet() },
+                        modifier = Modifier
+                            .fillMaxWidth(),
+                        colors = ButtonStyles.white10WithWhiteText(),
+                        R.string.onboarding_restore_wallet
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        binding.viewpager.unregisterOnPageChangeCallback(onPageChanged)
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        val invite: InvitationLinkData? = intent?.getParcelableExtra(EXTRA_INVITE)
+        if (invite != null && inviteHandlerViewModel.invitation.value != null) {
+            // TODO: wrong message
+            log.info("handling invite: already processing invite")
+            InviteHandler(this, viewModel.analytics).showInviteWhileOnboardingInProgressDialog()
+        } else if (invite != null) {
+            log.info("saving invite for later: ${invite.link}")
+            lifecycleScope.launch {
+                inviteHandlerViewModel.setInvitationLink(invite, true)
+            }
         }
     }
 
@@ -191,15 +270,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     // such that the wallet is not encrypted
     private fun unencryptedFlow() {
         log.info("the wallet is not encrypted -- the wallet will be upgraded")
-        if (config.v7TutorialCompleted) {
-            upgradeUnencryptedWallet()
-        } else {
-            startActivityForResult(
-                Intent(this, WelcomeActivity::class.java),
-                UPGRADE_NONENCRYPTED_FLOW_TUTORIAL_REQUEST_CODE
-            )
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
+        upgradeUnencryptedWallet()
     }
 
     private fun upgradeUnencryptedWallet() {
@@ -218,15 +289,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun regularFlow() {
-        if (config.v7TutorialCompleted) {
-            upgradeOrStartMainActivity()
-        } else {
-            startActivityForResult(
-                Intent(this, WelcomeActivity::class.java),
-                REGULAR_FLOW_TUTORIAL_REQUEST_CODE
-            )
-            overridePendingTransition(R.anim.fade_in, R.anim.fade_out)
-        }
+        upgradeOrStartMainActivity()
     }
 
     private fun upgradeOrStartMainActivity() {
@@ -246,33 +309,24 @@ class OnboardingActivity : RestoreFromFileActivity() {
     }
 
     private fun onboarding() {
-        initView()
         initViewModel()
-        showButtonsDelayed()
-        if (!config.v7TutorialCompleted) {
-            startActivity(Intent(this, WelcomeActivity::class.java))
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
-        }
     }
 
-    private fun initView() {
-        binding.createNewWallet.setOnClickListener {
-            selectWordCountLauncher.launch(
-                Intent(this, SelectSecurityLevelActivity::class.java)
-            )
-        }
-        binding.recoveryWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
-            walletApplication.initEnvironmentIfNeeded()
-            startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
-        }
-        // hide restore wallet from file if an invite is being used
-        // remove this line after backup file recovery supports invites
-        binding.restoreWallet.isVisible = !intent.hasExtra(EXTRA_INVITE) || BuildConfig.DEBUG
-        binding.restoreWallet.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
-            restoreWalletFromFile()
-        }
+    private fun createNewWallet() {
+        selectWordCountLauncher.launch(
+            Intent(this, SelectSecurityLevelActivity::class.java)
+        )
+    }
+
+    private fun recoverWalletFromSeedPhrase() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RECOVERY)
+        walletApplication.initEnvironmentIfNeeded()
+        startActivityForResult(Intent(this, RestoreWalletFromSeedActivity::class.java), REQUEST_CODE_RESTORE_WALLET)
+    }
+
+    private fun restoreWallet() {
+        viewModel.logEvent(AnalyticsConstants.Onboarding.RESTORE_FROM_FILE)
+        restoreWalletFromFile()
     }
 
     @SuppressLint("StringFormatInvalid")
@@ -280,24 +334,7 @@ class OnboardingActivity : RestoreFromFileActivity() {
         viewModel.showToastAction.observe(this) {
             Toast.makeText(this, it, Toast.LENGTH_LONG).show()
         }
-        viewModel.showRestoreWalletFailureAction.observe(this) {
-            val message = when {
-                TextUtils.isEmpty(it.message) -> it.javaClass.simpleName
-                else -> it.message!!
-            }
 
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                title = getString(R.string.import_export_keys_dialog_failure_title),
-                message = getString(R.string.import_keys_dialog_failure, message),
-                positiveButtonText = getString(R.string.button_dismiss),
-                negativeButtonText = getString(R.string.retry)
-            ).show(this) { dismiss ->
-                if (dismiss == false) {
-                    RestoreWalletFromSeedDialogFragment.show(supportFragmentManager)
-                }
-            }
-        }
         viewModel.finishCreateNewWalletAction.observe(this) {
             startActivityForResult(
                 SetPinActivity.createIntent(
@@ -309,18 +346,6 @@ class OnboardingActivity : RestoreFromFileActivity() {
                 SET_PIN_REQUEST_CODE
             )
         }
-    }
-
-    private fun showButtonsDelayed() {
-        binding.buttons.postDelayed({
-            hideSlogan()
-            binding.buttons.isVisible = true
-        }, 1000)
-    }
-
-    private fun hideSlogan() {
-        val sloganDrawable = (window.decorView.background as LayerDrawable).getDrawable(1)
-        sloganDrawable.mutate().alpha = 0
     }
 
     private fun getStatusBarHeightPx(): Int {
