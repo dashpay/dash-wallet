@@ -352,12 +352,24 @@ class MainViewModel @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
-                // Only invalidate when metadata actually changed (added, removed, or value differs).
+                // Compute exactly which txIds changed (added, removed, or value differs).
                 // data class equality on PresentableTxMetadata covers txId, memo, service, customIconId.
-                val hasChanges = newMetadata.size != oldMetadata.size ||
-                    newMetadata.any { (id, meta) -> meta != oldMetadata[id] }
+                val changedIds = buildSet<Sha256Hash> {
+                    newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id) }
+                    oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id) }
+                }
 
-                if (hasChanges) {
+                if (changedIds.isEmpty()) return@onEach
+
+                // Only invalidate if at least one changed txId is present in the current
+                // filtered/wrapped list. Changes to transactions outside the active filter
+                // (e.g. a RECEIVED tx memo changes while SENT filter is active) don't affect
+                // the visible pages and don't need a reload.
+                val affectsCurrentView = wrappedTransactionList.any { wrapper ->
+                    wrapper.transactions.keys.any { it in changedIds }
+                }
+
+                if (affectsCurrentView) {
                     currentPagingSource?.invalidate()
                 }
             }
