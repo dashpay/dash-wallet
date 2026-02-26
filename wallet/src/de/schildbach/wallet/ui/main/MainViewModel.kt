@@ -348,9 +348,18 @@ class MainViewModel @Inject constructor(
             .launchIn(viewModelWorkerScope)
 
         metadataProvider.observePresentableMetadata()
-            .onEach { metadata ->
-                this.metadata = metadata
-                currentPagingSource?.invalidate()
+            .onEach { newMetadata ->
+                val oldMetadata = this.metadata
+                this.metadata = newMetadata
+
+                // Only invalidate when metadata actually changed (added, removed, or value differs).
+                // data class equality on PresentableTxMetadata covers txId, memo, service, customIconId.
+                val hasChanges = newMetadata.size != oldMetadata.size ||
+                    newMetadata.any { (id, meta) -> meta != oldMetadata[id] }
+
+                if (hasChanges) {
+                    currentPagingSource?.invalidate()
+                }
             }
             .launchIn(viewModelWorkerScope)
 
@@ -569,6 +578,11 @@ class MainViewModel @Inject constructor(
         if (contacts.isEmpty()) return
         viewModelWorkerScope.launch {
             val resolved = txs
+                // Skip transactions that predate any contact relationship — they can't have
+                // contacts, so avoid the getContactForTransaction call entirely.
+                .filter { tx ->
+                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate
+                }
                 .map { tx ->
                     async(Dispatchers.IO) {
                         platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
