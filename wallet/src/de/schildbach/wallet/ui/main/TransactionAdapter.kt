@@ -26,8 +26,8 @@ import android.view.ViewGroup
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.paging.PagingDataAdapter
 import androidx.recyclerview.widget.DiffUtil
-import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import coil.load
 import coil.transform.RoundedCornersTransformation
@@ -52,7 +52,7 @@ class TransactionAdapter(
     private val resources: Resources,
     private val drawBackground: Boolean = false,
     private val clickListener: (HistoryRowView, Int, Boolean) -> Unit
-) : ListAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
+) : PagingDataAdapter<HistoryRowView, HistoryViewHolder>(DiffCallback()) {
     private val contentColor = resources.getColor(R.color.content_primary, null)
     private val colorSecondaryStatus = resources.getColor(R.color.orange, null)
 

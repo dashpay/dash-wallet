@@ -211,7 +211,9 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
         }
 
-        viewModel.transactions.observe(viewLifecycleOwner) { refreshShortcutBar() }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.transactionsLoaded.collect { if (it) refreshShortcutBar() }
+        }
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { updateSyncState() }
         viewModel.isBlockchainSyncFailed.observe(viewLifecycleOwner) { updateSyncState() }
 

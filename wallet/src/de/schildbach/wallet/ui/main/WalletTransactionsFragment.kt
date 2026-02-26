@@ -39,6 +39,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
@@ -55,6 +56,7 @@ import de.schildbach.wallet.ui.unregisterLockScreenDeactivated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
 import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
@@ -188,24 +190,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
 
-        viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
-            binding.loading.isVisible = false
+        // Collect PagingData and submit to adapter
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.transactions.collectLatest { pagingData ->
+                adapter.submitData(pagingData)
+            }
+        }
 
-            if (transactionViews.isEmpty() && header.isEmpty()) {
-                showEmptyView()
-            } else if (transactionViews.isNotEmpty()) {
-                val groupedByDate = transactionViews.entries
-                    .sortedByDescending { it.key }
-                    .map {
-                        val outList = mutableListOf<HistoryRowView>()
-                        outList.add(HistoryRowView(null, it.key))
-                        outList.apply { addAll(it.value) }
-                    }.reduce { acc, list -> acc.apply { addAll(list) } }
+        // Handle loading/empty states via loadStateFlow
+        viewLifecycleOwner.lifecycleScope.launch {
+            adapter.loadStateFlow.collectLatest { loadStates ->
+                val isLoading = loadStates.refresh is LoadState.Loading
+                val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
 
-                adapter.submitList(groupedByDate)
-                showTransactionList()
-            } else {
-                showTransactionList()
+                binding.loading.isVisible = isLoading
+                if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
             }
         }
 
@@ -370,7 +369,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun showEmptyView() {
-        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded
+        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded.value
         binding.walletTransactionsList.isVisible = false
     }
 
