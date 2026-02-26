@@ -45,25 +45,29 @@ import org.dash.wallet.common.ui.components.TopNavBase
 @Composable
 fun ToolsScreen(
     onBackClick: () -> Unit = {},
+    onAddressBookClick: () -> Unit = {},
     onImportPrivateKeyClick: () -> Unit = {},
     onNetworkMonitorClick: () -> Unit = {},
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
+    onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
 ) {
     val viewModel: ToolsViewModel = hiltViewModel()
-    
+
     ToolsScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
+        onAddressBookClick = onAddressBookClick,
         onImportPrivateKeyClick = onImportPrivateKeyClick,
         onNetworkMonitorClick = onNetworkMonitorClick,
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
         onZenLedgerExport = onZenLedgerExport,
+        onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
     )
 }
@@ -72,25 +76,29 @@ fun ToolsScreen(
 fun ToolsScreen(
     uiStateFlow: StateFlow<ToolsUIState>,
     onBackClick: () -> Unit = {},
+    onAddressBookClick: () -> Unit = {},
     onImportPrivateKeyClick: () -> Unit = {},
     onNetworkMonitorClick: () -> Unit = {},
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
+    onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
-    
+
     ToolsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
+        onAddressBookClick = onAddressBookClick,
         onImportPrivateKeyClick = onImportPrivateKeyClick,
         onNetworkMonitorClick = onNetworkMonitorClick,
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
         onZenLedgerExport = onZenLedgerExport,
+        onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
     )
 }
@@ -99,12 +107,14 @@ fun ToolsScreen(
 private fun ToolsScreenContent(
     uiState: ToolsUIState,
     onBackClick: () -> Unit = {},
+    onAddressBookClick: () -> Unit = {},
     onImportPrivateKeyClick: () -> Unit = {},
     onNetworkMonitorClick: () -> Unit = {},
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
+    onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
 ) {
     Column(
@@ -134,10 +144,17 @@ private fun ToolsScreenContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Menu {
+                // Address Book
+                MenuItem(
+                    title = stringResource(R.string.tools_address_book),
+                    //icon = R.drawable.address_book,
+                    action = onAddressBookClick
+                )
+
                 // Import Private Key
                 MenuItem(
                     title = stringResource(R.string.sweep_wallet_activity_title),
-                    icon = R.drawable.ic_import_private_key,
+                    icon = R.drawable.ic_menu_import_private_key,
                     action = onImportPrivateKeyClick
                 )
 
@@ -165,24 +182,32 @@ private fun ToolsScreenContent(
                 // CSV Export
                 MenuItem(
                     title = stringResource(R.string.report_transaction_history_title),
-                    icon = R.drawable.ic_csv_export,
+                    icon = R.drawable.ic_menu_csv_export,
                     action = onCsvExportClick
                 )
-                // space?
+            }
 
-                // CSV Export
+            Menu {
+                // ZenLedger Export
                 MenuItem(
                     title = stringResource(R.string.zenledger_export_title),
                     icon = R.drawable.ic_zenledger,
                     action = onZenLedgerExport
                 )
-
-                // CSV Export
-                MenuItem(
-                    title = stringResource(R.string.tools_credits_title),
-                    icon = R.drawable.ic_credits,
-                    action = onBuyCredits
-                )
+            }
+            if (uiState.hasUsername) {
+                Menu {
+                    // Credits (only shown when user has a username)
+                    MenuItem(
+                        title = stringResource(R.string.tools_credits_title),
+                        icon = R.drawable.ic_credits,
+                        showInfo = true,
+                        onInfoClick = onCreditsInfoClick,
+                        trailingButtonText = stringResource(R.string.tools_credits_buy_button),
+                        onTrailingButtonClick = onBuyCredits,
+                        action = onBuyCredits
+                    )
+                }
             }
         }
     }
@@ -191,5 +216,5 @@ private fun ToolsScreenContent(
 @Composable
 @Preview
 fun ToolsScreenPreview() {
-    ToolsScreenContent(uiState = ToolsUIState())
+    ToolsScreenContent(uiState = ToolsUIState(false, false, true))
 }

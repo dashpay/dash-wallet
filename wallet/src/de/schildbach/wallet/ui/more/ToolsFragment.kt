@@ -25,15 +25,11 @@ import android.widget.ImageView
 import android.widget.TextView
 import androidx.compose.ui.platform.ComposeView
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
-import androidx.navigation.findNavController
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.transition.MaterialFadeThrough
-import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
@@ -55,7 +51,6 @@ import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 // import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Qr
-import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -80,12 +75,14 @@ class ToolsFragment : Fragment() {
             setContent {
                 ToolsScreen(
                     onBackClick = { findNavController().popBackStack() },
+                    onAddressBookClick = { onAddressBook() },
                     onImportPrivateKeyClick = { onImportKeys() },
                     onNetworkMonitorClick = { onNetworkMonitor() },
                     onExtendPublicKeyClick = { handleExtendedPublicKey() },
-                    onMasternodeKeysClick = { onMasternodeKeys()},
+                    onMasternodeKeysClick = { onMasternodeKeys() },
                     onCsvExportClick = { onTransactionExport(viewModel.uiState.value.isSyncing) },
                     onZenLedgerExport = { onZenLedgerExport() },
+                    onCreditsInfoClick = { onCreditsInfo() },
                     onBuyCredits = { onBuyCredits() }
                 )
             }
@@ -148,6 +145,10 @@ class ToolsFragment : Fragment() {
         ZenLedgerDialogFragment().show(requireActivity())
     }
 
+    private fun onCreditsInfo() {
+        WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
+    }
+
     private fun onBuyCredits() = lifecycleScope.launch {
         if (!viewModel.creditsExplained()) {
             WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
@@ -171,7 +172,6 @@ class ToolsFragment : Fragment() {
         } else {
                 viewLifecycleOwner.lifecycleScope.launch {
                     try {
-                        val watch = Stopwatch.createStarted()
                         val transactionExporter = viewModel.getTransactionExporter()
                         viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
                         (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
@@ -205,7 +205,12 @@ class ToolsFragment : Fragment() {
 
     private fun onImportKeys() {
         analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
-        startActivity(Intent(requireContext(), SweepWalletActivity::class.java))
+        createImportPrivateKeyDialog(
+            onScanPrivateKey = {
+                SweepWalletActivity.start(requireContext(), false)
+            }
+        ).show(parentFragmentManager, "import_private_key")
+
     }
 
     private fun onAddressBook() {

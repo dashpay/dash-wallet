@@ -49,6 +49,7 @@ fun MenuItem(
     icon: Int? = null,
     showDirectionIndicator: Boolean = false,
     showInfo: Boolean = false,
+    onInfoClick: (() -> Unit)? = null,
     showChevron: Boolean = false,
     // New controlled props
     checked: Boolean? = null,
@@ -145,7 +146,12 @@ fun MenuItem(
                             painter = painterResource(id = android.R.drawable.ic_dialog_info),
                             contentDescription = "Info",
                             tint = MyTheme.Colors.textTertiary,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier
+                                .size(15.dp)
+                                .then(
+                                    if (onInfoClick != null) Modifier.clickable { onInfoClick() }
+                                    else Modifier
+                                )
                         )
                     }
                 }
