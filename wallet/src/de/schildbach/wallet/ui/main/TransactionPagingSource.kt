@@ -38,8 +38,14 @@ class TransactionPagingSource(
     private val onContactsNeeded: (List<Transaction>) -> Unit
 ) : PagingSource<Int, TransactionRowView>() {
 
+    // Set to true before invalidate() when the underlying list was rebuilt (new/removed
+    // transactions, filter change). This forces the next source to load from the top so
+    // the user always sees the newest transactions first without a visible prepend flash.
+    // Leave false for metadata/contact-only invalidations to preserve scroll position.
+    var resetToTop: Boolean = false
+
     override fun getRefreshKey(state: PagingState<Int, TransactionRowView>): Int? =
-        state.anchorPosition
+        if (resetToTop) null else state.anchorPosition
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TransactionRowView> {
         val offset = params.key ?: 0

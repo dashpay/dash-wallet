@@ -560,6 +560,7 @@ class MainViewModel @Inject constructor(
                 .sortedByDescending { it.groupDate }
 
             _transactionsLoaded.value = true
+            currentPagingSource?.resetToTop = true
             currentPagingSource?.invalidate()
         }
     }
