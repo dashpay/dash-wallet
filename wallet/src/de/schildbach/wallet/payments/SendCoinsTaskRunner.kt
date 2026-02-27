@@ -509,7 +509,7 @@ class SendCoinsTaskRunner @Inject constructor(
             signInputs = true,
             forceEnsureMinRequiredFee,
             topUpKey,
-            useCoinJoinGreedy = true
+            useCoinJoinGreedy = coinJoinSend
         )
         signSendRequest(firstSendRequest)
         walletData.wallet!!.completeTx(firstSendRequest)
@@ -522,7 +522,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 signInputs = false,
                 forceEnsureMinRequiredFee = true,
                 topUpKey,
-                useCoinJoinGreedy = true
+                useCoinJoinGreedy = coinJoinSend
             )
             signSendRequest(sendRequest)
             walletData.wallet!!.completeTx(sendRequest)
@@ -548,7 +548,7 @@ class SendCoinsTaskRunner @Inject constructor(
                 signInputs,
                 forceEnsureMinRequiredFee,
                 topUpKey,
-                useCoinJoinGreedy = true
+                useCoinJoinGreedy = coinJoinSend
             )
         }
     }
