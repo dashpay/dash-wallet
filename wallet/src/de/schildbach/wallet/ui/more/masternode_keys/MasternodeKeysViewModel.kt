@@ -28,6 +28,9 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.withContext
@@ -78,6 +81,9 @@ class MasternodeKeysViewModel @Inject constructor(
     val newKeysFound: LiveData<Boolean>
         get() = _newKeysUsed
 
+    private val _uiState = MutableStateFlow(MasternodeKeysUIState())
+    val uiState: StateFlow<MasternodeKeysUIState> = _uiState.asStateFlow()
+
     init {
         if (authenticationGroup.hasKeyChains()) {
             initKeyChainInfo()
@@ -115,6 +121,9 @@ class MasternodeKeysViewModel @Inject constructor(
         for (keyChainType in MasternodeKeyType.values()) {
             keyChainMap[keyChainType] = getKeyChainData(keyChainType)
         }
+        _uiState.value = MasternodeKeysUIState(
+            keyTypes = MasternodeKeyType.values().mapNotNull { keyChainMap[it] }
+        )
     }
 
     fun hasMasternodeKeys(): Boolean {
@@ -316,3 +325,7 @@ class MasternodeKeysViewModel @Inject constructor(
         return MasternodeKeyInfo(key, privateKeyHex, privateKeyWif, privatePublicKeyBase64)
     }
 }
+
+data class MasternodeKeysUIState(
+    val keyTypes: List<MasternodeKeyTypeInfo> = emptyList()
+)
