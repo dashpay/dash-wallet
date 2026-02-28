@@ -63,7 +63,7 @@ Our Design System in Figma uses different names for components.  Here is a list 
 component to our component:
 
 ## Component Mapping from Figma to JetPack Compose in this project
-- TopNavBase - TopNavBase
+- NavBar - use a named NavBar variant function (see NavBar section below); `TopNavBase` is the underlying base and remains available for full control
 - top-intro - TopIntro
 - menu - Menu
 - menuitem - MenuItem
@@ -76,6 +76,99 @@ component to our component:
 - Sheet/Buttons group - SheetButtonGroup
 - ListX - ListItem (X is number 1 to 20)
 - ListEmptyState - ListEmptyState
+- tablelist-masternodekeys - TableListMasternodeKeyRow
+
+## NavBar / TopNavBase (Figma: NavBar)
+
+The navigation bar lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/TopNavBase.kt
+```
+
+**Always use a named variant function** — they map 1-to-1 to the Figma NavBar playground variants and set the correct defaults automatically. `TopNavBase` is the base composable kept for full control and backward compatibility.
+
+**Figma Design System node:** `6828-4232`
+
+### Named variant functions
+
+| Figma variant | Kotlin function | Leading | Centre | Trailing |
+|---|---|---|---|---|
+| NavBarBack | `NavBarBack` | ← chevron | — | — |
+| NavBarBackTitle | `NavBarBackTitle` | ← chevron | title | — |
+| NavBarBackTitleInfo | `NavBarBackTitleInfo` | ← chevron | title | ℹ bare icon (blue) |
+| NavBarTitleClose | `NavBarTitleClose` | — | title | ✕ circle button |
+| NavBarBackTitlePlus | `NavBarBackTitlePlus` | ← chevron | title | + circle button |
+| NavBarBackPlus | `NavBarBackPlus` | ← chevron | — | + circle button |
+| NavBarTitle | `NavBarTitle` | — | title | — |
+| NavBarClose | `NavBarClose` | — | — | ✕ circle button |
+| NavBarActionTitleAction | `NavBarActionTitleAction` | text action | title | blue text action |
+| NavBarBackTitleAction | `NavBarBackTitleAction` | ← chevron | title | blue text action |
+| NavBarBackAction | `NavBarBackAction` | ← chevron | — | blue text action |
+
+### Layout specs
+- Height: 64 dp, horizontal padding: 20 dp
+- Leading/trailing icon buttons: 34 dp circle (1.5 dp border) via `Template`
+- Info icon (bare, no border): 22 dp, blue tint
+- Title: 225 dp wide, absolutely centred in the bar
+- Text actions: `MyTheme.CaptionMedium` (13sp medium); trailing text = `dashBlue`, leading text = `textPrimary`
+
+### Examples
+
+```kotlin
+// Back only
+NavBarBack(onBackClick = { findNavController().popBackStack() })
+
+// Back + title
+NavBarBackTitle(
+    title = stringResource(R.string.masternode_keys_title),
+    onBackClick = { findNavController().popBackStack() }
+)
+
+// Back + title + info icon
+NavBarBackTitleInfo(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onInfoClick = { showInfoDialog() }
+)
+
+// Back + title + plus button
+NavBarBackTitlePlus(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onPlusClick = { viewModel.addKey() }
+)
+
+// Title + close button
+NavBarTitleClose(
+    title = stringResource(R.string.confirm_title),
+    onCloseClick = { dialog.dismiss() }
+)
+
+// Text action + title + blue text action
+NavBarActionTitleAction(
+    title = stringResource(R.string.filter_title),
+    leadingActionText = stringResource(R.string.cancel),
+    onLeadingActionClick = { dismiss() },
+    trailingActionText = stringResource(R.string.apply),
+    onTrailingActionClick = { applyFilters() }
+)
+```
+
+### TopNavBase (base function — use only when no named variant fits)
+
+```kotlin
+TopNavBase(
+    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+    onLeadingClick = onBackClick,
+    trailingIcon = Icons.Default.Add,
+    onTrailingClick = onAddClick,
+    centralPart = false          // hide title area
+)
+```
+
+Key parameters: `leadingIcon`, `leadingText`, `onLeadingClick`, `trailingIcon`, `trailingIconCircle` (false = bare icon, no border), `trailingText`, `onTrailingClick`, `centralPart`, `title`.
+
+---
 
 ## Button Mapping (btn -> DashButton)
 When Figma designs specify button styles, map them to DashButton as follows:
@@ -899,12 +992,7 @@ private fun SettingsScreenContent(
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
         // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
+        NavBarBack(onBackClick = onBackClick)
 
         // Settings Header
         TopIntro(
