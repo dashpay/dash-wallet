@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -180,7 +181,7 @@ fun ListItem(
                         ) {
                             Text(
                                 text = titleText,
-                                style = MyTheme.Body2Medium,
+                                style = MyTheme.Typography.LabelLarge,
                                 color = MyTheme.Colors.textPrimary
                             )
                             if (showInfoIcon) {
@@ -216,7 +217,7 @@ fun ListItem(
                 ) {
                     Text(
                         text = label,
-                        style = MyTheme.Body2Regular,
+                        style = MyTheme.Typography.LabelLarge,
                         color = MyTheme.Colors.textTertiary
                     )
                     if (showInfoIcon) {
@@ -297,7 +298,7 @@ fun ListItem(
                         trailingActionText?.let {
                             Text(
                                 text = it,
-                                style = MyTheme.Body2Medium,
+                                style = MyTheme.Typography.LabelLarge,
                                 color = MyTheme.Colors.dashBlue
                             )
                         }
@@ -356,7 +357,7 @@ fun ListEmptyState(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         icon()
-        Text(heading, style = MyTheme.Body2Medium, color = MyTheme.Colors.textPrimary)
+        Text(heading, style = MyTheme.Typography.LabelLarge, color = MyTheme.Colors.textPrimary)
         body?.let {
             Text(
                 text = it,

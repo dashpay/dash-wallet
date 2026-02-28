@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.more.masternode_keys
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,7 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -103,7 +106,7 @@ private fun MasternodeKeyChainScreenContent(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(40.dp)
         ) {
             uiState.keypairs.forEach { keypair ->
                 KeypairSection(keypair = keypair, onCopy = onCopy)
@@ -127,30 +130,31 @@ private fun KeypairSection(
     }
 
     Column(
-        modifier = Modifier.padding(horizontal = 20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = stringResource(R.string.masternode_key_pair_index, keypair.index),
-                style = MyTheme.SubtitleSemibold,
+                style = MyTheme.Typography.TitleMediumBold,
                 color = MyTheme.Colors.textPrimary
             )
             Text(
                 text = usageText,
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.TitleSmall,
                 color = MyTheme.Colors.textTertiary
             )
         }
-    }
 
-    Menu {
-        keypair.fields.forEach { field ->
-            KeyFieldRow(field = field, onCopy = onCopy)
+        Menu {
+            keypair.fields.forEach { field ->
+                KeyFieldRow(field = field, onCopy = onCopy)
+            }
         }
     }
 }
@@ -161,12 +165,19 @@ fun TableListExtendedPublicKeyItem(label: String, value: String, onCopy: (String
         helpTextAbove = label,
         title = value,
         trailingContent = {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_copy),
-                contentDescription = null,
-                tint = MyTheme.Colors.textTertiary,
-                modifier = Modifier.size(16.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_copy),
+                    contentDescription = null,
+                    tint = MyTheme.Colors.textTertiary,
+                    modifier = Modifier.size(13.6.dp)
+                )
+            }
         },
         onClick = { onCopy(value) }
     )
