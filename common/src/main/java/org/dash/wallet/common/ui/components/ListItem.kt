@@ -121,6 +121,7 @@ fun ListItem(
     trailingHelpText: String? = null,
     @DrawableRes trailingHelpIcon: Int? = null,
     trailingActionText: String? = null,
+    onTrailingActionClick: (() -> Unit)? = null,
     trailingLabel: String? = null,
     // ── Right side: icons ─────────────────────────────────────────────────
     trailingLeadingIcon: (@Composable RowScope.() -> Unit)? = null,
@@ -299,7 +300,12 @@ fun ListItem(
                             Text(
                                 text = it,
                                 style = MyTheme.Typography.LabelLarge,
-                                color = MyTheme.Colors.dashBlue
+                                color = MyTheme.Colors.dashBlue,
+                                modifier = if (onTrailingActionClick != null) {
+                                    Modifier.clickable { onTrailingActionClick() }
+                                } else {
+                                    Modifier
+                                }
                             )
                         }
 
