@@ -21,18 +21,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -41,10 +36,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
@@ -53,8 +46,8 @@ import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarBackPlus
 import org.dash.wallet.common.ui.components.TopIntro
-import org.dash.wallet.common.ui.components.TopNavBase
 
 @Composable
 fun MasternodeKeyChainScreen(
@@ -95,12 +88,9 @@ private fun MasternodeKeyChainScreenContent(
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingIcon = Icons.Default.Add,
-            onTrailingClick = onAddKeyClick
+        NavBarBackPlus(
+            onBackClick = onBackClick,
+            onPlusClick = onAddKeyClick
         )
 
         TopIntro(
@@ -166,6 +156,23 @@ private fun KeypairSection(
 }
 
 @Composable
+fun TableListExtendedPublicKeyItem(label: String, value: String, onCopy: (String) -> Unit) {
+    ListItem(
+        helpTextAbove = label,
+        title = value,
+        trailingContent = {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_copy),
+                contentDescription = null,
+                tint = MyTheme.Colors.textTertiary,
+                modifier = Modifier.size(16.dp)
+            )
+        },
+        onClick = { onCopy(value) }
+    )
+}
+
+@Composable
 private fun KeyFieldRow(
     field: KeyFieldEntry,
     onCopy: (String) -> Unit
@@ -183,18 +190,10 @@ private fun KeyFieldRow(
     )
 
     if (field.value != null) {
-        ListItem(
-            helpTextAbove = label,
-            title = field.value,
-            trailingContent = {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_copy),
-                    contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
-                    modifier = Modifier.size(16.dp)
-                )
-            },
-            onClick = { onCopy(field.value) }
+        TableListExtendedPublicKeyItem(
+            label = label,
+            value = field.value,
+            onCopy = { onCopy(field.value) }
         )
     } else {
         ListItem(
