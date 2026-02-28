@@ -18,18 +18,20 @@
 package de.schildbach.wallet.ui.more.masternode_keys
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -111,15 +113,23 @@ private fun TableListMasternodeKeyItem(
     ListItem(
         title = typeName,
         subtitle = stringResource(R.string.masternode_key_type_total, info.totalKeys),
-        trailingText = stringResource(R.string.masternode_key_type_used, info.usedKeys),
-        trailingTrailingIcon = {
-            Spacer(modifier = Modifier.width(2.dp))
-            Icon(
-                painter = painterResource(id = R.drawable.ic_list_chevron_right),
-                contentDescription = null,
-                tint = MyTheme.Colors.textTertiary,
-                modifier = Modifier.size(width = 5.dp, height = 10.dp)
-            )
+        trailingContent = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.masternode_key_type_used, info.usedKeys),
+                    style = MyTheme.Typography.LabelMedium,
+                    color = MyTheme.Colors.textPrimary
+                )
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_list_chevron_right),
+                    contentDescription = null,
+                    tint = MyTheme.Colors.textTertiary,
+                    modifier = Modifier.size(width = 5.dp, height = 10.dp)
+                )
+            }
         },
         onClick = onClick
     )
