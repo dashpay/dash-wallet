@@ -19,8 +19,8 @@ package org.dash.wallet.features.exploredash.ui.explore.dialogs
 
 import android.os.Bundle
 import android.view.View
+import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
@@ -30,20 +30,26 @@ import javax.inject.Inject
 
 @AndroidEntryPoint
 class ExploreDashInfoDialog : OffsetDialogFragment(R.layout.explore_dash_main_info) {
-
+    override val forceExpand = true
     private val binding by viewBinding(ExploreDashMainInfoBinding::bind)
     @Inject lateinit var analyticsService: AnalyticsService
+
+    private var onCompletion: (() -> Unit)? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.learnMoreLabel.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.LEARN_MORE, mapOf())
             OffsetDialogFragment(R.layout.buy_gift_card_description).show(requireActivity())
         }
         binding.exploreDashInfoContinueBtn.setOnClickListener {
-            analyticsService.logEvent(AnalyticsConstants.Explore.CONTINUE, mapOf())
             dismissAllowingStateLoss()
+            onCompletion?.invoke()
         }
+    }
+
+    fun show(activity: FragmentActivity, onCompletion: (() -> Unit)? = null) {
+        this.onCompletion = onCompletion
+        super.show(activity)
     }
 }

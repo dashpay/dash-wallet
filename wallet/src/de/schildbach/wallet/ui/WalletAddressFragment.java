@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 import org.dash.wallet.common.Configuration;
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.util.Nfc;
 import de.schildbach.wallet.util.ThrottlingWalletChangeListener;
 import de.schildbach.wallet_test.R;
 
@@ -61,7 +62,7 @@ import android.widget.ImageView;
 /**
  * @author Andreas Schildbach
  */
-public final class WalletAddressFragment extends Fragment implements NfcAdapter.CreateNdefMessageCallback {
+public final class WalletAddressFragment extends Fragment {
     private Activity activity;
     private WalletApplication application;
     private Configuration config;
@@ -91,9 +92,6 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
     @Override
     public void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        if (nfcAdapter != null && nfcAdapter.isEnabled())
-            nfcAdapter.setNdefPushMessageCallback(this, activity);
     }
 
     @Override
@@ -234,6 +232,9 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
 
                 currentAddressQrBitmap = Qr.INSTANCE.themeAwareDrawable(addressStr, getResources());
                 currentAddressUriRef.set(addressStr);
+
+                Nfc.setNdefPushMessage(nfcAdapter, createNdefMessage(addressStr), activity);
+
                 updateView();
             }
         }
@@ -243,9 +244,7 @@ public final class WalletAddressFragment extends Fragment implements NfcAdapter.
         }
     };
 
-    @Override
-    public NdefMessage createNdefMessage(final NfcEvent event) {
-        final String uri = currentAddressUriRef.get();
+    private static NdefMessage createNdefMessage(final String uri) {
         if (uri != null)
             return new NdefMessage(new NdefRecord[] { NdefRecord.createUri(uri) });
         else

@@ -22,9 +22,19 @@
         android:icon="@drawable/ic_home"
         android:title="" />
     <item
+        android:id="@+id/contactsFragment"
+        android:enabled="true"
+        android:icon="@drawable/ic_contacts"
+        android:title="" />
+    <item
         android:id="@+id/paymentsFragment"
         android:enabled="true"
         android:icon="@drawable/ic_payments"
+        android:title="" />
+    <item
+        android:id="@+id/exploreFragment"
+        android:enabled="true"
+        android:icon="@drawable/ic_discover"
         android:title="" />
     <item
         android:id="@+id/moreFragment"

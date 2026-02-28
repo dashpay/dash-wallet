@@ -21,6 +21,7 @@ import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 
+@Deprecated(message = "Use org.dash.wallet.common.data.SingleLiveEvent")
 class SingleLiveEvent<T> : MutableLiveData<T>() {
 
     @MainThread

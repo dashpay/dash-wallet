@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">Το CrowdNode χρησιμοποιεί αυτή τη διεύθυνση ως αναγνωριστικό του λογαριασμού σας. Θα χάσετε την πρόσβαση στα χρήματά σας σε αυτό το πορτοφόλι και στο λογαριασμό σας CrowdNode αν χάσετε τη φράση πρόσβασης που σχετίζεται με αυτή τη διεύθυνση.</string>
     <string name="crowdnode_new_account_warning_2">Πολύ μικρές ποσότητες Dash θα αποστέλλονται από και προς το CrowdNode για να επαληθεύσετε ότι είστε ο ιδιοκτήτης αυτής της διεύθυνσης πορτοφολιού.</string>
     <string name="crowdnode_link_account_description">Όλες οι μεταφορές από και προς το CrowdNode από αυτή τη συσκευή θα πραγματοποιούνται με την παρακάτω διεύθυνση Dash από αυτή τη συσκευή.</string>
-    <string name="dash_address">Διεύθυνση Dash</string>
     <string name="primary_dash_address">Κύρια διεύθυνση Dash</string>
     <string name="crowdnode_secure_wallet">Δημιουργήστε αντίγραφο ασφαλείας της φράσης πρόσβασης για να δημιουργήσετε έναν λογαριασμό CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Εάν χάσετε τη φράση πρόσβασης για αυτό το πορτοφόλι και χάσετε αυτή τη συσκευή ή απεγκαταστήσετε το Dash Wallet, θα χάσετε την πρόσβαση στα χρήματά σας στο CrowdNode και τα χρήματα σε αυτό το πορτοφόλι.</string>

@@ -29,15 +29,18 @@ import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.DumpedPrivateKey
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.crypto.LinuxSecureRandom
 import org.bitcoinj.script.Script
 import org.bitcoinj.wallet.DeterministicKeyChain
 import org.bitcoinj.wallet.DeterministicSeed
 import org.bitcoinj.wallet.KeyChainGroup
 import org.bitcoinj.wallet.UnreadableWalletException
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletEx
 import org.bitcoinj.wallet.WalletExtension
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
+import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.util.Io
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -48,14 +51,15 @@ import java.io.FileInputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.InputStreamReader
+import java.security.SecureRandom
 import java.text.ParseException
 import java.util.LinkedList
 import javax.inject.Inject
 
 interface WalletFactory {
     // Onboarding
-    fun create(params: NetworkParameters): Wallet
-    fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet
+    fun create(params: NetworkParameters, seedWordCount: Int): Wallet
+    suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long? = null): Wallet
     @Throws(IOException::class)
     fun restoreFromFile(params: NetworkParameters, backupUri: Uri, password: String): Pair<Wallet, Boolean>
 
@@ -66,7 +70,8 @@ interface WalletFactory {
 }
 
 class DashWalletFactory @Inject constructor(
-    private val walletApplication: WalletApplication
+    private val walletApplication: WalletApplication,
+    private val blockchainServiceConfig: BlockchainServiceConfig
 ) : WalletFactory {
 
     companion object {
@@ -98,15 +103,25 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    override fun create(params: NetworkParameters): Wallet {
-        val wallet = Wallet.createDeterministic(params, Script.ScriptType.P2PKH)
+    override fun create(params: NetworkParameters, seedWordCount: Int): Wallet {
+        //val wallet = WalletEx.createDeterministic(params, Script.ScriptType.P2PKH)
+        val bits = when (seedWordCount) {
+            12 -> DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS
+            24 -> DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS * 2
+            else -> error("only 12 or 24 words are supported when creating a wallet")
+        }
+        val wallet = WalletEx.fromSeed(
+            params,
+            DeterministicSeed(SecureRandom(), bits, ""),
+            Script.ScriptType.P2PKH
+        )
         addMissingExtensions(wallet)
         checkWalletValid(wallet, params)
         return wallet
     }
 
-    override fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>): Wallet {
-        return restoreWalletFromSeed(recoveryPhrase, params)
+    override suspend fun restoreFromSeed(params: NetworkParameters, recoveryPhrase: List<String>, creationTimeSeconds: Long?): Wallet {
+        return restoreWalletFromSeed(recoveryPhrase, params, creationTimeSeconds)
     }
 
     @Throws(IOException::class)
@@ -167,6 +182,8 @@ class DashWalletFactory @Inject constructor(
 
             // does this work on encrypted backups?
             wallet.addKeyChain(Constants.BIP44_PATH)
+            wallet as WalletEx
+            wallet.initializeCoinJoin(0)
             return wallet
         } finally {
             try {
@@ -255,12 +272,15 @@ class DashWalletFactory @Inject constructor(
         }
     }
 
-    private fun restoreWalletFromSeed(
+    private suspend fun restoreWalletFromSeed(
         words: List<String>,
-        params: NetworkParameters
+        params: NetworkParameters,
+        creationTimeSeconds: Long? = null
     ): Wallet {
         return try {
-            val seed = DeterministicSeed(words, null, "", Constants.EARLIEST_HD_SEED_CREATION_TIME)
+            // The wallet creation time should always be the oldest possible time
+            val seedCreationTime = Constants.EARLIEST_HD_SEED_CREATION_TIME
+            val seed = DeterministicSeed(words, null, "", seedCreationTime)
             val group = KeyChainGroup.builder(params)
                 .fromSeed(seed, Script.ScriptType.P2PKH)
                 .addChain(
@@ -270,11 +290,15 @@ class DashWalletFactory @Inject constructor(
                         .build()
                 )
                 .build()
-            val wallet = Wallet(params, group)
+            val wallet = WalletEx(params, group)
             // add extensions
             addMissingExtensions(wallet)
 
             checkWalletValid(wallet, params)
+            // set the creation date here
+            creationTimeSeconds?.let {
+                blockchainServiceConfig.setWalletCreationDate(it)
+            }
             wallet
         } finally {
         }
@@ -291,7 +315,7 @@ class DashWalletFactory @Inject constructor(
             // create non-HD wallet
             val group = KeyChainGroup.builder(expectedNetworkParameters).build()
             group.importKeys(readKeys(keyReader, expectedNetworkParameters))
-            val wallet = Wallet(expectedNetworkParameters, group)
+            val wallet = WalletEx(expectedNetworkParameters, group)
             // this will result in a different HD seed each time
             wallet.upgradeToDeterministic(Script.ScriptType.P2PKH, null)
             // add the extensions

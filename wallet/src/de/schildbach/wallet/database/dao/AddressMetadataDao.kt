@@ -45,4 +45,7 @@ interface AddressMetadataDao {
 
     @Query("DELETE FROM address_metadata")
     suspend fun clear()
+
+    @Query("SELECT COUNT(*) FROM address_metadata")
+    suspend fun count(): Int
 }

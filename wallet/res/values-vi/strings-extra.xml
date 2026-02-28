@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Tạo một ví mới</string>
-    <string name="onboarding_recover_wallet">Khôi phục ví từ câu phục hồi</string>
-    <string name="onboarding_restore_wallet">Khôi phục ví từ file</string>
+    <string name="onboarding_recover_wallet">Nhập dữ liệu từ khóa Dash</string>
     <string name="onboarding_load_wallet_error">Không thể nạp ví!</string>
 
     <string name="set_pin_create_new_wallet">Tạo một ví mới</string>
@@ -22,17 +20,12 @@
     <string name="dialog_confirm_secured_by">Bảo mật bởi</string>
     <string name="dialog_confirm_fee">Phí giao dịch</string>
     <string name="dialog_confirm_total">Tổng số</string>
-
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Quét</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Gửi</string>
+    <string name="shortcut_send">Gửi</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Nhận</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Nhập khoá riêng</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Thêm shortcut</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Nhận nhanh</string>
@@ -74,6 +67,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Không có địa chỉ nào được copy</string>
 
     <string name="forgot_pin_title">Quên mã PIN</string>
+    <string name="forgot_pin_setup_new_pin_title">Thiết lập mã PIN mới</string>
     <string name="forgot_pin_message">Bạn có thể thiết lập mã PIN mới với sự giúp đỡ của câu phục hồi.</string>
     <string name="forgot_pin_instruction_1">Nhập câu phục hồi để khôi phục lại ví của bạn</string>
     <string name="forgot_pin_instruction_2">Thiết lập mã PIN mới</string>
@@ -105,7 +99,6 @@
     <string name="request_coins_clipboard_address_msg">Địa chỉ Dash đã được copy vào bộ đệm</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Hiển thị</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" không phải là một cụm từ khôi phục</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Cụm từ phục hồi phải có 12 từ</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Câu phục hồi không đúng</string>
     <string name="restore_wallet_from_invalid_seed_failure">Ví không thể được phục hồi:\n\n%s\n\nCâu phục hồi không đúng?</string>
 
@@ -199,6 +192,7 @@
     <string name="transaction_details_sent_from">Gửi đến từ</string>
     <string name="transaction_details_sent_to">Gửi đến</string>
     <string name="transaction_details_received_at">Nhận được tại</string>
+    <string name="transaction_details_received_from">Nhận được từ</string>
     <string name="transaction_details_moved_from">Được di chuyển từ</string>
     <string name="transaction_details_moved_internally_to">Được di chuyển nội bộ đến</string>
     <string name="authenticate_fingerprint_title">Xác thực</string>
@@ -228,7 +222,6 @@
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>
     <string name="about_license">Giấy phép GNU General Public v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="block">Khối</string>
     <string name="time">Thời gian</string>
     <string name="hash">Băm</string>
@@ -262,13 +255,11 @@
 
     <string name="skip">bỏ qua</string>
     <string name="get_started">Bắt đầu</string>
-    <string name="welcome_screen_title_1_new_install">Chào mừng</string>
-    <string name="welcome_screen_title_1_upgrade">Chúng tôi đã Nâng cấp</string>
-    <string name="welcome_screen_subtitle_1">Một giao diện trực quan và quen thuộc trên tất cả các thiết bị của bạn</string>
-    <string name="welcome_screen_title_2">Giao dịch một cách đơn giản</string>
-    <string name="welcome_screen_subtitle_2">Trả và nhận một cách tức thời một cách dễ dàng bằng cách sử dụng các quy trình thanh toán</string>
-    <string name="welcome_screen_title_3">Kiểm soát nhiều hơn</string>
-    <string name="welcome_screen_subtitle_3">Bạn có toàn quyền kiểm soát và tuỳ chỉnh ví dựa trên nhu cầu của mình</string>
+    <string-array name="history_filter">
+        <item>Tất cả</item>
+        <item>Đã nhận</item>
+        <item>Đã gửi</item>
+    </string-array>
 
     <string name="sync_status_wait">Vui lòng đợi quá trình đồng bộ hoàn thành</string>
     <string name="sync_status_syncing_sub_title">với blockchain của Dash</string>
@@ -289,12 +280,16 @@
     <string name="payment_request_skip">Bỏ qua</string>
     <string name="payment_request_paid_to">Được trả cho</string>
 
+    <string name="restore_wallet_please_wait">Vui lòng đợi</string>
     <string name="syncing">Đang đồng bộ</string>
     <string name="all_transactions">Tất cả</string>
     <string name="received_transactions">Đã nhận</string>
     <string name="sent_transactions">Đã gửi</string>
     <string name="continue_reset">Tiếp tục</string>
     <string name="reset_wallet_text">Thiết lập lại ví</string>
+    <string name="reset_wallet_button">Thiết lập lại ví</string>
+
+
     <string name="masternode_key_type_owner">Khoá của chủ sở hữu</string>
     <string name="masternode_key_type_voting">Khoá bỏ phiếu</string>
     <string name="masternode_key_type_operator">Chìa khoá của người vận hành</string>

@@ -29,14 +29,25 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.*
 import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
+import de.schildbach.wallet.ui.more.tools.ZenLedgerClient
 import de.schildbach.wallet.ui.notifications.NotificationManagerWrapper
+import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.LockScreenBroadcaster
@@ -45,12 +56,18 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
+import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashSpendService
 import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class AppModule {
     companion object {
+        @Provides
+        fun provideContext(@ApplicationContext context: Context): Context {
+            return context
+        }
+
         @Provides
         fun provideApplication(
             @ApplicationContext context: Context
@@ -77,24 +94,42 @@ abstract class AppModule {
             context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
         @Provides
-        fun provideTelephonyService(@ApplicationContext context: Context): TelephonyManager =
-            context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+        fun provideDeviceInfo(@ApplicationContext context: Context): DeviceInfoProvider =
+            DeviceInfoProvider(context.resources, context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager)
 
         @Singleton
         @Provides
         fun provideConfiguration(@ApplicationContext context: Context): Configuration =
-            Configuration(PreferenceManager.getDefaultSharedPreferences(context), context.resources)
+            Configuration(PreferenceManager.getDefaultSharedPreferences(context))
+
+        @Provides
+        fun provideSendPaymentService(
+            walletData: WalletDataProvider,
+            walletApplication: WalletApplication,
+            securityFunctions: SecurityFunctions,
+            packageInfoProvider: PackageInfoProvider,
+            analyticsService: AnalyticsService,
+            identityConfig: BlockchainIdentityConfig,
+            coinJoinConfig: CoinJoinConfig,
+            coinJoinService: CoinJoinService,
+            platformRepo: PlatformRepo,
+            transactionMetadataProvider: TransactionMetadataProvider
+        ): SendPaymentService {
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, platformRepo, transactionMetadataProvider)
+
+            return if (BuildConfig.FLAVOR.lowercase() == "prod") {
+                realService
+            } else {
+                FakeDashSpendService(realService, walletData)
+            }
+        }
+
+        @Provides
+        @Singleton
+        fun providesApplicationScope(): CoroutineScope {
+            return CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        }
     }
-
-    @Binds
-    abstract fun bindAnalyticsService(
-        analyticsService: FirebaseAnalyticsServiceImpl
-    ): AnalyticsService
-
-    @Binds
-    abstract fun bindSendPaymentService(
-        sendCoinsTaskRunner: SendCoinsTaskRunner
-    ): SendPaymentService
 
     @Binds
     abstract fun bindConfirmTransactionService(
@@ -122,4 +157,12 @@ abstract class AppModule {
 
     @Binds
     abstract fun bindWalletFactory(walletFactory: DashWalletFactory) : WalletFactory
+
+    @Binds
+    @Singleton
+    abstract fun bindZenLedgerClient(zenLedgerClient: ZenLedgerClient): ZenLedgerApi
+
+    @Singleton
+    @Binds
+    abstract fun provideDashSystemService(dashSystemService: DashSystemServiceImpl): DashSystemService
 }

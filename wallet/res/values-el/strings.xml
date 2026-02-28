@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">Απομένουν %1$s, %2$d μέρες</string>
     <string name="blockchain_state_progress_weeks">Απομένουν %1$s, %2$d εβδομάδες</string>
     <string name="blockchain_state_progress_months">Απομένουν %1$s, %2$d μήνες</string>
-    <string name="blockchain_state_progress_downloading">Συγχρονισμός με το δίκτυο</string>
+    <string name="blockchain_state_progress_downloading">Συγχρονισμός με το δίκτυο (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Συγχρονισμός σε αναστολή</string>
     <string name="blockchain_state_progress_problem_storage">Συγχρονισμός: Πρόβλημα αποθήκευσης</string>
     <string name="blockchain_state_progress_problem_network">Συγχρονισμός: Πρόβλημα δικτύου</string>
+    <string name="mixing_state_progress_mixing">Ανάμειξη νομισμάτων (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Η διεύθυνση Dash αντιγράφτηκε στο πρόχειρο</string>
     <string name="wallet_address_dialog_fragment_hint">Για λόγους προστασίας της ανωνυμίας σας, η διεύθυνσή σας θα αλλάζει με κάθε πληρωμή που θα λαμβάνετε.</string>
     <string name="wallet_balance_fragment_too_much">Το ποσό αυτό είναι αρκετά μεγάλο για να το έχετε σε ένα σημείο. Μετακινήστε μερικά νομίσματα σε άλλο πορτοφόλι για τη δική σας ασφάλεια.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Διαχείριση εφαρμογών</string>
     <string name="wallet_timeskew_dialog_title">Ελέξτε ρυθμίσεις ημερομηνίας &amp; χρόνου</string>
     <string name="wallet_timeskew_dialog_msg">Ο χρόνος της συσκευής σας είναι λάθος κατά %d λεπτά. Ενδεχομένως να μην μπορείτε να στείλετε ή να λάβετε Dash εξαιτίας αυτού του προβλήματος.\n\nΠρέπει να ελέγξετε και αν χρειάζεται να διορθώσετε στις ρυθμίσεις την ημερομηνία, την ώρα και την ζώνη ώρας.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Η ώρα της συσκευής σας είναι %s με %d δεύτερα. Δεν μπορείτε να χρησιμοποιήσετε το CoinJoin λόγω αυτής της διαφοράς.\n\nΟι ρυθμίσεις ώρας στη συσκευή σας πρέπει να αλλάξουν σε \"Αυτόματη ρύθμιση ώρας\" για να χρησιμοποιήσετε το CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Ο χρόνος της συσκευής σας απέχει περισσότερο από 5 δευτερόλεπτα. Δεν μπορείτε να χρησιμοποιήσετε το CoinJoin λόγω αυτής της διαφοράς.\n\nΟι ρυθμίσεις ώρας στη συσκευή σας πρέπει να αλλάξουν σε \"Αυτόματη ρύθμιση ώρας\" πριν χρησιμοποιήσετε το CoinJoin.</string>
     <string name="send_coins_activity_title">Αποστολή Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Παραλαβή υπογραφής από %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Η παραλαβή της υπογραφής απέτυχε</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Θα πληρώσετε %s για το δίκτυο.</string>
     <string name="send_coins_fragment_hint_fee_priority">Θα πληρώσετε τέλη προτεραιότητας %s. Αν σας ενδιαφέρουν χαμηλά τέλη, χρησιμοποιήστε την επιλογή "προτεραιότητα" μόνο αν χρειάζεστε επιβεβαίωση το συντομότερο δυνατόν.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Το ποσό των μικρών πληρωμών στο πορτοφόλι σας δεν επαρκεί για το ποσό που είναι προς αποστολή.</string>
-    <string name="send_coins_fragment_hint_replaying">Αυτή την στιγμή δεν διεκπεραιώνονται πληρωμές γιατί το πορτοφόλι δεν έχει συγχρονιστεί πλήρως με το δίκτυο</string>
     <string name="send_coins_fragment_direct_payment_enable">Στείλτε πληρωμή απευθείας στον δικαιούχο διακομιστή.</string>
     <string name="send_coins_fragment_direct_payment_ack">Η πληρωμή σας στάλθηκε απευθείας επιτυχώς.</string>
     <string name="send_coins_fragment_direct_payment_nack">Η πληρωμή μέσω απευθείας σύνδεσης απορρίφθηκε.</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">Ανάκληση Masternode</string>
     <string name="transaction_row_status_masternode_reward">Ανταμοιβή για Masternode</string>
     <string name="transaction_row_status_mining_reward">Ανταμοιβή για Mining</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Προμήθεια ανάμειξης CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin Collateral Inputs</string>
+    <string name="transaction_row_status_coinjoin_mixing">Ανάμειξη CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Δημιουργία ονομαστικών μονάδων</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Παρακολούθηση δικτύου</string>
     <string name="network_monitor_peer_list_title">Ομότιμοι</string>
     <string name="network_monitor_block_list_title">Τμήματα</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Το πορτοφόλι σας αποκαταστάθηκε με επιτυχία. Το ποσό του θα καθοριστεί στη συνέχεια. Αυτό θα πάρει κάποιο χρόνο.</string>
     <string name="restore_wallet_dialog_success_encrypted">Προειδοποίηση: Το πορτοφόλι σας προστατεύεται από ένα PIN ξοδέματος. Βεβαιωθείτε ότι το θυμάστε ακόμα πριν να λάβετε σε αυτό το πορτοφόλι.</string>
     <string name="import_keys_dialog_failure">Το πορτοφόλι δεν θα μπορούσε να αποκατασταθεί:\n\n%s\n\nΛάθος κωδικός;</string>
+    <string name="restore_wallet_creation_date_label">Ημερομηνία δημιουργίας πορτοφολιού (προαιρετικό)</string>
+    <string name="restore_wallet_creation_date_info">Επιλέγοντας την ημερομηνία δημιουργίας του πορτοφολιού σας, επιτρέπει συγχρονισμό πιο γρήγορα, σαρώνοντας μόνο από εκείνη την ημερομηνία και μετά.</string>
+    <string name="restore_wallet_select_date">Επιλέξτε ημερομηνία δημιουργίας</string>
+    <string name="restore_wallet_selected_date">Επιλεγμένη: %s</string>
+    <string name="restore_wallet_date_picker_title">Πότε δημιουργήθηκε το πορτοφόλι σας;</string>
+    <string name="wallet_creation_date_info_title">Πώς μπορεί η ημερομηνία δημιουργίας του πορτοφολιού να επιταχύνει τη διαδικασία;</string>
+    <string name="wallet_creation_date_info_description">Εάν γνωρίζετε την κατά προσέγγιση ημερομηνία δημιουργίας του πορτοφολιού σας, μπορείτε να την εισαγάγετε και οι συναλλαγές από την ημερομηνία αυτή θα ανακτηθούν, επιταχύνοντας τη συγχρονισμό. Λάβετε υπόψη ότι, εάν εισαγάγετε ημερομηνία μεταγενέστερη της ημερομηνίας δημιουργίας του πορτοφολιού, οι παλαιότερες συναλλαγές δεν θα μεταφορτωθούν.</string>
     <string name="export_keys_dialog_title">Αντίγραφο ασφαλείας πορτοφολιού</string>
     <string name="backup_wallet_dialog_message">Το αντίγραφο ασφαλείας σας θα κρυπτογραφηθεί με τον επιλεγμένο κωδικό και θα αποθηκευτεί στον εξωτερικό χώρο αποθήκευσης.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Το πορτοφόλι σας προστατεύεται από PIN ξοδέματος. Βεβαιωθείτε ότι θυμάστε το PIN εκτός από τον εφεδρικό κωδικό πρόσβασης!</string>
@@ -271,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Επανασάρωση του blockchain, συναλλαγών και του υπόλοιπου του πορτοφολιού. Η επανάληψη θα πάρει λίγο χρόνο, για αυτό καταφύγετε σε αυτή την λύση μόνο όταν το κρίνετε απαραίτητο</string>
     <string name="preferences_initiate_reset_dialog_message">Θέλετε να επανασαρώσετε το blockchain;\n\nΑυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα επανέλθουν μόλις ο συγχρονισμός του blockchain προχωρήσει. Σιγουρευτείτε ότι έχετε σταθερή σύνδεση στο ίντερνετ.</string>
     <string name="preferences_initiate_reset_dialog_positive">Επανάληψη της σάρωσης</string>
+    <string name="rescan_blockchain_dialog_title">Είστε σίγουροι ότι θέλετε να επαναλάβετε τη σάρωση του blockchain;</string>
+    <string name="rescan_blockchain_dialog_message">Αυτό θα κρύψει προσωρινά το υπόλοιπο του πορτοφολιού σας και θα αφαιρέσει τις συναλλαγές. Και τα δύο θα αποκατασταθούν καθώς προχωρά ο συγχρονισμός του blockchain. Βεβαιωθείτε ότι έχετε αξιόπιστη σύνδεση στο διαδίκτυο.</string>
+    <string name="rescan_blockchain_select_date_label">Επιλέξτε την ημερομηνία δημιουργίας του πορτοφολιού (προαιρετικό)</string>
+    <string name="rescan_blockchain_date_info_description">Πληροφορίες σχετικά με την ημερομηνία δημιουργίας του πορτοφολιού</string>
+    <string name="rescan_blockchain_select_date_placeholder">Επιλογή</string>
+    <string name="rescan_blockchain_confirm_button">Επανάληψη της σάρωσης</string>
     <string name="preferences_extended_public_key_title">Δείξε xpub</string>
     <string name="preferences_extended_public_key_summary">Δείτε το εκτετεμένο δημόσιο κλειδί από το πορτοφόλι σας, έτσι ώστε να μπορέσετε να το εισάγετε σε άλλες εφαρμογές και υπηρεσίες. Να είστε προσεκτικοί: με αυτό τον τρόπο θα αποκαλύψετε τη νομισματική προστασία της ιδιωτικής σας ζωής σε αυτή την εφαρμογή.</string>
     <string name="bitmap_fragment_share">Μοιραστείτε...</string>
@@ -287,8 +307,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Επισύναψη καταλόγου των εγκατεστημένων πακέτων</string>
     <string name="report_issue_dialog_collect_application_log">Επισύναψη αρχείου καταγραφής της εφαρμογής</string>
     <string name="report_issue_dialog_collect_wallet_dump">Επισύναψη αρχείου ένδειξης σφαλμάτων πορτοφολιού</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Αποστολή αναφοράς χρησιμοποιώντας…</string>
     <string name="report_issue_dialog_mail_intent_failed">Αποτυχία αποστολής της αναφοράς.</string>
+    <string name="report_issue_dialog_generating_report">Δημιουργία αναφοράς</string>
+    <string name="report_issue_dialog_status_device_info">πληροφορίες συσκευής</string>
+    <string name="report_issue_dialog_status_installed_packages">λίστα των εγκατεστημένων πακέτων</string>
+    <string name="report_issue_dialog_status_application_log">αρχείο καταγραφής εφαρμογών</string>
+    <string name="report_issue_dialog_status_application_info">πληροφορίες εφαρμογής</string>
+    <string name="report_issue_dialog_status_wallet_dump">απόρριψη πορτοφολιού (αργή)</string>
+    <string name="report_issue_dialog_status_contextual_info">πληροφορίες πλαισίου</string>
+    <string name="report_issue_dialog_status_background_traces">ίχνη στο παρασκήνιο</string>
+    <string name="report_issue_dialog_status_stack_trace">ίχνη στοίβας</string>
+    <string name="report_issue_dialog_status_finishing">ολοκλήρωση</string>
     <string name="report_transaction_history_export">Εξαγωγή</string>
     <string name="report_transaction_history_title">Εξαγωγή CSV</string>
     <string name="report_transaction_history_not_synced_title">Εξαγωγή CSV</string>
@@ -297,7 +326,18 @@
     <string name="report_transaction_history_mail_intent_chooser">Αποστολή ιστορικού συναλλαγών χρησιμοποιώντας...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Η αποστολή του ιστορικού συναλλαγών απέτυχε.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Απλοποιήστε τους φόρους των κρυπτονομισμάτων σας</string>
+    <string name="zenledger_export_all_tx">Εξαγωγή όλων των συναλλαγών</string>
+    <string name="zenledger_export_description">Συνδέστε τα πορτοφόλια σας με την πλατφόρμα ZenLedger. Μάθετε περισσότερα και ξεκινήστε τις συναλλαγές σας με το Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Περιμένετε μέχρι να συγχρονιστεί πλήρως το blockchain, ώστε να μπορέσουμε να επανεξετάσουμε το ιστορικό των συναλλαγών σας.</string>
+    <string name="zenledger_export_permission">Να επιτρέπεται η αποστολή όλων των συναλλαγών από το Dash Wallet στο Zenledger;</string>
+    <string name="zenledger_export_error">Υπήρξε σφάλμα κατά την εξαγωγή του ιστορικού των συναλλαγών σας στο ZenLedger.</string>
+
+
     <string name="about_title">Πληροφορίες</string>
+    <string name="about_dash_title">Σχετικά με το Dash</string>
     <string name="about_version_title">Έκδοση</string>
     <string name="about_copyright_title">Πνευματικά δικαιώματα</string>
     <string name="about_license_title">Άδεια</string>
@@ -319,6 +359,10 @@
     <string name="notification_inactivity_message">Εξακολουθείτε να έχετε Dash σε αυτή τη συσκευή! Βεβαιωθείτε ότι έχετε γράψει κάπου τη φράση ανάκτησης προτού απεγκαταστήσετε το Πορτοφόλι Dash αλλιώς θα χάσετε το υπόλοιπο %s.</string>
     <string name="notification_inactivity_action_dismiss">Υπενθυμίστε το μου αργότερα</string>
     <string name="notification_inactivity_action_dismiss_forever">Μήν μου το υπενθυμίσετε</string>
+    <string name="notification_bluetooth_service_listening">Έτοιμο για λήψη πληρωμών μέσω Bluetooth</string>
+    <string name="notification_sync_paused">Διακοπή συγχρονισμού Blockchain</string>
+    <string name="notification_background_processes_paused">Παύση της επεξεργασίας στο παρασκήνιο</string>
+    <string name="notification_background_processes_paused_text">Έχετε φτάσει το όριο των 6 ωρών για την υπηρεσία του Android για μίξη ή συγχρονισμό blockchain. Πατήστε για επαναφορά...</string>
     <string name="appwidget_wallet_balance_title">Υπόλοιπο Dash</string>
 
     <!-- generic buttons -->
@@ -394,4 +438,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Θέλετε να λαμβάνετε πληρωμές στο παρασκήνιο;</string>
     <string name="battery_optimization_dialog_message_not_optimized">Αυτή η εφαρμογή έχει ρυθμιστεί ώστε να συνεχίζει να εκτελείται ακόμη και όταν δεν είναι ορατή για κάποιο χρονικό διάστημα.\n\nΠροτείνουμε να επιτρέψετε σε αυτή την εφαρμογή να παραμένει πάντα ενημερωμένη με TO blockchain, ακόμη και στο παρασκήνιο.\n\nΜην ανησυχείτε, θα προσέχουμε πάντα τη χρήση της μπαταρίας σας.</string>
     <string name="battery_optimization_dialog_button_change">Άνοιγμα Ρυθμίσεων</string>
+    <string name="credits_profile_change_message">Ενημέρωση πληροφοριών προφίλ</string>
+
+    <string name="block_explorer_selection_title">Επιλέξτε blockchain explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Επιλέξτε επιλογή</string>
+    <string name="customize_shortcuts">Προσαρμογή της γραμμής συντομεύσεων</string>
+    <string name="customize_shortcuts_description">Κρατήστε πατημένο οποιοδήποτε κουμπί παραπάνω για να το αντικαταστήσετε με τη λειτουργία που χρειάζεστε</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Πρέπει να αναβαθμίσετε τον PIN σας</string>
+    <string name="upgrade_pin_description">Ορίστε ένα νέο PIN</string>
+    <string name="upgrade_pin_continue">Συνέχεια</string>
 </resources>

@@ -46,7 +46,6 @@
     <string name="explore_no_atms">没有自动提款机</string>
     <string name="distance_miles">%s 英里</string>
     <string name="distance_kilometers">%s 公里</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 商户</item>
     </plurals>
@@ -60,6 +59,7 @@
     <string name="explore_back_to_nearest">返回到最近的位置</string>
     <string name="explore_select_location">选择位置</string>
     <string name="explore_pay_with_dash">用Dash支付</string>
+    <string name="explore_pay_with_dash_save">保存 %.2f%%</string>
     <string name="explore_buy_gift_card">购买礼品卡</string>
     <string name="explore_buy_dash">购买Dash</string>
     <string name="explore_sell_dash">出售Dash</string>
@@ -71,8 +71,10 @@
     <string name="explore_filter">过滤</string>
     <string name="explore_filters">过滤器</string>
     <string name="explore_apply_filter">应用</string>
-    <string name="explore_payment_method">支付方式</string>
+    <string name="explore_spending_options">消费选项</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">CTX 礼品卡</string>
+    <string name="piggycards_gift_cards">Piggy Cards 礼品卡</string>
     <string name="explore_payment_gift_card">礼品卡</string>
     <string name="explore_filter_gift_cards">礼品卡</string>
     <string name="explore_radius">半径</string>
@@ -84,6 +86,10 @@
     <string name="explore_filtered_by">筛选条件:</string>
     <string name="explore_pay_gift_card">使用礼品卡付款</string>
     <string name="explore_sort_by">排序方式</string>
+    <string name="gift_card_types">礼品卡类型</string>
+    <string name="flexible_amount_option">可调面额</string>
+    <string name="fixed_denom_option">固定面额</string>
+    <string name="gift_card_providers">礼品卡供应商</string>
 
     <string-array name="merchants_filter_options">
         <item>线上</item>
@@ -115,6 +121,7 @@
     <string-array name="sort_by_options_names">
         <item>名称</item>
         <item>距离</item>
+        <item>折扣</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -149,6 +156,13 @@
     <string name="buy_gift_card_with_dash_text">使用Dash购买礼品卡.</string>
     <string name="redeem_gift_card_text">在线上或收银台几秒内兑换您的礼品卡.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash没有任何实际价值, 但您可以与其他 DashPay 测试用户进行收发.</string>
+    <string name="explore_test_dash_title">我如何获得 Test Dash?</string>
+    <string name="explore_test_dash_text_1">测试用的 Dash 是免费的, 可以通过所谓的「水龙头」获得.</string>
+    <string name="explore_test_dash_text_2">点击下面的按钮从此钱包复制 Dash 地址, 以便您可以获得测试用 Dash..</string>
+    <string name="explore_get_test_dash">获得 Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">同步中… 结果可能不完整.</string>
     <string name="sync_in_progress_error">同步中... 出现一个错误.</string>
@@ -158,4 +172,101 @@
     <string name="sync_in_progress_network_error">同步中断... 网络未连接或无法访问</string>
 
 
-    </resources>
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">在</string>
+    <string name="purchase_gift_card_min">最少: %s</string>
+    <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="purchase_gift_card_discount_hint">您正在以 %s 购买 %s 礼品卡 (%s 折扣)</string>
+    <string name="button_next">下一个</string>
+    <string name="purchase_gift_card_from">来自</string>
+    <string name="purchase_gift_card_to">到</string>
+    <string name="purchase_confirm_transaction">确认</string>
+    <string name="purchase_gift_card_total_label">礼品卡总计</string>
+    <string name="purchase_gift_card_discount">折扣</string>
+    <string name="purchase_gift_card_you_pay">您支付</string>
+    <string name="purchase_gift_card_confirm">确认</string>
+    <string name="purchase_gift_card_details">礼品卡详情</string>
+    <string name="purchase_original_purchase">原始购买</string>
+    <string name="purchase_check_current_balance">查看礼品卡详情</string>
+    <string name="purchase_card_number">卡号</string>
+    <string name="purchase_card_pin">卡密码</string>
+    <string name="purchase_view_transaction">查看交易详情</string>
+    <string name="purchase_see_how_to_use_gift_card">查看如何使用礼品卡</string>
+    <string name="purchase_how_to_use_gift_card">如何使用礼品卡</string>
+    <string name="purchase_self_checkout">自助结账</string>
+    <string name="purchase_Request_assistance">需要员工协助兑换数字礼品卡.</string>
+    <string name="purchase_in_store">有库存</string>
+    <string name="purchase_tell_the_cashier">告诉收银员您正在使用数字礼品卡付款. 收银员: 在银行卡信息栏中输入总金额, 然后在账户信息栏中输入礼品卡号码并按 Enter 键.</string>
+    <string name="purchase_in_the_payment_section">在付款环节, 在礼品卡信息栏中输入您的数字礼品卡号码.</string>
+    <string name="purchase_powered_by">提供方</string>
+    <string name="insufficient_money_title">Dash不足</string>
+    <string name="insufficient_money_msg">资金不足</string>
+    <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
+    <string name="gift_card_barcode_failed">条形码加载失败</string>
+    <string name="gift_card_tx_title">礼品卡 · %s</string>
+    <string name="select_amount">选择面额</string>
+    <string name="select_fixed_amount">此商户以固定价格出售礼品卡</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">输入验证码</string>
+    <string name="verification_check_email">检查您的电子邮箱并输入验证码</string>
+    <string name="buy_gift_card">使用您的 DashSpend 账户购买礼品卡</string>
+    <string name="dashspend_create_account">创建账户或登录现有账户</string>
+    <string name="create_new_account">创建新账户</string>
+    <string name="login">登录</string>
+    <string name="password">密码</string>
+    <string name="logged_in_as">已登录为 %s</string>
+    <string name="log_out">退出</string>
+    <string name="invaild_code">您输入了错误的代码. 请检查您的电子邮箱并重试.</string>
+    <string name="something_wrong_title">出错了!</string>
+    <string name="retry">重试</string>
+    <string name="gift_card_purchase_failed">礼品卡购买失败</string>
+    <string name="try_again">再试一次</string>
+    <string name="cancel">取消</string>
+    <string name="gift_card_error">由于某些原因, 我们无法购买礼品卡. 请再试一次.</string>
+    <string name="gift_card_out_of_stock_error">该礼品卡售罄. 请再试一次.</string>
+    <string name="gift_card_details_error">由于某些原因, 我们无法购买礼品卡. 请联系客服.</string>
+    <string name="gift_card_limit_error">该商户的购买限额已更改. 请联系CTX客服以获取更多信息.</string>
+    <string name="gift_card_server_error">由于一些原因我们无法购买礼品卡. 请联系 %s 客服提交问题.</string>
+    <string name="gift_card_server_region_error">您所在的地区无法购买该礼品卡.</string>
+    <string name="gift_card_error_wrong_network">付款请求针对不同的网络. 请联系客服人员.</string>
+    <string name="gift_card_unknown_error">由于某些原因, 我们无法购买礼品卡. 请通过 txid %s与客服联系.</string>
+    <string name="gift_card_delay">取回这张礼品卡的时间超出了正常时间. 如果长时间依然没有显示, 请联系<a href="contact:support">support@dash.org</a>.</string>
+    <string name="gift_card_rejected">付款已被拒绝. 请联系 %s客服并提供礼品卡 ID %s, 付款 ID %s 和交易 ID %s.</string>
+    <string name="gift_card_redeem_url_not_supported">已向提供兑换链接的商家进行付款, 但目前尚不受支持. 请联系 %s客服, 并提供礼品卡 ID %s和付款 ID %s, 以及交易 ID %s. </string>
+    <string name="dashspend_terms_conditions">接受条款和条件</string>
+    <string name="accept_terms_conditions">我接受 DashSpend 条款和条件</string>
+    <string name="tap_link_to_proceed">要在 DashSpend 创建账户, 您必须点击下面的链接才能继续</string>
+    <string name="accept_to_proceed">要在 DashSpend 创建账户, 您必须接受 DashSpend 条款和条件</string>
+    <string name="view_terms_conditions">条款和条件</string>
+    <string name="barcode_placeholder">请等待礼品卡详细信息发送给您.</string>
+    <string name="gift_card_contact_ctx">联系CTX客服</string>
+    <string name="gift_card_contact_piggycards">联系 PiggyCards 客服</string>
+    <string name="gift_card_contact_support">联系支持</string>
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">创建账户</string>
+    <string name="log_in_to_ctxspend_account">登录您的账户</string>
+    <string name="log_in_to_ctxspend_account_desc">您的电子邮箱仅用于发送一次性密码.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">使用您的 DashSpend 账户购买礼品卡</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">创建 DashSpend 账户或登录现有账户</string>
+    <string name="temporarily_unavailable">临时不可用</string>
+    <string name="country_availability">该礼品卡仅适用于美国</string>
+    <string name="token_expired_title">您的对话已过期</string>
+    <string name="token_expired_message">看起来您有段时间没有使用 DashSpend了. 出于安全原因, 您已登出. \n\n请重新登录以继续探索并使用您的 Dash.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">您的电子邮件地址不会与  PiggyCards 以外的任何人共享.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">选择礼品卡供应商</string>
+    <string name="flexible_amounts">可调面额</string>
+    <string name="fixed_amounts">固定金额</string>
+    <string name="address">地址</string>
+    <string name="phone">电话</string>
+    <string name="website">网站</string>
+    <string name="call">呼叫</string>
+    <string name="directions">路线</string>
+    <string name="explore_show_all_locations">显示所有位置 (%d)</string>
+    <string name="provider">供应商</string>
+    <string name="save">保存</string>
+</resources>

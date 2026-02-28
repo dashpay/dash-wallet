@@ -18,13 +18,15 @@ package de.schildbach.wallet.ui
 
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
+import androidx.appcompat.widget.Toolbar
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.BlockInfo
+import de.schildbach.wallet.ui.util.showBlockExplorerSelectionSheet
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityBlockInfoBinding
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -45,14 +47,17 @@ class BlockInfoActivity : LockScreenActivity() {
     private lateinit var binding: ActivityBlockInfoBinding
     @Inject
     lateinit var config: Configuration
+    @Inject
+    lateinit var analytics: AnalyticsService
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         binding = ActivityBlockInfoBinding.inflate(layoutInflater)
         setContentView(binding.root)
-        binding.appBar.toolbar.title = getString(R.string.block_info)
-        binding.appBar.toolbar.setNavigationOnClickListener { finish() }
+        val toolbar = findViewById<Toolbar>(R.id.toolbar)
+        toolbar.title = getString(R.string.block_info)
+        toolbar.setNavigationOnClickListener { finish() }
 
         val blockInfo = intent.getSerializableExtra(BLOCK_INFO_EXTRA) as BlockInfo
         binding.blockHeight.text = "${blockInfo.height}"
@@ -60,15 +65,7 @@ class BlockInfoActivity : LockScreenActivity() {
         binding.blockHash.text = blockInfo.hash
 
         binding.viewOnExplorer.setOnClickListener {
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.withAppendedPath(
-                        config.getBlockExplorer(R.array.preferences_block_explorer_values),
-                        "block/" + blockInfo.hash
-                    )
-                )
-            )
+            showBlockExplorerSelectionSheet(analytics, "block/" + blockInfo.hash)
         }
     }
 }

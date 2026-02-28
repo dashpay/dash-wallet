@@ -31,6 +31,7 @@ import de.schildbach.wallet_test.databinding.HeaderBalanceFragmentBinding
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.observe
 
 class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
     private val viewModel by activityViewModels<MainViewModel>()
@@ -48,7 +49,7 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         requireView().setOnClickListener { viewModel.triggerHideBalance() }
 
         viewModel.exchangeRate.observe(viewLifecycleOwner) { updateBalance() }
-        viewModel.balance.observe(viewLifecycleOwner) { updateBalance() }
+        viewModel.totalBalance.observe(viewLifecycleOwner) { updateBalance() }
 
         viewModel.isBlockchainSynced.observe(viewLifecycleOwner) { isSynced ->
             if (isSynced) {
@@ -66,12 +67,12 @@ class HeaderBalanceFragment : Fragment(R.layout.header_balance_fragment) {
         }
 
         viewModel.showTapToHideHint.observe(viewLifecycleOwner) { showHint ->
-            binding.hideBalanceHintText.isVisible = showHint ?: true
+            binding.hideBalanceHintText.isVisible = showHint != false
         }
     }
 
     private fun updateBalance() {
-        val balance = viewModel.balance.value ?: Coin.ZERO
+        val balance = viewModel.totalBalance.value ?: Coin.ZERO
         binding.walletBalanceDash.setAmount(balance)
         viewModel.exchangeRate.value?.let { exchangeRate ->
             val rate = org.bitcoinj.utils.ExchangeRate(

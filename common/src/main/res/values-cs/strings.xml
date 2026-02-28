@@ -43,9 +43,11 @@
     <string name="button_understand">Rozumím</string>
     <string name="button_okay">Dobře</string>
     <string name="button_share">Sdílet</string>
+    <string name="button_skip">Přeskočit</string>
     <string name="verify">Ověřit</string>
     <string name="receive_enter_amount_button">Uvést částku</string>
     <string name="account_create">Vytvořit účet</string>
+    <string name="try_again">Zkusit znovu</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Vyhledávání</string>
@@ -64,8 +66,11 @@
     <string name="payment_protocol_default_error_title">Chyba platby</string>
     <string name="payment_request_problem_message">Vaše platba nemohla být serverem zpracována, informujte se prosím u obchodníka.</string>
     <string name="exchange_rate_not_found">Nelze najít směnný kurz.</string>
+    <string name="send_coins_fragment_hint_replaying">Platby momentálně nelze provádět, protože peněženka není synchronizována se sítí.</string>
 
     <string name="disconnected">Odpojeno</string>
     <string name="enter_amount_available">k dispozici</string>
     <string name="transaction_row_rate_not_available">Není dostupný</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Odeslat hlášení pomocí…</string>
+
     </resources>

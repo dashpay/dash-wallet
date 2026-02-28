@@ -22,20 +22,21 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.flatMapConcat
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SweepWalletViewModel @Inject constructor(
     exchangeRates: ExchangeRatesProvider,
-    walletUIConfig: WalletUIConfig
+    walletUIConfig: WalletUIConfig,
+    private val analyticsService: AnalyticsService
 ): ViewModel() {
     var currentExchangeRate: ExchangeRate? = null
         private set
@@ -46,5 +47,9 @@ class SweepWalletViewModel @Inject constructor(
             .flatMapLatest(exchangeRates::observeExchangeRate)
             .onEach { currentExchangeRate = it }
             .launchIn(viewModelScope)
+    }
+
+    fun logEvent(eventName: String) {
+        analyticsService.logEvent(eventName, mapOf())
     }
 }

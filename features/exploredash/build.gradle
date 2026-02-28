@@ -1,18 +1,19 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
     id 'org.jlleitschuh.gradle.ktlint'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
         javaCompileOptions {
@@ -20,6 +21,10 @@ android {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
             }
         }
+    }
+    
+    ksp {
+        arg("room.schemaLocation", "$projectDir/schemas")
     }
 
     buildTypes {
@@ -30,14 +35,15 @@ android {
     }
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
+        compose = true
     }
     testOptions {
         unitTests.returnDefaultValues = true
@@ -47,10 +53,6 @@ android {
         test.resources.srcDirs += 'test/resources'
     }
     namespace 'org.dash.wallet.features.exploredash'
-}
-
-kapt {
-    correctErrorTypes true
 }
 
 hilt {
@@ -77,11 +79,13 @@ dependencies {
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-paging:$roomVersion"
+    implementation "androidx.room:room-runtime:$roomVersion"
+    ksp "androidx.room:room-compiler:$roomVersion"
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
-    kapt 'androidx.hilt:hilt-compiler:1.0.0'
+    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
 
     // UI
@@ -89,12 +93,20 @@ dependencies {
     implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
     api 'androidx.paging:paging-runtime-ktx:3.1.1'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
 
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation "androidx.compose.ui:ui"
+    implementation "androidx.compose.ui:ui-tooling"
+    implementation "androidx.compose.material3:material3"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose:$lifecycleVersion"
+
     // Maps & Location
-    implementation 'com.google.android.gms:play-services-location:18.0.0'
-    implementation 'com.google.android.gms:play-services-maps:18.0.0'
+    implementation 'com.google.android.gms:play-services-location:21.3.0'
+    implementation 'com.google.android.gms:play-services-maps:18.2.0'
     implementation 'com.google.maps.android:maps-ktx:3.2.0'
     implementation 'com.google.maps.android:android-maps-utils:2.2.6'
 
@@ -117,9 +129,8 @@ dependencies {
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
-    testImplementation "org.robolectric:robolectric:4.9.2"
+    testImplementation "org.robolectric:robolectric:4.15.1"
     testImplementation "androidx.room:room-testing:$roomVersion"
-    kapt "androidx.room:room-compiler:$roomVersion"
 
     androidTestImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     androidTestImplementation "org.mockito:mockito-android:4.6.1"

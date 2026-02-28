@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">Этот адрес используется в CrowdNode как ваш ID. Если вы потеряете кодовую фразу, связанную с этим аккаунтом, то вы потеряете доступ к средствам внутри этого кошелька и этот аккаунт на CrowdNode.</string>
     <string name="crowdnode_new_account_warning_2">Чтобы удостовериться, что вы действительно являетесь владельцем этого кошелька, на счёт CrowdNode будут зачислены и списаны небольшие суммы Dash.</string>
     <string name="crowdnode_link_account_description">Все входящие и исходящие переводы CrowdNode на этом устройстве будут производиться с адреса Dash, указанного ниже.</string>
-    <string name="dash_address">Адрес Dash</string>
     <string name="primary_dash_address">Основной адрес Dash</string>
     <string name="crowdnode_secure_wallet">Чтобы создать аккаунт CrowdNode, сделайте резервную копию кодовой фразы</string>
     <string name="crowdnode_secure_wallet_explainer">В случае, если вы потеряете кодовую фразу от этого кошелька, потеряете устройство или удалите Dash Wallet, вы потеряете доступ к средствам на CrowdNode и средствам внутри этого кошелька.</string>

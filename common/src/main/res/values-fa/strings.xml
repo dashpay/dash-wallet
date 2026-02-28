@@ -11,6 +11,7 @@
     <string name="buy_dash">خرید دش</string>
     <string name="copied">کپی شد</string>
     <string name="staking_title">سپرده‌گذاری</string>
+    <string name="spend_title">خرج کردن</string>
     <string name="email">ایمیل</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">خطا</string>
@@ -21,7 +22,10 @@
     <string name="transfer_dash">انتقال دش</string>
     <string name="login_error_title">ورود به حساب %s شما ناموفق بود</string>
     <string name="login_error_message">در هنگام تلاش برای ورود به حساب %s شما، خطایی روی داد. </string>
+    <string name="dash_address">نشانی دش</string>
+    <string name="username">نام کاربری</string>
     <string name="balance">موجودی: </string>
+    <string name="nothing_here">چیزی اینجا نیست</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">گرنزی پاوند</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">متوجه شدم</string>
     <string name="button_okay">باشه</string>
     <string name="button_share">به اشتراک گذاری</string>
+    <string name="button_skip">رد کردن</string>
     <string name="share_address">به اشتراک‌گذاری نشانی</string>
     <string name="verify">تائید</string>
     <string name="receive_enter_amount_button">مبلغ را مشخص کنید</string>
     <string name="account_create">ایجاد حساب</string>
+    <string name="submit">ثبت</string>
+    <string name="try_again">دوباره امتحان کنید</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">جستجو</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
+    <string name="send_coins_error_insufficient_mixed_money">موجودی ترکیبی کافی نیست. منتظر بمانید تا فرایند ترکیب کوین‌جوین تمام شود و یا این قابلیت را از طریق تنظیمات غیرفعال کنید تا این تراکنش صورت گیرد. </string>
     <string name="syncing">در حال همزمان‌سازی</string>
     <string name="no_connection">به اینترنت متصل نیستید</string>
     <string name="rate_not_available">در دسترس نیست</string>
@@ -89,6 +97,7 @@
     <string name="payment_protocol_default_error_title">خطا در پرداخت</string>
     <string name="payment_request_problem_message">امکان پردازش پرداخت‌تان توسط سرور وجود ندارد. لطفا با فروشنده تماس بگیرید. </string>
     <string name="exchange_rate_not_found"> نرخ‌های تبدیل پیدا نشد.</string>
+    <string name="send_coins_fragment_hint_replaying">پرداخت‌های کنونی امکان‌پذیر نیست، زیرا کیف پول به خوبی با شبکه همزمان نشده است</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">مستقیما روی دش والت دریافت کنید</string>
@@ -98,4 +107,8 @@
     <string name="enter_amount_available">موجود</string>
     <string name="transaction_row_rate_not_available">در دسترس نیست</string>
     <string name="log_in">ورود</string>
-</resources>
+
+    <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">در حال ارسال گزارش...</string>
+
+    </resources>

@@ -32,6 +32,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.ReceiveInfoViewBinding
+import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.shareText
 import org.slf4j.LoggerFactory
@@ -47,6 +48,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
     private var address: Address? = null
     private var amount: Coin? = null
     private var paymentRequestUri: String = ""
+    private var username: String? = null
 
     init {
         binding = ReceiveInfoViewBinding.inflate(LayoutInflater.from(context), this)
@@ -66,16 +68,19 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         }
 
         if (!isInEditMode) {
-            binding.addressPreviewPane.setOnClickListener {
+            binding.addressCopyBtn.setOnClickListener {
                 onAddressClicked?.invoke()
                 address?.let { handleCopyAddress(it) }
+            }
+            binding.usernameCopyBtn.setOnClickListener {
+                username?.let { handleCopyUsername(it) }
             }
             binding.specifyAmountButton.setOnClickListener {
                 onSpecifyAmountClicked?.invoke()
             }
             binding.shareButton.setOnClickListener {
                 onShareClicked?.invoke()
-                handleShare(paymentRequestUri)
+                address?.let { handleShare(it.toBase58()) }
             }
 
             refresh()
@@ -94,6 +99,28 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         } else if (this.amount != amount) {
             this.amount = amount
             refreshQr()
+        }
+    }
+
+    fun setProfile(username: String?, displayName: String?, avatar: String?, avatarHash: ByteArray?) {
+        this.username = username
+
+        if (!username.isNullOrEmpty()) {
+            binding.usernamePreviewPane.isVisible = true
+            binding.usernamePreview.text = username
+
+            if (!displayName.isNullOrEmpty()) {
+                binding.usernameLabel.text = displayName
+            } else {
+                binding.usernameLabel.text = context.getString(R.string.username)
+            }
+
+            if (!avatar.isNullOrEmpty()) {
+                ProfilePictureDisplay.display(binding.avatar, avatar, avatarHash, username, false, null)
+            }
+            refresh()
+        } else {
+            binding.usernamePreviewPane.isVisible = false
         }
     }
 
@@ -126,7 +153,7 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
         val address = this.address
 
         if (address != null) {
-            paymentRequestUri = BitcoinURI.convertToBitcoinURI(address, amount, null, null)
+            paymentRequestUri = BitcoinURI.convertToBitcoinURI(address.parameters, address.toBase58(), amount, null, null, username)
             val qrCodeBitmap = Qr.themeAwareDrawable(paymentRequestUri, resources)
             binding.qrPreview.setImageDrawable(qrCodeBitmap)
         } else {
@@ -148,6 +175,13 @@ class ReceiveInfoView(context: Context, attrs: AttributeSet?) : ConstraintLayout
             Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
             log.info("address copied to clipboard: {}", address)
         } catch (ignore: BitcoinURIParseException) { }
+    }
+
+    private fun handleCopyUsername(username: String) {
+        val clipboardManager = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboardManager.setPrimaryClip(ClipData.newPlainText("Dash Username", username))
+        Toast.makeText(context, R.string.copied, Toast.LENGTH_SHORT).show()
+        log.info("username copied to clipboard: {}", username)
     }
 
     private fun handleShare(paymentRequestUri: String) {

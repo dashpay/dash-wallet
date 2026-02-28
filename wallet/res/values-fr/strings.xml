@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d jours en retard</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d semaines en retard</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mois en retard</string>
-    <string name="blockchain_state_progress_downloading">Synchronisation avec le réseau</string>
+    <string name="blockchain_state_progress_downloading">Synchronisation avec le réseau (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronisation en suspens</string>
     <string name="blockchain_state_progress_problem_storage">Synchronisation : problème de stockage</string>
     <string name="blockchain_state_progress_problem_network">Synchronisation : problème de réseau</string>
+    <string name="mixing_state_progress_mixing">Mélange de fonds (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Adresse Dash copiée dans le presse-papier</string>
     <string name="wallet_address_dialog_fragment_hint">Par souci de confidentialité, votre adresse changera après avoir reçu un paiement.</string>
     <string name="wallet_balance_fragment_too_much">Ce montant est un peu trop élevé pour être transporté dans votre poche. Veuillez en déplacer une partie dans un endroit plus sûr.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Gérer les applications</string>
     <string name="wallet_timeskew_dialog_title">Veuillez vérifier les réglages de date &amp; heure.</string>
     <string name="wallet_timeskew_dialog_msg">L\'horloge de votre appareil est décalée de %d minutes. Vous ne pouvez sans doute pas envoyer ou recevoir de dashs pour cette raison.\n\nVeuillez vérifier et éventuellement corriger la date, l\'heure et le fuseau horaire de votre appareil.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">L\'heure de votre appareil est %s de %d secondes. Vous ne pouvez pas utiliser CoinJoin en raison de cette différence.\n\nLes réglages de l\'heure sur votre appareil doivent être réglés sur “Régler l\'heure automatiquement” pour utiliser CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">L\'heure de votre appareil est décalée de plus de 5 secondes. Vous ne pouvez pas utiliser CoinJoin en raison de cette différence.\n\nLes réglages de l\'heure sur votre appareil doivent être réglés sur “Régler l\'heure automatiquement” pour utiliser CoinJoin.</string>
     <string name="send_coins_activity_title">Envoyer dashs</string>
     <string name="send_coins_fragment_request_payment_request_progress">Récupération de la signature de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Échec lors de la récupération de la signature</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Des frais de réseau de %s seront appliqués.</string>
     <string name="send_coins_fragment_hint_fee_priority">Des frais prioritaires de %s seront appliqués. Si vous préférez des frais plus bas, n\'utilisez l\'option "prioritaire" que s\'il vous faut une confirmation la plus rapide possible.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Le total des petits montants dans votre portefeuille ne forme pas une somme pouvant être envoyée.</string>
-    <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
     <string name="send_coins_fragment_direct_payment_enable">Envoyer le paiement directement au bénéficiaire.</string>
     <string name="send_coins_fragment_direct_payment_ack">Votre paiement a été envoyé directement avec succès.</string>
     <string name="send_coins_fragment_direct_payment_nack">Votre paiement par connexion directe a été rejeté.</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">Révocation de masternode</string>
     <string name="transaction_row_status_masternode_reward">Récompense de masternode</string>
     <string name="transaction_row_status_mining_reward">Récompense de minage</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Frais de mélange CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Entrées de caution CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Mélange CoinJoin en cours</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">Création de coupures CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin combiner la petite monnaie</string>
     <string name="network_monitor_activity_title">Surveillance du réseau</string>
     <string name="network_monitor_peer_list_title">Pairs</string>
     <string name="network_monitor_block_list_title">Blocs</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Votre portefeuille a été restauré avec succès. Son solde va maintenant être calculé. Cela prendra un certain temps.</string>
     <string name="restore_wallet_dialog_success_encrypted">Attention : les dépenses depuis votre portefeuille sont protégées par un code PIN. Assurez-vous de vous souvenir de ce code PIN avant de recevoir dans ce portefeuille.</string>
     <string name="import_keys_dialog_failure">Impossible de restaurer le portefeuille :\n\n%s\n\nMot de passe erroné ?</string>
+    <string name="restore_wallet_creation_date_label">Date de création du portefeuille (facultatif)</string>
+    <string name="restore_wallet_creation_date_info">Choisir la date de création de votre portefeuille permet une synchronisation plus rapide grâce à une analyse uniquement à partir de cette date.</string>
+    <string name="restore_wallet_select_date">Choisir la date de création</string>
+    <string name="restore_wallet_selected_date">Choisi : %s</string>
+    <string name="restore_wallet_date_picker_title">Quand votre portefeuille a-t-il été créé ?</string>
+    <string name="wallet_creation_date_info_title">Comment la date de création du portefeuille peut-elle accélérer le processus ?</string>
+    <string name="wallet_creation_date_info_description">Si vous connaissez la date approximative de création de votre portefeuille, vous pouvez la saisir ; les transactions postérieures à cette date seront alors récupérées, ce qui accélérera la synchronisation. Attention : si vous saisissez une date postérieure à la création de votre portefeuille, les transactions plus anciennes ne seront pas téléchargées.</string>
     <string name="export_keys_dialog_title">Sauvegarder le portefeuille</string>
     <string name="backup_wallet_dialog_message">Votre sauvegarde sera chiffrée avec le mot de passe choisi et enregistrée sur le stockage externe.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Votre portefeuille est protégé par un code PIN de paiement. Assurez-vous de retenir le code PIN en plus du mot de passe de sauvegarde !</string>
@@ -271,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">Réinitialise la chaîne de blocs, les transactions et le solde de portefeuille. Le rebalayage prendra du temps ; ne faites donc ceci qu\'en connaissance de cause.</string>
     <string name="preferences_initiate_reset_dialog_message">Souhaitez-vous rebalayer la chaîne de blocs ?\n\nCela masquera provisoirement le solde de votre portefeuille et enlèvera les transactions. Les deux réapparaîtront à mesure qu\'avancera la synchronisation de la chaîne de blocs. Veuillez vous assurer d\'avoir une connexion Internet fiable.</string>
     <string name="preferences_initiate_reset_dialog_positive">Réanalyser</string>
+    <string name="rescan_blockchain_dialog_title">Voulez-vous vraiment rescanner la blockchain ?</string>
+    <string name="rescan_blockchain_dialog_message">Cela masquera provisoirement le solde de votre portefeuille et ôtera les transactions. Ces informations seront rétablies au fur et à mesure de la synchronisation de la blockchain. Assurez-vous de disposer d\'une connexion Internet stable.</string>
+    <string name="rescan_blockchain_select_date_label">Choisissez la date de création du portefeuille (facultatif)</string>
+    <string name="rescan_blockchain_date_info_description">Infos sur la date de création du portefeuille</string>
+    <string name="rescan_blockchain_select_date_placeholder">Choisir</string>
+    <string name="rescan_blockchain_confirm_button">Réanalyser</string>
     <string name="preferences_extended_public_key_title">Afficher la xpub</string>
     <string name="preferences_extended_public_key_summary">Visualisez la clé privée étendue de votre portefeuille afin qu\'elle puisse être importée dans d\'autres applications et services. Attention : ceci divulguera vos informations monétaires à cette application.</string>
     <string name="bitmap_fragment_share">Partager…</string>
@@ -287,8 +307,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Inclure la liste des paquetages installés</string>
     <string name="report_issue_dialog_collect_application_log">Inclure le journal de l\'application</string>
     <string name="report_issue_dialog_collect_wallet_dump">Inclure une exportation du portefeuille</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
     <string name="report_issue_dialog_mail_intent_failed">Échec lors de l\'envoi du rapport.</string>
+    <string name="report_issue_dialog_generating_report">Génération du rapport</string>
+    <string name="report_issue_dialog_status_device_info">information de l\'appareil</string>
+    <string name="report_issue_dialog_status_installed_packages">liste des paquets installés</string>
+    <string name="report_issue_dialog_status_application_log">journal de l\'application</string>
+    <string name="report_issue_dialog_status_application_info">infos de l\'application</string>
+    <string name="report_issue_dialog_status_wallet_dump">récup. données du portefeuille (lent)</string>
+    <string name="report_issue_dialog_status_contextual_info">infos contextuelles</string>
+    <string name="report_issue_dialog_status_background_traces">traces d\'arrière-plan</string>
+    <string name="report_issue_dialog_status_stack_trace">traces de pile</string>
+    <string name="report_issue_dialog_status_finishing">achèvement</string>
     <string name="report_transaction_history_export">Exportation</string>
     <string name="report_transaction_history_title">Exportation CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportation CSV</string>
@@ -297,7 +326,18 @@
     <string name="report_transaction_history_mail_intent_chooser">Envoyer l\'historique de transactions avec…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">L\'envoi de l\'historique de transactions a échoué.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Simplifier vos taxes crypto</string>
+    <string name="zenledger_export_all_tx">Exporter toutes les transactions</string>
+    <string name="zenledger_export_description">Connectez vos portefeuilles crypto à la plateforme ZenLedger. En savoir plus et se lancer avec vos transactions Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Attendez que la chaîne soit entièrement synchronisée, pour que vous puissiez consulter votre historique de transactions.</string>
+    <string name="zenledger_export_permission">Autoriser l\'envoi de toutes les transactions depuis Dash Wallet vers Zenledger ?</string>
+    <string name="zenledger_export_error">Il y a eu une erreur lors de l\'exportation de votre historique de transactions vers ZenLedger.</string>
+
+
     <string name="about_title">À propos du logiciel</string>
+    <string name="about_dash_title">À propos de Dash</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Tous droits réservés</string>
     <string name="about_license_title">Licence</string>
@@ -319,6 +359,10 @@
     <string name="notification_inactivity_message">Il vous reste des dashs sur cet appareil ! Assurez-vous d\'avoir noté votre phrase de récupération avant de désinstaller Dash Wallet, sinon vous perdrez votre solde de %s.</string>
     <string name="notification_inactivity_action_dismiss">Me le rappeler plus tard</string>
     <string name="notification_inactivity_action_dismiss_forever">Ne plus me le rappeler</string>
+    <string name="notification_bluetooth_service_listening">Prêt à recevoir des paiements via Bluetooth</string>
+    <string name="notification_sync_paused">Synchro. de la blockchain en pause</string>
+    <string name="notification_background_processes_paused">Traitement d\'arrière-plan en pause</string>
+    <string name="notification_background_processes_paused_text">Vous avez atteint la limite de services Android d\'avant-plan (6 heures) pour le mixage ou la synchronisation de blockchain. Touchez pour relancer…</string>
     <string name="appwidget_wallet_balance_title">Solde Dash</string>
 
     <!-- generic buttons -->
@@ -394,4 +438,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Souhaitez-vous pouvoir recevoir des paiements en arrière-plan ?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Cette application est configurée pour continuer à fonctionner après n\'avoir pas été visible ou consultée pendant un certain temps.\n\nNous conseillons d\'autoriser cette application à toujours rester à jour de la blockchain, même en arrière-plan.\n\nNe vous inquiétez pas, nous prendrons soin de l\'utilisation de la batterie.</string>
     <string name="battery_optimization_dialog_button_change">Ouvrir les Réglages</string>
+    <string name="credits_profile_change_message">Mise à jour des infos du profil</string>
+
+    <string name="block_explorer_selection_title">Choisir l’explorateur de blocs</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Choisissez l\'option</string>
+    <string name="customize_shortcuts">Personnaliser la barre de raccourcis</string>
+    <string name="customize_shortcuts_description">Touchez un bouton ci-dessus pour le remplacer par toute fonction dont vous avez besoin</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Vous devez mettre à jour votre PIN</string>
+    <string name="upgrade_pin_description">Choisir un nouveau code PIN</string>
+    <string name="upgrade_pin_continue">Continuer</string>
 </resources>

@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">يستخدم CrowdNode هذا العنوان باعتباره معرف حسابك. ستفقد الوصول إلى أموالك داخل هذه المحفظة وحساب CrowdNode الخاص بك إذا فقدت عبارة المرور المرتبطة بهذا العنوان.</string>
     <string name="crowdnode_new_account_warning_2">سيتم إرسال كميات صغيرة جدًا من داش من وإلى CrowdNode للتحقق من أنك مالك عنوان المحفظة هذا.</string>
     <string name="crowdnode_link_account_description">سيتم إجراء جميع عمليات النقل من وإلى CrowdNode من هذا الجهاز باستخدام عنوان Dash أدناه من هذا الجهاز.</string>
-    <string name="dash_address">عنوان داش</string>
     <string name="primary_dash_address">عنوان داش الأساسي</string>
     <string name="crowdnode_secure_wallet">قم بعمل نسخة احتياطية من عبارة مرورك لإنشاء حساب CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">إذا فقدت عبارة مرورك لهذه المحفظة وفقدت هذا الجهاز أو ألغيت تثبيت Dash Wallet ، فستفقد إمكانية الوصول إلى أموالك على CrowdNode والأموال الموجودة في هذه المحفظة.</string>

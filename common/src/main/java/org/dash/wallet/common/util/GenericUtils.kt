@@ -17,7 +17,6 @@
 
 package org.dash.wallet.common.util
 
-import android.os.Build
 import android.os.LocaleList
 import org.bitcoinj.utils.MonetaryFormat
 import java.math.BigDecimal
@@ -82,11 +81,19 @@ object GenericUtils {
     fun formatFiatWithoutComma(fiatValue: String): String {
         val fiatValueContainsCommaWithDecimal = fiatValue.contains(".") && fiatValue.contains(",")
 
-        return if (fiatValueContainsCommaWithDecimal) {
+        val cleaned = if (fiatValueContainsCommaWithDecimal) {
             fiatValue.replace(",", "")
         } else {
             fiatValue.replace(",", ".")
                 .replace("٫", ".")
+        }
+        
+        // Limit to 8 decimal places to prevent rounding errors in Coin.parseCoin
+        val decimalIndex = cleaned.indexOf('.')
+        return if (decimalIndex != -1 && cleaned.length > decimalIndex + 9) {
+            cleaned.substring(0, decimalIndex + 9)
+        } else {
+            cleaned
         }
     }
 
@@ -104,12 +111,12 @@ object GenericUtils {
 
     /**
      *
-     * @param percent The number as a double where 1.00 is 1.00%
+     * @param percent The number as a double where 0.01 is 1.00%
      * @return
      */
-    fun formatPercent(percent: Double): String? {
+    fun formatPercent(fraction: Double): String? {
         // the formatter translates 0.01 to 1.00%
-        return percentFormat.format(percent / 100)
+        return percentFormat.format(fraction)
     }
 
     fun isCurrencySymbolFirst(): Boolean {

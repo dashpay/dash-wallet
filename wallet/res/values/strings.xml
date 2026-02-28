@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d days behind</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d weeks behind</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d months behind</string>
-    <string name="blockchain_state_progress_downloading">Synchronizing with network</string>
+    <string name="blockchain_state_progress_downloading">Synchronizing with network (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronization stalled</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizing: Storage problem</string>
     <string name="blockchain_state_progress_problem_network">Synchronizing: Network problem</string>
+    <string name="mixing_state_progress_mixing">Mixing Coins (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash address copied to clipboard</string>
     <string name="wallet_address_dialog_fragment_hint">To protect your privacy, your address will change once it receives a payment.</string>
     <string name="wallet_balance_fragment_too_much">This amount is quite high for carrying in your pocket. Please move some to a safer place.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Manage apps</string>
     <string name="wallet_timeskew_dialog_title">Check date &amp; time settings</string>
     <string name="wallet_timeskew_dialog_msg">Your device time is off by %d minutes. You probably cannot send or receive Dash due to this problem.\n\nYou should check and if necessary correct your date, time and timezone settings.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Your device time is %s by %d seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” to use CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Your device time is off by more than 5 seconds. You cannot use CoinJoin due to this difference.\n\nThe time settings on your device needs to be changed to “Set time automatically” before using CoinJoin.</string>
     <string name="send_coins_activity_title">Send Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Fetching signature from %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Fetching signature failed</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">A network fee of %s will be paid.</string>
     <string name="send_coins_fragment_hint_fee_priority">A priority fee of %s will be paid. If you care about low fees, use \'priority\' only if you need confirmation as soon as possible.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">The amount of tiny payments in your wallet doesn\'t add up to a sendable value.</string>
-    <string name="send_coins_fragment_hint_replaying">Currently payments are not possible because the wallet is not fully synced with the network</string>
     <string name="send_coins_fragment_direct_payment_enable">Send payment directly to the payee.</string>
     <string name="send_coins_fragment_direct_payment_ack">Your payment was successfully sent directly.</string>
     <string name="send_coins_fragment_direct_payment_nack">Your payment was rejected via direct connection.</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">Masternode Revoke</string>
     <string name="transaction_row_status_masternode_reward">Masternode Reward</string>
     <string name="transaction_row_status_mining_reward">Mining Reward</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">CoinJoin Mixing Fee</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin Collateral Inputs</string>
+    <string name="transaction_row_status_coinjoin_mixing">CoinJoin Mixing</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Create Denominations</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Peers</string>
     <string name="network_monitor_block_list_title">Blocks</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Your wallet was successfully restored. Its balance will be determined next. This will take some time.</string>
     <string name="restore_wallet_dialog_success_encrypted">Warning: Your wallet is protected by a spending PIN. Make sure you still remember it before you receive to this wallet.</string>
     <string name="import_keys_dialog_failure">Wallet could not be restored:\n\n%s\n\nBad password?</string>
+    <string name="restore_wallet_creation_date_label">Wallet Creation Date (Optional)</string>
+    <string name="restore_wallet_creation_date_info">Selecting when your wallet was created allows faster sync by scanning only from that date forward.</string>
+    <string name="restore_wallet_select_date">Select Creation Date</string>
+    <string name="restore_wallet_selected_date">Selected: %s</string>
+    <string name="restore_wallet_date_picker_title">When was your wallet created?</string>
+    <string name="wallet_creation_date_info_title">How can the wallet creation date speed up the process?</string>
+    <string name="wallet_creation_date_info_description">If you know the approximate date that you created your wallet, you can enter it and transactions from that date will be retrieved making the sync faster. Please note, if you enter a date that is later than when you created the wallet, older transactions will not be downloaded.</string>
     <string name="export_keys_dialog_title">Back up wallet</string>
     <string name="backup_wallet_dialog_message">Your backup will be encrypted with the chosen password and written to external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Your wallet is protected by a spending PIN. Make sure you remember the PIN in addition to the backup password!</string>
@@ -260,6 +274,12 @@
     <string name="preferences_initiate_reset_summary">Rescan blockchain, transactions and wallet balance. Replay will take a while, so only do this if you know why.</string>
     <string name="preferences_initiate_reset_dialog_message">Would you like to rescan the blockchain?\n\nThis will temporarily hide your wallet balance and remove transactions. Both will recover as the blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">Rescan</string>
+    <string name="rescan_blockchain_dialog_title">Are you sure you want to rescan blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">This will temporarily hide your wallet balance and remove transactions. Both will recover as blockchain sync progresses. Make sure you\'ve got a reliable connection to the internet.</string>
+    <string name="rescan_blockchain_select_date_label">Select wallet creation date (optional)</string>
+    <string name="rescan_blockchain_date_info_description">Information about wallet creation date</string>
+    <string name="rescan_blockchain_select_date_placeholder">Select</string>
+    <string name="rescan_blockchain_confirm_button">Rescan</string>
     <string name="preferences_extended_public_key_title">Show xpub</string>
     <string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
     <string name="bitmap_fragment_share">Share…</string>
@@ -276,8 +296,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Append list of installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Append application log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Append wallet dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Send report using…</string>
     <string name="report_issue_dialog_mail_intent_failed">Sending report failed.</string>
+    <string name="report_issue_dialog_generating_report">Generating report</string>
+    <string name="report_issue_dialog_status_device_info">device information</string>
+    <string name="report_issue_dialog_status_installed_packages">list of installed packages</string>
+    <string name="report_issue_dialog_status_application_log">application log</string>
+    <string name="report_issue_dialog_status_application_info">application info</string>
+    <string name="report_issue_dialog_status_wallet_dump">wallet dump (slow)</string>
+    <string name="report_issue_dialog_status_contextual_info">contextual info</string>
+    <string name="report_issue_dialog_status_background_traces">background traces</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">finishing</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -286,13 +315,27 @@
     <string name="report_transaction_history_mail_intent_chooser">Send transaction history using…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Sending transaction history failed.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Simplify your crypto taxes</string>
+    <string name="zenledger_export_all_tx">Export all transactions</string>
+    <string name="zenledger_export_description">Connect your crypto wallets to the ZenLedger platform. Learn more and get started with your Dash Wallet transactions.</string>
+    <string name="zenledger_export_link" translatable="false">zenledger.io</string>
+    <string name="zenledger_export_url" translatable="false">https://zenledger.io</string>
+    <string name="chain_syncing_default_message">Wait until the chain is fully synced, so we can review your transaction history.</string>
+    <string name="zenledger_export_permission">Allow sending all transactions from Dash Wallet to Zenledger?</string>
+    <string name="zenledger_export_error">There was an error when exporting your transaction history to ZenLedger.</string>
+
+
     <string name="about_title">About</string>
+    <string name="about_dash_title">About Dash</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">License</string>
     <string name="about_source_title">Source code</string>
     <string name="about_category_credits">This app is using…</string>
     <string name="about_credits_bitcoinj_title">dashj %s, a Dash protocol implementation</string>
+    <string name="about_credits_platform_title" translatable="false">Platform %s</string>
     <string name="about_credits_zxing_title">ZXing, a QR-code processing library</string>
     <string name="about_credits_icon_title">This app is using an icon by \'bitboy\'</string>
     <string name="about_credits_scrypt_title">Scrypt, implemented by Will Glozer and Colin Percival</string>
@@ -308,6 +351,10 @@
     <string name="notification_inactivity_message">You still have Dash on this device! Please be sure to write down your recovery phrase before you uninstall the Dash Wallet or you will lose your balance of %s.</string>
     <string name="notification_inactivity_action_dismiss">Remind me later</string>
     <string name="notification_inactivity_action_dismiss_forever">Don\'t remind me</string>
+    <string name="notification_bluetooth_service_listening">Ready to receive payments via Bluetooth</string>
+    <string name="notification_sync_paused">Blockchain sync paused</string>
+    <string name="notification_background_processes_paused">Background processing paused</string>
+    <string name="notification_background_processes_paused_text">You\'ve reached the Android 6-hour foreground service limit for mixing or blockchain sync. Tap to reset…</string>
     <string name="appwidget_wallet_balance_title">Dash balance</string>
 
     <!-- generic buttons -->
@@ -382,4 +429,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Do you want to receive payments in the background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">This app is configured to continue running after not being visible for some time.\n\nWe suggest allowing this app to always stay up-to-date with the blockchain, even in the background.\n\nDon\'t worry, we will always mind your battery usage.</string>
     <string name="battery_optimization_dialog_button_change">Open Settings</string>
+    <string name="credits_profile_change_message">Update profile information</string>
+
+    <string name="block_explorer_selection_title">Select block explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Select option</string>
+    <string name="customize_shortcuts">Customize shortcut bar</string>
+    <string name="customize_shortcuts_description">Hold any button above to replace it with the function you need</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">You need to upgrade your PIN</string>
+    <string name="upgrade_pin_description">Set up a new PIN</string>
+    <string name="upgrade_pin_continue">Continue</string>
 </resources>

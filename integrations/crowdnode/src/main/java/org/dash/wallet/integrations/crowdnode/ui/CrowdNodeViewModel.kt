@@ -39,10 +39,10 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.SystemActionsService
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BalanceUIState
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.FeeInfo
 import org.dash.wallet.integrations.crowdnode.model.MessageStatusException
 import org.dash.wallet.integrations.crowdnode.model.OnlineAccountStatus
 import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
@@ -118,6 +118,7 @@ class CrowdNodeViewModel @Inject constructor(
     val crowdNodeBalance: LiveData<BalanceUIState>
         get() = _crowdNodeBalance
 
+    private var crowdNodeFee: Double = FeeInfo.DEFAULT_FEE
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
 
@@ -129,7 +130,7 @@ class CrowdNodeViewModel @Inject constructor(
             (crowdNodeBalance.value?.balance?.isLessThan(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT) ?: true)
 
     init {
-        walletDataProvider.observeBalance()
+        walletDataProvider.observeSpendableBalance()
             .distinctUntilChanged()
             .onEach {
                 _dashBalance.postValue(it)
@@ -162,6 +163,12 @@ class CrowdNodeViewModel @Inject constructor(
                     }
                     else -> _crowdNodeBalance.postValue(_crowdNodeBalance.value?.copy(isUpdating = false))
                 }
+            }
+            .launchIn(viewModelScope)
+
+        config.observe(CrowdNodeConfig.FEE_PERCENTAGE)
+            .onEach {
+                crowdNodeFee = it ?: FeeInfo.DEFAULT_FEE
             }
             .launchIn(viewModelScope)
     }
@@ -378,7 +385,6 @@ class CrowdNodeViewModel @Inject constructor(
         val accountAddress = accountAddress.value ?: return
         val amount = CrowdNodeConstants.API_CONFIRMATION_DASH_AMOUNT
 
-        analytics.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING_SHARE_BUTTON, mapOf())
         val paymentRequestUri = BitcoinURI.convertToBitcoinURI(accountAddress, amount, "", "")
         systemActions.shareText(paymentRequestUri)
     }
@@ -403,7 +409,7 @@ class CrowdNodeViewModel @Inject constructor(
         crowdNodeApi.reset()
     }
 
-    fun getMasternodeAPY(): Double {
+    suspend fun getMasternodeAPY(): Double {
         val apy = blockchainStateProvider.getMasternodeAPY()
         return if (apy != 0.0) {
             apy
@@ -412,7 +418,8 @@ class CrowdNodeViewModel @Inject constructor(
         }
     }
 
-    fun getCrowdNodeAPY(): Double {
-        return 0.85 * getMasternodeAPY()
+    suspend fun getCrowdNodeAPY(): Double {
+        val withoutFees = (100.0 - crowdNodeFee) / 100
+        return withoutFees * getMasternodeAPY()
     }
 }

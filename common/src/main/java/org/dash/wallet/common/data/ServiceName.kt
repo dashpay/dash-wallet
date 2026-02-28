@@ -4,7 +4,10 @@ object ServiceName {
     const val CrowdNode = "crowdnode"
     const val Uphold = "uphold"
     const val Coinbase = "coinbase"
-    const val DashDirect = "dashdirect"
+    const val CTXSpend = "ctxspend"
+    const val PiggyCards = "piggycards"
     const val Maya = "maya"
     const val Unknown = "unknown"
+
+    fun isDashSpend(serviceName: String?) = serviceName == CTXSpend || serviceName == PiggyCards
 }

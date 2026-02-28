@@ -16,6 +16,7 @@
 
 package de.schildbach.wallet.ui
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
@@ -34,6 +35,7 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
@@ -43,25 +45,33 @@ import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.security.BiometricLockoutException
+// DEBUG: import de.schildbach.wallet.security.FallbackTestingUtils
 import de.schildbach.wallet.security.PinRetryController
+import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.ui.payments.QuickReceiveActivity
+import de.schildbach.wallet.ui.security.createForgotPinDialog
+import de.schildbach.wallet.ui.security.createUpgradePinDialog
 import de.schildbach.wallet.ui.send.SendCoinsQrActivity
 import de.schildbach.wallet.ui.verify.VerifySeedActivity
 import de.schildbach.wallet.ui.widget.PinPreviewView
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivityLockScreenRootBinding
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
-import org.bitcoinj.wallet.Wallet.BalanceType
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.LockScreenBroadcaster
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dismissDialog
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -71,6 +81,7 @@ open class LockScreenActivity : SecureActivity() {
 
     companion object {
         const val INTENT_EXTRA_KEEP_UNLOCKED = "LockScreenActivity.keep_unlocked"
+        const val INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE = "LockScreenActivity.no_blockchain_service"
         private val log = LoggerFactory.getLogger(LockScreenActivity::class.java)
     }
 
@@ -83,6 +94,7 @@ open class LockScreenActivity : SecureActivity() {
     @Inject lateinit var pinRetryController: PinRetryController
     @Inject lateinit var biometricHelper: BiometricHelper
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
+    @Inject lateinit var authenticationManager: AuthenticationManager
 
     private val autoLogout: AutoLogout by lazy { walletApplication.autoLogout }
     private val checkPinViewModel by viewModels<CheckPinViewModel>()
@@ -115,8 +127,10 @@ open class LockScreenActivity : SecureActivity() {
         intent.getBooleanExtra(INTENT_EXTRA_KEEP_UNLOCKED, false)
     }
 
+    protected var isLocked: Boolean = false
     private val shouldShowBackupReminder
         get() = configuration.remindBackupSeed && configuration.lastBackupSeedReminderMoreThan24hAgo()
+    private val lockScreenDeactivatedListeners = arrayListOf<() -> Unit>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -129,6 +143,7 @@ open class LockScreenActivity : SecureActivity() {
         binding = ActivityLockScreenRootBinding.inflate(layoutInflater)
         super.setContentView(binding.root)
         setupKeyboardBottomMargin()
+        isLocked = autoLogout.shouldLogout()
 
         initView()
         initViewModel()
@@ -146,10 +161,15 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private val onLogoutListener = AutoLogout.OnLogoutListener {
+        isLocked = true
         dismissKeyboard()
         biometricHelper.cancelPending()
         setLockState(State.USE_DEFAULT)
         handleLockScreenActivated()
+    }
+
+    open fun imitateUserInteraction() {
+        onUserInteraction()
     }
 
     override fun onUserInteraction() {
@@ -165,9 +185,13 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun setupBackupSeedReminder() {
-        val hasBalance = walletData.wallet?.getBalance(BalanceType.ESTIMATED)?.isPositive ?: false
-        if (hasBalance && configuration.lastBackupSeedTime == 0L) {
-            configuration.setLastBackupSeedTime()
+        lifecycleScope.launch {
+            // we need the total wallet balance to trigger showing backup reminder
+            // a better way is to track transaction count > 0
+            val hasBalance = walletApplication.observeTotalBalance().firstOrNull()?.isPositive ?: false
+            if (hasBalance && configuration.lastBackupSeedTime == 0L) {
+                configuration.setLastBackupSeedTime()
+            }
         }
     }
 
@@ -210,9 +234,11 @@ open class LockScreenActivity : SecureActivity() {
         super.onStart()
         autoLogout.setOnLogoutListener(onLogoutListener)
 
-        if (!keepUnlocked && configuration.autoLogoutEnabled &&
-            (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout())
-        ) {
+        val showLockScreen = !keepUnlocked && configuration.autoLogoutEnabled &&
+                (autoLogout.keepLockedUntilPinEntered || autoLogout.shouldLogout()) ||
+                !authenticationManager.getHealth().isHealthy
+        log.info("show lock screen $showLockScreen = ![keepUnlocked=$keepUnlocked] && autologout=${configuration.autoLogoutEnabled} && (keepUnlockedUntilPenEntered=${autoLogout.keepLockedUntilPinEntered} || shouldLogout=${autoLogout.shouldLogout()}) || isHealthy=${authenticationManager.getHealth().isHealthy}")
+        if (showLockScreen) {
             setLockState(
                 if (pinRetryController.isLocked) {
                     State.LOCKED
@@ -236,11 +262,48 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     private fun startBlockchainService() {
-        walletApplication.startBlockchainService(false)
+        if (intent.extras?.getBoolean(INTENT_EXTRA_NO_BLOCKCHAIN_SERVICE) != true) {
+            walletApplication.startBlockchainService(false)
+        }
     }
+
+    /* DEBUG: Commented out for production
+    // TODO: remove
+    private fun updateBreakStatus() {
+        val sg = SecurityGuard.getInstance()
+        sg.validateKeyIntegrity()
+        binding.lockScreen.securityStatus.text = when {
+            sg.isHealthyWithFallbacks -> "OK"
+            sg.isHealthy -> "~OK"
+            sg.hasFallbacks() -> "bad"
+            else -> "dead"
+        }
+    }
+    // TODO: end
+    */
 
     private fun initView() {
         binding.lockScreen.apply {
+            /* DEBUG: Commented out for production
+            // TODO: remove this (only for testing)
+            breakPrimary.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateKeystoreCorruption_KeepFallbacks()
+                updateBreakStatus()
+            }
+            breakAll.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailure()
+                updateBreakStatus()
+            }
+            breakBefore.setOnClickListener {
+                // FallbackTestingUtils.enableTestMode();
+                FallbackTestingUtils.simulateCompleteEncryptionFailureFromPreviousInstall()
+                updateBreakStatus()
+            }
+            updateBreakStatus()
+            // TODO END
+            */
             actionLoginWithPin.setOnClickListener {
                 setLockState(State.ENTER_PIN)
             }
@@ -248,10 +311,12 @@ open class LockScreenActivity : SecureActivity() {
                 setLockState(State.USE_FINGERPRINT)
             }
             actionReceive.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.QUICK_RECEIVE)
                 startActivity(QuickReceiveActivity.createIntent(this@LockScreenActivity))
                 autoLogout.keepLockedUntilPinEntered = true
             }
             actionScanToPay.setOnClickListener {
+                checkPinViewModel.logEvent(AnalyticsConstants.LockScreen.SCAN_TO_SEND)
                 startActivity(SendCoinsQrActivity.createIntent(this@LockScreenActivity, true))
                 autoLogout.keepLockedUntilPinEntered = true
             }
@@ -284,6 +349,12 @@ open class LockScreenActivity : SecureActivity() {
                 }
             }
             viewFlipper.inAnimation = AnimationUtils.loadAnimation(this@LockScreenActivity, android.R.anim.fade_in)
+
+            pinPreview.onForgotPinClickListener = {
+                createForgotPinDialog(recover = false) {
+                    startActivity(RestoreWalletFromSeedActivity.createIntent(this@LockScreenActivity, true))
+                }.show(this@LockScreenActivity)
+            }
         }
     }
 
@@ -314,8 +385,25 @@ open class LockScreenActivity : SecureActivity() {
                         onCorrectPin(it.data!!)
                     }
                 }
+                else -> {
+                    // ignore
+                }
             }
         }
+
+        checkPinViewModel.authenticationHealth.observe(this) {
+            // DEBUG: updateBreakStatus()
+            if (!it.isHealthy && !it.hasFallback) {
+                // TODO: show the new dialog about "upgrading PIN"
+                // TODO:
+                createUpgradePinDialog {
+                    createForgotPinDialog(recover = true) {
+                        startActivity(RestoreWalletFromSeedActivity.createIntent(this, true))
+                    }.show(this)
+                }.show(this)
+            }
+        }
+        checkPinViewModel.checkHealth();
     }
 
     private fun onCorrectPin(pin: String) {
@@ -323,6 +411,8 @@ open class LockScreenActivity : SecureActivity() {
         autoLogout.keepLockedUntilPinEntered = false
         autoLogout.deviceWasLocked = false
         autoLogout.maybeStartAutoLogoutTimer()
+        isLocked = false
+        onLockScreenDeactivated()
         if (shouldShowBackupReminder) {
             val intent = VerifySeedActivity.createIntent(this, pin, false)
             configuration.resetBackupSeedReminderTimer()
@@ -332,8 +422,6 @@ open class LockScreenActivity : SecureActivity() {
         } else {
             binding.rootViewSwitcher.displayedChild = 1
         }
-
-        onLockScreenDeactivated()
     }
 
     private fun setLockState(suggestedState: State) {
@@ -462,6 +550,7 @@ open class LockScreenActivity : SecureActivity() {
     override fun onDestroy() {
         super.onDestroy()
         temporaryLockCheckHandler.removeCallbacks(temporaryLockCheckRunnable)
+        lockScreenDeactivatedListeners.clear()
     }
 
     private fun showFingerprintKeyChangedDialog() {
@@ -476,6 +565,7 @@ open class LockScreenActivity : SecureActivity() {
         }
     }
 
+    @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         if (!lockScreenDisplayed) {
             super.onBackPressed()
@@ -493,7 +583,11 @@ open class LockScreenActivity : SecureActivity() {
 
     open fun onLockScreenActivated() { }
 
-    open fun onLockScreenDeactivated() { }
+    open fun onLockScreenDeactivated() {
+        lockScreenDeactivatedListeners.forEach {
+            it.invoke()
+        }
+    }
 
     private fun notifyAndDismissFragments(fragmentManager: FragmentManager) {
         fragmentManager.fragments
@@ -519,5 +613,42 @@ open class LockScreenActivity : SecureActivity() {
         currentFocus?.windowToken?.let { token ->
             inputManager?.hideSoftInputFromWindow(token, 0)
         }
+    }
+
+    @SuppressLint("MissingSuperCall")
+    override fun onSaveInstanceState(outState: Bundle) {
+        // Prevent TransactionTooLargeException by limiting saved state size
+        try {
+            super.onSaveInstanceState(outState)
+        } catch (e: RuntimeException) {
+            if (e.cause is android.os.TransactionTooLargeException) {
+                // Clear the bundle to prevent the crash and call super with empty bundle
+                outState.clear()
+                log.warn("Cleared saved state to prevent TransactionTooLargeException", e)
+                super.onSaveInstanceState(outState)
+            } else {
+                throw e
+            }
+        }
+    }
+
+    fun registerLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.add(listener)
+    }
+
+    fun unregisterLockScreenDeactivated(listener: () -> Unit) {
+        lockScreenDeactivatedListeners.remove(listener)
+    }
+}
+
+fun Fragment.registerLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).registerLockScreenDeactivated(listener)
+    }
+}
+
+fun Fragment.unregisterLockScreenDeactivated(listener: () -> Unit) {
+    if (activity is LockScreenActivity) {
+        (activity as LockScreenActivity).unregisterLockScreenDeactivated(listener)
     }
 }

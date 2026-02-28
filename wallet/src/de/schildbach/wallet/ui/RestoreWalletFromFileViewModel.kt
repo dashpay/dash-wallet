@@ -21,12 +21,14 @@ import android.net.Uri
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.WalletFactory
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.util.SingleLiveEvent
 import de.schildbach.wallet_test.R
-import org.bitcoinj.crypto.MnemonicException
+import kotlinx.coroutines.launch
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
@@ -37,12 +39,12 @@ import javax.inject.Inject
 class RestoreWalletFromFileViewModel @Inject constructor(
     val walletApplication: WalletApplication,
     private val walletFactory: WalletFactory,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    private val dashPayConfig: DashPayConfig
 ) : ViewModel() {
 
     private val log = LoggerFactory.getLogger(RestoreWalletFromFileViewModel::class.java)
 
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val showUpgradeWalletAction = SingleLiveEvent<Wallet>()
     internal val showUpgradeDisclaimerAction = SingleLiveEvent<Wallet>()
     internal val startActivityAction = SingleLiveEvent<Intent>()
@@ -70,6 +72,7 @@ class RestoreWalletFromFileViewModel @Inject constructor(
             showUpgradeWalletAction.call(wallet)
         } else {
             walletApplication.setWallet(wallet)
+            viewModelScope.launch { dashPayConfig.disableNotifications() }
             log.info("successfully restored wallet from file")
             walletApplication.resetBlockchainState()
             startActivityAction.call(
@@ -77,7 +80,9 @@ class RestoreWalletFromFileViewModel @Inject constructor(
                     walletApplication,
                     R.string.set_pin_restore_wallet,
                     false,
-                    password
+                    password,
+                    onboarding = true,
+                    onboardingPath = OnboardingPath.RestoreFile
                 )
             )
         }

@@ -1,4 +1,176 @@
-Dash Wallet
+Dash Wallet / DashPay
+v11.6.2
+* CoinJoin spending does not return change (unless fee is high)
+* fix CoinJoin Mixing fee issues
+* Speed up sending from a CoinJoin Wallet
+* Support Compressed Headers from Dash Network
+
+v11.6.1
+* Fix Send Flows (don't show error dialogs)
+
+v11.6.0
+* Support non-contested username and DashPay related features while contested username is in the voting period
+* Upgrade security system to handle rare case of invalid Android Keystore keys
+* Optimize platform data synchronization
+* Improve blockchain sync speed
+* Hide PiggyCards for restricted countries (Russia and Cuba)
+* Allow user to specify the sync start date when restoring a wallet
+* Allow user to specify the sync start date when rescanning the blockchain
+* Improve the CSV Export features
+* Minor fixes
+
+v11.5.0
+* Added Transaction metadata feature
+* Addressed Sync issues and sync stalls
+* Update to dashj 21.1.13
+* Use 16KB aligned 64-bit native libraries
+* Fix max topup failure
+* Support Android 15 edge-to-edge on bottom sheet dialogs
+* Put Spend button on shortcut bar by default
+
+v11.4.1
+* Support Android 15
+* New Mixing Pane design on Home Screen
+* New Settings Page design
+* Support Dash branding on Blockchair.com
+* Address Sending Delays
+* Address gift card purchase delays
+* Inform user of merchant country
+* Fix Coinbase Transfer MAX function
+* Fix Topup bugs
+* Many UI fixes in DashSpend
+
+v11.4.0
+* Add PiggyCards support in DashSpend
+
+v11.3.2
+* Improve security model for PIN's and wallet encryption
+* Improve DashSpend error handling
+* Fix crashes related to DashSpend
+* Fix issues related to saving profile images to Google Drive
+* Improve wallet security model
+
+v11.3.1
+* fix bug re: refreshing CTX tokens
+* simplify Contact Support (uncheck append wallet dump)
+
+v11.3.0
+* Improve Frequent Contacts list display time
+* DashSpend: Refresh CTX tokens
+* Add support for 24 word recovery phrases
+* DashSpend: Fix discount display during purchase
+* Shortcuts: allow editing on the home screen
+* DashSpend: Add more error handling
+* Fix various UI issues
+* Fix various crashes
+
+v11.2.2
+* Fix QR codes (not include usernames)
+* Show merchant types dialog
+* Support fix denomination gift cards (5, 10, 25, ...)
+* Home Screen improvements for CoinJoin wallets
+* Add fixed denomination gift card search filters
+* Fix UI bugs on gift card search screen
+* Update translations
+
+v11.2.1
+* Add Blockchair block explorer
+* Fix various crashes and bugs related to home screen
+* Improve DashSpend feature
+* Reduce APK size
+
+v11.2.0
+* DashSpend beta
+* Fix some CoinJoin start up failures
+* Fix double spend issues after CoinJoin is turned OFF
+* Fix CoinJoin mixing limit issue
+* Improve home screen profile image display
+* Fix Google Drive signin for Profile image storage
+* Add TLS 1.3 support for Android 9 and below
+* Fix username request and restore bugs
+* Update firebase events
+
+v11.1.2
+* Fix username creation bugs
+* Resolve many ANR's
+* Disable saving transaction metadata
+
+v11.1.1
+* Fix username fee logic
+* Update to dashj 21.1.6 and dpp 1.7.2 (fixes CoinJoin, username creation bugs)
+
+v11.1.0
+* Username Voting Improvements
+* Improve Contact Support dialog and report export
+* Improve Home Screen Transaction List
+* Add Platform Identity Topup Support
+* Add Quick Voting
+
+v11.0.5
+* Fix sync stuck problem (often at 33%)
+* Fix obtaining username voting information
+* Allow rescan blockchain to resume on app start if failing due to ANR
+* Add detector for corrupt blockchain file
+* Fix various crashes related to DashPay functionality
+
+v11.0.4
+* Fix username voting screen (support more than 100 contests)
+* Fix username requests during voting period
+* Fix Crowdnode Signup on Android 14
+* Fix Crowdnode API
+* Fix sync stuck at 31% issue
+
+v11.0.3
+* Improve Username Voting screen
+* UI fixes
+* Update translations
+* Fix Username request and recover bugs
+* Fix CrowdNode signup on Android 14
+
+v11.0.2
+* Fix username requests
+* Add DashPay Event tracking
+
+v11.0.1
+* Fix UI items
+
+v11.0.0
+* DashPay
+* use dashj 21.1.1
+
+v10.3.2
+* Fix ANR when using CoinJoin
+* Fix missing Send button on Home Screen
+* Fix CrowdNode Online Signup Crash on Android 14
+* Update checkpoints
+
+v10.3.1
+* Hot fix: prevent crash in some upgrade scenarios
+
+v10.3.0
+* Add CoinJoin Support
+* Merge and hide DashPay functionality
+
+v10.2.1
+* Target Android 14
+* Fix rare crash when displaying transaction details
+* Fix rare crash when prompting the user for the PIN
+
+v10.2.0
+* Support Core 21
+* Fix syncing stuck at 30% or 31% bug
+
+v10.1.1
+* Attempt to fix stuck at Syncing 30 or 31%
+* Support devices without a camera flash
+* Warn user of stale (old) exchange rates
+* Add Jetpack Compose component
+
+v10.1.0
+* Add ZenLedger support
+* Coinbase: upgrade payment methods to v3
+* Update to dashj 20.0.4 (track deadlocks)
+
 v10.0.3
 * Deprecate Android 6 support, Android 7 now required
 * Coinbase: use custom tab for linking accounts

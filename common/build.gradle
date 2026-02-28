@@ -1,15 +1,16 @@
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.devtools.ksp'
 apply plugin: 'kotlin-parcelize'
 apply plugin: 'dagger.hilt.android.plugin'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
 
 android {
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
         vectorDrawables.useSupportLibrary = true
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
@@ -27,15 +28,16 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
 
     buildFeatures {
         viewBinding true
+        compose = true
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
@@ -51,6 +53,7 @@ dependencies {
     // Core
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
@@ -76,9 +79,16 @@ dependencies {
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:$serializationVersion"
 
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.ui:ui-tooling")
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.activity:activity-compose:1.8.0")
+
     // UI
     implementation "com.github.bumptech.glide:glide:$glideVersion"
-    kapt "com.github.bumptech.glide:compiler:$glideVersion"
+    ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation "io.coil-kt:coil:$coilVersion"
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.browser:browser:$browserVersion"
@@ -86,10 +96,12 @@ dependencies {
     //noinspection GradleDependency
     implementation "com.google.zxing:core:$zxingVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation 'com.github.amulyakhare:textdrawable:558677ea31'
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
+    implementation 'javax.inject:javax.inject:1'
 
     testImplementation "junit:junit:$junitVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"

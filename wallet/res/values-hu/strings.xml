@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d nap van még hátra</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d hét van még hátra</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d hónap van még hátra</string>
-    <string name="blockchain_state_progress_downloading">Szinkronizálás a hálózattal</string>
     <string name="blockchain_state_progress_stalled">A szinkronizálás szünetel</string>
     <string name="blockchain_state_progress_problem_storage">Szinkronizálás: tárolóhely probléma</string>
     <string name="blockchain_state_progress_problem_network">Szinkronizálás: Hálózati probléma</string>
@@ -221,7 +220,6 @@
     <string name="report_issue_dialog_collect_installed_packages">A telepített csomagok listájának csatolása</string>
     <string name="report_issue_dialog_collect_application_log">Alkalmazás napló csatolása</string>
     <string name="report_issue_dialog_collect_wallet_dump">Tárca információk csatolása</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Hiba küldése ezzel…</string>
     <string name="report_issue_dialog_mail_intent_failed">Jelentés küldése sikertelen.</string>
     <string name="about_title">Rólunk</string>
     <string name="about_version_title">Verzió</string>

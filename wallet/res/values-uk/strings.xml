@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d днів відставання</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d тиждень відставання</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d місяців відставання</string>
-    <string name="blockchain_state_progress_downloading">Синхронізація з мережею</string>
+    <string name="blockchain_state_progress_downloading">Синхронізація з мережею (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Синхронізація зависла</string>
     <string name="blockchain_state_progress_problem_storage">Синхронізація: проблема з сховищем</string>
     <string name="blockchain_state_progress_problem_network">Синхронізація: проблема з мережею</string>
+    <string name="mixing_state_progress_mixing">Змішування коінів (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Адреса скопійована в буфер обміну</string>
     <string name="wallet_address_dialog_fragment_hint">Щоб захистити вашу конфіденційність, ваша адреса буде змінена після отримання платежу.</string>
     <string name="wallet_balance_fragment_too_much">Ця сума досить висока для носіння в кишені. Будь ласка, перемістіть частину у безпечніше місце.</string>
@@ -42,6 +43,12 @@
     <string name="wallet_low_storage_dialog_button_apps">Керування додатками</string>
     <string name="wallet_timeskew_dialog_title">Перевірте налаштування дати та часу</string>
     <string name="wallet_timeskew_dialog_msg">Час на Вашому пристрої відрізняється на %d хвилин. З цієї причини Ви, можливо, не зможете надсилати або отримувати кошти.\n\nПеревірте налаштування та за потреби скоригуйте дату, час та часовий пояс.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Час вашого пристрою %s в секундах %d. Ви не можете використовувати CoinJoin через цю різницю.
+
+Щоб використовувати CoinJoin, налаштування часу на вашому пристрої потрібно змінити на «Установити час автоматично».</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Час вашого пристрою вимкнено більш ніж на 5 секунд. Ви не можете використовувати CoinJoin через цю різницю.
+
+Перш ніж використовувати CoinJoin, налаштування часу на вашому пристрої потрібно змінити на «Установити час автоматично».</string>
     <string name="send_coins_activity_title">Відправка Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Отримання підпису %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Помилка при отриманні підпису</string>
@@ -58,7 +65,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Буде знято комісію мережі %s .</string>
     <string name="send_coins_fragment_hint_fee_priority">Буде сплачено плату за пріоритет у розмірі %s. Якщо вам важлива низька комісія, використовуйте Пріоритет, лише якщо вам потрібне підтвердження якнайшвидше.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Сума дрібних платежів у вашому гаманці не становить суми, яку можна відправити.</string>
-    <string name="send_coins_fragment_hint_replaying">Наразі платежі неможливі, оскільки гаманець не повністю синхронізовано з мережею</string>
     <string name="send_coins_fragment_direct_payment_enable">Відправити платіж безпосередньо отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_ack">Платіж був успішно відправлений отримувачу.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ваш платіж через пряме підключення був відхилений.</string>
@@ -171,6 +177,11 @@
     <string name="transaction_row_status_masternode_revoke">Відключення Мастерноди</string>
     <string name="transaction_row_status_masternode_reward">Нагорода Мастерноди</string>
     <string name="transaction_row_status_mining_reward">Нагорода за майнинг</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Комісія за змішування CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Заставні дані CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Змішування CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Створення номіналів</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Об\'єднання дрібних часток через CoinJoin</string>
     <string name="network_monitor_activity_title">Мережевий монітор</string>
     <string name="network_monitor_peer_list_title">Вузли</string>
     <string name="network_monitor_block_list_title">Блоки</string>
@@ -196,6 +207,13 @@
     <string name="restore_wallet_dialog_success_replay">Ваш гаманець був успішно відновлений. Його баланс визначиться згодом. Це займе трохи часу.</string>
     <string name="restore_wallet_dialog_success_encrypted">Попередження: ваш гаманець захищено PIN-кодом витрат. Переконайтеся, що ви пам’ятаєте про це, перш ніж отримати платіж на цей гаманець.</string>
     <string name="import_keys_dialog_failure">Гаманець не можливо відновити:\n\n%s\n\Неправильний пароль?</string>
+    <string name="restore_wallet_creation_date_label">Дата створення гаманця (необов\'язково)</string>
+    <string name="restore_wallet_creation_date_info">Вибір дати створення гаманця дозволяє швидше синхронізувати дані, скануючи дані лише з цієї дати.</string>
+    <string name="restore_wallet_select_date">Обрати дату створення гаманця</string>
+    <string name="restore_wallet_selected_date">Вибрано: %s</string>
+    <string name="restore_wallet_date_picker_title">Коли було створено ваш гаманець?</string>
+    <string name="wallet_creation_date_info_title">Як дата створення гаманця може пришвидшити процес?</string>
+    <string name="wallet_creation_date_info_description">Якщо ви знаєте приблизну дату створення гаманця, ви можете ввести її, і транзакції з цієї дати будуть отримані, що пришвидшить синхронізацію. Зверніть увагу, що якщо ви введете дату, пізнішу за дату створення гаманця, старіші транзакції не будуть завантажені.</string>
     <string name="export_keys_dialog_title">Резервна копія гаманця</string>
     <string name="backup_wallet_dialog_message">Ваш гаманець буде зашифрований за допомогою пароля і будет записаний на зовнішній накопичувач.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ваш гаманець захищений платіжним PIN-кодом. Обов’язково запам’ятайте PIN-код на додаток до резервного пароля!</string>
@@ -271,6 +289,12 @@
     <string name="preferences_initiate_reset_summary">Пересканувати блокчейн, транзакції та баланс гаманця. Повторне відтворення займе деякий час, тому робіть це, лише якщо знаєте чому.</string>
     <string name="preferences_initiate_reset_dialog_message">Ви хочете пересканувати блокчейн?\n\nЦе зробить тимчасово недоступними ваші баланс та список транзакцій. Вони будуть відновлені у процесі синхронізації блокчейна. Переконайтеся, що у вас є надійне підключення до інтернету.</string>
     <string name="preferences_initiate_reset_dialog_positive">Повторне сканування</string>
+    <string name="rescan_blockchain_dialog_title">Ви впевнені, що хочете повторно просканувати блокчейн?</string>
+    <string name="rescan_blockchain_dialog_message">Це тимчасово приховає баланс вашого гаманця та видалить транзакції. Обидва параметри відновляться під час синхронізації блокчейну. Переконайтеся, що у вас надійне підключення до Інтернету.</string>
+    <string name="rescan_blockchain_select_date_label">Оберіть дату створення гаманця (необов\'язково)</string>
+    <string name="rescan_blockchain_date_info_description">Інформація про дату створення гаманця</string>
+    <string name="rescan_blockchain_select_date_placeholder">Вибрати</string>
+    <string name="rescan_blockchain_confirm_button">Повторне сканування</string>
     <string name="preferences_extended_public_key_title">Показати xpub</string>
     <string name="preferences_extended_public_key_summary">Перегляньте розширений відкритий ключ свого гаманця, щоб його можна було імпортувати в інші програми та служби. Будьте обережні: це призведе до розкриття вашої грошової конфіденційності цій програмі.</string>
     <string name="bitmap_fragment_share">Поділитися...</string>
@@ -287,8 +311,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Додати список встановлених пакетів</string>
     <string name="report_issue_dialog_collect_application_log">Додати лог додатку</string>
     <string name="report_issue_dialog_collect_wallet_dump">Додати дамп пам\'яті гаманця</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
     <string name="report_issue_dialog_mail_intent_failed">Помилка при відправці звіту.</string>
+    <string name="report_issue_dialog_generating_report">Формування звіту</string>
+    <string name="report_issue_dialog_status_device_info">інформація про пристрій</string>
+    <string name="report_issue_dialog_status_installed_packages">список встановлених пакетів</string>
+    <string name="report_issue_dialog_status_application_log">лог додатку</string>
+    <string name="report_issue_dialog_status_application_info">інформація додатку</string>
+    <string name="report_issue_dialog_status_wallet_dump">дамп гаманця (повільно)</string>
+    <string name="report_issue_dialog_status_contextual_info">контекстна інформація</string>
+    <string name="report_issue_dialog_status_background_traces">фонові трасування</string>
+    <string name="report_issue_dialog_status_stack_trace">трасування стеку</string>
+    <string name="report_issue_dialog_status_finishing">завершується</string>
     <string name="report_transaction_history_export">Експорт</string>
     <string name="report_transaction_history_title">Експорт CSV</string>
     <string name="report_transaction_history_not_synced_title">Експорт CSV</string>
@@ -297,7 +330,18 @@
     <string name="report_transaction_history_mail_intent_chooser">Надіслати історію транзакцій за допомогою…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Не вдалося надіслати історію транзакцій.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Спростіть податки на криптовалюту</string>
+    <string name="zenledger_export_all_tx">Експорт усіх транзакцій</string>
+    <string name="zenledger_export_description">Підключіть свої криптогаманці до платформи ZenLedger. Дізнайтеся більше та розпочніть роботу з транзакціями Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Зачекайте, доки ланцюжок буде повністю синхронізовано, щоб ми могли переглянути історію ваших транзакцій.</string>
+    <string name="zenledger_export_permission">Дозволити надсилати всі транзакції з Dash Wallet до Zenledger?</string>
+    <string name="zenledger_export_error">Сталася помилка під час експорту вашої історії транзакцій до ZenLedger</string>
+
+
     <string name="about_title">Про програму</string>
+    <string name="about_dash_title">Про Dash</string>
     <string name="about_version_title">Версія</string>
     <string name="about_copyright_title">Авторське право</string>
     <string name="about_license_title">Ліцензія</string>
@@ -319,6 +363,10 @@
     <string name="notification_inactivity_message">Ви все ще маєте Dash на цьому пристрої! Обов’язково запишіть свою фразу для відновлення, перш ніж видаляти Dash Wallet, інакше ви втратите свій баланс у розмірі %s.</string>
     <string name="notification_inactivity_action_dismiss">Нагадати пізніше</string>
     <string name="notification_inactivity_action_dismiss_forever">Не нагадувати</string>
+    <string name="notification_bluetooth_service_listening">Готовий приймати платежі через Bluetooth</string>
+    <string name="notification_sync_paused">Синхронізація блокчейну призупинена</string>
+    <string name="notification_background_processes_paused">Фонова обробка призупинена</string>
+    <string name="notification_background_processes_paused_text">Ви досягли 6-годинного ліміту фонової служби Android для мікшування або синхронізації блокчейну. Натисніть, щоб скинути…</string>
     <string name="appwidget_wallet_balance_title">Баланс Dash</string>
 
     <!-- generic buttons -->
@@ -394,4 +442,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Ви хочете отримувати платежі у фоновому режимі?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ця програма налаштована на продовження роботи після того, як деякий час її не видно.\n\nМи радимо дозволити цій програмі завжди оновлюватися з блокчейном, навіть у фоновому режимі.\n\nНе хвилюйтеся, ми будемо завжди звертати увагу на використання акумулятора.</string>
     <string name="battery_optimization_dialog_button_change">Відкрити налаштування</string>
+    <string name="credits_profile_change_message">Оновіть інформацію профілю</string>
+
+    <string name="block_explorer_selection_title">Виберіть оглядач блоків</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Виберіть опцію</string>
+    <string name="customize_shortcuts">Налаштуйте панель швидкого доступу</string>
+    <string name="customize_shortcuts_description">Утримуйте будь-яку кнопку вище, щоб замінити її на потрібну вам функцію.</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Вам потрібно оновити свій PIN-код</string>
+    <string name="upgrade_pin_description">Задайте новий PIN-код</string>
+    <string name="upgrade_pin_continue">Продовжити</string>
 </resources>

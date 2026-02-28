@@ -82,7 +82,7 @@ class CrowdNodeAPIConfirmationHandler(
             }
 
             try {
-                blockchainApi.resendConfirmationTx(tx)
+                blockchainApi.resendConfirmationTx(tx, primaryAddress)
             } catch (ex: CrowdNodeException) {
                 handleWrongAddressError()
             }

@@ -20,7 +20,8 @@ package org.dash.wallet.common.data.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.util.*
-
+// TODO: chainlockHeight is not updated when chainlocks are received
+// TODO: not updated on new blocks after sync has finished
 @Entity(tableName = "blockchain_state")
 data class BlockchainState(var bestChainDate: Date?,
                            var bestChainHeight: Int,
@@ -36,12 +37,12 @@ data class BlockchainState(var bestChainDate: Date?,
 
     @PrimaryKey
     var id = 1
-        set(value) {
+        set(@Suppress("UNUSED_PARAMETER") value) {
             field = 1
         }
 
     enum class Impediment {
-        STORAGE, NETWORK
+        STORAGE, NETWORK, SECURITY
     }
 
     fun syncFailed(): Boolean {

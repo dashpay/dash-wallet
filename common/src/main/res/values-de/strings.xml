@@ -11,6 +11,7 @@
     <string name="buy_dash">Dash kaufen</string>
     <string name="copied">Kopiert</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Ausgegeben</string>
     <string name="email">E-Mail</string>
     <string name="email_placeholder">z.B. maxmustermann@mail.com</string>
     <string name="error">Fehler</string>
@@ -21,7 +22,10 @@
     <string name="transfer_dash">Dash übertragen</string>
     <string name="login_error_title">Du kannst dich nicht in dein %s Konto einloggen.</string>
     <string name="login_error_message">Beim Einloggen in dein %s Konto ist ein Fehler aufgetreten.</string>
+    <string name="dash_address">Dash Adresse</string>
+    <string name="username">Nutzername</string>
     <string name="balance">Guthaben:</string>
+    <string name="nothing_here">Hier gibt es nichts</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pfund</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">Ich verstehe</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Teilen</string>
+    <string name="button_skip">Überspringen</string>
     <string name="share_address">Adresse teilen</string>
     <string name="verify">Verifizieren</string>
     <string name="receive_enter_amount_button">Betrag festsetzen</string>
     <string name="account_create">Konto erstellen</string>
+    <string name="submit">Einreichen</string>
+    <string name="try_again">Erneut versuchen</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Suchen</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">Währung auswählen</string>
     <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
+    <string name="send_coins_error_insufficient_mixed_money">Gemixtes Guthaben nicht ausreichend. Warte bis das CoinJoin-Mixen abgeschlossen ist oder deaktiviere dieses Feature in den Einstellungen, um die Transaktion abzuschließen.</string>
     <string name="syncing">Synchronisiere</string>
     <string name="no_connection">Keine Internetverbindung</string>
     <string name="rate_not_available">Nicht verfügbar</string>
@@ -89,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Zahlungsfehler</string>
     <string name="payment_request_problem_message">Deine Zahlung konnte nicht vom Server verarbeitet werden, wende dich bitte an den Händler.</string>
     <string name="exchange_rate_not_found">Kann Wechselkurs nicht finden.</string>
+    <string name="send_coins_fragment_hint_replaying">Da die Wallet momentan nicht mit dem Netzwerk synchronisiert ist, kann keine Zahlung durchgeführt werden.</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Direkt in der Dash Wallet erhalten</string>
@@ -98,4 +107,8 @@
     <string name="enter_amount_available">verfügbar</string>
     <string name="transaction_row_rate_not_available">Nicht verfügbar</string>
     <string name="log_in">Einloggen</string>
-</resources>
+
+    <string name="chain_syncing">Die Chain synchronisiert...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Bericht senden mit…</string>
+
+    </resources>

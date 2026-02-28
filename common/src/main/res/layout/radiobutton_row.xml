@@ -22,7 +22,7 @@
     android:layout_height="wrap_content"
     android:minHeight="46dp"
     android:paddingHorizontal="15dp"
-    android:paddingVertical="12dp"
+    android:paddingVertical="16dp"
     tools:context=".ui.radio_group.RadioGroupAdapter">
 
     <FrameLayout

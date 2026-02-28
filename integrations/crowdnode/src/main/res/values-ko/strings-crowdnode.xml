@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">크라우드노가 이 주소를 당신의 계정 ID로 사용합니다. 이 주소에 연결된 암호 문구를 잃게되는 경우, 이 지갑 안의 자금 및 크라우드노드 계정에 대한 액세스를 잃게 됩니다. </string>
     <string name="crowdnode_new_account_warning_2">이 지갑의 소유 여부를 검증하기 위해 아주 적은 금액의 대시가 크라우드노드에/로부터 전송됩니다.</string>
     <string name="crowdnode_link_account_description">이 기기의 크라우드노드에서/로부터 발생하는 모든 거래는 이 기기의 아래 대시 주소로 이루어집니다.</string>
-    <string name="dash_address">대시 주소</string>
     <string name="primary_dash_address">주요 대시 주소</string>
     <string name="crowdnode_secure_wallet">크라우드노드 계정을 생성하려면 암호 문구를 백업하세요</string>
     <string name="crowdnode_secure_wallet_explainer">이 지갑의 암호 문구를 잃어버리고 기기를 잃는 경우 혹은 대시 지갑을 삭제하는 경우에는 크라우드노드의 자금 및 이 지갑 내 자금에 대한 액세스를 잃게 됩니다.</string>
@@ -143,6 +142,8 @@
     <string name="crowdnode_withdrawal_limits_message">크라우드노드의 서비스 이용 약관에 따라, 사용자들은 다음의 금액 이상을 출금할 수 없습니다:</string>
     <string name="crowdnode_withdraw_without_limits_online">제한 없이 출금하려면 크라우드노드 웹사이트의 온라인 계정을 활용하십시오.</string>
     <string name="crowdnode_withdrawal_limits_error">크라우드노드 출금 한도를 초과하여 에러가 발생한 것으로 보입니다. 잠시 후 다시 시도하십시오.</string>
+    <string name="crowdnode_withdrawal_limits_per_block_title">다음 출금을 요청하기 전 기다려 주십시오</string>
+    <string name="crowdnode_withdrawal_limits_per_block_message">다음 출금을 요청하시기 전 5분을 대기하여야 합니다</string>
     <string name="per_transaction">거래당</string>
     <string name="per_hour">시간당</string>
     <string name="per_day">24시간당</string>

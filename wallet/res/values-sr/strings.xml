@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dana kasni</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d nedelja kasni</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d meseci kasni</string>
-    <string name="blockchain_state_progress_downloading">Sinhronizacija sa mrežom</string>
     <string name="blockchain_state_progress_stalled">Sinhronizacija nije uspela</string>
     <string name="blockchain_state_progress_problem_storage">Sinhronizacija: Problem sa skladištem</string>
     <string name="blockchain_state_progress_problem_network">Sinhronizacija: Problem sa mrežom</string>
@@ -246,7 +245,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Dodaj listu instaliranih paketa</string>
     <string name="report_issue_dialog_collect_application_log">Dodaj log aplikacije</string>
     <string name="report_issue_dialog_collect_wallet_dump">Dodaj dump novčanika</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Pošalji izveštaj koristeći...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nije uspelo slanje izveštaja.</string>
     <string name="about_title">Informacije</string>
     <string name="about_version_title">Verzija</string>

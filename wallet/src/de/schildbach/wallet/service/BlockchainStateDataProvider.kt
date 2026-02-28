@@ -21,31 +21,38 @@ import android.content.Context
 import android.database.sqlite.SQLiteException
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.AbstractBlockChain
 import org.bitcoinj.core.Block
 import org.bitcoinj.core.BlockChain
 import org.bitcoinj.core.CheckpointManager
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
+import org.bitcoinj.core.PeerGroup
 import org.bitcoinj.core.StoredBlock
 import org.bitcoinj.store.BlockStoreException
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.data.NetworkStatus
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
-import org.slf4j.LoggerFactory
 import java.io.IOException
 import java.io.InputStream
 import java.math.BigInteger
 import java.util.EnumSet
 import java.util.concurrent.Executors
 import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.math.min
 
 /**
@@ -57,9 +64,11 @@ import kotlin.math.min
  *
  */
 
+@Singleton
 class BlockchainStateDataProvider @Inject constructor(
     @ApplicationContext
     private val context: Context,
+    private val dashSystemService: DashSystemService,
     private val blockchainStateDao: BlockchainStateDao,
     private val walletDataProvider: WalletDataProvider,
     private val configuration: Configuration
@@ -78,6 +87,10 @@ class BlockchainStateDataProvider @Inject constructor(
 
     // this coroutineScope should execute all jobs sequentially
     private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
+
+    private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
+    private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
+    private val syncStageFlow = MutableStateFlow<PeerGroup.SyncStage?>(null)
 
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.getState()
@@ -98,16 +111,16 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
-    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int) {
+    fun updateBlockchainState(blockChain: BlockChain, impediments: Set<Impediment>, percentageSync: Int, syncStage: PeerGroup.SyncStage?) {
         coroutineScope.launch {
             var blockchainState = blockchainStateDao.getState()
             if (blockchainState == null) {
                 blockchainState = BlockchainState()
             }
             val chainHead: StoredBlock = blockChain.chainHead
-            val chainLockHeight = walletDataProvider.wallet!!.context.chainLockHandler.bestChainLockBlockHeight
+            val chainLockHeight = dashSystemService.system.chainLockHandler.bestChainLockBlockHeight
             val mnListHeight: Int =
-                walletDataProvider.wallet!!.context.masternodeListManager.listAtChainTip.height.toInt()
+                dashSystemService.system.masternodeListManager.listAtChainTip.height.toInt()
             blockchainState.bestChainDate = chainHead.header.time
             blockchainState.bestChainHeight = chainHead.height
             blockchainState.impediments = EnumSet.copyOf(impediments)
@@ -115,6 +128,7 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
+            syncStageFlow.value = syncStage
         }
     }
 
@@ -140,54 +154,94 @@ class BlockchainStateDataProvider @Inject constructor(
         }
     }
 
-    override fun getLastMasternodeAPY(): Double {
+    override suspend fun getLastMasternodeAPY(): Double {
         val apy = configuration.prefsKeyCrowdNodeStakingApy.toDouble()
         return if (apy != 0.0) {
             apy
         } else {
-            getEstimatedMasternodeAPY()
+            withContext(Dispatchers.Default) {
+                getEstimatedMasternodeAPY()
+            }
         }
     }
 
-    override fun getMasternodeAPY(): Double {
-        val masternodeListManager = walletDataProvider.wallet?.context?.masternodeListManager
-        val blockChain = walletDataProvider.wallet?.context?.blockChain
-        if (masternodeListManager != null && blockChain != null) {
-            val mnlist = masternodeListManager.listAtChainTip
-            if (mnlist.height != 0L) {
-                var prevBlock = try {
-                    mnlist.storedBlock.getPrev(blockChain.blockStore)
-                } catch (e: BlockStoreException) {
-                    null
-                }
-                // if we cannot retrieve the previous block, use the mnlist tip
-                if (prevBlock == null) {
-                    prevBlock = mnlist.storedBlock
-                }
+    fun setNetworkStatus(networkStatus: NetworkStatus) {
+        coroutineScope.launch {
+            networkStatusFlow.emit(networkStatus)
+        }
+    }
 
-                val validMNsCount = if (mnlist.size() != 0) {
-                    var virtualMNCount = 0
-                    mnlist.forEachMN(true) { entry ->
-                        virtualMNCount += if (entry.isHPMN) 4 else 1
+    override fun getNetworkStatus(): NetworkStatus {
+        return networkStatusFlow.value
+    }
+
+    override fun observeNetworkStatus(): Flow<NetworkStatus> {
+        return networkStatusFlow
+    }
+
+    fun setBlockChain(blockChain: AbstractBlockChain?) {
+        coroutineScope.launch {
+            blockchainFlow.emit(blockChain)
+        }
+    }
+
+    override fun getBlockChain(): AbstractBlockChain? {
+        return dashSystemService.system.blockChain
+    }
+
+    override fun observeBlockChain(): Flow<AbstractBlockChain?> {
+        return blockchainFlow
+    }
+
+    override fun observeSyncStage(): Flow<PeerGroup.SyncStage?> {
+        return syncStageFlow
+    }
+
+    override fun getSyncStage(): PeerGroup.SyncStage {
+        return syncStageFlow.value ?: PeerGroup.SyncStage.OFFLINE
+    }
+
+    override suspend fun getMasternodeAPY(): Double {
+        return withContext(Dispatchers.Default) {
+            val masternodeListManager = dashSystemService.system.masternodeListManager
+            val blockChain = dashSystemService.system.blockChain
+            if (masternodeListManager != null && blockChain != null) {
+                val mnlist = masternodeListManager.listAtChainTip
+                if (mnlist.height != 0L) {
+                    var prevBlock = try {
+                        blockChain.blockStore.get(mnlist.height.toInt() - 1)
+                    } catch (e: BlockStoreException) {
+                        null
                     }
-                    virtualMNCount
-                } else {
-                    MASTERNODE_COUNT
-                }
+                    // if we cannot retrieve the previous block, use the chain tip
+                    if (prevBlock == null) {
+                        prevBlock = blockChain.chainHead
+                    }
 
-                if (prevBlock != null) {
-                    val apy = getMasternodeAPY(
-                        walletDataProvider.wallet!!.params,
-                        mnlist.storedBlock.height,
-                        prevBlock.header.difficultyTarget,
-                        validMNsCount
-                    )
-                    configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
-                    return apy
+                    val validMNsCount = if (mnlist.size() != 0) {
+                        var virtualMNCount = 0
+                        mnlist.forEachMN(true) { entry ->
+                            virtualMNCount += if (entry.isHPMN) 4 else 1
+                        }
+                        virtualMNCount
+                    } else {
+                        MASTERNODE_COUNT
+                    }
+
+                    if (prevBlock != null) {
+                        val apy = getMasternodeAPY(
+                            walletDataProvider.wallet!!.params,
+                            mnlist.height.toInt(),
+                            prevBlock.header.difficultyTarget,
+                            validMNsCount
+                        )
+                        configuration.prefsKeyCrowdNodeStakingApy = apy.toFloat()
+                        return@withContext apy
+                    }
                 }
             }
+            return@withContext configuration.prefsKeyCrowdNodeStakingApy.toDouble()
         }
-        return configuration.prefsKeyCrowdNodeStakingApy.toDouble()
     }
 
     private val periods = arrayListOf(

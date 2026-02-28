@@ -1,18 +1,19 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 android {
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
         vectorDrawables.useSupportLibrary = true
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
@@ -26,14 +27,15 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
+        compose true
     }
     testOptions {
         animationsDisabled = true
@@ -44,13 +46,14 @@ android {
     namespace 'org.dash.wallet.integrations.coinbase'
 }
 
-kapt {
-    correctErrorTypes true
-}
-
 hilt {
     enableAggregatingTask = true
 }
+
+kotlin {
+    jvmToolchain(17)
+}
+
 
 dependencies {
 
@@ -68,8 +71,8 @@ dependencies {
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-android-compiler:$hiltVersion"
-    kapt "androidx.hilt:hilt-compiler:1.0.0"
+    ksp "com.google.dagger:hilt-android-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
     // UI
     implementation "com.google.android.material:material:$materialVersion"
@@ -80,17 +83,20 @@ dependencies {
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
 
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+
     // Logging
     implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
     // Tests
     testImplementation 'junit:junit:4.13.2'
-    testImplementation "org.mockito:mockito-core:4.0.0"
-    testImplementation 'org.mockito:mockito-inline:3.8.0'
-    testImplementation "io.mockk:mockk:1.9.3"
-    implementation 'org.hamcrest:hamcrest:2.2'
+    testImplementation "io.mockk:mockk:1.13.8"
     testImplementation "androidx.test:core-ktx:1.4.0"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+    testImplementation 'org.hamcrest:hamcrest:2.2'
 
     androidTestImplementation 'androidx.test.ext:junit:1.1.3'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'

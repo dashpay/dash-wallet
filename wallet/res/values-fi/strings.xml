@@ -7,7 +7,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d päivää takana</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d viikkoa takana</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d kuukautta takana</string>
-    <string name="blockchain_state_progress_downloading">Synkronoidaan verkon kanssa</string>
     <string name="blockchain_state_progress_stalled">Synkronointi pysäytetty</string>
     <string name="blockchain_state_progress_problem_storage">Synkronointi: Tilaongelma</string>
     <string name="blockchain_state_progress_problem_network">Synkronointi: Verkko-ongelma</string>
@@ -209,7 +208,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Liitä lista asennetuista paketeista</string>
     <string name="report_issue_dialog_collect_application_log">Liitä sovelluksen loki</string>
     <string name="report_issue_dialog_collect_wallet_dump">Liitä lompakon käyttömuistin tiedot</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Lähetä raportti käyttäen…</string>
     <string name="report_issue_dialog_mail_intent_failed">Raportin lähetys epäonnistui.</string>
     <string name="about_title">Tietoja</string>
     <string name="about_version_title">Versio</string>

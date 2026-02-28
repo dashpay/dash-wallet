@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ATMがありません</string>
     <string name="distance_miles">%sマイル</string>
     <string name="distance_kilometers">%skm</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d店舗</item>
     </plurals>
@@ -60,6 +59,7 @@
     <string name="explore_back_to_nearest">最寄りの店舗に戻る</string>
     <string name="explore_select_location">店舗を選択する</string>
     <string name="explore_pay_with_dash">Dashで支払う</string>
+    <string name="explore_pay_with_dash_save">%.2f%%を保存する</string>
     <string name="explore_buy_gift_card">ギフトカードを購入する</string>
     <string name="explore_buy_dash">Dashを購入する</string>
     <string name="explore_sell_dash">Dashを売る</string>
@@ -71,8 +71,10 @@
     <string name="explore_filter">絞り込み</string>
     <string name="explore_filters">フィルター</string>
     <string name="explore_apply_filter">申し込み</string>
-    <string name="explore_payment_method">支払い方法</string>
+    <string name="explore_spending_options">使用方法</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">CTXのギフトカード</string>
+    <string name="piggycards_gift_cards">PiggyCardsのギフトカード</string>
     <string name="explore_payment_gift_card">ギフトカード</string>
     <string name="explore_filter_gift_cards">ギフトカード</string>
     <string name="explore_radius">Radius</string>
@@ -84,6 +86,10 @@
     <string name="explore_filtered_by">でフィルターをかける</string>
     <string name="explore_pay_gift_card">ギフトカード支払い</string>
     <string name="explore_sort_by">で並び替え</string>
+    <string name="gift_card_types">ギフトカードの種類</string>
+    <string name="flexible_amount_option">フレキシブルアマウント</string>
+    <string name="fixed_denom_option">固定した指定通貨の金額</string>
+    <string name="gift_card_providers">ギフトカードの提供者</string>
 
     <string-array name="merchants_filter_options">
         <item>オンライン</item>
@@ -115,6 +121,7 @@
     <string-array name="sort_by_options_names">
         <item>名前</item>
         <item>距離</item>
+        <item>割引</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -149,6 +156,13 @@
     <string name="buy_gift_card_with_dash_text">Dashでギフトカードを購入</string>
     <string name="redeem_gift_card_text">ギフトカードは、オンラインで数秒以内またはレジでご利用いただけます。</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">テストDashは現実世界では何の価値もありませんが、他のDashPayのアルファユーザーと送受金ができます。</string>
+    <string name="explore_test_dash_title">テストDashを取得するには</string>
+    <string name="explore_test_dash_text_1">テストDashは無料で、一般的にフォーセットから入手できます。</string>
+    <string name="explore_test_dash_text_2">以下のボタンをクリックして、このウォレットからDashアドレスをコピーすると、テストDashを入手できます。</string>
+    <string name="explore_get_test_dash">テストDashを取得する</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">同期中... 入力結果が完了していない可能性があります。</string>
     <string name="sync_in_progress_error">同期中... エラーが発生しました。</string>
@@ -158,4 +172,101 @@
     <string name="sync_in_progress_network_error">同期が中断されました... ネットワークがオフラインまたはアクセス不可能です。</string>
 
 
-    </resources>
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">で</string>
+    <string name="purchase_gift_card_min">最低金額: %s</string>
+    <string name="purchase_gift_card_max">最高金額: %s</string>
+    <string name="purchase_gift_card_discount_hint">%sのギフトカードを%sで購入します (%s割引)</string>
+    <string name="button_next">次へ</string>
+    <string name="purchase_gift_card_from">から</string>
+    <string name="purchase_gift_card_to">へ</string>
+    <string name="purchase_confirm_transaction">確認する</string>
+    <string name="purchase_gift_card_total_label">ギフトカードの合計</string>
+    <string name="purchase_gift_card_discount">割引</string>
+    <string name="purchase_gift_card_you_pay">お客様の支払額</string>
+    <string name="purchase_gift_card_confirm">確認する</string>
+    <string name="purchase_gift_card_details">ギフトカードの詳細</string>
+    <string name="purchase_original_purchase">当初の購入額</string>
+    <string name="purchase_check_current_balance">カード情報を確認する</string>
+    <string name="purchase_card_number">カード番号</string>
+    <string name="purchase_card_pin">カードの暗証番号</string>
+    <string name="purchase_view_transaction">取引明細を見る</string>
+    <string name="purchase_see_how_to_use_gift_card">ギフトカードの使い方を確認する</string>
+    <string name="purchase_how_to_use_gift_card">ギフトカードの使い方</string>
+    <string name="purchase_self_checkout">セルフレジの場合</string>
+    <string name="purchase_Request_assistance">従業員にアシストを依頼し、デジタルギフトカードと引き換えましょう。</string>
+    <string name="purchase_in_store">店舗の場合</string>
+    <string name="purchase_tell_the_cashier">キャッシャーにデジタルギフトカードで支払うことを伝えます。キャッシャーは、銀行カードの欄に合計金額を入力し、アカウントの欄にギフトカードの番号を入力してエンターを押すことになります。</string>
+    <string name="purchase_in_the_payment_section">決済セクションでは、お客様のデジタルギフトカードの番号をギフトカードの欄に入力します。</string>
+    <string name="purchase_powered_by">提供元</string>
+    <string name="insufficient_money_title">充分なコインがありません</string>
+    <string name="insufficient_money_msg">資金不足</string>
+    <string name="send_coins_error_msg">送金に問題が発生しました！</string>
+    <string name="gift_card_barcode_failed">バーコードのロードに失敗しました</string>
+    <string name="gift_card_tx_title">ギフトカード · %s</string>
+    <string name="select_amount">金額を選択する</string>
+    <string name="select_fixed_amount">この加盟店はギフトカードを固定価格で販売しています</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">認証コードを入力</string>
+    <string name="verification_check_email">メールを確認して認証コードを入力する</string>
+    <string name="buy_gift_card">DashSpendアカウントでギフトカードを購入する</string>
+    <string name="dashspend_create_account">アカウントを作成するか既存のアカウントにログインする</string>
+    <string name="create_new_account">新しいアカウントを作成</string>
+    <string name="login">ログイン</string>
+    <string name="password">パスワード</string>
+    <string name="logged_in_as">%sとしてログインしました</string>
+    <string name="log_out">ログアウト</string>
+    <string name="invaild_code">間違ったコードが入力されました。メールを確認してもう一度行ってください。</string>
+    <string name="something_wrong_title">問題が発生しました!</string>
+    <string name="retry">リトライ</string>
+    <string name="gift_card_purchase_failed">ギフトカードの購入に失敗しました</string>
+    <string name="try_again">再試行する</string>
+    <string name="cancel">キャンセル</string>
+    <string name="gift_card_error">何らかの理由でギフトカードを購入できませんでした。もう一度お試しください。</string>
+    <string name="gift_card_out_of_stock_error">このギフトカードは売り切れです。もう一度お試しください。</string>
+    <string name="gift_card_details_error">何らかの理由でギフトカードを購入できませんでした。サポートまでご連絡ください。</string>
+    <string name="gift_card_limit_error">この加盟店の購入限度額が変更されました。詳細については、CTXサポートまでお問い合わせください。</string>
+    <string name="gift_card_server_error">何らかの理由でギフトカードを購入できませんでした。%sのサポートにお問い合わせし、問題を報告してください。</string>
+    <string name="gift_card_server_region_error">このギフトカードはお客様の地域では購入できません。</string>
+    <string name="gift_card_error_wrong_network">支払いリクエストは別のネットワーク向けです。サポートまでお問い合わせください。</string>
+    <string name="gift_card_unknown_error">何らかの理由でギフトカードを購入できませんでした。タックスID%sを添えてサポートまでご連絡ください。 </string>
+    <string name="gift_card_delay">このカードの取得に通常より時間がかかっています。大幅に遅延する場合は、<a href="contact:support">support@dash.org</a>までお問い合わせください。</string>
+    <string name="gift_card_rejected">決済が拒否されました。ギフトカードIDの%s、決済IDの%s、取引IDの%sを添えて%sのサポートまでお問い合わせください。</string>
+    <string name="gift_card_redeem_url_not_supported">決済は引換用URLを提供する加盟店に対して行われましたが、現在この機能はサポートされていません。ギフトカードIDの%s、決済IDの%s、取引IDの%sを添えて%sのサポートまでお問い合わせください。</string>
+    <string name="dashspend_terms_conditions">利用規約に同意する</string>
+    <string name="accept_terms_conditions">私はDashSpendの利用規約に同意します</string>
+    <string name="tap_link_to_proceed">DashSpendでアカウントを作成するにあたって、以下のリンクをタップして作成の手続きを進めることになります</string>
+    <string name="accept_to_proceed">DashSpendでアカウントを作成するにあたって、お客様はDashSpendの利用規約に同意する必要があります</string>
+    <string name="view_terms_conditions">利用規約</string>
+    <string name="barcode_placeholder">ギフトカードの詳細が届くまでお待ちください。</string>
+    <string name="gift_card_contact_ctx">CTXサポートにお問い合わせする</string>
+    <string name="gift_card_contact_piggycards">PiggyCardsのサポートへ連絡する</string>
+    <string name="gift_card_contact_support">サポートへ連絡する</string>
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">アカウントを作成する</string>
+    <string name="log_in_to_ctxspend_account">アカウントにログインする</string>
+    <string name="log_in_to_ctxspend_account_desc">お客様のメールはワンタイムパスワードを送る時にのみ使用されます。</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">DashSpendアカウントでギフトカードを購入する</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">DashSpendのアカウントを作成するか既存のアカウントにログインする</string>
+    <string name="temporarily_unavailable">現在はご利用いただけません</string>
+    <string name="country_availability">このカードは米国でのみ使用できます</string>
+    <string name="token_expired_title">セッションの有効時間が切れました</string>
+    <string name="token_expired_message">しばらくDashSpendをご利用になっていないようです。セキュリティ上の理由により、ログアウトされました。\n\nDashをお使いいただける場所を引き続き探索するには、再度サインインしてください。</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">お客様のメールアドレスはPiggyCards以外の人に開示されることはありません。</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">ギフトカードの提供者を選択する</string>
+    <string name="flexible_amounts">フレキシブルな金額</string>
+    <string name="fixed_amounts">固定金額</string>
+    <string name="address">アドレス</string>
+    <string name="phone">電話番号</string>
+    <string name="website">ウェブサイト</string>
+    <string name="call">電話する</string>
+    <string name="directions">地図</string>
+    <string name="explore_show_all_locations">全ての場所を表示する(%d)</string>
+    <string name="provider">提供者</string>
+    <string name="save">保存する</string>
+</resources>

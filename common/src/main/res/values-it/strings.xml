@@ -11,6 +11,7 @@
     <string name="buy_dash">Compra Dash</string>
     <string name="copied">Copiato</string>
     <string name="staking_title">Staking</string>
+    <string name="spend_title">Speso</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">esempio: johndoe@mail.com</string>
     <string name="error">Errore</string>
@@ -21,7 +22,11 @@
     <string name="transfer_dash">Trasferisci Dash</string>
     <string name="login_error_title">Impossibile accedere al tuo %s account</string>
     <string name="login_error_message">Si è verificato un errore durante l\'accesso al tuo %s account</string>
+    <string name="dash_address">Indirizzo Dash</string>
+    <string name="username">Carica la tua foto, personalizza la tua identità.
+ </string>
     <string name="balance">Saldo:</string>
+    <string name="nothing_here">Niente qui</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Guernsey Pound</string>
@@ -55,10 +60,13 @@
     <string name="button_understand">Ho capito</string>
     <string name="button_okay">Bene</string>
     <string name="button_share">Condividi</string>
+    <string name="button_skip">Salta</string>
     <string name="share_address">Condividi indirizzo</string>
     <string name="verify">Verifica</string>
     <string name="receive_enter_amount_button">Specifica Importo</string>
     <string name="account_create">Crea un Account</string>
+    <string name="submit">Invia</string>
+    <string name="try_again">Prova Ancora</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Cerca</string>
@@ -67,21 +75,22 @@
     <string name="pay_with">Paga con</string>
     <string name="choose_payment_method">Scegli metodo di pagamento</string>
     <string name="debit_credit_card">Debit/Credit card</string>
-    <string name="max">Massimo</string>
+    <string name="max">Max</string>
     <string name="select_the_coin">Seleziona una coin</string>
     <string name="dash">Dash</string>
-    <string name="dash_wallet_name">Dash Wallet</string>
+    <string name="dash_wallet_name">Portafoglio Dash</string>
     <string name="from">da</string>
     <string name="to">a</string>
     <string name="select_currency">Seleziona Valuta</string>
     <string name="send_coins_error_dusty_send">L\'importo è troppo piccolo per l\'invio</string>
     <string name="send_coins_error_insufficient_money">Fondi insufficenti</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fondi misti insufficienti. Attendi il completamento del mixaggio di CoinJoin o disabilita questa funzione nelle impostazioni per completare questa transazione.</string>
     <string name="syncing">Sincronizzazione</string>
     <string name="no_connection">Nessuna connessione internet</string>
     <string name="rate_not_available">Non disponibile</string>
 
     <!-- CrowdNode warning -->
-    <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Dash Wallet</string>
+    <string name="empty_wallet_warning_title">Sembra che tu stia svuotando il tuo Portafoglio Dash</string>
     <string name="empty_wallet_crowdnode_warning">Attenzione: non potrai prelevare i tuoi fondi da CrowdNode su questo portafoglio finché non aumenterai il tuo saldo a 0,0003 Dash.</string>
 
     <!-- Send coins -->
@@ -89,13 +98,18 @@
     <string name="payment_protocol_default_error_title">Errore di pagamento</string>
     <string name="payment_request_problem_message">Non è stato possibile processare il tuo pagamento dal server, per favore informati col commerciante</string>
     <string name="exchange_rate_not_found">Impossibile trovare il tasso di cambio.</string>
+    <string name="send_coins_fragment_hint_replaying">Attualmente i pagamenti non sono possibili perché il portafoglio non è completamente sincronizzato con la rete</string>
 
     <!-- Integrations -->
-    <string name="buy_dash_subtitle">Ricevi direttamente in Dash Wallet</string>
+    <string name="buy_dash_subtitle">Ricevi direttamente nel Portafoglio Dash</string>
     <string name="convert_crypto">Converti criptovalute</string>
     <string name="last_known_balance" >Ultimo saldo noto</string>
     <string name="disconnected">Disconnesso</string>
     <string name="enter_amount_available">disponibile</string>
     <string name="transaction_row_rate_not_available">Non disponibile</string>
     <string name="log_in">Accedi</string>
-</resources>
+
+    <string name="chain_syncing">La catena si sta sincronizzando...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Invio della segnalazione…</string>
+
+    </resources>

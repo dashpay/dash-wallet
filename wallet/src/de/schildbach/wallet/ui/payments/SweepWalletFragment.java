@@ -61,6 +61,7 @@ import org.bitcoinj.wallet.Wallet.BalanceType;
 import org.bitcoinj.wallet.WalletTransaction;
 import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.services.LeftoverBalanceException;
+import org.dash.wallet.common.services.analytics.AnalyticsConstants;
 import org.dash.wallet.common.ui.CurrencyTextView;
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog;
 import org.dash.wallet.common.ui.scan.ScanActivity;
@@ -90,6 +91,7 @@ import de.schildbach.wallet.ui.transactions.TransactionResultActivity;
 import de.schildbach.wallet.util.WalletUtils;
 import de.schildbach.wallet_test.R;
 import kotlin.Unit;
+import kotlin.jvm.functions.Function1;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -312,6 +314,43 @@ public class SweepWalletFragment extends Fragment {
                 }.parse();
             }
         }
+    }
+
+    /**
+     * Called by {@link SweepWalletActivity} when the scanner returns a result.
+     */
+    public void handleScanResult(@javax.annotation.Nullable final String input) {
+        if (input == null) return;
+
+        new StringInputParser(input, false) {
+            @Override
+            protected void handlePrivateKey(final PrefixedChecksummedBytes key) {
+                privateKeyToSweep = key;
+                setState(State.DECODE_KEY);
+                maybeDecodeKey();
+            }
+
+            @Override
+            protected void handlePaymentIntent(final PaymentIntent paymentIntent) {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void handleDirectTransaction(final Transaction transaction) throws VerificationException {
+                cannotClassify(input);
+            }
+
+            @Override
+            protected void error(Exception x, final int messageResId, final Object... messageArgs) {
+                AdaptiveDialog.create(
+                        null,
+                        getString(R.string.button_scan),
+                        getString(messageResId, messageArgs),
+                        getString(R.string.button_dismiss),
+                        null
+                ).show(requireActivity(), result -> Unit.INSTANCE);
+            }
+        }.parse();
     }
 
     private void showProgress(int messageResId) {
@@ -583,6 +622,7 @@ public class SweepWalletFragment extends Fragment {
 
                 setState(State.SENDING);
                 application.processDirectTransaction(sentTransaction);
+                viewModel.logEvent(AnalyticsConstants.SendReceive.IMPORT_PRIVATE_KEY_SUCCESS);
                 showTransactionResult(sentTransaction);
             }
 

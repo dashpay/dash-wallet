@@ -23,23 +23,29 @@ import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.core.os.bundleOf
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
+import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
-import de.schildbach.wallet.ui.ExportTransactionHistoryDialogBuilder
 import de.schildbach.wallet.ui.NetworkMonitorActivity
+import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
+import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
+import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.FlowPreview
+import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
@@ -50,6 +56,7 @@ import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+@FlowPreview
 @AndroidEntryPoint
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject lateinit var authManager: SecurityFunctions
@@ -57,6 +64,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
     companion object {
         private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
     }
+
     private val binding by viewBinding(FragmentToolsBinding::bind)
 
     @Inject
@@ -79,14 +87,18 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
         binding.importKeys.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
-            startActivity(Intent(requireContext(), SweepWalletActivity::class.java))
+            createImportPrivateKeyDialog(
+                onScanPrivateKey = {
+                    SweepWalletActivity.start(requireContext(), false)
+                }
+            ).show(parentFragmentManager, "import_private_key")
         }
         binding.networkMonitor.setOnClickListener {
             analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
             startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
         }
         binding.masternodeKeys.setOnClickListener {
-            lifecycleScope.launch {
+            viewLifecycleOwner.lifecycleScope.launch {
                 val pin = authManager.authenticate(requireActivity(), true)
                 pin?.let {
                     findNavController().navigate(
@@ -120,17 +132,44 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                 )
                 dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
             } else {
-                viewModel.getTransactionExporter()
-                viewModel.transactionExporter.observe(viewLifecycleOwner) {
-                    val alertDialog =
-                        ExportTransactionHistoryDialogBuilder.createExportTransactionDialog(
-                            requireActivity(),
-                            WalletApplication.getInstance(),
-                            it
-                        ).buildAlertDialog()
-                    alertDialog.show()
+                viewLifecycleOwner.lifecycleScope.launch {
+                    try {
+                        val watch = Stopwatch.createStarted()
+                        val transactionExporter = viewModel.getTransactionExporter()
+                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
+                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                        }
+                    } catch (e: Exception) {
+                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
+                    }
                 }
             }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
+        }
+        binding.buyCreditsInfoButton.setOnClickListener {
+            WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
+        }
+
+        binding.buyCreditsButton.setOnClickListener {
+            viewLifecycleOwner.lifecycleScope.launch {
+                if (!viewModel.creditsExplained()) {
+                    WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
+                        SendCoinsActivity.startBuyCredits(requireActivity())
+                    }
+                } else {
+                    SendCoinsActivity.startBuyCredits(requireActivity())
+                }
+            }
+        }
+
+        binding.zenledgerExport.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
+            ZenLedgerDialogFragment().show(requireActivity())
         }
     }
 

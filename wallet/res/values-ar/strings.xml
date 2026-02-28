@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d متأخر ايام</string>
     <string name="blockchain_state_progress_weeks">%1$s, متأخر %2$d اسابيع</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d متأخر أشهر</string>
-    <string name="blockchain_state_progress_downloading">يتم التزامن مع الشبكة</string>
     <string name="blockchain_state_progress_stalled">تعطل التزامن</string>
     <string name="blockchain_state_progress_problem_storage">مزامنة: مشكلة في التخزين</string>
     <string name="blockchain_state_progress_problem_network">مزامنة: مشكلة في الشبكة</string>
@@ -58,7 +57,6 @@
     <string name="send_coins_fragment_hint_fee_economic">سيتم دفع رسوم شبكة قدرها %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">سيتم دفع رسم أولوية بنسبة%s إذا كنت تهتم برسوم منخفضة، tاستخدم \"الأولوية\" فقط إذا كنت بحاجة إلى تأكيد في أقرب وقت ممكن.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">لا يضيف مبلغ المدفوعات الصغيرة في محفظتك قيمة قابلة للإرسال.</string>
-    <string name="send_coins_fragment_hint_replaying">لا يمكن الدفع حاليًا لأن المحفظة غير متزامنة بالكامل مع الشبكة</string>
     <string name="send_coins_fragment_direct_payment_enable">إرسال الدفعة مباشرة إلى المستفيد.</string>
     <string name="send_coins_fragment_direct_payment_ack">تم بنجاح إرسال الدفعة مباشرة.</string>
     <string name="send_coins_fragment_direct_payment_nack">تم رفض دفعتك بواسطة الاتصال المباشر.</string>
@@ -272,6 +270,7 @@
     <string name="preferences_initiate_reset_summary">إعادة تعيين سلسلة كتلة والمعاملات ورصيد المحفظة. سيستغرق إعادة التشغيل بعض الوقت ، لذلك افعل ذلك فقط إذا كنت تعرف السبب.</string>
     <string name="preferences_initiate_reset_dialog_message">هل ترغب في إعادة تعيين سلسلة الكتلة وإعادة تشغيلها؟\n\nسيؤدي ذلك إلى إخفاء رصيد محفظتك مؤقتًا وإزالة المعاملات. كلاهما سوف يتعافى مع تقدم مزامنة سلسلة الكتل. تأكد من أن لديك اتصالاً موثوقًا بالإنترنت.</string>
     <string name="preferences_initiate_reset_dialog_positive">إعادة تفحص</string>
+    <string name="rescan_blockchain_confirm_button">إعادة تفحص</string>
     <string name="preferences_extended_public_key_title">عرض xpub</string>
     <string name="preferences_extended_public_key_summary">عرض المفتاح العام الموسع لمحفظتك ، بحيث يمكن استيراده إلى تطبيقات وخدمات أخرى. كن حذرًا: سيؤدي ذلك إلى الكشف عن خصوصيتك المالية لهذا التطبيق.</string>
     <string name="bitmap_fragment_share">شارك…</string>
@@ -288,7 +287,6 @@
     <string name="report_issue_dialog_collect_installed_packages">إرفاق قائمة بالحزم المثبتة</string>
     <string name="report_issue_dialog_collect_application_log">إرفاق سجل البرنامج</string>
     <string name="report_issue_dialog_collect_wallet_dump">إرفاق مهملات المحفظة</string>
-    <string name="report_issue_dialog_mail_intent_chooser">إرسال التقرير بواسطة…</string>
     <string name="report_issue_dialog_mail_intent_failed">فشل إرسال التقرير.</string>
     <string name="report_transaction_history_export">تصدير</string>
     <string name="report_transaction_history_title">تصدير CSV</string>
@@ -385,4 +383,6 @@
     <string name="not_dash_address">ليس عنوان داش صالح او الاتصال عبر الرابط غير صالح</string>
     <string name="send_to_address">إرسال إلى عنوان</string>
 
-    </resources>
+    <string name="upgrade_pin_description">قم بإعداد رقم سري جديد</string>
+    <string name="upgrade_pin_continue">استمر</string>
+</resources>

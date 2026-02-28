@@ -20,14 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/background_explore"
-    tools:context="org.dash.wallet.features.exploredash.ExploreFragment">
-
-    <androidx.appcompat.widget.Toolbar
-        android:id="@+id/title_bar"
-        android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
-        app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back_white" />
+    tools:context="de.schildbach.wallet.ui.explore.ExploreFragment">
 
     <ImageView
         android:layout_width="wrap_content"
@@ -72,6 +65,7 @@
         android:background="@drawable/rounded_background"
         android:orientation="vertical"
         android:paddingTop="15dp"
+        android:paddingBottom="@dimen/bottom_nav_bar_height"
         android:theme="@style/ExploreBottomContentBackground"
         app:layout_constraintBottom_toBottomOf="parent">
 
@@ -88,7 +82,7 @@
                 android:orientation="vertical">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
-                    android:id="@+id/merchants_btn"
+                    android:id="@+id/faucet_btn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:background="?attr/selectableItemBackground"
@@ -97,6 +91,55 @@
                     android:paddingTop="17dp"
                     android:paddingEnd="15dp"
                     android:paddingBottom="10dp">
+
+                    <ImageView
+                        android:id="@+id/faucet_icon"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:src="@drawable/ic_faucet"
+                        app:layout_constraintEnd_toStartOf="@id/faucet_title"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/faucet_title"
+                        style="@style/Subtitle2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="63dp"
+                        android:text="@string/explore_get_test_dash"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
+
+                    <TextView
+                        android:id="@+id/faucet_subtitle"
+                        style="@style/Caption.Secondary"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="@string/explore_test_dash_text_1"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="@+id/faucet_title"
+                        app:layout_constraintTop_toBottomOf="@+id/faucet_title" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginStart="63dp"
+                    android:background="@color/divider_color" />
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/merchants_btn"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:paddingTop="12dp"
+                    android:paddingEnd="15dp"
+                    android:paddingBottom="12dp">
 
                     <ImageView
                         android:id="@+id/merchants_icon"

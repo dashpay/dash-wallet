@@ -10,7 +10,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="10dp"
         app:layout_constraintTop_toTopOf="parent"
-        android:hint="Enter dashdirect email"/>
+        android:hint="Enter dashspend email"/>
 
     <androidx.appcompat.widget.AppCompatEditText
         android:id="@+id/password"
@@ -20,5 +20,5 @@
         android:inputType="textPassword"
         android:layout_marginHorizontal="10dp"
         app:layout_constraintTop_toBottomOf="@+id/email"
-        android:hint="Enter dashdirect password"/>
+        android:hint="Enter dashspend password"/>
 </androidx.constraintlayout.widget.ConstraintLayout>

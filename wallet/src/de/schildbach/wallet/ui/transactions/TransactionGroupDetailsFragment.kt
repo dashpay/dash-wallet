@@ -23,9 +23,11 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.ui.main.TransactionAdapter
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionGroupDetailsBinding
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -52,17 +54,25 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
 
         binding.dashAmount.setFormat(viewModel.dashFormat)
 
-        if (transactionWrapper is FullCrowdNodeSignUpTxSet) {
-            binding.groupTitle.text = getString(R.string.crowdnode_account)
-            binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
-            binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
-            binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
+        when (transactionWrapper) {
+            is FullCrowdNodeSignUpTxSet -> {
+                binding.groupTitle.text = getString(R.string.crowdnode_account)
+                binding.icon.setImageResource(R.drawable.ic_crowdnode_logo)
+                binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
+                binding.detailsMessage.text = getString(R.string.crowdnode_tx_set_explainer)
+            }
+            is CoinJoinMixingTxSet -> {
+                binding.groupTitle.text = getString(R.string.coinjoin_mixing_transactions)
+                binding.icon.setImageResource(R.drawable.ic_coinjoin)
+                binding.detailsTitle.text = getString(R.string.crowdnode_tx_set_title)
+                binding.detailsMessage.text = getString(R.string.coinjoin_transaction_group)
+            }
         }
 
-        val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _ ->
+        val adapter = TransactionAdapter(viewModel.dashFormat, resources) { item, _, _ ->
             if (item is TransactionRowView) {
                 TransactionDetailsDialogFragment
-                    .newInstance(item.txId)
+                    .newInstance(Sha256Hash.wrap(item.id))
                     .show(requireActivity())
             }
         }

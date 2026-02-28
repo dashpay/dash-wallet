@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode usa este endereço como seu ID da conta. Você perderá o acesso aos seus fundos nesta carteira e à sua conta CrowdNode se perder a frase de recuperação associada a este endereço.</string>
     <string name="crowdnode_new_account_warning_2">Quantidades muito pequenas de Dash serão enviadas de/para CrowdNode para verificar se você é o proprietário desta carteira.</string>
     <string name="crowdnode_link_account_description">Todas as transferências de/para CrowdNode deste dispositivo serão realizadas com o endereço Dash abaixo.</string>
-    <string name="dash_address">Endereço Dash</string>
     <string name="primary_dash_address">Endereço Dash Primário</string>
     <string name="crowdnode_secure_wallet">Faça backup da sua frase de recuperação para criar uma conta CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Se você perder sua frase de recuperação para esta carteira, perder este dispositivo ou desinstalar a Carteira Dash, você perderá o acesso aos seus fundos no CrowdNode e aos fundos desta carteira.</string>

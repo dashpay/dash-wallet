@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'androidx.navigation.safeargs.kotlin'
     id 'dagger.hilt.android.plugin'
     id 'kotlin-parcelize'
@@ -10,9 +10,9 @@ plugins {
 
 android {
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
     }
@@ -25,20 +25,16 @@ android {
     }
     compileOptions {
         coreLibraryDesugaringEnabled true
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
     }
     namespace 'org.dash.wallet.integrations.crowdnode'
-}
-
-kapt {
-    correctErrorTypes true
 }
 
 hilt {
@@ -65,13 +61,16 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
-    kapt "com.google.dagger:hilt-android-compiler:$hiltVersion"
-    kapt "androidx.hilt:hilt-compiler:1.0.0"
+    ksp "com.google.dagger:hilt-android-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
     // UI
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+
+    // Logs
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
 
     // Tests
     testImplementation "junit:junit:$junitVersion"

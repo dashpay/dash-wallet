@@ -11,6 +11,7 @@
     <string name="buy_dash">Dashを購入する</string>
     <string name="copied">コピーされた</string>
     <string name="staking_title">ステーキング</string>
+    <string name="spend_title">使う</string>
     <string name="email">Eメール</string>
     <string name="email_placeholder">例：johndoe@mail.com</string>
     <string name="error">エラー</string>
@@ -21,7 +22,10 @@
     <string name="transfer_dash">Dashを送金する</string>
     <string name="login_error_title">お客様の%sアカウントにログインできません</string>
     <string name="login_error_message">お客様の%sアカウントへのログイン中にエラーが発生しました。</string>
+    <string name="dash_address">Dashアドレス</string>
+    <string name="username">ユーザー名</string>
     <string name="balance">残高:</string>
+    <string name="nothing_here">こちらにはありません</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">ガーンジー・ポンド</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">どれでも有効</string>
     <string name="button_okay">OK</string>
     <string name="button_share">共有</string>
+    <string name="button_skip">スキップする</string>
     <string name="share_address">アドレスを共有する</string>
     <string name="verify">検証する</string>
     <string name="receive_enter_amount_button">金額を指定する</string>
     <string name="account_create">アカウントの作成</string>
+    <string name="submit">提出する</string>
+    <string name="try_again">再試行する</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">検索</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">通貨を選択する</string>
     <string name="send_coins_error_dusty_send">送金額が小さすぎます</string>
     <string name="send_coins_error_insufficient_money">資金不足</string>
+    <string name="send_coins_error_insufficient_mixed_money">ミキシング資金が不足しています。CoinJoinのミキシングが完了するまで待つか、設定でこの機能を無効にしてこの取引を完了してください。</string>
     <string name="syncing">同期中</string>
     <string name="no_connection">インターネット接続がありません</string>
     <string name="rate_not_available">ご利用できません</string>
@@ -89,6 +97,7 @@
     <string name="payment_protocol_default_error_title">支払いエラー</string>
     <string name="payment_request_problem_message">お客様のお支払いがサーバーで処理されませんでしたので、加盟店にお問い合わせください。</string>
     <string name="exchange_rate_not_found">為替レートが見つかりません。</string>
+    <string name="send_coins_fragment_hint_replaying">ウォレットがネットワークと完全に同期されていないため、現在支払いはできません</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Dashウォレットに直接入金する</string>
@@ -98,4 +107,8 @@
     <string name="enter_amount_available">ご利用可能</string>
     <string name="transaction_row_rate_not_available">ご利用できません</string>
     <string name="log_in">ログイン</string>
-</resources>
+
+    <string name="chain_syncing">チェーンを同期中</string>
+    <string name="report_issue_dialog_mail_intent_chooser">報告を送信中…</string>
+
+    </resources>

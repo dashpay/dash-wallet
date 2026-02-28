@@ -158,18 +158,43 @@ class EnterAmountToTransferViewModel @Inject constructor(
                 "$fiatBalance $localCurrencySymbol"
             }
         } else {
-            formattedValue = if (inputValue.contains("E")) {
+            val rawFormattedValue = if (inputValue.contains("E")) {
                 DecimalFormat("########.########").format(inputValue.toDouble())
             } else {
                 inputValue
+            }
+            
+            // Limit to 8 decimal places max using BigDecimal for proper rounding
+            formattedValue = if (rawFormattedValue.endsWith(".") || rawFormattedValue.isEmpty()) {
+                // Don't process incomplete decimal entries
+                rawFormattedValue
+            } else if (isFraction && lengthOfDecimalPart <= 8) {
+                // Preserve input format for incomplete decimal entries like "0.0"
+                rawFormattedValue
+            } else {
+                try {
+                    val bigDecimal = rawFormattedValue.toBigDecimal()
+                    bigDecimal.setScale(8, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString()
+                } catch (e: Exception) {
+                    rawFormattedValue
+                }
             }
             "$formattedValue $monetaryCode"
         }
     }
 
     val hasBalance: Boolean
-        get() = inputValue.isNotEmpty() &&
-            (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        get() {
+            if (inputValue.isEmpty()) return false
+            if (inputValue == CoinbaseConstants.VALUE_ZERO) return false
+            
+            // Allow incomplete decimal entries like "0." or "0.0" to keep UI responsive
+            if (inputValue.endsWith(".") || inputValue.matches(Regex("0\\.0+"))) {
+                return false
+            }
+            
+            return (inputValue.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+        }
 
     fun setOnTransferDirectionListener(walletToCoinbase: Boolean) {
         // there must be a non-zero balance

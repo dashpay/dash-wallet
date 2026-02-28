@@ -43,7 +43,6 @@
     <string name="explore_no_atms">Žádné bankomaty</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometrů</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d obchodník</item>
         <item quantity="few">%d obchodníci</item>
@@ -74,7 +73,6 @@
     <string name="explore_filter">Filtr</string>
     <string name="explore_filters">Filtry</string>
     <string name="explore_apply_filter">Aplikovat</string>
-    <string name="explore_payment_method">Platební metoda</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">Dárkový poukaz</string>
     <string name="explore_radius">Okruh</string>
@@ -86,7 +84,6 @@
     <string name="explore_filtered_by">Filtrováno:</string>
     <string name="explore_pay_gift_card">Platba dárkovým poukazem</string>
     <string name="explore_sort_by">Řadit podle</string>
-
     <string-array name="merchants_filter_options">
         <item>Online</item>
         <item>Nejbližší</item>
@@ -158,4 +155,17 @@
     <string name="redeem_gift_card_text">Uplatněte dárkový poukaz online během několika sekund nebo u pokladny.</string>
 
     <string name="sync_in_progress_file_not_found">Chyba sestavení: Databáze nenalezena!</string>
-    </resources>
+    <string name="purchase_confirm_transaction">Potvrdit</string>
+    <string name="purchase_gift_card_confirm">Potvrdit</string>
+    <string name="insufficient_money_title">Nemáte dostatečný zůstatek</string>
+    <string name="insufficient_money_msg">Nedostatečný zůstatek</string>
+    <string name="send_coins_error_msg">Problém při zasílání!</string>
+    <string name="password">Heslo</string>
+    <string name="retry">Opakovat</string>
+    <string name="try_again">Zkusit znovu</string>
+    <string name="cancel">Zrušit</string>
+    <string name="gift_card_contact_support">Podpora</string>
+    <string name="address">Adresa</string>
+    <string name="call">Volání</string>
+    <string name="save">Uložit</string>
+</resources>

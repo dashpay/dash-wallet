@@ -27,6 +27,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import org.bitcoinj.core.VersionMessage
 import org.slf4j.LoggerFactory
+import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 import javax.inject.Inject
@@ -41,11 +42,11 @@ class PackageInfoProvider @Inject constructor(
     }
 
     val packageInfo: PackageInfo = packageInfoFromContext(context)
-    val versionCode: Int = packageInfo.versionCode
-    val versionName: String = packageInfo.versionName
+    val versionCode: Long = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) packageInfo.longVersionCode else packageInfo.versionCode.toLong()
+    val versionName: String = packageInfo.versionName ?: "unknown"
     val installerPackageName = resolveInstallerPackageName()
     val databases = context.databaseList().toList()
-    val filesDir = context.filesDir
+    val filesDir: File = context.filesDir
 
     fun applicationPackageFlavor(): String? {
         val packageName = context.packageName
@@ -62,7 +63,7 @@ class PackageInfoProvider @Inject constructor(
     }
 
     fun httpUserAgent(): String {
-        return httpUserAgent(packageInfo.versionName)
+        return httpUserAgent(versionName)
     }
 
     private fun packageInfoFromContext(context: Context): PackageInfo {

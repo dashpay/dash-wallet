@@ -22,7 +22,7 @@ import androidx.core.os.bundleOf
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.ui.main.WalletActivity
+import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.NotificationService
 import javax.inject.Inject
@@ -50,7 +50,7 @@ class PushMessagingService : FirebaseMessagingService() {
             message = remoteMessage.notification?.body ?: "",
             title = remoteMessage.notification?.title,
             imageUrl = remoteMessage.notification?.imageUrl?.toString(),
-            intent = Intent(this, WalletActivity::class.java).apply {
+            intent = Intent(this, MainActivity::class.java).apply {
                 putExtras(bundleOf(*remoteMessage.data.map { it.key to it.value }.toTypedArray()))
             },
             channelId = getString(R.string.fcm_notification_channel_id)

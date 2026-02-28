@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<de.schildbach.wallet.ui.widget.KeyboardResponsiveConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/search_user_empty_result"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:visibility="gone"
+    app:layout_constraintBottom_toBottomOf="parent"
+    app:layout_constraintEnd_toEndOf="parent"
+    app:layout_constraintStart_toStartOf="parent"
+    app:layout_constraintTop_toTopOf="parent"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/invite_friend_hint_view_empty_result"
+    tools:visibilty="visible">
+
+    <ImageView
+        android:id="@+id/no_results_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:srcCompat="@drawable/ic_user_search_no_results" />
+
+    <TextView
+        android:id="@+id/no_results_label"
+        style="@style/Subtitle1"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textAlignment="gravity"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/no_results_icon"
+        tools:text="@string/search_user_no_results" />
+
+    <include
+        android:id="@+id/invite_friend_hint_view_empty_result"
+        layout="@layout/invite_friend_hint_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</de.schildbach.wallet.ui.widget.KeyboardResponsiveConstraintLayout>

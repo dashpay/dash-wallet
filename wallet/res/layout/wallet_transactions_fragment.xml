@@ -22,7 +22,8 @@
         android:gravity="center_horizontal"
         android:textAlignment="gravity"
         android:text="@string/wallet_transactions_fragment_empty_text"
-        android:textSize="@dimen/font_size_small" />
+        android:textSize="@dimen/font_size_small"
+        android:visibility="invisible"/>
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -88,7 +89,7 @@
             android:animateLayoutChanges="false"
             android:clipToPadding="false"
             android:scrollbars="vertical"
-            android:paddingBottom="20dp"
+            android:paddingBottom="80dp"
             tools:itemCount="5"
             tools:listitem="@layout/transaction_row"/>
     </LinearLayout>

@@ -135,6 +135,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
                 ).also {
                     it.isCancelable = false
                 }.show(requireActivity()) { login ->
+                    if (!isAdded || isDetached) return@show
                     if (login == true) {
                         requireActivity().openCustomTab(CoinbaseConstants.LINK_URL)
                     } else {
@@ -158,6 +159,7 @@ class CoinbaseServicesFragment : Fragment(R.layout.fragment_integration_portal) 
                     getString(R.string.close),
                     getString(R.string.create_dash_account),
                 ).show(requireActivity()) { createAccount ->
+                    if (!isAdded || isDetached) return@show
                     if (createAccount == true) {
                         viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_CREATE_ACCOUNT)
                         openCoinbaseWebsite()

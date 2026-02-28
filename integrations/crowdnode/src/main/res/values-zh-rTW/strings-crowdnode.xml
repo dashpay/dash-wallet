@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode 使用此位址作為您的帳戶 ID。如果您丟失了與此位址關聯的密碼，您將無法訪問此錢包和您的 CrowdNode 帳戶中的資金。</string>
     <string name="crowdnode_new_account_warning_2">將會向 CrowdNode 發送非常少量的達世幣，以驗證您是該錢包位址的所有者。</string>
     <string name="crowdnode_link_account_description">從此設備與 CrowdNode 之間的所有交易都將使用來自該設備的以下達世幣位址來執行。</string>
-    <string name="dash_address">達世幣位址</string>
     <string name="primary_dash_address">主要達世幣位址</string>
     <string name="crowdnode_secure_wallet">備份您的恢復詞組以創建 CrowdNode 帳戶</string>
     <string name="crowdnode_secure_wallet_explainer">如果您丟失此錢包的恢復詞組並丟失此設備或卸載達世幣錢包，您將無法訪問 CrowdNode 上的資金和此錢包中的資金。</string>

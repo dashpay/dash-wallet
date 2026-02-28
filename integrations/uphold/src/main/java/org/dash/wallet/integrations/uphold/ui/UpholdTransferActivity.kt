@@ -120,7 +120,6 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         title = intent.getStringExtra(EXTRA_TITLE)
 
         enterAmountViewModel.setMaxAmount(balance)
-
         enterAmountViewModel.onContinueEvent.observe(this) {
             UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
                 when (result) {

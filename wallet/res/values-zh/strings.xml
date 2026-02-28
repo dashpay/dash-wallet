@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d 天延迟</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d 星期延迟</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d 月延迟</string>
-    <string name="blockchain_state_progress_downloading">与网络同步</string>
+    <string name="blockchain_state_progress_downloading">正在与网络同步 (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">同步已停滞</string>
     <string name="blockchain_state_progress_problem_storage">同步: 存储出现了问题</string>
     <string name="blockchain_state_progress_problem_network">同步: 网络出现了问题</string>
+    <string name="mixing_state_progress_mixing">正在混币 (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash地址已复制到剪切板</string>
     <string name="wallet_address_dialog_fragment_hint">为了保护您的隐私, 当您收到一笔交易后您的钱包地址将改变.</string>
     <string name="wallet_balance_fragment_too_much">该金额太庞大了, 随身携带存在安全风险. 请将一部分资金转移到一个安全的地方.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">管理应用程序</string>
     <string name="wallet_timeskew_dialog_title">检查日期 &amp; 时间设置</string>
     <string name="wallet_timeskew_dialog_msg">您的设备停止了 %d 分钟. 由于此原因, 您可能无法发送或接收Dash.\\n\\n您应当检查, 并修正您的日期, 时区设置.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">您的设备时间为 %s %d 秒. 由于此差异, 您无法使用 CoinJoin. \n\n您设备上的时间设置需要变更为“自动设定时间”才能使用CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">的设备时间偏差超过 5 秒. 由于此差异, 您无法使用CoinJoin. \n\n使用 CoinJoin 之前, 需要将设备上的时间设定更改为“自动设定时间”.</string>
     <string name="send_coins_activity_title">发送Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">正在从 %s 读取签名…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">获取签名失败</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">将支付 %s 的网络费用.</string>
     <string name="send_coins_fragment_hint_fee_priority">将支付 %s 作为优先确认费用. 如果您不在意些许的手续费, 使用\'优先确认\'可以使您的交易尽快完成确认.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">您钱包中的微小付款金额无法达到可支付的金额.</string>
-    <string name="send_coins_fragment_hint_replaying">因钱包与网络还未完成同步, 当前交易不可用.</string>
     <string name="send_coins_fragment_direct_payment_enable">直接向收款人付款.</string>
     <string name="send_coins_fragment_direct_payment_ack">您的直接付款已经成功发送.</string>
     <string name="send_coins_fragment_direct_payment_nack">您的直接付款已被拒绝.</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">主节点撤销</string>
     <string name="transaction_row_status_masternode_reward">主节点奖励</string>
     <string name="transaction_row_status_mining_reward">挖矿奖励</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">CoinJoin 混币费用</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">CoinJoin 抵押输入</string>
+    <string name="transaction_row_status_coinjoin_mixing">CoinJoin 混币</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin 创建面额</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">使用CoinJoin合并尘埃交易</string>
     <string name="network_monitor_activity_title">网络监视器</string>
     <string name="network_monitor_peer_list_title">网络节点</string>
     <string name="network_monitor_block_list_title">区块</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">您的钱包已经成功恢复. 下一步将会确定您的余额, 这将会花费一些时间.</string>
     <string name="restore_wallet_dialog_success_encrypted">警告: 您的钱包受消费PIN码保护. 在您通过此钱包收款前, 确保您仍记得PIN码.</string>
     <string name="import_keys_dialog_failure">无法恢复钱包:\n\n%s\n\n是否输入了错误的密码?</string>
+    <string name="restore_wallet_creation_date_label">钱包创建日期 (可选的)</string>
+    <string name="restore_wallet_creation_date_info">选择您钱包创建时间来扫描此后的区块以完成更快的同步.</string>
+    <string name="restore_wallet_select_date">选择创建日期</string>
+    <string name="restore_wallet_selected_date">已选择: %s</string>
+    <string name="restore_wallet_date_picker_title">您什么时候创建的钱包?</string>
+    <string name="wallet_creation_date_info_title">钱包创建时间如何加速同步过程?</string>
+    <string name="wallet_creation_date_info_description">如果您知道您钱包创建的大概时间, 在输入后将会获取自那时间后的交易以帮助更快同步. 请注意, 若您输入的时间比您钱包创建的时间要晚, 那么更早的交易将不会被下载.</string>
     <string name="export_keys_dialog_title">备份钱包</string>
     <string name="backup_wallet_dialog_message">您的备份将会使用选定的密码进行加密, 然后放置在外部存储设备上.</string>
     <string name="backup_wallet_dialog_warning_encrypted">您的钱包受支付PIN码保护. 除了备份密码以外, 请确保您记住该PIN码!</string>
@@ -271,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">重新扫描区块链, 交易和钱包余额. 这个过程需要一点时间, 所以只有在你知道原因的状况下才这样做.</string>
     <string name="preferences_initiate_reset_dialog_message">你想重新扫描区块链吗?\n\n这将暂时隐藏您的钱包余额并删除交易. 随着区块链同步的进行, 它们都将恢复. 在进行前请确保您有可靠网络连接.</string>
     <string name="preferences_initiate_reset_dialog_positive">重新扫描</string>
+    <string name="rescan_blockchain_dialog_title">您确定想要重新扫描区块链?</string>
+    <string name="rescan_blockchain_dialog_message">这将暂时隐藏您的钱包余额并删除交易. 随着区块链同步的进行, 它们都将恢复. 在进行前请确保您有可靠网络连接.</string>
+    <string name="rescan_blockchain_select_date_label">选择钱包创建日期 (可选的)</string>
+    <string name="rescan_blockchain_date_info_description">有关钱包创建日期的信息</string>
+    <string name="rescan_blockchain_select_date_placeholder">选择</string>
+    <string name="rescan_blockchain_confirm_button">重新扫描</string>
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
     <string name="bitmap_fragment_share">分享...</string>
@@ -287,8 +307,17 @@
     <string name="report_issue_dialog_collect_installed_packages">附加已安装的软件包列表</string>
     <string name="report_issue_dialog_collect_application_log">附加应用程序日志</string>
     <string name="report_issue_dialog_collect_wallet_dump">附加钱包 dump 信息</string>
-    <string name="report_issue_dialog_mail_intent_chooser">发送报告使用…</string>
     <string name="report_issue_dialog_mail_intent_failed">发送报告失败.</string>
+    <string name="report_issue_dialog_generating_report">正在生成报告</string>
+    <string name="report_issue_dialog_status_device_info">设备信息</string>
+    <string name="report_issue_dialog_status_installed_packages">已安装软件包列表</string>
+    <string name="report_issue_dialog_status_application_log">应用程序日志</string>
+    <string name="report_issue_dialog_status_application_info">应用程序信息</string>
+    <string name="report_issue_dialog_status_wallet_dump">钱包导出 (慢)</string>
+    <string name="report_issue_dialog_status_contextual_info">上下文信息</string>
+    <string name="report_issue_dialog_status_background_traces">背景追踪</string>
+    <string name="report_issue_dialog_status_stack_trace">堆栈跟踪</string>
+    <string name="report_issue_dialog_status_finishing">正在完成</string>
     <string name="report_transaction_history_export">导出</string>
     <string name="report_transaction_history_title">导出CSV文件</string>
     <string name="report_transaction_history_not_synced_title">导出CSV文件</string>
@@ -297,7 +326,18 @@
     <string name="report_transaction_history_mail_intent_chooser">发送交易记录使用...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">发送交易记录失败.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">简化您的加密数字货币报税</string>
+    <string name="zenledger_export_all_tx">导出所有交易</string>
+    <string name="zenledger_export_description">将您的加密数字货币钱包连接至 ZenLedger 平台. 了解更多信息并开始使用您的 Dash 钱包进行交易.</string>
+    <string name="chain_syncing_default_message">等待区块链完全同步, 我们便可以回顾您的交易历史.</string>
+    <string name="zenledger_export_permission">允许将所有交易从 Dash 钱包发送到 Zenledger?</string>
+    <string name="zenledger_export_error">当向 ZenLedger 导出您的交易历史时产生了一个错误.</string>
+
+
     <string name="about_title">关于</string>
+    <string name="about_dash_title">关于 Dash</string>
     <string name="about_version_title">版本</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">许可协议</string>
@@ -319,6 +359,10 @@
     <string name="notification_inactivity_message">您的设备上还存有Dash! 在卸载Dash钱包前, 请确保您已经记下了助记词, 否则您将丢失%s.</string>
     <string name="notification_inactivity_action_dismiss">以后提醒我</string>
     <string name="notification_inactivity_action_dismiss_forever">不需要提醒</string>
+    <string name="notification_bluetooth_service_listening">准备通过蓝牙接收付款</string>
+    <string name="notification_sync_paused">区块链同步已暂停</string>
+    <string name="notification_background_processes_paused">后台处理已暂停</string>
+    <string name="notification_background_processes_paused_text">您已达到 Android 前台服务权限对于混币或区块链同步的6小时限制. 点击重置...</string>
     <string name="appwidget_wallet_balance_title">Dash余额</string>
 
     <!-- generic buttons -->
@@ -394,4 +438,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">您想要在后台接收支付推送么?</string>
     <string name="battery_optimization_dialog_message_not_optimized">此 app 被设置为在后台运行一段时间后仍继续运行.\n\n我们推荐允许此 app 一直保持更新最新状态, 即便是在后台运行.\n\n无需担心, 我们将经常提醒您电池用量.</string>
     <string name="battery_optimization_dialog_button_change">打开设置</string>
+    <string name="credits_profile_change_message">更新资料信息</string>
+
+    <string name="block_explorer_selection_title">选择区块浏览器</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">选择一个选项</string>
+    <string name="customize_shortcuts">自定义快捷栏</string>
+    <string name="customize_shortcuts_description">长按上方任意按钮将其替换为您需要的功能</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">您需要升级您的PIN密钥</string>
+    <string name="upgrade_pin_description">设置一个新PIN</string>
+    <string name="upgrade_pin_continue">继续</string>
 </resources>

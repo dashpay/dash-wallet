@@ -11,6 +11,7 @@
     <string name="buy_dash">Acheter Dash</string>
     <string name="copied">Copié</string>
     <string name="staking_title">Récompenses</string>
+    <string name="spend_title">Dépenser</string>
     <string name="email">E-mail</string>
     <string name="email_placeholder">par exemple johndoe@mail.com</string>
     <string name="error">Erreur</string>
@@ -21,7 +22,10 @@
     <string name="transfer_dash">Transférer des dashs</string>
     <string name="login_error_title">Impossible de se connecter à votre compte %s </string>
     <string name="login_error_message">Une erreur est apparue lors de la connexion à votre compte %s.</string>
+    <string name="dash_address">Adresse Dash</string>
+    <string name="username">Nom d\'utilisateur</string>
     <string name="balance">Solde :</string>
+    <string name="nothing_here">Rien ici</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">livre de Guernesey</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">Je comprends</string>
     <string name="button_okay">OK</string>
     <string name="button_share">Partager</string>
+    <string name="button_skip">Ignorer</string>
     <string name="share_address">Partager adresse</string>
     <string name="verify">Vérifier</string>
     <string name="receive_enter_amount_button">Indiquez le montant</string>
     <string name="account_create">Créer un compte</string>
+    <string name="submit">Valider</string>
+    <string name="try_again">Réessayer</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Chercher</string>
@@ -67,7 +74,7 @@
     <string name="pay_with">Payer avec</string>
     <string name="choose_payment_method">Choisir une méthode de paiement</string>
     <string name="debit_credit_card">Carte de débit ou de crédit</string>
-    <string name="max">Maximum</string>
+    <string name="max">Max</string>
     <string name="select_the_coin">Choisir les pièces</string>
     <string name="dash">Dash</string>
     <string name="dash_wallet_name">Portefeuille Dash</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
+    <string name="send_coins_error_insufficient_mixed_money">Fonds mélangés insuffisants. Veuillez attendre que le mélange CoinJoin se termine, ou bien désactivez cette fonction dans les réglages pour que la transaction soit exécutée.</string>
     <string name="syncing">En synchronisation</string>
     <string name="no_connection">Pas de connexion Internet</string>
     <string name="rate_not_available">Non disponible</string>
@@ -89,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Erreur de paiement</string>
     <string name="payment_request_problem_message">Votre paiement n\'a pas pu être traité par le serveur, veuillez vous adresser au vendeur</string>
     <string name="exchange_rate_not_found">Taux de change introuvables.</string>
+    <string name="send_coins_fragment_hint_replaying">Les paiements ne sont pas encore possibles car le portefeuille n\'est pas entièrement synchronisé avec le réseau</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Recevoir directement dans Dash Wallet</string>
@@ -98,4 +107,8 @@
     <string name="enter_amount_available">disponible</string>
     <string name="transaction_row_rate_not_available">Non disponible</string>
     <string name="log_in">Se connecter</string>
-</resources>
+
+    <string name="chain_syncing">Synchronisation de la chaîne...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
+
+    </resources>

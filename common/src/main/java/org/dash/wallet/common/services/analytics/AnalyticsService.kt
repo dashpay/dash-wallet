@@ -66,17 +66,4 @@ class FirebaseAnalyticsServiceImpl @Inject constructor() : AnalyticsService {
         details?.let { crashlytics.log(details) }
         crashlytics.recordException(error)
     }
-
-    companion object {
-        private var analyticsService: FirebaseAnalyticsServiceImpl? = null
-
-        @Deprecated("Inject AnalyticsService instead")
-        fun getInstance(): FirebaseAnalyticsServiceImpl {
-            if (analyticsService == null) {
-                analyticsService = FirebaseAnalyticsServiceImpl()
-            }
-
-            return analyticsService!!
-        }
-    }
 }

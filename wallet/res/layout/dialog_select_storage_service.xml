@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:padding="16dp">
+
+        <TextView
+            style="@style/Headline6"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
+            android:textAlignment="center"
+            android:text="@string/where_to_store_your_picture" />
+
+        <TextView
+            style="@style/Body2.Secondary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            android:layout_marginBottom="14dp"
+            android:layout_marginStart="14dp"
+            android:layout_marginEnd="14dp"
+            android:textAlignment="center"
+            android:text="@string/external_storage_disclaimer" />
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/imgur"
+            style="@style/MenuRow.Sources"
+            android:layout_height="86dp">
+
+            <ImageView
+                android:id="@+id/imgur_arrow"
+                style="@style/MenuRowArrow"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+            <ImageView
+                android:id="@+id/imgur_logo"
+                style="@style/MenuRowArrow"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="20dp"
+                app:srcCompat="@drawable/ic_imgur_logo" />
+
+            <TextView
+                style="@style/MenuRowTitle.Internal"
+                android:layout_width="0dp"
+                android:text="@string/select_source_no_sign_in_required"
+                android:textSize="12sp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/imgur_arrow"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/imgur_logo"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/google_drive"
+            style="@style/MenuRow.Sources"
+            android:layout_height="86dp">
+
+            <ImageView
+                android:id="@+id/google_drive_arrow"
+                style="@style/MenuRowArrow"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:srcCompat="@drawable/ic_menu_row_arrow" />
+
+            <ImageView
+                android:id="@+id/google_drive_logo"
+                style="@style/MenuRowArrow"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                android:layout_marginStart="20dp"
+                android:layout_marginTop="20dp"
+                app:srcCompat="@drawable/ic_google_drive" />
+
+            <TextView
+                style="@style/MenuRowTitle.Internal"
+                android:layout_width="0dp"
+                android:text="@string/select_source_google_drive"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                app:layout_constraintEnd_toStartOf="@id/google_drive_arrow"
+                app:layout_constraintStart_toEndOf="@id/google_drive_logo"
+                app:layout_constraintBottom_toBottomOf="@id/google_drive_logo"/>
+
+            <TextView
+                style="@style/MenuRowTitle.Internal"
+                android:layout_width="0dp"
+                android:text="@string/select_source_sign_in_required"
+                android:textSize="12sp"
+                app:layout_constraintEnd_toStartOf="@id/google_drive_arrow"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/google_drive_logo"/>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <Button
+            android:id="@+id/cancel"
+            style="@style/Button.Tertiary.Large.Blue"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:layout_marginBottom="15dp"
+            android:text="@string/button_cancel" />
+
+    </LinearLayout>
+
+</ScrollView>

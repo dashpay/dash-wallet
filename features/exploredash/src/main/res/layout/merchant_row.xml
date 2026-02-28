@@ -41,11 +41,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="14dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="3dp"
         app:layout_constraintStart_toEndOf="@id/logo_img"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintBottom_toTopOf="@id/subtitle"
-        app:layout_constraintEnd_toStartOf="@id/method_img"
+        app:layout_constraintEnd_toStartOf="@id/discount_value"
         tools:text="Bark Box" />
 
     <TextView
@@ -54,12 +54,23 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="14dp"
-        android:layout_marginEnd="16dp"
+        android:layout_marginEnd="3dp"
         app:layout_constraintStart_toEndOf="@id/logo_img"
         app:layout_constraintTop_toBottomOf="@id/title"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/method_img"
+        app:layout_constraintEnd_toStartOf="@id/discount_value"
         tools:text="10 miles" />
+
+    <TextView
+        android:id="@+id/discount_value"
+        style="@style/Overline.Medium.Secondary"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="10dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@id/method_img"
+        tools:text="1.25%" />
 
     <ImageView
         android:id="@+id/method_img"

@@ -200,9 +200,9 @@ public class BlockListAdapter extends RecyclerView.Adapter<BlockListAdapter.Bloc
         }
          */
 
-        final StoredBlock block = wallet.getContext().chainLockHandler.getBestChainLockBlock();
-        final int chainLockHeight = block != null ? block.getHeight() : 0;
-        final int mnListHeight = (int) wallet.getContext().masternodeListManager.getListAtChainTip().getHeight();
+//        final StoredBlock block = wallet.getContext().chainLockHandler.getBestChainLockBlock();
+//        final int chainLockHeight = block != null ? block.getHeight() : 0;
+//        final int mnListHeight = (int) wallet.getContext().masternodeListManager.getListAtChainTip().getHeight();
 
         /*
         if(chainLockHeight == storedBlock.getHeight() || mnListHeight == storedBlock.getHeight()) {

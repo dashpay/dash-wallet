@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Създай нов портфейл</string>
-    <string name="onboarding_recover_wallet">Възстановяване на портфейл чрез фразата за възстановяване</string>
-    <string name="onboarding_restore_wallet">Възстановяване на портфейл от файл</string>
+    <string name="onboarding_recover_wallet">Възстанови портфейл</string>
     <string name="onboarding_load_wallet_error">Не може да се зареди портфейла!</string>
 
     <string name="set_pin_create_new_wallet">Създай нов портфейл</string>
@@ -21,17 +19,12 @@
     <string name="dialog_confirm_pay_to">Изпрати на</string>
     <string name="dialog_confirm_fee">Мрежова такса</string>
     <string name="dialog_confirm_total">Общо</string>
-
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Сканирай</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Изпрати</string>
+    <string name="shortcut_send">Изпрати</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Получаване</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Импортиране на частен ключ.</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Добави пряк път</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Бързо получаване</string>
@@ -73,6 +66,7 @@
     <string name="payments_pay_to_clipboard_sub_title">Няма копиран адрес</string>
 
     <string name="forgot_pin_title">Забравен ПИН?</string>
+    <string name="forgot_pin_setup_new_pin_title">Задайте нов ПИН</string>
     <string name="forgot_pin_message">Можете да зададете нов ПИН с помощта на вашата фраза за възстановяване.</string>
     <string name="forgot_pin_instruction_1">Въведете фразата си за възстановяване, за да възстановите  вашият портфейл.</string>
     <string name="forgot_pin_instruction_2">Задайте нов ПИН</string>
@@ -104,7 +98,6 @@
     <string name="request_coins_clipboard_address_msg">Dash е копиран в клипборда</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Покажи</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" не е фраза за възстановяване</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Фразата за възстановяване трябва да има 12 думи</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Грешна възстановяваща фраза</string>
     <string name="restore_wallet_from_invalid_seed_failure">Портфейлът не може да бъде възстановен:\n\n%s\n\nГрешна фраза за възстановяване?</string>
 
@@ -198,6 +191,7 @@
     <string name="transaction_details_sent_from">Изпрати от</string>
     <string name="transaction_details_sent_to">Изпратени на</string>
     <string name="transaction_details_received_at">Получени в</string>
+    <string name="transaction_details_received_from">Получени от</string>
     <string name="transaction_details_moved_from">Преместено от</string>
     <string name="transaction_details_moved_internally_to">Вътрешно преместени към</string>
     <string name="authenticate_fingerprint_title">Удостоверяване</string>
@@ -226,7 +220,6 @@
     <string name="about_contact_support">Връзка с поддръжката</string>
     <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="block">Блок</string>
     <string name="time">Време</string>
     <string name="hash">Хеш</string>
@@ -256,17 +249,15 @@
     <string name="security_medium">Средно</string>
     <string name="security_high">Високо</string>
     <string name="security_very_high">Много високо</string>
-    <string name="max">Максимум</string>
+    <string name="max">Макс</string>
 
     <string name="skip">пропусни</string>
     <string name="get_started">Първи стъпки</string>
-    <string name="welcome_screen_title_1_new_install">Добре дошли</string>
-    <string name="welcome_screen_title_1_upgrade">Надградихме</string>
-    <string name="welcome_screen_subtitle_1">Интуитивно и познато преживяване на всичките Ви устройства</string>
-    <string name="welcome_screen_title_2">Платете с лекота</string>
-    <string name="welcome_screen_subtitle_2">Платете и вземете плащане незабавно с лесни за използване потоци на плащане</string>
-    <string name="welcome_screen_title_3">Повече контрол</string>
-    <string name="welcome_screen_subtitle_3">Имате пълен контрол и персонализиране на портфейла според  нужди Ви</string>
+    <string-array name="history_filter">
+        <item>Всички</item>
+        <item>Получени</item>
+        <item>Изпратено</item>
+    </string-array>
 
     <string name="sync_status_wait">Моля изчакайте синхронизирането да приключи</string>
     <string name="sync_status_syncing_sub_title">с Dash блок верига</string>
@@ -287,12 +278,16 @@
     <string name="payment_request_skip">Пропусни</string>
     <string name="payment_request_paid_to">Платено na</string>
 
+    <string name="restore_wallet_please_wait">Моля изчакайте</string>
     <string name="syncing">Синхронизиране</string>
     <string name="all_transactions">Всички</string>
     <string name="received_transactions">Получени</string>
     <string name="sent_transactions">Изпратено</string>
     <string name="continue_reset">Продължи</string>
     <string name="reset_wallet_text">Нулиране на портфейл</string>
+    <string name="reset_wallet_button">Нулиране на портфейла</string>
+
+
     <string name="masternode_key_type_owner">Ключове на собственика</string>
     <string name="masternode_key_type_voting">Ключове за гласуване</string>
     <string name="masternode_key_type_operator">Операторски ключове</string>

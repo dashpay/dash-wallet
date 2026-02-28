@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d gün geride</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d hafta geride</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d ay geride</string>
-    <string name="blockchain_state_progress_downloading">Ağ ile senkronize ediliyor</string>
     <string name="blockchain_state_progress_stalled">Senkronizasyon durdu</string>
     <string name="blockchain_state_progress_problem_storage">Senkronize ediliyor: Depolama sorunu</string>
     <string name="blockchain_state_progress_problem_network">Senktronize ediliyor: Ağ sorunu</string>
@@ -58,7 +57,6 @@
     <string name="send_coins_fragment_hint_fee_economic">%s tutarında bir ağ ücreti ödenecektir.</string>
     <string name="send_coins_fragment_hint_fee_priority">%s tutarında bir öncelik ücreti ödenecektir. Eğer düşük ücretler sizin için önemliyse, \'öncelikli\' seçeneğini sadece mümkün olduğunca hızlı bir şekilde onaya ihtiyacınız olduğu durumlarda kullanın.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Cüzdanınıza gelen küçük ödemelerin toplamı göndermek için yetersiz kalıyor.</string>
-    <string name="send_coins_fragment_hint_replaying">Cüzdanınız ağ ile senkronize olmadığından şuan ödeme yapabilmeniz mümkün değil.</string>
     <string name="send_coins_fragment_direct_payment_enable">Ödemeyi doğrudan alıcıya gönder.</string>
     <string name="send_coins_fragment_direct_payment_ack">Ödemeniz başarıyla doğrudan gönderilmiştir.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ödemeniz doğrudan bağlantı tarafından reddedilmiştir.</string>
@@ -271,6 +269,8 @@
     <string name="preferences_initiate_reset_summary">Blok zincirini, işlemleri ve cüzdan bakiyesini yeniden tara. Eski haline gelmesi vakit alacaktır, bu yüzden bunu neden yaptığınızı biliyorsanız yapınız.</string>
     <string name="preferences_initiate_reset_dialog_message">Blok zincirini yeniden taramak ister misiniz?\n\nBu geçici olarak bakiyenizi gizler ve işlemlerinizi kaldırır. Blok zinciri senkronize oldukça ikiside yeniden gösterilecektir. Güvenilir bir internet bağlantınız olduğundan emin olun.</string>
     <string name="preferences_initiate_reset_dialog_positive">Yeniden tara</string>
+    <string name="rescan_blockchain_select_date_placeholder">Seç</string>
+    <string name="rescan_blockchain_confirm_button">Yeniden tara</string>
     <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
     <string name="preferences_extended_public_key_summary">Başka uygulama ve servislere iç aktarım yapılabilmesi için cüzdanınızın genişletilmiş genel anahtarını gösterir. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
     <string name="bitmap_fragment_share">Paylaş…</string>
@@ -287,7 +287,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Kurulu paketlerin listesini ekle</string>
     <string name="report_issue_dialog_collect_application_log">Uygulama günlüğünü ilave et</string>
     <string name="report_issue_dialog_collect_wallet_dump">Cüzdan dökümünü ilave et</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Raporu şununla gönder…</string>
     <string name="report_issue_dialog_mail_intent_failed">Rapor gönderimi başarısız.</string>
     <string name="report_transaction_history_export">Dışa Aktar</string>
     <string name="report_transaction_history_title">CSV Dışa Aktarma</string>
@@ -296,6 +295,16 @@
     <string name="report_transaction_history_message">Tam işlem geçmişi dışa aktarılacaktır.\n\nTüm ödemeler gider olarak kabul edilecek ve gelen tüm işlemler gelir olacaktır. Bu cüzdanın sahibi, seçtikleri vergi raporlama sisteminde herhangi bir maliyet esaslı ayarlama yapmaktan sorumludur.</string>
     <string name="report_transaction_history_mail_intent_chooser">Şunu kullanarak işlem geçmişini gönder…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">İşlem geçmişi gönderilemedi.</string>
+
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Kripto vergilerinizi basitleştirin</string>
+    <string name="zenledger_export_all_tx">Tüm işlemleri dışa aktar</string>
+    <string name="zenledger_export_description">Kripto cüzdanlarınızı ZenLedger platformuna bağlayın. Daha fazlasını öğrenin ve Dash Cüzdan işlemlerinize başlayın.</string>
+    <string name="chain_syncing_default_message">İşlem geçmişinizi inceleyebilmemiz için zincir tamamen senkronize edilene kadar bekleyin.</string>
+    <string name="zenledger_export_permission">Tüm işlemlerin Dash Cüzdanından Zenledger\'a gönderilmesine izin verilsin mi?</string>
+    <string name="zenledger_export_error">İşlem geçmişinizi ZenLedger\'a aktarırken bir hata oluştu.</string>
+
 
     <string name="about_title">Hakkında</string>
     <string name="about_version_title">Sürüm</string>
@@ -394,4 +403,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">Arka planda ödeme almak ister misiniz?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Bu uygulama bir süre görünmez kaldıktan sonra çalışmaya devam edecek şekilde yapılandırılmıştır.\n\nBu uygulamanın arka planda bile her zaman blockchain ile güncel kalmasına izin vermenizi öneririz.\n\nMerak etmeyin, pil kullanımınıza her zaman önem vereceğiz.</string>
     <string name="battery_optimization_dialog_button_change">Ayarları aç</string>
+    <string name="upgrade_pin_description">Yeni PİN oluşturun</string>
+    <string name="upgrade_pin_continue">Devam</string>
 </resources>

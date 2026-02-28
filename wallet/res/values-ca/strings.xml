@@ -7,7 +7,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d dies restants</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d setmanes restants</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d mesos restants</string>
-    <string name="blockchain_state_progress_downloading">Sincronitzant amb la xarxa</string>
     <string name="blockchain_state_progress_stalled">Sincronització encallada</string>
     <string name="blockchain_state_progress_problem_storage">Sincronitzant: problema d\'emmagatzematge</string>
     <string name="blockchain_state_progress_problem_network">Sincronitzant: problema de xarxa</string>
@@ -193,7 +192,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Adjuntar llistat de paquets instal·lats</string>
     <string name="report_issue_dialog_collect_application_log">Adjuntar registre d\'aplicació</string>
     <string name="report_issue_dialog_collect_wallet_dump">Adjuntar buidat de dades de cartera.</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Enviant report utilitzant…</string>
     <string name="report_issue_dialog_mail_intent_failed">Enviant un report de fallada.</string>
     <string name="about_title">Quant a</string>
     <string name="about_version_title">Versió</string>

@@ -35,7 +35,7 @@
     <string name="explore_option_all">همه</string>
     <string name="explore_option_buy">خرید</string>
     <string name="explore_option_sell">فروش</string>
-    <string name="explore_option_buy_sell">خرید &amp;؛ فروش</string>
+    <string name="explore_option_buy_sell">خرید و فروش</string>
     <string name="explore_where_to_spend">کجا خرج کنیم؟ </string>
     <string name="explore_atms">خودپردازها</string>
     <string name="explore_all_states">همه ایالات</string>
@@ -46,7 +46,6 @@
     <string name="explore_no_atms">هیچ خودپردازی یافت نشد</string>
     <string name="distance_miles">%s مایل</string>
     <string name="distance_kilometers">%sکیلومتر</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%dفروشنده</item>
         <item quantity="other">%dفروشنده</item>
@@ -62,6 +61,7 @@
     <string name="explore_back_to_nearest">بازگشت به نزدیک‌ترین موقعیت</string>
     <string name="explore_select_location">انتخاب مکان</string>
     <string name="explore_pay_with_dash">پرداخت با دش</string>
+    <string name="explore_pay_with_dash_save">پس‌انداز%.2f%%</string>
     <string name="explore_buy_gift_card">خرید کارت هدیه</string>
     <string name="explore_buy_dash">خرید دش</string>
     <string name="explore_sell_dash">فروش دش</string>
@@ -73,8 +73,10 @@
     <string name="explore_filter">فیلتر</string>
     <string name="explore_filters">فیلترها</string>
     <string name="explore_apply_filter">اعمال</string>
-    <string name="explore_payment_method">روش پرداخت</string>
+    <string name="explore_spending_options">گزینه‌های خرج کردن</string>
     <string name="explore_payment_dash">دش</string>
+    <string name="ctx_gift_cards">کارت‌های هدیه سی‌تی‌اکس</string>
+    <string name="piggycards_gift_cards">کارت‌های هدیه پیگی کارتس</string>
     <string name="explore_payment_gift_card">کارت هدیه</string>
     <string name="explore_filter_gift_cards">کارت هدیه</string>
     <string name="explore_radius">شعاع</string>
@@ -86,6 +88,10 @@
     <string name="explore_filtered_by">فیلتر بر اساس: </string>
     <string name="explore_pay_gift_card">پرداخت با کارت اعتباری</string>
     <string name="explore_sort_by">مرتب کردن بر اساس</string>
+    <string name="gift_card_types">انواع کارت هدیه</string>
+    <string name="flexible_amount_option">مبالغ منعطف</string>
+    <string name="fixed_denom_option">مبالغ تعیین‌شده ثابت</string>
+    <string name="gift_card_providers">ارائه‌دهندگان کارت هدیه</string>
 
     <string-array name="merchants_filter_options">
         <item>آنلاین</item>
@@ -117,6 +123,7 @@
     <string-array name="sort_by_options_names">
         <item>نام</item>
         <item>فاصله</item>
+        <item>تخفیف</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -141,7 +148,7 @@
     <string name="explore_atm_location_explainer_message">از موقعیت شما برای نشان دادن مکان‌تان در نقشه، فروشندگان در شعاع مورد نظر و نیز بهبود نتیجه جستجو استفاده می‌شود. </string>
 
     <!-- Info screens -->
-    <string name="explore_info_header_text">ما دو نوع فروشنده داریم</string>
+    <string name="explore_info_header_text">ما ۲ نوع فروشنده داریم</string>
     <string name="accept_dash_text">دش را به صورت مستقیم می‌پذیرند</string>
     <string name="pay_with_dash_text">پرداخت با کیف پول دش</string>
     <string name="buy_gift_card_text">خرید کارت هدیه با دش</string>
@@ -153,6 +160,13 @@
     <string name="buy_gift_card_with_dash_text">با دش یک کارت هدیه بخرید. </string>
     <string name="redeem_gift_card_text">کارت هدیه را به صورت آنلاین یا در یک فروشگاه، طی چند ثانیه استفاده کنید. </string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">تست دش هیچ ارزشی در دنیای واقعی ندارد، اما می‌توانید آن را برای سایر کاربران دش‌پی الفا بفرستید یا از آنها دریافت کنید. </string>
+    <string name="explore_test_dash_title">چگونه تست دش دریافت کنم؟ </string>
+    <string name="explore_test_dash_text_1">تست دش رایگان است و می‌توانید از چیزی که فاست نام دارد دریافت کنید. </string>
+    <string name="explore_test_dash_text_2">روی دگمه زیر کلیک کنید تا نشانی دش این کیف پول‌تان کپی شود تا بتوانید تست دش دریافت کنید. </string>
+    <string name="explore_get_test_dash">دریافت تست دش</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">فرآیند همزمان‌سازی در جریان است...نتایج شاید کامل نباشد. </string>
     <string name="sync_in_progress_error">فرآیند همزمان‌سازی در جریان است...یک خطا روی داد. </string>
@@ -162,4 +176,103 @@
     <string name="sync_in_progress_network_error">اخلال در فرآیند همزمان‌سازی...شبکه آفلاین است یا در دسترس نیست. </string>
 
 
-    </resources>
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">در</string>
+    <string name="purchase_gift_card_min">حداقل: %s</string>
+    <string name="purchase_gift_card_max">حداکثر: %s</string>
+    <string name="purchase_gift_card_discount_hint">شما در حال خرید یک کارت هدیه %s به قیمت %s (با %s تخفیف) هستند. </string>
+    <string name="button_next">بعدی</string>
+    <string name="purchase_gift_card_from">از</string>
+    <string name="purchase_gift_card_to">به</string>
+    <string name="purchase_confirm_transaction">تائید</string>
+    <string name="purchase_gift_card_total_label">جمع کارت هدیه</string>
+    <string name="purchase_gift_card_discount">تخفیف</string>
+    <string name="purchase_gift_card_you_pay">مبلغی که پرداخت می‌کنید</string>
+    <string name="purchase_gift_card_confirm">تائید</string>
+    <string name="purchase_gift_card_details">جزئيات کارت هدیه</string>
+    <string name="purchase_original_purchase">خرید اصلی</string>
+    <string name="purchase_check_current_balance">مشاهده جزئیات کارت</string>
+    <string name="purchase_card_number">شماره کارت</string>
+    <string name="purchase_card_pin">رمز کارت</string>
+    <string name="purchase_view_transaction">مشاهده جزئیات تراکنش</string>
+    <string name="purchase_see_how_to_use_gift_card">دیدن اینکه کارت هدیه چطور کار میکند </string>
+    <string name="purchase_how_to_use_gift_card">چطور از کارت هدیه استفاده کنیم</string>
+    <string name="purchase_self_checkout">خرید نهایی خودکار</string>
+    <string name="purchase_Request_assistance">درخواست کمک از یکی از کارکنان برای استفاده از کارت هدیه دیجیتال </string>
+    <string name="purchase_in_store">در فروشگاه</string>
+    <string name="purchase_tell_the_cashier">به صندوقدار بگویید که با یک کارت هدیه دیجیتال پرداخت می‌کنید. رقم کل را وارد کنید و سپس شماره کارت هدیه را در بخش شماره حساب وارد کنید و سپس دگمه انتر را بزنید. </string>
+    <string name="purchase_in_the_payment_section">در بخش پرداخت، شماره کارت هدیه دیجیتال را در بخش کارت هدیه وارد کنید. </string>
+    <string name="purchase_powered_by">قدرت گرفته از</string>
+    <string name="insufficient_money_title">موجودی کافی نیست</string>
+    <string name="insufficient_money_msg">موجودی ناکافی</string>
+    <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
+    <string name="gift_card_barcode_failed">بارکد بارگذاری نشد</string>
+    <string name="gift_card_tx_title">کارت هدیه. %s</string>
+    <string name="select_amount">مبلغ را انتخاب کنید</string>
+    <string name="select_fixed_amount">این فروشنده کارت‌های هدیه را با قیمت‌های ثابت به فروش می‌رساند</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">شماره تائید را وارد کنید</string>
+    <string name="verification_check_email">ایمیل‌تان را چک کنید و کد تائید را وارد کنید</string>
+    <string name="buy_gift_card">با حساب دش‌اسپند خود کارت هدیه بخرید</string>
+    <string name="dashspend_create_account">یک حساب کاربری ایجاد کنید یا وارد حساب موجود شوید</string>
+    <string name="create_new_account">ایجاد حساب جدید</string>
+    <string name="login">ورود به حساب</string>
+    <string name="password">گذرواژه</string>
+    <string name="logged_in_as">ورود به عنوان %s</string>
+    <string name="log_out">خروج</string>
+    <string name="invaild_code">کد نادرستی وارد کردید. لطفا ایمیل‌تان را چک کنید و دوباره تلاش کنید. </string>
+    <string name="something_wrong_title">مشکلی به وجود آمد! </string>
+    <string name="retry">تلاش دوباره</string>
+    <string name="gift_card_purchase_failed">خرید کارت هدیه ناموفق بود</string>
+    <string name="try_again">دوباره امتحان کنید</string>
+    <string name="cancel">لغو</string>
+    <string name="gift_card_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا دوباره تلاش کنید. </string>
+    <string name="gift_card_out_of_stock_error">کارت هدیه تمام شد. لطفاً بعداً دوباره سر بزنید. </string>
+    <string name="gift_card_details_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_limit_error">محدودیت های خرید برای این فروشنده تغییر کرده است. لطفاً برای اطلاعات بیشتر با پشتیبانی CTX تماس بگیرید.</string>
+    <string name="gift_card_server_error">بنا به دلایلی، قادر به خرید کارت هدیه نیستیم. لطفا با پشتیبانی %s برای گزارش این مشکل تماس بگیرید. </string>
+    <string name="gift_card_server_region_error">امکان خرید این کارت هدیه از منطقه‌ای که شما در آن هستید وجود ندارد. </string>
+    <string name="gift_card_error_wrong_network">درخواست پرداخت مربوط به شبکه‌ای دیگر است. لطفا با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_unknown_error">بنا به دلایلی، نمی‌توانیم کارت هدیه بخریم. لطفا با شناسه %s با پشتیبانی تماس بگیرید. </string>
+    <string name="gift_card_delay">انتظار برای دریافت اطلاعات کارت بیش از حد طول کشیده است. اگر باز هم طول کشید، لطفاً <a href="contact:support">support@dash.org </a> با تماس بگیرید. </string>
+    <string name="gift_card_rejected">پرداخت‌تان قبول نشد. لطفا با پشتیبانی %s با ارائه شناسه کارت هدیه %s و شناسه پرداخت %s و شناسه تراکنش %s تماس بگیرید. </string>
+    <string name="gift_card_redeem_url_not_supported">پرداخت برای فروشنده‌‌ای که نشانی برای نشانی وب برای خرج کردن کارت هدیه می‌دهد انجام شده، اما امکان دریافت این نشانی اکنون وجود ندارد. لطفاً با پشتیبانی %s با ارائه شناسه کارت هدیه %s و شناسه پرداخت %s و شناسه تراکنش %s تماس بگیرید. </string>
+    <string name="dashspend_terms_conditions">پذیرش شرایط و مقررات</string>
+    <string name="accept_terms_conditions">شرایط و مقررات دش‌اسپند را می‌پذیرم. </string>
+    <string name="tap_link_to_proceed">برای ایجاد حساب در دش‌اسنپد باید روی لینک زیر کلیک کنید</string>
+    <string name="accept_to_proceed">برای ایجاد حساب در دش‌اسپند باید شرایط و مقررات دش‌اسپند را بپذیرید. </string>
+    <string name="view_terms_conditions">شرایط  &amp;  مقررات</string>
+    <string name="barcode_placeholder">لطفاً منتظر بمانید تا اطلاعات کارت هدیه‌تان را دریافت کنید. </string>
+    <string name="gift_card_contact_ctx">تماس با پشتیبانی CTX</string>
+    <string name="gift_card_contact_piggycards">با پشتیبانی پیگی‌کارتس تماس بگیرید</string>
+    <string name="gift_card_contact_support">تماس با پشتیبانی</string>
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">ایجاد حساب</string>
+    <string name="log_in_to_ctxspend_account">ورود به حساب شما</string>
+    <string name="log_in_to_ctxspend_account_desc">ایمیل‌تان فقط برای ارسال گذرواژه یک‌بارمصرف استفاده می‌شود. </string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">با حساب دش‌اسپند خود کارت هدیه بخرید.</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">یک حساب دش‌اسپند ایجاد کنید یا به حساب فعلی‌تان وارد شوید. </string>
+    <string name="temporarily_unavailable">به صورت موقت در دسترس نیست</string>
+    <string name="country_availability">این کارت فقط در ایالات متحده کار می‌کند. </string>
+    <string name="token_expired_title">جلسه شما به اتمام رسید. </string>
+    <string name="token_expired_message">به نظر می‌رسد مدتی است از دش‌اسپند استفاده نکرده‌اید. به دلایل امنیتی، ما از حساب کاربری‌تان خارج شدیم. 
+برای بررسی جاهایی که می‌توانید دش را خرج کنید، دوباره وارد شوید.
+</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">ایمیل‌تان به جز پیگی‌کارتس در اختیار کسی دیگر قرار نمی‌گیرد. </string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">انتخاب ارائه‌دهنده کارت هدیه</string>
+    <string name="flexible_amounts">مبالغ منعطف</string>
+    <string name="fixed_amounts">مقادیر ثابت</string>
+    <string name="address">نشانی</string>
+    <string name="phone">تلفن</string>
+    <string name="website">وب‌سایت</string>
+    <string name="call">تماس</string>
+    <string name="directions">مسیریابی</string>
+    <string name="explore_show_all_locations">همه موقعیت‌ها (%d) را نشان بده</string>
+    <string name="provider">ارائه‌دهنده</string>
+    <string name="save">ذخیره</string>
+</resources>

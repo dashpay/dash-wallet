@@ -89,7 +89,6 @@ class NewAccountFragment : Fragment(R.layout.fragment_new_account) {
         }
 
         binding.notifyWhenDone.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.NOTIFY_WHEN_CREATED)
             requireActivity().finish()
         }
 

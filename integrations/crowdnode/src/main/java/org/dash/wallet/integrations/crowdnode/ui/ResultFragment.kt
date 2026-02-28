@@ -119,7 +119,6 @@ class ResultFragment : Fragment(R.layout.fragment_result) {
 
         binding.negativeBtn.setOnClickListener {
             if (viewModel.signUpStatus == SignUpStatus.Error) {
-                viewModel.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_ERROR_CLOSE)
                 viewModel.resetSignUp()
                 findNavController().popBackStack()
             } else {

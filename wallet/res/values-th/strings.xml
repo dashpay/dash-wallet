@@ -9,7 +9,6 @@
     <string name="blockchain_state_progress_days">%1$s,%2$d วันที่ผ่านมา</string>
     <string name="blockchain_state_progress_weeks">%1$s,%2$d สัปดาห์ที่ผ่านมา</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d เดือนที่ผ่านมา</string>
-    <string name="blockchain_state_progress_downloading">การซิงโครไนซ์กับเครือข่าย</string>
     <string name="blockchain_state_progress_stalled">การซิงโครไนซ์ถูกขัดขวาง</string>
     <string name="blockchain_state_progress_problem_storage">การซิงโครไนซ์: ปัญหาในการจัดเก็บ</string>
     <string name="blockchain_state_progress_problem_network">การซิงโครไนซ์: ปัญหาเครือข่าย</string>
@@ -58,7 +57,6 @@
     <string name="send_coins_fragment_hint_fee_economic">ค่าธรรมเนียมระบบเครือข่ายของ %s จะถูกจ่าย</string>
     <string name="send_coins_fragment_hint_fee_priority">ค่าธรรมเนียมพิเศษของ %s จะถูกจ่าย หากคุณสนใจค่าธรรมเนียมพิเศษนี้ โปรดใช้ \'priority\' เมื่อต้องการการยืนยันอย่างรวดเร็ว</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">จำนวนเงินในการชำระเงิน wallet ของคุณ ไม่เพิ่มขึ้นที่จะสามารถส่งได้</string>
-    <string name="send_coins_fragment_hint_replaying">ขณะนี้ยังไม่สามารถทำการชำระเงินได้เนื่องกระเป๋าสตางค์ยังไม่เชื่อมต่อกับเครือข่าย</string>
     <string name="send_coins_fragment_direct_payment_enable">ส่งการชำระเงินโดยตรงไปยังผู้รับเงิน</string>
     <string name="send_coins_fragment_direct_payment_ack">การชำระเงินของคุณได้ถูกส่งโดยตรงแล้ว</string>
     <string name="send_coins_fragment_direct_payment_nack">การชำระเงินถูกปฏิเสธผ่านเครือข่ายโดยตรง</string>
@@ -271,6 +269,8 @@
     <string name="preferences_initiate_reset_summary">การสแกนการตรวจสอบบล็อกเชน, ธุรกรรม และยอดคงเหลือซ้ำ ๆ นั้นจะใช้เวลาสักพักดังนั้นคุณควรทำในกรณีที่มีความจำเป็นเท่านั้น</string>
     <string name="preferences_initiate_reset_dialog_message">คุณต้องการจะตรวจสอบบล็อกเชนอีกครั้ง?\n\nซึ่งจะมีการซ่อนยอดคงเหลือของกระเป๋าเงินของคุณชั่วคราวและลบธุรกรรมทั้งหมด ทั้งสองจะกู้คืนอีกครั้งเมื่อมีการซิงค์กับบล็อกเชน กรุณาตรวจสอบให้แน่ใจว่าคุณมีการเชื่อมต่อที่เชื่อถือได้กับอินเทอร์เน็ตที่คุณใช้งานอยู่</string>
     <string name="preferences_initiate_reset_dialog_positive">สแกนอีกครั้ง</string>
+    <string name="rescan_blockchain_select_date_placeholder">เลือก</string>
+    <string name="rescan_blockchain_confirm_button">สแกนอีกครั้ง</string>
     <string name="preferences_extended_public_key_title">แสดง xpub</string>
     <string name="preferences_extended_public_key_summary">ดูส่วนขยาย public key  wallet ของคุณ  มันสามารถนำเข้าไปยังแอพพลิเคชั่นและบริการอื่น ๆ ได้   โปรดระวัง: การทำเช่นนี้จะเป็นการเปิดเผยข้อมูลทางการเงินส่วนบุคคลของคุณไปยังแอพพลิเคชั่นนั้น</string>
     <string name="bitmap_fragment_share">แบ่งปัน...</string>
@@ -287,7 +287,6 @@
     <string name="report_issue_dialog_collect_installed_packages">ผนวกรายการแพคเกจที่ติดตั้งไว้</string>
     <string name="report_issue_dialog_collect_application_log">ผนวกแอพพลิเคชั่นล็อค</string>
     <string name="report_issue_dialog_collect_wallet_dump">ผนวกการถ่ายโอนข้อมูล wallet </string>
-    <string name="report_issue_dialog_mail_intent_chooser">ส่งรายงานโดยใช้...</string>
     <string name="report_issue_dialog_mail_intent_failed">การส่งรายงานล้มเหลว</string>
     <string name="report_transaction_history_export">ส่งออก</string>
     <string name="report_transaction_history_title">ส่งออก CSV </string>
@@ -394,4 +393,6 @@
     <string name="battery_optimization_dialog_unrestricted_title">คุณต้องการรับการชำระเงินในเบื้องหลังหรือไม่?</string>
     <string name="battery_optimization_dialog_message_not_optimized">แอปนี้ได้รับการกำหนดค่าให้ทำงานต่อไปหลังจากที่ไม่ปรากฏให้เห็นมาระยะหนึ่งแล้ว \n\n เราขอแนะนำให้อนุญาตให้แอปนี้อัปเดตบล็อกเชนอยู่เสมอ แม้จะอยู่เบื้องหลังก็ตาม \n\n อย่ากังวล เราจะ คำนึงถึงการใช้งานแบตเตอรี่ของคุณเสมอ</string>
     <string name="battery_optimization_dialog_button_change">เปิดการตั้งค่า</string>
+    <string name="upgrade_pin_description">ตั้งเลขรหัสผ่านใหม่</string>
+    <string name="upgrade_pin_continue">ดำเนินการต่อ</string>
 </resources>

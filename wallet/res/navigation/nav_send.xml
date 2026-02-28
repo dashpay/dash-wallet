@@ -29,6 +29,21 @@
         <argument
             android:name="paymentIntent"
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
+
+        <argument
+            android:name="isQuickScan"
+            app:argType="boolean" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/buyCreditsFragment"
+        android:name="de.schildbach.wallet.ui.send.BuyCreditsFragment"
+        android:label="BuyCreditsFragment"
+        tools:layout="@layout/send_coins_fragment">
+
+        <argument
+            android:name="paymentIntent"
+            app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 
     <fragment

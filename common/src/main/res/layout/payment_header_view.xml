@@ -23,7 +23,7 @@
             tools:text="@string/to" />
 
         <TextView
-            android:id="@+id/payment_address_view_proposition"
+            android:id="@+id/payment_address_view_preposition"
             style="@style/Body2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

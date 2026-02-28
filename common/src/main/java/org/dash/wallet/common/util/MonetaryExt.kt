@@ -85,5 +85,5 @@ fun Fiat.toFormattedStringNoCode(): String {
     return format.format(this).toString()
 }
 
-fun Fiat.discountBy(percentage: Double): Fiat =
-    Fiat.valueOf(currencyCode, (value * (100.0 - percentage) / 100).toLong())
+fun Fiat.discountBy(fraction: Double): Fiat =
+    Fiat.valueOf(currencyCode, (value * (1.0 - fraction)).toLong())

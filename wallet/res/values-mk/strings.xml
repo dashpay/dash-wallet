@@ -7,7 +7,7 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d денови заостанува</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d недели заостанува</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d месеци заостанува</string>
-    <string name="blockchain_state_progress_downloading">Се синхронизира со мрежата</string>
+    <string name="blockchain_state_progress_downloading">Се синхронизира со мрежата (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Синхронизацијата застана</string>
     <string name="blockchain_state_progress_problem_storage">Се синхронизира: Проблем со простор за складирање</string>
     <string name="blockchain_state_progress_problem_network">Се синхронизира: Проблем со мрежата</string>

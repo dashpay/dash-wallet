@@ -24,8 +24,6 @@ import android.view.View
 import android.view.animation.AnimationUtils
 import android.widget.FrameLayout
 import android.widget.LinearLayout
-import androidx.appcompat.app.AppCompatActivity
-import de.schildbach.wallet.ui.ForgotPinActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.PinPreviewViewBinding
 
@@ -42,6 +40,8 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
     private var drawableResId: Int
 
     private val binding = PinPreviewViewBinding.inflate(LayoutInflater.from(context), this)
+
+    var onForgotPinClickListener: (() -> Unit)? = null
 
     var mode: PinType = PinType.STANDARD
         set(value) {
@@ -93,9 +93,7 @@ class PinPreviewView(context: Context, attrs: AttributeSet) : LinearLayout(conte
         }
 
         binding.forgotPin.setOnClickListener {
-            if (context is AppCompatActivity) {
-                context.startActivity(ForgotPinActivity.createIntent(context))
-            }
+            onForgotPinClickListener?.invoke()
         }
     }
 

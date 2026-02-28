@@ -38,7 +38,9 @@ import com.google.android.gms.maps.model.*
 import com.google.maps.android.collections.MarkerManager
 import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -92,9 +94,6 @@ class ExploreMapFragment : SupportMapFragment() {
             googleMap?.let { map ->
                 map.setOnCameraIdleListener {
                     viewModel.searchBounds = getGeoBounds(map)
-                    if (cameraMovementReason == GoogleMap.OnCameraMoveStartedListener.REASON_GESTURE) {
-                        viewModel.triggerPanAndZoomEvents(map.cameraPosition.zoom, getGeoBounds(map))
-                    }
                     viewModel.previousZoomLevel = map.cameraPosition.zoom
                     viewModel.previousCameraGeoBounds = getGeoBounds(map)
                 }
@@ -145,15 +144,35 @@ class ExploreMapFragment : SupportMapFragment() {
             }
         }
 
-        viewModel.selectedRadiusOption.observe(viewLifecycleOwner) {
-            googleMap?.let { map ->
-                if ((this.view?.measuredHeight ?: 0) > 0) {
-                    val mapCenter = map.projection.visibleRegion.latLngBounds.center
-                    val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
-                    map.animateCamera(radiusBounds)
+        viewModel.appliedFilters
+            .distinctUntilChangedBy { it.radius }
+            .observe(viewLifecycleOwner) {
+                googleMap?.let { map ->
+                    if ((this.view?.measuredHeight ?: 0) > 0) {
+                        val mapCenter = map.projection.visibleRegion.latLngBounds.center
+                        val radiusBounds = getRadiusBounds(mapCenter, viewModel.radius)
+                        map.animateCamera(radiusBounds)
+                    }
                 }
             }
-        }
+
+        viewModel.appliedFilters
+            .distinctUntilChangedBy {
+                "${it.payment}-${it.territory}-${it.denominationType}-${it.provider}-${it.query}"
+            }
+            .observe(viewLifecycleOwner) { filters ->
+                googleMap?.let { map ->
+                    if (viewModel.screenState.value == ScreenState.SearchResults &&
+                        viewModel.physicalSearchResults.value != null
+                    ) {
+                        setResults(viewModel.physicalSearchResults.value)
+                    } else if (viewModel.screenState.value == ScreenState.MerchantLocations &&
+                        viewModel.allMerchantLocations.value?.isNotEmpty() == true
+                    ) {
+                        setResults(viewModel.allMerchantLocations.value)
+                    }
+                }
+            }
     }
 
     private fun showSelectedMarker(state: ScreenState) {
@@ -226,12 +245,9 @@ class ExploreMapFragment : SupportMapFragment() {
         if (isGooglePlayServicesAvailable()) {
             markerCollection = MarkerManager(googleMap).newCollection()
             markerCollection?.setOnMarkerClickListener { marker ->
-                if (viewModel.exploreTopic == ExploreTopic.Merchants) {
-                    viewModel.logEvent(AnalyticsConstants.Explore.SELECT_MERCHANT_MARKER)
-                } else {
-                    viewModel.logEvent(AnalyticsConstants.Explore.SELECT_ATM_MARKER)
+                lifecycleScope.launch {
+                    viewModel.onMapMarkerSelected(marker.tag as Int)
                 }
-                viewModel.onMapMarkerSelected(marker.tag as Int)
                 true
             }
 

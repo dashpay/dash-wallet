@@ -21,8 +21,8 @@
     <string name="transfer_dash">تحويل داش</string>
     <string name="login_error_title">غير قادر على تسجيل الدخول إلى حسابك %s</string>
     <string name="login_error_message">حدث خطأ أثناء تسجيل الدخول إلى حسابك %s.</string>
+    <string name="dash_address">عنوان داش</string>
     <string name="balance">الرصيد:</string>
-
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">جيرنزي جنيه</string>
     <!-- Local Currency List: JEP -->
@@ -55,10 +55,12 @@
     <string name="button_understand">أفهم</string>
     <string name="button_okay">اوك</string>
     <string name="button_share">مشاركة</string>
+    <string name="button_skip">تخطي</string>
     <string name="share_address">شارك العنوان</string>
     <string name="verify">تحقق</string>
     <string name="receive_enter_amount_button">حدد المبلغ</string>
     <string name="account_create">إنشاء حساب</string>
+    <string name="try_again">حاول ثانية</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">بحث</string>
@@ -89,6 +91,7 @@
     <string name="payment_protocol_default_error_title">خطأ في الدفع</string>
     <string name="payment_request_problem_message">تعذر على الخادم معالجة دفعتك ، يرجى الاستفسار من التاجر</string>
     <string name="exchange_rate_not_found">تعذر العثور على سعر الصرف.</string>
+    <string name="send_coins_fragment_hint_replaying">لا يمكن الدفع حاليًا لأن المحفظة غير متزامنة بالكامل مع الشبكة</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">استلم مباشرةً إلى محفظة داش</string>
@@ -98,4 +101,8 @@
     <string name="enter_amount_available">متاح</string>
     <string name="transaction_row_rate_not_available">غير متاح</string>
     <string name="log_in">تسجيل الدخول </string>
-</resources>
+
+    <string name="chain_syncing">السلسلة قيد المزامنة ...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">إرسال التقرير بواسطة…</string>
+
+    </resources>

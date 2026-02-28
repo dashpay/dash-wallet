@@ -190,7 +190,10 @@ class MayaConvertCryptoViewModel @Inject constructor(
                 outputList.toTypedArray(),
                 it.memo, it.paymentUrl,
                 it.payeeData, it.paymentRequestUrl,
-                it.paymentRequestHash
+                it.paymentRequestHash,
+                null,
+                null,
+                null
             )
         }
     }

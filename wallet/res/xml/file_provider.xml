@@ -13,4 +13,8 @@
         name="ext-download"
         path="Download/" />
 
+    <external-files-path
+        name="app-images"
+        path="Pictures/" />
+
 </paths>

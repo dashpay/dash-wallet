@@ -10,7 +10,7 @@
     android:orientation="vertical"
     tools:context="de.schildbach.wallet.ui.payments.PaymentsFragment">
 
-    <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/tabs"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

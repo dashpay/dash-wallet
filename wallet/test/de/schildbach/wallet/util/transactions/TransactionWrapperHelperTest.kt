@@ -26,8 +26,10 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.wallet.Wallet
+import org.bitcoinj.wallet.WalletTransaction
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.bitcoinj.core.Utils
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.junit.Before
 import org.junit.Test
 
@@ -104,11 +106,16 @@ class TransactionWrapperHelperTest {
         every { bagMock.isPubKeyHashMine(eq(hash1), any()) } returns true
         every { bagMock.isPubKeyHashMine(eq(hash2), any()) } returns true
         every { bagMock.isPubKeyHashMine(eq(hash3), any()) } returns true
+        every { bagMock.isWatchedScript(any())} returns true
+        every { bagMock.getTransactionPool(WalletTransaction.Pool.UNSPENT)} returns mapOf()
+        every { bagMock.getTransactionPool(WalletTransaction.Pool.PENDING)} returns mapOf()
+        every { bagMock.getTransactionPool(WalletTransaction.Pool.SPENT)} returns allTransactions.associateBy({it.txId}, {it})
 
-        val crowdNodeWrapper = FullCrowdNodeSignUpTxSet(networkParams, bagMock)
+        val crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(networkParams, bagMock)
+        val crowdNodeWrapper = crowdNodeWrapperFactory.wrappers.first()!!
         val wrappedTransactions = TransactionWrapperHelper.wrapTransactions(
             allTransactions,
-            crowdNodeWrapper
+            crowdNodeWrapperFactory
         )
 
         assertEquals("Must have CrowdNode wrapper and 2 anon wrappers:", 3, wrappedTransactions.size)

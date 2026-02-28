@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/network_error_root"
+    tools:context="de.schildbach.wallet.ui.dashpay.ContactsFragment">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/root"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background_primary"
+        android:focusable="true"
+        android:orientation="vertical">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/network_error_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@android:color/white"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent">
+
+            <include
+                android:id="@+id/network_error_layout"
+                layout="@layout/network_unavailable" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/contacts_pane"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@id/network_error_container"
+            app:layout_constraintTop_toTopOf="parent">
+
+            <EditText
+                android:id="@+id/search"
+                style="@style/Body1"
+                android:layout_width="match_parent"
+                android:layout_height="45dp"
+                android:layout_marginStart="15dp"
+                android:layout_marginTop="17dp"
+                android:layout_marginEnd="15dp"
+                android:background="@drawable/round_corners_white_bg"
+                android:hint="@string/contacts_search_for"
+                android:inputType="textEmailAddress"
+                android:lines="1"
+                android:paddingStart="60dp"
+                android:paddingLeft="28dp"
+                android:paddingRight="28dp"
+                android:visibility="gone"
+                app:layout_constraintTop_toTopOf="parent"
+                tools:visibility="visible" />
+
+            <ImageView
+                android:id="@+id/icon"
+                android:layout_width="27.35dp"
+                android:layout_height="24dp"
+                android:layout_marginStart="13dp"
+                android:visibility="gone"
+                app:layout_constraintBottom_toBottomOf="@id/search"
+                app:layout_constraintStart_toStartOf="@id/search"
+                app:layout_constraintTop_toTopOf="@id/search"
+                app:srcCompat="@drawable/ic_search"
+                tools:visibility="visible" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/contacts_rv"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/search"
+                tools:itemCount="2"
+                tools:listitem="@layout/dashpay_contact_row"/>
+
+            <include
+                android:id="@+id/empty_state_pane"
+                layout="@layout/contacts_empty_state_layout"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <include layout="@layout/user_search_loading" />
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/suggestions_search_no_result"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/background_primary"
+                android:visibility="gone">
+
+                <include layout="@layout/contacts_empty_results_content" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>
+
+

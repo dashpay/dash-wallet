@@ -23,15 +23,20 @@ import android.media.RingtoneManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
+import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.integration.android.BitcoinIntegration
+import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.transactions.TransactionResultActivity
+import de.schildbach.wallet.util.AnrException
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.SendCoinsFragmentBinding
 import kotlinx.coroutines.launch
@@ -50,25 +55,27 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.toFormattedString
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
+open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     companion object {
         private val log = LoggerFactory.getLogger(SendCoinsFragment::class.java)
         private const val SEND_COINS_SOUND = "send_coins_broadcast_1"
     }
 
-    private val binding by viewBinding(SendCoinsFragmentBinding::bind)
-    private val viewModel by activityViewModels<SendCoinsViewModel>()
-    private val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
+    protected val binding by viewBinding(SendCoinsFragmentBinding::bind)
+    protected val viewModel by activityViewModels<SendCoinsViewModel>()
+    protected val enterAmountViewModel by activityViewModels<EnterAmountViewModel>()
+    private val dashPayViewModel by activityViewModels<DashPayViewModel>()
     private val args by navArgs<SendCoinsFragmentArgs>()
 
     @Inject lateinit var authManager: AuthenticationManager
-    private var enterAmountFragment: EnterAmountFragment? = null
-    private var userAuthorizedDuring: Boolean = false
+    protected var enterAmountFragment: EnterAmountFragment? = null
+    protected var userAuthorizedDuring: Boolean = false
         get() = field || enterAmountFragment?.didAuthorize == true
         set(value) {
             field = value
@@ -82,11 +89,20 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        viewModel.isQuickSend = args.isQuickScan
         binding.titleBar.setNavigationOnClickListener {
             requireActivity().finish()
         }
 
-        viewModel.initPaymentIntent(args.paymentIntent)
+        lifecycleScope.launch {
+            try {
+                viewModel.initPaymentIntent(args.paymentIntent)
+            } catch (ex: SendException) {
+                Toast.makeText(requireContext(), R.string.error_loading_identity, Toast.LENGTH_LONG).show()
+            }
+            // currentAmount requires viewModel.initPaymentIntent be executed first
+            enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.setAmount(it) }
+        }
 
         if (savedInstanceState == null) {
             val intentAmount = args.paymentIntent.amount
@@ -114,7 +130,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
 
         binding.paymentHeader.setTitle(getString(R.string.send_coins_fragment_button_send))
-        binding.paymentHeader.setProposition(getString(R.string.to))
+        binding.paymentHeader.setPreposition(getString(R.string.to))
         binding.paymentHeader.setOnShowHideBalanceClicked {
             lifecycleScope.launch { revealOrHideBalance(requirePinForBalance) }
         }
@@ -129,20 +145,36 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
         }
         viewModel.state.observe(viewLifecycleOwner) { updateView() }
-        viewModel.address.observe(viewLifecycleOwner) { binding.paymentHeader.setSubtitle(it) }
+        viewModel.address.observe(viewLifecycleOwner) {
+            if (viewModel.contactData.value?.dashPayProfile == null) {
+                binding.paymentHeader.setSubtitle(it)
+            }
+        }
         viewModel.maxOutputAmount.observe(viewLifecycleOwner) { balance ->
             enterAmountViewModel.setMaxAmount(balance)
             updateBalanceLabel(balance, enterAmountViewModel.selectedExchangeRate.value)
         }
 
-        enterAmountViewModel.amount.observe(viewLifecycleOwner) { viewModel.currentAmount = it }
+        viewModel.contactData.observe(viewLifecycleOwner) { contactData ->
+            contactData?.dashPayProfile?.let { profile ->
+                binding.paymentHeader.setSubtitle(profile.displayName.ifEmpty { profile.username })
+                binding.paymentHeader.setPaymentAddressViewIcon(profile.avatarUrl, R.drawable.ic_avatar)
+            }
+            updateView()
+        }
+        viewModel.coinJoinActive.observe(viewLifecycleOwner) { isActive ->
+            if (isActive) {
+                binding.paymentHeader.setBalanceTitle(getString(R.string.coinjoin_mixed_balance))
+            }
+        }
+
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
         }
     }
 
-    private fun updateView() {
+    protected open fun updateView() {
         val isReplaying = viewModel.isBlockchainReplaying.value
         val dryRunException = viewModel.dryRunException
         val state = viewModel.state.value ?: SendCoinsViewModel.State.INPUT
@@ -151,13 +183,11 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         if (isReplaying == true) {
             errorMessage = getString(R.string.send_coins_fragment_hint_replaying)
         } else if (dryRunException != null) {
+            log.info("dryRunException:", dryRunException)
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientMoneyException -> if (!requirePinForBalance || userAuthorizedDuring) {
-                    getString(R.string.send_coins_error_insufficient_money)
-                } else {
-                    ""
-                }
+                is InsufficientCoinJoinMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_mixed_money)
+                is InsufficientMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_money)
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()
             }
@@ -166,7 +196,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         enterAmountFragment?.setError(errorMessage)
         enterAmountViewModel.blockContinue = errorMessage.isNotEmpty() ||
             !viewModel.everythingPlausible() ||
+            viewModel.dryRunSuccessful.value != true ||
             viewModel.isBlockchainReplaying.value ?: false
+
+        log.info("enterAmountViewModel.blockContinue = {}, viewModel.dryRunSuccessful.value = {}", enterAmountViewModel.blockContinue, viewModel.dryRunSuccessful.value)
 
         enterAmountFragment?.setViewDetails(
             getString(
@@ -180,7 +213,13 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         )
     }
 
-    private suspend fun authenticateOrConfirm() {
+    protected fun getErrorMessage(@StringRes errorMessage: Int) = if (!requirePinForBalance || userAuthorizedDuring) {
+        getString(errorMessage)
+    } else {
+        ""
+    }
+
+    open suspend fun authenticateOrConfirm() {
         if (!viewModel.everythingPlausible()) {
             return
         }
@@ -198,7 +237,7 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         updateView()
     }
 
-    private suspend fun handleGo(checkBalance: Boolean) {
+    private suspend fun handleGo(checkBalance: Boolean, autoAcceptContactRequest: Boolean) {
         if (viewModel.dryrunSendRequest == null) {
             log.error("illegal state dryrunSendRequest == null")
             return
@@ -211,35 +250,39 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             val exchangeRate = rate?.fiat?.let { ExchangeRate(Coin.COIN, it) }
 
             try {
-                viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_SEND)
+                viewModel.logSend()
 
                 if (enterAmountFragment?.maxSelected == true) {
                     viewModel.logEvent(AnalyticsConstants.SendReceive.ENTER_AMOUNT_MAX)
                 }
 
                 val tx = viewModel.signAndSendPayment(editedAmount, exchangeRate, checkBalance)
-                onSignAndSendPaymentSuccess(tx)
+                onSignAndSendPaymentSuccess(tx, autoAcceptContactRequest)
             } catch (ex: LeftoverBalanceException) {
+                if (!isAdded) {
+                    return
+                }
                 val shouldContinue = MinimumBalanceDialog().showAsync(requireActivity())
 
                 if (shouldContinue == true) {
-                    handleGo(false)
+                    handleGo(false, autoAcceptContactRequest)
                 }
-            } catch (ex: InsufficientMoneyException) {
-                showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
-            } catch (ex: KeyCrypterException) {
-                showFailureDialog(ex)
-            } catch (ex: Wallet.CouldNotAdjustDownwards) {
-                showEmptyWalletFailedDialog()
             } catch (ex: Exception) {
-                showFailureDialog(ex)
+                viewModel.logSendError(args.paymentIntent.source)
+                log.info("send exception: ", ex)
+                when (ex) {
+                    is InsufficientMoneyException -> showInsufficientMoneyDialog(ex.missing ?: Coin.ZERO)
+                    is KeyCrypterException -> showFailureDialog(ex)
+                    is Wallet.CouldNotAdjustDownwards -> showEmptyWalletFailedDialog()
+                    else -> showFailureDialog(ex)
+                }
             }
 
             viewModel.resetState()
         }
     }
 
-    private suspend fun showPaymentConfirmation() {
+    protected open suspend fun showPaymentConfirmation() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
         val address = viewModel.basePaymentIntent.getAddress(Constants.NETWORK_PARAMETERS)?.toBase58() ?: return
 
@@ -260,22 +303,41 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         val amountStr = MonetaryFormat.BTC.noCode().format(amount).toString()
         val fee = txFee?.toPlainString() ?: ""
 
-        val confirmed = ConfirmTransactionDialog.showDialogAsync(
+        var dashPayProfile: DashPayProfile? = null
+
+        if (viewModel.contactData.value?.requestReceived == true) {
+            dashPayProfile = viewModel.contactData.value?.dashPayProfile
+        }
+
+        val isPendingContactRequest = viewModel.contactData.value?.isPendingRequest == true
+        val username = dashPayProfile?.username
+        val displayName = (dashPayProfile?.displayName ?: "").ifEmpty { username }
+        val avatarUrl = dashPayProfile?.avatarUrl
+
+        val dialog = ConfirmTransactionDialog()
+        val confirmed = dialog.show(
             requireActivity(),
             address,
             amountStr,
             exchangeRate,
             fee,
-            total ?: ""
+            total ?: "",
+            null,
+            null,
+            null,
+            username,
+            displayName,
+            avatarUrl,
+            isPendingContactRequest
         )
 
-        if (confirmed) {
-            handleGo(true)
+        if (confirmed == true) {
+            handleGo(true, dialog.autoAcceptContactRequest)
         }
     }
 
-    private fun onSignAndSendPaymentSuccess(transaction: Transaction) {
-        viewModel.logSentEvent(enterAmountViewModel.dashToFiatDirection.value ?: true)
+    private fun onSignAndSendPaymentSuccess(transaction: Transaction, autoAcceptContactRequest: Boolean) {
+        viewModel.logSendSuccess(enterAmountViewModel.dashToFiatDirection.value ?: true, args.paymentIntent.source)
         val callingActivity = requireActivity().callingActivity
 
         if (callingActivity != null) {
@@ -288,26 +350,33 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             requireActivity().setResult(Activity.RESULT_OK, resultIntent)
         }
 
-        showTransactionResult(transaction)
+        showTransactionResult(transaction, autoAcceptContactRequest)
         playSentSound()
         requireActivity().finish()
     }
 
-    private fun showTransactionResult(transaction: Transaction) {
+    protected fun showTransactionResult(transaction: Transaction, autoAcceptContactRequest: Boolean) {
         if (!isAdded) {
             return
+        }
+
+        val contactData = viewModel.contactData.value
+
+        if (autoAcceptContactRequest && contactData != null) {
+            dashPayViewModel.sendContactRequest(contactData.dashPayProfile.userId)
         }
 
         val transactionResultIntent = TransactionResultActivity.createIntent(
             requireActivity(),
             requireActivity().intent.action,
             transaction,
-            false
+            false,
+            contactData
         )
         startActivity(transactionResultIntent)
     }
 
-    private fun playSentSound() {
+    protected fun playSentSound() {
         if (!viewModel.shouldPlaySounds) {
             return
         }
@@ -335,7 +404,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         binding.paymentHeader.setBalanceValue(balanceText)
     }
 
-    private suspend fun showInsufficientMoneyDialog(missing: Coin) {
+    protected suspend fun showInsufficientMoneyDialog(missing: Coin) {
+        if (!isAdded) {
+            return
+        }
         val msg = StringBuilder(
             getString(
                 R.string.send_coins_fragment_insufficient_money_msg1,
@@ -380,7 +452,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         }
     }
 
-    private suspend fun showEmptyWalletFailedDialog() {
+    protected suspend fun showEmptyWalletFailedDialog() {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_fragment_empty_wallet_failed_title),
@@ -390,7 +465,10 @@ class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
         ).showAsync(requireActivity())
     }
 
-    private suspend fun showFailureDialog(exception: Exception) {
+    protected suspend fun showFailureDialog(exception: Exception) {
+        if (!isAdded) {
+            return
+        }
         AdaptiveDialog.create(
             R.drawable.ic_error,
             getString(R.string.send_coins_error_msg),

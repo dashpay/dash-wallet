@@ -1,7 +1,7 @@
 plugins {
     id 'com.android.library'
     id 'kotlin-android'
-    id 'kotlin-kapt'
+    id 'com.google.devtools.ksp'
     id 'dagger.hilt.android.plugin'
     id 'org.jlleitschuh.gradle.ktlint'
 }
@@ -9,36 +9,34 @@ plugins {
 android {
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
-        all {
-            minifyEnabled true
+        configureEach {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
+        }
+        release {
+            minifyEnabled true
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = '1.8'
+        jvmTarget = '17'
     }
     buildFeatures {
         viewBinding true
     }
     namespace 'org.dash.wallet.integrations.uphold'
-}
-
-kapt {
-    correctErrorTypes true
 }
 
 hilt {
@@ -65,7 +63,7 @@ dependencies {
 
     // DI
     implementation "com.google.dagger:hilt-android:$hiltVersion"
-    kapt "com.google.dagger:hilt-compiler:$hiltVersion"
+    ksp "com.google.dagger:hilt-compiler:$hiltVersion"
 
     // JWT
     implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -81,7 +79,7 @@ dependencies {
     // Tests
     testImplementation "junit:junit:$junitVersion"
     testImplementation "androidx.test:core-ktx:1.5.0"
-    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.6.4"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
     testImplementation "org.mockito:mockito-core:$mockitoVersion"
     testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
     testImplementation "com.squareup.okhttp3:mockwebserver:$ok_http_version"

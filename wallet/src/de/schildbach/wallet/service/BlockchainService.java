@@ -45,7 +45,9 @@ public interface BlockchainService {
             + ".broadcast_transaction";
     public static final String ACTION_BROADCAST_TRANSACTION_HASH = "hash";
 
-    @Nullable
+    String ACTION_RESET_BLOOMFILTERS =  BlockchainService.class.getPackage().getName()
+            + ".reset_bloomfilters";
+
     List<Peer> getConnectedPeers();
 
     List<StoredBlock> getRecentBlocks(int maxBlocks);

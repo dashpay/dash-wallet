@@ -38,7 +38,7 @@ class SetPinViewModel @Inject constructor(
     biometricHelper: BiometricHelper,
     analytics: AnalyticsService,
     private val securityFunctions: SecurityFunctions
-): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics) {
+): CheckPinViewModel(walletData, configuration, pinRetryController, biometricHelper, analytics, securityFunctions) {
 
     private val log = LoggerFactory.getLogger(SetPinViewModel::class.java)
 
@@ -90,6 +90,7 @@ class SetPinViewModel @Inject constructor(
     }
 
     fun initWallet() {
+        walletApplication.saveWalletAndFinalizeInitialization()
         startNextActivity.call(configuration.remindBackupSeed)
     }
 

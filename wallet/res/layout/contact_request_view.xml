@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:animateLayoutChanges="true"
+    android:background="@color/background_primary"
+    android:orientation="vertical"
+    tools:parentTag="android.widget.LinearLayout"
+    tools:context="de.schildbach.wallet.ui.dashpay.widget.ContactRequestPane">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/dash_white">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                tools:ignore="UselessLeaf" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@color/background_primary" />
+
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/main_button"
+            style="@style/Button.Primary.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginTop="9dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="9dp"
+            android:gravity="center"
+            android:orientation="horizontal"
+            tools:ignore="UseCompoundDrawables">
+
+            <ImageView
+                android:id="@+id/main_button_icon"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                app:srcCompat="@drawable/ic_add_contact_white"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/main_button_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/send_contact_request"
+                android:textColor="@color/dash_white"
+                android:textSize="14sp"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/pay_button_pane"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/dash_white"
+        android:paddingTop="9dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                tools:ignore="UselessLeaf" />
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@color/background_primary" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/pay_button"
+            style="@style/Button.Primary.Blue"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="30dp"
+            android:layout_marginEnd="30dp"
+            android:paddingStart="26dp"
+            android:paddingEnd="26dp"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="@string/pay" />
+
+    </FrameLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/contact_request_received_pane"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="9dp">
+
+        <TextView
+            android:id="@+id/request_received_pane_title"
+            style="@style/Caption"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="34dp"
+            android:layout_marginTop="26dp"
+            android:layout_marginRight="34dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="@string/contact_request_received_title" />
+
+        <androidx.constraintlayout.widget.Guideline
+            android:id="@+id/request_buttons_guide"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:orientation="vertical"
+            app:layout_constraintGuide_percent="0.5"
+            app:layout_constraintTop_toBottomOf="@id/request_received_pane_title" />
+
+        <Button
+            android:id="@+id/accept"
+            style="@style/Button.Primary.Green"
+            android:layout_width="120dp"
+            android:layout_height="39dp"
+            android:layout_marginTop="14dp"
+            android:layout_marginEnd="5dp"
+            android:text="@string/contact_request_accept"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintEnd_toStartOf="@id/request_buttons_guide"
+            app:layout_constraintTop_toBottomOf="@id/request_received_pane_title" />
+
+        <Button
+            android:id="@+id/ignore"
+            style="@style/Button.Tertiary"
+            android:layout_width="120dp"
+            android:layout_height="39dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginTop="14dp"
+            android:text="@string/contact_request_ignore"
+            android:maxLines="1"
+            android:ellipsize="end"
+            app:layout_constraintStart_toEndOf="@id/request_buttons_guide"
+            app:layout_constraintTop_toBottomOf="@id/request_received_pane_title" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <LinearLayout
+        android:id="@+id/contact_history_disclaimer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="32dp"
+        android:layout_marginTop="9dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="9dp"
+        android:background="@drawable/round_corners_white_bg"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/ic_add_stranger"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="32dp"
+            app:srcCompat="@drawable/ic_add_stranger" />
+
+        <TextView
+            android:id="@+id/contact_history_disclaimer_text"
+            style="@style/Body1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="26dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="26dp"
+            android:layout_marginBottom="24dp"
+            android:gravity="center"
+            android:textAlignment="gravity"
+            tools:text="Add Katie Rennie as your contact to Pay Directly to Username and Retain Mutual Transaction History" />
+
+        <LinearLayout
+            android:id="@+id/disclaimer_button"
+            android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="24dp"
+            android:background="@drawable/blue_outline_button_bg"
+            android:gravity="center"
+            android:textAlignment="gravity"
+            android:orientation="horizontal"
+            tools:ignore="UseCompoundDrawables">
+
+            <ImageView
+                android:id="@+id/disclaimer_button_icon"
+                android:layout_width="24dp"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="16dp"
+                app:srcCompat="@drawable/inverted_contact_icon"
+                tools:ignore="ContentDescription" />
+
+            <TextView
+                android:id="@+id/disclaimer_button_text"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/send_contact_request"
+                android:maxLines="1"
+                android:ellipsize="end"
+                android:textColor="@color/inverted_button"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+</merge>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:background="@color/background_primary"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:viewToHideWhenSoftKeyboardIsOpen="@id/network_error">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipChildren="false"
+        android:orientation="vertical">
+
+        <include
+            android:id="@+id/app_bar_layout"
+            layout="@layout/app_bar_general"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            app:layout_constraintBottom_toTopOf="@id/network_error"
+            app:layout_constraintTop_toBottomOf="@id/app_bar_layout">
+
+            <include
+                android:id="@+id/profile_1"
+                layout="@layout/activity_search_dashpay_profile_1" />
+
+        </FrameLayout>
+
+        <FrameLayout
+            android:id="@+id/network_error"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            tools:visibility="visible">
+
+            <include
+                android:id="@+id/network_unavailable"
+                layout="@layout/network_unavailable"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </FrameLayout>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+</de.schildbach.wallet.ui.widget.KeyboardResponsiveCoordinatorLayout>

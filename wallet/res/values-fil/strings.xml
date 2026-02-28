@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">Huli ng %1$s, %2$d araw</string>
     <string name="blockchain_state_progress_weeks">Huli ng %1$s, %2$d linggo</string>
     <string name="blockchain_state_progress_months">Huli ng %1$s, %2$d buwan</string>
-    <string name="blockchain_state_progress_downloading">Pagtutugma sa network</string>
+    <string name="blockchain_state_progress_downloading">Pagtutugma sa network (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Naantala ang pagtutugma</string>
     <string name="blockchain_state_progress_problem_storage">Pagtutugma: Problema sa storage</string>
     <string name="blockchain_state_progress_problem_network">Pagtutugma: Problema sa network</string>
+    <string name="mixing_state_progress_mixing">Paghahalo ng mga barya (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Ang Dash address ay nakopya na sa clipboard</string>
     <string name="wallet_address_dialog_fragment_hint">Para maprotektahan ang iyong pagiging pribado, babaguhin ang iyong address sa oras na matanggap ang bayad.</string>
     <string name="wallet_balance_fragment_too_much">Ang halagang ito ay masyadong mataas para dalhin ng iyong pitaka. Pakilipat ang iba sa mas ligtas na lugar.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Pangasiwaan ang apps</string>
     <string name="wallet_timeskew_dialog_title">Suriin ang settings ng petsa &amp; oras </string>
     <string name="wallet_timeskew_dialog_msg">Ang oras sa iyong device ay huli ng %d minuto. Maaaring hindi ka makapagpadala o makatanggap ng Dash dahil sa problemang ito.\n\nPalaging suriin at hanggat maaari ayusin ang settings ng iyong petsa, oras at time zone.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Ang oras ng iyong device ay %s sa pamamagitang ng %d segundo. Hindi mo magagamit ang CoinJoin dahil sa pagkakaibang ito.\n\nAng mga setting ng oras sa iyong device ay kailangang baguhin sa “Awtomatikong itakda ang oras” para magamit ang CoinJoin.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Ang oras ng iyong device ay naka-off nang higit sa 5 segundo. Hindi mo magagamit ang CoinJoin dahil sa pagkakaibang ito.\n\nAng mga setting ng oras sa iyong device ay kailangang baguhin sa “Awtomatikong itakda ang oras” bago gamitin ang CoinJoin.</string>
     <string name="send_coins_activity_title">Ipadala ang Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Nakakuha ng pansin ang lagda mula %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ang pagkuha ng pansin ng lagda ay hindi nagtagumpay</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Ang network fee na %s ay mababayaran na.</string>
     <string name="send_coins_fragment_hint_fee_priority">Ang priority fee na %say mababayaran. Kung alintana ang mababang bayad, gamitin lamang ang \'priority\' kung kailangan ng kumpirmasyon sa lalong madaling panahon.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Ang halaga ng maliit na bayad sa iyong pitaka ay hindi dumagdag sa ipinadalang halaga.</string>
-    <string name="send_coins_fragment_hint_replaying">Ang kasalukuyang bayad ay hindi posible dahil ang pitaka ay hindi sync sa network</string>
     <string name="send_coins_fragment_direct_payment_enable">Magbayad ng direkta sa binabayaran.</string>
     <string name="send_coins_fragment_direct_payment_ack">Matagumpay na naipadala ang iyong bayad.</string>
     <string name="send_coins_fragment_direct_payment_nack">Ang iyong bayad ay tinanggihan ng direct connection.</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">Pagbawi ng Masternode</string>
     <string name="transaction_row_status_masternode_reward">Pag-gantimpala ng Masternode</string>
     <string name="transaction_row_status_mining_reward">Gantimpala sa pagmimina</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Bayad sa Paghahalo ng CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Mga Collateral na Input ng CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Paghahalo ng CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">CoinJoin Lumikha ng mga Denominasyon</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">CoinJoin Combine Dust</string>
     <string name="network_monitor_activity_title">Network monitor</string>
     <string name="network_monitor_peer_list_title">Mga kapantay</string>
     <string name="network_monitor_block_list_title">Bloke</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Ang iyong pitaka ay matagumpay na naibalik. Ang balanse nito ay sunod na malalaman. Ito ay maaaring tumagal.</string>
     <string name="restore_wallet_dialog_success_encrypted">Babala: Ang iyong pitaka ay protektado ng isang paggastos na PIN. Tiyaking naaalala mo pa ito bago mo matanggap sa wallet na ito.</string>
     <string name="import_keys_dialog_failure">Ang wallet ay hindi pwedeng ibalik:\n\n%s\n\nMaling password?</string>
+    <string name="restore_wallet_creation_date_label">Petsa ng Paggawa ng Pitaka (Opsyonal)</string>
+    <string name="restore_wallet_creation_date_info">Ang pagpili kung kailan ginawa ang iyong pitaka ay nagbibigay-daan sa mas mabilis na pag-sync sa pamamagitan ng pag-scan lamang mula sa petsang iyon.</string>
+    <string name="restore_wallet_select_date">Piliin ang Petsa ng Paglikha</string>
+    <string name="restore_wallet_selected_date">Napili: %s</string>
+    <string name="restore_wallet_date_picker_title">Kailan ginawa ang iyong pitaka?</string>
+    <string name="wallet_creation_date_info_title">Paano mapabilis ng petsa ng paglikha ng pitaka ang proseso?</string>
+    <string name="wallet_creation_date_info_description">Kung alam mo ang tinatayang petsa kung kailan mo ginawa ang iyong pitaka, maaari mo itong ilagay at ang mga transaksyon mula sa petsang iyon ay makukuha para mas mabilis ang pag-sync. Pakitandaan, kung maglalagay ka ng petsa na mas huli kaysa noong ginawa mo ang pitaka, hindi mada-download ang mga mas lumang transaksyon.</string>
     <string name="export_keys_dialog_title">I-back up ang wallet</string>
     <string name="backup_wallet_dialog_message">Ang iyong backup ay mae-encrypt sa piniling password at masusulat sa external storage.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Ang iyong wallet ay protektado ng spending PIN. Siguraduhin na naalala mo ang iyong PIN at saka ang iyong backup password!</string>
@@ -271,6 +285,12 @@
     <string name="preferences_initiate_reset_summary">I-scan muli ang blockchain, mga transaksyon at balanse ng wallet. Magtatagal ang replay, kaya gawin lang ito kung alam mo kung bakit.</string>
     <string name="preferences_initiate_reset_dialog_message">Gusto mo bang i-scan muli ang blockchain?\n\nPansamantala nitong itatago ang balanse ng iyong wallet at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
     <string name="preferences_initiate_reset_dialog_positive">I-scan muli</string>
+    <string name="rescan_blockchain_dialog_title">Sigurado ka bang gusto mong muling i-scan ang blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Pansamantala nitong itatago ang balanse ng iyong pitaka at aalisin ang mga transaksyon. Parehong mababawi habang umuusad ang pag-sync ng blockchain. Tiyaking mayroon kang maaasahang koneksyon sa internet.</string>
+    <string name="rescan_blockchain_select_date_label">Piliin ang petsa ng paggawa ng pitaka (opsyonal)</string>
+    <string name="rescan_blockchain_date_info_description">Impormasyon tungkol sa petsa ng paggawa ng pitaka</string>
+    <string name="rescan_blockchain_select_date_placeholder">Pumili</string>
+    <string name="rescan_blockchain_confirm_button">I-scan muli</string>
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
     <string name="bitmap_fragment_share">Ipamahagi...</string>
@@ -287,8 +307,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Ilakip ang listahan ng installed packages</string>
     <string name="report_issue_dialog_collect_application_log">Ilakip ang application log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Ilakip ang wallet dump</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
     <string name="report_issue_dialog_mail_intent_failed">Nabigo ang pagpapadala ng report.</string>
+    <string name="report_issue_dialog_generating_report">Pagbuo ng ulat</string>
+    <string name="report_issue_dialog_status_device_info">impormasyon ng aparato</string>
+    <string name="report_issue_dialog_status_installed_packages">listahan ng installed packages</string>
+    <string name="report_issue_dialog_status_application_log">log ng aplikasyon</string>
+    <string name="report_issue_dialog_status_application_info">impormasyon ng aplikasyon</string>
+    <string name="report_issue_dialog_status_wallet_dump">pagbaba ng pitaka (mabagal)</string>
+    <string name="report_issue_dialog_status_contextual_info">impormasyon sa konteksto</string>
+    <string name="report_issue_dialog_status_background_traces">mga bakas sa background</string>
+    <string name="report_issue_dialog_status_stack_trace">stack traces</string>
+    <string name="report_issue_dialog_status_finishing">pagtatapos</string>
     <string name="report_transaction_history_export">Export</string>
     <string name="report_transaction_history_title">CSV Export</string>
     <string name="report_transaction_history_not_synced_title">CSV Export</string>
@@ -297,7 +326,18 @@
     <string name="report_transaction_history_mail_intent_chooser">Magpadala ng history ng transaksyon gamit ang…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Nabigo ang pagpapadala ng history ng transaksyon.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Pasimplehin ang iyong mga buwis sa crypto</string>
+    <string name="zenledger_export_all_tx">I-export ang lahat ng transaksyon</string>
+    <string name="zenledger_export_description">Ikonekta ang iyong mga crypto wallet sa platform ng ZenLedger. Matuto pa at magsimula sa iyong mga transaksyon sa Dash Wallet.</string>
+    <string name="chain_syncing_default_message">Maghintay hanggang sa ganap na ma-sync ang chain, para masuri namin ang iyong history ng transaksyon.</string>
+    <string name="zenledger_export_permission">Payagan ang pagpapadala ng lahat ng mga transaksyon mula sa Dash Wallet sa Zenledger?</string>
+    <string name="zenledger_export_error">Nagkaroon ng error noong ine-export ang iyong history ng transaksyon sa ZenLedger.</string>
+
+
     <string name="about_title">Tungkol sa</string>
+    <string name="about_dash_title">Tungkol sa Dash</string>
     <string name="about_version_title">Bersyon</string>
     <string name="about_copyright_title">Copyright</string>
     <string name="about_license_title">Lisensya</string>
@@ -319,6 +359,10 @@
     <string name="notification_inactivity_message">Mayroon ka pang dash sa device na ito! Siguraduhing na naisulat ang iyong recovery phrase bago i-uninstall ang Dash Walet o mawawala lahat ng iyong balanse na %s.</string>
     <string name="notification_inactivity_action_dismiss">Paalalahanan mo ako mamaya</string>
     <string name="notification_inactivity_action_dismiss_forever">Wag mo akong paalalahanan</string>
+    <string name="notification_bluetooth_service_listening">Handa nang tumanggap ng mga pagbabayad sa pamamagitan ng Bluetooth</string>
+    <string name="notification_sync_paused">Sandaling tumigil ang pag sync ng blockchain</string>
+    <string name="notification_background_processes_paused">Sandaling tumigil and proseso sa background</string>
+    <string name="notification_background_processes_paused_text">Naabot mo na ang Android 6 na oras na limitasyon ng serbisyo sa foreground para sa paghahalo o pag-sync ng blockchain. I-tap para i-reset…</string>
     <string name="appwidget_wallet_balance_title">Balanse ng Dash</string>
 
     <!-- generic buttons -->
@@ -394,4 +438,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Gusto mo bang makatanggap ng mga pagbabayad sa background?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Ang app na ito ay na-configure upang magpatuloy sa pagtakbo pagkatapos na hindi makita sa loob ng ilang oras.\n\nIminumungkahi namin na payagan ang app na ito na laging manatiling up-to-date sa blockchain, kahit na nasa background.\n\nHuwag mag-alala, gagawin namin laging isipin ang iyong paggamit ng baterya.</string>
     <string name="battery_optimization_dialog_button_change">Buksan ang settings</string>
+    <string name="credits_profile_change_message">I-update ang impormasyon ng profile</string>
+
+    <string name="block_explorer_selection_title">Piliin ang block explorer</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Pumili ng opsyon</string>
+    <string name="customize_shortcuts">I-customize ang shortcut bar</string>
+    <string name="customize_shortcuts_description">Pindutin ang anumang pindutan sa itaas upang palitan ito ng function na kailangan mo</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Kailangan mong i-upgrade ang iyong PIN</string>
+    <string name="upgrade_pin_description">Mag set up ng bagong PIN</string>
+    <string name="upgrade_pin_continue">Ipagpatuloy</string>
 </resources>

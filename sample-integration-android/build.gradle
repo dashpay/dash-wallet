@@ -10,9 +10,11 @@ dependencies {
     }
     implementation "org.dashj:dashj-core:$dashjVersion"
     implementation 'androidx.multidex:multidex:2.0.1'
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
 }
 
 android {
+    namespace "de.schildbach.wallet.integration.sample"
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
@@ -37,14 +39,14 @@ android {
     }
 
     defaultConfig {
-        compileSdk 33
+        compileSdk 35
         minSdkVersion 24
-        targetSdkVersion 33
+        targetSdkVersion 35
         multiDexEnabled true
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
     lint {
         abortOnError false

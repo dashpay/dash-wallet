@@ -44,7 +44,8 @@ abstract class MayaPaymentIntentParser(
         return PaymentIntent(
             null, "maya DASH pool", null,
             arrayOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(metadata.toByteArray()))),
-            "maya swap to $currency", null, null, null, null
+            "maya swap to $currency", null, null, null, null,
+            null, null, null
         )
     }
 }

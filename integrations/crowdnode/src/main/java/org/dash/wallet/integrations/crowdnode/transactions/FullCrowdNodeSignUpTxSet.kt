@@ -18,10 +18,11 @@
 package org.dash.wallet.integrations.crowdnode.transactions
 
 import org.bitcoinj.core.*
-import org.dash.wallet.common.transactions.TransactionComparator
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.filters.TransactionFilter
+import java.time.LocalDate
+import java.time.ZoneId
 
 open class FullCrowdNodeSignUpTxSet(
     networkParams: NetworkParameters,
@@ -38,7 +39,14 @@ open class FullCrowdNodeSignUpTxSet(
     )
 
     private val matchedFilters = mutableListOf<TransactionFilter>()
-    override val transactions = sortedSetOf(TransactionComparator())
+
+    override val id: String = "crowdnode"
+    override val transactions = hashMapOf<Sha256Hash, Transaction>()
+    final override var groupDate: LocalDate = LocalDate.now()
+        private set
+
+    val isComplete: Boolean
+        get() = welcomeToApiResponse != null && transactions.count() >= 5
 
     open val acceptTermsResponse: CrowdNodeAcceptTermsResponse?
         get() = matchedFilters.filterIsInstance<CrowdNodeAcceptTermsResponse>().firstOrNull()
@@ -61,8 +69,9 @@ open class FullCrowdNodeSignUpTxSet(
         }
 
     override fun tryInclude(tx: Transaction): Boolean {
-        if (transactions.any { it.txId == tx.txId }) {
-            return false
+        if (transactions.containsKey(tx.txId)) {
+            transactions[tx.txId] = tx
+            return true
         }
 
         if (tx.isEntirelySelf(bag)) {
@@ -81,7 +90,11 @@ open class FullCrowdNodeSignUpTxSet(
         val matchedFilter = crowdNodeTxFilters.firstOrNull { it.matches(tx) }
 
         if (matchedFilter != null) {
-            transactions.add(tx)
+            if (transactions.isEmpty()) {
+                groupDate = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+            }
+
+            transactions[tx.txId] = tx
             matchedFilters.add(matchedFilter)
             return true
         }
@@ -92,8 +105,8 @@ open class FullCrowdNodeSignUpTxSet(
     override fun getValue(bag: TransactionBag): Coin {
         var result = Coin.ZERO
 
-        for (tx in transactions) {
-            val value = tx.getValue(bag)
+        for (pair in transactions) {
+            val value = pair.value.getValue(bag)
             result = result.add(value)
         }
 

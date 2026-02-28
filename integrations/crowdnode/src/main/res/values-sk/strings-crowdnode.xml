@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode používa túto adresu ako ID vášho účtu. Ak stratíte prístupovú frázu priradenú k tejto adrese, stratíte prístup k svojim finančným prostriedkom v tejto peňaženke a k účtu CrowdNode.</string>
     <string name="crowdnode_new_account_warning_2">Do a z CrowdNode budú odoslané veľmi malé množstvá Dash, aby sme overili, že ste vlastníkom tejto adresy peňaženky.</string>
     <string name="crowdnode_link_account_description">Všetky prenosy do a z CrowdNode z tohto zariadenia sa budú vykonávať s nižšie uvedenou Dash adresou z tohto zariadenia.</string>
-    <string name="dash_address">Dash adresa</string>
     <string name="primary_dash_address">Primárna Dash adresa</string>
     <string name="crowdnode_secure_wallet">Zálohujte si svoju prístupovú frázu a vytvorte si účet CrowdNode</string>
     <string name="crowdnode_secure_wallet_explainer">Ak stratíte prístupovú frázu pre túto peňaženku a stratíte toto zariadenie alebo odinštalujete Dash peňaženku, stratíte prístup k svojim finančným prostriedkom v CrowdNode a k prostriedkom v tejto peňaženke.</string>

@@ -77,7 +77,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val walletData = mock<WalletDataProvider> {
-        on { observeBalance() } doReturn MutableStateFlow(balance)
+        on { observeSpendableBalance() } doReturn MutableStateFlow(balance)
         on {
             freshReceiveAddress()
         } doReturn Address.fromBase58(TestNet3Params.get(), "ydW78zVxRgNhANX2qtG4saSCC5ejNQjw2U")
@@ -88,7 +88,7 @@ class CrowdNodeViewModelTest {
     }
 
     private val blockchainStateMock = mock<BlockchainStateProvider> {
-        on { getMasternodeAPY() } doReturn 5.9
+        onBlocking { getMasternodeAPY() } doReturn 5.9
     }
 
     @Test

@@ -37,7 +37,6 @@ import java.lang.System.currentTimeMillis
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.math.max
 
 interface ExploreRepository {
     suspend fun getRemoteTimestamp(): Long
@@ -78,15 +77,15 @@ class GCExploreDatabase @Inject constructor(
     val configScope = CoroutineScope(Dispatchers.IO)
 
     override suspend fun getRemoteTimestamp(): Long {
-        val remoteDataInfo =
-            try {
-                ensureAuthenticated()
-                remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
-                remoteDataRef!!.metadata.await()
-            } catch (ex: Exception) {
-                log.warn("error getting remote data timestamp", ex)
-                null
-            }
+        val remoteDataInfo = try {
+            ensureAuthenticated()
+            remoteDataRef = storage.reference.child(Constants.EXPLORE_GC_FILE_PATH)
+            remoteDataRef!!.metadata.await()
+        } catch (ex: Exception) {
+            log.warn("error getting remote data timestamp", ex)
+            null
+        }
+
         val dataTimestamp = remoteDataInfo?.getCustomMetadata("Data-Timestamp")?.toLong()
         return dataTimestamp ?: -1L
     }
@@ -197,7 +196,7 @@ class GCExploreDatabase @Inject constructor(
         configScope.launch {
             val prefs = exploreConfig.exploreDatabasePrefs.first()
             exploreConfig.saveExploreDatabasePrefs(
-                prefs.copy(localDbTimestamp = max(prefs.localDbTimestamp, updateTimestampCache))
+                prefs.copy(localDbTimestamp = updateTimestampCache)
             )
         }
     }

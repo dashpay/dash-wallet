@@ -19,9 +19,15 @@ package org.dash.wallet.features.exploredash.network
 import okhttp3.Authenticator
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
+import org.bitcoinj.core.NetworkParameters
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
+import org.dash.wallet.features.exploredash.network.interceptor.ErrorHandlingInterceptor
 import org.dash.wallet.features.exploredash.network.interceptor.HeadersInterceptor
-import org.dash.wallet.features.exploredash.utils.DashDirectConfig
-import org.dash.wallet.features.exploredash.utils.DashDirectConstants
+import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendTokenApi
+import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.slf4j.LoggerFactory
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -29,23 +35,48 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.toJavaDuration
 
-class RemoteDataSource @Inject constructor(private val config: DashDirectConfig) {
+class RemoteDataSource @Inject constructor(
+    private val config: CTXSpendConfig,
+    private val walletData: WalletDataProvider
+) {
     companion object {
         private val log = LoggerFactory.getLogger(RemoteDataSource::class.java)
     }
 
     fun <Api> buildApi(api: Class<Api>): Api {
         return Retrofit.Builder()
-            .baseUrl(DashDirectConstants.BASE_URL)
-            .client(getOkHttpClient())
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    CTXSpendConstants.BASE_URL
+                } else {
+                    CTXSpendConstants.DEV_BASE_URL
+                }
+            )
+            .client(getOkHttpClient(TokenAuthenticator(buildTokenApi(), config)))
             .addConverterFactory(GsonConverterFactory.create())
             .build()
             .create(api)
     }
 
+    private fun buildTokenApi(): CTXSpendTokenApi {
+        return Retrofit.Builder()
+            .baseUrl(
+                if (walletData.networkParameters.id == NetworkParameters.ID_MAINNET) {
+                    CTXSpendConstants.BASE_URL
+                } else {
+                    CTXSpendConstants.DEV_BASE_URL
+                }
+            )
+            .client(getOkHttpClient())
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(CTXSpendTokenApi::class.java)
+    }
+
     private fun getOkHttpClient(authenticator: Authenticator? = null): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(HeadersInterceptor(config))
+            .addInterceptor(ErrorHandlingInterceptor(ServiceName.CTXSpend))
             .connectTimeout(20.seconds.toJavaDuration())
             .callTimeout(20.seconds.toJavaDuration())
             .readTimeout(20.seconds.toJavaDuration())
@@ -53,6 +84,7 @@ class RemoteDataSource @Inject constructor(private val config: DashDirectConfig)
                 authenticator?.let { client.authenticator(it) }
                 //                if (BuildConfig.DEBUG) { TODO
                 val logging = HttpLoggingInterceptor { message -> log.info(message) }
+                logging.redactHeader("Authorization")
                 logging.level = HttpLoggingInterceptor.Level.BODY
                 client.addInterceptor(logging)
                 //                }

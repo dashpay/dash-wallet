@@ -46,7 +46,6 @@
     <string name="explore_no_atms">Κανένα ATM</string>
     <string name="distance_miles">%sμίλια</string>
     <string name="distance_kilometers">%sχιλιόμετρα</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d έμπορος</item>
         <item quantity="other">%dέμποροι</item>
@@ -62,6 +61,7 @@
     <string name="explore_back_to_nearest">Πίσω στην πλησιέστερη τοποθεσία</string>
     <string name="explore_select_location">Επιλέξτε τοποθεσία</string>
     <string name="explore_pay_with_dash">Πληρώστε με Dash</string>
+    <string name="explore_pay_with_dash_save">Aποθήκευση %.2f%%</string>
     <string name="explore_buy_gift_card">Αγοράστε μια δωροκάρτα</string>
     <string name="explore_buy_dash">Αγορά Dash</string>
     <string name="explore_sell_dash">Πώληση Dash</string>
@@ -73,8 +73,10 @@
     <string name="explore_filter">Φίλτρο</string>
     <string name="explore_filters">Φίλτρα</string>
     <string name="explore_apply_filter">Εφαρμογή</string>
-    <string name="explore_payment_method">Μέθοδος πληρωμής</string>
+    <string name="explore_spending_options">Επιλογές εξόδων</string>
     <string name="explore_payment_dash">Dash</string>
+    <string name="ctx_gift_cards">Δωροκάρτες CTX</string>
+    <string name="piggycards_gift_cards">Δωροκάρτες Piggy Cards</string>
     <string name="explore_payment_gift_card">Δωροκάρτα</string>
     <string name="explore_filter_gift_cards">Δωροκάρτες</string>
     <string name="explore_radius">Ακτίνα</string>
@@ -86,6 +88,10 @@
     <string name="explore_filtered_by">Φιλτράρεται από:</string>
     <string name="explore_pay_gift_card">Πληρώστε με δωροκάρτα</string>
     <string name="explore_sort_by">Ταξινόμηση κατά</string>
+    <string name="gift_card_types">Τύποι δωροκάρτας</string>
+    <string name="flexible_amount_option">Flexible amounts</string>
+    <string name="fixed_denom_option">Ποσά σε σταθερές μονάδες</string>
+    <string name="gift_card_providers">Παροχείς δωροκαρτών</string>
 
     <string-array name="merchants_filter_options">
         <item>Online</item>
@@ -117,6 +123,7 @@
     <string-array name="sort_by_options_names">
         <item>Όνομα</item>
         <item>Απόσταση</item>
+        <item>Έκπτωση</item>
     </string-array>
 
     <plurals name="radius_miles">
@@ -153,6 +160,13 @@
     <string name="buy_gift_card_with_dash_text">Αγοράστε μια δωροκάρτα με Dash.</string>
     <string name="redeem_gift_card_text">Εξαργυρώστε τη δωροκάρτα σας online μέσα σε λίγα δευτερόλεπτα ή σε ταμείο.</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Τα Test Dash δεν έχουν καμία αξία στον πραγματικό κόσμο, αλλά μπορείτε να στείλετε και να λάβετε με άλλους χρήστες του DashPay Alpha.</string>
+    <string name="explore_test_dash_title">Πώς μπορώ να αποκτήσω Test Dash;</string>
+    <string name="explore_test_dash_text_1">Τα Test Dash είναι δωρεάν και μπορούν να ληφθούν από αυτό που ονομάζεται faucet.</string>
+    <string name="explore_test_dash_text_2">Κάντε κλικ στο παρακάτω κουμπί για να αντιγράψετε μια διεύθυνση Dash από αυτό το πορτοφόλι, ώστε να μπορέσετε να λάβετε τα test Dash σας ..</string>
+    <string name="explore_get_test_dash">Πάρτε Test Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">Συγχρονισμός σε εξέλιξη... Τα αποτελέσματα μπορεί να μην είναι πλήρη.</string>
     <string name="sync_in_progress_error">Συγχρονισμός σε εξέλιξη... Υπήρξε ένα σφάλμα.</string>
@@ -162,4 +176,101 @@
     <string name="sync_in_progress_network_error">Ο συγχρονισμός διακόπηκε... Το δίκτυο είναι εκτός σύνδεσης ή μη προσβάσιμο</string>
 
 
-    </resources>
+    <!-- purchase_gift_card -->
+    <string name="purchase_gift_card_at">σε</string>
+    <string name="purchase_gift_card_min">Ελάχιστο: %s</string>
+    <string name="purchase_gift_card_max">Μέγιστο: %s</string>
+    <string name="purchase_gift_card_discount_hint">Αγοράζετε μια %s δωροκάρτα για %s (έκπτωση %s)</string>
+    <string name="button_next">Επόμενο</string>
+    <string name="purchase_gift_card_from">Από</string>
+    <string name="purchase_gift_card_to">Σε</string>
+    <string name="purchase_confirm_transaction">Επιβεβαίωση</string>
+    <string name="purchase_gift_card_total_label">Σύνολο δωροκάρτας</string>
+    <string name="purchase_gift_card_discount">Έκπτωση</string>
+    <string name="purchase_gift_card_you_pay">Πληρώνετε</string>
+    <string name="purchase_gift_card_confirm">Επιβεβαίωση</string>
+    <string name="purchase_gift_card_details">Λεπτομέριες δωροκάρτας</string>
+    <string name="purchase_original_purchase">Αρχική αγορά</string>
+    <string name="purchase_check_current_balance">Δείτε τις λεπτομέρειες της κάρτας</string>
+    <string name="purchase_card_number">Αριθμός κάρτας</string>
+    <string name="purchase_card_pin">PIN κάρτας</string>
+    <string name="purchase_view_transaction">Προβολή στοιχείων συναλλαγής</string>
+    <string name="purchase_see_how_to_use_gift_card">Δείτε πώς να χρησιμοποιήσετε μια δωροκάρτα</string>
+    <string name="purchase_how_to_use_gift_card">Πώς να χρησιμοποιήσετε μια δωροκάρτα</string>
+    <string name="purchase_self_checkout">Self-checkout</string>
+    <string name="purchase_Request_assistance">Ζητήστε βοήθεια από έναν υπάλληλο για να εξαργυρώσετε μια ψηφιακή δωροκάρτα.</string>
+    <string name="purchase_in_store">Σε κατάστημα</string>
+    <string name="purchase_tell_the_cashier">Πείτε στον ταμία ότι πληρώνετε με ψηφιακή δωροκάρτα. Ταμίας: Πληκτρολογήστε το συνολικό ποσό στο πεδίο Bankcard, στη συνέχεια πληκτρολογήστε τον αριθμό της δωροκάρτας στο πεδίο  Λογαριασμός και πατήστε Enter.</string>
+    <string name="purchase_in_the_payment_section">Στην ενότητα πληρωμής, πληκτρολογήστε τον αριθμό της ψηφιακής δωροκάρτας σας στο πεδίο της δωροκάρτας.</string>
+    <string name="purchase_powered_by">Με την υποστήριξη</string>
+    <string name="insufficient_money_title">Ανεπαρκή διαθέσιμα νομίσματα</string>
+    <string name="insufficient_money_msg">Ανεπαρκή χρήματα</string>
+    <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
+    <string name="gift_card_barcode_failed">Απέτυχε η φόρτωση του barcode</string>
+    <string name="gift_card_tx_title">Δωροκάρτα · %s</string>
+    <string name="select_amount">επιλεξτε ποσό</string>
+    <string name="select_fixed_amount">Αυτός ο έμπορος πωλεί δωροκάρτες σε σταθερές τιμές</string>
+
+    <!-- dash spend login-->
+    <string name="enter_verification_code">Πληκτρολογήστε τον κωδικό επαλήθευσης</string>
+    <string name="verification_check_email">Ελέγξτε το email σας και πληκτρολογήστε τον κωδικό επαλήθευσης</string>
+    <string name="buy_gift_card">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
+    <string name="dashspend_create_account">Δημιουργήστε έναν λογαριασμό ή συνδεθείτε στον ήδη υπάρχοντα.</string>
+    <string name="create_new_account">Δημιουργία νέου λογαριασμού</string>
+    <string name="login">Είσοδος</string>
+    <string name="password">Κωδικός</string>
+    <string name="logged_in_as">Συνδεθήκατε ως %s</string>
+    <string name="log_out">Αποσύνδεση </string>
+    <string name="invaild_code">Πληκτρολογήσατε λάθος κωδικό. Ελέγξτε το email σας και προσπαθήστε ξανά.</string>
+    <string name="something_wrong_title">Κάτι πήγε στραβά</string>
+    <string name="retry">Επανάληψη</string>
+    <string name="gift_card_purchase_failed">Απέτυχε η αγορά δωροκάρτας</string>
+    <string name="try_again">Προσπαθήστε ξανά</string>
+    <string name="cancel">Ακύρωση</string>
+    <string name="gift_card_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλώ, δοκιμάστε ξανά.</string>
+    <string name="gift_card_out_of_stock_error">Αυτή η δωροκάρτα είναι εξαντλημένη. Παρακαλώ, δοκιμάστε ξανά.</string>
+    <string name="gift_card_details_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη.</string>
+    <string name="gift_card_limit_error">Τα όρια αγορών για αυτόν τον έμπορο έχουν αλλάξει. Παρακαλούμε επικοινωνήστε με την Υποστήριξη CTX για περισσότερες πληροφορίες.</string>
+    <string name="gift_card_server_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλώ επικοινωνήστε με την υποστήριξη %s για να αναφέρετε το πρόβλημα.</string>
+    <string name="gift_card_server_region_error">Η αγορά αυτής της δωροκάρτας δεν είναι δυνατή από την περιοχή σας.</string>
+    <string name="gift_card_error_wrong_network">Το αίτημα πληρωμής αφορά διαφορετικό δίκτυο. Επικοινωνήστε με την υποστήριξη.</string>
+    <string name="gift_card_unknown_error">Για κάποιο λόγο δεν μπορέσαμε να αγοράσουμε μια δωροκάρτα. Παρακαλούμε επικοινωνήστε με την υποστήριξη με το txid %s.</string>
+    <string name="gift_card_delay">Η ανάκτηση αυτής της κάρτας διαρκεί περισσότερο από το συνηθισμένο. Εάν διαρκέσει πολύ περισσότερο, επικοινωνήστε με το <a href="contact:support">support@dash.org</a></string>
+    <string name="gift_card_rejected">Η πληρωμή απορρίφθηκε. Παρακαλούμε επικοινωνήστε με την υποστήριξη %s  με τον αριθμό της δωροκάρτας %s, τον αριθμό πληρωμής  %s και τον αριθμό συναλλαγής %s</string>
+    <string name="gift_card_redeem_url_not_supported">Η πληρωμή πραγματοποιήθηκε για έναν έμπορο που παρέχει μια διεύθυνση URL εξαργύρωσης, αλλά αυτή δεν υποστηρίζεται προς το παρόν. Επικοινωνήστε με την υποστήριξη %s με τον αριθμό της δωροκάρτας %s, τον αριθμό πληρωμής %s και τον αριθμό συναλλαγής %s.</string>
+    <string name="dashspend_terms_conditions">Αποδοχή των όρων και προϋποθέσεων</string>
+    <string name="accept_terms_conditions">Αποδέχομαι τους όρους και τις προϋποθέσεις του DashSpend</string>
+    <string name="tap_link_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να πατήσετε στον παρακάτω σύνδεσμο για να προχωρήσετε.</string>
+    <string name="accept_to_proceed">Για να δημιουργήσετε λογαριασμό στο DashSpend πρέπει να αποδεχτείτε τους όρους και τις προϋποθέσεις του DashSpend.</string>
+    <string name="view_terms_conditions">Όροι και Προϋποθέσεις</string>
+    <string name="barcode_placeholder">Παρακαλώ περιμένετε μέχρι να παραδοθούν τα στοιχεία της δωροκάρτας.</string>
+    <string name="gift_card_contact_ctx">Επικοινωνήστε με την CTX υποστήριξη</string>
+    <string name="gift_card_contact_piggycards">Επικοινωνήστε με την υποστήριξη της PiggyCards</string>
+    <string name="gift_card_contact_support">Επικοινωνήστε με την υποστήριξη</string>
+    <!-- ctx spend login-->
+    <string name="create_ctx_spend_account">Δημιουργία λογαριασμού</string>
+    <string name="log_in_to_ctxspend_account">Συνδεθείτε στο λογαριασμό σας</string>
+    <string name="log_in_to_ctxspend_account_desc">Το email σας χρησιμοποιείται μόνο για την αποστολή ενός κωδικού πρόσβασης μιας χρήσης.</string>
+    <string name="buy_a_gift_card_with_your_ctx_spend_account">Αγοράστε μια δωροκάρτα με το λογαριασμό σας DashSpend</string>
+    <string name="create_an_account_at_ctx_spend_or_log_in_to_the_existing_one">Δημιουργήστε έναν λογαριασμό στο DashSpend ή συνδεθείτε στον ήδη υπάρχοντα.</string>
+    <string name="temporarily_unavailable">Προσωρινά μη διαθέσιμο</string>
+    <string name="country_availability">Αυτή η κάρτα λειτουργεί μόνο στις Ηνωμένες Πολιτείες</string>
+    <string name="token_expired_title">Η συνεδρία σας έληξε</string>
+    <string name="token_expired_message">Φαίνεται ότι έχετε καιρό να χρησιμοποιήσετε το DashSpend. Για λόγους ασφαλείας, έχετε αποσυνδεθεί.\n\nΠαρακαλούμε συνδεθείτε ξανά για να συνεχίσετε να εξερευνάτε πού μπορείτε να ξοδέψετε τα Dash σας.</string>
+
+    <!-- PiggyCards -->
+    <string name="log_in_to_piggycards_account_desc">Το email σας δεν θα κοινοποιηθεί σε κανέναν εκτός από την PiggyCards.</string>
+    
+    <!-- Provider Selection -->
+    <string name="select_gift_card_provider">Επιλέξτε πάροχο δωροκάρτας</string>
+    <string name="flexible_amounts">Flexible amounts</string>
+    <string name="fixed_amounts">Σταθερά ποσά</string>
+    <string name="address">Διεύθυνση</string>
+    <string name="phone">Τηλέφωνο</string>
+    <string name="website">Ιστοσελίδα</string>
+    <string name="call">Κλήση</string>
+    <string name="directions">Οδηγίες</string>
+    <string name="explore_show_all_locations">Εμφάνιση όλων των τοποθεσιών (%d)</string>
+    <string name="provider">Πάροχος</string>
+    <string name="save">Αποθήκευση</string>
+</resources>

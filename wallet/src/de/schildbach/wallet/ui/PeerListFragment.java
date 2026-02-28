@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui;
 
 import java.net.InetAddress;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -69,6 +70,7 @@ public final class PeerListFragment extends Fragment {
     private LoaderManager loaderManager;
 
     private BlockchainService service;
+    private boolean serviceBound = false;
 
     private ViewAnimator viewGroup;
     private RecyclerView recyclerView;
@@ -97,7 +99,7 @@ public final class PeerListFragment extends Fragment {
     public void onActivityCreated(final Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        activity.bindService(new Intent(activity, BlockchainServiceImpl.class), serviceConnection,
+        serviceBound = activity.bindService(new Intent(activity, BlockchainServiceImpl.class), serviceConnection,
                 Context.BIND_AUTO_CREATE);
     }
 
@@ -163,7 +165,14 @@ public final class PeerListFragment extends Fragment {
 
     @Override
     public void onDestroy() {
-        activity.unbindService(serviceConnection);
+        if (serviceBound) {
+            try {
+                activity.unbindService(serviceConnection);
+                serviceBound = false;
+            } catch (IllegalArgumentException x) {
+                log.warn("service not registered: " + serviceConnection);
+            }
+        }
 
         loaderManager.destroyLoader(ID_REVERSE_DNS_LOADER);
 
@@ -174,7 +183,7 @@ public final class PeerListFragment extends Fragment {
         @Override
         public void onServiceConnected(final ComponentName name, final IBinder binder) {
             service = ((BlockchainServiceImpl.LocalBinder) binder).getService();
-
+            log.info("service is bound: {}", serviceBound);
             loaderManager.initLoader(ID_PEER_LOADER, null, peerLoaderCallbacks);
         }
 
@@ -183,6 +192,7 @@ public final class PeerListFragment extends Fragment {
             loaderManager.destroyLoader(ID_PEER_LOADER);
 
             service = null;
+            serviceBound = false;
         }
     };
 
@@ -303,7 +313,13 @@ public final class PeerListFragment extends Fragment {
 
         @Override
         public List<Peer> loadInBackground() {
-            return service.getConnectedPeers();
+            List<Peer> connectedPeers = service.getConnectedPeers();
+            if (connectedPeers == null) {
+                log.warn("getConnectedPeers() returned null, using empty list");
+                connectedPeers = Collections.emptyList();
+            }
+            log.info("connected peers: {}", connectedPeers.size());
+            return connectedPeers;
         }
 
         private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {

@@ -21,7 +21,9 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.copy
@@ -39,18 +41,21 @@ class StakingDialog : OffsetDialogFragment(R.layout.dialog_staking) {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.stakingMessageTwo.text = getString(
-            R.string.crowdnode_staking_info_message_second,
-            String.format(Locale.getDefault(), "%.1f", viewModel.getMasternodeAPY())
-        )
-        binding.stakingFirstMinDepositMessage.text = getString(
-            R.string.crowdnode_staking_info_message,
-            CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
-        )
-        binding.stakingApyTitle.text = getString(
-            R.string.crowdnode_staking_apy_title,
-            String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
-        )
+        lifecycleScope.launch {
+            binding.stakingMessageTwo.text = getString(
+                R.string.crowdnode_staking_info_message_second,
+                String.format(Locale.getDefault(), "%.1f", viewModel.getMasternodeAPY())
+            )
+            binding.stakingFirstMinDepositMessage.text = getString(
+                R.string.crowdnode_staking_info_message,
+                CrowdNodeConstants.DASH_FORMAT.format(CrowdNodeConstants.MINIMUM_DASH_DEPOSIT)
+            )
+            binding.stakingApyTitle.text = getString(
+                R.string.crowdnode_staking_apy_title,
+                String.format(Locale.getDefault(), "%.1f", viewModel.getCrowdNodeAPY())
+            )
+        }
+
         binding.stakingConnectedDashAddress.text = viewModel.accountAddress.value?.toBase58()
         binding.stakingConnectedAddressContainer.setOnClickListener {
             viewModel.accountAddress.value?.toBase58()?.copy(requireActivity(), "dash address")

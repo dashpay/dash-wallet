@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">Còn lại %1$s, %2$d ngày</string>
     <string name="blockchain_state_progress_weeks">Còn lại %1$s, %2$d tuần</string>
     <string name="blockchain_state_progress_months">Còn lại %1$s, %2$d tháng</string>
-    <string name="blockchain_state_progress_downloading">Đồng bộ hóa với mạng lưới</string>
     <string name="blockchain_state_progress_stalled">Tiến trình đồng bộ hóa đã ngưng lại</string>
     <string name="blockchain_state_progress_problem_storage">Đồng bộ hóa: Gặp vấn đề về dung lượng lưu trữ</string>
     <string name="blockchain_state_progress_problem_network">Đồng bộ hóa: Vấn đề về mạng lưới</string>
@@ -57,7 +56,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Một phần phí giao dịch của %s sẽ được trả.</string>
     <string name="send_coins_fragment_hint_fee_priority">Một mức phí ưu tiên %s sẽ được trả. Nếu bạn quan tâm đến mức phí thấp, hãy sử dụng \'ưu tiên\' chỉ khi bạn cần xác thực càng nhanh càng tốt.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Một khoản thanh toán nhỏ xíu trong ví của bạn không làm tăng thêm giá trị có thể tiêu được.</string>
-    <string name="send_coins_fragment_hint_replaying">Giao dịch hiện chưa thực hiện được vì ví chưa hoàn thành được việc đồng bộ với mạng lưới</string>
     <string name="send_coins_fragment_direct_payment_enable">Gửi thanh toán trực tiếp cho người trả.</string>
     <string name="send_coins_fragment_direct_payment_ack">Việc thanh toán của bạn đã thành công khi gửi trực tiếp.</string>
     <string name="send_coins_fragment_direct_payment_nack">Giao dịch của bạn vừa bị từ chối qua kết nối trực tiếp.</string>
@@ -266,6 +264,7 @@
     <string name="preferences_report_issue_title">Báo cáo về lỗi</string>
     <string name="preferences_initiate_reset_title">Quét lại blockchain</string>
     <string name="preferences_initiate_reset_dialog_positive">Quét lại</string>
+    <string name="rescan_blockchain_confirm_button">Quét lại</string>
     <string name="preferences_extended_public_key_title">Hiển thị xpub</string>
     <string name="preferences_extended_public_key_summary">Xem khoá công khai mở rộng trong ví của bạn, nó có thể được nhập vào  qua các ứng dụng và dịch vụ khác. Cẩn thận: thực hiện điều này có thể làm lộ thông tin riêng tư về số tiền của bạn cho các ứng dụng đó.</string>
     <string name="bitmap_fragment_share">Chia sẻ...</string>
@@ -282,7 +281,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Thêm vào danh sách các gói được cài đặt</string>
     <string name="report_issue_dialog_collect_application_log">Nhật trình chỉ thị của ứng dụng</string>
     <string name="report_issue_dialog_collect_wallet_dump">Các lỗi mà ví tiền gặp phải</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Gửi báo cáo sử dụng…</string>
     <string name="report_issue_dialog_mail_intent_failed">Gửi báo cáo không thành công.</string>
     <string name="about_title">Thông tin</string>
     <string name="about_version_title">Phiên bản</string>
@@ -360,4 +358,6 @@
     <string name="activity_buy_and_sell_dash_filter">Lọc</string>
     <string name="send_to_address">Gửi đến địa chỉ</string>
 
-    </resources>
+    <string name="upgrade_pin_description">Thiết lập mã PIN mới</string>
+    <string name="upgrade_pin_continue">Tiếp tục</string>
+</resources>

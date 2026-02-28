@@ -17,49 +17,38 @@
 
 package de.schildbach.wallet.util;
 
-import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Writer;
 import java.text.DateFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 import java.util.TimeZone;
 
-import javax.annotation.Nullable;
-
 import org.bitcoinj.core.Address;
-import org.bitcoinj.core.AddressFormatException;
 import org.bitcoinj.core.Coin;
-import org.bitcoinj.core.DumpedPrivateKey;
 import org.bitcoinj.core.ECKey;
-import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.MonetaryFormat;
-import org.bitcoinj.wallet.DeterministicKeyChain;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletExtension;
 import org.bitcoinj.wallet.WalletProtobufSerializer;
 import org.dash.wallet.common.transactions.TransactionUtils;
 
-import com.google.common.base.Charsets;
+import java.util.Calendar;
+import java.util.Locale;
+
+import javax.annotation.Nullable;
 
 import de.schildbach.wallet.Constants;
 import de.schildbach.wallet.WalletApplication;
+import de.schildbach.wallet.ui.transactions.BlockExplorer;
 import de.schildbach.wallet_test.R;
 
 import android.annotation.SuppressLint;
@@ -117,6 +106,23 @@ public class WalletUtils {
         return builder;
     }
 
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, yyyy KK:mm a",Locale.getDefault());
+    private static SimpleDateFormat dateFormatNoYear = new SimpleDateFormat("MMM dd, KK:mm a", Locale.getDefault());
+
+    public static String formatDate(long timeStamp) {
+        Calendar calendar = Calendar.getInstance();
+        Date currentDate = new Date(System.currentTimeMillis());
+        calendar.setTime(currentDate);
+        int currentYear = calendar.get(Calendar.YEAR);
+
+        Date txDate = new Date(timeStamp);
+        calendar.setTime(txDate);
+        int txYear = calendar.get(Calendar.YEAR);
+        SimpleDateFormat format = currentYear == txYear ? dateFormatNoYear : dateFormat;
+
+        return format.format(timeStamp).replace("AM", "am").replace("PM", "pm");
+    }
+
     public static void writeKeys(final Writer out, final List<ECKey> keys) throws IOException {
         final DateFormat format = Iso8601Format.newDateTimeFormatT();
 
@@ -168,22 +174,6 @@ public class WalletUtils {
         addressBuilder.append(longAddress.substring(lastSectionStart));
         return addressBuilder.toString();
     }
-
-    public static void viewOnBlockExplorer(Context context, Transaction.Purpose txPurpose,
-                                           String txHash) {
-        Uri blockExplorer = WalletApplication.getInstance()
-                .getConfiguration()
-                .getBlockExplorer(R.array.preferences_block_explorer_values);
-        Uri keyRotationUri = Uri.parse("https://bitcoin.org/en/alert/2013-08-11-android");
-        boolean txRotation = txPurpose == Transaction.Purpose.KEY_ROTATION;
-        if (!txRotation) {
-            context.startActivity(new Intent(Intent.ACTION_VIEW,
-                    Uri.withAppendedPath(blockExplorer, "tx/" + txHash)));
-        } else {
-            context.startActivity(new Intent(Intent.ACTION_VIEW, keyRotationUri));
-        }
-    }
-
 
     public static @androidx.annotation.Nullable
     String uriToProvider(final Uri uri) {

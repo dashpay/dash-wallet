@@ -46,7 +46,6 @@
     <string name="explore_no_atms">ไม่พบเอทีเอ็ม</string>
     <string name="distance_miles">%s ไมล์</string>
     <string name="distance_kilometers">%s กิโลเมตร</string>
-
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d ร้านค้า</item>
     </plurals>
@@ -71,7 +70,6 @@
     <string name="explore_filter">กรอง</string>
     <string name="explore_filters">ตัวกรอง</string>
     <string name="explore_apply_filter">นำมาใช้</string>
-    <string name="explore_payment_method">วิธีการชำระเงิน</string>
     <string name="explore_payment_dash">Dash</string>
     <string name="explore_payment_gift_card">บัตรของขวัญ</string>
     <string name="explore_filter_gift_cards">บัตรของขวัญ</string>
@@ -84,7 +82,6 @@
     <string name="explore_filtered_by">กรองโดย:</string>
     <string name="explore_pay_gift_card">จ่ายด้วยบัตรของขวัญ</string>
     <string name="explore_sort_by">เรียงลำดับตาม</string>
-
     <string-array name="merchants_filter_options">
         <item>ออนไลน์</item>
         <item>ใกล้เคียง</item>
@@ -149,6 +146,11 @@
     <string name="buy_gift_card_with_dash_text">ซื้อบัตรของขวัญด้วย Dash</string>
     <string name="redeem_gift_card_text">แลกบัตรของขวัญของคุณทางออนไลน์ภายในไม่กี่วินาทีหรือที่แคชเชียร์</string>
 
+    <!-- Explore TestNet -->
+    <string name="explore_test_subtitle">Test Dash ไม่มีค่าใดๆ ในโลกแห่งความเป็นจริง แต่คุณสามารถส่งและรับกับผู้ใช้ DashPay Alpha คนอื่นๆ ได้</string>
+    <string name="explore_test_dash_title">ฉันจะรับ Test Dash ได้อย่างไร?</string>
+    <string name="explore_get_test_dash">รับการทดสอบ Dash</string>
+
     <!-- Sync Status -->
     <string name="sync_in_progress_not_complete">กำลังซิงค์... ผลลัพธ์อาจไม่สมบูรณ์</string>
     <string name="sync_in_progress_error">กำลังซิงค์... มีข้อผิดพลาด</string>
@@ -158,4 +160,19 @@
     <string name="sync_in_progress_network_error">การซิงค์ถูกขัดจังหวะ... เครือข่ายออฟไลน์หรือไม่สามารถเข้าถึงได้</string>
 
 
-    </resources>
+    <string name="purchase_confirm_transaction">ยืนยัน</string>
+    <string name="purchase_gift_card_confirm">ยืนยัน</string>
+    <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
+    <string name="insufficient_money_msg">ยอดเงินไม่เพียงพอ</string>
+    <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
+    <string name="password">รหัสผ่าน</string>
+    <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
+    <string name="retry">ลองอีกครั้ง</string>
+    <string name="try_again">ลองอีกครั้ง</string>
+    <string name="cancel">ยกเลิก</string>
+    <string name="gift_card_contact_support">ติดต่อฝ่ายสนับสนุน</string>
+    <string name="address">ที่อยู่</string>
+    <string name="website">เว็บไซต์</string>
+    <string name="call">โทร</string>
+    <string name="save">บันทึก</string>
+</resources>

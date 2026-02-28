@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode使用此地址作为您的账户ID. 若您丢失了与此地址关联的密码, 您将无法访问此钱包和您CrowdNode账户中的资金.</string>
     <string name="crowdnode_new_account_warning_2">将会向CrowdNode发送非常少的Dash用以验证您是该钱包地址的所有者.</string>
     <string name="crowdnode_link_account_description">从此设备与CrowdNode之间的所有来往交易都会使用此设备下方的Dash地址.</string>
-    <string name="dash_address">Dash地址</string>
     <string name="primary_dash_address">主要Dash地址</string>
     <string name="crowdnode_secure_wallet">备份您的密码以创建CrowdNode账户</string>
     <string name="crowdnode_secure_wallet_explainer">如果您丢失此钱包的密码并丢失此设备或卸载Dash钱包, 您将无法访问CrowdNode上和此钱包中的资金.</string>

@@ -70,6 +70,10 @@ class PaymentRequestWaitErrorView(context: Context, attrs: AttributeSet) : Frame
         binding.confirm.visibility = View.GONE
     }
 
+    fun hideCancelButton() {
+        binding.cancel.visibility = View.GONE
+    }
+
     fun setOnCloseClickListener(listener: OnClickListener) {
         binding.close.setOnClickListener(listener)
     }

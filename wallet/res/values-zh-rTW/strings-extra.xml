@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">創建一個新錢包</string>
-    <string name="onboarding_recover_wallet">從恢復詞組還原錢包</string>
+    <string name="onboarding_create_wallet">創建新錢包</string>
+    <string name="onboarding_recover_wallet">回復錢包</string>
     <string name="onboarding_restore_wallet">從文件還原錢包</string>
     <string name="onboarding_load_wallet_error">無法加載錢包!</string>
 
@@ -25,21 +25,23 @@
     <string name="dialog_confirm_secured_by">由擔保</string>
     <string name="dialog_confirm_fee">網絡費用</string>
     <string name="dialog_confirm_total">總共</string>
+    <string name="dialog_confirm_accept_contact_request">接受聯繫請求</string>
 
+    <string name="shortcut_action_join_dashpay">加入 DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_secure_now">備份</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">掃描</string>
+    <string name="shortcut_scan_to_pay">掃描二維碼</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">付款</string>
+    <string name="shortcut_send">付款</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_pay_to_contact">發送給聯繫人</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">購買 &amp; 出售</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">接收</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">導入私鑰</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">添加捷徑</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">快速接收</string>
@@ -75,12 +77,16 @@
     <string name="payments_title">付款方式</string>
     <string name="payments_tab_pay_label">付款</string>
     <string name="payments_tab_receive_label">接收</string>
+    <string name="payments_pay_to_contact_title">發送給聯繫人</string>
+    <string name="payments_pay_to_contact_sub_title">聯繫人中的一個人</string>
+    <string name="payments_pay_to_contact_button">選擇</string>
     <string name="payments_pay_by_qr_title">發送者</string>
     <string name="payments_pay_by_qr_sub_title">掃描二維碼</string>
     <string name="payments_pay_to_clipboard_title">發送到復制的位址</string>
     <string name="payments_pay_to_clipboard_sub_title">未能復制位址</string>
 
     <string name="forgot_pin_title">忘記密碼了嗎?</string>
+    <string name="forgot_pin_setup_new_pin_title">設置一個新的密碼</string>
     <string name="forgot_pin_message">您可以在恢復詞組的幫助下設置新的密碼。</string>
     <string name="forgot_pin_instruction_1">輸入恢復詞組以恢復您的錢包</string>
     <string name="forgot_pin_instruction_2">設置一個新的密碼</string>
@@ -115,7 +121,7 @@
     <string name="request_coins_clipboard_address_msg">達世幣位址複製到剪貼板</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">顯示</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" 不是恢復詞組的字詞</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含 12 個字</string>
+    <string name="restore_wallet_from_invalid_seed_not_twelve_words">恢復詞組必須包含12或24個單詞</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">錯誤恢復詞組</string>
     <string name="restore_wallet_from_invalid_seed_failure">錢包無法還原:\n\n%s\n\n錯誤的恢復詞組?</string>
 
@@ -180,6 +186,8 @@
     <string name="notification_settings_title">通知</string>
     <string name="notification_explainer_title">達世幣錢包想向您發送通知</string>
     <string name="notification_explainer_message">通知可能包括警報、聲音和圖標標記。這些可以在電話設置中進行設置。</string>
+    <string name="notification_dashpay_channel_name">DashPay</string>
+    <string name="notification_dashpay_channel_description">正在進行的 DashPay 的狀態。</string>
 
     <string name="net_type_indicator" />
 
@@ -205,7 +213,7 @@
     <string name="verify_info_title_1">Dash Core Group 不存儲恢復詞組</string>
     <string name="verify_info_subtitle_1">任何知道您的恢復詞組的人都可以使用您的資金。</string>
     <string name="verify_info_title_2">沒有恢復詞組，您將無法恢復錢包</string>
-    <string name="verify_info_subtitle_2">把它寫在安全的地方，不要給任何人看到。</string>
+    <string name="verify_info_subtitle_2">將其寫在安全的地方，不要向任何人展示。</string>
     <string name="verify_seed_buttons_tip">請以正確的順序點按您的恢復詞組中的單詞</string>
     <string name="verify_seed_success_title">已成功驗證</string>
     <string name="verify_seed_success_message">您的錢包現在已經安全了。 您可以隨時使用恢復詞組在另一台設備上恢復帳戶。</string>
@@ -233,9 +241,11 @@
     <string name="transaction_close">關閉</string>
     <string name="transaction_details_amount_received">收到的金額</string>
     <string name="transaction_details_amount_sent">發送金額</string>
+    <string name="transaction_details_amount_sent_successfully">發送成功</string>
     <string name="transaction_details_sent_from">來自</string>
     <string name="transaction_details_sent_to">發給</string>
     <string name="transaction_details_received_at">在......收到</string>
+    <string name="transaction_details_received_from">從......收到</string>
     <string name="transaction_details_moved_from">從移動</string>
     <string name="transaction_details_moved_internally_to">內部移至</string>
     <string name="transaction_failed_details">交易失敗</string>
@@ -249,6 +259,8 @@
     <string name="authenticate_switch_to_fingerprint">使用指紋</string>
     <string name="authenticate_switch_to_pin">使用密碼</string>
 
+    <string name="menu_invite_title">邀請函</string>
+    <string name="menu_invite_subtitle">幫助您的朋友和家人加入達世幣</string>
     <string name="menu_buy_and_sell_title">購買 &amp; 出售達世幣</string>
     <string name="menu_buy_and_sell_subtitle">與第三方交易所連結</string>
     <string name="liquid_unavailable">Liquid 與達世幣錢包的整合功能已經不能再使用</string>
@@ -275,9 +287,9 @@
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
     <string name="about_contact_support">聯繫支援服務</string>
     <string name="about_fork_disclaimer">這是一個從比特幣錢包分叉的開源應用程序</string>
-    <string name="about_copyright">版權所有 © 2023 Dash Core Group</string>
+    <string name="about_copyright">版權所有 © 2025 Dash Core Group</string>
     <string name="about_license">GNU通用公共許可證 v3.0</string>
-    <string name="about_version_name">達世幣錢包 %s</string>
+    <string name="about_version_name">DashPay 錢包%s</string>
     <string name="about_last_explore_device_sync">上一次探索設備同步</string>
     <string name="about_last_explore_server_update">上一次探索服務器更新</string>
     <string name="about_firebase_installation_id">Firebase 安裝 ID</string>
@@ -320,13 +332,15 @@
 
     <string name="skip">略過</string>
     <string name="get_started">開始使用</string>
-    <string name="welcome_screen_title_1_new_install">歡迎</string>
-    <string name="welcome_screen_title_1_upgrade">我們升級了</string>
-    <string name="welcome_screen_subtitle_1">跨所有設備的直觀熟悉的體驗</string>
-    <string name="welcome_screen_title_2">輕鬆付款</string>
-    <string name="welcome_screen_subtitle_2">易於使用的付款流程，可立即付款並能即時確認付款</string>
-    <string name="welcome_screen_title_3">更多控制選項</string>
-    <string name="welcome_screen_subtitle_3">能夠讓您完全控制並根據您的個人需要自定義錢包</string>
+    <string name="welcome_screen_title_1">通過用戶名發送和接收達世幣</string>
+    <string name="welcome_screen_title_2">在數千家商店花費 達世幣</string>
+    <string name="welcome_screen_title_3">存儲 達世幣 最安全的方式</string>
+
+    <string-array name="history_filter">
+        <item>所有</item>
+        <item>己收到</item>
+        <item>發送</item>
+    </string-array>
 
     <string name="sync_status_wait">請等待同步完成</string>
     <string name="sync_status_syncing_sub_title">與達世幣區塊鏈</string>
@@ -352,6 +366,29 @@
     <string name="import_image_no_private_key_copied">沒有複製到私鑰</string>
     <string name="import_image_import_valid_private_key">複製一個有效的私鑰並從中導入達世幣</string>
     <string name="import_image_invalid_private">無效的私鑰</string>
+    <string name="okay">好的</string>
+
+    <string name="onboard_from_invite_title">讓我們開始吧</string>
+    <string name="onboard_from_invite_subtitle">歡迎來到 DashPay</string>
+    <string name="onboard_from_invite_step1">步驟1</string>
+    <string name="onboard_from_invite_step2">步驟2</string>
+    <string name="onboard_from_invite_step3">步驟3</string>
+    <string name="onboard_from_invite_step1_title">選擇你的用戶名</string>
+    <string name="onboard_from_invite_step2_title">設置您的密碼</string>
+    <string name="onboard_from_invite_step3_title">保護您的錢包</string>
+
+    <string name="restore_wallet_please_wait">請稍等</string>
+    <string name="restore_wallet_restoring">您的錢包正在恢復</string>
+
+
+
+    <string name="network_unavailable">網絡不可用</string>
+    <string name="network_error_contact_details">無法獲取聯絡人詳細資料</string>
+    <string name="network_error_user_search">無法搜索該用戶</string>
+    <string name="network_error_contact_suggestions">無法提供建議</string>
+    <string name="network_error_unable_to_update_profile">無法更新您的個人資料</string>
+
+
 
     <string name="today">今天</string>
     <string name="yesterday">昨天</string>
@@ -362,6 +399,8 @@
     <string name="all_transactions">所有</string>
     <string name="received_transactions">己收到</string>
     <string name="sent_transactions">發送</string>
+    <string name="serious_error_title">嚴重錯誤</string>
+    <string name="serious_error_unknown">請聯絡支援人員。</string>
     <string name="set_pin_error_missing_wallet_title">缺少錢包錯誤</string>
     <string name="set_pin_error_missing_wallet_message">錢包不見了。請將此報告給支援平台。</string>
     <string name="wallet_encryption_error_title">錢包創建錯誤</string>
@@ -377,6 +416,10 @@
     <string name="launch_reset_wallet_extra_message">備份您的恢復詞組</string>
     <string name="start_reset_wallet_title">你可能失去 %s</string>
     <string name="reset_wallet_text">重置錢包</string>
+    <string name="reset_wallet_button">重置錢包</string>
+
+
+    <!-- Tax category -->
     <string name="reclassify_transactions_title">重新分類您的交易</string>
     <string name="reclassify_transactions_title_message">這些分類將反映在可用於導入稅務報告服務的 CSV 導出中。</string>
     <string name="reclassify_transactions_question">我在哪裡可以更改稅種?</string>
@@ -407,4 +450,18 @@
     <string name="masternode_key_not_used">尚未使用</string>
     <string name="masternode_key_revoked">已撤銷</string>
     <string name="masternode_key_private_public_base64">私鑰 / 公鑰 (base64)</string>
+    <string name="timeskew_ahead">前面</string>
+    <string name="timeskew_behind">在後面
+Zài hòumiàn</string>
+
+    <!-- stale rates messages -->
+    <string name="stale_exchange_rates_error">價格未被檢索到，所以相關的法幣的價值可能不正確。</string>
+    <string name="stale_exchange_rates_stale">價格至少有 30 分鐘延遲，所以相關的法幣的價值可能不正確。</string>
+    <string name="stale_exchange_rates_volatile">自上次更新以來，價格波動超過 50%。</string>
+    <string name="select_security_level_title">選擇安全級別</string>
+    <string name="select_security_level_message">您可以使用12或24個單詞的恢復詞組來保護錢包。</string>
+    <string name="select_security_level_12_words_title">安全</string>
+    <string name="select_security_level_12_words_message">12個單詞的恢復詞組</string>
+    <string name="select_security_level_24_words_title">非常安全</string>
+    <string name="select_security_level_24_words_message">24單詞的恢復詞組</string>
 </resources>

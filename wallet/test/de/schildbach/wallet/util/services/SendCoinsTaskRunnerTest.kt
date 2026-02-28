@@ -18,11 +18,18 @@
 package de.schildbach.wallet.util.services
 
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
+import de.schildbach.wallet.service.CoinJoinMode
+import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.MixingStatus
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import junit.framework.TestCase.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
@@ -37,10 +44,14 @@ class SendCoinsTaskRunnerTest {
     @Test
     fun sendCoins_coinSelectorSet_correctCoinSelector() {
         val wallet = mockk<Wallet>()
+        val coinJoinConfig = mockk<CoinJoinConfig>()
+        val coinJoinService = mockk<CoinJoinService>()
         every { wallet.context } returns Context(MainNetParams.get())
+        coEvery { coinJoinConfig.observeMode() } returns MutableStateFlow(CoinJoinMode.NONE)
+        coEvery { coinJoinService.observeMixingState() } returns MutableStateFlow(MixingStatus.NOT_STARTED)
         val application = mockk<WalletApplication>()
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk())
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), coinJoinConfig, coinJoinService, mockk(), mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,
@@ -54,10 +65,15 @@ class SendCoinsTaskRunnerTest {
     @Test
     fun sendCoins_nullCoinSelector_zeroConfSelectorByDefault() {
         val wallet = mockk<Wallet>()
+        val coinJoinConfig = mockk<CoinJoinConfig>()
+        val coinJoinService = mockk<CoinJoinService>()
         every { wallet.context } returns Context(MainNetParams.get())
+        coEvery { coinJoinConfig.observeMode() } returns MutableStateFlow(CoinJoinMode.NONE)
+        coEvery { coinJoinService.observeMixingState() } returns MutableStateFlow(MixingStatus.NOT_STARTED)
         val application = mockk<WalletApplication>()
+        every { application.wallet } returns wallet
 
-        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk())
+        val sendCoinsTaskRunner = SendCoinsTaskRunner(application, mockk(), mockk(), mockk(), mockk(), mockk(), coinJoinConfig, coinJoinService, mockk(), mockk())
         val request = sendCoinsTaskRunner.createSendRequest(
             Address.fromBase58(MainNetParams.get(), "XjBya4EnibUyxubEA8D2Y8KSrBMW1oHq5U"),
             Coin.COIN,

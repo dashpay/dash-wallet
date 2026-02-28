@@ -26,7 +26,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.suspendCancellableCoroutine
-import org.dash.wallet.common.data.RoomConverters
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
 import org.dash.wallet.features.exploredash.data.explore.MerchantDao
 import org.dash.wallet.features.exploredash.data.explore.model.Atm
@@ -35,6 +36,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.data.explore.model.MerchantFTS
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.RoomConverters
 import org.slf4j.LoggerFactory
 import java.io.File
 import kotlin.coroutines.resume
@@ -45,9 +47,10 @@ import kotlin.coroutines.resumeWithException
         Merchant::class,
         MerchantFTS::class,
         Atm::class,
-        AtmFTS::class
+        AtmFTS::class,
+        GiftCardProvider::class
     ],
-    version = 1,
+    version = 4,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -55,6 +58,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
     abstract fun merchantDao(): MerchantDao
     abstract fun atmDao(): AtmDao
+    abstract fun giftCardProviderDao(): GiftCardProviderDao
 
     companion object {
         private const val EXPLORE_DB_NAME = "explore-database"
@@ -124,44 +128,51 @@ abstract class ExploreDatabase : RoomDatabase() {
                             log.info("onOpenPrepackagedDatabase")
                         }
                     }
+                ).addMigrations(
+                    ExploreDatabaseMigrations.migration1To2,
+                    ExploreDatabaseMigrations.migration2To3,
+                    ExploreDatabaseMigrations.migration3To4
                 )
 
-                val onOpenCallback =
-                    object : Callback() {
-                        override fun onOpen(db: SupportSQLiteDatabase) {
-                            log.info("opened database: ${db.path}")
-                            if (!dbUpdateFile.delete()) {
-                                log.error("unable to delete " + dbUpdateFile.absolutePath)
-                            }
+                val onOpenCallback = object : Callback() {
+                    override fun onOpen(db: SupportSQLiteDatabase) {
+                        log.info("opened database: ${db.path}")
+                        if (!dbUpdateFile.delete()) {
+                            log.error("unable to delete " + dbUpdateFile.absolutePath)
+                        }
 
-                            try {
-                                if (hasExpectedData(db)) {
-                                    repository.finalizeUpdate()
-                                    log.info("successfully loaded new version of explore db")
-
-                                    if (coroutine.isActive) {
-                                        coroutine.resume(database!!)
-                                    }
-                                } else {
-                                    log.info("database update file was empty")
-
-                                    if (coroutine.isActive) {
-                                        coroutine.resumeWithException(SQLiteException("Database update file is empty"))
-                                    }
-                                }
-                            } catch (ex: Exception) {
-                                log.error("error reading merchant & atm count", ex)
+                        try {
+                            if (hasExpectedData(db)) {
+                                repository.finalizeUpdate()
+                                log.info("successfully loaded new version of explore db")
 
                                 if (coroutine.isActive) {
-                                    coroutine.resumeWithException(ex)
+                                    coroutine.resume(database!!)
                                 }
+                            } else {
+                                log.info("database update file was empty")
+
+                                if (coroutine.isActive) {
+                                    coroutine.resumeWithException(SQLiteException("Database update file is empty"))
+                                }
+                            }
+                        } catch (ex: Exception) {
+                            log.error("error reading merchant & atm count", ex)
+
+                            if (coroutine.isActive) {
+                                coroutine.resumeWithException(ex)
                             }
                         }
                     }
+                }
 
                 database = dbBuilder
                     .setJournalMode(JournalMode.TRUNCATE)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(
+                        ExploreDatabaseMigrations.migration1To2,
+                        ExploreDatabaseMigrations.migration2To3,
+                        ExploreDatabaseMigrations.migration3To4
+                    )
                     .addCallback(onOpenCallback)
                     .build()
 

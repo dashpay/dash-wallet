@@ -25,9 +25,9 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.rates.ExchangeRatesRepository
 import de.schildbach.wallet.service.WalletTransactionMetadataProvider
-import org.dash.wallet.common.WalletDataProvider
 import de.schildbach.wallet.service.BlockchainStateDataProvider
 import de.schildbach.wallet.service.ExchangeIntegrationListProvider
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider

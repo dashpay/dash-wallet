@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<!--
+  ~ Copyright (c) 2024$ Dash Core Group
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <https://www.gnu.org/licenses/>.
+  -->
+
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="34dp"
+    android:height="34dp"
+    android:viewportWidth="34"
+    android:viewportHeight="34">
+  <path
+      android:pathData="M6,12C6,8.686 8.686,6 12,6H22C25.314,6 28,8.686 28,12V22C28,25.314 25.314,28 22,28H12C8.686,28 6,25.314 6,22V12Z"
+      android:fillColor="#11D7A3"/>
+  <path
+      android:pathData="M21.4,12.6H11.5V11.5H22.5L21.4,12.6ZM11.5,13.48H20.52L19.42,14.58H11.5V13.48ZM11.5,15.46H18.54L17.44,16.56H11.5V15.46ZM15.46,18.54L16.56,17.44H22.5V18.54H15.46ZM14.58,19.42L13.48,20.52H22.5V19.42H14.58ZM12.6,21.4L11.5,22.5H22.5V21.4H12.6Z"
+      android:fillColor="#ffffff"
+      android:fillType="evenOdd"/>
+</vector>

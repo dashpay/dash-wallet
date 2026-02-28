@@ -20,9 +20,10 @@ package org.dash.wallet.common.transactions.filters
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionConfidence
-import org.dash.wallet.common.transactions.filters.TransactionFilter
 
-class LockedTransaction(private val topUpTxId: Sha256Hash): TransactionFilter {
+class LockedTransaction(private val topUpTxId: Sha256Hash? = null): TransactionFilter {
+    constructor() : this(null)
+
     override fun matches(tx: Transaction): Boolean {
         val confidence = tx.confidence
         val type = confidence.confidenceType
@@ -30,6 +31,10 @@ class LockedTransaction(private val topUpTxId: Sha256Hash): TransactionFilter {
                 type == TransactionConfidence.ConfidenceType.BUILDING ||
                 (type == TransactionConfidence.ConfidenceType.PENDING && confidence.numBroadcastPeers() > 1)
 
-        return tx.txId == topUpTxId && isLocked
+        return if (topUpTxId != null) {
+            tx.txId == topUpTxId && isLocked
+        } else {
+            isLocked
+        }
     }
 }

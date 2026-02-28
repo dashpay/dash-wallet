@@ -21,7 +21,7 @@ import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.data.ExchangeConfig
-import org.dash.wallet.common.data.unwrap
+import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
@@ -74,7 +74,7 @@ class ExchangeIntegrationListProvider @Inject constructor(
                         ExchangeIntegration(
                             "coinbase",
                             coinBaseRepository.isAuthenticated,
-                            coinbaseAddress.unwrap(),
+                            (coinbaseAddress as? ResponseResource.Success)?.value,
                             currency,
                             R.string.coinbase,
                             R.drawable.ic_coinbase

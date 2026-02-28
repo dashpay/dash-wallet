@@ -50,7 +50,7 @@ public class DashRetailClient extends RetrofitClient implements ExchangeRatesCli
         List<ExchangeRate> exchangeRates = new ArrayList<>();
         for (DashRetailRate rate : rates) {
             if (DASH_CURRENCY_SYMBOL.equals(rate.getBaseCurrency())) {
-                exchangeRates.add(new ExchangeRate(rate.getQuoteCurrency(), rate.getPrice().toPlainString()));
+                exchangeRates.add(new ExchangeRate(rate.getQuoteCurrency(), rate.getPrice().toPlainString(), rate.getRetreivalDate()));
             }
         }
 

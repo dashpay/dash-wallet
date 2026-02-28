@@ -8,7 +8,6 @@
     <string name="blockchain_state_progress_days">%1$s, %2$d zile în urmă</string>
     <string name="blockchain_state_progress_weeks">%1$s, %2$d săptămâni în urmă</string>
     <string name="blockchain_state_progress_months">%1$s, %2$d luni în urmă</string>
-    <string name="blockchain_state_progress_downloading">Sincronizare cu rețeaua</string>
     <string name="blockchain_state_progress_stalled">Sincronizarea s-a blocat</string>
     <string name="blockchain_state_progress_problem_storage">Sincronizare: Problemă de stocare</string>
     <string name="blockchain_state_progress_problem_network">Sincronizare: Problemă de rețea</string>
@@ -235,6 +234,7 @@
     <string name="preferences_report_issue_title">Raportează problema</string>
     <string name="preferences_initiate_reset_title">scanează din nou blockchain-ul</string>
     <string name="preferences_initiate_reset_dialog_positive">Scanează din nou</string>
+    <string name="rescan_blockchain_confirm_button">Scanează din nou</string>
     <string name="preferences_extended_public_key_title">Arată xpub</string>
     <string name="preferences_extended_public_key_summary">Arată Cheia Publică Extinsă a portofelului tau, pentru a putea fi importată in alte aplicaţii și servicii. Ai grijă: acest lucru va dezvălui confidențialitatea ta monetară aplicației respective.</string>
     <string name="bitmap_fragment_share">Distribuie...</string>
@@ -251,7 +251,6 @@
     <string name="report_issue_dialog_collect_installed_packages">Adaugă lista pachetelor instalate</string>
     <string name="report_issue_dialog_collect_application_log">Adaugă log-ul aplicatiei</string>
     <string name="report_issue_dialog_collect_wallet_dump">Adaugă dump-ul portofelului</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Trimite raportul folosind...</string>
     <string name="report_issue_dialog_mail_intent_failed">Trimiterea raportului a eșuat.</string>
     <string name="about_title">Despre</string>
     <string name="about_version_title">Versiunea</string>

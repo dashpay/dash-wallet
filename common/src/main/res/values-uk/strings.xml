@@ -11,6 +11,7 @@
     <string name="buy_dash">Купити Dash</string>
     <string name="copied">Скопійовано</string>
     <string name="staking_title">Стейкінг</string>
+    <string name="spend_title">Витратити</string>
     <string name="email">Електронна адреса</string>
     <string name="email_placeholder">e.g. johndoe@mail.com</string>
     <string name="error">Помилка</string>
@@ -21,7 +22,10 @@
     <string name="transfer_dash">Переказати Dash</string>
     <string name="login_error_title">Навдалося ввійти в ваш %s акаунт</string>
     <string name="login_error_message">Сталася помилка під час входу до вашого %s акаунту.</string>
+    <string name="dash_address">Адреса Dash</string>
+    <string name="username">Ім\'я користувача</string>
     <string name="balance">Баланс:</string>
+    <string name="nothing_here">Тут нічого немає</string>
 
     <!-- Local Currency List: GGP -->
     <string name="currency_GGP">Гернсійський фунт</string>
@@ -55,10 +59,13 @@
     <string name="button_understand">Я розумію</string>
     <string name="button_okay">Згода</string>
     <string name="button_share">Поділитися</string>
+    <string name="button_skip">Пропустити</string>
     <string name="share_address">Поділитися адресою</string>
     <string name="verify">Підтвердити</string>
     <string name="receive_enter_amount_button">Вкажіть суму</string>
     <string name="account_create">Створити обліковий запис</string>
+    <string name="submit">Надіслати</string>
+    <string name="try_again">Спробуйте ще раз</string>
 
     <!-- Design system UI elements -->
     <string name="search_hint">Пошук</string>
@@ -67,7 +74,7 @@
     <string name="pay_with">Платіть з</string>
     <string name="choose_payment_method">Виберіть спосіб оплати</string>
     <string name="debit_credit_card">Дебетова/кредитна картка</string>
-    <string name="max">Максимум</string>
+    <string name="max">Макс</string>
     <string name="select_the_coin">Виберіть монету</string>
     <string name="dash">Dash</string>
     <string name="dash_wallet_name">Dash Wallet</string>
@@ -76,6 +83,7 @@
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>
+    <string name="send_coins_error_insufficient_mixed_money">Недостатньо змішаних фондів. Зачекайте, поки змішування CoinJoin завершиться, або вимкніть цю функцію в налаштуваннях, щоб завершити цю транзакцію.</string>
     <string name="syncing">Синхронізація</string>
     <string name="no_connection">Немає підключення до Інтернету</string>
     <string name="rate_not_available">Недоступний</string>
@@ -89,6 +97,7 @@
     <string name="payment_protocol_default_error_title">Помилка платежу</string>
     <string name="payment_request_problem_message">Ваш платіж не може бути оброблений сервером, будь ласка, зверніться до продавця</string>
     <string name="exchange_rate_not_found">Не вдалося знайти обмінний курс.</string>
+    <string name="send_coins_fragment_hint_replaying">Наразі платежі неможливі, оскільки гаманець не повністю синхронізовано з мережею</string>
 
     <!-- Integrations -->
     <string name="buy_dash_subtitle">Отримуйте безпосередньо в Dash Wallet.</string>
@@ -98,4 +107,8 @@
     <string name="enter_amount_available">доступно</string>
     <string name="transaction_row_rate_not_available">Недоступний</string>
     <string name="log_in">Увійти</string>
-</resources>
+
+    <string name="chain_syncing">Блокчейн синхронізується...</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
+
+    </resources>

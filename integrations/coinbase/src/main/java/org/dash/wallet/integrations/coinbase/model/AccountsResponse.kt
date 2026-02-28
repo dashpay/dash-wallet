@@ -33,7 +33,7 @@ import java.util.UUID
 @Parcelize
 data class AccountsResponse(
     val accounts: List<CoinbaseAccount>
-): Parcelable
+):  Parcelable
 
 @Parcelize
 data class CoinbaseAccount(

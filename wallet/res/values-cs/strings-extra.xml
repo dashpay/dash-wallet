@@ -1,9 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
-    <string name="onboarding_create_wallet">Vytvořit novou peněženku</string>
-    <string name="onboarding_recover_wallet">Obnovit peněženku pomocí fráze</string>
-    <string name="onboarding_restore_wallet">Obnovit peněženku ze souboru</string>
+    <string name="onboarding_recover_wallet">Obnovit peněženku</string>
     <string name="onboarding_load_wallet_error">Nelze načíst peněženku!</string>
 
     <string name="set_pin_create_new_wallet">Vytvořit novou peněženku</string>
@@ -25,19 +23,17 @@
     <string name="dialog_confirm_secured_by">Zabezpečeno</string>
     <string name="dialog_confirm_fee">Poplatek síti</string>
     <string name="dialog_confirm_total">Celkem</string>
-
+    <string name="shortcut_action_join_dashpay">Připojit k DashPay</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_scan_to_pay">Skenovat</string>
+    <string name="shortcut_send">Poslat</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_pay_to_address">Poslat</string>
+    <string name="shortcut_pay_to_contact">Odeslat kontaktu</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_buy_sell">Nákup &amp; Prodej</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_receive">Přijmout</string>
     <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
     <string name="shortcut_import_key">Importovat Privátní Klíč</string>
-    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
-    <string name="shortcut_add_shortcut">Přidat zkratku</string>
 
     <!-- Lock Screen: Button: 2 lines, 9 characters across -->
     <string name="lock_action_quick_receive">Přijmout</string>
@@ -73,12 +69,16 @@
     <string name="payments_title">Platby</string>
     <string name="payments_tab_pay_label">Poslat</string>
     <string name="payments_tab_receive_label">Přijmout</string>
+    <string name="payments_pay_to_contact_title">Odeslat kontaktu</string>
+    <string name="payments_pay_to_contact_sub_title">Osoba z vašich kontaktů</string>
+    <string name="payments_pay_to_contact_button">Zvolit</string>
     <string name="payments_pay_by_qr_title">Odeslat</string>
     <string name="payments_pay_by_qr_sub_title">Skenování QR kódu</string>
     <string name="payments_pay_to_clipboard_title">Odeslat na zkopírovanou adresu</string>
     <string name="payments_pay_to_clipboard_sub_title">Žádná zkopírovaná adresa</string>
 
     <string name="forgot_pin_title">Zapomenutý PIN?</string>
+    <string name="forgot_pin_setup_new_pin_title">Nastavit nový PIN</string>
     <string name="forgot_pin_message">Nový PIN můžete nastavit pomocí vaší fráze pro obnovení.</string>
     <string name="forgot_pin_instruction_1">Zadejte frázi pro obnovení vaší peněženky</string>
     <string name="forgot_pin_instruction_2">Nastavit nový PIN</string>
@@ -113,7 +113,6 @@
     <string name="request_coins_clipboard_address_msg">Dash adresa zkopírována do schránky</string>
     <string name="backup_wallet_to_seed_show_recovery_phrase">Zobrazit</string>
     <string name="restore_wallet_from_invalid_seed_warning_message">\"%s\" není slovo z fráze pro obnovení</string>
-    <string name="restore_wallet_from_invalid_seed_not_twelve_words">Fráze pro obnovení musí mít 12 slov</string>
     <string name="restore_wallet_from_invalid_seed_bad_checksum">Špátná fráze pro obnovení</string>
     <string name="restore_wallet_from_invalid_seed_failure">Peněženka nemohla být obnovena:\n\%s\n\nŠpatná fráze pro obnovení?</string>
 
@@ -185,7 +184,6 @@
     <string name="notification_settings_title">Notifikace</string>
     <string name="notification_explainer_title">Dash Wallet vám chce zasílat notifikace</string>
     <string name="notification_explainer_message">Notifikace mohou obsahovat upozornění, zvuky a odznaky. Ty lze konfigurovat v Nastavení telefonu.</string>
-
     <string name="net_type_indicator" />
 
     <string name="unlock_with_fingerprint">K odemčení použijte otisk prstu.</string>
@@ -230,6 +228,7 @@
     <string name="transaction_details_sent_from">Odesláno z</string>
     <string name="transaction_details_sent_to">Odeslat na</string>
     <string name="transaction_details_received_at">Přijato na</string>
+    <string name="transaction_details_received_from">Přijato od</string>
     <string name="transaction_details_moved_from">Přesunuto z</string>
     <string name="transaction_details_moved_internally_to">Interně přesunuto do</string>
     <string name="authenticate_fingerprint_title">Ověřit</string>
@@ -246,8 +245,8 @@
     <string name="menu_settings_subtitle">Výchozí měna, zkratky, o aplikaci</string>
     <string name="menu_tools_title">Nástroje</string>
     <string name="menu_tools_subtitle">Importovat privátní klíč…</string>
-    <string name="menu_local_currency">Místní Měna</string>
-    <string name="menu_rescan_blockchain">Znovu Skenovat Blockchain</string>
+    <string name="menu_local_currency">Místní měna</string>
+    <string name="menu_rescan_blockchain">Znovu skenovat blockchain</string>
     <string name="menu_contact_support_title">Podpora</string>
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
     <string name="menu_explore_title">Prozkoumat</string>
@@ -260,7 +259,6 @@
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>
     <string name="about_license">GNU General Public License v3.0</string>
-    <string name="about_version_name">Dash Wallet %s</string>
     <string name="about_last_explore_dash_update_error">nelze načíst</string>
     <string name="about_last_explore_dash_sync_never">nikdy</string>
     <string name="block">Blok</string>
@@ -296,13 +294,11 @@
 
     <string name="skip">přeskočit</string>
     <string name="get_started">Jdu na to</string>
-    <string name="welcome_screen_title_1_new_install">Vítej</string>
-    <string name="welcome_screen_title_1_upgrade">Vylepšovali jsme</string>
-    <string name="welcome_screen_subtitle_1">Intuitivní používání napříč všemi tvými zařízeními</string>
-    <string name="welcome_screen_title_2">Plaťte jednoduše</string>
-    <string name="welcome_screen_subtitle_2">Plať a přijímej platby zcela okamžitě</string>
-    <string name="welcome_screen_title_3">Více možností</string>
-    <string name="welcome_screen_subtitle_3">Měj naprostou kontrolu a přizpůsob si svojí peněženku</string>
+    <string-array name="history_filter">
+        <item>Vše</item>
+        <item>Přijato</item>
+        <item>Odesláno</item>
+    </string-array>
 
     <string name="sync_status_wait">Počkejte na dokončení synchronizace</string>
     <string name="sync_status_syncing_sub_title">s Dash blockchainem</string>
@@ -328,7 +324,17 @@
     <string name="import_image_no_private_key_copied">Nebyl zkopírován žádný privátní klíč</string>
     <string name="import_image_import_valid_private_key">Pro importování Dash zkopírujte platný privátní klíč  </string>
     <string name="import_image_invalid_private">Neplatný privátní klíč</string>
+    <string name="okay">Dobře</string>
 
+    <string name="onboard_from_invite_step1_title">Zvolte si uživatelské jméno</string>
+    <string name="onboard_from_invite_step2_title">Nastavte svůj PIN</string>
+    <string name="onboard_from_invite_step3_title">Zabezpečte svou peněženku</string>
+
+    <string name="restore_wallet_please_wait">Čekejte prosím</string>
+    <string name="network_unavailable">Síť je nedostupná</string>
+    <string name="network_error_contact_details">Nelze načíst kontaktní údaje</string>
+    <string name="network_error_user_search">Nelze vyhledat uživatele</string>
+    <string name="network_error_contact_suggestions">Nelze poskytnout návrhy</string>
     <string name="syncing">Synchronizace</string>
     <string name="all_transactions">Vše</string>
     <string name="received_transactions">Přijato</string>
@@ -341,6 +347,9 @@
 
     <string name="continue_reset">Pokračovat</string>
     <string name="reset_wallet_text">Resetovat peněženku</string>
+    <string name="reset_wallet_button">Resetovat peněženku</string>
+
+
     <string name="masternode_key_type_owner">Klíče majitele</string>
     <string name="masternode_key_type_voting">Klíče pro hlasování</string>
     <string name="masternode_key_type_operator">Klíče operátora</string>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2021 Dash Core Group.
+  ~ Copyright 2023 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -14,18 +14,15 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
-    <item>
-        <layer-list>
-            <item>
-                <shape android:shape="oval">
-                    <solid android:color="@color/colorPrimary" />
-                    <size android:width="25dp" android:height="25dp" />
-                </shape>
-            </item>
-
-            <item android:top="6.8dp" android:bottom="6.2dp" android:left="6.4dp" android:right="6.5dp"
-                  android:drawable="@drawable/ic_checkmark" />
-        </layer-list>
-    </item>
-</selector>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="22"
+    android:viewportHeight="22">
+    <path
+        android:pathData="M6,0L16,0A6,6 0,0 1,22 6L22,16A6,6 0,0 1,16 22L6,22A6,6 0,0 1,0 16L0,6A6,6 0,0 1,6 0z"
+        android:fillColor="#008DE4"/>
+    <path
+        android:pathData="M9.624,16.93C9.403,16.93 9.204,16.883 9.025,16.79C8.847,16.697 8.673,16.539 8.503,16.319L5.306,12.395C5.212,12.268 5.138,12.134 5.083,11.994C5.028,11.854 5,11.712 5,11.567C5,11.278 5.098,11.03 5.293,10.822C5.488,10.614 5.73,10.51 6.019,10.51C6.206,10.51 6.374,10.548 6.522,10.624C6.671,10.701 6.826,10.845 6.987,11.058L9.573,14.395L15.013,5.656C15.25,5.266 15.556,5.07 15.93,5.07C16.202,5.07 16.448,5.157 16.669,5.331C16.89,5.506 17,5.741 17,6.038C17,6.183 16.966,6.327 16.898,6.472C16.83,6.616 16.758,6.752 16.681,6.879L10.694,16.319C10.558,16.522 10.401,16.675 10.223,16.777C10.045,16.879 9.845,16.93 9.624,16.93Z"
+        android:fillColor="#ffffff"/>
+</vector>

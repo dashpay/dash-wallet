@@ -23,7 +23,6 @@ import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
-import android.content.res.Resources;
 import android.net.Uri;
 import android.text.format.DateUtils;
 
@@ -37,6 +36,7 @@ import org.bitcoinj.utils.MonetaryFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -46,12 +46,10 @@ public class Configuration {
     public final int lastVersionCode;
 
     private final SharedPreferences prefs;
-    private final Resources res;
 
     public static final String PREFS_KEY_CONNECTIVITY_NOTIFICATION = "connectivity_notification";
     public static final String PREFS_KEY_TRUSTED_PEER = "trusted_peer";
     public static final String PREFS_KEY_TRUSTED_PEER_ONLY = "trusted_peer_only";
-    public static final String PREFS_KEY_BLOCK_EXPLORER = "block_explorer";
     public static final String PREFS_KEY_REMIND_BALANCE = "remind_balance";
     public static final String PREFS_KEY_REMIND_BALANCE_TIME = "remind_balance_time";
     private static final String PREFS_KEY_PREVIOUS_VERSION = "previous_version";
@@ -68,16 +66,18 @@ public class Configuration {
     private static final String PREFS_KEY_LAST_BACKUP = "last_backup";
     public static final String PREFS_KEY_REMIND_BACKUP_SEED = "remind_backup_seed";
     private static final String PREFS_KEY_LAST_BACKUP_SEED_TIME = "last_backup_seed_time";
-    private static final String PREFS_KEY_LAST_RESTORE = "last_restore";
     private static final String PREFS_KEY_LAST_ENCRYPT_KEYS = "last_encrypt_keys";
     private static final String PREFS_KEY_LAST_BLOCKCHAIN_RESET = "last_blockchain_reset";
 
     private static final String PREFS_REMIND_ENABLE_FINGERPRINT = "remind_enable_fingerprint";
     private static final String PREFS_ENABLE_FINGERPRINT = "enable_fingerprint";
     public static final String PREFS_RESTORING_BACKUP = "restoring_backup";
-    public static final String PREFS_V7_REDESIGN_TUTORIAL_COMPLETED = "v7_tutorial_completed";
     public static final String PREFS_PIN_LENGTH = "pin_length";
-
+    private static final String PREFS_IMGUR_DELETE_HASH = "imgur_delete_hash";
+    private static final String PREFS_UPLOAD_POLICY = "upload_policy_accepted_";
+    private static final String PREFS_INVITER = "inviter";
+    private static final String PREFS_INVITER_CONTACT_REQUEST_SENT_INFO = "inviter_contact_request_sent_info";
+    private static final String PREFS_ONBOARDING_STAGE = "onboarding_state";
     public static final String PREFS_KEY_LAST_UPHOLD_BALANCE = "last_uphold_balance";
 
     private static final int PREFS_DEFAULT_BTC_SHIFT = 0;
@@ -86,18 +86,21 @@ public class Configuration {
     public static final String PREFS_KEY_SHOW_NOTIFICATIONS_EXPLAINER = "show_notifications_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_EXPLAINER = "show_tax_catagory_explainer";
     public static final String PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME = "show_tax_catagory_install_time";
-
+    public static final String PREFS_KEY_RESET_BLOCKCHAIN_PENDING = "reset_blockchain_pending";
+    private static final long DISABLE_NOTIFICATIONS = -1;
+    
     // CrowdNode
     public static final String PREFS_KEY_CROWDNODE_ACCOUNT_ADDRESS = "crowdnode_account_address";
     public static final String PREFS_KEY_CROWDNODE_PRIMARY_ADDRESS = "crowdnode_primary_address";
     public static final String PREFS_KEY_CROWDNODE_STAKING_APY = "crowdnode_staking_apy_last";
 
+    // UUID
+    public static final String PREFS_UUID = "prefs_uuid";
+
     private static final Logger log = LoggerFactory.getLogger(Configuration.class);
 
-    public Configuration(final SharedPreferences prefs, final Resources res) {
+    public Configuration(final SharedPreferences prefs) {
         this.prefs = prefs;
-        this.res = res;
-
         this.lastVersionCode = prefs.getInt(PREFS_KEY_LAST_VERSION, 0);
     }
 
@@ -147,10 +150,6 @@ public class Configuration {
 
     public boolean getTrustedPeerOnly() {
         return prefs.getBoolean(PREFS_KEY_TRUSTED_PEER_ONLY, false);
-    }
-
-    public Uri getBlockExplorer(int defValueResValue) {
-        return Uri.parse(prefs.getString(PREFS_KEY_BLOCK_EXPLORER, res.getStringArray(defValueResValue)[0]));
     }
 
     public boolean remindBalance() {
@@ -220,10 +219,6 @@ public class Configuration {
 
     public boolean getRemindBackupSeed() {
         return prefs.getBoolean(PREFS_KEY_REMIND_BACKUP_SEED, true);
-    }
-
-    public long getLastRestoreTime() {
-        return prefs.getLong(PREFS_KEY_LAST_RESTORE, 0);
     }
 
     public boolean lastBackupSeedReminderMoreThan24hAgo() {
@@ -337,14 +332,6 @@ public class Configuration {
         prefs.edit().putBoolean(PREFS_REMIND_ENABLE_FINGERPRINT, remind).apply();
     }
 
-    public boolean getV7TutorialCompleted() {
-        return prefs.getBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, false);
-    }
-
-    public void setV7TutorialCompleted() {
-        prefs.edit().putBoolean(PREFS_V7_REDESIGN_TUTORIAL_COMPLETED, true).apply();
-    }
-
     public boolean getEnableFingerprint() {
         return prefs.getBoolean(PREFS_ENABLE_FINGERPRINT, false);
     }
@@ -359,6 +346,46 @@ public class Configuration {
 
     public void setPinLength(int pinLength) {
         prefs.edit().putInt(PREFS_PIN_LENGTH, pinLength).apply();
+    }
+
+    public String getImgurDeleteHash() {
+        return prefs.getString(PREFS_IMGUR_DELETE_HASH, "");
+    }
+
+    public void setImgurDeleteHash(String deleteHash) {
+        prefs.edit().putString(PREFS_IMGUR_DELETE_HASH, deleteHash).apply();
+    }
+
+    public Boolean getAcceptedUploadPolicy(String service) {
+        return prefs.getBoolean(PREFS_UPLOAD_POLICY + service, false);
+    }
+
+    public void setAcceptedUploadPolicy(String service, Boolean accepted) {
+        prefs.edit().putBoolean(PREFS_UPLOAD_POLICY + service, accepted).apply();
+    }
+
+    public String getInviter() {
+        return prefs.getString(PREFS_INVITER, null);
+    }
+
+    public void setInviter(String iviter) {
+        prefs.edit().putString(PREFS_INVITER, iviter).apply();
+    }
+
+    public Boolean getInviterContactRequestSentInfoShown() {
+        return prefs.getBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, false);
+    }
+
+    public void setInviterContactRequestSentInfoShown(Boolean shown) {
+        prefs.edit().putBoolean(PREFS_INVITER_CONTACT_REQUEST_SENT_INFO, shown).apply();
+    }
+
+    public int getOnboardingStage() {
+        return prefs.getInt(PREFS_ONBOARDING_STAGE, 0);
+    }
+
+    public void setOnboardingStage(final int onboardingStage) {
+        prefs.edit().putInt(PREFS_ONBOARDING_STAGE, onboardingStage).apply();
     }
 
     public long getLastEncryptKeysTime() {
@@ -437,6 +464,17 @@ public class Configuration {
         prefs.edit().putLong(PREFS_KEY_SHOW_TAX_CATEGORY_INSTALLTIME, time).apply();
     }
 
+    // reset blockchain pending
+    public boolean isResetBlockchainPending() {
+        return prefs.getBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false);
+    }
+    public void setResetBlockchainPending() {
+        prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, true).apply();
+    }
+    public void clearResetBlockchainPending() {
+        prefs.edit().putBoolean(PREFS_KEY_RESET_BLOCKCHAIN_PENDING, false).apply();
+    }
+
     // CrowdNode
 
     @NonNull
@@ -464,5 +502,15 @@ public class Configuration {
 
     public void setPrefsKeyCrowdNodeStakingApy(float apy) {
         prefs.edit().putFloat(PREFS_KEY_CROWDNODE_STAKING_APY, apy).apply();
+    }
+
+    public String getUniqueId() {
+        if (prefs.contains(PREFS_UUID)) {
+            return prefs.getString(PREFS_UUID, UUID.randomUUID().toString());
+        } else {
+            String uuid = UUID.randomUUID().toString();
+            prefs.edit().putString(PREFS_UUID, uuid).apply();
+            return uuid;
+        }
     }
 }

@@ -17,16 +17,24 @@
 
 package de.schildbach.wallet.database
 
+import android.net.Uri
 import androidx.room.TypeConverter
+import de.schildbach.wallet.data.InvitationLinkData
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import org.dashj.platform.dpp.identity.Identity
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Sha256Hash
+import org.dashj.platform.dashpay.IdentityStatus
+import org.dashj.platform.dashpay.UsernameStatus
+import org.dashj.platform.sdk.KeyType
 import java.util.*
+import kotlin.collections.ArrayList
 
 class BlockchainStateRoomConverters {
 
     @TypeConverter
-    fun fromImpedimentsEnumSet(value: String?): Set<BlockchainState.Impediment> {
+    fun fromImpedimentsEnumSet(value: String?): MutableSet<BlockchainState.Impediment> {
         val impedimentSet = EnumSet.noneOf(BlockchainState.Impediment::class.java)
         if (value == null || value.isEmpty()) {
             return impedimentSet
@@ -39,7 +47,7 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun toImpedimentsString(impediments: Set<BlockchainState.Impediment>): String {
+    fun toImpedimentsString(impediments: MutableSet<BlockchainState.Impediment>): String {
         val sb = StringBuilder()
         impediments.forEach {
             if (sb.isNotEmpty()) {
@@ -51,22 +59,98 @@ class BlockchainStateRoomConverters {
     }
 
     @TypeConverter
-    fun fromSha256Hash(hash: Sha256Hash?) : ByteArray? {
+    fun toIdentityCreationState(value: Int): IdentityCreationState {
+        return IdentityCreationState.values()[value]
+    }
+
+    @TypeConverter
+    fun fromIdentityCreationState(identityCreationState: IdentityCreationState): Int {
+        return identityCreationState.ordinal
+    }
+
+    @TypeConverter
+    fun fromSha256Hash(hash: Sha256Hash?): ByteArray? {
         return hash?.bytes
     }
 
     @TypeConverter
     fun toSha256Hash(bytes: ByteArray?): Sha256Hash? {
-        bytes?.let {
-            return Sha256Hash.wrap(bytes)
-        }
+        return bytes?.let { Sha256Hash.wrap(it) }
+    }
 
-        return null
+    @TypeConverter
+    fun toUsernameStatus(value: Int): UsernameStatus {
+        return UsernameStatus.values()[value]
+    }
+
+    @TypeConverter
+    fun fromUsernameStatus(usernameStatus: UsernameStatus?): Int {
+        return usernameStatus?.value ?: UsernameStatus.NOT_PRESENT.value
+    }
+
+    @TypeConverter
+    fun toRegistrationStatus(value: Int): IdentityStatus? {
+        return if (value > -1) IdentityStatus.values()[value] else null
+    }
+
+    @TypeConverter
+    fun fromRegistrationStatus(registrationStatus: IdentityStatus?): Int {
+        return registrationStatus?.ordinal ?: -1
+    }
+
+    @TypeConverter
+    fun toCurrentMainKeyType(value: Int): KeyType? {
+        return if (value > -1) KeyType.entries[value] else null
+    }
+
+    @TypeConverter
+    fun fromCurrentMainKeyType(currentMainKeyType: KeyType?): Int {
+        return currentMainKeyType?.ordinal ?: -1
+    }
+
+    @TypeConverter
+    fun toArrayList(data: String?): ArrayList<String>? {
+        return data?.run { ArrayList(data.split(",")) }
+    }
+
+    @TypeConverter
+    fun fromArrayList(data: ArrayList<String>?): String? {
+        return data?.joinToString(",")
+    }
+
+    @TypeConverter
+    fun fromIdentity(identity: Identity?): ByteArray? {
+        return identity?.toBuffer()
+    }
+
+    @Deprecated("this is not available")
+    @TypeConverter
+    fun toIdentity(data: ByteArray?): Identity? {
+        return data?.run {
+            return try {
+                null
+                //PlatformRepo.getInstance().platform.dpp.identity.createFromBuffer(data)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    @TypeConverter
+    fun fromInvitationLinkData(invite: InvitationLinkData?): String? {
+        return invite?.link?.toString()
+    }
+
+    @TypeConverter
+    fun toInvitationLinkData(data: String?): InvitationLinkData? {
+        return data?.run {
+            InvitationLinkData(Uri.parse(data), false)
+        }
     }
 
     @TypeConverter
     fun toCoin(value: Long): Coin = Coin.valueOf(value)
 
     @TypeConverter
-    fun fromCoin(coin: Coin) = coin.value
+    fun fromCoin(coin: Coin?) = coin?.value ?: 0L
 }

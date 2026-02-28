@@ -24,11 +24,13 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.BuildConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
 
 object Constants {
+    const val EARLIEST_HD_SEED_CREATION_TIME = 1427610960L
     private val log: Logger = LoggerFactory.getLogger(Constants::class.java)
 
     const val CHAR_HAIR_SPACE = '\u200a'
@@ -49,6 +51,8 @@ object Constants {
     const val ANDROID_KEY_STORE = "AndroidKeyStore"
 
     lateinit var EXPLORE_GC_FILE_PATH: String
+    lateinit var FAUCET_URL: String
+    lateinit var BUILD_FLAVOR: String
     var DEEP_LINK_PREFIX = "android-app://hashengineering.darkcoin.wallet"
 
     const val DASH_CURRENCY = "DASH"
@@ -61,11 +65,11 @@ object Constants {
     val HTTP_CLIENT: OkHttpClient = OkHttpClient.Builder()
         .followRedirects(false)
         .followSslRedirects(true)
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .connectTimeout(20, TimeUnit.SECONDS)
+        .writeTimeout(20, TimeUnit.SECONDS)
+        .readTimeout(20, TimeUnit.SECONDS)
         .addInterceptor(
-            HttpLoggingInterceptor { log.debug(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
+            HttpLoggingInterceptor { log.info(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
         )
         .build()
     @JvmField

@@ -28,13 +28,12 @@
         android:layout_height="24dp"
         android:visibility="gone"/>
 
-    <org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/filter_options"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="15dp"
-        android:layout_marginTop="22dp"
-        tools:layout="@layout/segmented_picker" />
+        android:layout_marginTop="22dp" />
 
     <FrameLayout
         android:id="@+id/search_panel"

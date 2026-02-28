@@ -18,14 +18,21 @@
 package de.schildbach.wallet.ui
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import android.content.Intent
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.service.WalletFactory
 import de.schildbach.wallet.ui.util.SingleLiveEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.MnemonicException
+import org.bitcoinj.wallet.WalletEx
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.Configuration
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -34,23 +41,32 @@ import javax.inject.Inject
 class OnboardingViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletFactory: WalletFactory,
-    private val configuration: Configuration
+    private val configuration: Configuration,
+    val analytics: AnalyticsService,
+    val platformRepo: PlatformRepo
 ) : ViewModel() {
-
-    private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
+    companion object {
+        private val log = LoggerFactory.getLogger(OnboardingViewModel::class.java)
+    }
 
     internal val showToastAction = SingleLiveEvent<String>()
-    internal val showRestoreWalletFailureAction = SingleLiveEvent<MnemonicException>()
     internal val finishCreateNewWalletAction = SingleLiveEvent<Unit>()
     internal val finishUnecryptedWalletUpgradeAction = SingleLiveEvent<Unit>()
+    internal val startActivityAction = SingleLiveEvent<Intent>()
 
-    fun createNewWallet() {
-        walletApplication.initEnvironmentIfNeeded()
-        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS)
-        log.info("successfully created new wallet")
-        walletApplication.setWallet(wallet)
-        configuration.armBackupSeedReminder()
-        finishCreateNewWalletAction.call(Unit)
+    fun createNewWallet(seedWordCount: Int) {
+        analytics.logEvent(AnalyticsConstants.Onboarding.NEW_WALLET, mapOf())
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                walletApplication.initEnvironmentIfNeeded()
+        val wallet = walletFactory.create(Constants.NETWORK_PARAMETERS, seedWordCount)
+                log.info("successfully created new wallet")
+                walletApplication.setWallet(wallet)
+                configuration.armBackupSeedReminder()
+            }
+            analytics.logEvent(AnalyticsConstants.Invites.NEW_WALLET, mapOf())
+            finishCreateNewWalletAction.call(Unit)
+        }
     }
 
     fun upgradeUnencryptedWallet() {
@@ -60,9 +76,14 @@ class OnboardingViewModel @Inject constructor(
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
+            (walletApplication.wallet as WalletEx).initializeCoinJoin(0)
             configuration.armBackupSeedReminder()
 
             finishUnecryptedWalletUpgradeAction.call(Unit)
         }
+    }
+
+    fun logEvent(eventName: String) {
+        analytics.logEvent(eventName, mapOf())
     }
 }

@@ -9,10 +9,11 @@
     <string name="blockchain_state_progress_days">%1$s, pozadu %2$d dní</string>
     <string name="blockchain_state_progress_weeks">%1$s, pozadu %2$d týždňov</string>
     <string name="blockchain_state_progress_months">%1$s, pozadu %2$d mesiacov</string>
-    <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou</string>
+    <string name="blockchain_state_progress_downloading">Synchronizácia so sieťou (%1$s%%)</string>
     <string name="blockchain_state_progress_stalled">Synchronizácia pozastavená</string>
     <string name="blockchain_state_progress_problem_storage">Synchronizácia: Problém s dátovým úložiskom</string>
     <string name="blockchain_state_progress_problem_network">Synchronizácia: Problém so sieťou</string>
+    <string name="mixing_state_progress_mixing">Miešanie mincí (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dash adresa skopírovaná do schránky</string>
     <string name="wallet_address_dialog_fragment_hint">Pre ochranu súkromia sa vaša adresa zmení vždy po prijatí platby.</string>
     <string name="wallet_balance_fragment_too_much">Tato čiastka je pomerne vysoká na nosenie vo vrecku. Presuňte nejakú čiastku na bezpečnejšie miesto.</string>
@@ -42,6 +43,8 @@
     <string name="wallet_low_storage_dialog_button_apps">Spravovať aplikácie</string>
     <string name="wallet_timeskew_dialog_title">Kontrola nastavenia času a dátumu</string>
     <string name="wallet_timeskew_dialog_msg">Čas na vašom zariadené je posunutý o %d minút. Kvôli tomuto problému pravdepodobne nemôžete odosielať alebo prijímať Dash.\n\nMali by ste skontrolovať a v prípade potreby opraviť dátum, čas a časové pásmo.</string>
+    <string name="wallet_coinjoin_timeskew_dialog_msg">Čas vášho zariadenia je %s po %d sekundách. Kvôli tomuto rozdielu nemôžete používať CoinJoin.\n\nAby ste mohli používať CoinJoin, nastavenia času na vašom zariadení je potrebné zmeniť na „Nastaviť čas automaticky“.</string>
+    <string name="settings_coinjoin_timeskew_dialog_msg">Čas vášho zariadenia je posunutý o viac ako 5 sekúnd. Kvôli tomuto rozdielu nemôžete používať CoinJoin.\n\nPred použitím CoinJoin je potrebné zmeniť nastavenia času na vašom zariadení na „Nastaviť čas automaticky“.</string>
     <string name="send_coins_activity_title">Poslať Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Získavanie podpisu z %s...</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Získavanie podpisu zlyhalo</string>
@@ -58,7 +61,6 @@
     <string name="send_coins_fragment_hint_fee_economic">Bude zaplatený sieťový poplatok %s.</string>
     <string name="send_coins_fragment_hint_fee_priority">Bude zaplatený prioritný poplatok %s. Ak Vám záleží na nízkych poplatkoch, používajte "prioritu" iba ak potrebujete rýchle potvrdenie.</string>
     <string name="send_coins_fragment_hint_empty_wallet_failed">Súčet malých platieb vo vašej peňaženke neumožňuje v súčte zaslanie platby.</string>
-    <string name="send_coins_fragment_hint_replaying">Platby nie sú momentálne možne, pretože peňaženka nie je plne synchronizovaná so sieťou </string>
     <string name="send_coins_fragment_direct_payment_enable">Odoslať platbu priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_ack">Platba bola úspešne odoslaná priamo príjemcovi.</string>
     <string name="send_coins_fragment_direct_payment_nack">Platba cez priame spojenie bola zamietnutá.</string>
@@ -145,7 +147,7 @@
     <string name="transaction_row_message_received_dust">Takéto malé množstvo zrejme nebude možné minúť.</string>
     <string name="transaction_row_message_received_pay_to_many">Táto platba je pre viac peňaženiek než len pre Vašu, čo môže spomaliť časom túto aplikáciu. Pokiaľ môžete, pokúste sa prijímať platby, ktoré sú iba pre vás.</string>
     <string name="transaction_row_message_received_rbf">U tejto platby došlo k meškaniu, pretože odosielateľ použil nezabezpečený spôsob platby.</string>
-    <string name="transaction_row_status_received">Prijté</string>
+    <string name="transaction_row_status_received">Prijaté</string>
     <string name="transaction_row_status_sent">Poslané</string>
     <string name="transaction_row_status_sending">Odosielam</string>
     <string name="transaction_row_status_sent_internally">Interná</string>
@@ -171,6 +173,11 @@
     <string name="transaction_row_status_masternode_revoke">Masternód odvolaný</string>
     <string name="transaction_row_status_masternode_reward">Masternód odmena</string>
     <string name="transaction_row_status_mining_reward">Odmena za ťažbu</string>
+    <string name="transaction_row_status_coinjoin_mixing_fee">Poplatok za miešanie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_make_collateral">Kolaterálne vstupy Coinjoin</string>
+    <string name="transaction_row_status_coinjoin_mixing">Miešanie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_create_denominations">Vytvorené denominácie CoinJoin</string>
+    <string name="transaction_row_status_coinjoin_combine_dust">Celkový CoinJoin Dust</string>
     <string name="network_monitor_activity_title">Stav siete</string>
     <string name="network_monitor_peer_list_title">Uzly</string>
     <string name="network_monitor_block_list_title">Bloky</string>
@@ -196,6 +203,13 @@
     <string name="restore_wallet_dialog_success_replay">Vaša peňaženka bola úspešne obnovená. Jej bilancia bude následne vypočítaná. Zaberie to nejaký čas.</string>
     <string name="restore_wallet_dialog_success_encrypted">Upozornenie: Vaša peňaženka je chránená výdavkovým PIN-om. Uistite sa, že si ho stale pamätáte pred prijatím do tejto peňaženky.</string>
     <string name="import_keys_dialog_failure">Peňaženku sa nepodarilo obnoviť:\n\n%s\n\nNesprávne heslo?</string>
+    <string name="restore_wallet_creation_date_label">Dátum vytvorenia peňaženky (voliteľné)</string>
+    <string name="restore_wallet_creation_date_info">Vybraním dátumu vytvorenia peňaženky umožníte rýchlejšiu synchronizáciu tým, že sa naskenujú iba údaje od tohto dátumu.</string>
+    <string name="restore_wallet_select_date">Vybrať dátum vytvorenia</string>
+    <string name="restore_wallet_selected_date">Vybrané: %s</string>
+    <string name="restore_wallet_date_picker_title">Kedy ste vytvorili svoju peňaženku?</string>
+    <string name="wallet_creation_date_info_title">Ako môže dátum vytvorenia peňaženky urýchliť proces?</string>
+    <string name="wallet_creation_date_info_description">Ak poznáte približný dátum vytvorenia peňaženky, môžete ho zadať a transakcie sa načítajú len od tohto dátumu, čím sa synchronizácia zrýchli. Upozorňujeme, že ak zadáte dátum neskorší ako skutočný dátum vytvorenia peňaženky, staršie transakcie nebudú stiahnuté.</string>
     <string name="export_keys_dialog_title">Zálohovať peňaženku</string>
     <string name="backup_wallet_dialog_message">Vaša záloha bude zašifrovaná zvoleným heslom a uložená na externú pamäť.</string>
     <string name="backup_wallet_dialog_warning_encrypted">Vaša peňaženka je zabezpečená PIN-om. Uistite sa že si pamätáte nie len PIN ale tiež heslo k zálohe! </string>
@@ -267,10 +281,16 @@
     <string name="preferences_show_disclaimer_title">Ukázať vyhlásenie</string>
     <string name="preferences_show_disclaimer_summary">Naozaj ste si prečítali bezpečnostné pokyny? Zálohovali ste už peňaženku na bezpečné miesto?</string>
     <string name="preferences_report_issue_title">Nahlásiť problém</string>
-    <string name="preferences_initiate_reset_title">Znova prehľadať reťazec blokov</string>
-    <string name="preferences_initiate_reset_summary">Znova naskenovať reťazec blokov, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
-    <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať reťazec blokov?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie reťazca blokov. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
+    <string name="preferences_initiate_reset_title">Znova prehľadať blockchain</string>
+    <string name="preferences_initiate_reset_summary">Znova naskenovať blockchain, transakcie a zostatok v peňaženke. Opätovné načítanie bude chvíľu trvať, preto používajte iba v prípade nutnosti.</string>
+    <string name="preferences_initiate_reset_dialog_message">Chcete znova naskenovať blockchain?\n\nTýmto dočasne skryjete svoju bilanciu a zmažete transakcie. Oboje bude obnovené počas synchronizácie blockchainu. Uistite sa, že máte spoľahlivé internetové pripojenie</string>
     <string name="preferences_initiate_reset_dialog_positive">Pre-skenovať</string>
+    <string name="rescan_blockchain_dialog_title">Ste si istí, že chcete znovu preskenovať blockchain?</string>
+    <string name="rescan_blockchain_dialog_message">Týmto sa dočasne skryje zostatok peňaženky a odstránia transakcie. Obe sa obnovia s postupom synchronizácie blockchainu. Uistite sa, že máte spoľahlivé internetové pripojenie.</string>
+    <string name="rescan_blockchain_select_date_label">Vybrať dátum vytvorenia peňaženky (voliteľné)</string>
+    <string name="rescan_blockchain_date_info_description">Informácie o dátume vytvorenia peňaženky</string>
+    <string name="rescan_blockchain_select_date_placeholder">Vybrať</string>
+    <string name="rescan_blockchain_confirm_button">Pre-skenovať</string>
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
     <string name="bitmap_fragment_share">Zdieľať...</string>
@@ -287,8 +307,17 @@
     <string name="report_issue_dialog_collect_installed_packages">Pripojiť zoznam nainštalovaných balíčkov</string>
     <string name="report_issue_dialog_collect_application_log">Pripojiť aplikačný log</string>
     <string name="report_issue_dialog_collect_wallet_dump">Pripojiť dáta peňaženky</string>
-    <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
     <string name="report_issue_dialog_mail_intent_failed">Odosielanie hlásenia zlyhalo.</string>
+    <string name="report_issue_dialog_generating_report">Generovanie prehľadu</string>
+    <string name="report_issue_dialog_status_device_info">informácie o zariadení</string>
+    <string name="report_issue_dialog_status_installed_packages">zoznam nainštalovaných balíkov</string>
+    <string name="report_issue_dialog_status_application_log">protokol aplikácie</string>
+    <string name="report_issue_dialog_status_application_info">informácie o aplikácii</string>
+    <string name="report_issue_dialog_status_wallet_dump">výpis z peňaženky (pomalý)</string>
+    <string name="report_issue_dialog_status_contextual_info">kontextové informácie</string>
+    <string name="report_issue_dialog_status_background_traces">stopy v pozadí</string>
+    <string name="report_issue_dialog_status_stack_trace">stopy v zásobníku</string>
+    <string name="report_issue_dialog_status_finishing">dokončovanie</string>
     <string name="report_transaction_history_export">Exportovať</string>
     <string name="report_transaction_history_title">Export CSV</string>
     <string name="report_transaction_history_not_synced_title">Export CSV</string>
@@ -297,7 +326,18 @@
     <string name="report_transaction_history_mail_intent_chooser">Odoslať históriu transakcií pomocou…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Odoslanie histórie transakcií zlyhalo.</string>
 
+    <!-- ZenLedger -->
+    <string name="zenledger_export_title">ZenLedger</string>
+    <string name="zenledger_export_subtitle">Zjednodušte si dane z kryptomien</string>
+    <string name="zenledger_export_all_tx">Exportovať všetky transakcie</string>
+    <string name="zenledger_export_description">Pripojte svoje kryptopeňaženky k platforme ZenLedger. Získajte viac informácií a začnite s Dash Wallet transakciami.</string>
+    <string name="chain_syncing_default_message">Počkajte, kým sa reťazec úplne zosynchronizuje, aby sme mohli skontrolovať vašu históriu transakcií.</string>
+    <string name="zenledger_export_permission">Povoliť odosielanie všetkých transakcií z Dash Wallet do Zenledgeru?</string>
+    <string name="zenledger_export_error">Pri exporte vašej histórie transakcií do ZenLedger sa vyskytla chyba.</string>
+
+
     <string name="about_title">O aplikácií</string>
+    <string name="about_dash_title">O Dash</string>
     <string name="about_version_title">Verzia</string>
     <string name="about_copyright_title">Autorské práva</string>
     <string name="about_license_title">Licencia</string>
@@ -319,6 +359,10 @@
     <string name="notification_inactivity_message">Na tomto zariadení máte stále Dashe! Nezabudnite si pred odinštalovaním Dash peňaženky zapísať svoju frázu pre obnovenie, inak stratíte svoj zostatok %s.</string>
     <string name="notification_inactivity_action_dismiss">Pripomenúť neskôr </string>
     <string name="notification_inactivity_action_dismiss_forever">Nepripomínať</string>
+    <string name="notification_bluetooth_service_listening">Pripravené na prijímanie platieb cez Bluetooth</string>
+    <string name="notification_sync_paused">Synchronizácia blockchainu pozastavená</string>
+    <string name="notification_background_processes_paused">Spracovanie na pozadí pozastavené</string>
+    <string name="notification_background_processes_paused_text">Dosiahli ste 6-hodinový limit služby Android na popredí pre mixovanie alebo synchronizáciu blockchainu. Klepnutím resetujete…</string>
     <string name="appwidget_wallet_balance_title">Bilancia Dash</string>
 
     <!-- generic buttons -->
@@ -394,4 +438,17 @@
     <string name="battery_optimization_dialog_unrestricted_title">Chcete dostávať platby na pozadí?</string>
     <string name="battery_optimization_dialog_message_not_optimized">Táto aplikácia je nakonfigurovaná tak, aby bola spustená aj vtedy, keď nebude nejaký čas viditeľná.\n\nOdporúčame tejto aplikácii povoliť, aby mala vždy aktuálne informácie o blockchaine, a to aj na pozadí.\n\nNebojte sa, vždy nám bude záležať na spotrebe batérie.</string>
     <string name="battery_optimization_dialog_button_change">Otvoriť nastavenia</string>
+    <string name="credits_profile_change_message">Aktualizovanie informácií o profile</string>
+
+    <string name="block_explorer_selection_title">Vyberte prieskumníka blokov</string>
+
+    <!-- Shortcuts -->
+    <string name="select_option">Vyberte možnosť</string>
+    <string name="customize_shortcuts">Prispôsobiť panel skratiek</string>
+    <string name="customize_shortcuts_description">Pre nahradenie požadovanou funkciou, podržte ľubovoľné vyššie umiestnené tlačidlo</string>
+
+    <!-- PIN Upgrade Dialog -->
+    <string name="upgrade_pin_title">Musíte aktualizovať svoj PIN</string>
+    <string name="upgrade_pin_description">Nastaviť nový PIN kód</string>
+    <string name="upgrade_pin_continue">Pokračovať</string>
 </resources>

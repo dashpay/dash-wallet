@@ -32,7 +32,6 @@
     <string name="crowdnode_new_account_warning_1">CrowdNode gebruikt dit adres als account-ID. Je verliest de toegang tot je geld in deze portemonnee alsmode je CrowdNode account als je de wachtwoordzin verliest die aan dit adres is gekoppeld.</string>
     <string name="crowdnode_new_account_warning_2">Er worden zeer kleine hoeveelheden Dash van en naar CrowdNode verzonden om te verifiëren dat je de eigenaar bent van dit adres in de  portemonnee.</string>
     <string name="crowdnode_link_account_description">Alle overboekingen van en naar CrowdNode vanaf dit apparaat worden uitgevoerd met het onderstaande Dash adres.</string>
-    <string name="dash_address">Dashadres</string>
     <string name="primary_dash_address">Primair Dashadres</string>
     <string name="crowdnode_secure_wallet">Maak een back-up van je wachtwoordzin om een CrowdNode account aan te maken</string>
     <string name="crowdnode_secure_wallet_explainer">Als je de wachtwoordzin voor deze portemonnee verliest, dit apparaat verliest of de Dash portemonnee app verwijdert, verliest je de toegang tot je geld op CrowdNode en ook het geld in deze portemonnee.</string>

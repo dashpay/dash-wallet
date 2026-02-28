@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/dash_blue" android:state_pressed="true" />
+    <item android:color="@color/dash_deep_blue" android:state_enabled="false" />
+    <item android:color="@color/dash_blue" />
+</selector>
