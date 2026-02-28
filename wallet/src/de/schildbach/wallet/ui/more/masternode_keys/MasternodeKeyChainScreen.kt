@@ -146,11 +146,11 @@ private fun KeypairSection(
                 color = MyTheme.Colors.textTertiary
             )
         }
+    }
 
-        Menu {
-            keypair.fields.forEach { field ->
-                KeyFieldRow(field = field, onCopy = onCopy)
-            }
+    Menu {
+        keypair.fields.forEach { field ->
+            KeyFieldRow(field = field, onCopy = onCopy)
         }
     }
 }
