@@ -19,9 +19,11 @@ package de.schildbach.wallet.ui.more.masternode_keys
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
@@ -29,10 +31,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
@@ -40,8 +40,8 @@ import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.TopIntro
-import org.dash.wallet.common.ui.components.TopNavBase
 
 @Composable
 fun MasternodeKeysScreen(
@@ -68,11 +68,8 @@ private fun MasternodeKeysScreenContent(
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
+        NavBarBack(
+            onBackClick = onBackClick
         )
 
         TopIntro(
@@ -87,7 +84,7 @@ private fun MasternodeKeysScreenContent(
         ) {
             Menu {
                 uiState.keyTypes.forEach { info ->
-                    MasternodeKeyTypeRow(
+                    TableListMasternodeKeyItem(
                         info = info,
                         onClick = { onKeyTypeClick(info.type) }
                     )
@@ -98,7 +95,7 @@ private fun MasternodeKeysScreenContent(
 }
 
 @Composable
-private fun MasternodeKeyTypeRow(
+private fun TableListMasternodeKeyItem(
     info: MasternodeKeyTypeInfo,
     onClick: () -> Unit
 ) {
@@ -116,11 +113,12 @@ private fun MasternodeKeyTypeRow(
         subtitle = stringResource(R.string.masternode_key_type_total, info.totalKeys),
         trailingText = stringResource(R.string.masternode_key_type_used, info.usedKeys),
         trailingTrailingIcon = {
+            Spacer(modifier = Modifier.width(2.dp))
             Icon(
-                painter = painterResource(id = R.drawable.ic_menu_row_arrow),
+                painter = painterResource(id = R.drawable.ic_list_chevron_right),
                 contentDescription = null,
                 tint = MyTheme.Colors.textTertiary,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(width = 5.dp, height = 10.dp)
             )
         },
         onClick = onClick
