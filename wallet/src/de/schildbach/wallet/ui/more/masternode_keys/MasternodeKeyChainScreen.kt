@@ -54,14 +54,14 @@ import org.dash.wallet.common.ui.components.TopIntro
 
 @Composable
 fun MasternodeKeyChainScreen(
-    uiStateFlow: StateFlow<MasternodeKeyChainUIState>,
+    uiStateFlow: StateFlow<MasternodeKeysUIState>,
     onBackClick: () -> Unit,
     onAddKeyClick: () -> Unit,
     onCopy: (String) -> Unit
 ) {
     val uiState by uiStateFlow.collectAsState()
     MasternodeKeyChainScreenContent(
-        uiState = uiState,
+        uiState = uiState.keyChainState,
         onBackClick = onBackClick,
         onAddKeyClick = onAddKeyClick,
         onCopy = onCopy

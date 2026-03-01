@@ -23,18 +23,21 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
 class MasternodeKeyChainFragment : Fragment() {
 
@@ -56,7 +59,7 @@ class MasternodeKeyChainFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 MasternodeKeyChainScreen(
-                    uiStateFlow = viewModel.keyChainUIState,
+                    uiStateFlow = viewModel.uiState,
                     onBackClick = { findNavController().popBackStack() },
                     onAddKeyClick = {
                         lifecycleScope.launch {
@@ -78,9 +81,13 @@ class MasternodeKeyChainFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         viewModel.initKeyChainScreen(masternodeKeyType)
 
-        viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
-            if (isAdded == true) {
-                viewModel.initKeyChainScreen(masternodeKeyType)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState
+                    .map { it.newKeysFound }
+                    .distinctUntilChanged()
+                    .filter { it }
+                    .collect { viewModel.initKeyChainScreen(masternodeKeyType) }
             }
         }
     }

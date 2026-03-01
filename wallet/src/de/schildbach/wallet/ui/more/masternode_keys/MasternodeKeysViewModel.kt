@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,6 +32,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Context
@@ -80,9 +79,6 @@ class MasternodeKeysViewModel @Inject constructor(
     val keyChainMap = hashMapOf<MasternodeKeyType, MasternodeKeyTypeInfo>()
 
     private val masternodeKeyChainInfoMap = hashMapOf<MasternodeKeyType, MasternodeKeyChainInfo>()
-    private val _newKeysUsed = MutableLiveData(false)
-    val newKeysFound: LiveData<Boolean>
-        get() = _newKeysUsed
 
     private val _uiState = MutableStateFlow(MasternodeKeysUIState())
     val uiState: StateFlow<MasternodeKeysUIState> = _uiState.asStateFlow()
@@ -113,20 +109,20 @@ class MasternodeKeysViewModel @Inject constructor(
             }
             if (masternodeKeysUsed > 0) {
                 initKeyChainInfo()
-                _newKeysUsed.value = true
+                _uiState.update { it.copy(newKeysFound = true) }
             } else {
-                _newKeysUsed.value = false
+                _uiState.update { it.copy(newKeysFound = false) }
             }
         }
     }
 
     private fun initKeyChainInfo() {
-        for (keyChainType in MasternodeKeyType.values()) {
+        for (keyChainType in MasternodeKeyType.entries) {
             keyChainMap[keyChainType] = getKeyChainData(keyChainType)
         }
-        _uiState.value = MasternodeKeysUIState(
-            keyTypes = MasternodeKeyType.values().mapNotNull { keyChainMap[it] }
-        )
+        _uiState.update { it.copy(
+            keyTypes = MasternodeKeyType.entries.mapNotNull { keyChainMap[it] }
+        ) }
     }
 
     fun hasMasternodeKeys(): Boolean {
@@ -309,9 +305,6 @@ class MasternodeKeysViewModel @Inject constructor(
         authenticationGroup.addNewKey(getKeyChain(masternodeKeyType).type, freshKey)
     }
 
-    private val _keyChainUIState = MutableStateFlow(MasternodeKeyChainUIState())
-    val keyChainUIState: StateFlow<MasternodeKeyChainUIState> = _keyChainUIState.asStateFlow()
-
     fun initKeyChainScreen(type: MasternodeKeyType) {
         rebuildKeyChainState(type)
         viewModelScope.launch(Dispatchers.IO) {
@@ -348,7 +341,7 @@ class MasternodeKeysViewModel @Inject constructor(
                 fields = buildKeyFields(keyInfo)
             )
         }
-        _keyChainUIState.value = MasternodeKeyChainUIState(type, keypairs)
+        _uiState.update { it.copy(keyChainState = MasternodeKeyChainUIState(type, keypairs)) }
     }
 
     private fun buildKeyFields(keyInfo: MasternodeKeyInfo): List<KeyFieldEntry> {
@@ -397,7 +390,9 @@ class MasternodeKeysViewModel @Inject constructor(
 }
 
 data class MasternodeKeysUIState(
-    val keyTypes: List<MasternodeKeyTypeInfo> = emptyList()
+    val keyTypes: List<MasternodeKeyTypeInfo> = emptyList(),
+    val keyChainState: MasternodeKeyChainUIState = MasternodeKeyChainUIState(),
+    val newKeysFound: Boolean = false
 )
 
 enum class KeyFieldType {
