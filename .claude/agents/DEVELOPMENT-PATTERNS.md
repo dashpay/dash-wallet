@@ -63,7 +63,7 @@ Our Design System in Figma uses different names for components.  Here is a list 
 component to our component:
 
 ## Component Mapping from Figma to JetPack Compose in this project
-- TopNavBase - TopNavBase
+- NavBar - use a named NavBar variant function (see NavBar section below); `TopNavBase` is the underlying base and remains available for full control
 - top-intro - TopIntro
 - menu - Menu
 - menuitem - MenuItem
@@ -74,6 +74,101 @@ component to our component:
 - feature.list - FeatureList
 - feature.single.item - FeatureSingleItem
 - Sheet/Buttons group - SheetButtonGroup
+- ListX - ListItem (X is number 1 to 20)
+- ListEmptyState - ListEmptyState
+- tablelist-masternodekeys - TableListMasternodeKeyRow
+
+## NavBar / TopNavBase (Figma: NavBar)
+
+The navigation bar lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/TopNavBase.kt
+```
+
+**Always use a named variant function** — they map 1-to-1 to the Figma NavBar playground variants and set the correct defaults automatically. `TopNavBase` is the base composable kept for full control and backward compatibility.
+
+**Figma Design System node:** `6828-4232`
+
+### Named variant functions
+
+| Figma variant | Kotlin function | Leading | Centre | Trailing |
+|---|---|---|---|---|
+| NavBarBack | `NavBarBack` | ← chevron | — | — |
+| NavBarBackTitle | `NavBarBackTitle` | ← chevron | title | — |
+| NavBarBackTitleInfo | `NavBarBackTitleInfo` | ← chevron | title | ℹ bare icon (blue) |
+| NavBarTitleClose | `NavBarTitleClose` | — | title | ✕ circle button |
+| NavBarBackTitlePlus | `NavBarBackTitlePlus` | ← chevron | title | + circle button |
+| NavBarBackPlus | `NavBarBackPlus` | ← chevron | — | + circle button |
+| NavBarTitle | `NavBarTitle` | — | title | — |
+| NavBarClose | `NavBarClose` | — | — | ✕ circle button |
+| NavBarActionTitleAction | `NavBarActionTitleAction` | text action | title | blue text action |
+| NavBarBackTitleAction | `NavBarBackTitleAction` | ← chevron | title | blue text action |
+| NavBarBackAction | `NavBarBackAction` | ← chevron | — | blue text action |
+
+### Layout specs
+- Height: 64 dp, horizontal padding: 20 dp
+- Leading/trailing icon buttons: 34 dp circle (1.5 dp border) via `Template`
+- Info icon (bare, no border): 22 dp, blue tint
+- Title: 225 dp wide, absolutely centred in the bar
+- Text actions: `MyTheme.CaptionMedium` (13sp medium); trailing text = `dashBlue`, leading text = `textPrimary`
+
+### Examples
+
+```kotlin
+// Back only
+NavBarBack(onBackClick = { findNavController().popBackStack() })
+
+// Back + title
+NavBarBackTitle(
+    title = stringResource(R.string.masternode_keys_title),
+    onBackClick = { findNavController().popBackStack() }
+)
+
+// Back + title + info icon
+NavBarBackTitleInfo(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onInfoClick = { showInfoDialog() }
+)
+
+// Back + title + plus button
+NavBarBackTitlePlus(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onPlusClick = { viewModel.addKey() }
+)
+
+// Title + close button
+NavBarTitleClose(
+    title = stringResource(R.string.confirm_title),
+    onCloseClick = { dialog.dismiss() }
+)
+
+// Text action + title + blue text action
+NavBarActionTitleAction(
+    title = stringResource(R.string.filter_title),
+    leadingActionText = stringResource(R.string.cancel),
+    onLeadingActionClick = { dismiss() },
+    trailingActionText = stringResource(R.string.apply),
+    onTrailingActionClick = { applyFilters() }
+)
+```
+
+### TopNavBase (base function — use only when no named variant fits)
+
+```kotlin
+TopNavBase(
+    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+    onLeadingClick = onBackClick,
+    trailingIcon = Icons.Default.Add,
+    onTrailingClick = onAddClick,
+    centralPart = false          // hide title area
+)
+```
+
+Key parameters: `leadingIcon`, `leadingText`, `onLeadingClick`, `trailingIcon`, `trailingIconCircle` (false = bare icon, no border), `trailingText`, `onTrailingClick`, `centralPart`, `title`.
+
+---
 
 ## Button Mapping (btn -> DashButton)
 When Figma designs specify button styles, map them to DashButton as follows:
@@ -111,6 +206,236 @@ DashButton(
     size = Size.Large,
     onClick = { /* action */ }
 )
+```
+
+## ListItem / ListEmptyState (Figma: List1–List23, ListEmptyState)
+
+The `ListItem` composable covers all numbered Figma list variants (`List1` … `List23`) in a **single component**. `ListEmptyState` handles the empty-list placeholder. Both live in:
+
+```
+common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
+```
+
+**Figma section node ID:** `2760:14713`
+
+### Layout structure
+
+```
+[topLabel                                    ]
+Row { [leadingContent]  [left]  [trailing]   }
+[bottomLabel                                 ]
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `topLabel` | `String?` | Full-width gray label above the row (List12/18 style) |
+| `bottomLabel` | `String?` | Full-width gray label below the row |
+| `leadingContent` | `@Composable (() -> Unit)?` | Icon/thumbnail prepended to the row (Merchant/ATM style) |
+| `label` | `String?` | Tertiary gray "key" text — left side of **key-value** rows |
+| `showInfoIcon` | `Boolean` | ℹ icon after `label` or `title` (List10) |
+| `helpTextAbove` | `String?` | Small gray text above `title` (List13/14/22) |
+| `title` | `String?` | Primary bold text — **content-block** mode |
+| `subtitle` | `String?` | Small gray text below `title` |
+| `bottomHelpText` | `String?` | Small gray text at the bottom of the left column (List13) |
+| `trailingText` | `String?` | Primary value text on the right |
+| `trailingTextLines` | `List<String>?` | Multiple lines of value text (List6) |
+| `trailingHelpText` | `String?` | Secondary text below the trailing value |
+| `trailingHelpIcon` | `@DrawableRes Int?` | Small icon before `trailingHelpText` (List16) |
+| `trailingActionText` | `String?` | Blue action link below the value (List5) |
+| `trailingLabel` | `String?` | Small outlined chip badge (List7) |
+| `trailingLeadingIcon` | `@Composable (RowScope.() -> Unit)?` | Icon **before** trailing text (List2/15/17) |
+| `trailingTrailingIcon` | `@Composable (RowScope.() -> Unit)?` | Icon **after** trailing text (List3/4/20) |
+| `trailingContent` | `@Composable (() -> Unit)?` | Fully custom right-side slot (List18, ATM Buy/Sell) |
+| `onClick` | `(() -> Unit)?` | Row click handler |
+
+### Left-side modes (mutually exclusive)
+
+**Key-value mode** — set `label`:
+- `label` renders as tertiary gray text at its natural width
+- A `Spacer(weight=1f)` automatically pushes trailing content to the end
+
+**Content-block mode** — set `title` (and optionally surrounding texts):
+- The column expands to fill available width (`weight=1f`)
+- Stack order: `helpTextAbove` (BodySmall/gray) → `title` (Body2Medium/primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+
+### Variant quick-reference
+
+| Figma variant | Parameters to use |
+|---|---|
+| List1, List11 | `label`, `trailingText` |
+| List2, List15 | `label`, `trailingLeadingIcon { }`, `trailingText` |
+| List3 | `label`, `trailingText`, `trailingTrailingIcon { }` |
+| List4 | `label`, `trailingTrailingIcon { }` |
+| List5 | `label`, `trailingText`, `trailingActionText` |
+| List6 | `label`, `trailingTextLines` |
+| List7 | `label`, `trailingLabel` |
+| List8, List9 | `title` only |
+| List10 | `label`, `showInfoIcon = true`, `trailingText` |
+| List12 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingText` |
+| List13 | `helpTextAbove`, `title`, `subtitle`, `bottomHelpText`, `trailingTrailingIcon { }` |
+| List14, List22 | `helpTextAbove`, `title` |
+| List16 | `title`, `subtitle`, `trailingText`, `trailingHelpText`, `trailingHelpIcon` |
+| List17 | `label`, `trailingLeadingIcon { }`, `trailingText`, `trailingHelpText` |
+| List18 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingContent { }` |
+| List20 | `title`, `subtitle`, `trailingText`, `trailingTrailingIcon { }` |
+| List23 | `title`, `subtitle` |
+| MerchantListPrev | `leadingContent { }`, `title`, `subtitle`, `trailingText`, `trailingTrailingIcon { }` |
+| ATMListPrev | `leadingContent { }`, `title`, `subtitle`, `trailingContent { BuySell() }` |
+
+### Examples
+
+```kotlin
+// List1 — key-value
+ListItem(label = "Fee", trailingText = "0.001 DASH")
+
+// List2 — key-value with leading checkbox
+ListItem(
+    label = "Network",
+    trailingText = "Mainnet",
+    trailingLeadingIcon = { CheckboxIcon(checked = true) }
+)
+
+// List5 — key-value with blue action link
+ListItem(
+    label = "Address",
+    trailingText = "XabCD…1234",
+    trailingActionText = "Copy"
+)
+
+// List6 — key-value with multi-line value
+ListItem(
+    label = "Notes",
+    trailingTextLines = listOf("Line 1", "Line 2", "Line 3")
+)
+
+// List7 — key-value with chip badge
+ListItem(label = "Status", trailingLabel = "Active")
+
+// List8 — standalone title
+ListItem(title = "Section header")
+
+// List10 — label with ℹ info icon
+ListItem(label = "Public key", showInfoIcon = true, trailingText = "XpubABCD…")
+
+// List13 — full multi-line left block with trailing icon
+ListItem(
+    helpTextAbove = "Registered on",
+    title = "XAbcDeFgHi1234…",
+    subtitle = "Valid until 2025-12-31",
+    bottomHelpText = "Tap to view details",
+    trailingTrailingIcon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_dash_blue_filled),
+            contentDescription = null,
+            tint = MyTheme.Colors.dashBlue,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+)
+
+// List12 — wrapper labels + leading checkbox + trailing value
+ListItem(
+    topLabel = "Voting keys",
+    bottomLabel = "Tap to select",
+    leadingContent = { CheckboxIcon(checked = false) },
+    title = "Key #1",
+    subtitle = "Not used",
+    trailingText = "0 used"
+)
+
+// List16 — two-line content on both sides
+ListItem(
+    title = "Operator key",
+    subtitle = "Active",
+    trailingText = "XpubABCD…",
+    trailingHelpText = "last used today",
+    trailingHelpIcon = R.drawable.ic_swap_blue
+)
+
+// Merchant-style — leading image + trailing price + arrow
+ListItem(
+    leadingContent = {
+        AsyncImage(
+            model = merchant.logoUrl,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).clip(CircleShape)
+        )
+    },
+    title = merchant.name,
+    subtitle = merchant.address,
+    trailingText = "~2%",
+    trailingTrailingIcon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_menu_row_arrow),
+            contentDescription = null,
+            tint = MyTheme.Colors.textTertiary,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+)
+
+// ATM-style — custom Buy/Sell trailing buttons
+ListItem(
+    leadingContent = {
+        Image(
+            painter = painterResource(R.drawable.ic_atm),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
+        )
+    },
+    title = "Coinme ATM",
+    subtitle = "0.3 mi away",
+    trailingContent = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DashButton(text = "Buy", style = Style.TintedBlue,
+                size = Size.Small, stretch = false, onClick = { })
+            DashButton(text = "Sell", style = Style.TintedGray,
+                size = Size.Small, stretch = false, onClick = { })
+        }
+    }
+)
+```
+
+### ListEmptyState
+
+Displays a centred icon, heading, optional body text, and optional action row when a list has no items.
+
+```kotlin
+ListEmptyState(
+    icon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_dash_blue_filled),
+            contentDescription = null,
+            tint = MyTheme.Colors.dashBlue,
+            modifier = Modifier.size(48.dp)
+        )
+    },
+    heading = stringResource(R.string.no_masternode_keys),
+    body = stringResource(R.string.no_masternode_keys_description),
+    actions = {
+        DashButton(
+            text = stringResource(R.string.add_key),
+            style = Style.PlainBlue,
+            size = Size.Small,
+            stretch = false,
+            onClick = onAddKeyClick
+        )
+    }
+)
+```
+
+### Wrapping with Menu
+
+`ListItem` is transparent — it does not add its own card background. Wrap one or more items in `Menu` for the standard rounded white card:
+
+```kotlin
+Menu {
+    ListItem(label = "Owner",    trailingText = "XpubAB…")
+    ListItem(label = "Voting",   trailingText = "XpubCD…")
+    ListItem(label = "Operator", trailingText = "XpubEF…")
+}
 ```
 
 ## Feature Components (feature.top.text, feature.list, feature.single.item)
@@ -667,12 +992,7 @@ private fun SettingsScreenContent(
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
         // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
+        NavBarBack(onBackClick = onBackClick)
 
         // Settings Header
         TopIntro(
