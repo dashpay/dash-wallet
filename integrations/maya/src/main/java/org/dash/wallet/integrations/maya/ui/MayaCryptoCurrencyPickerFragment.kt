@@ -148,7 +148,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             )
                         }
                     }.sortedBy { it.title }
-                log.info("exchange rate: updating itemList with {}", itemList[0].additionalInfo)
+                log.info("exchange rate: updating itemList with {}", itemList.firstOrNull()?.additionalInfo)
                 adapter.submitList(itemList)
             }
         }
