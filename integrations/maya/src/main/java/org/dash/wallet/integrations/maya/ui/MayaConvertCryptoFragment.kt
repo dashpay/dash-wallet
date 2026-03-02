@@ -132,23 +132,25 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
 
-        viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
-            safeNavigate(
-                MayaConvertCryptoFragmentDirections
-                    .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
-                        it,
-                        convertViewModel.destinationCurrency!!,
-                        viewModel.getUpdatedPaymentIntent(
-                            convertViewModel.enteredConvertDashAmount.value!!,
-                            Address.fromBase58(
-                                null,
-                                mayaViewModel.inboundAddresses.find { inboundAddress ->
-                                    inboundAddress.chain == "DASH"
-                                }!!.address
-                            )
-                        )!!
-                    )
-            )
+        viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
+            mayaViewModel.inboundAddresses.value.find { inboundAddress ->
+                inboundAddress.chain == "DASH"
+            }?.address?.let { dashAddress ->
+                safeNavigate(
+                    MayaConvertCryptoFragmentDirections
+                        .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
+                            swapTrade,
+                            convertViewModel.destinationCurrency!!,
+                            viewModel.getUpdatedPaymentIntent(
+                                convertViewModel.enteredConvertDashAmount.value!!,
+                                Address.fromBase58(
+                                    null,
+                                        dashAddress
+                                    )
+                            )!!
+                        )
+                )
+            }
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {

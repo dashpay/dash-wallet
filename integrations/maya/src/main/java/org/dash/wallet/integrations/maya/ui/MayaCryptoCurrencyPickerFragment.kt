@@ -19,14 +19,24 @@ package org.dash.wallet.integrations.maya.ui
 
 import android.os.Bundle
 import android.view.View
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.Toast
+import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.radio_group.IconSelectMode
@@ -54,9 +64,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
 
     class FullDiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
         override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem.title == newItem.title &&
-                oldItem.iconRes == newItem.iconRes &&
-                oldItem.additionalInfo == newItem.additionalInfo
+            return oldItem.id != null && oldItem.id == newItem.id
         }
 
         override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
@@ -121,34 +129,52 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             }
         }
 
-        viewModel.poolList.observe(viewLifecycleOwner) {
-            lifecycleScope.launch {
-                itemList = it.filter { pool -> pool.asset != "DASH.DASH" }
-                    .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
-                    .map { pool ->
-                        if (defaultItemMap.containsKey(pool.asset)) {
-                            defaultItemMap[pool.asset]!!.copy(
-                                iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
-                                iconSelectMode = IconSelectMode.None,
-                                additionalInfo = GenericUtils.formatFiatWithoutComma(
-                                    viewModel.formatFiat(pool.assetPriceFiat)
-                                ),
-                                id = pool.asset
-                            )
-                        } else {
-                            IconifiedViewItem(
-                                pool.currencyCode,
-                                pool.asset,
-                                iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
-                                iconSelectMode = IconSelectMode.None,
-                                additionalInfo = GenericUtils.formatFiatWithoutComma(
-                                    viewModel.formatFiat(pool.assetPriceFiat)
-                                ),
-                                id = pool.asset
-                            )
-                        }
-                    }.sortedBy { it.title }
-                log.info("exchange rate: updating itemList with {}", itemList.firstOrNull()?.additionalInfo)
+        combine(viewModel.poolList, viewModel.inboundAddresses) { pools, addresses ->
+            pools.filter { pool -> pool.asset != "DASH.DASH" }
+                .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
+                .map { pool ->
+                    val chain = pool.asset.substringBefore('.')
+                    val isHalted = addresses.find { it.chain == chain }?.halted ?: false
+                    val price = if (!isHalted) GenericUtils.formatFiatWithoutComma(
+                        viewModel.formatFiat(pool.assetPriceFiat)
+                    ) else null
+                    val haltedLabel = if (isHalted) getString(R.string.maya_halted_label) else null
+                    if (defaultItemMap.containsKey(pool.asset)) {
+                        defaultItemMap[pool.asset]!!.copy(
+                            iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
+                            iconSelectMode = IconSelectMode.None,
+                            additionalInfo = price,
+                            actionText = haltedLabel,
+                            actionBackgroundColor = if (isHalted) org.dash.wallet.common.R.color.gray_100 else null,
+                            actionTextColor = if (isHalted) org.dash.wallet.common.R.color.content_secondary else null,
+                            isEnabled = !isHalted,
+                            id = pool.asset
+                        )
+                    } else {
+                        IconifiedViewItem(
+                            pool.currencyCode,
+                            pool.asset,
+                            iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
+                            iconSelectMode = IconSelectMode.None,
+                            additionalInfo = price,
+                            actionText = haltedLabel,
+                            actionBackgroundColor = if (isHalted) org.dash.wallet.common.R.color.gray_100 else null,
+                            actionTextColor = if (isHalted) org.dash.wallet.common.R.color.content_secondary else null,
+                            isEnabled = !isHalted,
+                            id = pool.asset
+                        )
+                    }
+                }.sortedBy { it.title }
+        }.observe(viewLifecycleOwner) { items ->
+            itemList = items
+            log.info("exchange rate: updating itemList with {}", itemList.firstOrNull()?.additionalInfo)
+            val currentQuery = binding.searchQuery.text?.toString() ?: ""
+            if (currentQuery.isNotEmpty()) {
+                adapter.submitList(itemList.filter {
+                    it.title.contains(currentQuery.uppercase()) ||
+                        it.subtitle.uppercase().contains(currentQuery.uppercase())
+                })
+            } else {
                 adapter.submitList(itemList)
             }
         }
@@ -156,6 +182,24 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
             uiState.errorCode?.let {
                 showErrorAlert(it)
+            }
+        }
+
+        binding.haltedCoinsToast.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+        binding.haltedCoinsToast.setContent {
+            val hasHaltedCoins by viewModel.hasHaltedCoins.collectAsStateWithLifecycle()
+            var dismissed by remember { mutableStateOf(false) }
+
+            if (hasHaltedCoins && !dismissed) {
+                Toast(
+                    text = stringResource(R.string.maya_halted_coins_toast),
+                    actionText = stringResource(android.R.string.ok),
+                    imageResource = ToastImageResource.Warning.resourceId
+                ) {
+                    dismissed = true
+                }
             }
         }
     }
