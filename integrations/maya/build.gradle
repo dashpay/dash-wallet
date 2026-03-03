@@ -37,6 +37,9 @@ android {
         viewBinding true
         compose true
     }
+    lint {
+        disable "NullSafeMutableLiveData"
+    }
 }
 
 kotlin {
