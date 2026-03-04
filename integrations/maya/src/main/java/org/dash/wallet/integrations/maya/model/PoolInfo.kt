@@ -17,26 +17,31 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
+import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import java.math.BigDecimal
+
+@Parcelize
 data class PoolInfo(
-    val annualPercentageRate: String,
-    val asset: String,
-    val assetDepth: String,
-    val assetPrice: String,
-    val assetPriceUSD: String,
-    val liquidityUnits: String,
-    val poolAPY: String,
-    val runeDepth: String,
-    val status: String,
-    val synthSupply: String,
-    val synthUnits: String,
-    val units: String,
-    val volume24h: String
-) {
+    @SerializedName("annualPercentageRate") val annualPercentageRate: String = "",
+    @SerializedName("asset") val asset: String = "",
+    @SerializedName("assetDepth") val assetDepth: String = "",
+    @SerializedName("assetPrice") val assetPrice: String = "",
+    @SerializedName("assetPriceUSD") val assetPriceUSD: String = "",
+    @SerializedName("liquidityUnits") val liquidityUnits: String = "",
+    @SerializedName("poolAPY") val poolAPY: String = "",
+    @SerializedName("runeDepth") val runeDepth: String = "",
+    @SerializedName("status") val status: String = "",
+    @SerializedName("synthSupply") val synthSupply: String = "",
+    @SerializedName("synthUnits") val synthUnits: String = "",
+    @SerializedName("units") val units: String = "",
+    @SerializedName("volume24h") val volume24h: String = ""
+): Parcelable {
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
     fun getAssetPriceUSD(): Fiat {
