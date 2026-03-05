@@ -17,9 +17,13 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * Response from https://api.freecurrencyapi.com/v1/latest
  */
+@Parcelize
 class FreeCurrencyResponse(
     val data: Map<String, Double>
-)
+): Parcelable

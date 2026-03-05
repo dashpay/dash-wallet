@@ -16,14 +16,19 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
+import kotlinx.parcelize.RawValue
 
+@Parcelize
 data class SwapTransactionInfo(
     @SerializedName("observed_tx") val observedTx: ObservedTx,
     @SerializedName("keysign_metric") val keysignMetric: KeysignMetric,
     val error: String?
-)
+): Parcelable
 
+@Parcelize
 data class ObservedTx(
     @SerializedName("tx") val transaction: Transaction,
     val status: String,
@@ -32,8 +37,9 @@ data class ObservedTx(
     val signers: List<String>,
     @SerializedName("observed_pub_key") val observedPubKey: String,
     @SerializedName("finalise_height") val finaliseHeight: Int
-)
+): Parcelable
 
+@Parcelize
 data class Transaction(
     val id: String,
     val chain: String,
@@ -42,14 +48,16 @@ data class Transaction(
     val coins: List<CoinAmount>,
     val gas: List<CoinAmount>,
     val memo: String
-)
+): Parcelable
 
+@Parcelize
 data class CoinAmount(
     val asset: String,
     val amount: String
-)
+): Parcelable
 
+@Parcelize
 data class KeysignMetric(
     @SerializedName("tx_id") val txId: String,
-    @SerializedName("node_tss_times") val nodeTssTimes: Any?
-)
+    @SerializedName("node_tss_times") val nodeTssTimes: @RawValue Any?
+): Parcelable

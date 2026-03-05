@@ -17,12 +17,16 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
+import kotlinx.parcelize.Parcelize
+
 /**
  * Response from https://api.currencybeacon.com/v1/latest
  */
+@Parcelize
 class CurrencyBeaconResponse(
     val result: String,
     val base: String,
     val date: String,
     val rates: Map<String, Double>
-)
+): Parcelable
