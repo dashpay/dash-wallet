@@ -183,7 +183,6 @@ class PlatformSynchronizationService @Inject constructor(
         syncScope.launch {
             identityRepository.init()
             initializeStateRepository()
-            identityRepository.upgradeIdentity(platformRepo.getWalletEncryptionKey())
         }
         log.info("Starting the platform sync job")
     }
@@ -455,7 +454,7 @@ class PlatformSynchronizationService @Inject constructor(
 
                         awaitAll(
                             async {
-                                // identityRepository.upgradeIdentity(platformRepo.getWalletEncryptionKey())
+                                identityRepository.upgradeIdentity(platformRepo.getWalletEncryptionKey())
                             },
                             // fetch updated invitations
                             async {

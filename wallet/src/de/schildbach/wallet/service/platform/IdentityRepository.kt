@@ -18,11 +18,11 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
-import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
 import de.schildbach.wallet.ui.dashpay.UserAlert
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDENTITY_REQUIRED
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -138,6 +138,7 @@ class IdentityRepositoryImpl @Inject constructor(
     private val dashPayProfileDao = appDatabase.dashPayProfileDao()
     private val invitationsDao = appDatabase.invitationsDao()
     private val userAlertDao = appDatabase.userAlertDao()
+    private var hasCheckedIdentityForUpgrade = false
 
     override suspend fun clearBlockchainIdentityData() {
         blockchainIdentityDataStorage.clear()
@@ -364,7 +365,14 @@ class IdentityRepositoryImpl @Inject constructor(
     /** should be called after loading identity from storage and updating from platform */
     override suspend fun upgradeIdentity(keyParameter: KeyParameter?): Boolean {
         // the only upgrade is to add missing keys
-        return addMissingKeys(keyParameter)
+        // always run the upgrade action items the first time or if there is a failure the last time
+        // those actions were run
+        return if (!hasCheckedIdentityForUpgrade || dashPayConfig.get(UPGRADE_IDENTITY_REQUIRED) == true) {
+            hasCheckedIdentityForUpgrade = true
+            addMissingKeys(keyParameter)
+        } else {
+            false
+        }
     }
 
     /** assumes that the blockchainIdentity has been synced against platform */
@@ -385,11 +393,15 @@ class IdentityRepositoryImpl @Inject constructor(
                             val signer = WalletSignerCallback(wallet, keyParameter)
                             _blockchainIdentity.addMissingKeys(signer)
                             updateBlockchainIdentityData()
+                            dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, false)
                             return true
                         }
                     } catch (E: Exception) {
                         log.error("failure to add missing keys", E)
+                        dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
                     }
+                } else {
+                    dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, false)
                 }
             }
         }

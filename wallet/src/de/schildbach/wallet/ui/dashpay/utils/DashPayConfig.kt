@@ -109,6 +109,7 @@ open class DashPayConfig @Inject constructor(
         val USERNAME_VOTE_COUNTER = intPreferencesKey("username_vote_counter")
         val GOOGLE_DRIVE_ACCESS_TOKEN = stringPreferencesKey("google_drive_access_token")
         val FREQUENT_CONTACTS = stringSetPreferencesKey("frequent_contacts")
+        val UPGRADE_IDENTITY_REQUIRED = booleanPreferencesKey("upgrade_identity_required")
         // transaction metadata settings
         val TRANSACTION_METADATA_FEATURE_INSTALLED = longPreferencesKey("transaction_metadata_feature_installed")
         val TRANSACTION_METADATA_INFO_SHOWN = booleanPreferencesKey("transaction_metadata_info_shown")
