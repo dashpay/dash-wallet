@@ -114,7 +114,7 @@ class IdentityRepositoryImpl @Inject constructor(
     private val dashSystemService: DashSystemService,
 ) : IdentityRepository {
     companion object {
-        private val log = LoggerFactory.getLogger(TopUpRepositoryImpl::class.java)
+        private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
     }
 
     val authenticationGroupExtension: AuthenticationGroupExtension?
