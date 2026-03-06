@@ -24,15 +24,18 @@ import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
@@ -77,6 +80,12 @@ class BuyAndSellViewModel @Inject constructor(
     val servicesList: StateFlow<List<BuyAndSellDashServicesModel>> = _servicesList.asStateFlow()
 
     val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
+
+    val isConnectedToInternet: StateFlow<Boolean> = networkState.isConnected
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+
+    val balanceFormat: MonetaryFormat
+        get() = config.format.noCode()
 
     val isUpholdAuthenticated: Boolean
         get() = upholdClient.isAuthenticated

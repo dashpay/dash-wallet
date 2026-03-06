@@ -18,100 +18,79 @@
 package de.schildbach.wallet.ui.buy_sell
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import androidx.core.view.isVisible
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.adapter.BuyAndSellDashServicesAdapter
 import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentBuySellIntegrationsBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class BuyAndSellIntegrationsFragment : Fragment(R.layout.fragment_buy_sell_integrations) {
+class BuyAndSellIntegrationsFragment : Fragment() {
     companion object {
         val log: Logger = LoggerFactory.getLogger(BuyAndSellIntegrationsFragment::class.java)
     }
 
-    private val binding by viewBinding(FragmentBuySellIntegrationsBinding::bind)
     private val viewModel by viewModels<BuyAndSellViewModel>()
-    private val buyAndSellDashServicesAdapter: BuyAndSellDashServicesAdapter by lazy {
-        BuyAndSellDashServicesAdapter(viewModel.config.format.noCode()) { model ->
-            when (model.serviceType) {
-                ServiceType.TOPPER -> onTopperItemClicked()
-                ServiceType.UPHOLD -> onUpholdItemClicked()
-                ServiceType.COINBASE -> onCoinbaseItemClicked()
-                ServiceType.MAYA -> onMayaItemClicked()
-            }
-        }
-    }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
         log.info("starting Buy and Sell Dash fragment")
-
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-
-        // check for missing keys from service.properties
-        if (!viewModel.hasValidCredentials) {
-            binding.keysMissingError.isVisible = true
-        }
-
-        binding.dashServicesList.itemAnimator = null
-        binding.dashServicesList.adapter = buyAndSellDashServicesAdapter
-
-        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { isConnected ->
-            binding.noNetworkIndicator.isVisible = !isConnected
-        }
-
-        viewModel.servicesList.observe(viewLifecycleOwner) {
-            buyAndSellDashServicesAdapter.submitList(it)
-        }
 
         lifecycleScope.launchWhenResumed {
             checkLiquidStatus()
         }
-    }
 
-    private fun onTopperItemClicked() {
-        lifecycleScope.launch {
-            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
-            requireActivity().openCustomTab(uri)
+        return ComposeView(requireContext()).apply {
+            setContent {
+                BuyAndSellScreen(
+                    onBackClick = {
+                        findNavController().popBackStack()
+                    },
+                    onTopperClick = {
+                        lifecycleScope.launch {
+                            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
+                            requireActivity().openCustomTab(uri)
+                        }
+                    },
+                    onUpholdClick = {
+                        viewModel.logEnterUphold()
+                        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
+                    },
+                    onCoinbaseClick = {
+                        viewModel.logEnterCoinbase()
+                        if (viewModel.isCoinbaseAuthenticated) {
+                            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
+                        } else {
+                            safeNavigate(
+                                BuyAndSellIntegrationsFragmentDirections.buySellToOverview(
+                                    ServiceType.COINBASE
+                                )
+                            )
+                        }
+                    },
+                    onMayaClick = {
+                        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
+                    }
+                )
+            }
         }
-    }
-
-    private fun onUpholdItemClicked() {
-        viewModel.logEnterUphold()
-        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
-    }
-
-    private fun onCoinbaseItemClicked() {
-        viewModel.logEnterCoinbase()
-
-        if (viewModel.isCoinbaseAuthenticated) {
-            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
-        } else {
-            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToOverview(ServiceType.COINBASE))
-        }
-    }
-
-    private fun onMayaItemClicked() {
-        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
     }
 
     override fun onResume() {
