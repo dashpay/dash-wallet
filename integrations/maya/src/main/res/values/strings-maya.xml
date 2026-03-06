@@ -19,6 +19,7 @@
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
+    <string name="maya_portal_subtitle">Convert Dash from Dash Wallet to any crypto that is supported on Maya and send it to any wallet</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
     <string name="maya_crypto_convert_title">Convert Dash</string>

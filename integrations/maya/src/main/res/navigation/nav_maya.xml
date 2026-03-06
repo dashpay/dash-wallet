@@ -7,8 +7,7 @@
     <fragment
         android:id="@+id/mayaPortalFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaPortalFragment"
-        android:label="mayaPortalFragment"
-        tools:layout="@layout/fragment_integration_portal">
+        android:label="mayaPortalFragment">
         <action android:id="@+id/mayaPortal_to_currencyPicker"
             app:destination="@id/mayaCurrencyPickerFragment"
             app:enterAnim="@anim/slide_in_right"
