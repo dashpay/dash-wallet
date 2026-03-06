@@ -153,9 +153,20 @@ class MayaViewModel @Inject constructor(
 
     private fun updateInboundAddresses() {
         viewModelScope.launch {
-            inboundAddresses.clear()
-            inboundAddresses.addAll(mayaApi.getInboundAddresses())
+            refreshInboundAddresses()
         }
+    }
+
+    suspend fun refreshInboundAddresses() {
+        // TODO: this is temp code to disable some coins
+        // inboundAddresses.clear()
+        val addresses = mayaApi.getInboundAddresses().toMutableList()
+        if (addresses.isNotEmpty()) {
+            val newAddress = addresses.first().copy(halted = true)
+            addresses.removeAt(0)
+            addresses.add(0, newAddress)
+        }
+        inboundAddresses.value = addresses
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {
