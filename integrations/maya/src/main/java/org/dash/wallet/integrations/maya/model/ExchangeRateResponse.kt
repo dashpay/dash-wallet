@@ -30,4 +30,4 @@ data class ExchangeRateResponse(
     @SerializedName("base_code") val baseCode: String,
     @SerializedName("time_last_update_unix") val lastUpdate: Long,
     @SerializedName("conversion_rates") val rates: Map<String, Double>
-): Parcelable
+) : Parcelable

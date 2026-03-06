@@ -28,8 +28,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import dagger.hilt.android.AndroidEntryPoint
@@ -135,9 +135,13 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 .map { pool ->
                     val chain = pool.asset.substringBefore('.')
                     val isHalted = addresses.find { it.chain == chain }?.halted ?: false
-                    val price = if (!isHalted) GenericUtils.formatFiatWithoutComma(
-                        viewModel.formatFiat(pool.assetPriceFiat)
-                    ) else null
+                    val price = if (!isHalted) {
+                        GenericUtils.formatFiatWithoutComma(
+                            viewModel.formatFiat(pool.assetPriceFiat)
+                        )
+                    } else {
+                        null
+                    }
                     val haltedLabel = if (isHalted) getString(R.string.maya_halted_label) else null
                     if (defaultItemMap.containsKey(pool.asset)) {
                         defaultItemMap[pool.asset]!!.copy(
@@ -170,10 +174,12 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
             log.info("exchange rate: updating itemList with {}", itemList.firstOrNull()?.additionalInfo)
             val currentQuery = binding.searchQuery.text?.toString() ?: ""
             if (currentQuery.isNotEmpty()) {
-                adapter.submitList(itemList.filter {
-                    it.title.contains(currentQuery.uppercase()) ||
-                        it.subtitle.uppercase().contains(currentQuery.uppercase())
-                })
+                adapter.submitList(
+                    itemList.filter {
+                        it.title.contains(currentQuery.uppercase()) ||
+                            it.subtitle.uppercase().contains(currentQuery.uppercase())
+                    }
+                )
             } else {
                 adapter.submitList(itemList)
             }
