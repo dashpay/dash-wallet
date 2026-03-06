@@ -134,24 +134,25 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
                 .map { pool ->
                     val chain = pool.asset.substringBefore('.')
-                    val isHalted = addresses.find { it.chain == chain }?.halted ?: false
-                    val price = if (!isHalted) {
+                    val inbound = addresses.find { it.chain == chain }
+                    val isEnabled = inbound != null && !inbound.halted
+                    val price = if (isEnabled) {
                         GenericUtils.formatFiatWithoutComma(
                             viewModel.formatFiat(pool.assetPriceFiat)
                         )
                     } else {
                         null
                     }
-                    val haltedLabel = if (isHalted) getString(R.string.maya_halted_label) else null
+                    val haltedLabel = if (inbound?.halted == true) getString(R.string.maya_halted_label) else null
                     if (defaultItemMap.containsKey(pool.asset)) {
                         defaultItemMap[pool.asset]!!.copy(
                             iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
                             actionText = haltedLabel,
-                            actionBackgroundColor = if (isHalted) org.dash.wallet.common.R.color.gray_100 else null,
-                            actionTextColor = if (isHalted) org.dash.wallet.common.R.color.content_secondary else null,
-                            isEnabled = !isHalted,
+                            actionBackgroundColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.gray_100 else null,
+                            actionTextColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.content_secondary else null,
+                            isEnabled = isEnabled,
                             id = pool.asset
                         )
                     } else {
@@ -162,9 +163,9 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
                             actionText = haltedLabel,
-                            actionBackgroundColor = if (isHalted) org.dash.wallet.common.R.color.gray_100 else null,
-                            actionTextColor = if (isHalted) org.dash.wallet.common.R.color.content_secondary else null,
-                            isEnabled = !isHalted,
+                            actionBackgroundColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.gray_100 else null,
+                            actionTextColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.content_secondary else null,
+                            isEnabled = isEnabled,
                             id = pool.asset
                         )
                     }
