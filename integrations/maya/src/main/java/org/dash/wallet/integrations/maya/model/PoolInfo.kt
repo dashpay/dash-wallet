@@ -41,7 +41,7 @@ data class PoolInfo(
     @SerializedName("synthUnits") val synthUnits: String = "",
     @SerializedName("units") val units: String = "",
     @SerializedName("volume24h") val volume24h: String = ""
-): Parcelable {
+) : Parcelable {
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
     fun getAssetPriceUSD(): Fiat {

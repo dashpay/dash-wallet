@@ -145,8 +145,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                                 convertViewModel.enteredConvertDashAmount.value!!,
                                 Address.fromBase58(
                                     null,
-                                        dashAddress
-                                    )
+                                    dashAddress
+                                )
                             )!!
                         )
                 )

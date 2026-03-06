@@ -13,4 +13,4 @@ data class NetworkResponse(
     @SerializedName("total_asgard") val totalAsgard: String,
     @SerializedName("total_bond_units") val totalBondUnits: String,
     @SerializedName("total_reserve") val totalReserve: String
-): Parcelable
+) : Parcelable

@@ -26,7 +26,7 @@ data class SwapTransactionInfo(
     @SerializedName("observed_tx") val observedTx: ObservedTx,
     @SerializedName("keysign_metric") val keysignMetric: KeysignMetric,
     val error: String?
-): Parcelable
+) : Parcelable
 
 @Parcelize
 data class ObservedTx(
@@ -37,7 +37,7 @@ data class ObservedTx(
     val signers: List<String>,
     @SerializedName("observed_pub_key") val observedPubKey: String,
     @SerializedName("finalise_height") val finaliseHeight: Int
-): Parcelable
+) : Parcelable
 
 @Parcelize
 data class Transaction(
@@ -48,16 +48,16 @@ data class Transaction(
     val coins: List<CoinAmount>,
     val gas: List<CoinAmount>,
     val memo: String
-): Parcelable
+) : Parcelable
 
 @Parcelize
 data class CoinAmount(
     val asset: String,
     val amount: String
-): Parcelable
+) : Parcelable
 
 @Parcelize
 data class KeysignMetric(
     @SerializedName("tx_id") val txId: String,
     @SerializedName("node_tss_times") val nodeTssTimes: @RawValue Any?
-): Parcelable
+) : Parcelable

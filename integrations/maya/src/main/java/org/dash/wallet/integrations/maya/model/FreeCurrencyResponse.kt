@@ -26,4 +26,4 @@ import kotlinx.parcelize.Parcelize
 @Parcelize
 class FreeCurrencyResponse(
     val data: Map<String, Double>
-): Parcelable
+) : Parcelable
