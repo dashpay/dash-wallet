@@ -17,14 +17,17 @@
 
 package org.dash.wallet.integrations.maya.model
 
+import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.Parcelize
 
 /**
  * Response from https://v6.exchangerate-api.com/v6
  */
+@Parcelize
 data class ExchangeRateResponse(
     val result: String,
     @SerializedName("base_code") val baseCode: String,
     @SerializedName("time_last_update_unix") val lastUpdate: Long,
     @SerializedName("conversion_rates") val rates: Map<String, Double>
-)
+) : Parcelable

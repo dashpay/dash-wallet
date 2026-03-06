@@ -122,6 +122,8 @@
     <string name="maya_error_invalid_destination_address">Invalid destination address</string>
     <string name="maya_error_below_recommended_minimum">Entered amount is lower than the recommended minimum</string>
     <string name="maya_error_trading_halted">Trading has been halted on %s.</string>
+    <string name="maya_halted_label">Halted</string>
+    <string name="maya_halted_coins_toast">Some coins are temporarily halted and unavailable for trading</string>
 
 
 </resources>

@@ -466,6 +466,7 @@ android {
     lint {
         abortOnError false
         disable 'MissingTranslation'
+        disable 'NullSafeMutableLiveData'
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
