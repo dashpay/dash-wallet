@@ -134,9 +134,18 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
             lifecycleScope.launch {
-                mayaViewModel.refreshInboundAddresses()
-
-                val dashInbound = mayaViewModel.inboundAddresses.value.find { it.chain == "DASH" }
+                val dashInbound = try {
+                    mayaViewModel.refreshInboundAddresses()
+                    mayaViewModel.inboundAddresses.value.find { it.chain == "DASH" }
+                } catch (e: Exception) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                }
 
                 if (dashInbound == null || dashInbound.halted) {
                     AdaptiveDialog.create(
@@ -148,10 +157,20 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     return@launch
                 }
 
-                val paymentIntent = viewModel.getUpdatedPaymentIntent(
-                    convertViewModel.enteredConvertDashAmount.value!!,
-                    Address.fromBase58(null, dashInbound.address)
-                ) ?: return@launch
+                val paymentIntent = try {
+                    viewModel.getUpdatedPaymentIntent(
+                        convertViewModel.enteredConvertDashAmount.value!!,
+                        Address.fromBase58(null, dashInbound.address)
+                    )
+                } catch (e: Exception) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                } ?: return@launch
 
                 safeNavigate(
                     MayaConvertCryptoFragmentDirections
