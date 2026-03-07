@@ -75,7 +75,7 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                     },
                     onCoinbaseClick = {
                         viewModel.logEnterCoinbase()
-                        if (viewModel.isCoinbaseAuthenticated) {
+                        if (viewModel.uiState.value.isCoinbaseAuthenticated) {
                             safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
                         } else {
                             safeNavigate(

@@ -73,10 +73,7 @@ fun BuyAndSellScreen(
     val viewModel: BuyAndSellViewModel = hiltViewModel()
 
     BuyAndSellScreen(
-        servicesFlow = viewModel.servicesList,
-        isConnectedFlow = viewModel.isConnectedToInternet,
-        balanceFormat = viewModel.balanceFormat,
-        hasValidCredentials = viewModel.hasValidCredentials,
+        uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
         onTopperClick = onTopperClick,
         onUpholdClick = onUpholdClick,
@@ -87,24 +84,20 @@ fun BuyAndSellScreen(
 
 @Composable
 fun BuyAndSellScreen(
-    servicesFlow: StateFlow<List<BuyAndSellDashServicesModel>>,
-    isConnectedFlow: StateFlow<Boolean>,
-    balanceFormat: MonetaryFormat,
-    hasValidCredentials: Boolean = true,
+    uiStateFlow: StateFlow<BuyAndSellUIState>,
     onBackClick: () -> Unit = {},
     onTopperClick: () -> Unit = {},
     onUpholdClick: () -> Unit = {},
     onCoinbaseClick: () -> Unit = {},
     onMayaClick: () -> Unit = {}
 ) {
-    val services by servicesFlow.collectAsState()
-    val isConnected by isConnectedFlow.collectAsState()
+    val uiState by uiStateFlow.collectAsState()
 
     BuyAndSellScreenContent(
-        services = services,
-        isConnected = isConnected,
-        balanceFormat = balanceFormat,
-        hasValidCredentials = hasValidCredentials,
+        services = uiState.servicesList,
+        isConnected = uiState.isConnected,
+        balanceFormat = uiState.balanceFormat,
+        hasValidCredentials = uiState.hasValidCredentials,
         onBackClick = onBackClick,
         onTopperClick = onTopperClick,
         onUpholdClick = onUpholdClick,
