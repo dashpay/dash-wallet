@@ -30,6 +30,7 @@ import org.dash.wallet.integrations.maya.payments.parsers.EthereumPaymentIntentP
 import org.dash.wallet.integrations.maya.payments.parsers.RuneAddressParser
 import org.dash.wallet.integrations.maya.payments.parsers.RunePaymentIntentProcessor
 import org.dash.wallet.integrations.maya.payments.parsers.XrdPaymentIntentParser
+import org.dash.wallet.integrations.maya.payments.parsers.ZcashAddressParser
 import org.dash.wallet.integrations.maya.payments.parsers.ZcashPaymentIntentParser
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -160,7 +161,7 @@ open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val asset: String = "ZEC.ZEC"
     override val exampleAddress: String = "t1KRvTkgrVD6DXiyJRJRnhFiU1M2JuLJDnq"
     override val paymentIntentParser: PaymentIntentParser = ZcashPaymentIntentParser()
-    override val addressParser: AddressParser = AddressParser.getBase58AddressParser()
+    override val addressParser: AddressParser = ZcashAddressParser()
     override val codeId: Int = R.string.cryptocurrency_zec_code
     override val nameId: Int = R.string.cryptocurrency_zec_network
 }

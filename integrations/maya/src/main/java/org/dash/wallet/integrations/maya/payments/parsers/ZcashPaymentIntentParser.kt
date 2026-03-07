@@ -21,14 +21,19 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
-import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
+/**
+ * Parser for Zcash (ZEC) payment intents.
+ *
+ * Supports transparent t-addresses (`t1...`, `t3...`), Sapling shielded addresses (`zs1...`),
+ * and unified addresses (`u1...`).
+ */
 class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", null) {
     private val log = LoggerFactory.getLogger(ZcashPaymentIntentParser::class.java)
-    private val addressParser = AddressParser.getBase58AddressParser()
+    private val addressParser = ZcashAddressParser()
 
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
@@ -53,7 +58,7 @@ class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZE
                 )
             }
         }
-        log.info("cannot classify: '{}'", input)
+        log.info("cannot classify as ZEC address: '{}'", input)
         throw PaymentIntentParserException(
             IllegalArgumentException(input),
             ResourceString(R.string.error, listOf(input))
