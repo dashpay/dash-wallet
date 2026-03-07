@@ -18,7 +18,6 @@ package org.dash.wallet.integrations.maya.payments.parsers
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.AddressFormatException
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
@@ -47,15 +46,7 @@ class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD"
                 )
             }
         } else if (addressParser.exactMatch(input)) {
-            try {
-                return@withContext createPaymentIntent(input)
-            } catch (ex: AddressFormatException) {
-                log.info("got invalid address", ex)
-                throw PaymentIntentParserException(
-                    ex,
-                    ResourceString(R.string.error, listOf())
-                )
-            }
+            return@withContext createPaymentIntent(input)
         }
         log.info("cannot classify: '{}'", input)
         throw PaymentIntentParserException(

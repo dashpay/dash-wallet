@@ -79,6 +79,7 @@ These need:
 3. String resources
 
 **Address format guide by chain:**
+
 | Chain | Address format | Parser class to use |
 |-------|---------------|---------------------|
 | ETH / ARB / BSC | `0x[a-fA-F0-9]{40}` | `EthereumPaymentIntentParser` |
