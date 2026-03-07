@@ -26,7 +26,7 @@ import org.dash.wallet.common.payments.parsers.Bech32AddressParser
  * - Sapling shielded: `zs1...` — Bech32, 78 chars total
  * - Unified: `u1...` — Bech32m, variable length (91+ chars)
  */
-class ZcashAddressParser : AddressParser(PATTERN_BITCOIN_ADDRESS, null) {
+class ZcashAddressParser : AddressParser("t[13][1-9A-HJ-NP-Za-km-z]{33}", null) {
     private val saplingParser = Bech32AddressParser("zs", 75, null)   // zs1... Sapling shielded
     private val unifiedParser = Bech32AddressParser("u", 88, null)    // u1... unified (min length)
 
