@@ -413,7 +413,7 @@
     <string name="reason">Reason</string>
     <string name="link_account">Link your account</string>
     <string name="buy_no_account_needed">Buy Dash · No account needed</string>
-    <string name="convert_no_account_needed">Convert Dash · No account needed</string>
+    <string name="convert_no_account_needed">Swap Dash · No account needed</string>
 
     <string name="recipient_address">Recipient Address</string>
     <string name="not_dash_address">Not a valid Dash Address or URL request</string>

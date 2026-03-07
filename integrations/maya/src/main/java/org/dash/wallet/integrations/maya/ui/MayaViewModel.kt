@@ -78,7 +78,8 @@ class MayaViewModel @Inject constructor(
         get() = globalConfig.format.noCode()
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
-    val inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
+    private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
+    val inboundAddresses: StateFlow<List<InboundAddress>> = _inboundAddresses.asStateFlow()
     val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
         addresses.any { it.halted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -153,9 +154,20 @@ class MayaViewModel @Inject constructor(
 
     private fun updateInboundAddresses() {
         viewModelScope.launch {
-            inboundAddresses.clear()
-            inboundAddresses.addAll(mayaApi.getInboundAddresses())
+            refreshInboundAddresses()
         }
+    }
+
+    suspend fun refreshInboundAddresses() {
+        // TODO: this is temp code to disable some coins
+        // inboundAddresses.clear()
+        val addresses = mayaApi.getInboundAddresses().toMutableList()
+        if (addresses.isNotEmpty()) {
+            val newAddress = addresses.first().copy(halted = true)
+            addresses.removeAt(0)
+            addresses.add(0, newAddress)
+        }
+        _inboundAddresses.value = addresses
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {

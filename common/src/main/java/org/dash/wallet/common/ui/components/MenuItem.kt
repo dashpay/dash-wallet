@@ -155,8 +155,8 @@ fun MenuItem(
                 subtitle?.let {
                     Text(
                         text = it,
-                        style = MyTheme.OverlineCaptionRegular,
-                        color = MyTheme.Colors.textTertiary,
+                        style = MyTheme.Typography.BodyMedium,
+                        color = MyTheme.Colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -165,8 +165,8 @@ fun MenuItem(
                 subtitle2?.let {
                     Text(
                         text = it,
-                        style = MyTheme.OverlineCaptionRegular,
-                        color = MyTheme.Colors.textTertiary,
+                        style = MyTheme.Typography.BodyMedium,
+                        color = MyTheme.Colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
