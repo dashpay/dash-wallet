@@ -356,9 +356,19 @@ object MayaCurrencyList {
         get() = currencyMap.values
     fun getPaymentProcessors(): PaymentParsers {
         val paymentProcessors = PaymentParsers()
+        val registeredCodes = mutableSetOf<String>()
         for (currency in all) {
-            paymentProcessors.add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+            if (registeredCodes.add(currency.code.lowercase())) {
+                paymentProcessors.add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+            }
         }
         return paymentProcessors
+    }
+
+    fun getPaymentProcessorForAsset(asset: String): PaymentParsers? {
+        val currency = currencyMap[asset] ?: return null
+        return PaymentParsers().apply {
+            add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+        }
     }
 }
