@@ -85,7 +85,7 @@ dependencies {
     implementation(platform("androidx.compose:compose-bom:$composeBom"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
-    implementation "androidx.lifecycle:lifecycle-runtime-compose-android"
+    implementation "androidx.lifecycle:lifecycle-runtime-compose-android:2.10.0"
     implementation "androidx.compose.ui:ui-tooling-preview-android"
 
     // Tests
