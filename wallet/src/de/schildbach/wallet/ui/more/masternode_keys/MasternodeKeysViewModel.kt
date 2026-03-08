@@ -19,8 +19,6 @@ package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.content.ClipData
 import android.content.ClipboardManager
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,11 +26,18 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Address
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Utils
+import org.bitcoinj.crypto.BLSPublicKey
 import org.bitcoinj.crypto.ChildNumber
 import org.bitcoinj.crypto.IDeterministicKey
 import org.bitcoinj.crypto.IKey
@@ -74,9 +79,9 @@ class MasternodeKeysViewModel @Inject constructor(
     val keyChainMap = hashMapOf<MasternodeKeyType, MasternodeKeyTypeInfo>()
 
     private val masternodeKeyChainInfoMap = hashMapOf<MasternodeKeyType, MasternodeKeyChainInfo>()
-    private val _newKeysUsed = MutableLiveData(false)
-    val newKeysFound: LiveData<Boolean>
-        get() = _newKeysUsed
+
+    private val _uiState = MutableStateFlow(MasternodeKeysUIState())
+    val uiState: StateFlow<MasternodeKeysUIState> = _uiState.asStateFlow()
 
     init {
         if (authenticationGroup.hasKeyChains()) {
@@ -104,17 +109,20 @@ class MasternodeKeysViewModel @Inject constructor(
             }
             if (masternodeKeysUsed > 0) {
                 initKeyChainInfo()
-                _newKeysUsed.value = true
+                _uiState.update { it.copy(newKeysFound = true) }
             } else {
-                _newKeysUsed.value = false
+                _uiState.update { it.copy(newKeysFound = false) }
             }
         }
     }
 
     private fun initKeyChainInfo() {
-        for (keyChainType in MasternodeKeyType.values()) {
+        for (keyChainType in MasternodeKeyType.entries) {
             keyChainMap[keyChainType] = getKeyChainData(keyChainType)
         }
+        _uiState.update { it.copy(
+            keyTypes = MasternodeKeyType.entries.mapNotNull { keyChainMap[it] }
+        ) }
     }
 
     fun hasMasternodeKeys(): Boolean {
@@ -297,6 +305,70 @@ class MasternodeKeysViewModel @Inject constructor(
         authenticationGroup.addNewKey(getKeyChain(masternodeKeyType).type, freshKey)
     }
 
+    fun initKeyChainScreen(type: MasternodeKeyType) {
+        rebuildKeyChainState(type)
+        viewModelScope.launch(Dispatchers.IO) {
+            val keyChainInfo = masternodeKeyChainInfoMap[type] ?: return@launch
+            keyChainInfo.masternodeKeyInfoList.forEachIndexed { position, keyInfo ->
+                if (keyInfo.privateKeyHex == null) {
+                    val decrypted = getDecryptedKey(keyInfo.masternodeKey)
+                    keyChainInfo.masternodeKeyInfoList[position] = decrypted
+                    rebuildKeyChainState(type)
+                }
+            }
+        }
+    }
+
+    private fun rebuildKeyChainState(type: MasternodeKeyType) {
+        val keyChainInfo = getKeyChainInfo(type, false)
+        val usage = getKeyUsage()
+        val keypairs = keyChainInfo.masternodeKeyInfoList.mapIndexed { position, keyInfo ->
+            val key = keyInfo.masternodeKey
+            val usageEntry = if (usage.containsKey(key)) {
+                usage[key]
+            } else {
+                usage.values.find { it.key.pubKey.contentEquals(key.pubKey) }
+            }
+            val index = if (key is IDeterministicKey) {
+                key.path.last()?.num() ?: position
+            } else {
+                position
+            }
+            KeypairEntry(
+                index = index,
+                usageStatus = usageEntry?.status,
+                usageIpAddress = usageEntry?.address?.addr?.toString()?.removePrefix("/"),
+                fields = buildKeyFields(keyInfo)
+            )
+        }
+        _uiState.update { it.copy(keyChainState = MasternodeKeyChainUIState(type, keypairs)) }
+    }
+
+    private fun buildKeyFields(keyInfo: MasternodeKeyInfo): List<KeyFieldEntry> {
+        val key = keyInfo.masternodeKey
+        return when (key.keyFactory.keyType) {
+            KeyType.ECDSA -> listOf(
+                KeyFieldEntry(KeyFieldType.ADDRESS, Address.fromKey(Constants.NETWORK_PARAMETERS, key).toBase58()),
+                KeyFieldEntry(KeyFieldType.PUBLIC_KEY, Utils.HEX.encode(key.pubKey)),
+                KeyFieldEntry(KeyFieldType.PRIVATE_KEY_HEX, keyInfo.privateKeyHex),
+                KeyFieldEntry(KeyFieldType.PRIVATE_KEY_WIF, keyInfo.privateKeyWif)
+            )
+            KeyType.BLS -> {
+                val blsPublicKey = key.pubKeyObject as BLSPublicKey
+                listOf(
+                    KeyFieldEntry(KeyFieldType.PUBLIC_KEY, blsPublicKey.toStringHex(false)),
+                    KeyFieldEntry(KeyFieldType.PUBLIC_KEY_LEGACY, blsPublicKey.toStringHex(true)),
+                    KeyFieldEntry(KeyFieldType.PRIVATE_KEY_HEX, keyInfo.privateKeyHex)
+                )
+            }
+            KeyType.EdDSA -> listOf(
+                KeyFieldEntry(KeyFieldType.KEY_ID, Utils.HEX.encode(key.pubKeyHash)),
+                KeyFieldEntry(KeyFieldType.PRIVATE_PUBLIC_BASE64, keyInfo.privatePublicKeyBase64)
+            )
+            else -> emptyList()
+        }
+    }
+
     fun getDecryptedKey(key: IKey): MasternodeKeyInfo {
         val securityGuard = SecurityGuard.getInstance()
         val password = securityGuard.retrievePassword()
@@ -316,3 +388,31 @@ class MasternodeKeysViewModel @Inject constructor(
         return MasternodeKeyInfo(key, privateKeyHex, privateKeyWif, privatePublicKeyBase64)
     }
 }
+
+data class MasternodeKeysUIState(
+    val keyTypes: List<MasternodeKeyTypeInfo> = emptyList(),
+    val keyChainState: MasternodeKeyChainUIState = MasternodeKeyChainUIState(),
+    val newKeysFound: Boolean = false
+)
+
+enum class KeyFieldType {
+    ADDRESS, KEY_ID, PUBLIC_KEY, PUBLIC_KEY_LEGACY,
+    PRIVATE_KEY_HEX, PRIVATE_KEY_WIF, PRIVATE_PUBLIC_BASE64
+}
+
+data class KeyFieldEntry(
+    val type: KeyFieldType,
+    val value: String?
+)
+
+data class KeypairEntry(
+    val index: Int,
+    val usageStatus: AuthenticationKeyStatus?,
+    val usageIpAddress: String?,
+    val fields: List<KeyFieldEntry>
+)
+
+data class MasternodeKeyChainUIState(
+    val keyType: MasternodeKeyType? = null,
+    val keypairs: List<KeypairEntry> = emptyList()
+)

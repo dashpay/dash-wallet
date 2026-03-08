@@ -17,83 +17,56 @@
 package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentMasternodeKeyTypesBinding
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
-import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.viewBinding
-import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-class MasternodeKeysFragment : Fragment(R.layout.fragment_masternode_key_types) {
+class MasternodeKeysFragment : Fragment() {
 
-    companion object {
-        private val log = LoggerFactory.getLogger(MasternodeKeysFragment::class.java)
-    }
-    private val binding by viewBinding(FragmentMasternodeKeyTypesBinding::bind)
-
-    @Inject
-    lateinit var analytics: AnalyticsService
     private val viewModel: MasternodeKeysViewModel by activityViewModels()
-    private lateinit var masternodeKeyTypeAdapter: MasternodeKeyTypeAdapter
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                MasternodeKeysScreen(
+                    uiStateFlow = viewModel.uiState,
+                    onBackClick = { findNavController().popBackStack() },
+                    onKeyTypeClick = { type ->
+                        findNavController().navigate(
+                            R.id.masternodeKeyChainFragment,
+                            bundleOf("type" to type),
+                            NavOptions.Builder()
+                                .setEnterAnim(R.anim.slide_in_right)
+                                .build()
+                        )
+                    }
+                )
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-        binding.title.setText(R.string.masternode_keys_title)
-
-        masternodeKeyTypeAdapter = MasternodeKeyTypeAdapter(viewModel.keyChainMap) {
-            findNavController().navigate(
-                R.id.masternodeKeyChainFragment,
-                bundleOf("type" to it),
-                NavOptions.Builder()
-                    .setEnterAnim(R.anim.slide_in_right)
-                    .build(),
-            )
-        }
-        binding.keyTypeList.adapter = masternodeKeyTypeAdapter
-        binding.keyTypeList.layoutManager = LinearLayoutManager(activity)
-        binding.keyTypeList.setHasFixedSize(true)
-
-        if (viewModel.hasMasternodeKeys()) {
-            loadKeyTypes()
-        } else {
+        if (!viewModel.hasMasternodeKeys()) {
             lifecycleScope.launch {
                 viewModel.addKeyChains("")
-                loadKeyTypes()
             }
         }
-        viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
-            if (isAdded == true) {
-                loadKeyTypes()
-            }
-        }
-    }
-
-    private fun loadKeyTypes() {
-        masternodeKeyTypeAdapter.notifyDataSetChanged()
-    }
-
-    private fun handleCopyAddress(text: String) {
-        viewModel.copyToClipboard(text)
-
-        Toast(requireContext()).toast(R.string.copied)
-        log.info("text copied to clipboard: {}", text)
     }
 }
