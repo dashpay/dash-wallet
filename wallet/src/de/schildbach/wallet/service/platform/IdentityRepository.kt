@@ -120,18 +120,13 @@ class IdentityRepositoryImpl @Inject constructor(
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
 
-    private lateinit var _blockchainIdentity: BlockchainIdentity
+    private var _blockchainIdentity: BlockchainIdentity? = null
 
     override val blockchainIdentity: BlockchainIdentity?
-        get() = if (this::_blockchainIdentity.isInitialized) {
-            _blockchainIdentity
-        } else {
-            null
-        }
-
+        get() = _blockchainIdentity
 
     override val hasBlockchainIdentity: Boolean
-        get() = this::_blockchainIdentity.isInitialized
+        get() = _blockchainIdentity != null
     
     val platform = platformRepo.platform
     private val dashPayContactRequestDao = appDatabase.dashPayContactRequestDao()
@@ -142,6 +137,8 @@ class IdentityRepositoryImpl @Inject constructor(
 
     override suspend fun clearBlockchainIdentityData() {
         blockchainIdentityDataStorage.clear()
+        _blockchainIdentity = null
+        hasCheckedIdentityForUpgrade = false
     }
 
     override suspend fun doneAndDismiss() {
@@ -153,8 +150,8 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     suspend fun getActiveUsername(): String? {
-        return if (this::_blockchainIdentity.isInitialized) {
-            _blockchainIdentity.currentUsername
+        return if (_blockchainIdentity != null) {
+            _blockchainIdentity!!.currentUsername
         } else {
             val username = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
             val creationState = blockchainIdentityDataStorage.get(BlockchainIdentityConfig.CREATION_STATE)
@@ -172,15 +169,15 @@ class IdentityRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun hasIdentity(): Boolean = this::_blockchainIdentity.isInitialized ||
+    override suspend fun hasIdentity(): Boolean = _blockchainIdentity != null ||
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID) != null
 
-    override suspend fun hasUsername(): Boolean = (this::_blockchainIdentity.isInitialized && _blockchainIdentity.currentUsername != null) ||
+    override suspend fun hasUsername(): Boolean = (_blockchainIdentity?.currentUsername != null) ||
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME) != null
 
     override suspend fun getUsername(): String? {
-        return if (this::_blockchainIdentity.isInitialized) {
-            _blockchainIdentity.currentUsername
+        return if (_blockchainIdentity != null) {
+            _blockchainIdentity!!.currentUsername
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.USERNAME)
         }
@@ -188,8 +185,8 @@ class IdentityRepositoryImpl @Inject constructor(
 
     @Throws(IllegalStateException::class)
     suspend fun getIdentity(): String {
-        return if (this::_blockchainIdentity.isInitialized) {
-            _blockchainIdentity.uniqueIdString
+        return if (_blockchainIdentity != null) {
+            _blockchainIdentity!!.uniqueIdString
         } else {
             blockchainIdentityDataStorage.get(BlockchainIdentityConfig.IDENTITY_ID)
                 ?: throw IllegalStateException("IdentityId not found")
@@ -198,7 +195,7 @@ class IdentityRepositoryImpl @Inject constructor(
 
     override suspend fun getIdentityBalance(): CreditBalanceInfo? = withContext(Dispatchers.IO) {
         try {
-            CreditBalanceInfo(platformRepo.platform.client.getIdentityBalance(_blockchainIdentity.uniqueIdentifier))
+            CreditBalanceInfo(platformRepo.platform.client.getIdentityBalance(_blockchainIdentity?.uniqueIdentifier ?: return@withContext null))
         } catch (e: Exception) {
             log.error("Failed to get identity balance", e)
             null
@@ -206,9 +203,13 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun init() {
-        blockchainIdentityDataStorage.load()?.let {
-            _blockchainIdentity = initBlockchainIdentity(it, walletDataProvider.wallet!!)
+        val data = blockchainIdentityDataStorage.load()
+        if (data != null) {
+            _blockchainIdentity = initBlockchainIdentity(data, walletDataProvider.wallet!!)
             // initializeStateRepository()
+        } else {
+            _blockchainIdentity = null
+            hasCheckedIdentityForUpgrade = false
         }
     }
 
@@ -228,7 +229,7 @@ class IdentityRepositoryImpl @Inject constructor(
                 identity = blockchainIdentityData.identity
             }
             blockchainIdentity.updateIdentity()
-            log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::_blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
+            log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
             return blockchainIdentity
@@ -236,7 +237,7 @@ class IdentityRepositoryImpl @Inject constructor(
 
         // TODO: needs to check against Platform to see if values exist.  Check after
         // Syncing complete
-        log.info("loading identity ${blockchainIdentityData.userId} == ${if (this::_blockchainIdentity.isInitialized) blockchainIdentity.uniqueIdString else null}: {}", watch)
+        log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
         return blockchainIdentity.apply {
             primaryUsername = blockchainIdentityData.username
             secondaryUsername = blockchainIdentityData.usernameSecondary
@@ -357,8 +358,9 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateBlockchainIdentityData() {
+        val identity = _blockchainIdentity ?: return
         blockchainIdentityDataStorage.load()?.let {
-            updateBlockchainIdentityData(it, _blockchainIdentity)
+            updateBlockchainIdentityData(it, identity)
         }
     }
 
@@ -377,21 +379,22 @@ class IdentityRepositoryImpl @Inject constructor(
 
     /** assumes that the blockchainIdentity has been synced against platform */
     private suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean {
-        if (hasIdentity()) {
+        val identity = _blockchainIdentity
+        if (hasIdentity() && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
-                if (!_blockchainIdentity.hasTransferKey() || !_blockchainIdentity.hasEncryptionKey()) {
+                if (!identity.hasTransferKey() || !identity.hasEncryptionKey()) {
                     try {
                         log.info(
                             "one or more identity keys are missing [transfer=${
-                                _blockchainIdentity.hasTransferKey()
+                                identity.hasTransferKey()
                             }, encryption=${
-                                _blockchainIdentity.hasEncryptionKey()
+                                identity.hasEncryptionKey()
                             }]"
                         )
                         val enough = getIdentityBalance()
                         if (enough != null && !enough.isBalanceEmpty()) {
                             val signer = WalletSignerCallback(wallet, keyParameter)
-                            _blockchainIdentity.addMissingKeys(signer)
+                            identity.addMissingKeys(signer)
                             updateBlockchainIdentityData()
                             dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, false)
                             return true
@@ -418,8 +421,9 @@ class IdentityRepositoryImpl @Inject constructor(
     @Throws(Exception::class)
     override suspend fun searchUsernames(text: String, onlyExactUsername: Boolean, limit: Int): List<UsernameSearchResult> {
         return withContext(Dispatchers.IO) {
-            val userIdString = _blockchainIdentity.uniqueIdString
-            val userId = _blockchainIdentity.uniqueIdentifier
+            val identity = _blockchainIdentity ?: throw IllegalStateException("BlockchainIdentity not initialized")
+            val userIdString = identity.uniqueIdString
+            val userId = identity.uniqueIdentifier
 
             // Names.search does support retrieving 100 names at a time if retrieveAll = false
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
@@ -661,7 +665,7 @@ class IdentityRepositoryImpl @Inject constructor(
     override suspend fun updateFrequentContacts(newTx: Transaction) {
         // since we are accessing the blockchainIdentity object, we better check that it is valid
         // previously, we were using hasUsername() which can return true during a wallet reset
-        if (hasBlockchainIdentity && _blockchainIdentity.getContactForTransaction(newTx) != null) {
+        if (hasBlockchainIdentity && _blockchainIdentity?.getContactForTransaction(newTx) != null) {
             updateFrequentContacts()
         }
     }
@@ -671,18 +675,19 @@ class IdentityRepositoryImpl @Inject constructor(
             val contactRequests = searchContacts("", UsernameSortOrderBy.DATE_ADDED)
             val frequentContacts = when (contactRequests.status) {
                 Status.SUCCESS -> {
-                    if (!hasBlockchainIdentity) {
+                    val identity = _blockchainIdentity
+                    if (!hasBlockchainIdentity || identity == null) {
                         return
                     }
 
                     val threeMonthsAgo = Date().time - TIMESPAN
 
                     val results =
-                        getTopContacts(contactRequests.data!!, listOf(), _blockchainIdentity, threeMonthsAgo, true)
+                        getTopContacts(contactRequests.data!!, listOf(), identity, threeMonthsAgo, true)
 
                     if (results.size < TOP_CONTACT_COUNT) {
                         val moreResults =
-                            getTopContacts(contactRequests.data, results, _blockchainIdentity, threeMonthsAgo, false)
+                            getTopContacts(contactRequests.data, results, identity, threeMonthsAgo, false)
                         results.addAll(moreResults)
                     }
 
@@ -742,7 +747,7 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     private fun isUsernameRegistered(): Boolean {
-        return this::_blockchainIdentity.isInitialized
+        return _blockchainIdentity != null
     }
 
     override suspend fun getNotificationCount(date: Long): Int {
@@ -786,7 +791,7 @@ class IdentityRepositoryImpl @Inject constructor(
 
     override fun getNextContactAddress(userId: String, accountReference: Int): Address? {
         return try {
-            _blockchainIdentity.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
+            _blockchainIdentity?.getContactNextPaymentAddress(Identifier.from(userId), accountReference)
         } catch (e: NullPointerException) {
             log.error("Failed to get contact address due to null key chain", e)
             null
@@ -815,7 +820,7 @@ class IdentityRepositoryImpl @Inject constructor(
         val profiles = dashPayProfileDao.loadAll()
         val profilesById = profiles.associateBy({ it.userId }, { it })
         report.append("Contact Requests (Sent) -----------------\n")
-        dashPayContactRequestDao.loadToOthers(_blockchainIdentity.uniqueIdString).forEach {
+        dashPayContactRequestDao.loadToOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
@@ -829,7 +834,7 @@ class IdentityRepositoryImpl @Inject constructor(
             report.append("\n")
         }
         report.append("Contact Requests (Received) -----------------\n")
-        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity.uniqueIdString).forEach {
+        dashPayContactRequestDao.loadFromOthers(_blockchainIdentity?.uniqueIdString ?: return "").forEach {
             val fromProfile = profilesById[it.userId]
             report.append(it.userId)
             if (fromProfile != null) {
