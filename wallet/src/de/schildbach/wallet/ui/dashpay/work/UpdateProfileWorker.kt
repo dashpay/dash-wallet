@@ -82,6 +82,7 @@ class UpdateProfileWorker @AssistedInject constructor(
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
         val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
 
         val encryptionKey: KeyParameter
         try {
@@ -152,8 +153,8 @@ class UpdateProfileWorker @AssistedInject constructor(
             Pair(avatarHash, avatarFingerprint)
         }
 
-        val dashPayProfile = DashPayProfile(blockchainIdentity!!.uniqueIdString,
-                blockchainIdentity!!.getUniqueUsername(),
+        val dashPayProfile = DashPayProfile(blockchainIdentity.uniqueIdString,
+                blockchainIdentity.getUniqueUsername(),
                 displayName,
                 publicMessage,
                 avatarUrl,

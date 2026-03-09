@@ -191,8 +191,11 @@ class DashPayUserActivityViewModel @Inject constructor(
                 }
             }
 
-            val blockchainIdentity = identityRepository.blockchainIdentity
-            val txs = blockchainIdentity!!.getContactTransactions(Identifier.from(userId), accountReference)
+            val blockchainIdentity = identityRepository.blockchainIdentity ?: run {
+                log.warn("blockchainIdentity is null, cannot get contact transactions")
+                return@withContext emptyList()
+            }
+            val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
             txs.forEach {
                 results.add(NotificationItemPayment(it))
