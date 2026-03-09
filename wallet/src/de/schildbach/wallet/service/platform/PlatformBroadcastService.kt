@@ -88,7 +88,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     override suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
         val potentialContactIdentity = platform.identities.get(toUserId)
         log.info("potential contact identity: $potentialContactIdentity")
-        val blockchainIdentity = identityRepository.blockchainIdentity!!
+        val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")
 
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -116,7 +117,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     }
 
     override suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument {
-        val blockchainIdentity = identityRepository.blockchainIdentity!!
+        val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.broadcastIdentityVerify")
 
         // Create Identity Verify
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
@@ -185,7 +187,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     @Throws(Exception::class)
     override suspend fun broadcastUpdatedProfile(dashPayProfile: DashPayProfile, encryptionKey: KeyParameter): DashPayProfile {
         log.info("broadcast profile")
-        val blockchainIdentity = identityRepository.blockchainIdentity!!
+        val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.broadcastUpdatedProfile")
 
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
