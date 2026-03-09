@@ -380,9 +380,10 @@ class IdentityRepositoryImpl @Inject constructor(
     /** assumes that the blockchainIdentity has been synced against platform */
     private suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean {
         val identity = _blockchainIdentity
-        if (hasIdentity() && identity != null) {
+        if (hasBlockchainIdentity && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
                 if (!identity.hasTransferKey() || !identity.hasEncryptionKey()) {
+                    dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
                     try {
                         log.info(
                             "one or more identity keys are missing [transfer=${
