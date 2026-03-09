@@ -45,6 +45,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
@@ -64,6 +65,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.common.util.safeNavigate
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
@@ -79,6 +81,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         get() = (binding.walletTransactionsList.adapter?.itemCount ?: 0) == 0
 
     private lateinit var header: HistoryHeaderAdapter
+    @Inject
+    lateinit var identityRepository: IdentityRepository
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -394,7 +398,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 viewLifecycleOwner.lifecycleScope.launch {
                     val handler = InviteHandler(requireActivity(), viewModel.analytics)
 
-                    if (handler.handleError(blockchainIdentityData)) {
+                    if (handler.handleError(blockchainIdentityData, identityRepository)) {
                         header.blockchainIdentityData = null
                     } else {
                         requireActivity().startService(
