@@ -620,7 +620,7 @@ class IdentityRepositoryImpl @Inject constructor(
     override fun observeContacts(text: String, orderBy: UsernameSortOrderBy, includeSentPending: Boolean): Flow<List<UsernameSearchResult>> {
         return blockchainIdentityDataStorage.observe()
             .filterNotNull()
-            .filter { it.hasUsername }
+            .filter { it.hasUsername && it.userId != null }
             .flatMapLatest { identityData ->
                 val userId = identityData.userId!!
 
