@@ -888,8 +888,9 @@ class IdentityRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getLocalUserProfile(): DashPayProfile? {
-        val blockchainIdentityBaseData = loadBlockchainIdentityBaseData()!!
-        return dashPayProfileDao.loadByUserId(blockchainIdentityBaseData.userId!!)
+        val blockchainIdentityBaseData = loadBlockchainIdentityBaseData()
+        val userId = blockchainIdentityBaseData.userId ?: return null
+        return dashPayProfileDao.loadByUserId(userId)
     }
 
     override fun getIdentityFromPublicKeyId(): Identity? {
