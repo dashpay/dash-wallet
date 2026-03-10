@@ -6,18 +6,15 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +66,7 @@ fun Toast(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(start = 12.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // LeadingWrap: icon + message
@@ -78,7 +75,7 @@ fun Toast(
                     .weight(1f)
                     .padding(end = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 if (imageResource != null) {
                     Box(
@@ -96,19 +93,20 @@ fun Toast(
                     text = text,
                     style = MyTheme.Body2Regular,
                     color = Color.White,
+                    modifier = Modifier.padding(vertical = 2.dp),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Action button
-            actionText?.let {
-                TextButton(
-                    onClick = onActionClick,
+            // Action button — plain Box to avoid Material3's 40dp minimum height
+            if (actionText != null) {
+                Box(
                     modifier = Modifier
-                        .wrapContentSize()
-                        .width(54.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                        .width(54.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clickable { onActionClick() },
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = actionText,
@@ -138,6 +136,32 @@ fun Toast(
                 }
             }
         }
+    }
+}
+
+@Preview(name = "Toast with action")
+@Composable
+private fun ToastPreview() {
+    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "The exchange rates are out of date, please do something about it right away",
+            actionText = "OK",
+            imageResource = R.drawable.ic_image_placeholder
+        ) {}
+    }
+}
+
+@Preview(name = "Toast with action and dismiss")
+@Composable
+private fun ToastWithDismissPreview() {
+    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Some coins are currently halted",
+            actionText = "Action",
+            imageResource = R.drawable.ic_image_placeholder,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
     }
 }
 
