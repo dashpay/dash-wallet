@@ -47,6 +47,7 @@ import de.schildbach.wallet.service.DeviceInfoProvider
 import de.schildbach.wallet.service.MAX_ALLOWED_AHEAD_TIMESKEW
 import de.schildbach.wallet.service.MAX_ALLOWED_BEHIND_TIMESKEW
 import de.schildbach.wallet.service.MixingStatus
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
@@ -127,6 +128,7 @@ class MainViewModel @Inject constructor(
     exchangeRatesProvider: ExchangeRatesProvider,
     val walletData: WalletDataProvider,
     private val walletApplication: WalletApplication,
+    private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     private val platformService: PlatformService,
     private val platformSyncService: PlatformSyncService,
@@ -289,7 +291,7 @@ class MainViewModel @Inject constructor(
     val seriousErrorLiveData = SeriousErrorLiveData(platformRepo)
     var processingSeriousError = false
 
-    val notificationCountData = NotificationCountLiveData(platformRepo, platformSyncService, dashPayConfig, viewModelScope)
+    val notificationCountData = NotificationCountLiveData(identityRepository, platformRepo, platformSyncService, dashPayConfig, viewModelScope)
     val notificationCount: Int
         get() = notificationCountData.value ?: 0
 
@@ -320,7 +322,7 @@ class MainViewModel @Inject constructor(
             }
             .launchIn(viewModelWorkerScope)
 
-        platformRepo.observeContacts(
+        identityRepository.observeContacts(
             "",
             UsernameSortOrderBy.LAST_ACTIVITY,
             false
@@ -698,7 +700,7 @@ class MainViewModel @Inject constructor(
             val contactsMap = if (this@MainViewModel.contacts.isNotEmpty()) {
                 txs.filterNot { it.isEntirelySelf(walletData.transactionBag) }
                     .mapNotNull { tx ->
-                        platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { contactId ->
+                        identityRepository.blockchainIdentity!!.getContactForTransaction(tx)?.let { contactId ->
                             contacts[contactId]?.let { contact ->
                                 tx.txId to contact
                             }
@@ -886,7 +888,7 @@ class MainViewModel @Inject constructor(
         val data = blockchainIdentityDataDao.loadBase()
 
         if (data.creationState == IdentityCreationState.DONE) {
-            platformRepo.doneAndDismiss()
+            identityRepository.doneAndDismiss()
             return true
         }
 
@@ -895,7 +897,7 @@ class MainViewModel @Inject constructor(
 
     fun dismissUsernameCreatedCard() {
         viewModelScope.launch {
-            platformRepo.doneAndDismiss()
+            identityRepository.doneAndDismiss()
         }
     }
 

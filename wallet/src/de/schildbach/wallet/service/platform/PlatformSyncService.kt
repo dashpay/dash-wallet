@@ -148,6 +148,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val usernameVoteDao: UsernameVoteDao,
     private val identityConfig: BlockchainIdentityConfig,
     private val topUpRepository: TopUpRepository,
+    private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletDataProvider,
 ) : PlatformSyncService {
     companion object {
@@ -179,7 +180,10 @@ class PlatformSynchronizationService @Inject constructor(
     private var lastMetadataUpdateTime = 0L
 
     override fun init() {
-        syncScope.launch { platformRepo.init() }
+        syncScope.launch {
+            identityRepository.init()
+            initializeStateRepository()
+        }
         log.info("Starting the platform sync job")
     }
 
@@ -253,14 +257,14 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
-        if (platformSyncJob != null && platformRepo.hasBlockchainIdentity) {
+        if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
             Preconditions.checkState(platformSyncJob!!.isActive)
             log.info("Shutting down the platform sync job")
             syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
             platformSyncJob!!.cancel(null)
             platformSyncJob = null
         }
-        if (txMetadataJob != null && platformRepo.hasIdentity()) {
+        if (txMetadataJob != null && identityRepository.hasIdentity()) {
             if (txMetadataJob!!.isActive) {
                 log.info("Shutting down the txmetdata publish job")
                 syncScope.coroutineContext.cancelChildren(CancellationException("shutdown the platform sync"))
@@ -282,7 +286,7 @@ class PlatformSynchronizationService @Inject constructor(
     override suspend fun updateContactRequests(initialSync: Boolean) {
 
         // if there is no wallet or identity, then skip the remaining steps of the update
-        if (!platformRepo.hasBlockchainIdentity || walletApplication.wallet == null) {
+        if (!identityRepository.hasBlockchainIdentity || walletApplication.wallet == null) {
             return
         }
         log.info("updateContactRequests($initialSync) checking if can run")
@@ -313,7 +317,7 @@ class PlatformSynchronizationService @Inject constructor(
                             if (domainDocument.dashUniqueIdentityId == blockchainIdentityData.identity?.id) {
                                 blockchainIdentityData.creationState =
                                     IdentityCreationState.DONE_AND_DISMISS
-                                platformRepo.updateBlockchainIdentityData(blockchainIdentityData)
+                                identityRepository.updateBlockchainIdentityData(blockchainIdentityData)
                             }
                         }
                     }
@@ -449,6 +453,9 @@ class PlatformSynchronizationService @Inject constructor(
                         val myEncryptionKey = platformRepo.getWalletEncryptionKey()
 
                         awaitAll(
+                            async {
+                                identityRepository.upgradeIdentity(platformRepo.getWalletEncryptionKey())
+                            },
                             // fetch updated invitations
                             async {
                                 if (Constants.SUPPORTS_INVITES) {
@@ -490,7 +497,7 @@ class PlatformSynchronizationService @Inject constructor(
 
             } else {
                 if (config.get(DashPayConfig.FREQUENT_CONTACTS) == null) {
-                    platformRepo.updateFrequentContacts()
+                    identityRepository.updateFrequentContacts()
                 }
             }
             // fire listeners if there were new contacts
@@ -562,7 +569,7 @@ class PlatformSynchronizationService @Inject constructor(
                     myEncryptionKey =
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
-                platformRepo.blockchainIdentity.addPaymentKeyChainFromContact(
+                identityRepository.blockchainIdentity!!.addPaymentKeyChainFromContact(
                     contactIdentity!!,
                     contactRequest,
                     myEncryptionKey!!
@@ -611,7 +618,7 @@ class PlatformSynchronizationService @Inject constructor(
                     myEncryptionKey =
                         platformRepo.walletApplication.wallet!!.keyCrypter!!.deriveKey(password)
                 }
-                platformRepo.blockchainIdentity.addPaymentKeyChainToContact(
+                identityRepository.blockchainIdentity!!.addPaymentKeyChainToContact(
                     contactIdentity!!,
                     contactRequest,
                     myEncryptionKey!!
@@ -853,7 +860,7 @@ class PlatformSynchronizationService @Inject constructor(
 
         log.info("fetching TxMetadataDocuments from {}", lastTxMetadataRequestTime)
 
-        val items = platformRepo.blockchainIdentity
+        val items = identityRepository.blockchainIdentity!!
             .getTxMetaData(lastTxMetadataRequestTime, myEncryptionKey)
 
         if (items.isEmpty()) {
@@ -1103,7 +1110,7 @@ class PlatformSynchronizationService @Inject constructor(
         myEncryptionKey: KeyParameter?,
         progressListener: (suspend (Int) -> Unit)? = null
     ): Int {
-        if (!platformRepo.hasBlockchainIdentity) {
+        if (!identityRepository.hasBlockchainIdentity) {
             return 0
         }
         progressListener?.invoke(0)
@@ -1130,7 +1137,7 @@ class PlatformSynchronizationService @Inject constructor(
         progressListener?.invoke(10)
         //val walletEncryptionKey = platformRepo.getWalletEncryptionKey()
         val keyIndex = 1 + transactionMetadataDocumentDao.countAllRequests()
-        platformRepo.blockchainIdentity.publishTxMetaData(
+        identityRepository.blockchainIdentity!!.publishTxMetaData(
             metadataList,
             myEncryptionKey,
             keyIndex,
@@ -1579,7 +1586,7 @@ class PlatformSynchronizationService @Inject constructor(
             if (identityData == null || identityData.restoring) {
                 log.info("preBlockDownload: checking for existing associated identity")
 
-                val identity = platformRepo.getIdentityFromPublicKeyId()
+                val identity = identityRepository.getIdentityFromPublicKeyId()
 
                 if (identity != null) {
                     log.info("preBlockDownload: initiate recovery of existing identity ${identity.id}")
@@ -1622,14 +1629,14 @@ class PlatformSynchronizationService @Inject constructor(
                 when {
                     winner.isLocked -> {
                         identityData.usernameRequested = UsernameRequestStatus.LOCKED
-                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
                     }
 
                     winner.isWinner(Identifier.from(identityData.userId)) -> {
                         identityData.usernameRequested = UsernameRequestStatus.APPROVED
                         syncScope.launch {
-                            platformRepo.updateBlockchainIdentityData(identityData)
-                            platformRepo.getLocalUserProfile()?.let {
+                            identityRepository.updateBlockchainIdentityData(identityData)
+                            identityRepository.getLocalUserProfile()?.let {
                                 dashPayProfileDao.insert(it.copy(username = identityData.username!!))
                             }
                         }
@@ -1641,14 +1648,14 @@ class PlatformSynchronizationService @Inject constructor(
 
                     else -> {
                         identityData.usernameRequested = UsernameRequestStatus.LOST_VOTE
-                        syncScope.launch { platformRepo.updateBlockchainIdentityData(identityData) }
+                        syncScope.launch { identityRepository.updateBlockchainIdentityData(identityData) }
                     }
                 }
                 if (resource.status == Status.SUCCESS && resource.data != null) {
                     val domainDocument = DomainDocument(resource.data)
                     if (domainDocument.dashUniqueIdentityId == identityData.identity?.id) {
                         identityData.creationState = IdentityCreationState.DONE_AND_DISMISS
-                        platformRepo.updateBlockchainIdentityData(identityData)
+                        identityRepository.updateBlockchainIdentityData(identityData)
                     }
                 } else {
 
@@ -1699,6 +1706,34 @@ class PlatformSynchronizationService @Inject constructor(
         if (!hasCheckedTopups) {
             topUpRepository.checkTopUps(myEncryptionKey)
             hasCheckedTopups = true
+        }
+    }
+
+    /**
+     * This method looks at all items in the database tables
+     * that have existing identites and saves them for future use.
+     *
+     * Sometimes Platform Nodes return IdentityNotFound Errors and
+     * this list is used to determine if that node should be banned
+     */
+    private suspend fun initializeStateRepository() {
+        // load our id
+        val blockchainIdentity = identityRepository.blockchainIdentity
+        if (blockchainIdentity != null && blockchainIdentity.isRegistered()) {
+            val identityId = blockchainIdentity.uniqueIdString
+            platform.stateRepository.addValidIdentity(Identifier.from(identityId))
+
+            // load all id's of users who have sent us a contact request
+            dashPayContactRequestDao.loadFromOthers(identityId).forEach {
+                platform.stateRepository.addValidIdentity(it.userIdentifier)
+            }
+
+            // load all id's of users for whom we have profiles
+            dashPayProfileDao.loadAll().forEach {
+                platform.stateRepository.addValidIdentity(it.userIdentifier)
+            }
+
+            platform.stateRepository.storeIdentity(blockchainIdentity.identity!!)
         }
     }
 }

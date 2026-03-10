@@ -25,6 +25,7 @@ import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.TopUp
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.TopupIdentityOperation
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -52,6 +53,7 @@ class TransactionResultViewModel @Inject constructor(
     val configuration: Configuration,
     private val dashPayProfileDao: DashPayProfileDao,
     private val topUpsDao: TopUpsDao,
+    private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
@@ -140,13 +142,13 @@ class TransactionResultViewModel @Inject constructor(
 
     private suspend fun findContact(tx: Transaction) {
         // check hasIdentity since later we need blockchainIdentity
-        if (!platformRepo.hasBlockchainIdentity) {
+        if (!identityRepository.hasBlockchainIdentity) {
             _contact.postValue(null)
             return
         }
 
         val userId = withContext(Dispatchers.IO) {
-            platformRepo.blockchainIdentity.getContactForTransaction(tx)
+            identityRepository.blockchainIdentity!!.getContactForTransaction(tx)
         }
 
         if (userId == null) {

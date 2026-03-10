@@ -43,6 +43,7 @@ import java.io.IOException
 import java.security.GeneralSecurityException
 import java.util.*
 import androidx.core.net.toUri
+import de.schildbach.wallet.service.platform.IdentityRepository
 import java.math.BigInteger
 
 @HiltWorker
@@ -50,6 +51,7 @@ class UpdateProfileWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     val analytics: AnalyticsService,
+    private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     val platformBroadcastService: PlatformBroadcastService,
     val googleDriveService: GoogleDriveService,
@@ -79,7 +81,8 @@ class UpdateProfileWorker @AssistedInject constructor(
         if (!inputData.keyValueMap.containsKey(KEY_CREATED_AT))
             return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
         val createdAt = inputData.getLong(KEY_CREATED_AT, 0L)
-        val blockchainIdentity = platformRepo.blockchainIdentity
+        val blockchainIdentity = identityRepository.blockchainIdentity
+            ?: return Result.failure(workDataOf(KEY_ERROR_MESSAGE to UpdateProfileError.DOCUMENT.name))
 
         val encryptionKey: KeyParameter
         try {
