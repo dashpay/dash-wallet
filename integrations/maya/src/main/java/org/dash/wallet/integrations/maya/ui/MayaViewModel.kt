@@ -78,7 +78,10 @@ class MayaViewModel @Inject constructor(
         get() = globalConfig.format.noCode()
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
-    val inboundAddresses = arrayListOf<InboundAddress>()
+    val inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
+    val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
+        addresses.any { it.halted }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val paymentParsers = MayaCurrencyList.getPaymentProcessors()
 
     init {
@@ -156,9 +159,9 @@ class MayaViewModel @Inject constructor(
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {
-        return if (inboundAddresses.isNotEmpty()) {
+        return if (inboundAddresses.value.isNotEmpty()) {
             val chain = asset.let { it.substring(0, it.indexOf('.')) }
-            inboundAddresses.find { it.chain == chain }
+            inboundAddresses.value.find { it.chain == chain }
         } else { null }
     }
 }

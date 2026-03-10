@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.radio_group
 
+import android.graphics.drawable.GradientDrawable
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
@@ -194,9 +195,38 @@ open class RadioButtonViewHolder(
         if (option.actionText != null) {
             binding.action.isVisible = true
             binding.action.text = option.actionText
+
+            val textColor = option.actionTextColor?.let {
+                ContextCompat.getColor(binding.root.context, it)
+            } ?: ContextCompat.getColor(binding.root.context, R.color.dash_blue)
+            binding.action.setTextColor(textColor)
+
+            if (option.actionBackgroundColor != null) {
+                val bgColor = ContextCompat.getColor(binding.root.context, option.actionBackgroundColor)
+                val density = binding.root.resources.displayMetrics.density
+                val cornerRadius = 12 * density
+                val hPad = (8 * density).toInt()
+                val vPad = (4 * density).toInt()
+                val badge = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    setCornerRadius(cornerRadius)
+                    setColor(bgColor)
+                }
+                binding.action.background = badge
+                binding.action.setPadding(hPad, vPad, hPad, vPad)
+            } else {
+                binding.action.background = null
+                binding.action.setPadding(0, 0, 0, 0)
+            }
         } else {
             binding.action.isVisible = false
         }
+
+        val contentAlpha = if (option.isEnabled) 1.0f else 0.4f
+        binding.iconWrapper.alpha = contentAlpha
+        binding.title.alpha = contentAlpha
+        binding.subtitle.alpha = contentAlpha
+        binding.additionalInfo.alpha = contentAlpha
     }
 }
 

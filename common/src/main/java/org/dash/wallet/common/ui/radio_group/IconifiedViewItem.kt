@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.radio_group
 
+import androidx.annotation.ColorRes
 import androidx.annotation.DrawableRes
 
 enum class IconSelectMode {
@@ -36,5 +37,13 @@ data class IconifiedViewItem(
     val subtitleDrawable: Int? = null,
     val subtitleAdditionalInfo: String? = null,
     val actionText: String? = null,
-    val id: String? = null
+    val id: String? = null,
+    /** When false, the icon, title, subtitle and price are rendered at reduced opacity */
+    val isEnabled: Boolean = true,
+    /** Optional pill background color for the action button */
+    @ColorRes
+    val actionBackgroundColor: Int? = null,
+    /** Optional text color for the action button; defaults to dash_blue when null */
+    @ColorRes
+    val actionTextColor: Int? = null
 )
