@@ -38,6 +38,7 @@ import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.utils.MayaConfig
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.Locale
 import javax.inject.Inject
@@ -58,10 +59,10 @@ class MayaViewModel @Inject constructor(
     walletUIConfig: WalletUIConfig
 ) : ViewModel() {
     companion object {
-        val log = LoggerFactory.getLogger(MayaViewModel::class.java)
+        private val log: Logger = LoggerFactory.getLogger(MayaViewModel::class.java)
     }
 
-    var fiatFormat: MonetaryFormat = MonetaryFormat()
+    private var fiatFormat: MonetaryFormat = MonetaryFormat()
         .minDecimals(GenericUtils.getCurrencyDigits())
         .withLocale(Locale.getDefault())
         .noCode()
@@ -159,15 +160,7 @@ class MayaViewModel @Inject constructor(
     }
 
     suspend fun refreshInboundAddresses() {
-        // TODO: this is temp code to disable some coins
-        // inboundAddresses.clear()
-        val addresses = mayaApi.getInboundAddresses().toMutableList()
-        if (addresses.isNotEmpty()) {
-            val newAddress = addresses.first().copy(halted = true)
-            addresses.removeAt(0)
-            addresses.add(0, newAddress)
-        }
-        _inboundAddresses.value = addresses
+        _inboundAddresses.value = mayaApi.getInboundAddresses()
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {
