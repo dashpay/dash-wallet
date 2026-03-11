@@ -27,11 +27,16 @@ import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class EthereumPaymentIntentParser(uriPrefix: String, asset: String) : MayaPaymentIntentParser(
+class EthereumPaymentIntentParser(
+    uriPrefix: String,
+    asset: String,
+    shortAsset: String? = null
+) : MayaPaymentIntentParser(
     "ethereum",
     uriPrefix,
     asset,
-    null
+    shortAsset,
+    params = null
 ) {
     private val log = LoggerFactory.getLogger(EthereumPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getEthereumAddressParser()

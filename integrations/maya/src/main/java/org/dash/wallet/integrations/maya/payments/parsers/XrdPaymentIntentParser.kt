@@ -25,7 +25,7 @@ import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD", null) {
+class XrdPaymentIntentParser : MayaPaymentIntentParser("XRD", "radix", "XRD.XRD", "x",null) {
     private val log = LoggerFactory.getLogger(XrdPaymentIntentParser::class.java)
     private val addressParser = Bech32AddressParser(
         "account_rdx",

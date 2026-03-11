@@ -34,7 +34,7 @@ import org.dash.wallet.common.payments.parsers.SegwitAddress
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BTC.BTC", BitcoinMainNetParams()) {
+class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BTC.BTC", null, BitcoinMainNetParams()) {
     private val log = LoggerFactory.getLogger(BitcoinPaymentIntentParser::class.java)
     private val addressParser = BitcoinAddressParser(params as NetworkParameters)
 

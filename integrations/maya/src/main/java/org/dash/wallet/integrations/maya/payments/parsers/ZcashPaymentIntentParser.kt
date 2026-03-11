@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory
  * Supports transparent t-addresses (`t1...`, `t3...`), Sapling shielded addresses (`zs1...`),
  * and unified addresses (`u1...`).
  */
-class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", null) {
+class ZcashPaymentIntentParser : MayaPaymentIntentParser("ZEC", "zcash", "ZEC.ZEC", "z", null) {
     private val log = LoggerFactory.getLogger(ZcashPaymentIntentParser::class.java)
     private val addressParser = ZcashAddressParser()
 
