@@ -96,7 +96,7 @@ fun MayaPortalScreen(
                 MenuItem(
                     title = stringResource(R.string.maya_portal_convert_title),
                     subtitle = stringResource(R.string.maya_portal_convert_subtitle),
-                    icon = R.drawable.ic_maya_convert,
+                    icon = R.drawable.ic_convert_icon,
                     showChevron = true,
                     action = onConvertClick
                 )
