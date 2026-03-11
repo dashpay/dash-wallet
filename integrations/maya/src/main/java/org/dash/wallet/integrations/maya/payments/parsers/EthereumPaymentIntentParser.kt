@@ -39,6 +39,20 @@ class EthereumPaymentIntentParser(uriPrefix: String, asset: String) : MayaPaymen
     override suspend fun parse(input: String): PaymentIntent = withContext(Dispatchers.Default) {
         if (input.startsWith("$uriPrefix:") || input.startsWith("${uriPrefix.uppercase()}:")) {
             try {
+                val hexAddress = input.substring(uriPrefix.length)
+                return@withContext createPaymentIntent(hexAddress)
+            } catch (ex: Exception) {
+                log.info("got invalid uri: '$input'", ex)
+                throw PaymentIntentParserException(
+                    ex,
+                    ResourceString(
+                        R.string.error,
+                        listOf(input)
+                    )
+                )
+            }
+        } else if (input.startsWith(currency) || input.startsWith("${currency.uppercase()}:")) {
+            try {
                 val hexAddress = input.substring(currency.length)
                 return@withContext createPaymentIntent(hexAddress)
             } catch (ex: Exception) {

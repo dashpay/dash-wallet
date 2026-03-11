@@ -43,7 +43,7 @@ class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BT
             try {
                 val bitcoinUri = BitcoinURI(
                     params,
-                    AbstractBitcoinNetParams.BITCOIN_SCHEME + ":" + input.substring(uriPrefix.length + 1)
+                    uriPrefix + ":" + input.substring(uriPrefix.length + 1)
                 )
                 val address = bitcoinUri.address
 
