@@ -60,7 +60,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var input: String
         get() = _input
         set(value) {
-            _input = value.ifEmpty { "0" }
+            _input = if (value.none { it.isDigit() }) "0" else value
             updateAmount()
         }
 
