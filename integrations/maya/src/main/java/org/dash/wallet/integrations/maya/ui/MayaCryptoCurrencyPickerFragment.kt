@@ -84,15 +84,9 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 it.asset == item.id
             }?.let {
                 val inboundAddress = viewModel.getInboundAddress(it.asset)
+                // if trading is halted, then don't perform an action
                 if (inboundAddress != null && !inboundAddress.halted) {
                     clickListener(it)
-                } else {
-                    AdaptiveDialog.create(
-                        null,
-                        getString(R.string.error),
-                        getString(R.string.maya_error_trading_halted, it.asset),
-                        getString(R.string.button_close)
-                    ).show(requireActivity())
                 }
             }
         }
