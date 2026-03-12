@@ -28,6 +28,7 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.slf4j.LoggerFactory
 
 class TransactionPagingSource(
     private val wrappedTransactions: List<TransactionWrapper>,
@@ -37,6 +38,10 @@ class TransactionPagingSource(
     private val chainLockBlockHeight: Int,
     private val onContactsNeeded: (List<Transaction>) -> Unit
 ) : PagingSource<Int, TransactionRowView>() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(TransactionPagingSource::class.java)
+    }
 
     // Set to true before invalidate() when the underlying list was rebuilt (new/removed
     // transactions, filter change). This forces the next source to load from the top so
@@ -49,6 +54,8 @@ class TransactionPagingSource(
 
     override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TransactionRowView> {
         val offset = params.key ?: 0
+        val isFirstPage = offset == 0
+        val pageStartTime = if (isFirstPage) System.currentTimeMillis() else 0L
         val slice = wrappedTransactions.drop(offset).take(params.loadSize)
 
         val rows = slice.map { wrapper ->
@@ -62,6 +69,11 @@ class TransactionPagingSource(
                 metadata[tx.txId],
                 chainLockBlockHeight
             )
+        }
+
+        if (isFirstPage) {
+            log.info("first page: built {} rows in {}ms (total list size: {})",
+                rows.size, System.currentTimeMillis() - pageStartTime, wrappedTransactions.size)
         }
 
         // Viewport-driven: trigger contact resolution for this page (fire-and-forget)

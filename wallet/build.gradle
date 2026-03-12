@@ -113,6 +113,7 @@ dependencies {
     // Database
     implementation "androidx.room:room-ktx:$roomVersion"
     implementation "androidx.room:room-runtime:$roomVersion"
+    implementation "androidx.room:room-paging:$roomVersion"
     ksp "androidx.room:room-compiler:$roomVersion"
 
     // Prefs

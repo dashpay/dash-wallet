@@ -212,10 +212,7 @@ class TransactionAdapter(
                 val name = txView.contact.displayName.ifEmpty { txView.contact.username }
                 binding.primaryStatus.text = name
             } else if (txView.title != null) {
-                binding.primaryStatus.text = resources.getString(
-                    txView.title!!.resourceId,
-                    *txView.title!!.args.toTypedArray()
-                )
+                binding.primaryStatus.text = txView.title!!.format(resources)
             }
 
             binding.primaryStatus.setTextColor(contentColor)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Dash Core Group.
+ * Copyright 2024 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.common.util
+package de.schildbach.wallet.database.dao
 
-import android.content.res.Resources
-import androidx.annotation.StringRes
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 
-data class ResourceString(
-    @StringRes val resourceId: Int = 0,
-    val args: List<Any> = listOf(),
-    val resolvedText: String? = null
-) {
-    fun format(resources: Resources): String {
-        return resolvedText ?: resources.getString(resourceId, *args.toTypedArray())
-    }
+@Dao
+interface TxGroupCacheDao {
+    @Query("SELECT * FROM tx_group_cache")
+    suspend fun getAll(): List<TxGroupCacheEntry>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entries: List<TxGroupCacheEntry>)
+
+    @Query("DELETE FROM tx_group_cache")
+    suspend fun deleteAll()
 }

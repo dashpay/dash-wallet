@@ -61,6 +61,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
+import org.slf4j.LoggerFactory
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
@@ -72,7 +73,10 @@ import org.dash.wallet.common.util.safeNavigate
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
+        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
+
+    private var firstPageLoadStartTime: Long = 0L
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -95,18 +99,31 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 if (isProfileClick && rowView.contact != null) {
                     requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
                 } else {
-                    val fragment = if (rowView.txWrapper != null) {
-                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionGroupDetailsFragment(rowView.txWrapper)
-                    } else if (ServiceName.isDashSpend(rowView.service)) {
-                        viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                        GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
-                    } else {
-                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
+                    // For rows loaded from the display cache, txWrapper is null.
+                    // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
+                    val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
+                    val fragment = when {
+                        txWrapper != null -> {
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionGroupDetailsFragment(txWrapper)
+                        }
+                        ServiceName.isDashSpend(rowView.service) -> {
+                            viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
+                            GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
+                        }
+                        rowView.transactionAmount == 1 -> {
+                            // Individual transaction — rowId is a 64-char txId hex string.
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
+                        }
+                        else -> {
+                            // Group row tapped before live rebuild finished — ignore.
+                            log.warn("tapped group row {} before live wrappers available", rowView.id)
+                            null
+                        }
                     }
 
-                    fragment.show(requireActivity())
+                    fragment?.show(requireActivity())
                 }
             }
         }
@@ -203,8 +220,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             adapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
-                    val isLoading = loadStates.refresh is LoadState.Loading
+                    val isRefreshing = loadStates.refresh is LoadState.Loading
+                    // Only show the loading spinner when there's nothing to display yet.
+                    // When a background refresh (cache → live, or metadata invalidation) is in
+                    // progress the adapter already has items, so we suppress the spinner to avoid
+                    // a jarring "items → spinner → same items" flash.
+                    val isLoading = isRefreshing && adapter.itemCount == 0
                     val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
+
+                    if (isRefreshing && firstPageLoadStartTime == 0L) {
+                        firstPageLoadStartTime = System.currentTimeMillis()
+                    } else if (!isRefreshing && adapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
+                        log.info("first page visible: {}ms (loading → items displayed, {} items)",
+                            System.currentTimeMillis() - firstPageLoadStartTime, adapter.itemCount)
+                        firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
+                    }
 
                     binding.loading.isVisible = isLoading
                     if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()

@@ -40,7 +40,9 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.database.dao.TxDisplayCacheDao
 import de.schildbach.wallet.database.dao.UserAlertDao
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -145,7 +147,8 @@ class MainViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
-    private val coinJoinService: CoinJoinService
+    private val coinJoinService: CoinJoinService,
+    private val txDisplayCacheDao: TxDisplayCacheDao
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     companion object {
         private const val BATCHING_PERIOD = 500L
@@ -165,29 +168,28 @@ class MainViewModel @Inject constructor(
 
     // In-memory sorted wrapped list — rebuilt when any source changes
     private var wrappedTransactionList: List<TransactionWrapper> = emptyList()
-    private var currentPagingSource: TransactionPagingSource? = null
 
     // Simple flag / flow for WalletFragment and WalletTransactionsFragment
     private val _transactionsLoaded = MutableStateFlow(false)
     val transactionsLoaded: StateFlow<Boolean> = _transactionsLoaded
 
-    // Pager exposes PagingData with date separators
+    private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
+    // The current Room PagingSource — kept so contact changes can trigger manual invalidate().
+    private var currentPagingSource: androidx.paging.PagingSource<Int, de.schildbach.wallet.database.entity.TxDisplayCacheEntry>? = null
+
+    // Pager is always backed by the Room display cache.
+    // Room's InvalidationTracker auto-invalidates on any table change (metadata/tx updates).
+    // Contact changes (in-memory only) trigger manual currentPagingSource?.invalidate().
     val transactions: Flow<PagingData<HistoryRowView>> = Pager(
-        config = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false),
+        config = pagingConfig,
         pagingSourceFactory = {
-            TransactionPagingSource(
-                wrappedTransactionList,
-                metadata,
-                contactsByTxId,
-                walletData,
-                chainLockBlockHeight,
-                onContactsNeeded = ::resolveContactsForPage
-            ).also { currentPagingSource = it }
+            txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
         }
     ).flow
         .map { pagingData ->
+            val contacts = contactsByTxId
             pagingData
-                .map { it as HistoryRowView }
+                .map { entry -> entry.toTransactionRowView(contacts[entry.rowId]) as HistoryRowView }
                 .insertSeparators { before: HistoryRowView?, after: HistoryRowView? ->
                     val afterDate = (after as? TransactionRowView)?.let {
                         Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -335,6 +337,14 @@ class MainViewModel @Inject constructor(
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
 
+        // Set transactionsLoaded = true immediately if cache has data so WalletFragment
+        // shows balance without waiting for the live rebuild (~2.4s).
+        viewModelScope.launch(Dispatchers.IO) {
+            if (txDisplayCacheDao.getCount() > 0) {
+                _transactionsLoaded.value = true
+            }
+        }
+
         _transactionsDirection
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
@@ -352,8 +362,6 @@ class MainViewModel @Inject constructor(
                 val oldMetadata = this.metadata
                 this.metadata = newMetadata
 
-                // Compute exactly which txIds changed (added, removed, or value differs).
-                // data class equality on PresentableTxMetadata covers txId, memo, service, customIconId.
                 val changedIds = buildSet<Sha256Hash> {
                     newMetadata.forEach { (id, meta) -> if (meta != oldMetadata[id]) add(id) }
                     oldMetadata.forEach { (id, _) -> if (id !in newMetadata) add(id) }
@@ -361,16 +369,41 @@ class MainViewModel @Inject constructor(
 
                 if (changedIds.isEmpty()) return@onEach
 
-                // Only invalidate if at least one changed txId is present in the current
-                // filtered/wrapped list. Changes to transactions outside the active filter
-                // (e.g. a RECEIVED tx memo changes while SENT filter is active) don't affect
-                // the visible pages and don't need a reload.
-                val affectsCurrentView = wrappedTransactionList.any { wrapper ->
+                // Re-render only the affected wrappers and upsert them into the cache.
+                // Room's InvalidationTracker auto-invalidates the pager — no manual call needed.
+                val affectedWrappers = wrappedTransactionList.filter { wrapper ->
                     wrapper.transactions.keys.any { it in changedIds }
                 }
-
-                if (affectsCurrentView) {
-                    currentPagingSource?.invalidate()
+                if (affectedWrappers.isNotEmpty()) {
+                    val newEntries = affectedWrappers.map { wrapper ->
+                        val row = TransactionRowView.fromTransactionWrapper(
+                            wrapper,
+                            walletData.transactionBag,
+                            Constants.CONTEXT,
+                            contact = null,
+                            metadata = newMetadata[wrapper.transactions.keys.first()],
+                            chainLockBlockHeight = chainLockBlockHeight
+                        )
+                        TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+                    }
+                    // Guard: if this metadata update lost the service info for a row that already
+                    // has a service-specific icon (gift card, CrowdNode), preserve the existing
+                    // icon/service rather than downgrading to a generic sent/received icon.
+                    val rowIds = newEntries.map { it.rowId }
+                    val existingByRowId = txDisplayCacheDao.getEntriesByIds(rowIds).associateBy { it.rowId }
+                    val entries = newEntries.map { entry ->
+                        val existing = existingByRowId[entry.rowId]
+                        if (existing != null && existing.service != null && entry.service == null) {
+                            entry.copy(
+                                service  = existing.service,
+                                iconType = existing.iconType,
+                                iconBgType = existing.iconBgType
+                            )
+                        } else {
+                            entry
+                        }
+                    }
+                    txDisplayCacheDao.insertAll(entries)
                 }
             }
             .launchIn(viewModelWorkerScope)
@@ -394,6 +427,7 @@ class MainViewModel @Inject constructor(
             .onEach {
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
+                viewModelScope.launch(Dispatchers.IO) { txDisplayCacheDao.deleteAll() }
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
@@ -571,18 +605,55 @@ class MainViewModel @Inject constructor(
 
     private fun rebuildWrappedList(filter: TxDirectionFilter) {
         walletData.wallet?.let { wallet ->
+            val t0 = System.currentTimeMillis()
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
 
-            wrappedTransactionList = walletData.wrapAllTransactions(
-                crowdNodeWrapperFactory,
-                coinJoinWrapperFactory
-            ).filter { it.passesFilter(filter, metadata) }
-                .sortedByDescending { it.groupDate }
+            val rawCount = wallet.getTransactions(true).size
+            val t1 = System.currentTimeMillis()
+
+            val wrapped = walletData.wrapAllTransactions(crowdNodeWrapperFactory, coinJoinWrapperFactory)
+            val t2 = System.currentTimeMillis()
+
+            val filtered = wrapped.filter { it.passesFilter(filter, metadata) }
+            val t3 = System.currentTimeMillis()
+
+            wrappedTransactionList = filtered.sortedByDescending { it.groupDate }
+            val t4 = System.currentTimeMillis()
+
+            log.info("rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
+                "getTransactions={}ms wrapAll={}ms filter={}ms sort={}ms total={}ms",
+                rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
+                t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0)
+
+            // Update the Room display cache — Room auto-invalidates the pager.
+            updateDisplayCache(wrappedTransactionList)
 
             _transactionsLoaded.value = true
-            currentPagingSource?.resetToTop = true
-            currentPagingSource?.invalidate()
+        }
+    }
+
+    /**
+     * Fire-and-forget: render all [wrappers] to [TxDisplayCacheEntry] rows and write to Room.
+     * Room's InvalidationTracker then auto-invalidates the [PagingSource] so the UI refreshes.
+     */
+    private fun updateDisplayCache(wrappers: List<TransactionWrapper>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val t0 = System.currentTimeMillis()
+            val entries = wrappers.map { wrapper ->
+                val row = TransactionRowView.fromTransactionWrapper(
+                    wrapper,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    contact = null,
+                    metadata = metadata[wrapper.transactions.keys.first()],
+                    chainLockBlockHeight = chainLockBlockHeight
+                )
+                TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+            }
+            txDisplayCacheDao.deleteAll()
+            if (entries.isNotEmpty()) txDisplayCacheDao.insertAll(entries)
+            log.info("updateDisplayCache: saved {} rows in {}ms", entries.size, System.currentTimeMillis() - t0)
         }
     }
 
@@ -808,6 +879,14 @@ class MainViewModel @Inject constructor(
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
+
+    /**
+     * Look up the live [TransactionWrapper] by its row ID (txId hex for individuals,
+     * or groupId for CoinJoin/CrowdNode groups).  Returns null if the live rebuild has not
+     * finished yet (caller should handle gracefully).
+     */
+    fun getTransactionWrapper(rowId: String): TransactionWrapper? =
+        wrappedTransactionList.find { it.id == rowId }
 
     fun metadataReminder() {
         viewModelScope.launch {

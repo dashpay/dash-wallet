@@ -28,6 +28,7 @@ import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
 import de.schildbach.wallet.database.entity.TransactionMetadataCacheItem
 import de.schildbach.wallet.database.entity.TransactionMetadataDocument
+import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.database.entity.UsernameVote
 import de.schildbach.wallet.ui.dashpay.UserAlert
@@ -58,9 +59,10 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         UsernameRequest::class,
         UsernameVote::class,
         ImportedMasternodeKey::class,
-        TopUp::class
+        TopUp::class,
+        TxDisplayCacheEntry::class
     ],
-    version = 16, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 19, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
@@ -81,4 +83,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun usernameVoteDao(): UsernameVoteDao
     abstract fun importedMasternodeKeyDao(): ImportedMasternodeKeyDao
     abstract fun topUpsDao(): TopUpsDao
+    abstract fun txDisplayCacheDao(): TxDisplayCacheDao
 }
