@@ -72,6 +72,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -110,6 +111,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
@@ -347,7 +349,8 @@ class MainViewModel @Inject constructor(
 
         _transactionsDirection
             .flatMapLatest { direction ->
-                val filter = TxDirectionFilter(direction, walletData.wallet!!)
+                val wallet = walletData.wallet ?: return@flatMapLatest kotlinx.coroutines.flow.emptyFlow()
+                val filter = TxDirectionFilter(direction, wallet)
                 rebuildWrappedList(filter)
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
@@ -419,8 +422,10 @@ class MainViewModel @Inject constructor(
             } ?: LocalDate.now()
             val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
             this.contacts = contactsByIdentity
+            // Clear the txId-keyed cache so resolveAllContacts re-resolves with the new contact list
             this.contactsByTxId = mapOf()
-            currentPagingSource?.invalidate()
+            // Re-resolve contacts against the current wrapped transaction list
+            resolveAllContacts()
         }.launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
@@ -603,7 +608,7 @@ class MainViewModel @Inject constructor(
         }
     }
 
-    private fun rebuildWrappedList(filter: TxDirectionFilter) {
+    private suspend fun rebuildWrappedList(filter: TxDirectionFilter) {
         walletData.wallet?.let { wallet ->
             val t0 = System.currentTimeMillis()
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
@@ -629,57 +634,90 @@ class MainViewModel @Inject constructor(
             // Update the Room display cache — Room auto-invalidates the pager.
             updateDisplayCache(wrappedTransactionList)
 
+            // Resolve contacts for transactions so avatars appear in the list.
+            resolveAllContacts()
+
             _transactionsLoaded.value = true
         }
     }
 
     /**
-     * Fire-and-forget: render all [wrappers] to [TxDisplayCacheEntry] rows and write to Room.
+     * Render all [wrappers] to [TxDisplayCacheEntry] rows and write to Room atomically.
      * Room's InvalidationTracker then auto-invalidates the [PagingSource] so the UI refreshes.
+     *
+     * This runs synchronously on the caller's coroutine context (the single-threaded
+     * [viewModelWorkerScope]) to avoid racing with concurrent rebuilds.
      */
-    private fun updateDisplayCache(wrappers: List<TransactionWrapper>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val t0 = System.currentTimeMillis()
-            val entries = wrappers.map { wrapper ->
-                val row = TransactionRowView.fromTransactionWrapper(
-                    wrapper,
-                    walletData.transactionBag,
-                    Constants.CONTEXT,
-                    contact = null,
-                    metadata = metadata[wrapper.transactions.keys.first()],
-                    chainLockBlockHeight = chainLockBlockHeight
-                )
-                TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
-            }
-            txDisplayCacheDao.deleteAll()
-            if (entries.isNotEmpty()) txDisplayCacheDao.insertAll(entries)
-            log.info("updateDisplayCache: saved {} rows in {}ms", entries.size, System.currentTimeMillis() - t0)
+    private suspend fun updateDisplayCache(wrappers: List<TransactionWrapper>) {
+        val t0 = System.currentTimeMillis()
+        val entries = wrappers.map { wrapper ->
+            val row = TransactionRowView.fromTransactionWrapper(
+                wrapper,
+                walletData.transactionBag,
+                Constants.CONTEXT,
+                contact = null,
+                metadata = metadata[wrapper.transactions.keys.first()],
+                chainLockBlockHeight = chainLockBlockHeight
+            )
+            TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
         }
+        txDisplayCacheDao.replaceAll(entries)
+        log.info("updateDisplayCache: saved {} rows in {}ms", entries.size, System.currentTimeMillis() - t0)
     }
 
-    private fun resolveContactsForPage(txs: List<Transaction>) {
+    /**
+     * Resolve contacts for all transactions in [wrappedTransactionList] and populate
+     * [contactsByTxId].  Skips transactions that are entirely self-sends or that predate
+     * any contact relationship.  Results are merged into the existing map (so earlier
+     * resolutions are preserved until overwritten).
+     *
+     * After resolution, the current [PagingSource] is invalidated so the `.map {}` flow
+     * on the pager picks up the new contacts from [contactsByTxId].
+     *
+     * Must be called on [viewModelWorkerScope] (single-threaded) so that reads/writes
+     * to [contactsByTxId] are safe.
+     */
+    private suspend fun resolveAllContacts() {
         if (contacts.isEmpty()) return
-        viewModelWorkerScope.launch {
-            val resolved = txs
-                // Skip transactions that predate any contact relationship — they can't have
-                // contacts, so avoid the getContactForTransaction call entirely.
-                .filter { tx ->
-                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate
-                }
+        if (!platformRepo.hasBlockchainIdentity) return
+
+        val txsToResolve = wrappedTransactionList
+            .map { it.transactions.values.first() }
+            .filter { tx ->
+                // Skip self-sends (internal transfers) -- they cannot have contacts
+                !tx.isEntirelySelf(walletData.transactionBag) &&
+                    // Skip transactions that predate any contact relationship
+                    tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate() >= minContactCreatedDate &&
+                    // Skip transactions already resolved
+                    contactsByTxId[tx.txId.toString()] == null
+            }
+
+        if (txsToResolve.isEmpty()) return
+
+        val resolved = coroutineScope {
+            txsToResolve
                 .map { tx ->
                     async(Dispatchers.IO) {
-                        platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
-                            contacts[id]?.let { profile -> tx.txId.toString() to profile }
+                        try {
+                            platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
+                                contacts[id]?.let { profile -> tx.txId.toString() to profile }
+                            }
+                        } catch (e: Exception) {
+                            log.warn("failed to resolve contact for tx {}: {}", tx.txId, e.message)
+                            null
                         }
                     }
                 }
                 .awaitAll()
                 .filterNotNull()
                 .toMap()
-            if (resolved.isNotEmpty()) {
-                contactsByTxId = contactsByTxId + resolved
-                currentPagingSource?.invalidate()
-            }
+        }
+
+        if (resolved.isNotEmpty()) {
+            contactsByTxId = contactsByTxId + resolved
+            currentPagingSource?.invalidate()
+            log.info("resolveAllContacts: resolved {} contacts for {} candidates",
+                resolved.size, txsToResolve.size)
         }
     }
 

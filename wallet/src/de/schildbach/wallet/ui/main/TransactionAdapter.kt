@@ -219,11 +219,14 @@ class TransactionAdapter(
         }
 
         private fun setSecondaryStatus(txView: TransactionRowView) {
-            if (txView.statusRes <= 0) {
-                binding.secondaryStatus.text = null
-            } else {
+            if (txView.statusRes > 0) {
                 binding.secondaryStatus.text = resources.getString(txView.statusRes)
                 binding.secondaryStatus.setTextColor(colorSecondaryStatus)
+            } else if (!txView.statusText.isNullOrEmpty()) {
+                binding.secondaryStatus.text = txView.statusText
+                binding.secondaryStatus.setTextColor(colorSecondaryStatus)
+            } else {
+                binding.secondaryStatus.text = null
             }
         }
 

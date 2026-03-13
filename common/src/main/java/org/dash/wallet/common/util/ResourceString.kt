@@ -26,6 +26,8 @@ data class ResourceString(
     val resolvedText: String? = null
 ) {
     fun format(resources: Resources): String {
-        return resolvedText ?: resources.getString(resourceId, *args.toTypedArray())
+        if (resolvedText != null) return resolvedText
+        if (resourceId == 0) return ""
+        return resources.getString(resourceId, *args.toTypedArray())
     }
 }

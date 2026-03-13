@@ -22,6 +22,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 
 @Dao
@@ -48,4 +49,15 @@ interface TxDisplayCacheDao {
 
     @Query("DELETE FROM tx_display_cache")
     suspend fun deleteAll()
+
+    /**
+     * Atomically replace the entire cache: delete all existing rows and insert the new ones
+     * in a single transaction.  This prevents Room's InvalidationTracker from firing between
+     * delete and insert, which would cause the PagingSource to briefly see an empty table.
+     */
+    @Transaction
+    suspend fun replaceAll(entries: List<TxDisplayCacheEntry>) {
+        deleteAll()
+        if (entries.isNotEmpty()) insertAll(entries)
+    }
 }

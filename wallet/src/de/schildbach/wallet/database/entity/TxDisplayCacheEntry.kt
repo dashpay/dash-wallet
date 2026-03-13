@@ -18,10 +18,10 @@
 package de.schildbach.wallet.database.entity
 
 import android.content.Context
+import android.text.format.DateUtils
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import de.schildbach.wallet.ui.transactions.TransactionRowView
-import de.schildbach.wallet.ui.transactions.TxResourceMapper
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.util.ResourceString
@@ -81,6 +81,9 @@ data class TxDisplayCacheEntry(
         const val BG_ERROR    = 2
         const val BG_ORANGE   = 3
         const val BG_NONE     = 4
+
+        /** Cached date/time format — same as [TxResourceMapper.dateTimeFormat] but avoids instantiation. */
+        private val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
 
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
         fun fromTransactionRowView(row: TransactionRowView, context: Context): TxDisplayCacheEntry {
@@ -145,14 +148,15 @@ data class TxDisplayCacheEntry(
             icon              = iconRes,
             iconBitmap        = null,    // service icons loaded separately from metadata
             iconBackground    = bgRes,
-            statusRes         = -1,      // use statusText field below; -1 → adapter hides status view
+            statusRes         = -1,      // use statusText field instead for cached rows
             comment           = comment,
             transactionAmount = transactionAmount,
             time              = time,
-            timeFormat        = TxResourceMapper().dateTimeFormat,
+            timeFormat        = DATE_TIME_FORMAT,
             hasErrors         = hasErrors,
             service           = service,
-            txWrapper         = null
+            txWrapper         = null,
+            statusText        = statusText.ifEmpty { null }
         )
     }
 }
