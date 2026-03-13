@@ -19,31 +19,31 @@ package de.schildbach.wallet.ui.main
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import org.slf4j.LoggerFactory
 
 /**
- * In-memory [PagingSource] over a pre-loaded snapshot of [TxDisplayCacheEntry] rows.
+ * In-memory [PagingSource] over a pre-built list of [HistoryRowView] rows (transaction rows
+ * with date-header entries already interleaved).
  *
- * Used for the initial home-screen display to avoid Room's [LimitOffsetPagingSource] overhead
- * (COUNT(*) + SELECT … LIMIT ? OFFSET ? per page).  All data is already in [items] so each
- * page load is just an array slice — no IO, no SQL.
+ * Used for the initial home-screen display so that no [PagingData] transforms (e.g.
+ * [insertSeparators]) are needed on the hot path.  All data is already in [items] so each
+ * page load is just an array slice — no IO, no SQL, no transforms.
  *
  * This source is NOT auto-invalidated by Room's [InvalidationTracker].  It is used only until
  * [MainViewModel.rebuildWrappedList] completes and replaces it with the Room-backed pager.
  */
 class PrebuiltRowsPagingSource(
-    private val items: List<TxDisplayCacheEntry>
-) : PagingSource<Int, TxDisplayCacheEntry>() {
+    private val items: List<HistoryRowView>
+) : PagingSource<Int, HistoryRowView>() {
 
     companion object {
         private val log = LoggerFactory.getLogger(PrebuiltRowsPagingSource::class.java)
     }
 
-    override fun getRefreshKey(state: PagingState<Int, TxDisplayCacheEntry>): Int? =
+    override fun getRefreshKey(state: PagingState<Int, HistoryRowView>): Int? =
         state.anchorPosition
 
-    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, TxDisplayCacheEntry> {
+    override suspend fun load(params: LoadParams<Int>): LoadResult<Int, HistoryRowView> {
         val t0 = System.currentTimeMillis()
         val offset = params.key ?: 0
         val slice = items.drop(offset).take(params.loadSize)

@@ -162,9 +162,6 @@ import kotlin.jvm.functions.Function0;
 import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
-import android.os.Handler;
-import android.os.Looper;
-
 /**
  * @author Andreas Schildbach
  */
@@ -256,21 +253,7 @@ public class WalletApplication extends MultiDexApplication
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
-            // initEnvironment is fast (~36 ms) — keep it on the main thread so StrictMode
-            // and bitcoinj Context are set up before any Activity starts.
-            initEnvironment();
-            // loadWalletFromProtobuf (includes finalizeInitialization) takes ~5-6 s because
-            // WalletProtobufSerializer.readWallet deserialises all transactions from disk.
-            // Moving it to a background thread lets the first Activity start immediately and
-            // show the cached transaction list while the wallet loads in parallel.
-            long t0 = System.currentTimeMillis();
-            new Thread(() -> {
-                Looper.prepare();
-                loadWalletFromProtobuf();
-                log.info("STARTUP background wallet init completed in {}ms", System.currentTimeMillis() - t0);
-                // Signal the ViewModel that the wallet is ready so it can rebuild the live list.
-                WalletReadyFlow.INSTANCE.setReady();
-            }, "wallet-init").start();
+            fullInitialization();
         }
 
         CrashReporter.init(getCacheDir());
@@ -404,13 +387,12 @@ public class WalletApplication extends MultiDexApplication
 
     public void fullInitialization() {
         long t0 = System.currentTimeMillis();
-        initEnvironmentIfNeeded();
+        initEnvironment();
         log.info("STARTUP fullInit: initEnvironment done in {}ms", System.currentTimeMillis() - t0);
         long t1 = System.currentTimeMillis();
         loadWalletFromProtobuf();
         log.info("STARTUP fullInit: loadWalletFromProtobuf done in {}ms", System.currentTimeMillis() - t1);
         log.info("STARTUP fullInit: total {}ms", System.currentTimeMillis() - t0);
-        WalletReadyFlow.INSTANCE.setReady();
     }
 
     public void initEnvironmentIfNeeded() {
@@ -644,20 +626,6 @@ public class WalletApplication extends MultiDexApplication
     }
 
 
-    /** Show a Toast safely from any thread (delegates to main thread via Handler). */
-    private void showToast(String message) {
-        new Handler(Looper.getMainLooper()).post(() ->
-            Toast.makeText(WalletApplication.this, message, Toast.LENGTH_LONG).show()
-        );
-    }
-
-    /** Show a string-resource Toast safely from any thread. */
-    private void showToast(@StringRes int resId) {
-        new Handler(Looper.getMainLooper()).post(() ->
-            Toast.makeText(WalletApplication.this, resId, Toast.LENGTH_LONG).show()
-        );
-    }
-
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
@@ -678,7 +646,7 @@ public class WalletApplication extends MultiDexApplication
         if (config.isResetBlockchainPending()) {
             log.info("failed to finish reset earlier, performing now...");
             deleteBlockchainFiles();
-            showToast("finishing blockchain rescan");
+            Toast.makeText(this, "finishing blockchain rescan", Toast.LENGTH_LONG).show();
             WalletApplicationExt.INSTANCE.clearDatabases(this, false);
             config.clearResetBlockchainPending();
         }
@@ -812,7 +780,7 @@ public class WalletApplication extends MultiDexApplication
         } catch (final FileNotFoundException x) {
             log.error("problem loading wallet", x);
 
-            showToast(x.getClass().getName());
+            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -822,7 +790,7 @@ public class WalletApplication extends MultiDexApplication
         } catch (final UnreadableWalletException x) {
             log.error("problem loading wallet", x);
 
-            showToast(x.getClass().getName());
+            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -842,7 +810,7 @@ public class WalletApplication extends MultiDexApplication
         wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
         if (!wallet.isConsistent()) {
-            showToast("inconsistent wallet: " + walletFile);
+            Toast.makeText(WalletApplication.this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -871,7 +839,7 @@ public class WalletApplication extends MultiDexApplication
 
             resetBlockchain();
 
-            showToast(R.string.toast_wallet_reset);
+            Toast.makeText(this, R.string.toast_wallet_reset, Toast.LENGTH_LONG).show();
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
 
@@ -1316,12 +1284,6 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return new WalletObserver(wallet).observeTransactions(withConfidence, filters);
-    }
-
-    @NonNull
-    @Override
-    public Flow<Unit> observeWalletReady() {
-        return WalletReadyFlow.INSTANCE.observe();
     }
 
     @NonNull

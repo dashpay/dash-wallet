@@ -83,7 +83,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -173,20 +172,20 @@ class MainViewModel @Inject constructor(
 
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
     // The current active PagingSource — kept so contact changes can trigger manual invalidate().
-    // May be a PrebuiltRowsPagingSource (startup) or Room's LimitOffsetPagingSource (live).
+    // Only used for the RoomLive paging source; PrebuiltCache uses a separate in-memory source.
     private var currentPagingSource: PagingSource<Int, TxDisplayCacheEntry>? = null
 
     /**
      * Two-phase data source for the transaction list:
      * - [TxDataSource.Empty]: no data yet (ViewModel just created, cache not loaded)
-     * - [TxDataSource.PrebuiltCache]: initial fast display from an in-memory snapshot of
-     *   the previous session's display cache — no Room queries per page, just array slices
+     * - [TxDataSource.PrebuiltCache]: initial fast display — rows already include date-header
+     *   entries interleaved, so no [insertSeparators] transform is needed on this path
      * - [TxDataSource.RoomLive]: live Room-backed paging after [rebuildWrappedList] writes
      *   fresh data; Room's [InvalidationTracker] auto-invalidates on metadata/tx changes
      */
     private sealed class TxDataSource {
         object Empty : TxDataSource()
-        class PrebuiltCache(val entries: List<TxDisplayCacheEntry>) : TxDataSource()
+        class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
         object RoomLive : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
@@ -195,33 +194,33 @@ class MainViewModel @Inject constructor(
         .flatMapLatest { source ->
             when (source) {
                 is TxDataSource.Empty -> flowOf(PagingData.empty())
+                // Rows already contain interleaved date headers — skip insertSeparators entirely.
                 is TxDataSource.PrebuiltCache -> Pager(
                     config = pagingConfig,
-                    pagingSourceFactory = {
-                        PrebuiltRowsPagingSource(source.entries).also { currentPagingSource = it }
-                    }
+                    pagingSourceFactory = { PrebuiltRowsPagingSource(source.rows) }
                 ).flow
-                is TxDataSource.RoomLive -> Pager(
-                    config = pagingConfig,
-                    pagingSourceFactory = {
-                        txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
+                is TxDataSource.RoomLive -> {
+                    val contacts = contactsByTxId
+                    Pager(
+                        config = pagingConfig,
+                        pagingSourceFactory = {
+                            txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
+                        }
+                    ).flow.map { pagingData ->
+                        pagingData
+                            .map { entry -> entry.toTransactionRowView(contacts[entry.rowId]) as HistoryRowView }
+                            .insertSeparators { before: HistoryRowView?, after: HistoryRowView? ->
+                                val afterDate = (after as? TransactionRowView)?.let {
+                                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
+                                } ?: return@insertSeparators null
+                                val beforeDate = (before as? TransactionRowView)?.let {
+                                    Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
+                                }
+                                if (beforeDate != afterDate) HistoryRowView(null, afterDate) else null
+                            }
                     }
-                ).flow
-            }
-        }
-        .map { pagingData ->
-            val contacts = contactsByTxId
-            pagingData
-                .map { entry -> entry.toTransactionRowView(contacts[entry.rowId]) as HistoryRowView }
-                .insertSeparators { before: HistoryRowView?, after: HistoryRowView? ->
-                    val afterDate = (after as? TransactionRowView)?.let {
-                        Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
-                    } ?: return@insertSeparators null
-                    val beforeDate = (before as? TransactionRowView)?.let {
-                        Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
-                    }
-                    if (beforeDate != afterDate) HistoryRowView(null, afterDate) else null
                 }
+            }
         }
         .cachedIn(viewModelScope)
 
@@ -357,31 +356,40 @@ class MainViewModel @Inject constructor(
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
         log.info("STARTUP MainViewModel init at {}", System.currentTimeMillis())
 
-        // Load the previous session's display cache into memory so the home screen can
-        // show transactions immediately — no Room per-page queries, just array slices.
+        // Load the previous session's display cache and interleave date headers on the IO thread
+        // so the home screen can show transactions immediately without any PagingData transforms.
         viewModelScope.launch(Dispatchers.IO) {
             val t0 = System.currentTimeMillis()
             val cachedRows = txDisplayCacheDao.getAll()
             log.info("STARTUP tx_display_cache loaded {} rows in {}ms at {}",
                 cachedRows.size, System.currentTimeMillis() - t0, System.currentTimeMillis())
             if (cachedRows.isNotEmpty()) {
-                _txDataSource.value = TxDataSource.PrebuiltCache(cachedRows)
+                val contacts = contactsByTxId
+                val historyRows = ArrayList<HistoryRowView>(cachedRows.size + 32)
+                var prevDate: LocalDate? = null
+                for (entry in cachedRows) {
+                    val txRow = entry.toTransactionRowView(contacts[entry.rowId])
+                    val date = Instant.ofEpochMilli(txRow.time)
+                        .atZone(ZoneId.systemDefault()).toLocalDate()
+                    if (date != prevDate) {
+                        historyRows.add(HistoryRowView(null, date))
+                        prevDate = date
+                    }
+                    historyRows.add(txRow)
+                }
+                _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
                 _transactionsLoaded.value = true
             }
         }
 
-        // Combine direction filter with wallet-ready signal so that (a) when wallet is loading
-        // asynchronously on a background thread, we wait before trying to wrap transactions, and
-        // (b) when the direction filter changes after the wallet is ready, we still retrigger.
-        combine(_transactionsDirection, walletData.observeWalletReady()) { direction, _ -> direction }
+        _transactionsDirection
             .flatMapLatest { direction ->
-                val wallet = walletData.wallet ?: return@flatMapLatest emptyFlow()
-                val filter = TxDirectionFilter(direction, wallet)
-                log.info("STARTUP rebuildWrappedList START at {}", System.currentTimeMillis())
+                val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 rebuildWrappedList(filter)
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
                     .onEach {
+                        log.info("STARTUP rebuildWrappedList START at {}", System.currentTimeMillis())
                         rebuildWrappedList(filter)
                     }
             }

@@ -18,7 +18,6 @@
 package org.dash.wallet.common
 
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flowOf
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
@@ -50,16 +49,6 @@ interface WalletDataProvider {
     fun getMixedBalance(): Coin
 
     fun observeWalletChanged(): Flow<Unit>
-
-    /**
-     * Returns a [Flow] that emits [Unit] once the wallet has finished loading and
-     * [finalizeInitialization] has completed. If the wallet is already ready, emits immediately.
-     *
-     * The default implementation emits immediately (suitable for tests and contexts where the
-     * wallet is always available). [WalletApplication] overrides this with the actual deferred
-     * signal so the UI can react when background wallet loading completes.
-     */
-    fun observeWalletReady(): Flow<Unit> = flowOf(Unit)
 
     fun observeWalletReset(): Flow<Unit>
 
