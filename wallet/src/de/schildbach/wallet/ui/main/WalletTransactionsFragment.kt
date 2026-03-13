@@ -261,7 +261,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
+        viewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { canJoinDashPay ->
             header.canJoinDashPay = canJoinDashPay && header.invitation == null
         }
 

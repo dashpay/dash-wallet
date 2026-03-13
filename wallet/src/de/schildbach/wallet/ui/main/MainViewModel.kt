@@ -29,6 +29,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
 import androidx.paging.PagingConfig
 import androidx.paging.PagingData
+import androidx.paging.PagingSource
 import androidx.paging.cachedIn
 import androidx.paging.insertSeparators
 import androidx.paging.map
@@ -152,13 +153,6 @@ class MainViewModel @Inject constructor(
     private val coinJoinService: CoinJoinService,
     private val txDisplayCacheDao: TxDisplayCacheDao
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
-    companion object {
-        private const val BATCHING_PERIOD = 500L
-        private const val DIRECTION_KEY = "tx_direction"
-        private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
-
-        private val log = LoggerFactory.getLogger(MainViewModel::class.java)
-    }
     var restoringBackup: Boolean = false
     private val workerJob = SupervisorJob()
 
@@ -177,7 +171,7 @@ class MainViewModel @Inject constructor(
 
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
     // The current Room PagingSource — kept so contact changes can trigger manual invalidate().
-    private var currentPagingSource: androidx.paging.PagingSource<Int, de.schildbach.wallet.database.entity.TxDisplayCacheEntry>? = null
+    private var currentPagingSource: PagingSource<Int, TxDisplayCacheEntry>? = null
 
     // Pager is always backed by the Room display cache.
     // Room's InvalidationTracker auto-invalidates on any table change (metadata/tx updates).
@@ -308,7 +302,7 @@ class MainViewModel @Inject constructor(
 //        }
     }
 
-    val isAbleToCreateIdentityFlow: StateFlow<Boolean> = combine(
+    val isAbleToCreateIdentity: StateFlow<Boolean> = combine(
         isPlatformAvailable,
         blockchainIdentity.asFlow()
     ) { isPlatformAvailable, identity ->
@@ -318,10 +312,6 @@ class MainViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = false
     )
-
-
-    val isAbleToCreateIdentity: Boolean
-        get() = isAbleToCreateIdentityLiveData.value ?: false
 
     val showCreateUsernameEvent = SingleLiveEvent<Unit>()
     val sendContactRequestState = SendContactRequestOperation.allOperationsStatus(walletApplication)
@@ -634,23 +624,34 @@ class MainViewModel @Inject constructor(
             // Update the Room display cache — Room auto-invalidates the pager.
             updateDisplayCache(wrappedTransactionList)
 
-            // Resolve contacts for transactions so avatars appear in the list.
-            resolveAllContacts()
-
+            // Signal that the live data is ready (shortcut bar, empty-view guard).
+            // Do this BEFORE contact resolution — contacts can take seconds for DashPay
+            // users and should not block the UI from becoming fully interactive.
             _transactionsLoaded.value = true
+
+            // Resolve contacts in the background.  Launch as a separate coroutine so
+            // it does not block the next rebuildWrappedList call when batch tx updates
+            // arrive during sync.  viewModelWorkerScope ensures thread-safe access to
+            // contactsByTxId without races against the metadata observer.
+            viewModelWorkerScope.launch { resolveAllContacts() }
         }
     }
 
     /**
-     * Render all [wrappers] to [TxDisplayCacheEntry] rows and write to Room atomically.
-     * Room's InvalidationTracker then auto-invalidates the [PagingSource] so the UI refreshes.
+     * Render [wrappers] to [TxDisplayCacheEntry] rows and write to Room.
      *
-     * This runs synchronously on the caller's coroutine context (the single-threaded
-     * [viewModelWorkerScope]) to avoid racing with concurrent rebuilds.
+     * To minimize latency, the first [INITIAL_RENDER_SIZE] rows are written atomically
+     * (replacing the old cache) so the UI shows live data as fast as possible.  The
+     * remaining rows are inserted in a second pass without another full replace — they
+     * don't affect scroll position since the first page is already visible.
+     *
+     * Runs synchronously on the caller's coroutine context ([viewModelWorkerScope]) to
+     * avoid racing with concurrent rebuilds.
      */
     private suspend fun updateDisplayCache(wrappers: List<TransactionWrapper>) {
         val t0 = System.currentTimeMillis()
-        val entries = wrappers.map { wrapper ->
+
+        fun renderEntry(wrapper: TransactionWrapper): TxDisplayCacheEntry {
             val row = TransactionRowView.fromTransactionWrapper(
                 wrapper,
                 walletData.transactionBag,
@@ -659,10 +660,31 @@ class MainViewModel @Inject constructor(
                 metadata = metadata[wrapper.transactions.keys.first()],
                 chainLockBlockHeight = chainLockBlockHeight
             )
-            TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+            return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
         }
-        txDisplayCacheDao.replaceAll(entries)
-        log.info("updateDisplayCache: saved {} rows in {}ms", entries.size, System.currentTimeMillis() - t0)
+
+        val initialBatch = wrappers.take(INITIAL_RENDER_SIZE).map { renderEntry(it) }
+        // Atomic replace — PagingSource sees either old data or the new first page, never empty.
+        txDisplayCacheDao.replaceAll(initialBatch)
+        val t1 = System.currentTimeMillis()
+        log.info("updateDisplayCache: first {} rows in {}ms", initialBatch.size, t1 - t0)
+
+        if (wrappers.size > INITIAL_RENDER_SIZE) {
+            val rest = wrappers.drop(INITIAL_RENDER_SIZE).map { renderEntry(it) }
+            txDisplayCacheDao.insertAll(rest)
+            log.info("updateDisplayCache: remaining {} rows in {}ms (total {}ms)",
+                rest.size, System.currentTimeMillis() - t1, System.currentTimeMillis() - t0)
+        }
+    }
+
+    companion object {
+        private const val BATCHING_PERIOD = 500L
+        private const val DIRECTION_KEY = "tx_direction"
+        private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
+        /** Number of rows rendered and written to Room immediately for fast first-paint. */
+        private const val INITIAL_RENDER_SIZE = 100
+
+        private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
 
     /**
