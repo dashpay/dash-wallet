@@ -243,7 +243,7 @@ suspend fun UpholdClient.createCardAddress(cardId: String, currency: String): St
 suspend fun UpholdClient.listCardAddress(cardId: String, currency: String): UpholdAddress? {
     val addressList = service.listCardAddresses(cardId)
     val upholdAddresses = addressList?.find { it.type == upholdNetworks[currency] }
-    val address = upholdAddresses?.addresses?.first { it.format == "pubkeyhash" }
+    val address = upholdAddresses?.addresses?.first { it.format == "pubkeyhash" || it.format == "nativeSegWit" }
     return address?.apply {
         config.setAccountAddress(cardId, value)
     }

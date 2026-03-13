@@ -65,4 +65,8 @@ class MayaAddressInputViewModel @Inject constructor(
     suspend fun getDefaultQuote(): SwapQuote? {
         return mayaWebApi.getDefaultSwapQuote(asset)
     }
+
+    suspend fun getDefaultQuote(destinationAddress: String): SwapQuote? {
+        return mayaWebApi.getDefaultSwapQuote(asset, destinationAddress)
+    }
 }

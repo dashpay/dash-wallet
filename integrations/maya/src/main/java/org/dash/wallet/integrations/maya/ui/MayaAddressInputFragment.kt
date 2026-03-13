@@ -83,7 +83,7 @@ class MayaAddressInputFragment : AddressInputFragment() {
 
     override fun continueAction() {
         lifecycleScope.launch {
-            val quote = mayaAddressInputViewModel.getDefaultQuote()
+            val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
             if (quote != null && quote.error == null) {
                 safeNavigate(
                     MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(

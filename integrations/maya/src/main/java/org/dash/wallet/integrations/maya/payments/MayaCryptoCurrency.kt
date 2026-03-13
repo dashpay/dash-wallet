@@ -159,7 +159,7 @@ open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "ZEC"
     override val name: String = "Zcash"
     override val asset: String = "ZEC.ZEC"
-    override val exampleAddress: String = "t1KRvTkgrVD6DXiyJRJRnhFiU1M2JuLJDnq"
+    override val exampleAddress: String = "t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7"
     override val paymentIntentParser: PaymentIntentParser = ZcashPaymentIntentParser()
     override val addressParser: AddressParser = ZcashAddressParser()
     override val codeId: Int = R.string.cryptocurrency_zec_code
@@ -170,7 +170,7 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "XRD"
     override val name: String = "Radix"
     override val asset: String = "XRD.XRD"
-    override val exampleAddress: String = "account_rdx1qspws4jg0q3a9h63j0l7g9uw8rwn3uszx7nh0kthp60s4gqrxhhpd8svdg9r"
+    override val exampleAddress: String = "account_rdx1680ldd0sgl547sp05eqdpt3x8wvq004qeh7rk54t65t7yxn87ukunn"
     override val paymentIntentParser: PaymentIntentParser = XrdPaymentIntentParser()
     override val addressParser: AddressParser = Bech32AddressParser("account_rdx", "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}", null)
     override val codeId: Int = R.string.cryptocurrency_xrd_code
