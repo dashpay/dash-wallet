@@ -83,6 +83,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
@@ -170,18 +172,43 @@ class MainViewModel @Inject constructor(
     val transactionsLoaded: StateFlow<Boolean> = _transactionsLoaded
 
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
-    // The current Room PagingSource — kept so contact changes can trigger manual invalidate().
+    // The current active PagingSource — kept so contact changes can trigger manual invalidate().
+    // May be a PrebuiltRowsPagingSource (startup) or Room's LimitOffsetPagingSource (live).
     private var currentPagingSource: PagingSource<Int, TxDisplayCacheEntry>? = null
 
-    // Pager is always backed by the Room display cache.
-    // Room's InvalidationTracker auto-invalidates on any table change (metadata/tx updates).
-    // Contact changes (in-memory only) trigger manual currentPagingSource?.invalidate().
-    val transactions: Flow<PagingData<HistoryRowView>> = Pager(
-        config = pagingConfig,
-        pagingSourceFactory = {
-            txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
+    /**
+     * Two-phase data source for the transaction list:
+     * - [TxDataSource.Empty]: no data yet (ViewModel just created, cache not loaded)
+     * - [TxDataSource.PrebuiltCache]: initial fast display from an in-memory snapshot of
+     *   the previous session's display cache — no Room queries per page, just array slices
+     * - [TxDataSource.RoomLive]: live Room-backed paging after [rebuildWrappedList] writes
+     *   fresh data; Room's [InvalidationTracker] auto-invalidates on metadata/tx changes
+     */
+    private sealed class TxDataSource {
+        object Empty : TxDataSource()
+        class PrebuiltCache(val entries: List<TxDisplayCacheEntry>) : TxDataSource()
+        object RoomLive : TxDataSource()
+    }
+    private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
+
+    val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
+        .flatMapLatest { source ->
+            when (source) {
+                is TxDataSource.Empty -> flowOf(PagingData.empty())
+                is TxDataSource.PrebuiltCache -> Pager(
+                    config = pagingConfig,
+                    pagingSourceFactory = {
+                        PrebuiltRowsPagingSource(source.entries).also { currentPagingSource = it }
+                    }
+                ).flow
+                is TxDataSource.RoomLive -> Pager(
+                    config = pagingConfig,
+                    pagingSourceFactory = {
+                        txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
+                    }
+                ).flow
+            }
         }
-    ).flow
         .map { pagingData ->
             val contacts = contactsByTxId
             pagingData
@@ -328,19 +355,29 @@ class MainViewModel @Inject constructor(
 
     init {
         transactionsDirection = savedStateHandle[DIRECTION_KEY] ?: TxFilterType.ALL
+        log.info("STARTUP MainViewModel init at {}", System.currentTimeMillis())
 
-        // Set transactionsLoaded = true immediately if cache has data so WalletFragment
-        // shows balance without waiting for the live rebuild (~2.4s).
+        // Load the previous session's display cache into memory so the home screen can
+        // show transactions immediately — no Room per-page queries, just array slices.
         viewModelScope.launch(Dispatchers.IO) {
-            if (txDisplayCacheDao.getCount() > 0) {
+            val t0 = System.currentTimeMillis()
+            val cachedRows = txDisplayCacheDao.getAll()
+            log.info("STARTUP tx_display_cache loaded {} rows in {}ms at {}",
+                cachedRows.size, System.currentTimeMillis() - t0, System.currentTimeMillis())
+            if (cachedRows.isNotEmpty()) {
+                _txDataSource.value = TxDataSource.PrebuiltCache(cachedRows)
                 _transactionsLoaded.value = true
             }
         }
 
-        _transactionsDirection
+        // Combine direction filter with wallet-ready signal so that (a) when wallet is loading
+        // asynchronously on a background thread, we wait before trying to wrap transactions, and
+        // (b) when the direction filter changes after the wallet is ready, we still retrigger.
+        combine(_transactionsDirection, walletData.observeWalletReady()) { direction, _ -> direction }
             .flatMapLatest { direction ->
-                val wallet = walletData.wallet ?: return@flatMapLatest kotlinx.coroutines.flow.emptyFlow()
+                val wallet = walletData.wallet ?: return@flatMapLatest emptyFlow()
                 val filter = TxDirectionFilter(direction, wallet)
+                log.info("STARTUP rebuildWrappedList START at {}", System.currentTimeMillis())
                 rebuildWrappedList(filter)
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
@@ -633,6 +670,7 @@ class MainViewModel @Inject constructor(
             // it does not block the next rebuildWrappedList call when batch tx updates
             // arrive during sync.  viewModelWorkerScope ensures thread-safe access to
             // contactsByTxId without races against the metadata observer.
+            log.info("STARTUP rebuildWrappedList DONE (_transactionsLoaded=true) at {}", System.currentTimeMillis())
             viewModelWorkerScope.launch { resolveAllContacts() }
         }
     }
@@ -666,8 +704,12 @@ class MainViewModel @Inject constructor(
         val initialBatch = wrappers.take(INITIAL_RENDER_SIZE).map { renderEntry(it) }
         // Atomic replace — PagingSource sees either old data or the new first page, never empty.
         txDisplayCacheDao.replaceAll(initialBatch)
+        // Switch from PrebuiltCache to RoomLive now that fresh data is in Room.
+        // Room's InvalidationTracker will auto-invalidate after replaceAll, so the pager
+        // reloads from the DB (which now has the live first page).
+        _txDataSource.value = TxDataSource.RoomLive
         val t1 = System.currentTimeMillis()
-        log.info("updateDisplayCache: first {} rows in {}ms", initialBatch.size, t1 - t0)
+        log.info("updateDisplayCache: first {} rows in {}ms (switched to RoomLive)", initialBatch.size, t1 - t0)
 
         if (wrappers.size > INITIAL_RENDER_SIZE) {
             val rest = wrappers.drop(INITIAL_RENDER_SIZE).map { renderEntry(it) }

@@ -39,6 +39,10 @@ interface TxDisplayCacheDao {
     @Query("SELECT COUNT(*) FROM tx_display_cache")
     suspend fun getCount(): Int
 
+    /** Fetch all entries ordered newest-first — used for in-memory snapshot on startup. */
+    @Query("SELECT * FROM tx_display_cache ORDER BY time DESC")
+    suspend fun getAll(): List<TxDisplayCacheEntry>
+
     /** Insert or replace entries (used for full rebuild and targeted metadata updates). */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<TxDisplayCacheEntry>)

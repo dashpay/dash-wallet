@@ -24,6 +24,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.text.TextUtils
+import android.view.View
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -170,7 +171,24 @@ class OnboardingActivity : RestoreFromFileActivity() {
         // and move some of this to the viewModel, wrapping it in tests.
         // The viewModel already has some related events
         if (walletApplication.walletFileExists()) {
-            if (!walletApplication.wallet!!.isEncrypted) {
+            val wallet = walletApplication.wallet
+            if (wallet == null) {
+                // Wallet is loading asynchronously on a background thread. Wait for it to be
+                // ready before starting MainActivity — LockScreenActivity / CheckPinViewModel
+                // require a non-null wallet.
+                // Hide the buttons and page indicator so the user cannot interact with the
+                // onboarding flow; only the Dash logo and welcome animation remain visible.
+                binding.composeContainer.visibility = View.GONE
+                binding.pageIndicator.visibility = View.GONE
+                binding.viewpager.isUserInputEnabled = false
+                binding.viewpager.visibility = View.GONE
+                lifecycleScope.launch {
+                    walletApplication.observeWalletReady().collect {
+                        regularFlow()
+                    }
+                }
+                // Fall through so the welcome pager is still set up as a visual loading screen.
+            } else if (!wallet.isEncrypted) {
                 unencryptedFlow()
             } else {
                 if (walletApplication.isWalletUpgradedToBIP44) {

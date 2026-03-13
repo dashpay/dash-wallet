@@ -77,6 +77,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private var firstPageLoadStartTime: Long = 0L
+    private var onViewCreatedTime: Long = 0L
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -89,6 +90,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        onViewCreatedTime = System.currentTimeMillis()
+        log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
 
         val adapter = TransactionAdapter(
             viewModel.balanceDashFormat,
@@ -211,6 +214,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         // Collect PagingData and submit to adapter
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactions.collectLatest { pagingData ->
+                log.info("STARTUP submitData called on thread={} at {}", Thread.currentThread().name, System.currentTimeMillis())
                 adapter.submitData(pagingData)
             }
         }
@@ -231,8 +235,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     if (isRefreshing && firstPageLoadStartTime == 0L) {
                         firstPageLoadStartTime = System.currentTimeMillis()
                     } else if (!isRefreshing && adapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
-                        log.info("first page visible: {}ms (loading → items displayed, {} items)",
-                            System.currentTimeMillis() - firstPageLoadStartTime, adapter.itemCount)
+                        log.info("STARTUP first items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
+                            System.currentTimeMillis() - onViewCreatedTime,
+                            System.currentTimeMillis() - firstPageLoadStartTime,
+                            adapter.itemCount)
                         firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
                     }
 

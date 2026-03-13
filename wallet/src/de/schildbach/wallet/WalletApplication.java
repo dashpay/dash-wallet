@@ -162,6 +162,8 @@ import kotlin.jvm.functions.Function0;
 import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
+import android.os.Handler;
+import android.os.Looper;
 
 /**
  * @author Andreas Schildbach
@@ -246,7 +248,7 @@ public class WalletApplication extends MultiDexApplication
         FirebaseApp.initializeApp(this);
         new Thread(this::initializeAppsFlyer).start();
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
-        log.info("WalletApplication.onCreate()");
+        log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
         new Thread(this::initializeAppsFlyer).start();
         autoLogout = new AutoLogout(config);
@@ -254,7 +256,21 @@ public class WalletApplication extends MultiDexApplication
         registerActivityLifecycleCallbacks(new WalletActivityTracker(this, config, autoLogout, restartService));
         walletFile = getFileStreamPath(Constants.Files.WALLET_FILENAME_PROTOBUF);
         if (walletFileExists()) {
-            fullInitialization();
+            // initEnvironment is fast (~36 ms) — keep it on the main thread so StrictMode
+            // and bitcoinj Context are set up before any Activity starts.
+            initEnvironment();
+            // loadWalletFromProtobuf (includes finalizeInitialization) takes ~5-6 s because
+            // WalletProtobufSerializer.readWallet deserialises all transactions from disk.
+            // Moving it to a background thread lets the first Activity start immediately and
+            // show the cached transaction list while the wallet loads in parallel.
+            long t0 = System.currentTimeMillis();
+            new Thread(() -> {
+                Looper.prepare();
+                loadWalletFromProtobuf();
+                log.info("STARTUP background wallet init completed in {}ms", System.currentTimeMillis() - t0);
+                // Signal the ViewModel that the wallet is ready so it can rebuild the live list.
+                WalletReadyFlow.INSTANCE.setReady();
+            }, "wallet-init").start();
         }
 
         CrashReporter.init(getCacheDir());
@@ -387,8 +403,14 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void fullInitialization() {
-        initEnvironment();
+        long t0 = System.currentTimeMillis();
+        initEnvironmentIfNeeded();
+        log.info("STARTUP fullInit: initEnvironment done in {}ms", System.currentTimeMillis() - t0);
+        long t1 = System.currentTimeMillis();
         loadWalletFromProtobuf();
+        log.info("STARTUP fullInit: loadWalletFromProtobuf done in {}ms", System.currentTimeMillis() - t1);
+        log.info("STARTUP fullInit: total {}ms", System.currentTimeMillis() - t0);
+        WalletReadyFlow.INSTANCE.setReady();
     }
 
     public void initEnvironmentIfNeeded() {
@@ -481,6 +503,7 @@ public class WalletApplication extends MultiDexApplication
     }
 
     public void finalizeInitialization() {
+        long _t = System.currentTimeMillis();
         // TODO, put this in a different place. maybe SecurityInitilizer
         // TODO, can we remove this?
         try {
@@ -498,8 +521,10 @@ public class WalletApplication extends MultiDexApplication
             log.error("Failed to ensure mnemonic-based fallbacks", e);
             // Don't crash - app can continue with primary+PIN fallback only
         }
+        log.info("STARTUP finalizeInit: securityGuard done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
 
         dashSystemService.getSystem().initDash(true, true, Constants.SYNC_FLAGS, Constants.VERIFY_FLAGS);
+        log.info("STARTUP finalizeInit: initDash done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
 
         if (config.versionCodeCrossed((int)packageInfoProvider.getVersionCode(), VERSION_CODE_SHOW_BACKUP_REMINDER)
                 && !wallet.getImportedKeys().isEmpty()) {
@@ -514,6 +539,7 @@ public class WalletApplication extends MultiDexApplication
         }
 
         afterLoadWallet();
+        log.info("STARTUP finalizeInit: afterLoadWallet done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
 
         cleanupFiles();
 
@@ -524,9 +550,11 @@ public class WalletApplication extends MultiDexApplication
         if (Constants.SUPPORTS_PLATFORM) {
             initPlatform();
         }
+        log.info("STARTUP finalizeInit: initPlatform+channels done in {}ms", System.currentTimeMillis() - _t); _t = System.currentTimeMillis();
         initUphold();
         initCoinbase();
         initDashSpend();
+        log.info("STARTUP finalizeInit: integrations done in {}ms", System.currentTimeMillis() - _t);
     }
 
     private void initUphold() {
@@ -616,6 +644,20 @@ public class WalletApplication extends MultiDexApplication
     }
 
 
+    /** Show a Toast safely from any thread (delegates to main thread via Handler). */
+    private void showToast(String message) {
+        new Handler(Looper.getMainLooper()).post(() ->
+            Toast.makeText(WalletApplication.this, message, Toast.LENGTH_LONG).show()
+        );
+    }
+
+    /** Show a string-resource Toast safely from any thread. */
+    private void showToast(@StringRes int resId) {
+        new Handler(Looper.getMainLooper()).post(() ->
+            Toast.makeText(WalletApplication.this, resId, Toast.LENGTH_LONG).show()
+        );
+    }
+
     private void afterLoadWallet() {
         wallet.setSaveOnNextBlock(false);
         wallet.autosaveToFile(walletFile, Constants.Files.WALLET_AUTOSAVE_DELAY_MS, TimeUnit.MILLISECONDS, null);
@@ -636,7 +678,7 @@ public class WalletApplication extends MultiDexApplication
         if (config.isResetBlockchainPending()) {
             log.info("failed to finish reset earlier, performing now...");
             deleteBlockchainFiles();
-            Toast.makeText(this, "finishing blockchain rescan", Toast.LENGTH_LONG).show();
+            showToast("finishing blockchain rescan");
             WalletApplicationExt.INSTANCE.clearDatabases(this, false);
             config.clearResetBlockchainPending();
         }
@@ -770,7 +812,7 @@ public class WalletApplication extends MultiDexApplication
         } catch (final FileNotFoundException x) {
             log.error("problem loading wallet", x);
 
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+            showToast(x.getClass().getName());
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -780,7 +822,7 @@ public class WalletApplication extends MultiDexApplication
         } catch (final UnreadableWalletException x) {
             log.error("problem loading wallet", x);
 
-            Toast.makeText(WalletApplication.this, x.getClass().getName(), Toast.LENGTH_LONG).show();
+            showToast(x.getClass().getName());
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -800,7 +842,7 @@ public class WalletApplication extends MultiDexApplication
         wallet.setRiskAnalyzer(new AllowLockTimeRiskAnalysis.OfflineAnalyzer(config.getBestHeightEver(), System.currentTimeMillis()/1000));
 
         if (!wallet.isConsistent()) {
-            Toast.makeText(this, "inconsistent wallet: " + walletFile, Toast.LENGTH_LONG).show();
+            showToast("inconsistent wallet: " + walletFile);
 
             wallet = restoreWalletFromBackup();
             WalletExtension authenticationGroupExtension = wallet.getKeyChainExtension(AuthenticationGroupExtension.EXTENSION_ID);
@@ -829,7 +871,7 @@ public class WalletApplication extends MultiDexApplication
 
             resetBlockchain();
 
-            Toast.makeText(this, R.string.toast_wallet_reset, Toast.LENGTH_LONG).show();
+            showToast(R.string.toast_wallet_reset);
 
             log.info("wallet restored from backup: '{}'", Constants.Files.WALLET_KEY_BACKUP_PROTOBUF);
 
@@ -1274,6 +1316,12 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return new WalletObserver(wallet).observeTransactions(withConfidence, filters);
+    }
+
+    @NonNull
+    @Override
+    public Flow<Unit> observeWalletReady() {
+        return WalletReadyFlow.INSTANCE.observe();
     }
 
     @NonNull
