@@ -26,9 +26,16 @@ open class SegwitNetworkParams() : AbstractBitcoinNetParams() {
 }
 
 class BitcoinMainNetParams : SegwitNetworkParams() {
+    companion object {
+        const val BITCOIN_SCHEME = "bitcoin"
+    }
     init {
         addressHeader = 0 // addresses starting with 1
         p2shHeader = 5 // addresses starting with 3
         segwitAddressHrp = "bc"
+    }
+
+    override fun getUriScheme(): String {
+        return BITCOIN_SCHEME
     }
 }

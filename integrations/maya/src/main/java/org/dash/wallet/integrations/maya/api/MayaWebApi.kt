@@ -178,6 +178,10 @@ open class MayaWebApi @Inject constructor(
         }
     }
 
+    suspend fun getDefaultSwapQuote(to: String, destinationAddress: String, value: Long = 1_0000_0000): SwapQuote? {
+        return getSwapQuote("DASH.DASH", to, value, destinationAddress)
+    }
+
 //    {
 //        "address": "bc1qfufu935synv680ws076m60g60n6gxvqaqglawt",
 //        "chain": "BTC",

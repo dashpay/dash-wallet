@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -47,7 +48,7 @@ fun TopIntro(
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
-        
+
         // Optional text
         text?.let {
             Text(
@@ -56,6 +57,47 @@ fun TopIntro(
                 color = MyTheme.Colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+fun TopIntro(
+    heading: String,
+    text: String? = null,
+    icon: @Composable () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
+            .fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        icon()
+
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = heading,
+                style = MyTheme.Typography.HeadlineSmallBold,
+                color = MyTheme.Colors.textPrimary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            text?.let {
+                Text(
+                    text = it,
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.textSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

@@ -29,6 +29,9 @@ import org.dash.wallet.integrations.maya.payments.parsers.BitcoinPaymentIntentPa
 import org.dash.wallet.integrations.maya.payments.parsers.EthereumPaymentIntentParser
 import org.dash.wallet.integrations.maya.payments.parsers.RuneAddressParser
 import org.dash.wallet.integrations.maya.payments.parsers.RunePaymentIntentProcessor
+import org.dash.wallet.integrations.maya.payments.parsers.XrdPaymentIntentParser
+import org.dash.wallet.integrations.maya.payments.parsers.ZcashAddressParser
+import org.dash.wallet.integrations.maya.payments.parsers.ZcashPaymentIntentParser
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -139,6 +142,39 @@ open class MayaRuneCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = RuneAddressParser()
     override val codeId: Int = R.string.cryptocurrency_rune_code
     override val nameId: Int = R.string.cryptocurrency_rune_network
+}
+
+open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
+    override val code: String = "MAYA"
+    override val name: String = "Maya"
+    override val asset: String = "MAYA.MAYA"
+    override val exampleAddress: String = "maya1x9jj85ugrpf8j0nhq9p7c4qjn9a2ufnhmlvt5e"
+    override val paymentIntentParser: PaymentIntentParser = Bech32PaymentIntentParser("MAYA", "maya", "maya", 38, "MAYA.MAYA")
+    override val addressParser: AddressParser = Bech32AddressParser("maya", 38, null)
+    override val codeId: Int = R.string.cryptocurrency_maya_code
+    override val nameId: Int = R.string.cryptocurrency_maya_network
+}
+
+open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
+    override val code: String = "ZEC"
+    override val name: String = "Zcash"
+    override val asset: String = "ZEC.ZEC"
+    override val exampleAddress: String = "t1K79TgQbqu74d6rBmsMu2oFEXEwAmdYiT7"
+    override val paymentIntentParser: PaymentIntentParser = ZcashPaymentIntentParser()
+    override val addressParser: AddressParser = ZcashAddressParser()
+    override val codeId: Int = R.string.cryptocurrency_zec_code
+    override val nameId: Int = R.string.cryptocurrency_zec_network
+}
+
+open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
+    override val code: String = "XRD"
+    override val name: String = "Radix"
+    override val asset: String = "XRD.XRD"
+    override val exampleAddress: String = "account_rdx1680ldd0sgl547sp05eqdpt3x8wvq004qeh7rk54t65t7yxn87ukunn"
+    override val paymentIntentParser: PaymentIntentParser = XrdPaymentIntentParser()
+    override val addressParser: AddressParser = Bech32AddressParser("account_rdx", "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}", null)
+    override val codeId: Int = R.string.cryptocurrency_xrd_code
+    override val nameId: Int = R.string.cryptocurrency_xrd_network
 }
 
 object MayaCurrencyList {
@@ -267,6 +303,38 @@ object MayaCurrencyList {
                 R.string.cryptocurrency_wsteth_code,
                 R.string.cryptocurrency_wsteth_arbitrum_network
             ),
+            MayaEthereumTokenCryptoCurrency(
+                "LLD",
+                "LLD",
+                "ETH.LLD-0X054C9D4C6F4EA4E14391ADDD1812106C97D05690",
+                EthereumPaymentIntentParser("lld", "ETH.LLD-05690"),
+                R.string.cryptocurrency_lld_code,
+                R.string.cryptocurrency_lld_ethereum_network
+            ),
+            MayaEthereumTokenCryptoCurrency(
+                "MOCA",
+                "Mocaverse",
+                "ETH.MOCA-0X53312F85BBA24C8CB99CFFC13BF82420157230D3",
+                EthereumPaymentIntentParser("moca", "ETH.MOCA-230D3"),
+                R.string.cryptocurrency_moca_code,
+                R.string.cryptocurrency_moca_ethereum_network
+            ),
+            MayaEthereumTokenCryptoCurrency(
+                "YUM",
+                "YUM",
+                "ARB.YUM-0X9F41B34F42058A7B74672055A5FAE22C4B113FD1",
+                EthereumPaymentIntentParser("yum", "ARB.YUM-13FD1"),
+                R.string.cryptocurrency_yum_code,
+                R.string.cryptocurrency_yum_arbitrum_network
+            ),
+            MayaEthereumTokenCryptoCurrency(
+                "USDT",
+                "Tether",
+                "ARB.USDT-0XFD086BC7CD5C481DCC9C85EBE478A1C0B69FCBB9",
+                EthereumPaymentIntentParser("usdt", "ARB.USDT-FCBB9"),
+                R.string.cryptocurrency_tether_code,
+                R.string.cryptocurrency_tether_arbitrum_network
+            ),
 
             MayaKujiraCryptoCurrency(),
             MayaKujiraTokenCryptoCurrency(
@@ -277,7 +345,10 @@ object MayaCurrencyList {
                 R.string.cryptocurrency_usk_network
             ),
 
-            MayaRuneCryptoCurrency()
+            MayaRuneCryptoCurrency(),
+            MayaZcashCryptoCurrency(),
+            MayaRadixCryptoCurrency(),
+            MayaMayaTokenCryptoCurrency()
         )
         currencyMap = currencyList.associateBy({ it.asset }, { it })
     }
@@ -286,9 +357,19 @@ object MayaCurrencyList {
         get() = currencyMap.values
     fun getPaymentProcessors(): PaymentParsers {
         val paymentProcessors = PaymentParsers()
+        val registeredCodes = mutableSetOf<String>()
         for (currency in all) {
-            paymentProcessors.add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+            if (registeredCodes.add(currency.code.lowercase())) {
+                paymentProcessors.add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+            }
         }
         return paymentProcessors
+    }
+
+    fun getPaymentProcessorForAsset(asset: String): PaymentParsers? {
+        val currency = currencyMap[asset] ?: return null
+        return PaymentParsers().apply {
+            add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+        }
     }
 }

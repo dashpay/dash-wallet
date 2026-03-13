@@ -49,6 +49,7 @@ import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.KeyboardUtil
 import org.dash.wallet.common.util.observe
+import org.slf4j.LoggerFactory
 
 /**
  * Address input fragment
@@ -60,6 +61,9 @@ import org.dash.wallet.common.util.observe
  */
 @AndroidEntryPoint
 abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
+    companion object {
+        private val log = LoggerFactory.getLogger(AddressInputFragment::class.java)
+    }
     var adapter: IconifiedListAdapter? = null
     protected val binding by viewBinding(FragmentAddressInputBinding::bind)
     protected val viewModel by viewModels<AddressInputViewModel>()
@@ -188,9 +192,7 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
                 binding.inputWrapper.isErrorEnabled = false
                 binding.errorText.isVisible = false
             } catch (ex: Exception) {
-                // TODO: remove this before completing PR
-                println(ex)
-                ex.printStackTrace()
+                log.error("problem processing $input", ex)
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
             }

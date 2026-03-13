@@ -22,6 +22,7 @@ import androidx.annotation.StringRes
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.data.ExchangeConfig
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
@@ -40,6 +41,17 @@ class ExchangeIntegrationListProvider @Inject constructor(
     private val upholdConfig: UpholdConfig,
     private val upholdClient: UpholdClient
 ) : ExchangeIntegrationProvider {
+
+    override suspend fun clearCachedAddresses() {
+        coinbaseConfig.clearCurrencyAddresses()
+        upholdConfig.clearCurrencyAddresses()
+    }
+
+    override suspend fun clearCachedAddresses(service: String) = when (service) {
+        ServiceName.Coinbase -> coinbaseConfig.clearCurrencyAddresses()
+        ServiceName.Uphold -> upholdConfig.clearCurrencyAddresses()
+        else -> error("$service is not supported")
+    }
 
     override suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration> {
         val exchangeIntegrations = arrayListOf<ExchangeIntegration>()
