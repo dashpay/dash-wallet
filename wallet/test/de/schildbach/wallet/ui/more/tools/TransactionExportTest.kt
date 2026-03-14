@@ -14,9 +14,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.schildbach.wallet.transactions
+package de.schildbach.wallet.ui.more.tools
 
 import de.schildbach.wallet.Constants.HEX
+import de.schildbach.wallet.transactions.TaxBitExporter
 import io.mockk.coEvery
 import io.mockk.mockk
 import kotlinx.coroutines.runBlocking

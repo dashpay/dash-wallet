@@ -42,6 +42,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import kotlinx.coroutines.flow.filterNot
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
@@ -93,11 +94,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         onViewCreatedTime = System.currentTimeMillis()
         log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
 
-        val adapter = TransactionAdapter(
-            viewModel.balanceDashFormat,
-            resources,
-            true
-        ) { rowView, _, isProfileClick ->
+        val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             if (rowView is TransactionRowView) {
                 if (isProfileClick && rowView.contact != null) {
                     requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
@@ -131,6 +128,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
+        // Cache adapter (plain ListAdapter) — shown immediately using pre-built rows from Room.
+        // submitList() is a single background DiffUtil + one main-thread handler post: much faster
+        // than PagingDataAdapter.submitData() which dispatches through 4+ coroutine contexts.
+        val cacheAdapter = CacheTransactionAdapter(viewModel.balanceDashFormat, resources, true, clickHandler)
+        // Live adapter (PagingDataAdapter) — activated after the wallet finishes loading.
+        val liveAdapter = TransactionAdapter(viewModel.balanceDashFormat, resources, true, clickHandler)
+
+        // Scroll to top when new live transactions arrive at the top of the list.
         viewLifecycleOwner.lifecycleScope.launch {
             // these observers had exceptions after the view was destroyed
             viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -142,11 +147,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     }
                 }
 
-                adapter.registerAdapterDataObserver(observer)
+                liveAdapter.registerAdapterDataObserver(observer)
                 try {
                     awaitCancellation() // Keeps the block alive
                 } finally {
-                    adapter.unregisterAdapterDataObserver(observer)
+                    liveAdapter.unregisterAdapterDataObserver(observer)
                 }
             }
         }
@@ -173,12 +178,46 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         header.setOnAcceptInviteCreateClicked { onAcceptInvite() }
         header.setOnAcceptInviteHideClicked { onHideInvite() }
 
+        // Single ConcatAdapter kept for the entire Fragment lifetime.
+        // We swap cacheAdapter ↔ liveAdapter inside it (removeAdapter / addAdapter) to avoid
+        // the ConcatAdapterController "cannot find wrapper" crash that occurs when two separate
+        // ConcatAdapter instances try to call onViewDetachedFromWindow on each other's ViewHolders.
+        val concatAdapter = ConcatAdapter(header, cacheAdapter)
+
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
-        binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
+        binding.walletTransactionsList.adapter = concatAdapter
 
         viewLifecycleOwner.observeOnDestroy {
             binding.walletTransactionsList.adapter = null
+        }
+
+        // Log when cache items are actually inserted into the RecyclerView (after DiffUtil).
+        cacheAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                if (firstPageLoadStartTime > 0L && cacheAdapter.itemCount > 0) {
+                    log.info("STARTUP cache items visible: {}ms from onViewCreated, {}ms from submitList ({} items)",
+                        System.currentTimeMillis() - onViewCreatedTime,
+                        System.currentTimeMillis() - firstPageLoadStartTime,
+                        cacheAdapter.itemCount)
+                    firstPageLoadStartTime = -1L
+                }
+            }
+        })
+
+        // Fast cache path — ListAdapter.submitList() dispatches DiffUtil once on a background
+        // thread, then posts a single update to the main thread.  No Paging3 coroutine chain.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.cachedRows
+                .filterNot { it.isEmpty() }
+                .collect { rows ->
+                    log.info("STARTUP cache submitList: {} rows at {}", rows.size, System.currentTimeMillis())
+                    if (firstPageLoadStartTime == 0L) {
+                        firstPageLoadStartTime = System.currentTimeMillis()
+                    }
+                    cacheAdapter.submitList(rows)
+                    showTransactionList()
+                }
         }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
@@ -211,34 +250,46 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
 
-        // Collect PagingData and submit to adapter
+        // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactions.collectLatest { pagingData ->
                 log.info("STARTUP submitData called on thread={} at {}", Thread.currentThread().name, System.currentTimeMillis())
-                adapter.submitData(pagingData)
+                liveAdapter.submitData(pagingData)
             }
         }
 
-        // Handle loading/empty states via loadStateFlow
+        // Handle loading/empty states via liveAdapter's loadStateFlow.
+        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once live items arrive.
         viewLifecycleOwner.lifecycleScope.launch {
-            adapter.loadStateFlow
+            liveAdapter.loadStateFlow
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
                     val isRefreshing = loadStates.refresh is LoadState.Loading
+                    val cacheHasItems = cacheAdapter.currentList.isNotEmpty()
                     // Only show the loading spinner when there's nothing to display yet.
-                    // When a background refresh (cache → live, or metadata invalidation) is in
-                    // progress the adapter already has items, so we suppress the spinner to avoid
-                    // a jarring "items → spinner → same items" flash.
-                    val isLoading = isRefreshing && adapter.itemCount == 0
-                    val isEmpty = loadStates.refresh is LoadState.NotLoading && adapter.itemCount == 0
+                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
+                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
+                        liveAdapter.itemCount == 0 && !cacheHasItems
 
-                    if (isRefreshing && firstPageLoadStartTime == 0L) {
-                        firstPageLoadStartTime = System.currentTimeMillis()
-                    } else if (!isRefreshing && adapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
-                        log.info("STARTUP first items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
+                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter once live
+                    // items are ready.  Keeping one ConcatAdapter instance avoids the
+                    // "cannot find wrapper" crash from ConcatAdapterController.
+                    if (loadStates.refresh is LoadState.NotLoading && liveAdapter.itemCount > 0 &&
+                        concatAdapter.adapters.contains(cacheAdapter)) {
+                        log.info("STARTUP swapping to live adapter: {} items at {}",
+                            liveAdapter.itemCount, System.currentTimeMillis())
+                        val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
+                        val scrollState = lm.onSaveInstanceState()
+                        concatAdapter.removeAdapter(cacheAdapter)
+                        concatAdapter.addAdapter(liveAdapter)
+                        lm.onRestoreInstanceState(scrollState)
+                    }
+
+                    if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
+                        log.info("STARTUP first live items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
                             System.currentTimeMillis() - onViewCreatedTime,
                             System.currentTimeMillis() - firstPageLoadStartTime,
-                            adapter.itemCount)
+                            liveAdapter.itemCount)
                         firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
                     }
 

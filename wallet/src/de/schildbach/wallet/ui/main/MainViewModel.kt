@@ -190,15 +190,23 @@ class MainViewModel @Inject constructor(
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
 
+    /**
+     * Cache rows for the fast startup phase, exposed so [WalletTransactionsFragment] can call
+     * [CacheTransactionAdapter.submitList] directly — a single background DiffUtil + one
+     * main-thread handler post — instead of going through [PagingDataAdapter.submitData]'s
+     * multi-dispatch coroutine chain which is slow when the main looper is congested at startup.
+     */
+    val cachedRows: StateFlow<List<HistoryRowView>> = _txDataSource
+        .map { source -> if (source is TxDataSource.PrebuiltCache) source.rows else emptyList() }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
     val transactions: Flow<PagingData<HistoryRowView>> = _txDataSource
         .flatMapLatest { source ->
             when (source) {
                 is TxDataSource.Empty -> flowOf(PagingData.empty())
-                // Rows already contain interleaved date headers — skip insertSeparators entirely.
-                is TxDataSource.PrebuiltCache -> Pager(
-                    config = pagingConfig,
-                    pagingSourceFactory = { PrebuiltRowsPagingSource(source.rows) }
-                ).flow
+                // Cache rows are delivered via cachedRows / CacheTransactionAdapter.submitList()
+                // to avoid PagingDataAdapter's slow coroutine-dispatch chain at startup.
+                is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
                 is TxDataSource.RoomLive -> {
                     val contacts = contactsByTxId
                     Pager(
