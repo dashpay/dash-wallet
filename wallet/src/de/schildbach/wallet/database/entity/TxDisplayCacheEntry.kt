@@ -24,6 +24,8 @@ import androidx.room.PrimaryKey
 import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.ResourceString
 
 /**
@@ -63,7 +65,11 @@ data class TxDisplayCacheEntry(
     val time: Long,
     val hasErrors: Boolean,
     /** Service name (e.g. "CrowdNode") or null for plain sends/receives. */
-    val service: String?
+    val service: String?,
+    /** Currency code of the historical exchange rate (e.g. "USD"), or null if unknown. */
+    val exchangeRateFiatCode: String?,
+    /** Fiat value of the historical exchange rate in smallest fiat unit, or null if unknown. */
+    val exchangeRateFiatValue: Long?
 ) {
     companion object {
         // ── Icon type constants (stable across app versions) ────────────────────────
@@ -106,17 +112,19 @@ data class TxDisplayCacheEntry(
             val title = row.title?.format(context.resources) ?: ""
             val statusText = if (row.statusRes > 0) context.getString(row.statusRes) else ""
             return TxDisplayCacheEntry(
-                rowId           = row.id,
-                title           = title,
-                valueSatoshis   = row.value.value,
-                iconType        = iconType,
-                iconBgType      = iconBgType,
-                statusText      = statusText,
-                comment         = row.comment,
-                transactionAmount = row.transactionAmount,
-                time            = row.time,
-                hasErrors       = row.hasErrors,
-                service         = row.service
+                rowId                  = row.id,
+                title                  = title,
+                valueSatoshis          = row.value.value,
+                iconType               = iconType,
+                iconBgType             = iconBgType,
+                statusText             = statusText,
+                comment                = row.comment,
+                transactionAmount      = row.transactionAmount,
+                time                   = row.time,
+                hasErrors              = row.hasErrors,
+                service                = row.service,
+                exchangeRateFiatCode   = row.exchangeRate?.fiat?.currencyCode,
+                exchangeRateFiatValue  = row.exchangeRate?.fiat?.value
             )
         }
     }
@@ -139,11 +147,14 @@ data class TxDisplayCacheEntry(
             BG_NONE    -> R.style.TxNoBackground
             else       -> R.style.TxReceivedBackground
         }
+        val rate = if (exchangeRateFiatCode != null && exchangeRateFiatValue != null) {
+            ExchangeRate(Coin.COIN, Fiat.valueOf(exchangeRateFiatCode, exchangeRateFiatValue))
+        } else null
         return TransactionRowView(
             title             = if (title.isNotEmpty()) ResourceString(resolvedText = title) else null,
             id                = rowId,
             value             = Coin.valueOf(valueSatoshis),
-            exchangeRate      = null,    // resolved at display time from current exchange rate
+            exchangeRate      = rate,
             contact           = contact, // injected by ViewModel from contactsByTxId
             icon              = iconRes,
             iconBitmap        = null,    // service icons loaded separately from metadata

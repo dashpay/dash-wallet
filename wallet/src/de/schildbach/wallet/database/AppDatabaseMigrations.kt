@@ -166,6 +166,14 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration19to20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add historical exchange rate columns (nullable — null for old rows, backfilled on next full rebuild)
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `exchangeRateFiatCode` TEXT")
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `exchangeRateFiatValue` INTEGER")
+            }
+        }
+
         val migration17to18 = object : Migration(17, 18) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Drop the old group-structure cache (required wallet access at startup — unusable).
