@@ -89,8 +89,8 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
         // the view model defaults to using Dash as the currency
         requireArguments().getString("currency")?.let {
             viewModel.currency = it
-            binding.errorText.text = getString(R.string.not_valid_address, it)
         }
+        binding.errorText.text = getString(R.string.not_valid_address, viewModel.currency)
         requireArguments().getString("title")?.let {
             binding.toolbarTitle.text = it
         }
