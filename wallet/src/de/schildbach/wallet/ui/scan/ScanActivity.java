@@ -191,6 +191,7 @@ public final class ScanActivity extends LockScreenActivity
         scannerView = (ScannerView) findViewById(R.id.scan_activity_mask);
         previewView = (TextureView) findViewById(R.id.scan_activity_preview);
         previewView.setSurfaceTextureListener(this);
+        findViewById(R.id.scan_close_button).setOnClickListener(v -> onBackPressed());
 
         cameraThread = new HandlerThread("cameraThread", Process.THREAD_PRIORITY_BACKGROUND);
         cameraThread.start();
