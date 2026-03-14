@@ -27,6 +27,7 @@ import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepository
 import org.dash.wallet.integrations.coinbase.utils.CoinbaseConfig
+import dagger.Lazy
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import org.dash.wallet.integrations.uphold.api.createCardAddress
 import org.dash.wallet.integrations.uphold.api.getAllCards
@@ -39,7 +40,7 @@ class ExchangeIntegrationListProvider @Inject constructor(
     private val coinBaseRepository: CoinBaseRepository,
     private val coinbaseConfig: CoinbaseConfig,
     private val upholdConfig: UpholdConfig,
-    private val upholdClient: UpholdClient
+    private val upholdClient: Lazy<UpholdClient>
 ) : ExchangeIntegrationProvider {
 
     override suspend fun clearCachedAddresses() {
@@ -130,16 +131,16 @@ class ExchangeIntegrationListProvider @Inject constructor(
             try {
                 // determine if we are connected
 
-                if (upholdClient.isAuthenticated) {
-                    val cards = upholdClient.getAllCards()
+                if (upholdClient.get().isAuthenticated) {
+                    val cards = upholdClient.get().getAllCards()
 
                     if (cards != null) {
                         val card = cards.find { it.currency == currency }
                         if (card != null) {
-                            val cardAddress = upholdClient.listCardAddress(card.id, currency)
+                            val cardAddress = upholdClient.get().listCardAddress(card.id, currency)
 
                             val address = cardAddress?.value
-                                ?: upholdClient.createCardAddress(
+                                ?: upholdClient.get().createCardAddress(
                                     card.id,
                                     currency
                                 )

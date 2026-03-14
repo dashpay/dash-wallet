@@ -44,7 +44,7 @@ object WalletApplicationExt {
         }
     }
 
-    fun clearCachedAddresses() = runBlocking {
+    fun WalletApplication.clearCachedAddresses(): Unit = runBlocking {
         exchangeIntegrationProvider.clearCachedAddresses()
     }
 }

@@ -533,7 +533,7 @@ public class WalletApplication extends MultiDexApplication
         initUphold();
         initCoinbase();
         initDashSpend();
-        WalletApplicationExt.INSTANCE.clearCachedAddresses();
+        WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
     }
 
     private void initUphold() {
