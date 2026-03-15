@@ -60,7 +60,7 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
     var input: String
         get() = _input
         set(value) {
-            _input = if (value.none { it.isDigit() }) "0" else value
+            _input = if (value.none { it.isDigit() } || value.trimStart().startsWith("-")) "0" else value
             updateAmount()
         }
 
@@ -96,8 +96,9 @@ class AmountView(context: Context, attrs: AttributeSet) : ConstraintLayout(conte
 
                     if (exchangeRate != null) {
                         fiatAmount = exchangeRate!!.coinToFiat(dashAmount)
-                        _input = fiatFormat.minDecimals(0)
+                        val fiatStr = fiatFormat.minDecimals(0)
                             .optionalDecimals(0, 2).format(fiatAmount).toString()
+                        _input = if (fiatStr.trimStart().startsWith("-")) "0" else fiatStr
                         binding.inputAmount.text = formatInputWithCurrency()
                     } else {
                         binding.inputAmount.text = resources.getString(R.string.rate_not_available)
