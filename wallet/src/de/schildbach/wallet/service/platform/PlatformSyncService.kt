@@ -377,6 +377,9 @@ class PlatformSynchronizationService @Inject constructor(
             if (!initialSync) {
                 checkDatabaseIntegrity(userId)
                 updateSyncStatus(PreBlockStage.FixMissingProfiles)
+            } else {
+                // update the
+                identityRepository.updateIdentity()
             }
 
             // Get all out our contact requests
