@@ -152,10 +152,12 @@ open class LockScreenActivity : SecureActivity() {
     }
 
     override fun setContentView(contentViewResId: Int) {
+        if (isFinishing) return
         setContentView(layoutInflater.inflate(contentViewResId, null))
     }
 
     override fun setContentView(contentView: View?) {
+        if (isFinishing) return
         binding.regularContent.removeAllViews()
         binding.regularContent.addView(contentView)
     }
