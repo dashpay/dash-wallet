@@ -49,6 +49,7 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
     }
     private val binding by viewBinding(FragmentIntegrationOverviewBinding::bind)
     private val viewModel by viewModels<IntegrationOverviewViewModel>()
+    private var action: String? = null
 
     private val coinbaseAuthResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -69,6 +70,8 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        action = requireArguments().getString(INTENT_ACTION)
 
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
@@ -117,7 +120,12 @@ class IntegrationOverviewFragment : Fragment(R.layout.fragment_integration_overv
             }
 
             if (success) {
-                safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
+                if (action == LOGIN_AND_CLOSE) {
+                    action = null
+                    findNavController().popBackStack()
+                } else {
+                    safeNavigate(IntegrationOverviewFragmentDirections.overviewToCoinbase())
+                }
             } else {
                 AdaptiveDialog.create(
                     R.drawable.ic_error,
