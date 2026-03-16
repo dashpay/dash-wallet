@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "75386d86842a0293c16b11a0a67c9e68",
+    "identityHash": "b5e761f8aad7425da842ff76f50bf43c",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -989,38 +989,110 @@
         "foreignKeys": []
       },
       {
-        "tableName": "tx_group_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`txId` TEXT NOT NULL, `groupId` TEXT NOT NULL, `groupType` INTEGER NOT NULL, `groupDateEpoch` INTEGER NOT NULL, PRIMARY KEY(`txId`))",
+        "tableName": "tx_display_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, `contactUsername` TEXT, `contactDisplayName` TEXT, `contactAvatarUrl` TEXT, PRIMARY KEY(`rowId`))",
         "fields": [
           {
-            "fieldPath": "txId",
-            "columnName": "txId",
+            "fieldPath": "rowId",
+            "columnName": "rowId",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "groupId",
-            "columnName": "groupId",
+            "fieldPath": "title",
+            "columnName": "title",
             "affinity": "TEXT",
             "notNull": true
           },
           {
-            "fieldPath": "groupType",
-            "columnName": "groupType",
+            "fieldPath": "valueSatoshis",
+            "columnName": "valueSatoshis",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "groupDateEpoch",
-            "columnName": "groupDateEpoch",
+            "fieldPath": "iconType",
+            "columnName": "iconType",
             "affinity": "INTEGER",
             "notNull": true
+          },
+          {
+            "fieldPath": "iconBgType",
+            "columnName": "iconBgType",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "statusText",
+            "columnName": "statusText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comment",
+            "columnName": "comment",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transactionAmount",
+            "columnName": "transactionAmount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "time",
+            "columnName": "time",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasErrors",
+            "columnName": "hasErrors",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "service",
+            "columnName": "service",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "exchangeRateFiatCode",
+            "columnName": "exchangeRateFiatCode",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "exchangeRateFiatValue",
+            "columnName": "exchangeRateFiatValue",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactUsername",
+            "columnName": "contactUsername",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactDisplayName",
+            "columnName": "contactDisplayName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactAvatarUrl",
+            "columnName": "contactAvatarUrl",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
           "autoGenerate": false,
           "columnNames": [
-            "txId"
+            "rowId"
           ]
         },
         "indices": [],
@@ -1030,7 +1102,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '75386d86842a0293c16b11a0a67c9e68')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b5e761f8aad7425da842ff76f50bf43c')"
     ]
   }
 }

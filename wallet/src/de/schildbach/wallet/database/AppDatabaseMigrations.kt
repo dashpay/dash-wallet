@@ -124,27 +124,8 @@ class AppDatabaseMigrations {
             }
         }
 
-        val migration16to17 = object : Migration(16, 17) {
+        val migration16to17 = object : Migration(16, 21) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS `tx_group_cache` (
-                        `txId` TEXT NOT NULL,
-                        `groupId` TEXT NOT NULL,
-                        `groupType` INTEGER NOT NULL,
-                        `groupDateEpoch` INTEGER NOT NULL,
-                        PRIMARY KEY(`txId`)
-                    )
-                    """
-                )
-            }
-        }
-
-        val migration18to19 = object : Migration(18, 19) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Recreate tx_display_cache with new schema: resolved strings instead of
-                // resource IDs, stable icon/bg enum ints instead of drawable/style resource IDs.
-                database.execSQL("DROP TABLE IF EXISTS `tx_display_cache`")
                 database.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `tx_display_cache` (
@@ -159,51 +140,11 @@ class AppDatabaseMigrations {
                         `time` INTEGER NOT NULL,
                         `hasErrors` INTEGER NOT NULL,
                         `service` TEXT,
-                        PRIMARY KEY(`rowId`)
-                    )
-                    """
-                )
-            }
-        }
-
-        val migration20to21 = object : Migration(20, 21) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactUsername` TEXT")
-                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactDisplayName` TEXT")
-                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactAvatarUrl` TEXT")
-            }
-        }
-
-        val migration19to20 = object : Migration(19, 20) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Add historical exchange rate columns (nullable — null for old rows, backfilled on next full rebuild)
-                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `exchangeRateFiatCode` TEXT")
-                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `exchangeRateFiatValue` INTEGER")
-            }
-        }
-
-        val migration17to18 = object : Migration(17, 18) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Drop the old group-structure cache (required wallet access at startup — unusable).
-                database.execSQL("DROP TABLE IF EXISTS `tx_group_cache`")
-                // Create the display-data cache: fully rendered row fields, no wallet needed.
-                database.execSQL(
-                    """
-                    CREATE TABLE IF NOT EXISTS `tx_display_cache` (
-                        `rowId` TEXT NOT NULL,
-                        `titleResId` INTEGER NOT NULL,
-                        `titleArgs` TEXT NOT NULL,
-                        `valueSatoshis` INTEGER NOT NULL,
-                        `icon` INTEGER NOT NULL,
-                        `iconBackground` INTEGER NOT NULL,
-                        `statusRes` INTEGER NOT NULL,
-                        `comment` TEXT NOT NULL,
-                        `transactionAmount` INTEGER NOT NULL,
-                        `time` INTEGER NOT NULL,
-                        `timeFormat` INTEGER NOT NULL,
-                        `hasErrors` INTEGER NOT NULL,
-                        `service` TEXT,
-                        `sortOrder` INTEGER NOT NULL,
+                        `exchangeRateFiatCode` TEXT,
+                        `exchangeRateFiatValue` INTEGER,
+                        `contactUsername` TEXT,
+                        `contactDisplayName` TEXT,
+                        `contactAvatarUrl` TEXT,
                         PRIMARY KEY(`rowId`)
                     )
                     """

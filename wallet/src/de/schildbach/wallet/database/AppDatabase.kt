@@ -42,8 +42,7 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.features.exploredash.utils.RoomConverters
 
 @Database(
-    entities =
-    [
+    entities = [
         ExchangeRate::class,
         BlockchainState::class,
         TransactionMetadata::class,
@@ -62,7 +61,7 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         TopUp::class,
         TxDisplayCacheEntry::class
     ],
-    version = 21, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 17, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)
