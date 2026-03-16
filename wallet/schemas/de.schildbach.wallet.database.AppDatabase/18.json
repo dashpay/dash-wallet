@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 18,
-    "identityHash": "a7d70349a83e79172962d892cde2531f",
+    "identityHash": "722a2eba57981b75da2deec4e7ad592a",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -990,7 +990,7 @@
       },
       {
         "tableName": "tx_display_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `titleResId` INTEGER NOT NULL, `titleArgs` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `icon` INTEGER NOT NULL, `iconBackground` INTEGER NOT NULL, `statusRes` INTEGER NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `timeFormat` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`rowId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, `contactUsername` TEXT, `contactDisplayName` TEXT, `contactAvatarUrl` TEXT, PRIMARY KEY(`rowId`))",
         "fields": [
           {
             "fieldPath": "rowId",
@@ -999,14 +999,8 @@
             "notNull": true
           },
           {
-            "fieldPath": "titleResId",
-            "columnName": "titleResId",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
-            "fieldPath": "titleArgs",
-            "columnName": "titleArgs",
+            "fieldPath": "title",
+            "columnName": "title",
             "affinity": "TEXT",
             "notNull": true
           },
@@ -1017,21 +1011,21 @@
             "notNull": true
           },
           {
-            "fieldPath": "icon",
-            "columnName": "icon",
+            "fieldPath": "iconType",
+            "columnName": "iconType",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "iconBackground",
-            "columnName": "iconBackground",
+            "fieldPath": "iconBgType",
+            "columnName": "iconBgType",
             "affinity": "INTEGER",
             "notNull": true
           },
           {
-            "fieldPath": "statusRes",
-            "columnName": "statusRes",
-            "affinity": "INTEGER",
+            "fieldPath": "statusText",
+            "columnName": "statusText",
+            "affinity": "TEXT",
             "notNull": true
           },
           {
@@ -1053,12 +1047,6 @@
             "notNull": true
           },
           {
-            "fieldPath": "timeFormat",
-            "columnName": "timeFormat",
-            "affinity": "INTEGER",
-            "notNull": true
-          },
-          {
             "fieldPath": "hasErrors",
             "columnName": "hasErrors",
             "affinity": "INTEGER",
@@ -1071,10 +1059,34 @@
             "notNull": false
           },
           {
-            "fieldPath": "sortOrder",
-            "columnName": "sortOrder",
+            "fieldPath": "exchangeRateFiatCode",
+            "columnName": "exchangeRateFiatCode",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "exchangeRateFiatValue",
+            "columnName": "exchangeRateFiatValue",
             "affinity": "INTEGER",
-            "notNull": true
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactUsername",
+            "columnName": "contactUsername",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactDisplayName",
+            "columnName": "contactDisplayName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactAvatarUrl",
+            "columnName": "contactAvatarUrl",
+            "affinity": "TEXT",
+            "notNull": false
           }
         ],
         "primaryKey": {
@@ -1085,12 +1097,57 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "tx_group_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `txId` TEXT NOT NULL, `wrapperType` TEXT NOT NULL, `groupDate` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`groupId`, `txId`))",
+        "fields": [
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "txId",
+            "columnName": "txId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wrapperType",
+            "columnName": "wrapperType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupDate",
+            "columnName": "groupDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "groupId",
+            "txId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a7d70349a83e79172962d892cde2531f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '722a2eba57981b75da2deec4e7ad592a')"
     ]
   }
 }

@@ -152,6 +152,23 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration17to18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `tx_group_cache` (
+                        `groupId` TEXT NOT NULL,
+                        `txId` TEXT NOT NULL,
+                        `wrapperType` TEXT NOT NULL,
+                        `groupDate` TEXT NOT NULL,
+                        `sortOrder` INTEGER NOT NULL,
+                        PRIMARY KEY(`groupId`, `txId`)
+                    )
+                    """
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

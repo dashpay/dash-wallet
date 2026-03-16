@@ -42,8 +42,10 @@ import de.schildbach.wallet.database.dao.DashPayContactRequestDao
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.dao.TxDisplayCacheDao
+import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.dao.UserAlertDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
+import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
@@ -91,6 +93,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.PeerGroup
+import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.core.PeerGroup.SyncStage
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -152,7 +155,8 @@ class MainViewModel @Inject constructor(
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
-    private val txDisplayCacheDao: TxDisplayCacheDao
+    private val txDisplayCacheDao: TxDisplayCacheDao,
+    private val txGroupCacheDao: TxGroupCacheDao
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
     private val workerJob = SupervisorJob()
@@ -393,12 +397,16 @@ class MainViewModel @Inject constructor(
         _transactionsDirection
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                rebuildWrappedList(filter)
+                if (txGroupCacheDao.getGroupCount() > 0) {
+                    buildWrappedListFromCache(filter)
+                } else {
+                    rebuildWrappedList(filter)
+                }
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
-                    .onEach {
-                        log.info("STARTUP rebuildWrappedList START at {}", System.currentTimeMillis())
-                        rebuildWrappedList(filter)
+                    .onEach { txs ->
+                        log.info("tx batch update: {} transactions", txs.size)
+                        updateWrappedListForTransactions(txs, filter)
                     }
             }
             .launchIn(viewModelWorkerScope)
@@ -476,7 +484,10 @@ class MainViewModel @Inject constructor(
             .onEach {
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
-                viewModelScope.launch(Dispatchers.IO) { txDisplayCacheDao.deleteAll() }
+                viewModelScope.launch(Dispatchers.IO) {
+                    txDisplayCacheDao.deleteAll()
+                    txGroupCacheDao.deleteAll()
+                }
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
@@ -675,6 +686,10 @@ class MainViewModel @Inject constructor(
                 rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
                 t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0)
 
+            // Persist ALL (unfiltered) wrappers to the group cache so future startups
+            // can skip wrapAllTransactions() and reconstruct from stored group structure.
+            persistGroupCache(wrapped)
+
             // Update the Room display cache — Room auto-invalidates the pager.
             updateDisplayCache(wrappedTransactionList)
 
@@ -735,6 +750,218 @@ class MainViewModel @Inject constructor(
             log.info("updateDisplayCache: remaining {} rows in {}ms (total {}ms)",
                 rest.size, System.currentTimeMillis() - t1, System.currentTimeMillis() - t0)
         }
+    }
+
+    /**
+     * Persist the group structure (all wrappers, unfiltered) to Room so that
+     * [buildWrappedListFromCache] can reconstruct [wrappedTransactionList] at
+     * the next startup without calling [wrapAllTransactions].
+     */
+    private suspend fun persistGroupCache(wrappers: Collection<TransactionWrapper>) {
+        val entries = wrappers.flatMap { wrapper ->
+            val type = when {
+                wrapper.id.startsWith("coinjoin")  -> TxGroupCacheEntry.TYPE_COINJOIN
+                wrapper.id == "crowdnode"           -> TxGroupCacheEntry.TYPE_CROWDNODE
+                else                                -> TxGroupCacheEntry.TYPE_SINGLE
+            }
+            wrapper.transactions.values
+                .sortedBy { it.updateTime }
+                .mapIndexed { index, tx ->
+                    TxGroupCacheEntry(
+                        groupId     = wrapper.id,
+                        txId        = tx.txId.toString(),
+                        wrapperType = type,
+                        groupDate   = wrapper.groupDate.toString(),
+                        sortOrder   = index
+                    )
+                }
+        }
+        txGroupCacheDao.replaceAll(entries)
+    }
+
+    /**
+     * Fast startup path (replaces [rebuildWrappedList] when the group cache is populated).
+     *
+     * Reconstructs [wrappedTransactionList] by looking up stored txIds from the wallet
+     * (O(1) per txId) and re-driving the CoinJoin/CrowdNode factory state from the
+     * cached groups — without calling [wrapAllTransactions].
+     */
+    private suspend fun buildWrappedListFromCache(filter: TxDirectionFilter) {
+        val wallet = walletData.wallet ?: return
+        val t0 = System.currentTimeMillis()
+
+        coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+        crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+
+        // getAll() returns rows sorted groupDate DESC, groupId, sortOrder ASC.
+        // groupBy preserves insertion order so group ordering is maintained.
+        val byGroup = txGroupCacheDao.getAll().groupBy { it.groupId }
+        val result = mutableListOf<TransactionWrapper>()
+
+        for ((groupId, rows) in byGroup) {
+            val wrapperType = rows.first().wrapperType
+            val txs = rows
+                .sortedBy { it.sortOrder }
+                .mapNotNull { row ->
+                    try { wallet.getTransaction(Sha256Hash.wrap(row.txId)) } catch (_: Exception) { null }
+                }
+
+            if (txs.isEmpty()) continue
+
+            when (wrapperType) {
+                TxGroupCacheEntry.TYPE_COINJOIN -> {
+                    txs.forEach { coinJoinWrapperFactory.tryInclude(it) }
+                    coinJoinWrapperFactory.wrappers
+                        .find { it.id == groupId }
+                        ?.let { result.add(it) }
+                }
+                TxGroupCacheEntry.TYPE_CROWDNODE -> {
+                    txs.forEach { crowdNodeWrapperFactory.tryInclude(it) }
+                    crowdNodeWrapperFactory.wrappers
+                        .find { it.id == groupId }
+                        ?.let { result.add(it) }
+                }
+                else -> txs.firstOrNull()?.let { result.add(createSingleTxWrapper(it)) }
+            }
+        }
+
+        wrappedTransactionList = result
+            .filter { it.passesFilter(filter, metadata) }
+            .sortedByDescending { it.groupDate }
+
+        log.info("buildWrappedListFromCache: {} groups → {} after filter in {}ms",
+            byGroup.size, wrappedTransactionList.size, System.currentTimeMillis() - t0)
+
+        // Refresh display cache with the reconstructed wrappers (picks up any wallet changes
+        // that happened while the app was closed), then signal UI is ready.
+        updateDisplayCache(wrappedTransactionList)
+        _transactionsLoaded.value = true
+        viewModelWorkerScope.launch { resolveAllContacts() }
+    }
+
+    /**
+     * Incremental update triggered by [walletData.observeTransactions].
+     *
+     * For each transaction in [txs]:
+     * - If it is already in a wrapper (confidence update): update the Transaction reference
+     *   and re-render that wrapper's cache entries.
+     * - If it is new: try to include it in the CoinJoin or CrowdNode factory; otherwise
+     *   create a standalone single-tx wrapper. Update both caches.
+     *
+     * Never calls [wrapAllTransactions].
+     */
+    private suspend fun updateWrappedListForTransactions(txs: List<Transaction>, filter: TxDirectionFilter) {
+        // Build txId (hex) → wrapper lookup from the current list
+        val txIdToWrapper = HashMap<String, TransactionWrapper>(wrappedTransactionList.size * 4)
+        wrappedTransactionList.forEach { wrapper ->
+            wrapper.transactions.keys.forEach { txId ->
+                txIdToWrapper[txId.toString()] = wrapper
+            }
+        }
+
+        val mutableList = wrappedTransactionList.toMutableList()
+        val affectedWrappers = mutableSetOf<TransactionWrapper>()
+
+        for (tx in txs) {
+            val txKey = tx.txId.toString()
+            val existing = txIdToWrapper[txKey]
+
+            if (existing != null) {
+                // Confidence/metadata update for a known tx — refresh the reference.
+                existing.transactions[tx.txId] = tx
+                affectedWrappers.add(existing)
+            } else {
+                // Genuinely new transaction
+                var added = false
+
+                val (cjIncluded, cjWrapper) = coinJoinWrapperFactory.tryInclude(tx)
+                if (cjIncluded && cjWrapper != null) {
+                    if (cjWrapper.passesFilter(filter, metadata) &&
+                        mutableList.none { it.id == cjWrapper.id }) {
+                        mutableList.add(cjWrapper)
+                    }
+                    affectedWrappers.add(cjWrapper)
+                    added = true
+                }
+
+                if (!added) {
+                    val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory.tryInclude(tx)
+                    if (cnIncluded && cnWrapper != null) {
+                        if (cnWrapper.passesFilter(filter, metadata) &&
+                            mutableList.none { it.id == cnWrapper.id }) {
+                            mutableList.add(cnWrapper)
+                        }
+                        affectedWrappers.add(cnWrapper)
+                        added = true
+                    }
+                }
+
+                if (!added) {
+                    val wrapper = createSingleTxWrapper(tx)
+                    if (wrapper.passesFilter(filter, metadata)) {
+                        mutableList.add(wrapper)
+                        affectedWrappers.add(wrapper)
+                    }
+                }
+            }
+        }
+
+        if (mutableList.size != wrappedTransactionList.size) {
+            mutableList.sortByDescending { it.groupDate }
+        }
+        wrappedTransactionList = mutableList
+
+        if (affectedWrappers.isEmpty()) return
+
+        // Update display cache for affected wrappers
+        val displayEntries = affectedWrappers
+            .filter { it.passesFilter(filter, metadata) }
+            .map { wrapper ->
+                val txId = wrapper.transactions.keys.first()
+                val row = TransactionRowView.fromTransactionWrapper(
+                    wrapper, walletData.transactionBag, Constants.CONTEXT,
+                    contact = contactsByTxId[txId.toString()],
+                    metadata = metadata[txId],
+                    chainLockBlockHeight = chainLockBlockHeight
+                )
+                TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+            }
+        if (displayEntries.isNotEmpty()) {
+            txDisplayCacheDao.insertAll(displayEntries)
+        }
+
+        // Update group cache — one row per (wrapper, tx)
+        val groupEntries = affectedWrappers.flatMap { wrapper ->
+            val type = when {
+                wrapper.id.startsWith("coinjoin")  -> TxGroupCacheEntry.TYPE_COINJOIN
+                wrapper.id == "crowdnode"           -> TxGroupCacheEntry.TYPE_CROWDNODE
+                else                                -> TxGroupCacheEntry.TYPE_SINGLE
+            }
+            wrapper.transactions.values
+                .sortedBy { it.updateTime }
+                .mapIndexed { index, tx ->
+                    TxGroupCacheEntry(
+                        groupId     = wrapper.id,
+                        txId        = tx.txId.toString(),
+                        wrapperType = type,
+                        groupDate   = wrapper.groupDate.toString(),
+                        sortOrder   = index
+                    )
+                }
+        }
+        txGroupCacheDao.insertAll(groupEntries)
+
+        _txDataSource.value = TxDataSource.RoomLive
+        log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
+    }
+
+    /** Creates a plain single-tx anonymous [TransactionWrapper]. */
+    private fun createSingleTxWrapper(tx: Transaction): TransactionWrapper = object : TransactionWrapper {
+        override val id          = tx.txId.toStringBase58()
+        override val transactions = hashMapOf(tx.txId to tx)
+        override val groupDate   = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
+        override fun tryInclude(t: Transaction) = true
+        override fun getValue(bag: TransactionBag) = tx.getValue(bag)
     }
 
     companion object {
