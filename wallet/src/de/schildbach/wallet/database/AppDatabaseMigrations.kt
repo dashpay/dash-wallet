@@ -166,6 +166,14 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration20to21 = object : Migration(20, 21) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactUsername` TEXT")
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactDisplayName` TEXT")
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `contactAvatarUrl` TEXT")
+            }
+        }
+
         val migration19to20 = object : Migration(19, 20) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // Add historical exchange rate columns (nullable — null for old rows, backfilled on next full rebuild)

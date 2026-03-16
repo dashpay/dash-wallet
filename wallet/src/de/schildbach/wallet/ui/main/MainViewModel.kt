@@ -422,12 +422,13 @@ class MainViewModel @Inject constructor(
                 }
                 if (affectedWrappers.isNotEmpty()) {
                     val newEntries = affectedWrappers.map { wrapper ->
+                        val txId = wrapper.transactions.keys.first()
                         val row = TransactionRowView.fromTransactionWrapper(
                             wrapper,
                             walletData.transactionBag,
                             Constants.CONTEXT,
-                            contact = null,
-                            metadata = newMetadata[wrapper.transactions.keys.first()],
+                            contact = contactsByTxId[txId.toString()],
+                            metadata = newMetadata[txId],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
                         TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
@@ -706,12 +707,13 @@ class MainViewModel @Inject constructor(
         val t0 = System.currentTimeMillis()
 
         fun renderEntry(wrapper: TransactionWrapper): TxDisplayCacheEntry {
+            val txId = wrapper.transactions.keys.first()
             val row = TransactionRowView.fromTransactionWrapper(
                 wrapper,
                 walletData.transactionBag,
                 Constants.CONTEXT,
-                contact = null,
-                metadata = metadata[wrapper.transactions.keys.first()],
+                contact = contactsByTxId[txId.toString()],
+                metadata = metadata[txId],
                 chainLockBlockHeight = chainLockBlockHeight
             )
             return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
@@ -798,6 +800,26 @@ class MainViewModel @Inject constructor(
             currentPagingSource?.invalidate()
             log.info("resolveAllContacts: resolved {} contacts for {} candidates",
                 resolved.size, txsToResolve.size)
+
+            // Upsert the affected cache rows with the now-known contact info so the
+            // NEXT startup shows contact names/avatars immediately from the cache.
+            val updatedEntries = wrappedTransactionList
+                .filter { wrapper -> resolved.containsKey(wrapper.transactions.keys.first().toString()) }
+                .map { wrapper ->
+                    val txId = wrapper.transactions.keys.first()
+                    val row = TransactionRowView.fromTransactionWrapper(
+                        wrapper,
+                        walletData.transactionBag,
+                        Constants.CONTEXT,
+                        contact = contactsByTxId[txId.toString()],
+                        metadata = metadata[txId],
+                        chainLockBlockHeight = chainLockBlockHeight
+                    )
+                    TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+                }
+            if (updatedEntries.isNotEmpty()) {
+                txDisplayCacheDao.insertAll(updatedEntries)
+            }
         }
     }
 

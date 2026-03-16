@@ -69,7 +69,13 @@ data class TxDisplayCacheEntry(
     /** Currency code of the historical exchange rate (e.g. "USD"), or null if unknown. */
     val exchangeRateFiatCode: String?,
     /** Fiat value of the historical exchange rate in smallest fiat unit, or null if unknown. */
-    val exchangeRateFiatValue: Long?
+    val exchangeRateFiatValue: Long?,
+    /** DashPay contact username, or null for non-contact transactions. */
+    val contactUsername: String?,
+    /** DashPay contact display name, or null for non-contact transactions. */
+    val contactDisplayName: String?,
+    /** DashPay contact avatar URL, or null for non-contact transactions. */
+    val contactAvatarUrl: String?
 ) {
     companion object {
         // ── Icon type constants (stable across app versions) ────────────────────────
@@ -124,7 +130,10 @@ data class TxDisplayCacheEntry(
                 hasErrors              = row.hasErrors,
                 service                = row.service,
                 exchangeRateFiatCode   = row.exchangeRate?.fiat?.currencyCode,
-                exchangeRateFiatValue  = row.exchangeRate?.fiat?.value
+                exchangeRateFiatValue  = row.exchangeRate?.fiat?.value,
+                contactUsername        = row.contact?.username,
+                contactDisplayName     = row.contact?.displayName,
+                contactAvatarUrl       = row.contact?.avatarUrl
             )
         }
     }
@@ -150,12 +159,20 @@ data class TxDisplayCacheEntry(
         val rate = if (exchangeRateFiatCode != null && exchangeRateFiatValue != null) {
             ExchangeRate(Coin.COIN, Fiat.valueOf(exchangeRateFiatCode, exchangeRateFiatValue))
         } else null
+        val resolvedContact = contact ?: if (contactUsername != null) {
+            DashPayProfile(
+                userId        = rowId,
+                username      = contactUsername,
+                displayName   = contactDisplayName ?: "",
+                avatarUrl     = contactAvatarUrl ?: ""
+            )
+        } else null
         return TransactionRowView(
             title             = if (title.isNotEmpty()) ResourceString(resolvedText = title) else null,
             id                = rowId,
             value             = Coin.valueOf(valueSatoshis),
             exchangeRate      = rate,
-            contact           = contact, // injected by ViewModel from contactsByTxId
+            contact           = resolvedContact,
             icon              = iconRes,
             iconBitmap        = null,    // service icons loaded separately from metadata
             iconBackground    = bgRes,
