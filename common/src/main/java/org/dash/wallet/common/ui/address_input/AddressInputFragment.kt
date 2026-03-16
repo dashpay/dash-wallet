@@ -206,6 +206,9 @@ abstract class AddressInputFragment : Fragment(R.layout.fragment_address_input) 
         viewModel.addressSources.clear()
         viewModel.addressSources.addAll(source)
         binding.addressSourceContainer.isVisible = source.isNotEmpty()
+        if (source.isNotEmpty()) {
+            binding.scrollContainer.isVisible = true
+        }
         adapter?.run {
             submitList(
                 source.map {
