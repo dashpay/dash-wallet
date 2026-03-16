@@ -336,6 +336,12 @@ class MainViewModel @Inject constructor(
             refreshContactsForAllTransactions()
         }.launchIn(viewModelWorkerScope)
 
+        identityRepository.blockchainIdentityFlow
+            .filterNotNull()
+            .distinctUntilChanged()
+            .onEach { refreshContactsForAllTransactions() }
+            .launchIn(viewModelWorkerScope)
+
         walletData.observeWalletReset()
             .onEach {
                 txByHash = mapOf()
@@ -697,10 +703,11 @@ class MainViewModel @Inject constructor(
         }
 
         viewModelWorkerScope.launch {
-            val contactsMap = if (this@MainViewModel.contacts.isNotEmpty()) {
+            val blockchainIdentity = identityRepository.blockchainIdentity
+            val contactsMap = if (this@MainViewModel.contacts.isNotEmpty() && blockchainIdentity != null) {
                 txs.filterNot { it.isEntirelySelf(walletData.transactionBag) }
                     .mapNotNull { tx ->
-                        identityRepository.blockchainIdentity!!.getContactForTransaction(tx)?.let { contactId ->
+                        blockchainIdentity.getContactForTransaction(tx)?.let { contactId ->
                             contacts[contactId]?.let { contact ->
                                 tx.txId to contact
                             }

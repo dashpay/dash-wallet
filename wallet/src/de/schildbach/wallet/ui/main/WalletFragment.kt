@@ -430,7 +430,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     R.id.paymentsFragment,
                     bundleOf(
                         PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_PAY
-                    )
+                    ),
+                    NavOptions.Builder()
+                        .setLaunchSingleTop(true)
+                        .setPopUpTo(R.id.walletFragment, false)
+                        .build()
                 )
             }
             ShortcutOption.RECEIVE -> {
@@ -439,7 +443,11 @@ class WalletFragment : Fragment(R.layout.home_content) {
                     R.id.paymentsFragment,
                     bundleOf(
                         PaymentsFragment.ARG_ACTIVE_TAB to PaymentsFragment.ACTIVE_TAB_RECEIVE
-                    )
+                    ),
+                    NavOptions.Builder()
+                        .setLaunchSingleTop(true)
+                        .setPopUpTo(R.id.walletFragment, false)
+                        .build()
                 )
             }
             ShortcutOption.EXPLORE -> {
