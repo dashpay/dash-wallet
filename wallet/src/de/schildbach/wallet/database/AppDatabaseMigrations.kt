@@ -124,7 +124,7 @@ class AppDatabaseMigrations {
             }
         }
 
-        val migration16to17 = object : Migration(16, 21) {
+        val migration16to17 = object : Migration(16, 17) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     """
@@ -175,6 +175,16 @@ class AppDatabaseMigrations {
                 // until the cache is refreshed on next startup.
                 database.execSQL(
                     "ALTER TABLE `tx_display_cache` ADD COLUMN `filterFlags` INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
+        val migration19to20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add contactUserId column (nullable) to fix a bug where the reconstructed
+                // DashPayProfile was using rowId (a transaction hex) as the userId.
+                database.execSQL(
+                    "ALTER TABLE `tx_display_cache` ADD COLUMN `contactUserId` TEXT"
                 )
             }
         }

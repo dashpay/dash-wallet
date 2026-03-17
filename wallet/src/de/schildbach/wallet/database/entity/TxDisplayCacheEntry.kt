@@ -76,6 +76,10 @@ data class TxDisplayCacheEntry(
     val contactDisplayName: String?,
     /** DashPay contact avatar URL, or null for non-contact transactions. */
     val contactAvatarUrl: String?,
+    /** DashPay contact identity/user ID (Base58 identifier), or null for non-contact transactions.
+     *  Persisted so that the reconstructed [DashPayProfile] in [toTransactionRowView] carries the
+     *  correct userId instead of accidentally re-using [rowId] (which is a transaction hex). */
+    val contactUserId: String?,
     /** Bitmask used for SQL-side filtering. See [FLAG_SENT], [FLAG_RECEIVED], [FLAG_GIFT_CARD]. */
     val filterFlags: Int = 0
 ) {
@@ -102,7 +106,7 @@ data class TxDisplayCacheEntry(
         const val BG_NONE     = 4
 
         /** Cached date/time format — same as [TxResourceMapper.dateTimeFormat] but avoids instantiation. */
-        private val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
+        private const val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
 
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
         fun fromTransactionRowView(row: TransactionRowView, context: Context, filterFlags: Int = 0): TxDisplayCacheEntry {
@@ -141,6 +145,7 @@ data class TxDisplayCacheEntry(
                 contactUsername        = row.contact?.username,
                 contactDisplayName     = row.contact?.displayName,
                 contactAvatarUrl       = row.contact?.avatarUrl,
+                contactUserId          = row.contact?.userId,
                 filterFlags            = filterFlags
             )
         }
@@ -167,9 +172,9 @@ data class TxDisplayCacheEntry(
         val rate = if (exchangeRateFiatCode != null && exchangeRateFiatValue != null) {
             ExchangeRate(Coin.COIN, Fiat.valueOf(exchangeRateFiatCode, exchangeRateFiatValue))
         } else null
-        val resolvedContact = contact ?: if (contactUsername != null) {
+        val resolvedContact = contact ?: if (contactUsername != null && contactUserId != null) {
             DashPayProfile(
-                userId        = rowId,
+                userId        = contactUserId,
                 username      = contactUsername,
                 displayName   = contactDisplayName ?: "",
                 avatarUrl     = contactAvatarUrl ?: ""

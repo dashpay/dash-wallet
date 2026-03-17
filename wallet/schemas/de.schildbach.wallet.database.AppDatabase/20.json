@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 20,
-    "identityHash": "ec1950699d68dc990e78a9036be753a6",
+    "identityHash": "7ba039e89d0f2adf0148eaf497b40123",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -990,7 +990,7 @@
       },
       {
         "tableName": "tx_display_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, PRIMARY KEY(`rowId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`rowId` TEXT NOT NULL, `title` TEXT NOT NULL, `valueSatoshis` INTEGER NOT NULL, `iconType` INTEGER NOT NULL, `iconBgType` INTEGER NOT NULL, `statusText` TEXT NOT NULL, `comment` TEXT NOT NULL, `transactionAmount` INTEGER NOT NULL, `time` INTEGER NOT NULL, `hasErrors` INTEGER NOT NULL, `service` TEXT, `exchangeRateFiatCode` TEXT, `exchangeRateFiatValue` INTEGER, `contactUsername` TEXT, `contactDisplayName` TEXT, `contactAvatarUrl` TEXT, `contactUserId` TEXT, `filterFlags` INTEGER NOT NULL, PRIMARY KEY(`rowId`))",
         "fields": [
           {
             "fieldPath": "rowId",
@@ -1069,6 +1069,36 @@
             "columnName": "exchangeRateFiatValue",
             "affinity": "INTEGER",
             "notNull": false
+          },
+          {
+            "fieldPath": "contactUsername",
+            "columnName": "contactUsername",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactDisplayName",
+            "columnName": "contactDisplayName",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactAvatarUrl",
+            "columnName": "contactAvatarUrl",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "contactUserId",
+            "columnName": "contactUserId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "filterFlags",
+            "columnName": "filterFlags",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -1079,12 +1109,57 @@
         },
         "indices": [],
         "foreignKeys": []
+      },
+      {
+        "tableName": "tx_group_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`groupId` TEXT NOT NULL, `txId` TEXT NOT NULL, `wrapperType` TEXT NOT NULL, `groupDate` TEXT NOT NULL, `sortOrder` INTEGER NOT NULL, PRIMARY KEY(`groupId`, `txId`))",
+        "fields": [
+          {
+            "fieldPath": "groupId",
+            "columnName": "groupId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "txId",
+            "columnName": "txId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wrapperType",
+            "columnName": "wrapperType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "groupDate",
+            "columnName": "groupDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sortOrder",
+            "columnName": "sortOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "groupId",
+            "txId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ec1950699d68dc990e78a9036be753a6')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7ba039e89d0f2adf0148eaf497b40123')"
     ]
   }
 }
