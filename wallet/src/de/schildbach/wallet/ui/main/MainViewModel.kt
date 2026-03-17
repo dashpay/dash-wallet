@@ -399,13 +399,13 @@ class MainViewModel @Inject constructor(
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
                 if (wrappedTransactionList.isEmpty()) {
                     if (txDisplayCacheDao.getCount() > 0) {
-                        // Display cache already has renderable rows — show them immediately.
-                        // Only initialise the CoinJoin/CrowdNode factories for today's active
-                        // groups so incremental updates are handled correctly; all other wrappers
-                        // are reconstructed lazily when the user taps a row.
-                        initializeFactoriesFromCache()
+                        // Display cache is populated — start the Room pager immediately so it
+                        // pre-loads the first page while factory initialisation runs.  By the
+                        // time the Fragment subscribes (~100–200ms later), the first page of
+                        // rows is already in the pager's cache and appears with no extra wait.
                         _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
                         _transactionsLoaded.value = true
+                        initializeFactoriesFromCache()
                     } else {
                         // First-ever run (no display cache) — must do full rebuild to populate caches.
                         rebuildWrappedList(filter)
@@ -1032,9 +1032,11 @@ class MainViewModel @Inject constructor(
                 }
         }
         txGroupCacheDao.insertAll(groupEntries)
-
-        _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
-        // log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
+        // Room's InvalidationTracker auto-invalidates the PagingSource when insertAll touches
+        // tx_display_cache — no need to reassign _txDataSource here.  Reassigning would cancel
+        // the existing Pager and create a new one on every tx-batch, causing repeated submitData
+        // calls and flickering. Only set RoomLive on the initial transition (handled above).
+        log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
     }
 
     /** Creates a plain single-tx anonymous [TransactionWrapper]. */
