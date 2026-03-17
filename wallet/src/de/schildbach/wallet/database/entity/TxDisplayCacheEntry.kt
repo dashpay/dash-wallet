@@ -97,6 +97,7 @@ data class TxDisplayCacheEntry(
         const val FLAG_SENT      = 1
         const val FLAG_RECEIVED  = 2
         const val FLAG_GIFT_CARD = 4
+        const val FLAG_COINJOIN = 8
 
         // ── Background type constants ────────────────────────────────────────────────
         const val BG_RECEIVED = 0

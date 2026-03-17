@@ -61,6 +61,7 @@ import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
+import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinTxWrapperFactory
 import de.schildbach.wallet.ui.dashpay.BaseContactsViewModel
 import de.schildbach.wallet.ui.dashpay.NotificationCountLiveData
@@ -1103,15 +1104,19 @@ class MainViewModel @Inject constructor(
     private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
         val bag = walletData.transactionBag
         var flags = 0
-        if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
-            flags = flags or TxDisplayCacheEntry.FLAG_SENT
-        }
-        if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
-            flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
-        }
-        val firstTxId = wrapper.transactions.keys.first()
-        if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
-            flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        if (wrapper is CoinJoinMixingTxSet) {
+            flags = TxDisplayCacheEntry.FLAG_COINJOIN
+        } else {
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
+                flags = flags or TxDisplayCacheEntry.FLAG_SENT
+            }
+            if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
+                flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
+            }
+            val firstTxId = wrapper.transactions.keys.first()
+            if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
+                flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+            }
         }
         return flags
     }
