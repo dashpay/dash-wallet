@@ -145,15 +145,12 @@ class AppDatabaseMigrations {
                         `contactUsername` TEXT,
                         `contactDisplayName` TEXT,
                         `contactAvatarUrl` TEXT,
+                        `contactUserId` TEXT,
+                        `filterFlags` INTEGER NOT NULL DEFAULT 0,
                         PRIMARY KEY(`rowId`)
                     )
                     """
                 )
-            }
-        }
-
-        val migration17to18 = object : Migration(17, 18) {
-            override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL(
                     """
                     CREATE TABLE IF NOT EXISTS `tx_group_cache` (
@@ -165,26 +162,6 @@ class AppDatabaseMigrations {
                         PRIMARY KEY(`groupId`, `txId`)
                     )
                     """
-                )
-            }
-        }
-
-        val migration18to19 = object : Migration(18, 19) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Add filterFlags column with default 0 (ALL) so existing rows are visible in all filters
-                // until the cache is refreshed on next startup.
-                database.execSQL(
-                    "ALTER TABLE `tx_display_cache` ADD COLUMN `filterFlags` INTEGER NOT NULL DEFAULT 0"
-                )
-            }
-        }
-
-        val migration19to20 = object : Migration(19, 20) {
-            override fun migrate(database: SupportSQLiteDatabase) {
-                // Add contactUserId column (nullable) to fix a bug where the reconstructed
-                // DashPayProfile was using rowId (a transaction hex) as the userId.
-                database.execSQL(
-                    "ALTER TABLE `tx_display_cache` ADD COLUMN `contactUserId` TEXT"
                 )
             }
         }
