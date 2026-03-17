@@ -419,7 +419,7 @@ class MainViewModel @Inject constructor(
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
                     .onEach { txs ->
-                        log.info("tx batch update: {} transactions", txs.size)
+                        // log.info("tx batch update: {} transactions", txs.size)
                         updateWrappedListForTransactions(txs, filter)
                     }
             }
@@ -1034,7 +1034,7 @@ class MainViewModel @Inject constructor(
         txGroupCacheDao.insertAll(groupEntries)
 
         _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
-        log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
+        // log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
     }
 
     /** Creates a plain single-tx anonymous [TransactionWrapper]. */
@@ -1356,6 +1356,23 @@ class MainViewModel @Inject constructor(
     }
 
     fun observeMostRecentTransaction() = walletData.observeMostRecentTransaction().distinctUntilChanged()
+
+    /**
+     * Clears both the display cache and the group cache, resets [wrappedTransactionList],
+     * and triggers a full [rebuildWrappedList] as if the app were launched for the first time.
+     *
+     * Intended for user-initiated "Refresh transaction list" actions only.
+     */
+    fun forceRebuildTransactionCache() {
+        viewModelWorkerScope.launch {
+            wrappedTransactionList = emptyList()
+            txDisplayCacheDao.deleteAll()
+            txGroupCacheDao.deleteAll()
+            _txDataSource.value = TxDataSource.Empty
+            val filter = TxDirectionFilter(_transactionsDirection.value, walletData.wallet!!)
+            rebuildWrappedList(filter)
+        }
+    }
 
     /**
      * Look up the live [TransactionWrapper] by its row ID (txId hex for individuals,

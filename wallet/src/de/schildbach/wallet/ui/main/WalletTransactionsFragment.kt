@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -64,6 +65,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.slf4j.LoggerFactory
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
@@ -135,6 +137,22 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     fragment?.show(requireActivity())
                 }
             }
+        }
+
+        // Long-press "History" title → offer to wipe and rebuild the transaction cache.
+        binding.transactionListTitle.setOnLongClickListener {
+            AdaptiveDialog.create(
+                icon = null,
+                negativeButtonText = getString(R.string.cancel),
+                positiveButtonText = getString(R.string.history_refresh_dialog_confirm),
+                title = getString(R.string.history_refresh_dialog_title),
+                message = getString(R.string.history_refresh_dialog_message)
+            ).show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.forceRebuildTransactionCache()
+                }
+            }
+            true // consume
         }
 
         // Cache adapter (plain ListAdapter) — shown immediately using pre-built rows from Room.
