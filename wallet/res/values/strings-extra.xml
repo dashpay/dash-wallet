@@ -444,11 +444,11 @@
     <string name="reclassify_transactions_linked_accounts_message">by default all transactions to or from your linked accounts (exchanges, staking, etc) will be marked as transfers.</string>
     <string name="reclassify_transactions_change_explanation">Choose any transaction from the homepage and change the category on the transaction details page.</string>
 
-    <string name="masternode_keys_title">Masternode Keys</string>
-    <string name="masternode_key_type_owner">Owner Keys</string>
-    <string name="masternode_key_type_voting">Voting Keys</string>
-    <string name="masternode_key_type_operator">Operator Keys</string>
-    <string name="masternode_key_type_platform">EvoNode operator keys</string>
+    <string name="masternode_keys_title">Masternode keys</string>
+    <string name="masternode_key_type_owner">Owner keys</string>
+    <string name="masternode_key_type_voting">Voting keys</string>
+    <string name="masternode_key_type_operator">Operator keys</string>
+    <string name="masternode_key_type_platform">HPMN operator keys</string>
     <string name="masternode_key_type_total">%d keys</string>
     <string name="masternode_key_type_used">%d used</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

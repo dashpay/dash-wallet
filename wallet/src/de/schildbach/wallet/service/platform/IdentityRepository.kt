@@ -26,6 +26,9 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.Companion.UPGRADE_IDE
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -66,6 +69,7 @@ import javax.inject.Inject
 
 interface IdentityRepository {
     val blockchainIdentity: BlockchainIdentity?
+    val blockchainIdentityFlow: StateFlow<BlockchainIdentity?>
     //suspend fun addMissingKeys(keyParameter: KeyParameter?): Boolean
     suspend fun getIdentityBalance(): CreditBalanceInfo?
     val hasBlockchainIdentity: Boolean
@@ -102,6 +106,7 @@ interface IdentityRepository {
     suspend fun shouldShowAlert(): Boolean
     fun getNextContactAddress(userId: String, accountReference: Int): Address?
     suspend fun clearDatabase(includeInvitations: Boolean)
+    fun updateIdentity()
 }
 
 class IdentityRepositoryImpl @Inject constructor(
@@ -120,7 +125,12 @@ class IdentityRepositoryImpl @Inject constructor(
     val authenticationGroupExtension: AuthenticationGroupExtension?
         get() = walletApplication.authenticationGroupExtension
 
-    private var _blockchainIdentity: BlockchainIdentity? = null
+    private val _blockchainIdentityFlow = MutableStateFlow<BlockchainIdentity?>(null)
+    override val blockchainIdentityFlow: StateFlow<BlockchainIdentity?> = _blockchainIdentityFlow.asStateFlow()
+
+    private var _blockchainIdentity: BlockchainIdentity?
+        get() = _blockchainIdentityFlow.value
+        set(value) { _blockchainIdentityFlow.value = value }
 
     override val blockchainIdentity: BlockchainIdentity?
         get() = _blockchainIdentity
@@ -228,7 +238,6 @@ class IdentityRepositoryImpl @Inject constructor(
                 }
                 identity = blockchainIdentityData.identity
             }
-            blockchainIdentity.updateIdentity()
             log.info("loading identity ${blockchainIdentityData.userId} == ${_blockchainIdentity?.uniqueIdString}: {}", watch)
         } else {
             log.info("loading identity: {}", watch)
@@ -813,6 +822,10 @@ class IdentityRepositoryImpl @Inject constructor(
         if (includeInvitations) {
             invitationsDao.clear()
         }
+    }
+
+    override fun updateIdentity() {
+        _blockchainIdentity?.updateIdentity()
     }
 
     // current unused

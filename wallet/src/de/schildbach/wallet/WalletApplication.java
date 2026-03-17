@@ -547,7 +547,6 @@ public class WalletApplication extends MultiDexApplication
 
     private void initPlatform() {
         platformSyncService.init();
-        //PlatformRepo.getInstance().initGlobal();
     }
 
     private void initCoinbase() {
