@@ -1058,7 +1058,7 @@ class MainViewModel @Inject constructor(
 
     /** Creates a plain single-tx anonymous [TransactionWrapper]. */
     private fun createSingleTxWrapper(tx: Transaction): TransactionWrapper = object : TransactionWrapper {
-        override val id          = tx.txId.toStringBase58()
+        override val id          = tx.txId.toString()
         override val transactions = hashMapOf(tx.txId to tx)
         override val groupDate   = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
         override fun tryInclude(t: Transaction) = true

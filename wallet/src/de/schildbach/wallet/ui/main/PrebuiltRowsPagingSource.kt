@@ -49,7 +49,7 @@ class PrebuiltRowsPagingSource(
         val slice = items.drop(offset).take(params.loadSize)
         val result = LoadResult.Page(
             data = slice,
-            prevKey = if (offset == 0) null else offset,
+            prevKey = if (offset == 0) null else maxOf(0, offset - params.loadSize),
             nextKey = if (slice.size < params.loadSize) null else offset + slice.size
         )
         log.info("STARTUP PrebuiltRowsPagingSource.load offset={} size={} thread={} in {}ms",

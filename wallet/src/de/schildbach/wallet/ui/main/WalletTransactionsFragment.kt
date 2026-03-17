@@ -123,10 +123,11 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                             // load it on demand so the user can still open the detail view.
                             viewLifecycleOwner.lifecycleScope.launch {
                                 val wrapper = viewModel.loadGroupWrapper(rowView.id)
-                                if (wrapper != null) {
+                                val activity = if (isAdded) activity else null
+                                if (wrapper != null && activity != null) {
                                     viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                    TransactionGroupDetailsFragment(wrapper).show(requireActivity())
-                                } else {
+                                    TransactionGroupDetailsFragment(wrapper).show(activity)
+                                } else if (wrapper == null) {
                                     log.warn("group {} not found in cache — cannot open details", rowView.id)
                                 }
                             }

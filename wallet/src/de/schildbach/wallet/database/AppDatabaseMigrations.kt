@@ -146,7 +146,7 @@ class AppDatabaseMigrations {
                         `contactDisplayName` TEXT,
                         `contactAvatarUrl` TEXT,
                         `contactUserId` TEXT,
-                        `filterFlags` INTEGER NOT NULL DEFAULT 0,
+                        `filterFlags` INTEGER NOT NULL,
                         PRIMARY KEY(`rowId`)
                     )
                     """
