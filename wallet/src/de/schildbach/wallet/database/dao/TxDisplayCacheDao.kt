@@ -28,13 +28,12 @@ import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 @Dao
 interface TxDisplayCacheDao {
     /**
-     * Room-native PagingSource ordered newest-first.  Room's InvalidationTracker
-     * automatically invalidates this source whenever any row in [tx_display_cache]
-     * is inserted, updated, or deleted — no manual invalidate() calls needed for
-     * data changes (only needed for in-memory changes like contact resolution).
+     * Room-native PagingSource filtered by [filterFlag].
+     * Pass [filterFlag] = 0 for ALL (no WHERE filtering).
+     * Pass [TxDisplayCacheEntry.FLAG_SENT], [FLAG_RECEIVED], or [FLAG_GIFT_CARD] for filtered views.
      */
-    @Query("SELECT * FROM tx_display_cache ORDER BY time DESC")
-    fun pagingSource(): PagingSource<Int, TxDisplayCacheEntry>
+    @Query("SELECT * FROM tx_display_cache WHERE (:filterFlag = 0 OR (filterFlags & :filterFlag) != 0) ORDER BY time DESC")
+    fun pagingSource(filterFlag: Int): PagingSource<Int, TxDisplayCacheEntry>
 
     @Query("SELECT COUNT(*) FROM tx_display_cache")
     suspend fun getCount(): Int

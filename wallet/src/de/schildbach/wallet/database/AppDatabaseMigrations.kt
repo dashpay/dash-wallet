@@ -169,6 +169,16 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration18to19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add filterFlags column with default 0 (ALL) so existing rows are visible in all filters
+                // until the cache is refreshed on next startup.
+                database.execSQL(
+                    "ALTER TABLE `tx_display_cache` ADD COLUMN `filterFlags` INTEGER NOT NULL DEFAULT 0"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

@@ -190,7 +190,7 @@ class MainViewModel @Inject constructor(
     private sealed class TxDataSource {
         object Empty : TxDataSource()
         class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
-        object RoomLive : TxDataSource()
+        data class RoomLive(val filterFlag: Int) : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
 
@@ -213,10 +213,11 @@ class MainViewModel @Inject constructor(
                 is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
                 is TxDataSource.RoomLive -> {
                     val contacts = contactsByTxId
+                    val filterFlag = source.filterFlag
                     Pager(
                         config = pagingConfig,
                         pagingSourceFactory = {
-                            txDisplayCacheDao.pagingSource().also { currentPagingSource = it }
+                            txDisplayCacheDao.pagingSource(filterFlag).also { currentPagingSource = it }
                         }
                     ).flow.map { pagingData ->
                         pagingData
@@ -439,7 +440,7 @@ class MainViewModel @Inject constructor(
                             metadata = newMetadata[txId],
                             chainLockBlockHeight = chainLockBlockHeight
                         )
-                        TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+                        TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
                     }
                     // Guard: if this metadata update lost the service info for a row that already
                     // has a service-specific icon (gift card, CrowdNode), preserve the existing
@@ -690,8 +691,8 @@ class MainViewModel @Inject constructor(
             // can skip wrapAllTransactions() and reconstruct from stored group structure.
             persistGroupCache(wrapped)
 
-            // Update the Room display cache — Room auto-invalidates the pager.
-            updateDisplayCache(wrappedTransactionList)
+            // Update the Room display cache with ALL wrappers — filtered by SQL at query time.
+            updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
 
             // Signal that the live data is ready (shortcut bar, empty-view guard).
             // Do this BEFORE contact resolution — contacts can take seconds for DashPay
@@ -718,7 +719,7 @@ class MainViewModel @Inject constructor(
      * Runs synchronously on the caller's coroutine context ([viewModelWorkerScope]) to
      * avoid racing with concurrent rebuilds.
      */
-    private suspend fun updateDisplayCache(wrappers: List<TransactionWrapper>) {
+    private suspend fun updateDisplayCache(wrappers: List<TransactionWrapper>, filterFlag: Int) {
         val t0 = System.currentTimeMillis()
 
         fun renderEntry(wrapper: TransactionWrapper): TxDisplayCacheEntry {
@@ -731,7 +732,7 @@ class MainViewModel @Inject constructor(
                 metadata = metadata[txId],
                 chainLockBlockHeight = chainLockBlockHeight
             )
-            return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+            return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
         }
 
         val initialBatch = wrappers.take(INITIAL_RENDER_SIZE).map { renderEntry(it) }
@@ -740,7 +741,7 @@ class MainViewModel @Inject constructor(
         // Switch from PrebuiltCache to RoomLive now that fresh data is in Room.
         // Room's InvalidationTracker will auto-invalidate after replaceAll, so the pager
         // reloads from the DB (which now has the live first page).
-        _txDataSource.value = TxDataSource.RoomLive
+        _txDataSource.value = TxDataSource.RoomLive(filterFlag)
         val t1 = System.currentTimeMillis()
         log.info("updateDisplayCache: first {} rows in {}ms (switched to RoomLive)", initialBatch.size, t1 - t0)
 
@@ -832,9 +833,8 @@ class MainViewModel @Inject constructor(
         log.info("buildWrappedListFromCache: {} groups → {} after filter in {}ms",
             byGroup.size, wrappedTransactionList.size, System.currentTimeMillis() - t0)
 
-        // Refresh display cache with the reconstructed wrappers (picks up any wallet changes
-        // that happened while the app was closed), then signal UI is ready.
-        updateDisplayCache(wrappedTransactionList)
+        // Refresh display cache with ALL reconstructed wrappers — filtered by SQL at query time.
+        updateDisplayCache(result, filter.direction.toFilterFlag())
         _transactionsLoaded.value = true
         viewModelWorkerScope.launch { resolveAllContacts() }
     }
@@ -913,9 +913,8 @@ class MainViewModel @Inject constructor(
 
         if (affectedWrappers.isEmpty()) return
 
-        // Update display cache for affected wrappers
+        // Update display cache for affected wrappers — store all, filtering is done by SQL.
         val displayEntries = affectedWrappers
-            .filter { it.passesFilter(filter, metadata) }
             .map { wrapper ->
                 val txId = wrapper.transactions.keys.first()
                 val row = TransactionRowView.fromTransactionWrapper(
@@ -924,7 +923,7 @@ class MainViewModel @Inject constructor(
                     metadata = metadata[txId],
                     chainLockBlockHeight = chainLockBlockHeight
                 )
-                TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+                TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
             }
         if (displayEntries.isNotEmpty()) {
             txDisplayCacheDao.insertAll(displayEntries)
@@ -951,7 +950,7 @@ class MainViewModel @Inject constructor(
         }
         txGroupCacheDao.insertAll(groupEntries)
 
-        _txDataSource.value = TxDataSource.RoomLive
+        _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
         log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
     }
 
@@ -972,6 +971,34 @@ class MainViewModel @Inject constructor(
         private const val INITIAL_RENDER_SIZE = 100
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
+    }
+
+    /** Returns the DAO filter flag for this direction. 0 means ALL (no WHERE clause). */
+    private fun TxFilterType.toFilterFlag(): Int = when (this) {
+        TxFilterType.SENT      -> TxDisplayCacheEntry.FLAG_SENT
+        TxFilterType.RECEIVED  -> TxDisplayCacheEntry.FLAG_RECEIVED
+        TxFilterType.GIFT_CARD -> TxDisplayCacheEntry.FLAG_GIFT_CARD
+        TxFilterType.ALL       -> 0
+    }
+
+    /**
+     * Computes the [TxDisplayCacheEntry.filterFlags] bitmask for [wrapper] based on the
+     * direction of its transactions and whether it is a gift-card service transaction.
+     */
+    private fun computeFilterFlags(wrapper: TransactionWrapper): Int {
+        val bag = walletData.transactionBag
+        var flags = 0
+        if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.SENT, bag).matches(it) }) {
+            flags = flags or TxDisplayCacheEntry.FLAG_SENT
+        }
+        if (wrapper.transactions.values.any { TxDirectionFilter(TxFilterType.RECEIVED, bag).matches(it) }) {
+            flags = flags or TxDisplayCacheEntry.FLAG_RECEIVED
+        }
+        val firstTxId = wrapper.transactions.keys.first()
+        if (ServiceName.isDashSpend(metadata[firstTxId]?.service)) {
+            flags = flags or TxDisplayCacheEntry.FLAG_GIFT_CARD or TxDisplayCacheEntry.FLAG_SENT
+        }
+        return flags
     }
 
     /**
@@ -1042,7 +1069,7 @@ class MainViewModel @Inject constructor(
                         metadata = metadata[txId],
                         chainLockBlockHeight = chainLockBlockHeight
                     )
-                    TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication)
+                    TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
                 }
             if (updatedEntries.isNotEmpty()) {
                 txDisplayCacheDao.insertAll(updatedEntries)

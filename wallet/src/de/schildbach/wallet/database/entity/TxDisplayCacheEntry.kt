@@ -75,7 +75,9 @@ data class TxDisplayCacheEntry(
     /** DashPay contact display name, or null for non-contact transactions. */
     val contactDisplayName: String?,
     /** DashPay contact avatar URL, or null for non-contact transactions. */
-    val contactAvatarUrl: String?
+    val contactAvatarUrl: String?,
+    /** Bitmask used for SQL-side filtering. See [FLAG_SENT], [FLAG_RECEIVED], [FLAG_GIFT_CARD]. */
+    val filterFlags: Int = 0
 ) {
     companion object {
         // ── Icon type constants (stable across app versions) ────────────────────────
@@ -86,6 +88,11 @@ data class TxDisplayCacheEntry(
         const val ICON_GIFT_CARD = 4
         const val ICON_COINJOIN  = 5
         const val ICON_CROWDNODE = 6
+
+        // ── Filter flag bitmask constants ────────────────────────────────────────────
+        const val FLAG_SENT      = 1
+        const val FLAG_RECEIVED  = 2
+        const val FLAG_GIFT_CARD = 4
 
         // ── Background type constants ────────────────────────────────────────────────
         const val BG_RECEIVED = 0
@@ -98,7 +105,7 @@ data class TxDisplayCacheEntry(
         private val DATE_TIME_FORMAT = DateUtils.FORMAT_SHOW_TIME
 
         /** Convert a [TransactionRowView] (which uses current resource IDs) to a cache entry. */
-        fun fromTransactionRowView(row: TransactionRowView, context: Context): TxDisplayCacheEntry {
+        fun fromTransactionRowView(row: TransactionRowView, context: Context, filterFlags: Int = 0): TxDisplayCacheEntry {
             val iconType = when (row.icon) {
                 R.drawable.ic_transaction_sent        -> ICON_SENT
                 R.drawable.ic_internal                -> ICON_INTERNAL
@@ -133,7 +140,8 @@ data class TxDisplayCacheEntry(
                 exchangeRateFiatValue  = row.exchangeRate?.fiat?.value,
                 contactUsername        = row.contact?.username,
                 contactDisplayName     = row.contact?.displayName,
-                contactAvatarUrl       = row.contact?.avatarUrl
+                contactAvatarUrl       = row.contact?.avatarUrl,
+                filterFlags            = filterFlags
             )
         }
     }
