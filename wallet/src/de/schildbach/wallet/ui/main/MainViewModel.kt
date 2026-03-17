@@ -267,13 +267,7 @@ class MainViewModel @Inject constructor(
     val exchangeRate: LiveData<ExchangeRate>
         get() = _exchangeRate
 
-    private val _rateStale = MutableStateFlow(
-        RateRetrievalState(
-            lastAttemptFailed = false,
-            staleRates = false,
-            volatile = false
-        )
-    )
+    private val _rateStale = MutableStateFlow(RateRetrievalState.DEFAULT)
     val rateStale: Flow<RateRetrievalState>
         get() = _rateStale
     val currentStaleRateState
@@ -398,10 +392,18 @@ class MainViewModel @Inject constructor(
         _transactionsDirection
             .flatMapLatest { direction ->
                 val filter = TxDirectionFilter(direction, walletData.wallet!!)
-                if (txGroupCacheDao.getGroupCount() > 0) {
-                    buildWrappedListFromCache(filter)
+                if (wrappedTransactionList.isEmpty()) {
+                    // First load — build the wrapper list from group cache or full rebuild.
+                    if (txGroupCacheDao.getGroupCount() > 0) {
+                        buildWrappedListFromCache(filter)
+                    } else {
+                        rebuildWrappedList(filter)
+                    }
                 } else {
-                    rebuildWrappedList(filter)
+                    // Direction changed — display cache already has all txs with filterFlags set.
+                    // Just switch the pager's WHERE clause; no wallet access needed.
+                    log.info("direction changed to {} — switching filter flag only", direction)
+                    _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
                 }
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
