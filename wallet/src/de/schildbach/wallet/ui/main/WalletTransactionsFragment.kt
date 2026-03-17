@@ -321,9 +321,14 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
                     }
 
-                    binding.loading.isVisible = isLoading
+                    binding.loading.isVisible = isLoading || viewModel.isBuildingCache.value
                     if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
                 }
+        }
+
+        // Show the "determining transaction history" overlay while the cache is being built.
+        viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
+            binding.loading.isVisible = building
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->
@@ -487,7 +492,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun showEmptyView() {
-        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded.value
+        // Don't show "no transactions" text while the cache is being built — the loading
+        // overlay covers this state and showing both at once is confusing.
+        binding.walletTransactionsEmpty.isVisible =
+            viewModel.transactionsLoaded.value && !viewModel.isBuildingCache.value
         binding.walletTransactionsList.isVisible = false
     }
 

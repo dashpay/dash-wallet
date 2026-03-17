@@ -69,6 +69,7 @@
 
     <string name="pay_title">Send</string>
     <string name="history_title">History</string>
+    <string name="wallet_transactions_building_cache">Determining transaction history…</string>
     <string name="history_refresh_dialog_title">Refresh Transaction List</string>
     <string name="history_refresh_dialog_message">This will clear the transaction display cache and rebuild it from scratch. The list will be temporarily unavailable while it rebuilds.</string>
     <string name="history_refresh_dialog_confirm">Refresh</string>

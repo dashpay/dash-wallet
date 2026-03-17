@@ -174,6 +174,10 @@ class MainViewModel @Inject constructor(
     private val _transactionsLoaded = MutableStateFlow(false)
     val transactionsLoaded: StateFlow<Boolean> = _transactionsLoaded
 
+    /** True while a full cache rebuild is in progress (first run or user-initiated refresh). */
+    private val _isBuildingCache = MutableStateFlow(false)
+    val isBuildingCache: StateFlow<Boolean> = _isBuildingCache
+
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
     // The current active PagingSource — kept so contact changes can trigger manual invalidate().
     // Only used for the RoomLive paging source; PrebuiltCache uses a separate in-memory source.
@@ -695,46 +699,52 @@ class MainViewModel @Inject constructor(
     }
 
     private suspend fun rebuildWrappedList(filter: TxDirectionFilter) {
-        walletData.wallet?.let { wallet ->
-            val t0 = System.currentTimeMillis()
-            coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
-            crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
+        _isBuildingCache.value = true
+        try {
+            walletData.wallet?.let { wallet ->
+                val t0 = System.currentTimeMillis()
+                coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
+                crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
 
-            val rawCount = wallet.getTransactions(true).size
-            val t1 = System.currentTimeMillis()
+                val rawCount = wallet.getTransactions(true).size
+                val t1 = System.currentTimeMillis()
 
-            val wrapped = walletData.wrapAllTransactions(crowdNodeWrapperFactory, coinJoinWrapperFactory)
-            val t2 = System.currentTimeMillis()
+                val wrapped = walletData.wrapAllTransactions(crowdNodeWrapperFactory, coinJoinWrapperFactory)
+                val t2 = System.currentTimeMillis()
 
-            val filtered = wrapped.filter { it.passesFilter(filter, metadata) }
-            val t3 = System.currentTimeMillis()
+                val filtered = wrapped.filter { it.passesFilter(filter, metadata) }
+                val t3 = System.currentTimeMillis()
 
-            wrappedTransactionList = filtered.sortedByDescending { it.groupDate }
-            val t4 = System.currentTimeMillis()
+                wrappedTransactionList = filtered.sortedByDescending { it.groupDate }
+                val t4 = System.currentTimeMillis()
 
-            log.info("rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
-                "getTransactions={}ms wrapAll={}ms filter={}ms sort={}ms total={}ms",
-                rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
-                t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0)
+                log.info("rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
+                    "getTransactions={}ms wrapAll={}ms filter={}ms sort={}ms total={}ms",
+                    rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
+                    t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0)
 
-            // Persist ALL (unfiltered) wrappers to the group cache so future startups
-            // can skip wrapAllTransactions() and reconstruct from stored group structure.
-            persistGroupCache(wrapped)
+                // Persist ALL (unfiltered) wrappers to the group cache so future startups
+                // can skip wrapAllTransactions() and reconstruct from stored group structure.
+                persistGroupCache(wrapped)
 
-            // Update the Room display cache with ALL wrappers — filtered by SQL at query time.
-            updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
+                // Update the Room display cache with ALL wrappers — filtered by SQL at query time.
+                updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
 
-            // Signal that the live data is ready (shortcut bar, empty-view guard).
-            // Do this BEFORE contact resolution — contacts can take seconds for DashPay
-            // users and should not block the UI from becoming fully interactive.
-            _transactionsLoaded.value = true
+                // Signal that the live data is ready (shortcut bar, empty-view guard).
+                // Do this BEFORE contact resolution — contacts can take seconds for DashPay
+                // users and should not block the UI from becoming fully interactive.
+                _isBuildingCache.value = false
+                _transactionsLoaded.value = true
 
-            // Resolve contacts in the background.  Launch as a separate coroutine so
-            // it does not block the next rebuildWrappedList call when batch tx updates
-            // arrive during sync.  viewModelWorkerScope ensures thread-safe access to
-            // contactsByTxId without races against the metadata observer.
-            log.info("STARTUP rebuildWrappedList DONE (_transactionsLoaded=true) at {}", System.currentTimeMillis())
-            viewModelWorkerScope.launch { resolveAllContacts() }
+                // Resolve contacts in the background.  Launch as a separate coroutine so
+                // it does not block the next rebuildWrappedList call when batch tx updates
+                // arrive during sync.  viewModelWorkerScope ensures thread-safe access to
+                // contactsByTxId without races against the metadata observer.
+                log.info("STARTUP rebuildWrappedList DONE (_transactionsLoaded=true) at {}", System.currentTimeMillis())
+                viewModelWorkerScope.launch { resolveAllContacts() }
+            }
+        } finally {
+            _isBuildingCache.value = false
         }
     }
 
