@@ -1008,9 +1008,12 @@ class MainViewModel @Inject constructor(
 
                 if (!added) {
                     val wrapper = createSingleTxWrapper(tx)
+                    // Always write to the display cache regardless of the active filter so
+                    // the tx appears when the user switches to a filter that includes it.
+                    // (Same pattern as CoinJoin/CrowdNode above.)  Only gate mutableList.add.
+                    affectedWrappers.add(wrapper)
                     if (wrapper.passesFilter(filter, metadata)) {
                         mutableList.add(wrapper)
-                        affectedWrappers.add(wrapper)
                     }
                 }
             }
