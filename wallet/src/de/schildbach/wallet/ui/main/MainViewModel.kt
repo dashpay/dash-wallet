@@ -750,12 +750,9 @@ class MainViewModel @Inject constructor(
     }
 
     /**
-     * Render [wrappers] to [TxDisplayCacheEntry] rows and write to Room.
-     *
-     * To minimize latency, the first [INITIAL_RENDER_SIZE] rows are written atomically
-     * (replacing the old cache) so the UI shows live data as fast as possible.  The
-     * remaining rows are inserted in a second pass without another full replace — they
-     * don't affect scroll position since the first page is already visible.
+     * Render [wrappers] to [TxDisplayCacheEntry] rows and write to Room, then switch
+     * the pager to [TxDataSource.RoomLive].  All rows are written before the switch so
+     * the pager never sees a partial table.
      *
      * Runs synchronously on the caller's coroutine context ([viewModelWorkerScope]) to
      * avoid racing with concurrent rebuilds.
@@ -776,22 +773,10 @@ class MainViewModel @Inject constructor(
             return TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
         }
 
-        val initialBatch = wrappers.take(INITIAL_RENDER_SIZE).map { renderEntry(it) }
-        // Atomic replace — PagingSource sees either old data or the new first page, never empty.
-        txDisplayCacheDao.replaceAll(initialBatch)
-        // Switch from PrebuiltCache to RoomLive now that fresh data is in Room.
-        // Room's InvalidationTracker will auto-invalidate after replaceAll, so the pager
-        // reloads from the DB (which now has the live first page).
+        val allEntries = wrappers.map { renderEntry(it) }
+        txDisplayCacheDao.replaceAll(allEntries)
+        log.info("updateDisplayCache: {} rows in {}ms", allEntries.size, System.currentTimeMillis() - t0)
         _txDataSource.value = TxDataSource.RoomLive(filterFlag)
-        val t1 = System.currentTimeMillis()
-        log.info("updateDisplayCache: first {} rows in {}ms (switched to RoomLive)", initialBatch.size, t1 - t0)
-
-        if (wrappers.size > INITIAL_RENDER_SIZE) {
-            val rest = wrappers.drop(INITIAL_RENDER_SIZE).map { renderEntry(it) }
-            txDisplayCacheDao.insertAll(rest)
-            log.info("updateDisplayCache: remaining {} rows in {}ms (total {}ms)",
-                rest.size, System.currentTimeMillis() - t1, System.currentTimeMillis() - t0)
-        }
     }
 
     /**
@@ -1083,8 +1068,6 @@ class MainViewModel @Inject constructor(
         private const val BATCHING_PERIOD = 500L
         private const val DIRECTION_KEY = "tx_direction"
         private const val TIME_SKEW_TOLERANCE = 3600000L // seconds (1 hour)
-        /** Number of rows rendered and written to Room immediately for fast first-paint. */
-        private const val INITIAL_RENDER_SIZE = 100
 
         private val log = LoggerFactory.getLogger(MainViewModel::class.java)
     }
