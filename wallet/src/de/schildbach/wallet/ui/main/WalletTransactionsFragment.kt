@@ -117,9 +117,18 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                             TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
                         }
                         else -> {
-                            // Group row tapped before live rebuild finished — ignore.
-                            log.warn("tapped group row {} before live wrappers available", rowView.id)
-                            null
+                            // Group row whose wrapper isn't loaded yet (lazy startup) —
+                            // load it on demand so the user can still open the detail view.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                val wrapper = viewModel.loadGroupWrapper(rowView.id)
+                                if (wrapper != null) {
+                                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                    TransactionGroupDetailsFragment(wrapper).show(requireActivity())
+                                } else {
+                                    log.warn("group {} not found in cache — cannot open details", rowView.id)
+                                }
+                            }
+                            null  // fragment already shown inside the coroutine above
                         }
                     }
 

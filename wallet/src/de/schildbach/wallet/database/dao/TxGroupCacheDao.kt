@@ -40,6 +40,37 @@ interface TxGroupCacheDao {
     @Query("SELECT COUNT(DISTINCT groupId) FROM tx_group_cache")
     suspend fun getGroupCount(): Int
 
+    /**
+     * Returns only the "active" groups that may still receive new transactions:
+     * - CoinJoin groups dated [today] (today's mixing sessions)
+     * - All CrowdNode groups (signup flow may be in progress)
+     *
+     * Used by [MainViewModel.initializeFactoriesFromCache] to seed factory state
+     * at startup without loading the entire group history.
+     */
+    @Query(
+        "SELECT * FROM tx_group_cache " +
+            "WHERE (wrapperType = 'coinjoin' AND groupDate = :today) " +
+            "   OR wrapperType = 'crowdnode' " +
+            "ORDER BY groupId, sortOrder ASC"
+    )
+    suspend fun getActiveGroups(today: String): List<TxGroupCacheEntry>
+
+    /**
+     * Batch lookup: returns group entries whose [TxGroupCacheEntry.txId] is in [txIds].
+     * Used to lazily resolve known transactions that are not yet in the in-memory wrapper
+     * list, without a separate round-trip per transaction.
+     */
+    @Query("SELECT * FROM tx_group_cache WHERE txId IN (:txIds)")
+    suspend fun getGroupsForTxIds(txIds: List<String>): List<TxGroupCacheEntry>
+
+    /**
+     * Returns all entries for a single group in sort order — used for on-demand wrapper
+     * reconstruction when a user taps a group row before the full list is loaded.
+     */
+    @Query("SELECT * FROM tx_group_cache WHERE groupId = :groupId ORDER BY sortOrder ASC")
+    suspend fun getGroupEntries(groupId: String): List<TxGroupCacheEntry>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entries: List<TxGroupCacheEntry>)
 
