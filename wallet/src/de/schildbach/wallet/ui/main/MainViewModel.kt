@@ -439,12 +439,29 @@ class MainViewModel @Inject constructor(
 
                 // Re-render only the affected wrappers and upsert them into the cache.
                 // Room's InvalidationTracker auto-invalidates the pager — no manual call needed.
-                val affectedWrappers = wrappedTransactionList.filter { wrapper ->
+                val inMemoryWrappers = wrappedTransactionList.filter { wrapper ->
                     wrapper.transactions.keys.any { it in changedIds }
                 }
+                // Under lazy loading, wrappers for historical txs may not be in memory yet.
+                // Look them up from the group cache and load on demand.
+                val inMemoryTxIds = inMemoryWrappers.flatMap { it.transactions.keys }.toSet()
+                val missingTxIds = changedIds.filter { it !in inMemoryTxIds }.map { it.toString() }
+                val lazyWrappers = if (missingTxIds.isNotEmpty()) {
+                    val cacheEntries = txGroupCacheDao.getGroupsForTxIds(missingTxIds)
+                    val loadedById = HashMap<String, TransactionWrapper>()
+                    cacheEntries.mapNotNull { entry ->
+                        loadedById[entry.groupId]
+                            ?: loadWrapperOnDemand(entry.groupId, entry.wrapperType)
+                                ?.also { loadedById[it.id] = it }
+                    }.distinctBy { it.id }
+                } else emptyList()
+                val affectedWrappers = (inMemoryWrappers + lazyWrappers).distinctBy { it.id }
                 if (affectedWrappers.isNotEmpty()) {
                     val newEntries = affectedWrappers.map { wrapper ->
-                        val txId = wrapper.transactions.keys.first()
+                        // Prefer the tx that actually changed metadata (so the memo is picked up);
+                        // fall back to the first tx key for grouped wrappers with no direct match.
+                        val txId = wrapper.transactions.keys.firstOrNull { it in changedIds }
+                            ?: wrapper.transactions.keys.first()
                         val row = TransactionRowView.fromTransactionWrapper(
                             wrapper,
                             walletData.transactionBag,
