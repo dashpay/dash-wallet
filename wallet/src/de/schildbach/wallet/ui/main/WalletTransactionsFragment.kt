@@ -105,9 +105,17 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                     // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
                     val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
                     val fragment = when {
-                        txWrapper != null -> {
+                        txWrapper != null && txWrapper.transactions.size > 1 -> {
+                            // Multi-tx group (CrowdNode / CoinJoin) — open group detail.
                             viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
                             TransactionGroupDetailsFragment(txWrapper)
+                        }
+                        txWrapper != null -> {
+                            // Single-tx wrapper found in memory — open TX detail directly.
+                            // TransactionGroupDetailsFragment would show the wrong (default
+                            // CrowdNode) icon for non-group wrappers, so route here instead.
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
                         }
                         ServiceName.isDashSpend(rowView.service) -> {
                             viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)

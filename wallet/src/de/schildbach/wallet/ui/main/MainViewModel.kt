@@ -183,7 +183,8 @@ class MainViewModel @Inject constructor(
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
     // The current active PagingSource — kept so contact changes can trigger manual invalidate().
     // Only used for the RoomLive paging source; PrebuiltCache uses a separate in-memory source.
-    private var currentPagingSource: PagingSource<Int, TxDisplayCacheEntry>? = null
+    // MutableStateFlow provides atomic read/write across Paging's internal threads and coroutine scopes.
+    private val _currentPagingSource = MutableStateFlow<PagingSource<Int, TxDisplayCacheEntry>?>(null)
 
     /**
      * Two-phase data source for the transaction list:
@@ -196,9 +197,14 @@ class MainViewModel @Inject constructor(
     private sealed class TxDataSource {
         object Empty : TxDataSource()
         class PrebuiltCache(val rows: List<HistoryRowView>) : TxDataSource()
-        data class RoomLive(val filterFlag: Int) : TxDataSource()
+        // Filter is stored separately in _liveFilterFlag so filter changes can be applied
+        // via PagingSource.invalidate() without cancelling the Pager (avoids flicker).
+        object RoomLive : TxDataSource()
     }
     private val _txDataSource = MutableStateFlow<TxDataSource>(TxDataSource.Empty)
+    // Holds the active Room WHERE-clause filter. Written before _txDataSource switches to
+    // RoomLive, and updated in-place (+ invalidate) when the user changes the filter tab.
+    private val _liveFilterFlag = MutableStateFlow(0)
 
     /**
      * Cache rows for the fast startup phase, exposed so [WalletTransactionsFragment] can call
@@ -218,16 +224,19 @@ class MainViewModel @Inject constructor(
                 // to avoid PagingDataAdapter's slow coroutine-dispatch chain at startup.
                 is TxDataSource.PrebuiltCache -> flowOf(PagingData.empty())
                 is TxDataSource.RoomLive -> {
-                    val contacts = contactsByTxId
-                    val filterFlag = source.filterFlag
                     Pager(
                         config = pagingConfig,
                         pagingSourceFactory = {
-                            txDisplayCacheDao.pagingSource(filterFlag).also { currentPagingSource = it }
+                            // Read the filter flag at factory-call time so that invalidate()-based
+                            // filter changes pick up the new flag without recreating the Pager.
+                            txDisplayCacheDao.pagingSource(_liveFilterFlag.value).also { _currentPagingSource.value = it }
                         }
                     ).flow.map { pagingData ->
                         pagingData
-                            .map { entry -> entry.toTransactionRowView(contacts[entry.rowId]) as HistoryRowView }
+                            // Read contactsByTxId at render time (not at branch-entry) so each page
+                            // after an invalidate() sees the contacts resolved since the Pager started.
+                            // @Volatile on the field ensures cross-thread visibility from workerScope.
+                            .map { entry -> entry.toTransactionRowView(contactsByTxId[entry.rowId]) as HistoryRowView }
                             .insertSeparators { before: HistoryRowView?, after: HistoryRowView? ->
                                 val afterDate = (after as? TransactionRowView)?.let {
                                     Instant.ofEpochMilli(it.time).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -289,7 +298,9 @@ class MainViewModel @Inject constructor(
 
     private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
     private var contacts: Map<String, DashPayProfile> = mapOf()
-    private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
+    // @Volatile so Paging's IO-thread .map lambda always sees the latest write from
+    // viewModelWorkerScope without the stale-snapshot problem of a plain var capture.
+    @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
     private var minContactCreatedDate: LocalDate = LocalDate.now()
     private lateinit var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory
     private lateinit var coinJoinWrapperFactory: CoinJoinTxWrapperFactory
@@ -409,7 +420,8 @@ class MainViewModel @Inject constructor(
                         // pre-loads the first page while factory initialisation runs.  By the
                         // time the Fragment subscribes (~100–200ms later), the first page of
                         // rows is already in the pager's cache and appears with no extra wait.
-                        _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
+                        _liveFilterFlag.value = filter.direction.toFilterFlag()
+                        _txDataSource.value = TxDataSource.RoomLive
                         _transactionsLoaded.value = true
                         initializeFactoriesFromCache()
                     } else {
@@ -418,9 +430,12 @@ class MainViewModel @Inject constructor(
                     }
                 } else {
                     // Direction changed — display cache already has all txs with filterFlags set.
-                    // Just switch the pager's WHERE clause; no wallet access needed.
+                    // Update the filter flag and invalidate the current PagingSource so Paging
+                    // calls pagingSourceFactory() with the new flag.  This keeps the existing
+                    // Pager alive and avoids the flatMapLatest cancel/restart flicker.
                     log.info("direction changed to {} — switching filter flag only", direction)
-                    _txDataSource.value = TxDataSource.RoomLive(filter.direction.toFilterFlag())
+                    _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    _currentPagingSource.value?.invalidate()
                 }
                 walletData.observeTransactions(true, filter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
@@ -533,8 +548,9 @@ class MainViewModel @Inject constructor(
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
                 }
-                currentPagingSource?.invalidate()
+                _currentPagingSource.value?.invalidate()
             }
+            .catch { e -> log.error("wallet reset flow error", e) }
             .launchIn(viewModelScope)
 
         blockchainStateProvider.observeState()
@@ -549,6 +565,7 @@ class MainViewModel @Inject constructor(
                     log.info("blockchain state update: {}; {}; {} -> {}", headersHeight, chainHeight, chainLockBlockHeight, walletData.wallet?.lastBlockSeenHeight)
                 }
             }
+            .catch { e -> log.error("blockchain state flow error", e) }
             .launchIn(viewModelWorkerScope)
 
         // we need the total wallet balance for mixing progress,
@@ -556,12 +573,14 @@ class MainViewModel @Inject constructor(
             .onEach {
                 _totalBalance.value = it
             }
+            .catch { e -> log.error("total balance flow error", e) }
             .launchIn(viewModelScope)
 
         walletData.observeMixedBalance()
             .onEach {
                 _mixedBalance.value = it
             }
+            .catch { e -> log.error("mixed balance flow error", e) }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -572,6 +591,7 @@ class MainViewModel @Inject constructor(
                     .filterNotNull()
             }
             .onEach(_exchangeRate::postValue)
+            .catch { e -> log.error("exchange rate flow error", e) }
             .launchIn(viewModelScope)
 
         walletUIConfig
@@ -581,6 +601,7 @@ class MainViewModel @Inject constructor(
                 exchangeRatesProvider.observeStaleRates(code)
             }
             .onEach(_rateStale::emit)
+            .catch { e -> log.error("stale rates flow error", e) }
             .launchIn(viewModelScope)
 
         // DashPay
@@ -601,6 +622,7 @@ class MainViewModel @Inject constructor(
                         .onEach { forceUpdateNotificationCount() }
                 }
             }
+            .catch { e -> log.error("dashpay notification flow error", e) }
             .launchIn(viewModelScope)
 
         blockchainStateProvider.observeSyncStage()
@@ -615,6 +637,7 @@ class MainViewModel @Inject constructor(
                 }
                 _syncStage.value = syncStage ?: SyncStage.OFFLINE
             }
+            .catch { e -> log.error("sync stage flow error", e) }
             .launchIn(viewModelScope)
         restoringBackup = config.isRestoringBackup
     }
@@ -781,7 +804,8 @@ class MainViewModel @Inject constructor(
         val allEntries = wrappers.map { renderEntry(it) }
         txDisplayCacheDao.replaceAll(allEntries)
         log.info("updateDisplayCache: {} rows in {}ms", allEntries.size, System.currentTimeMillis() - t0)
-        _txDataSource.value = TxDataSource.RoomLive(filterFlag)
+        _liveFilterFlag.value = filterFlag
+        _txDataSource.value = TxDataSource.RoomLive
     }
 
     /**
@@ -1068,6 +1092,14 @@ class MainViewModel @Inject constructor(
         // the existing Pager and create a new one on every tx-batch, causing repeated submitData
         // calls and flickering. Only set RoomLive on the initial transition (handled above).
         log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
+
+        // Attempt to resolve DashPay contacts for any newly-arrived transactions.
+        // resolveAllContacts() is normally only triggered by rebuildWrappedList or a
+        // contacts-change event, so a freshly sent/received contact payment would stay
+        // labeled "Sent"/"Received" until the next rebuild without this call.
+        if (unknownTxs.isNotEmpty()) {
+            resolveAllContacts()
+        }
     }
 
     /** Creates a plain single-tx anonymous [TransactionWrapper]. */
@@ -1169,7 +1201,7 @@ class MainViewModel @Inject constructor(
 
         if (resolved.isNotEmpty()) {
             contactsByTxId = contactsByTxId + resolved
-            currentPagingSource?.invalidate()
+            _currentPagingSource.value?.invalidate()
             log.info("resolveAllContacts: resolved {} contacts for {} candidates",
                 resolved.size, txsToResolve.size)
 
