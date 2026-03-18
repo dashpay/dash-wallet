@@ -1093,12 +1093,94 @@ class MainViewModel @Inject constructor(
         // calls and flickering. Only set RoomLive on the initial transition (handled above).
         log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
 
-        // Attempt to resolve DashPay contacts for any newly-arrived transactions.
-        // resolveAllContacts() is normally only triggered by rebuildWrappedList or a
-        // contacts-change event, so a freshly sent/received contact payment would stay
-        // labeled "Sent"/"Received" until the next rebuild without this call.
+        // Resolve DashPay contacts for newly-arrived transactions only.
+        // resolveAllContacts() is only triggered by rebuildWrappedList or a contacts-change
+        // event, so a freshly sent/received contact payment would stay labeled "Sent"/
+        // "Received" until the next rebuild without this targeted resolution pass.
         if (unknownTxs.isNotEmpty()) {
-            resolveAllContacts()
+            resolveContactsForTransactions(unknownTxs, affectedWrappers)
+        }
+    }
+
+    /**
+     * Resolves DashPay contacts for [newTxs] and upserts the affected display-cache rows.
+     *
+     * Only transactions that are not self-transfers, were sent/received on or after
+     * [minContactCreatedDate], and do not already have a resolved contact are queried.
+     * When contacts are found, [contactsByTxId] is updated and the paging source is
+     * invalidated so the UI reflects the resolved names immediately.
+     *
+     * Must be called from [viewModelWorkerScope] (or a child coroutine thereof).
+     */
+    private suspend fun resolveContactsForTransactions(
+        newTxs: List<Transaction>,
+        affectedWrappers: Set<TransactionWrapper>
+    ) {
+        if (contacts.isEmpty() || !platformRepo.hasBlockchainIdentity) return
+
+        val txsToResolve = newTxs.filter { tx ->
+            !tx.isEntirelySelf(walletData.transactionBag) &&
+                tx.updateTime
+                    .toInstant()
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate() >= minContactCreatedDate &&
+                contactsByTxId[tx.txId.toString()] == null
+        }
+        if (txsToResolve.isEmpty()) return
+
+        val resolved = coroutineScope {
+            txsToResolve
+                .map { tx ->
+                    async(Dispatchers.IO) {
+                        try {
+                            platformRepo.blockchainIdentity.getContactForTransaction(tx)
+                                ?.let { id ->
+                                    contacts[id]?.let { profile ->
+                                        tx.txId.toString() to profile
+                                    }
+                                }
+                        } catch (e: Exception) {
+                            log.warn(
+                                "failed to resolve contact for new tx {}: {}",
+                                tx.txId,
+                                e.message
+                            )
+                            null
+                        }
+                    }
+                }
+                .awaitAll()
+                .filterNotNull()
+                .toMap()
+        }
+        if (resolved.isEmpty()) return
+
+        contactsByTxId = contactsByTxId + resolved
+        _currentPagingSource.value?.invalidate()
+
+        // Upsert display-cache rows with the resolved contact info.
+        val updatedEntries = affectedWrappers
+            .filter { wrapper ->
+                resolved.containsKey(wrapper.transactions.keys.first().toString())
+            }
+            .map { wrapper ->
+                val txId = wrapper.transactions.keys.first()
+                val row = TransactionRowView.fromTransactionWrapper(
+                    wrapper,
+                    walletData.transactionBag,
+                    Constants.CONTEXT,
+                    contact = contactsByTxId[txId.toString()],
+                    metadata = metadata[txId],
+                    chainLockBlockHeight = chainLockBlockHeight
+                )
+                TxDisplayCacheEntry.fromTransactionRowView(
+                    row,
+                    walletApplication,
+                    computeFilterFlags(wrapper)
+                )
+            }
+        if (updatedEntries.isNotEmpty()) {
+            txDisplayCacheDao.insertAll(updatedEntries)
         }
     }
 
