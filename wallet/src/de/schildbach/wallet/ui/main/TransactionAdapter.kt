@@ -76,12 +76,7 @@ class TransactionViewHolder(
     }
 
     fun bind(txView: TransactionRowView, position: Int) {
-        val nextItem = if (itemCountFn() > position + 1) {
-            getItemFn(position + 1)
-        } else {
-            null
-        }
-        val isLastInGroup = nextItem !is TransactionRowView
+        val isLastInGroup = itemCountFn() <= position + 1 || getItemFn(position + 1) !is TransactionRowView
 
         if (drawBackground) {
             binding.root.background = if (isLastInGroup) {
@@ -291,43 +286,12 @@ class TransactionAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder =
+        createHistoryViewHolder(parent, viewType, resources, drawBackground, dashFormat,
+            { itemCount }, { pos -> getItem(pos) }, clickListener)
 
-        return when (viewType) {
-            R.layout.transaction_row -> {
-                val binding = TransactionRowBinding.inflate(inflater, parent, false)
-                TransactionViewHolder(
-                    binding, resources, drawBackground, dashFormat,
-                    { itemCount }, { pos -> getItem(pos) },
-                    clickListener
-                )
-            }
-            R.layout.transaction_group_header -> {
-                val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
-                TransactionGroupHeaderViewHolder(binding)
-            }
-            else -> {
-                throw IllegalArgumentException("viewType $viewType isn't recognized")
-            }
-        }
-    }
-
-    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
-        val item = getItem(position)
-
-        when (holder) {
-            is TransactionViewHolder -> {
-                holder.bind(item as TransactionRowView, position)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
-            }
-            is TransactionGroupHeaderViewHolder -> {
-                val date = (item as HistoryRowView).localDate ?: return
-                holder.bind(date)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
-            }
-        }
-    }
+    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) =
+        bindHistoryViewHolder(holder, getItem(position), position, clickListener)
 }
 
 /**
@@ -352,41 +316,54 @@ class CacheTransactionAdapter(
         }
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder {
-        val inflater = LayoutInflater.from(parent.context)
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistoryViewHolder =
+        createHistoryViewHolder(parent, viewType, resources, drawBackground, dashFormat,
+            { itemCount }, { pos -> currentList.getOrNull(pos) }, clickListener)
 
-        return when (viewType) {
-            R.layout.transaction_row -> {
-                val binding = TransactionRowBinding.inflate(inflater, parent, false)
-                TransactionViewHolder(
-                    binding, resources, drawBackground, dashFormat,
-                    { itemCount }, { pos -> currentList.getOrNull(pos) },
-                    clickListener
-                )
-            }
-            R.layout.transaction_group_header -> {
-                val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
-                TransactionGroupHeaderViewHolder(binding)
-            }
-            else -> {
-                throw IllegalArgumentException("viewType $viewType isn't recognized")
-            }
+    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) =
+        bindHistoryViewHolder(holder, getItem(position), position, clickListener)
+}
+
+private fun createHistoryViewHolder(
+    parent: ViewGroup,
+    viewType: Int,
+    resources: Resources,
+    drawBackground: Boolean,
+    dashFormat: MonetaryFormat,
+    itemCountFn: () -> Int,
+    getItemFn: (Int) -> HistoryRowView?,
+    clickListener: (HistoryRowView, Int, Boolean) -> Unit
+): HistoryViewHolder {
+    val inflater = LayoutInflater.from(parent.context)
+    return when (viewType) {
+        R.layout.transaction_row -> {
+            val binding = TransactionRowBinding.inflate(inflater, parent, false)
+            TransactionViewHolder(binding, resources, drawBackground, dashFormat, itemCountFn, getItemFn, clickListener)
         }
+        R.layout.transaction_group_header -> {
+            val binding = TransactionGroupHeaderBinding.inflate(inflater, parent, false)
+            TransactionGroupHeaderViewHolder(binding)
+        }
+        else -> throw IllegalArgumentException("viewType $viewType isn't recognized")
     }
+}
 
-    override fun onBindViewHolder(holder: HistoryViewHolder, position: Int) {
-        val item = getItem(position)
-
-        when (holder) {
-            is TransactionViewHolder -> {
-                holder.bind(item as TransactionRowView, position)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
-            }
-            is TransactionGroupHeaderViewHolder -> {
-                val date = (item as HistoryRowView).localDate ?: return
-                holder.bind(date)
-                holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
-            }
+private fun bindHistoryViewHolder(
+    holder: HistoryViewHolder,
+    item: HistoryRowView?,
+    position: Int,
+    clickListener: (HistoryRowView, Int, Boolean) -> Unit
+) {
+    item ?: return
+    when (holder) {
+        is TransactionViewHolder -> {
+            holder.bind(item as TransactionRowView, position)
+            holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
+        }
+        is TransactionGroupHeaderViewHolder -> {
+            val date = item.localDate ?: return
+            holder.bind(date)
+            holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
         }
     }
 }

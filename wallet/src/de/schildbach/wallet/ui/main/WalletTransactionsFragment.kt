@@ -212,10 +212,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
         binding.walletTransactionsList.adapter = concatAdapter
 
-        viewLifecycleOwner.observeOnDestroy {
-            binding.walletTransactionsList.adapter = null
-        }
-
         // Log when cache items are actually inserted into the RecyclerView (after DiffUtil).
         cacheAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
             override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {

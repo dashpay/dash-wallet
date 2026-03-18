@@ -171,7 +171,11 @@ data class TxDisplayCacheEntry(
             else       -> R.style.TxReceivedBackground
         }
         val rate = if (exchangeRateFiatCode != null && exchangeRateFiatValue != null) {
-            ExchangeRate(Coin.COIN, Fiat.valueOf(exchangeRateFiatCode, exchangeRateFiatValue))
+            try {
+                ExchangeRate(Coin.COIN, Fiat.valueOf(exchangeRateFiatCode, exchangeRateFiatValue))
+            } catch (_: IllegalArgumentException) {
+                null
+            }
         } else null
         val resolvedContact = contact ?: if (contactUsername != null && contactUserId != null) {
             DashPayProfile(

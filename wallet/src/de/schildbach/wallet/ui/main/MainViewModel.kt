@@ -82,6 +82,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
@@ -120,6 +121,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.dash.wallet.common.transactions.TransactionWrapper
 import org.dash.wallet.common.transactions.batchAndFilterUpdates
+import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSet
 import org.dash.wallet.integrations.crowdnode.transactions.FullCrowdNodeSignUpTxSetFactory
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -129,7 +131,6 @@ import java.util.Currency
 import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.abs
-import kotlin.time.Duration.Companion.hours
 
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
@@ -428,6 +429,7 @@ class MainViewModel @Inject constructor(
                         updateWrappedListForTransactions(txs, filter)
                     }
             }
+            .catch { e -> log.error("transactionsDirection flow error", e) }
             .launchIn(viewModelWorkerScope)
 
         metadataProvider.observePresentableMetadata()
@@ -497,6 +499,7 @@ class MainViewModel @Inject constructor(
                     txDisplayCacheDao.insertAll(entries)
                 }
             }
+            .catch { e -> log.error("metadata flow error", e) }
             .launchIn(viewModelWorkerScope)
 
         platformRepo.observeContacts(
@@ -514,7 +517,9 @@ class MainViewModel @Inject constructor(
             this.contactsByTxId = mapOf()
             // Re-resolve contacts against the current wrapped transaction list
             resolveAllContacts()
-        }.launchIn(viewModelWorkerScope)
+        }
+        .catch { e -> log.error("contacts flow error", e) }
+        .launchIn(viewModelWorkerScope)
 
         walletData.observeWalletReset()
             .onEach {
@@ -786,10 +791,10 @@ class MainViewModel @Inject constructor(
      */
     private suspend fun persistGroupCache(wrappers: Collection<TransactionWrapper>) {
         val entries = wrappers.flatMap { wrapper ->
-            val type = when {
-                wrapper.id.startsWith("coinjoin")  -> TxGroupCacheEntry.TYPE_COINJOIN
-                wrapper.id == "crowdnode"           -> TxGroupCacheEntry.TYPE_CROWDNODE
-                else                                -> TxGroupCacheEntry.TYPE_SINGLE
+            val type = when (wrapper) {
+                is CoinJoinMixingTxSet          -> TxGroupCacheEntry.TYPE_COINJOIN
+                is FullCrowdNodeSignUpTxSet      -> TxGroupCacheEntry.TYPE_CROWDNODE
+                else                            -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
                 .sortedBy { it.updateTime }
@@ -1040,10 +1045,10 @@ class MainViewModel @Inject constructor(
 
         // Update group cache — one row per (wrapper, tx)
         val groupEntries = affectedWrappers.flatMap { wrapper ->
-            val type = when {
-                wrapper.id.startsWith("coinjoin")  -> TxGroupCacheEntry.TYPE_COINJOIN
-                wrapper.id == "crowdnode"           -> TxGroupCacheEntry.TYPE_CROWDNODE
-                else                                -> TxGroupCacheEntry.TYPE_SINGLE
+            val type = when (wrapper) {
+                is CoinJoinMixingTxSet          -> TxGroupCacheEntry.TYPE_COINJOIN
+                is FullCrowdNodeSignUpTxSet      -> TxGroupCacheEntry.TYPE_CROWDNODE
+                else                            -> TxGroupCacheEntry.TYPE_SINGLE
             }
             wrapper.transactions.values
                 .sortedBy { it.updateTime }
