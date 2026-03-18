@@ -163,6 +163,9 @@ import kotlin.jvm.functions.Function0;
 import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.flow.Flow;
 import kotlinx.coroutines.flow.FlowKt;
+import kotlinx.coroutines.flow.MutableStateFlow;
+import kotlinx.coroutines.flow.StateFlowKt;
+
 /**
  * @author Andreas Schildbach
  */
@@ -442,6 +445,7 @@ public class WalletApplication extends MultiDexApplication
                 AuthenticationKeyChain.KeyChainType.INVITATION_FUNDING
         );
         this.wallet = newWallet;
+        walletStateFlow.setValue(newWallet);
         // TODO: move to a wallet creation class
         if (!wallet.hasKeyChain(Constants.BIP44_PATH)) {
             wallet.addKeyChain(Constants.BIP44_PATH);
@@ -748,6 +752,14 @@ public class WalletApplication extends MultiDexApplication
         return wallet;
     }
 
+    private final MutableStateFlow<Wallet> walletStateFlow = StateFlowKt.MutableStateFlow(null);
+    @NonNull
+    @Override
+    public
+    Flow<Wallet> observeWallet() {
+        return walletStateFlow;
+    }
+
     @Nullable
     @Override
     public AuthenticationGroupExtension getAuthenticationGroupExtension() {
@@ -824,7 +836,7 @@ public class WalletApplication extends MultiDexApplication
 
         if (!wallet.getParams().equals(Constants.NETWORK_PARAMETERS))
             throw new Error("bad wallet network parameters: " + wallet.getParams().getId());
-
+        walletStateFlow.setValue(wallet);
         finalizeInitialization();
     }
 
