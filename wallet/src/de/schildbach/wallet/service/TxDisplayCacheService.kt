@@ -675,13 +675,16 @@ class TxDisplayCacheService @Inject constructor(
 
         if (txsToResolve.isEmpty()) return
 
+        // Snapshot contacts before entering the parallel IO section so that IO threads
+        // read an immutable map reference rather than the mutable serviceScope field.
+        val contactsSnapshot = contacts
         val resolved = coroutineScope {
             txsToResolve
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
                             platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
-                                contacts[id]?.let { profile -> tx.txId.toString() to profile }
+                                contactsSnapshot[id]?.let { profile -> tx.txId.toString() to profile }
                             }
                         } catch (e: Exception) {
                             log.warn("failed to resolve contact for tx {}: {}", tx.txId, e.message)
@@ -736,6 +739,9 @@ class TxDisplayCacheService @Inject constructor(
         }
         if (txsToResolve.isEmpty()) return
 
+        // Snapshot contacts before entering the parallel IO section so that IO threads
+        // read an immutable map reference rather than the mutable serviceScope field.
+        val contactsSnapshot = contacts
         val resolved = coroutineScope {
             txsToResolve
                 .map { tx ->
@@ -743,7 +749,7 @@ class TxDisplayCacheService @Inject constructor(
                         try {
                             platformRepo.blockchainIdentity.getContactForTransaction(tx)
                                 ?.let { id ->
-                                    contacts[id]?.let { profile ->
+                                    contactsSnapshot[id]?.let { profile ->
                                         tx.txId.toString() to profile
                                     }
                                 }
