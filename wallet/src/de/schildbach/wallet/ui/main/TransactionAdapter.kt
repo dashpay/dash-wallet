@@ -322,7 +322,8 @@ class TransactionAdapter(
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
             is TransactionGroupHeaderViewHolder -> {
-                holder.bind((item as HistoryRowView).localDate!!)
+                val date = (item as HistoryRowView).localDate ?: return
+                holder.bind(date)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
         }
@@ -382,7 +383,8 @@ class CacheTransactionAdapter(
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
             is TransactionGroupHeaderViewHolder -> {
-                holder.bind((item as HistoryRowView).localDate!!)
+                val date = (item as HistoryRowView).localDate ?: return
+                holder.bind(date)
                 holder.binding.root.setOnClickListener { clickListener.invoke(item, position, false) }
             }
         }

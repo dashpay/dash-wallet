@@ -830,7 +830,12 @@ class MainViewModel @Inject constructor(
         for ((groupId, rows) in byGroup) {
             val wrapperType = rows.first().wrapperType
             val txs = rows.sortedBy { it.sortOrder }.mapNotNull { row ->
-                try { wallet.getTransaction(Sha256Hash.wrap(row.txId)) } catch (_: Exception) { null }
+                try {
+                    wallet.getTransaction(Sha256Hash.wrap(row.txId))
+                } catch (e: IllegalArgumentException) {
+                    log.error("initializeFactoriesFromCache: invalid txId bytes for group {}", groupId, e)
+                    null
+                }
             }
             if (txs.isEmpty()) continue
 
@@ -865,7 +870,12 @@ class MainViewModel @Inject constructor(
         val wallet = walletData.wallet ?: return null
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->
-            try { wallet.getTransaction(Sha256Hash.wrap(row.txId)) } catch (_: Exception) { null }
+            try {
+                wallet.getTransaction(Sha256Hash.wrap(row.txId))
+            } catch (e: IllegalArgumentException) {
+                log.error("loadWrapperOnDemand: invalid txId bytes for group {}", groupId, e)
+                null
+            }
         }
         if (txs.isEmpty()) return null
 
