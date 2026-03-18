@@ -37,9 +37,10 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -57,7 +58,6 @@ import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.unregisterLockScreenDeactivated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
-import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
@@ -164,25 +164,21 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         val liveAdapter = TransactionAdapter(viewModel.balanceDashFormat, resources, true, clickHandler)
 
         // Scroll to top when new live transactions arrive at the top of the list.
-        viewLifecycleOwner.lifecycleScope.launch {
-            // these observers had exceptions after the view was destroyed
-            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                val observer = object : RecyclerView.AdapterDataObserver() {
-                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                        if (positionStart == 0) {
-                            binding.walletTransactionsList.scrollToPosition(0)
-                        }
-                    }
-                }
-
-                liveAdapter.registerAdapterDataObserver(observer)
-                try {
-                    awaitCancellation() // Keeps the block alive
-                } finally {
-                    liveAdapter.unregisterAdapterDataObserver(observer)
+        // Register once per view; unregister on view destroy to avoid duplicate observers
+        // across lifecycle STARTED/STOPPED transitions.
+        val scrollObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                if (positionStart == 0) {
+                    binding.walletTransactionsList.scrollToPosition(0)
                 }
             }
         }
+        liveAdapter.registerAdapterDataObserver(scrollObserver)
+        viewLifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                liveAdapter.unregisterAdapterDataObserver(scrollObserver)
+            }
+        })
 
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
