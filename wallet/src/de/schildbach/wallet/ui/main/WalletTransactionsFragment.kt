@@ -81,6 +81,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
     private var firstPageLoadStartTime: Long = 0L
     private var onViewCreatedTime: Long = 0L
+    private var pendingManualRefresh: Boolean = false
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -158,6 +159,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 message = getString(R.string.history_refresh_dialog_message)
             ).show(requireActivity()) { result ->
                 if (result == true) {
+                    pendingManualRefresh = true
                     viewModel.forceRebuildTransactionCache()
                 }
             }
@@ -321,14 +323,24 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                         firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
                     }
 
-                    binding.loading.isVisible = isLoading || viewModel.isBuildingCache.value
+                    val buildingFromScratch = viewModel.isBuildingCache.value &&
+                        liveAdapter.itemCount == 0 && cacheAdapter.currentList.isEmpty()
+                    binding.loading.isVisible = isLoading || buildingFromScratch
                     if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
                 }
         }
 
-        // Show the "determining transaction history" overlay while the cache is being built.
+        // Show the "determining transaction history" overlay only when building the cache
+        // from scratch (no rows displayed yet). If rows are already visible, suppress the
+        // overlay so the existing list stays on screen during background rebuilds.
         viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
-            binding.loading.isVisible = building
+            val hasRows = viewModel.transactionsLoaded.value &&
+                (liveAdapter.itemCount > 0 || cacheAdapter.currentList.isNotEmpty())
+            binding.loading.isVisible = building && !hasRows
+            if (!building && pendingManualRefresh) {
+                pendingManualRefresh = false
+                Toast.makeText(requireContext(), R.string.history_refresh_complete, Toast.LENGTH_SHORT).show()
+            }
         }
 
         viewModel.blockchainIdentity.observe(viewLifecycleOwner) { identity ->

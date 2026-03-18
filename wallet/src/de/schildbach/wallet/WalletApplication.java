@@ -94,6 +94,7 @@ import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
 import de.schildbach.wallet.service.CoinJoinService;
+import de.schildbach.wallet.service.TxDisplayCacheService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
@@ -225,6 +226,8 @@ public class WalletApplication extends MultiDexApplication
     WalletUIConfig walletUIConfig;
     @Inject
     SecurityInitializer securityInitializer;
+    @Inject
+    TxDisplayCacheService txDisplayCacheService;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
 
