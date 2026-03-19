@@ -69,6 +69,8 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
             handlePositiveButtonClick()
         }
+
+        viewModel.showTransactionResult(isSuccess = true)
     }
 
     private fun handlePositiveButtonClick() {

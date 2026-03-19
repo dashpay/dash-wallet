@@ -58,6 +58,11 @@ class MayaConvertResultViewModel @Inject constructor(
         _isRetryingTransfer = isRetryingTransfer
     }
 
+    fun showTransactionResult(isSuccess: Boolean, errorMessage: String? = null) {
+        _loadingState.value = false
+        _transactionState.value = TransactionState(isSuccess, errorMessage)
+    }
+
     fun logRetry(type: MayaResultType) {
         when (type) {
             MayaResultType.DEPOSIT_ERROR -> {
