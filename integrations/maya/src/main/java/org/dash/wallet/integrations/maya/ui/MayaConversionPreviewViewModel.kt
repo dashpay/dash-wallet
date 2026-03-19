@@ -28,6 +28,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.bitcoinj.core.InsufficientMoneyException
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
@@ -54,8 +55,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
     val commitSwapTradeFailureState = SingleLiveEvent<String>()
 
-    private var sendFundToWalletParams: SendTransactionToWalletParams? = null
-
     private val _swapTradeOrder: MutableLiveData<SwapTradeUIModel> = MutableLiveData()
     val swapTradeOrder: LiveData<SwapTradeUIModel>
         get() = _swapTradeOrder
@@ -66,8 +65,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val sellSwapSuccessState = SingleLiveEvent<Unit>()
     val swapTradeFailureState = SingleLiveEvent<String?>()
 
-    val getUserAccountAddressFailedCallback = SingleLiveEvent<Unit>()
-    val onFailure = SingleLiveEvent<String?>()
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
 
     var isFirstTime = true
@@ -102,6 +99,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
             }
             is ResponseResource.Failure -> {
                 _showLoading.value = false
+                if (result.throwable is InsufficientMoneyException) {
+                    onInsufficientMoneyCallback.call()
+                    return@launch
+                }
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {
                     commitSwapTradeFailureState.call()

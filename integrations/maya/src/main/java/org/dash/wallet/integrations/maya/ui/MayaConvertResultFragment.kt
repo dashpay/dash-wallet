@@ -20,52 +20,81 @@ package org.dash.wallet.integrations.maya.ui
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
+import androidx.core.net.toUri
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.LockScreenAware
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.MayaConvertResultFragmentBinding
+import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
-import androidx.core.net.toUri
 
 @AndroidEntryPoint
 class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment), LockScreenAware {
 
     private val binding by viewBinding(MayaConvertResultFragmentBinding::bind)
     private val viewModel by viewModels<MayaConvertResultViewModel>()
-    private lateinit var loadingDialog: AdaptiveDialog
     private var onBackPressedCallback: OnBackPressedCallback? = null
+    private var currentType: MayaResultType? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         handleBackPress()
+
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
         viewModel.sendInitialTransactionToSMSTwoFactorAuth(params?.params)
 
-        viewModel.loadingState.observe(viewLifecycleOwner) {
-            // setLoadingState(it)
+        viewModel.loadingState.observe(viewLifecycleOwner) { isLoading ->
+            binding.progressRing.isVisible = isLoading
         }
 
         viewModel.transactionState.observe(viewLifecycleOwner) { state ->
             params?.let { setTransactionState(it.type, state) }
         }
 
-        binding.contactCoinbaseSupport.setOnClickListener {
+        binding.buyDialogContactCoinbaseSupport.setOnClickListener {
             openMayaHelp()
         }
 
+        binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
+            handlePositiveButtonClick()
+        }
+
         viewModel.verifyUserAndCompleteTransaction(params?.params, "")
+    }
+
+    private fun handlePositiveButtonClick() {
+        val type = currentType ?: return
+        when (type) {
+            MayaResultType.TRANSFER_DASH_ERROR,
+            MayaResultType.DEPOSIT_ERROR -> {
+                viewModel.logRetry(type)
+                viewModel.isRetryingTransfer(true)
+            }
+            MayaResultType.CONVERSION_ERROR -> {
+                viewModel.logRetry(type)
+                findNavController().popBackStack()
+            }
+            MayaResultType.CONVERSION_SUCCESS,
+            MayaResultType.DEPOSIT_SUCCESS,
+            MayaResultType.TRANSFER_DASH_SUCCESS -> {
+                viewModel.logClose(type)
+                val navController = findNavController()
+                navController.popBackStack(navController.graph.startDestinationId, false)
+            }
+            else -> {}
+        }
     }
 
     private fun openMayaHelp() {
@@ -80,102 +109,98 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
+        binding.progressRing.isGone = true
+        binding.resultContent.isVisible = true
+        binding.coinbaseBuyDialogPositiveButton.isVisible = true
+
         if (state.isTransactionSuccessful) {
             when (transactionType) {
-                TransactionType.BuyDash -> showTransactionStateDialog(MayaResultDialog.Type.DEPOSIT_SUCCESS)
-                TransactionType.BuySwap -> showTransactionStateDialog(MayaResultDialog.Type.CONVERSION_SUCCESS)
-                TransactionType.TransferDash -> showTransactionStateDialog(MayaResultDialog.Type.TRANSFER_DASH_SUCCESS)
-                TransactionType.SellSwap -> showTransactionStateDialog(MayaResultDialog.Type.CONVERSION_SUCCESS)
+                TransactionType.BuyDash -> setDepositSuccess()
+                TransactionType.BuySwap -> setConversionSuccess()
+                TransactionType.TransferDash -> setTransferDashSuccess()
+                TransactionType.SellSwap -> setConversionSuccess()
             }
         } else {
             when (transactionType) {
-                TransactionType.BuyDash -> showTransactionStateDialog(
-                    MayaResultDialog.Type.DEPOSIT_ERROR,
-                    state.responseMessage
-                )
-                TransactionType.BuySwap -> showTransactionStateDialog(
-                    MayaResultDialog.Type.TRANSFER_DASH_ERROR,
-                    state.responseMessage
-                )
-                TransactionType.TransferDash -> showTransactionStateDialog(
-                    MayaResultDialog.Type.TRANSFER_DASH_ERROR,
-                    state.responseMessage
-                )
+                TransactionType.BuyDash -> setDepositError(state.responseMessage)
+                TransactionType.BuySwap -> setTransferDashError(state.responseMessage)
+                TransactionType.TransferDash -> setTransferDashError(state.responseMessage)
                 else -> {}
             }
         }
     }
 
-    private fun setLoadingState(showLoading: Boolean) {
-        if (showLoading) {
-            showProgressDialog()
-        } else {
-            hideProgressDialog()
+    private fun setDepositSuccess() {
+        currentType = MayaResultType.DEPOSIT_SUCCESS
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
+        binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
+        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
+        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+    }
+
+    private fun setDepositError(errorMessage: String?) {
+        currentType = MayaResultType.DEPOSIT_ERROR
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
+        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
+        when {
+            errorMessage.isNullOrEmpty() -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
+            errorMessage.contains(getString(R.string.send_to_wallet_error)) -> binding.coinbaseBuyDialogMessage.text = errorMessage
+            else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }
+        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
+    }
+
+    private fun setConversionSuccess() {
+        currentType = MayaResultType.CONVERSION_SUCCESS
+        val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
+        val source = params?.coinbaseWalletName ?: org.dash.wallet.common.util.Constants.DASH_CURRENCY
+        val destination = params?.params?.amount?.cryptoCode ?: getString(R.string.error)
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
+        binding.coinbaseBuyDialogMessage.text = getString(R.string.maya_it_could_take_up_to_5_minutes, source, destination)
+        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+    }
+
+    private fun setTransferDashSuccess() {
+        currentType = MayaResultType.TRANSFER_DASH_SUCCESS
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
+        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
+        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_10_minutes)
+        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+    }
+
+    private fun setTransferDashError(errorMessage: String?) {
+        currentType = MayaResultType.TRANSFER_DASH_ERROR
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
+        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
+        binding.coinbaseBuyDialogMessage.text = if (errorMessage.isNullOrEmpty()) {
+            getString(R.string.transfer_dash_failed_msg)
+        } else {
+            errorMessage
+        }
+        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
     private fun handleBackPress() {
         // Block back navigation to prevent re-submitting the transaction
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            // Intentionally consume back press without navigating
+            // Intentionally consume back press without navigating for success states
+            if (currentType != MayaResultType.TRANSFER_DASH_SUCCESS &&
+                currentType != MayaResultType.CONVERSION_SUCCESS &&
+                currentType != MayaResultType.DEPOSIT_SUCCESS) {
+                findNavController().popBackStack()
+            }
         }
-    }
-
-    private fun showProgressDialog() {
-        if (::loadingDialog.isInitialized && loadingDialog.dialog?.isShowing == true) {
-            loadingDialog.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(R.string.loading))
-        loadingDialog.show(parentFragmentManager, tag)
-    }
-
-    private fun hideProgressDialog() {
-        if (loadingDialog.isAdded) {
-            loadingDialog.dismissAllowingStateLoss()
-        }
-    }
-
-    private fun showTransactionStateDialog(type: MayaResultDialog.Type, responseMessage: String? = null) {
-        val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
-        val transactionStateDialog = MayaResultDialog.newInstance(
-            type,
-            responseMessage,
-            params?.coinbaseWalletName,
-            destinationCurrency = params?.params?.amount?.cryptoCode
-        ).apply {
-            this.onMayaResultDialogButtonsClickListener =
-                object : MayaResultDialog.MayaBaseResultDialogButtonsClickListener {
-                    override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
-                        when (type) {
-                            MayaResultDialog.Type.TRANSFER_DASH_ERROR, MayaResultDialog.Type.DEPOSIT_ERROR -> {
-                                viewModel.logRetry(type)
-                                viewModel.isRetryingTransfer(true)
-                                dismiss()
-                            }
-                            MayaResultDialog.Type.CONVERSION_ERROR -> {
-                                viewModel.logRetry(type)
-                                dismiss()
-                                findNavController().popBackStack()
-                            }
-                            MayaResultDialog.Type.CONVERSION_SUCCESS,
-                            MayaResultDialog.Type.DEPOSIT_SUCCESS,
-                            MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
-                                viewModel.logClose(type)
-                                dismiss()
-                                val navController = findNavController()
-                                val home = navController.graph.startDestinationId
-                                navController.popBackStack(home, false)
-                            }
-                            else -> {}
-                        }
-                    }
-
-                    override fun onNegativeButtonClick(type: MayaResultDialog.Type) {
-                        viewModel.logClose(type)
-                    }
-                }
-        }
-        transactionStateDialog.showNow(parentFragmentManager, "MayaSwapDashDialog")
     }
 
     override fun onLockScreenActivated() {

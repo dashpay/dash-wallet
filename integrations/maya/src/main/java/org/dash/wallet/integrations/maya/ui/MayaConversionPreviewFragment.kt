@@ -48,6 +48,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
+import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
@@ -142,11 +143,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.CONVERSION_ERROR, it)
+            showBuyOrderDialog(MayaResultType.CONVERSION_ERROR, it)
         }
 
         viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.CONVERSION_SUCCESS)
+            showBuyOrderDialog(MayaResultType.CONVERSION_SUCCESS)
         }
 
         binding.contentOrderReview.mayaFeeInfoContainer.setOnClickListener {
@@ -155,7 +156,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.SWAP_ERROR, it)
+            showBuyOrderDialog(MayaResultType.SWAP_ERROR, it)
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
@@ -178,28 +179,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
         observeNavigationCallBack()
 
-        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.error),
-                getString(R.string.error),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
-
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
                 R.drawable.ic_error,
                 getString(R.string.insufficient_money_title),
-                getString(R.string.insufficient_money_msg),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
-
-        viewModel.onFailure.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.send_coins_error_msg),
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.button_close)
             ).show(requireActivity())
@@ -387,7 +370,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
     }
 
-    private fun showBuyOrderDialog(type: MayaResultDialog.Type, responseMessage: String? = null) {
+    private fun showBuyOrderDialog(type: MayaResultType, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true) {
             transactionStateDialog?.dismissAllowingStateLoss()
         }
@@ -400,21 +383,21 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         ).apply {
             this.onMayaResultDialogButtonsClickListener =
                 object : MayaResultDialog.MayaBaseResultDialogButtonsClickListener {
-                    override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
+                    override fun onPositiveButtonClick(type: MayaResultType) {
                         when (type) {
-                            MayaResultDialog.Type.CONVERSION_ERROR -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                            MayaResultType.CONVERSION_ERROR -> {
+                                //viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
                                 dismiss()
                                 findNavController().popBackStack()
                             }
-                            MayaResultDialog.Type.SWAP_ERROR -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                            MayaResultType.SWAP_ERROR -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
                                 dismiss()
                                 findNavController().popBackStack()
                                 findNavController().popBackStack()
                             }
-                            MayaResultDialog.Type.CONVERSION_SUCCESS -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
+                            MayaResultType.CONVERSION_SUCCESS -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE)
                                 dismiss()
                                 val navController = findNavController()
                                 val home = navController.graph.startDestinationId
@@ -424,7 +407,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                         }
                     }
 
-                    override fun onNegativeButtonClick(type: MayaResultDialog.Type) {
+                    override fun onNegativeButtonClick(type: MayaResultType) {
                         viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
                     }
                 }

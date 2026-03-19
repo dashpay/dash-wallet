@@ -29,6 +29,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
+import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 import org.dash.wallet.integrations.maya.utils.MayaConstants
@@ -116,39 +117,39 @@ class MayaConvertResultViewModel @Inject constructor(
         }
     }
 
-    fun logRetry(type: MayaResultDialog.Type) {
+    fun logRetry(type: MayaResultType) {
         when (type) {
-            MayaResultDialog.Type.DEPOSIT_ERROR -> {
+            MayaResultType.DEPOSIT_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_RETRY, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_ERROR -> {
+            MayaResultType.CONVERSION_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
+            MayaResultType.TRANSFER_DASH_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_RETRY, mapOf())
             }
             else -> {}
         }
     }
 
-    fun logClose(type: MayaResultDialog.Type) {
+    fun logClose(type: MayaResultType) {
         when (type) {
-            MayaResultDialog.Type.DEPOSIT_SUCCESS -> {
+            MayaResultType.DEPOSIT_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.DEPOSIT_ERROR -> {
+            MayaResultType.DEPOSIT_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_SUCCESS -> {
+            MayaResultType.CONVERSION_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_ERROR -> {
+            MayaResultType.CONVERSION_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+            MayaResultType.TRANSFER_DASH_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
+            MayaResultType.TRANSFER_DASH_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}

@@ -34,6 +34,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
+import org.dash.wallet.integrations.maya.model.MayaResultType
 
 class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogMayaResultBinding::bind)
@@ -64,21 +65,20 @@ class MayaResultDialog : DialogFragment() {
         val sourceCurrency = arguments?.getString(ARG_SOURCE) ?: Constants.DASH_CURRENCY
         val destinationCurrency = arguments?.getString(ARG_DESTINATION) ?: getString(R.string.error)
         type?.let {
-            isCancelable = false
             when (type) {
-                Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
-                Type.DEPOSIT_ERROR.ordinal -> setDepositError()
-                Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
-                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(sourceCurrency, destinationCurrency)
-                Type.CONVERSION_ERROR.ordinal -> setConversionError()
-                Type.SWAP_ERROR.ordinal -> setSwapError()
-                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
-                Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
+                MayaResultType.PURCHASE_ERROR.ordinal -> setPurchaseError()
+                MayaResultType.DEPOSIT_ERROR.ordinal -> setDepositError()
+                MayaResultType.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
+                MayaResultType.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(sourceCurrency, destinationCurrency)
+                MayaResultType.CONVERSION_ERROR.ordinal -> setConversionError()
+                MayaResultType.SWAP_ERROR.ordinal -> setSwapError()
+                MayaResultType.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
+                MayaResultType.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
                 onMayaResultDialogButtonsClickListener?.onPositiveButtonClick(
-                    Type.values().first { it.ordinal == type }
+                    MayaResultType.entries.first { it.ordinal == type }
                 )
             }
         }
@@ -208,7 +208,7 @@ class MayaResultDialog : DialogFragment() {
         const val ARG_SOURCE: String = "ARG_SOURCE"
         const val ARG_DESTINATION: String = "ARG_DESTINATION"
         fun newInstance(
-            type: Type,
+            type: MayaResultType,
             responseMessage: String?,
             sourceCurrency: String?,
             destinationCurrency: String?
@@ -225,20 +225,9 @@ class MayaResultDialog : DialogFragment() {
         }
     }
 
-    enum class Type {
-        DEPOSIT_SUCCESS,
-        DEPOSIT_ERROR,
-        PURCHASE_ERROR,
-        CONVERSION_SUCCESS,
-        CONVERSION_ERROR,
-        SWAP_ERROR,
-        TRANSFER_DASH_SUCCESS,
-        TRANSFER_DASH_ERROR
-    }
-
     interface MayaBaseResultDialogButtonsClickListener {
-        fun onPositiveButtonClick(type: Type)
-        fun onNegativeButtonClick(type: Type) {}
+        fun onPositiveButtonClick(type: MayaResultType)
+        fun onNegativeButtonClick(type: MayaResultType) {}
     }
 
     private fun openCoinbaseHelp() {
