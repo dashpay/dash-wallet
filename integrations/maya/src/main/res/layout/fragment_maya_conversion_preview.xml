@@ -64,17 +64,27 @@
         android:id="@+id/confirm_btn_container"
         android:layout_width="0dp"
         android:orientation="horizontal"
+        android:gravity="center"
         style="@style/Button.Primary.Large.Blue"
         android:layout_height="wrap_content"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="@id/content_order_review"
         android:layout_marginBottom="25dp"
         app:layout_constraintStart_toEndOf="@+id/cancel_btn">
+
+        <ProgressBar
+            android:id="@+id/confirm_progress"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
         <ImageView
             android:id="@+id/retry_icon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_retry"
+            android:tint="@color/dash_blue"
             android:visibility="gone"
             />
         <TextView

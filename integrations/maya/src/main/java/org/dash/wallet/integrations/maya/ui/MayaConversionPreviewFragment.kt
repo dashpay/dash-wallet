@@ -40,10 +40,12 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.CenteredImageSpan
+import androidx.core.view.isGone
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
@@ -62,7 +64,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
-    private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var transactionStateDialog: MayaResultDialog? = null
     private var newSwapOrderId: String? = null
@@ -73,6 +74,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
             override fun onTick(millisUntilFinished: Long) {
                 binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                binding.confirmProgress.isGone = true
                 binding.retryIcon.visibility = View.GONE
                 setConfirmBtnStyle(
                     org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue,
@@ -123,9 +125,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         binding.confirmBtnContainer.setOnClickListener {
             countDownTimer.cancel()
             if (isRetrying) {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(requireContext(), R.color.dash_blue)
                 getNewCommitOrder()
                 isRetrying = false
             } else {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(requireContext(), org.dash.wallet.common.R.color.dash_white)
                 newSwapOrderId?.let { orderId ->
                     viewModel.swapTradeUIModel.let {
                         viewModel.commitSwapTrade(orderId)
@@ -135,11 +139,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
-            if (showLoading) {
-                showProgress(R.string.loading)
-            } else {
-                dismissProgress()
-            }
+            binding.confirmProgress.isGone = !showLoading
+            binding.retryIcon.isGone = showLoading || !isRetrying
+            binding.confirmBtnContainer.isEnabled = !showLoading
+            binding.confirmBtnContainer.alpha = if (showLoading) 0.6f else 1.0f
         }
 
         viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
@@ -170,7 +173,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             } else {
                 viewModel.swapTradeUIModel.outputCurrencyName
             }
-            dismissProgress()
             safeNavigate(
                 MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
                     MayaTransactionParams(params, TransactionType.SellSwap, walletName)
@@ -356,20 +358,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         textView.text = spannableString
     }
 
-    private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(parentFragmentManager, "progress")
-    }
-
-    private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-    }
-
     private fun showBuyOrderDialog(type: MayaResultType, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true) {
             transactionStateDialog?.dismissAllowingStateLoss()
@@ -412,7 +400,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                     }
                 }
         }
-        transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
+        transactionStateDialog?.showNow(parentFragmentManager, "MayaResultDialog")
     }
 
     override fun onResume() {
@@ -446,6 +434,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
     private fun setRetryStatus() {
         binding.confirmBtn.text = getString(R.string.button_retry)
+        binding.confirmProgress.isGone = true
         binding.retryIcon.visibility = View.VISIBLE
         isRetrying = true
         setConfirmBtnStyle(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)

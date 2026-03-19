@@ -27,17 +27,6 @@ class MayaAddressInputViewModel @Inject constructor(
     val addressSources: Flow<List<AddressSource>>
         get() = _addressSources.asStateFlow()
 
-    init {
-
-//        inputCurrency
-//            .filterNotNull()
-//            .mapLatest(exchangeIntegrationProvider::getDepositAddresses)
-//            .onEach {
-//                refreshAddressSources(it)
-//            }
-//            .launchIn(viewModelScope)
-    }
-
     private fun refreshAddressSources(it: List<ExchangeIntegration>) {
         val sources = it.map { integration ->
             AddressSource(

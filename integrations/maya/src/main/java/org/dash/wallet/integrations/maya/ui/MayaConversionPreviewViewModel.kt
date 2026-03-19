@@ -18,6 +18,9 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -49,9 +52,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
     private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
     lateinit var swapTradeUIModel: SwapTradeUIModel
-    private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
-    val showLoading: LiveData<Boolean>
-        get() = _showLoading
+    private val _showLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val showLoading: StateFlow<Boolean>
+        get() = _showLoading.asStateFlow()
 
     val commitSwapTradeFailureState = SingleLiveEvent<String>()
 
