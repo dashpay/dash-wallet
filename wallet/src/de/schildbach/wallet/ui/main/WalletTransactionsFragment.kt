@@ -458,9 +458,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun onAcceptInvite() {
+        val invitation = inviteHandlerViewModel.invitation.value ?: return
         val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
             requireContext(),
-            inviteHandlerViewModel.invitation.value!!,
+            invitation,
             inviteHandlerViewModel.fromOnboarding
         )
         startActivity(createUsernameActivityIntent)

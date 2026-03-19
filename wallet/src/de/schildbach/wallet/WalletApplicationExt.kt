@@ -39,6 +39,7 @@ object WalletApplicationExt {
                 transactionMetadataProvider.clear()
             }
             platformRepo.clearDatabase(isWalletWipe)
+            txDisplayCacheService.clearDatabase()
             WorkManager.getInstance(context).cancelAllWork()
         }
     }

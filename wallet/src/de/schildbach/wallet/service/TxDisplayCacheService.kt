@@ -47,6 +47,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -109,6 +110,7 @@ class TxDisplayCacheService @Inject constructor(
     private val pagingConfig = PagingConfig(pageSize = 50, prefetchDistance = 20, enablePlaceholders = false)
 
     // In-memory sorted wrapped list
+    @Volatile
     private var wrappedTransactionList: List<TransactionWrapper> = emptyList()
 
     private val _transactionsLoaded = MutableStateFlow(false)
@@ -133,8 +135,8 @@ class TxDisplayCacheService @Inject constructor(
     @Volatile private var metadata: Map<Sha256Hash, PresentableTxMetadata> = mapOf()
     @Volatile private var contacts: Map<String, DashPayProfile> = mapOf()
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
-    private var minContactCreatedDate: LocalDate = LocalDate.MIN
-    private var chainLockBlockHeight: Int = 0
+    @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
+    @Volatile private var chainLockBlockHeight: Int = 0
 
     private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
     private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
@@ -188,8 +190,11 @@ class TxDisplayCacheService @Inject constructor(
         serviceScope.launch {
             val t0 = System.currentTimeMillis()
             val cachedRows = txDisplayCacheDao.getAll()
-            log.info("STARTUP tx_display_cache loaded {} rows in {}ms",
-                cachedRows.size, System.currentTimeMillis() - t0)
+            log.info(
+                "STARTUP tx_display_cache loaded {} rows in {}ms",
+                cachedRows.size,
+                System.currentTimeMillis() - t0
+            )
             if (cachedRows.isNotEmpty()) {
                 val contacts = contactsByTxId
                 val historyRows = ArrayList<HistoryRowView>(cachedRows.size + 32)
@@ -227,6 +232,7 @@ class TxDisplayCacheService @Inject constructor(
                 } else {
                     log.info("direction changed to {} — switching filter flag only", direction)
                     _liveFilterFlag.value = filter.direction.toFilterFlag()
+                    _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
                     _currentPagingSource.value?.invalidate()
                 }
                 walletData.observeTransactions(true, filter)
@@ -305,7 +311,7 @@ class TxDisplayCacheService @Inject constructor(
             .onEach { contacts ->
                 this.minContactCreatedDate = contacts.minOfOrNull { it.dashPayProfile.createdAt }?.let {
                     Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
-                } ?: LocalDate.now()
+                } ?: LocalDate.MIN
                 val contactsByIdentity = contacts.associate { it.dashPayProfile.userId to it.dashPayProfile }
                 this.contacts = contactsByIdentity
                 this.contactsByTxId = mapOf()
@@ -380,6 +386,14 @@ class TxDisplayCacheService @Inject constructor(
         }
     }
 
+    /** clear database tables during a wipe wallet operation */
+    suspend fun clearDatabase() {
+        txDisplayCacheDao.deleteAll()
+        txGroupCacheDao.deleteAll()
+        wrappedTransactionList = emptyList()
+        _txDataSource.value = TxDataSource.Empty
+    }
+
     private suspend fun rebuildWrappedList(filter: TxDirectionFilter) {
         _isBuildingCache.value = true
         try {
@@ -391,7 +405,9 @@ class TxDisplayCacheService @Inject constructor(
                 val rawCount = wallet.getTransactions(true).size
                 val t1 = System.currentTimeMillis()
 
-                val wrapped = walletData.wrapAllTransactions(crowdNodeWrapperFactory!!, coinJoinWrapperFactory!!)
+                val cnFactory = crowdNodeWrapperFactory ?: return
+                val cjFactory = coinJoinWrapperFactory ?: return
+                val wrapped = walletData.wrapAllTransactions(cnFactory, cjFactory)
                 val t2 = System.currentTimeMillis()
 
                 val filtered = wrapped.filter { it.passesFilter(filter, metadata) }
@@ -400,10 +416,12 @@ class TxDisplayCacheService @Inject constructor(
                 wrappedTransactionList = filtered.sortedByDescending { it.groupDate }
                 val t4 = System.currentTimeMillis()
 
-                log.info("rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
+                log.info(
+                    "rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
                     "getTransactions={}ms wrapAll={}ms filter={}ms sort={}ms total={}ms",
                     rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
-                    t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0)
+                    t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0
+                )
 
                 persistGroupCache(wrapped)
                 updateDisplayCache(wrapped.toList(), filter.direction.toFilterFlag())
@@ -519,8 +537,8 @@ class TxDisplayCacheService @Inject constructor(
             coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
             crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
         }
-        val cjFactory = coinJoinWrapperFactory!!
-        val cnFactory = crowdNodeWrapperFactory!!
+        val cjFactory = coinJoinWrapperFactory ?: return null
+        val cnFactory = crowdNodeWrapperFactory ?: return null
 
         val entries = txGroupCacheDao.getGroupEntries(groupId)
         val txs = entries.sortedBy { it.sortOrder }.mapNotNull { row ->
@@ -672,8 +690,6 @@ class TxDisplayCacheService @Inject constructor(
         }
         txGroupCacheDao.insertAll(groupEntries)
 
-        log.info("updateWrappedListForTransactions: updated {} wrappers", affectedWrappers.size)
-
         if (unknownTxs.isNotEmpty()) {
             resolveContactsForTransactions(unknownTxs, affectedWrappers)
         }
@@ -718,8 +734,7 @@ class TxDisplayCacheService @Inject constructor(
         if (resolved.isNotEmpty()) {
             contactsByTxId = contactsByTxId + resolved
             _currentPagingSource.value?.invalidate()
-            log.info("resolveAllContacts: resolved {} contacts for {} candidates",
-                resolved.size, txsToResolve.size)
+            log.info("resolveAllContacts: resolved {} contacts for {} candidates", resolved.size, txsToResolve.size)
 
             val updatedEntries = wrappedTransactionList
                 .filter { wrapper -> resolved.containsKey(wrapper.transactions.keys.first().toString()) }
@@ -819,7 +834,7 @@ class TxDisplayCacheService @Inject constructor(
         override val id           = tx.txId.toString()
         override val transactions = hashMapOf(tx.txId to tx)
         override val groupDate    = tx.updateTime.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
-        override fun tryInclude(t: Transaction) = true
+        override fun tryInclude(t: Transaction) = t.txId == tx.txId
         override fun getValue(bag: org.bitcoinj.core.TransactionBag) = tx.getValue(bag)
     }
 
@@ -860,5 +875,10 @@ class TxDisplayCacheService @Inject constructor(
 
     private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
         return ServiceName.isDashSpend(metadata[transactions.values.first().txId]?.service)
+    }
+
+    @VisibleForTesting
+    fun close() {
+        serviceScope.cancel()
     }
 }

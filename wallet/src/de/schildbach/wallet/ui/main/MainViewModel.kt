@@ -324,6 +324,7 @@ class MainViewModel @Inject constructor(
                         .filterNotNull()
                         .distinctUntilChanged()
                         .onEach { forceUpdateNotificationCount() }
+                        .launchIn(viewModelScope)
                 }
             }
             .catch { e -> log.error("dashpay notification flow error", e) }
@@ -332,7 +333,7 @@ class MainViewModel @Inject constructor(
         blockchainStateProvider.observeSyncStage()
             .distinctUntilChanged()
             .onEach { syncStage ->
-                if (syncStage == PeerGroup.SyncStage.PREBLOCKS || syncStage == PeerGroup.SyncStage.BLOCKS && !isPlatformAvailable.value) {
+                if (syncStage == SyncStage.PREBLOCKS || syncStage == SyncStage.BLOCKS && !isPlatformAvailable.value) {
                     isPlatformAvailable.value = if (Constants.SUPPORTS_PLATFORM) {
                         platformService.isPlatformAvailable()
                     } else {
@@ -566,8 +567,9 @@ class MainViewModel @Inject constructor(
             false
         } else {
             val isPlatformAvailable = isPlatformAvailable.value
+            val identity = blockchainIdentity.value
             val noIdentityCreatedOrInProgress =
-                (blockchainIdentity.value == null) || blockchainIdentity.value!!.creationState == IdentityCreationState.NONE
+                identity == null || identity.creationState == IdentityCreationState.NONE
             log.info(
                 "platform available: {}; no identity creation is progress: {}",
                 isPlatformAvailable,
