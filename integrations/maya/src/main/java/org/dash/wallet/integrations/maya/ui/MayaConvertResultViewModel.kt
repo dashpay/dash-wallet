@@ -37,7 +37,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertResultViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val mayaWebApi: MayaWebApi,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
@@ -62,7 +62,7 @@ class MayaConvertResultViewModel @Inject constructor(
     ) = viewModelScope.launch {
         val sendTransactionToWalletParams = params?.copy()
         sendTransactionToWalletParams?.let {
-            coinBaseRepository.sendFundsToWallet(it, null)
+            mayaWebApi.sendFundsToWallet(it, null)
         }
     }
 
@@ -80,7 +80,7 @@ class MayaConvertResultViewModel @Inject constructor(
 
         sendTransactionToWalletParams?.let {
             _isRetryingTransfer = false
-            when (val result = coinBaseRepository.sendFundsToWallet(it, twoFaCode)) {
+            when (val result = mayaWebApi.sendFundsToWallet(it, twoFaCode)) {
                 is ResponseResource.Success -> {
                     _loadingState.value = false
                     if (result.value == null) {

@@ -64,14 +64,12 @@ class MayaResultDialog : DialogFragment() {
         val sourceCurrency = arguments?.getString(ARG_SOURCE) ?: Constants.DASH_CURRENCY
         val destinationCurrency = arguments?.getString(ARG_DESTINATION) ?: getString(R.string.error)
         type?.let {
+            isCancelable = false
             when (type) {
                 Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
                 Type.DEPOSIT_ERROR.ordinal -> setDepositError()
                 Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
-                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(
-                    sourceCurrency,
-                    destinationCurrency
-                )
+                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(sourceCurrency, destinationCurrency)
                 Type.CONVERSION_ERROR.ordinal -> setConversionError()
                 Type.SWAP_ERROR.ordinal -> setSwapError()
                 Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)

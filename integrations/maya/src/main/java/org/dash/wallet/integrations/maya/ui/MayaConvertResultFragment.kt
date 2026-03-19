@@ -37,6 +37,7 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.MayaConvertResultFragmentBinding
 import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
+import androidx.core.net.toUri
 
 @AndroidEntryPoint
 class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment), LockScreenAware {
@@ -68,10 +69,10 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
     }
 
     private fun openMayaHelp() {
-        val helpUrl = "https://www.mayaprotocol.com/contact"
+        val helpUrl = "https://www.mayaprotocol.com"
         try {
             val intent = Intent(ACTION_VIEW)
-            intent.data = Uri.parse(helpUrl)
+            intent.data = helpUrl.toUri()
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()
@@ -114,14 +115,9 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
     }
 
     private fun handleBackPress() {
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().previousBackStackEntry?.savedStateHandle?.set("resume_review", true)
-            findNavController().popBackStack()
-        }
-
+        // Block back navigation to prevent re-submitting the transaction
         onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            findNavController().previousBackStackEntry?.savedStateHandle?.set("resume_review", true)
-            findNavController().popBackStack()
+            // Intentionally consume back press without navigating
         }
     }
 
