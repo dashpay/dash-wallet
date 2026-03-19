@@ -112,7 +112,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
                 } else {
                     val message = MayaErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {
-                        commitSwapTradeFailureState.value = result.throwable.localizedMessage
+                        commitSwapTradeFailureState.value = result.throwable.localizedMessage ?: ""
                     } else {
                         commitSwapTradeFailureState.value = message ?: ""
                     }

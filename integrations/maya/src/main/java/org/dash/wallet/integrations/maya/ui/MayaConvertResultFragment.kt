@@ -53,7 +53,6 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         handleBackPress()
 
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
-        viewModel.sendInitialTransactionToSMSTwoFactorAuth(params?.params)
 
         viewModel.loadingState.observe(viewLifecycleOwner) { isLoading ->
             binding.progressRing.isVisible = isLoading
@@ -63,15 +62,13 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
             params?.let { setTransactionState(it.type, state) }
         }
 
-        binding.buyDialogContactCoinbaseSupport.setOnClickListener {
+        binding.contactSupport.setOnClickListener {
             openMayaHelp()
         }
 
         binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
             handlePositiveButtonClick()
         }
-
-        viewModel.verifyUserAndCompleteTransaction(params?.params, "")
     }
 
     private fun handlePositiveButtonClick() {
@@ -125,7 +122,7 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
                 TransactionType.BuyDash -> setDepositError(state.responseMessage)
                 TransactionType.BuySwap -> setTransferDashError(state.responseMessage)
                 TransactionType.TransferDash -> setTransferDashError(state.responseMessage)
-                else -> {}
+                TransactionType.SellSwap -> setSellSwapError(state.responseMessage)
             }
         }
     }
@@ -136,7 +133,7 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -150,7 +147,7 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
             errorMessage.contains(getString(R.string.send_to_wallet_error)) -> binding.coinbaseBuyDialogMessage.text = errorMessage
             else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -163,7 +160,7 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.text = getString(R.string.maya_it_could_take_up_to_5_minutes, source, destination)
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -173,7 +170,7 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_10_minutes)
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -187,7 +184,21 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         } else {
             errorMessage
         }
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
+        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
+    }
+
+    private fun setSellSwapError(errorMessage: String?) {
+        currentType = MayaResultType.SWAP_ERROR
+        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
+        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
+        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
+        binding.coinbaseBuyDialogMessage.text = if (errorMessage.isNullOrEmpty()) {
+            getString(R.string.transfer_failed_msg)
+        } else {
+            errorMessage
+        }
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 

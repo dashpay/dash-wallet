@@ -68,6 +68,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     private var transactionStateDialog: MayaResultDialog? = null
     private var newSwapOrderId: String? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
+    private var networkStatusView: View? = null
 
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
@@ -192,7 +193,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.previewNetworkStatusStub.isVisible = !hasInternet
+        if (!hasInternet) {
+            if (networkStatusView == null) {
+                networkStatusView = binding.previewNetworkStatusStub.inflate()
+            }
+            networkStatusView?.isVisible = true
+        } else {
+            networkStatusView?.isVisible = false
+        }
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 

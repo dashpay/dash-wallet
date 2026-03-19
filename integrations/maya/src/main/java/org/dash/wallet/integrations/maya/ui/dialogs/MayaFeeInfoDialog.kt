@@ -57,29 +57,6 @@ class MayaFeeInfoDialog : DialogFragment() {
         binding.mayaFeeInfoCloseBtn.setOnClickListener { findNavController().navigateUp() }
     }
 
-    private fun openWebPage() {
-        val feeInfoHelpLink = "https://help.coinbase.com/en/coinbase/trading-and-funding/pricing-and-fees/fees"
-        val builder = CustomTabsIntent.Builder()
-        val toolbarColor = ContextCompat.getColor(requireContext(), R.color.colorPrimary)
-        val colorSchemeParams = CustomTabColorSchemeParams.Builder()
-            .setToolbarColor(toolbarColor)
-            .build()
-        val customTabsIntent = builder.setShowTitle(true)
-            .setDefaultColorSchemeParams(colorSchemeParams)
-            .build()
-
-        val uri = Uri.parse(feeInfoHelpLink)
-        CustomTabActivityHelper.openCustomTab(
-            requireActivity(),
-            customTabsIntent,
-            uri
-        ) { _, _ ->
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = uri
-            startActivity(intent)
-        }
-    }
-
     override fun onStart() {
         super.onStart()
         dialog?.apply {

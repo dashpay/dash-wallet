@@ -125,7 +125,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
 
                 val error = result.errorBody
                 if (error.isNullOrEmpty()) {
-                    swapTradeFailedCallback.value = result.throwable.localizedMessage
+                    swapTradeFailedCallback.value = result.throwable.localizedMessage ?: ""
                 } else {
                     val message = MayaErrorResponse.getErrorMessage(error)?.message
                     if (message.isNullOrEmpty()) {

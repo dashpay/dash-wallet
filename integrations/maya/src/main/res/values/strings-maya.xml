@@ -95,7 +95,7 @@
     <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
     <string name="you_dont_own_any_crypto">You don’t own any crypto. Buy some crypto to get started.</string>
     <string name="buy_crypto_on_coinbase">Buy Crypto on Coinbase</string>
-    <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
+    <string name="coinbase_website" translatable="false">https://mayaprotocol.com/</string>
     <string name="purchase_failed">Purchase Failed</string>
     <string name="transfer_failed">Transfer Failed</string>
     <string name="transfer_failed_msg">The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>

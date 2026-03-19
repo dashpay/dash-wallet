@@ -58,65 +58,6 @@ class MayaConvertResultViewModel @Inject constructor(
         _isRetryingTransfer = isRetryingTransfer
     }
 
-    fun sendInitialTransactionToSMSTwoFactorAuth(
-        params: SendTransactionToWalletParams?
-    ) = viewModelScope.launch {
-        val sendTransactionToWalletParams = params?.copy()
-        sendTransactionToWalletParams?.let {
-            mayaWebApi.sendFundsToWallet(it, null)
-        }
-    }
-
-    fun verifyUserAndCompleteTransaction(
-        params: SendTransactionToWalletParams?,
-        twoFaCode: String
-    ) = viewModelScope.launch(Dispatchers.Main) {
-        _loadingState.value = true
-
-        val sendTransactionToWalletParams = if (_isRetryingTransfer) {
-            params?.copy()
-        } else {
-            params
-        }
-
-        sendTransactionToWalletParams?.let {
-            _isRetryingTransfer = false
-            when (val result = mayaWebApi.sendFundsToWallet(it, twoFaCode)) {
-                is ResponseResource.Success -> {
-                    _loadingState.value = false
-                    if (result.value == null) {
-                        _transactionState.value = TransactionState(false)
-                    } else {
-                        _transactionState.value = TransactionState(true)
-                    }
-                }
-
-                is ResponseResource.Failure -> {
-                    _loadingState.value = false
-                    try {
-                        val error = result.errorBody
-                        if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
-                            error?.let { errorMsg ->
-                                val errorContent = MayaErrorResponse.getErrorMessage(errorMsg)
-                                if (errorContent?.id.equals(MayaConstants.ERROR_ID_INVALID_REQUEST, true) &&
-                                    errorContent?.message?.contains(MayaConstants.ERROR_MSG_INVALID_REQUEST) == true
-                                ) {
-                                    twoFaErrorState.call()
-                                } else {
-                                    _transactionState.value = TransactionState(false, errorContent?.message)
-                                }
-                            }
-                        } else {
-                            _transactionState.value = TransactionState(false, null)
-                        }
-                    } catch (e: IOException) {
-                        _transactionState.value = TransactionState(false, null)
-                    }
-                }
-            }
-        }
-    }
-
     fun logRetry(type: MayaResultType) {
         when (type) {
             MayaResultType.DEPOSIT_ERROR -> {

@@ -68,7 +68,7 @@
             tools:text="@string/maya_it_could_take_up_to_2_3_minutes" />
 
         <Button
-            android:id="@+id/buy_dialog_contact_coinbase_support"
+            android:id="@+id/contact_support"
             style="@style/Button.Primary.Small.Blue"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -91,7 +91,6 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="15dp"
-        android:background="@android:color/white"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

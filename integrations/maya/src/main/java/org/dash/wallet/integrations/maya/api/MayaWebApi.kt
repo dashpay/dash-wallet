@@ -348,11 +348,6 @@ open class MayaWebApi @Inject constructor(
         )
     }
 
-    fun sendFundsToWallet(params: SendTransactionToWalletParams, nothing: String?): ResponseResource<Boolean> {
-        log.info("sendFundsToWallet($params, $nothing")
-        return ResponseResource.Success(true)
-    }
-
     fun commitSwapTransaction(tradeId: String, swapTradeUIModel: SwapTradeUIModel): ResponseResource<SwapTradeUIModel> {
         log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
         return ResponseResource.Success(swapTradeUIModel)
