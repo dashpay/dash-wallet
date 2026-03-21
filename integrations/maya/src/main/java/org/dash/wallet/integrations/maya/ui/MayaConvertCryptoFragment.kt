@@ -87,13 +87,20 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()
-            fragment.setViewDetails(getString(R.string.button_continue), null)
-
-            parentFragmentManager.commit {
+            childFragmentManager.commit {
                 setReorderingAllowed(true)
                 add(R.id.enter_amount_fragment_placeholder, fragment)
             }
+        } else {
+            fragment = childFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder) as? ConvertViewFragment
+                ?: ConvertViewFragment.newInstance().also {
+                    childFragmentManager.commit {
+                        setReorderingAllowed(true)
+                        add(R.id.enter_amount_fragment_placeholder, it)
+                    }
+                }
         }
+        fragment.setViewDetails(getString(R.string.button_continue), null)
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)

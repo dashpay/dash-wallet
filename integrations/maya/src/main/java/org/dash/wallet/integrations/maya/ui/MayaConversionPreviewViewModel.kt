@@ -21,7 +21,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
+import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
@@ -31,7 +35,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.bitcoinj.core.InsufficientMoneyException
+import org.dash.wallet.common.transactions.filters.LockedTransaction
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
@@ -40,6 +44,7 @@ import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
@@ -51,6 +56,11 @@ class MayaConversionPreviewViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(MayaConversionPreviewViewModel::class.java)
+        private const val IS_LOCK_TIMEOUT_MS = 10_000L
+    }
+
     lateinit var swapTradeUIModel: SwapTradeUIModel
     private val _showLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val showLoading: StateFlow<Boolean>
@@ -81,6 +91,22 @@ class MayaConversionPreviewViewModel @Inject constructor(
         _showLoading.value = true
         when (val result = mayaBlockchainApi.commitSwapTransaction(tradeId, swapTradeUIModel)) {
             is ResponseResource.Success -> {
+                // Wait for the swap transaction to be IS-locked or confirmed on the network.
+                // This verifies that the transaction was successfully broadcast and seen by peers.
+                // Dash IS locks typically arrive within 1-2 seconds; we allow up to 10 seconds
+                // before proceeding anyway (the tx was sent; lock may arrive later).
+                val txId = result.value.txid
+                if (txId != Sha256Hash.ZERO_HASH) {
+                    val locked = withTimeoutOrNull(IS_LOCK_TIMEOUT_MS) {
+                        walletDataProvider.observeTransactions(true, LockedTransaction(txId)).first()
+                    }
+                    if (locked != null) {
+                        log.info("maya swap tx {} IS-locked or confirmed", txId)
+                    } else {
+                        log.warn("maya swap tx {} not IS-locked within {}ms timeout", txId, IS_LOCK_TIMEOUT_MS)
+                    }
+                }
+
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     commitSwapTradeFailureState.call()

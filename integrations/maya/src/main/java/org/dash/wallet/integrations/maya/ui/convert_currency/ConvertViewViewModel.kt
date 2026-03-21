@@ -63,10 +63,12 @@ class ConvertViewViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
-    private val mayaWebApi: MayaWebApi
+    private val mayaWebApi: MayaWebApi,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
+        private const val KEY_AMOUNT = "amount"
     }
     var destinationCurrency: String? = null
     var destinationAddress: String? = null
@@ -150,6 +152,14 @@ class ConvertViewViewModel @Inject constructor(
         viewModelScope.launch {
             walletUIConfig.get(WalletUIConfig.SELECTED_CURRENCY)?.let {
                 selectedPickerCurrencyCode = it
+            }
+        }
+
+        savedStateHandle.get<Amount>(KEY_AMOUNT)?.let { savedAmount ->
+            when (savedAmount.anchoredType) {
+                CurrencyInputType.Dash -> amount.dash = savedAmount.dash
+                CurrencyInputType.Fiat -> amount.fiat = savedAmount.fiat
+                CurrencyInputType.Crypto -> amount.crypto = savedAmount.crypto
             }
         }
     }
@@ -286,6 +296,7 @@ class ConvertViewViewModel @Inject constructor(
         _dashToCrypto.value = false
         _enteredConvertDashAmount.value = Coin.ZERO
         _enteredConvertCryptoAmount.value = Pair("", "")
+        savedStateHandle.remove<Amount>(KEY_AMOUNT)
     }
 
     fun continueSwap(pickedCurrencyOption: String) {
@@ -434,6 +445,7 @@ class ConvertViewViewModel @Inject constructor(
     fun setEnteredAmount(amount: String, isLocalized: Boolean) {
         _enteredAmount.value = amount
         setAmount(amount, selectedPickerCurrencyCode, isLocalized)
+        savedStateHandle[KEY_AMOUNT] = this.amount.copy()
         log.info("setting amount: {} {}: {}", amount, selectedPickerCurrencyCode, this.amount)
     }
 
