@@ -69,7 +69,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
-    private var loadingDialog: AdaptiveDialog? = null
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
 
     private lateinit var fragment: ConvertViewFragment
@@ -101,16 +100,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             binding.convertView.isEnabled = hasInternet
         }
         convertViewModel.destinationAddress = getArgAddress()
-
-//        viewModel.showLoading.observe(
-//            viewLifecycleOwner
-//        ) {
-//            if (it) {
-//                showProgress(R.string.loading)
-//            } else {
-//                dismissProgress()
-//            }
-//        }
 
         convertViewModel.dashToCrypto.value?.let {
             if (it) {
@@ -432,20 +421,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             requireContext().resources.displayMetrics
         ).toInt()
         binding.convertView.layoutParams = params
-    }
-
-    private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(requireActivity())
-    }
-
-    private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
     }
 
     private fun showNoAssetsError() {
