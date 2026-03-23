@@ -140,6 +140,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
+            binding.cancelBtn.isEnabled = !showLoading
             binding.confirmProgress.isGone = !showLoading
             binding.retryIcon.isGone = showLoading || !isRetrying
             binding.confirmBtnContainer.isEnabled = !showLoading
