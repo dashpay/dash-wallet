@@ -1,16 +1,18 @@
 apply plugin: 'com.android.library'
 
 android {
+    namespace 'org.dash.wallet.common'
     compileSdkVersion 28
-    buildToolsVersion '28.0.2'
 
     defaultConfig {
         minSdkVersion 16
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     publishNonDefault true
@@ -20,9 +22,6 @@ android {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             consumerProguardFiles 'proguard-rules.pro'
-        }
-        debug {
-            debuggable true
         }
     }
 }

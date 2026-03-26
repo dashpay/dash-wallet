@@ -7,7 +7,7 @@ ext {
 repositories {
     mavenLocal()
     maven {
-        url 'http://oss.jfrog.org/artifactory/oss-snapshot-local'
+        url 'https://oss.jfrog.org/artifactory/oss-snapshot-local'
         name 'OJO snapshots'
     }
     maven {
@@ -42,10 +42,11 @@ dependencies {
     implementation 'com.squareup.okhttp:logging-interceptor:2.7.5'
     implementation 'com.squareup.moshi:moshi:1.5.0'
     implementation 'org.slf4j:slf4j-api:1.7.25'
-    implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
-        exclude(group: 'com.google.android', module: 'android')
-    }
-    implementation 'com.github.tony19:logback-android-core:1.1.1-6'
+//    implementation('com.github.tony19:logback-android-classic:1.1.1-6') {
+//        exclude(group: 'com.google.android', module: 'android')
+//    }
+//    implementation 'com.github.tony19:logback-android-core:1.1.1-6'
+    implementation "com.github.tony19:logback-android:2.0.0"
     implementation 'com.google.code.findbugs:jsr305:2.0.3'
 
     implementation project(path: ':common')
@@ -80,8 +81,12 @@ ext {
 }
 
 android {
+    namespace 'de.schildbach.wallet_test'
     compileSdkVersion 28
-    buildToolsVersion '28.0.2'
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     lintOptions {
         abortOnError false

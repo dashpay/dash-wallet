@@ -1,5 +1,5 @@
 ext {
-    dashjVersion = "0.15.2"
+    dashjVersion = "0.15.3"
 }
 
 buildscript {
@@ -9,7 +9,7 @@ buildscript {
     }
 
     dependencies {
-        classpath 'com.android.tools.build:gradle:3.6.0'
+        classpath 'com.android.tools.build:gradle:8.7.3'
         classpath('fr.avianey.androidsvgdrawable:gradle-plugin:3.0.0') {
             exclude group: 'xerces'
         }

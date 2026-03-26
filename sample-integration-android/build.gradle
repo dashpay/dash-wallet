@@ -12,8 +12,8 @@ dependencies {
 }
 
 android {
+    namespace 'de.schildbach.wallet.integration.sample'
     compileSdkVersion 'android-15'
-    buildToolsVersion '28.0.2'
 
     lintOptions { abortOnError false }
 
