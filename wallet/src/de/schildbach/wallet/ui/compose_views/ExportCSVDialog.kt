@@ -28,9 +28,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
@@ -39,22 +39,15 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
-import com.google.common.base.Charsets
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.transactions.TransactionExporter
+import de.schildbach.wallet.ui.more.ToolsViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.FileOutputStream
-import java.io.OutputStreamWriter
 
 private val log = LoggerFactory.getLogger("ExportCSVDialog")
 
@@ -65,47 +58,44 @@ private val log = LoggerFactory.getLogger("ExportCSVDialog")
  */
 fun createExportCSVDialog(
     activity: FragmentActivity,
-    transactionExporter: TransactionExporter,
+    viewModel: ToolsViewModel,
     onDismiss: () -> Unit = {}
 ): ComposeBottomSheet {
-    var isLoading by mutableStateOf(false)
-
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
         forceExpand = false
     ) { dialog ->
+        val exportResult by viewModel.exportCsvResult.collectAsState()
+        val isLoading = exportResult is ToolsViewModel.ExportCsvResult.Loading
+
+        LaunchedEffect(exportResult) {
+            when (val result = exportResult) {
+                is ToolsViewModel.ExportCsvResult.Loading -> {
+                    dialog.dialog?.setCancelable(false)
+                    dialog.dialog?.setCanceledOnTouchOutside(false)
+                }
+                is ToolsViewModel.ExportCsvResult.Success -> {
+                    startSendIntent(activity, result.file)
+                    dialog.dismiss()
+                    onDismiss()
+                    viewModel.resetExportCsvResult()
+                }
+                is ToolsViewModel.ExportCsvResult.Error -> {
+                    dialog.dialog?.setCancelable(true)
+                    dialog.dialog?.setCanceledOnTouchOutside(true)
+                    dialog.dismiss()
+                    onDismiss()
+                    viewModel.resetExportCsvResult()
+                }
+                is ToolsViewModel.ExportCsvResult.Idle -> Unit
+            }
+        }
+
         ExportCSVContent(
             isLoading = isLoading,
             onExportClick = {
                 if (isLoading) return@ExportCSVContent
-                activity.lifecycleScope.launch {
-                    try {
-                        isLoading = true
-                        dialog.dialog?.setCancelable(false)
-                        dialog.dialog?.setCanceledOnTouchOutside(false)
-
-                        withContext(Dispatchers.IO) { transactionExporter.initMetadataMap() }
-                        val csvContent = withContext(Dispatchers.IO) { transactionExporter.exportString() }
-
-                        val reportDir = File(activity.cacheDir, "report").also { it.mkdirs() }
-                        val file = File.createTempFile("transaction-history.", ".csv", reportDir)
-                        withContext(Dispatchers.IO) {
-                            OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8).use { it.write(csvContent) }
-                        }
-
-                        isLoading = false
-                        startSendIntent(activity, file)
-                        dialog.dismiss()
-                        onDismiss()
-                    } catch (e: Exception) {
-                        log.error("Failed to export CSV", e)
-                        isLoading = false
-                        dialog.dialog?.setCancelable(true)
-                        dialog.dialog?.setCanceledOnTouchOutside(true)
-                        dialog.dismiss()
-                        onDismiss()
-                    }
-                }
+                viewModel.exportCsv(activity.cacheDir)
             }
         )
     }
@@ -133,7 +123,7 @@ private fun startSendIntent(activity: FragmentActivity, csvFile: File) {
  * Figma Node ID: 31265:8935
  */
 @Composable
-fun ExportCSVContent(
+internal fun ExportCSVContent(
     isLoading: Boolean = false,
     onExportClick: () -> Unit
 ) {

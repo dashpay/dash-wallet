@@ -18,9 +18,14 @@
 package de.schildbach.wallet.ui.more.tools
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.script.ScriptPattern
@@ -38,16 +43,38 @@ class ZenLedgerViewModel @Inject constructor(
     private val zenLedgerClient: ZenLedgerClient
 ) : ViewModel() {
 
+    sealed class ExportResult {
+        object Idle : ExportResult()
+        object Loading : ExportResult()
+        data class Success(val signUpUrl: String) : ExportResult()
+        object Error : ExportResult()
+    }
+
     companion object {
         private val log = LoggerFactory.getLogger(ZenLedgerViewModel::class.java)
     }
+
+    private val _exportResult = MutableStateFlow<ExportResult>(ExportResult.Idle)
+    val exportResult: StateFlow<ExportResult> = _exportResult.asStateFlow()
+
     suspend fun isSynced(): Boolean {
         return blockchainStateProvider.getState()?.isSynced() ?: false
     }
 
-    var signUpUrl: String? = null
+    fun export() {
+        if (_exportResult.value is ExportResult.Loading) return
+        viewModelScope.launch {
+            _exportResult.value = ExportResult.Loading
+            val url = sendTransactionInformation()
+            _exportResult.value = if (url != null) ExportResult.Success(url) else ExportResult.Error
+        }
+    }
 
-    suspend fun sendTransactionInformation(): Boolean = withContext(Dispatchers.IO) {
+    fun resetExportResult() {
+        _exportResult.value = ExportResult.Idle
+    }
+
+    private suspend fun sendTransactionInformation(): String? = withContext(Dispatchers.IO) {
         val wallet = walletDataProvider.wallet!!
         val transactions = wallet.getTransactions(false)
         val addresses = if (transactions.isEmpty()) {
@@ -63,24 +90,14 @@ class ZenLedgerViewModel @Inject constructor(
             val addresses = arrayListOf<ZenLedgerAddress>()
             transactions.forEach { tx ->
                 tx.outputs.forEach { output ->
-                    if (output.isMine(wallet)) {
-                        log.info(
-                            output.value.toFriendlyString(),
-                            Address.fromPubKeyHash(
-                                Constants.NETWORK_PARAMETERS,
-                                ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                            ).toBase58()
-                        )
+                    if (output.isMine(wallet) && ScriptPattern.isP2PKH(output.scriptPubKey)) {
+                        val address = Address.fromPubKeyHash(
+                            Constants.NETWORK_PARAMETERS,
+                            ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+                        ).toBase58()
+                        log.info(output.value.toFriendlyString(), address)
                         addresses.add(
-                            ZenLedgerAddress(
-                                DASH_CURRENCY,
-                                DASH_CURRENCY,
-                                Address.fromPubKeyHash(
-                                    Constants.NETWORK_PARAMETERS,
-                                    ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                                ).toBase58(),
-                                "Dash Wallet"
-                            )
+                            ZenLedgerAddress(DASH_CURRENCY, DASH_CURRENCY, address, "Dash Wallet")
                         )
                     }
                 }
@@ -93,15 +110,15 @@ class ZenLedgerViewModel @Inject constructor(
                 zenLedgerClient.getToken()
                 log.info("zenledger: obtained token successfully")
                 val request = ZenLedgerCreatePortfolioRequest(addresses)
-                signUpUrl = zenLedgerClient.getSignupUrl(request)
+                val signUpUrl = zenLedgerClient.getSignupUrl(request)
                 log.info("zenledger: obtained signup url successfully: {}", signUpUrl)
-                true
+                signUpUrl
             } else {
-                false
+                null
             }
         } catch (e: Exception) {
             log.error("zenledger: send addresses error:", e)
-            false
+            null
         }
     }
 }

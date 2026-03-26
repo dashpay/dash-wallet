@@ -27,7 +27,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
-import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
@@ -133,30 +132,21 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
         binding.transactionExport.setOnClickListener {
             if (isSyncing) {
-                val dialog = AdaptiveDialog.create(
+                AdaptiveDialog.create(
                     null,
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
                     getString(R.string.button_close)
-                )
-                dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
+                ).show(parentFragmentManager, "requireSyncing")
             } else {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        val watch = Stopwatch.createStarted()
-                        val transactionExporter = viewModel.getTransactionExporter()
-                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
-                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-                        createExportCSVDialog(
-                            activity = requireActivity(),
-                            transactionExporter = transactionExporter,
-                            onDismiss = { (requireActivity() as? SecureActivity)?.turnOnAutoLogout() }
-                        ).show(requireActivity().supportFragmentManager, "export_csv_dialog")
-                    } catch (e: Exception) {
-                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                    }
-                }
+                viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                createExportCSVDialog(
+                    activity = requireActivity(),
+                    viewModel = viewModel,
+                    onDismiss = { (requireActivity() as? SecureActivity)?.turnOnAutoLogout() }
+                ).show(parentFragmentManager, "export_csv_dialog")
             }
         }
 

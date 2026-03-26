@@ -31,9 +31,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -44,7 +45,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.fragment.app.FragmentActivity
-import androidx.lifecycle.lifecycleScope
 import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
@@ -62,22 +62,50 @@ import org.dash.wallet.common.util.openCustomTab
  *
  * Shows the ZenLedger icon, title, description, a link to zenledger.io, and
  * an "Export all transactions" primary action button. Blocks dismissal while
- * [ZenLedgerViewModel.sendTransactionInformation] is running.
+ * [ZenLedgerViewModel.export] is running.
  */
 fun createZenLedgerDialog(
     activity: FragmentActivity,
     viewModel: ZenLedgerViewModel
 ): ComposeBottomSheet {
-    var isLoading by mutableStateOf(false)
-
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
         forceExpand = false
     ) { dialog ->
+        val exportResult by viewModel.exportResult.collectAsState()
+        val isLoading = exportResult is ZenLedgerViewModel.ExportResult.Loading
+        val coroutineScope = rememberCoroutineScope()
+
+        LaunchedEffect(exportResult) {
+            when (val result = exportResult) {
+                is ZenLedgerViewModel.ExportResult.Loading -> {
+                    dialog.dialog?.setCancelable(false)
+                    dialog.dialog?.setCanceledOnTouchOutside(false)
+                }
+                is ZenLedgerViewModel.ExportResult.Success -> {
+                    activity.openCustomTab(result.signUpUrl)
+                    dialog.dismiss()
+                    viewModel.resetExportResult()
+                }
+                is ZenLedgerViewModel.ExportResult.Error -> {
+                    dialog.dialog?.setCancelable(true)
+                    dialog.dialog?.setCanceledOnTouchOutside(true)
+                    AdaptiveDialog.create(
+                        null,
+                        activity.getString(R.string.zenledger_export_title),
+                        activity.getString(R.string.zenledger_export_error),
+                        activity.getString(R.string.button_close)
+                    ).showAsync(activity)
+                    viewModel.resetExportResult()
+                }
+                is ZenLedgerViewModel.ExportResult.Idle -> Unit
+            }
+        }
+
         ZenLedgerContent(
             isLoading = isLoading,
             onExportClick = {
-                activity.lifecycleScope.launch {
+                if (!isLoading) coroutineScope.launch {
                     if (viewModel.isSynced()) {
                         val confirmed = AdaptiveDialog.create(
                             null,
@@ -88,24 +116,7 @@ fun createZenLedgerDialog(
                         ).showAsync(activity) == true
 
                         if (confirmed) {
-                            isLoading = true
-                            dialog.dialog?.setCancelable(false)
-                            dialog.dialog?.setCanceledOnTouchOutside(false)
-
-                            if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
-                                activity.openCustomTab(viewModel.signUpUrl!!)
-                                dialog.dismiss()
-                            } else {
-                                isLoading = false
-                                dialog.dialog?.setCancelable(true)
-                                dialog.dialog?.setCanceledOnTouchOutside(true)
-                                AdaptiveDialog.create(
-                                    null,
-                                    activity.getString(R.string.zenledger_export_title),
-                                    activity.getString(R.string.zenledger_export_error),
-                                    activity.getString(R.string.button_close)
-                                ).showAsync(activity)
-                            }
+                            viewModel.export()
                         }
                     } else {
                         AdaptiveDialog.create(
