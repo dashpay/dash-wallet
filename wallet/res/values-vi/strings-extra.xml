@@ -290,9 +290,6 @@
     <string name="reset_wallet_button">Thiết lập lại ví</string>
 
 
-    <string name="masternode_key_type_owner">Khoá của chủ sở hữu</string>
-    <string name="masternode_key_type_voting">Khoá bỏ phiếu</string>
-    <string name="masternode_key_type_operator">Chìa khoá của người vận hành</string>
     <string name="masternode_key_address">Địa chỉ</string>
     <string name="masternode_key_ip_address_unknown">Không biết</string>
     <string name="masternode_key_revoked">Đã thu hồi</string>

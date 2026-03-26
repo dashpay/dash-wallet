@@ -396,11 +396,6 @@
     <string name="reclassify_transactions_linked_accounts_message">بشكل افتراضي ، سيتم تمييز جميع المعاملات من وإلى حساباتك المرتبطة (التبادلات ، Staking ، إلخ) على أنها تحويلات.</string>
     <string name="reclassify_transactions_change_explanation">اختر أي معاملة من الصفحة الرئيسية وقم بتغيير الفئة في صفحة تفاصيل المعاملة.</string>
 
-    <string name="masternode_keys_title">مفاتيح ماسترنود</string>
-    <string name="masternode_key_type_owner">مفاتيح المالك</string>
-    <string name="masternode_key_type_voting">مفاتيح التصويت</string>
-    <string name="masternode_key_type_operator">مفاتيح المشغل</string>
-    <string name="masternode_key_type_platform">المعرف الشخصي التابع لعقدة Evolution</string>
     <string name="masternode_key_type_total">%dمفاتيح</string>
     <string name="masternode_key_type_used">%dمستعملة</string>
     <string name="masternode_key_pair_index">%dزوج المفتاح</string>

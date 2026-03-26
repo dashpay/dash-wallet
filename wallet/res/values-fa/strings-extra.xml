@@ -292,7 +292,6 @@
     <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
-    <string name="about_copyright">کپی‌رایت ۲۰۲۵ © Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش‌پی والت %s</string>
     <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
@@ -436,11 +435,6 @@
     <string name="reclassify_transactions_linked_accounts_message">به صورت پیشفرض، همه تراکنش‌‌ها به یا از حساب‌های متصل (صرافی‌ها، استیکینگ و ...) به عنوان تراکنش در نظر گرفته می‌شوند. </string>
     <string name="reclassify_transactions_change_explanation">هر تراکنشی که خواستید را از صفحه اصلی انتخاب کنید و دسته‌بندی آن را در صفحه جزئیات تغییر دهید. </string>
 
-    <string name="masternode_keys_title">کلید مسترنود</string>
-    <string name="masternode_key_type_owner">کلیدهای مالک</string>
-    <string name="masternode_key_type_voting">کلیدهای رای‌دهی</string>
-    <string name="masternode_key_type_operator">کلیدهای اپراتور</string>
-    <string name="masternode_key_type_platform">کلیدهای شناسه اولوشن نود</string>
     <string name="masternode_key_type_total">%dعدد کلید</string>
     <string name="masternode_key_type_used">%dعدد استفاده شده</string>
     <string name="masternode_key_pair_index">%dعدد جفت‌کلید</string>

@@ -296,6 +296,7 @@
     <string name="bitmap_fragment_share">Condividi…</string>
     <string name="extended_public_key_fragment_title">Chiave pubblica estesa</string>
     <string name="extended_public_key_fragment_share">Condividi xpub…</string>
+    <string name="extended_public_key_share_key">Condividi la chiave</string>
     <string name="report_issue_dialog_title_issue">Segnala un problema</string>
     <string name="report_issue_dialog_title_crash">"Crash" precedente rilevato</string>
     <string name="report_issue_dialog_title_transaction">Segnala un problema con il pagamento selezionato</string>

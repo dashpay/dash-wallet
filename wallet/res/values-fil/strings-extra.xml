@@ -290,7 +290,6 @@
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
@@ -434,11 +433,6 @@
     <string name="reclassify_transactions_linked_accounts_message">bilang default lahat ng mga transaksyon papunta o mula sa iyong mga naka-link na account (palitan, staking, atbp) ay mamarkahan bilang mga paglilipat.</string>
     <string name="reclassify_transactions_change_explanation">Pumili ng anumang transaksyon mula sa homepage at baguhin ang kategorya sa pahina ng mga detalye ng transaksyon.</string>
 
-    <string name="masternode_keys_title">Mga Masternode Key</string>
-    <string name="masternode_key_type_owner">Susi ng may-ari</string>
-    <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
-    <string name="masternode_key_type_operator">Operator na mga Susi</string>
-    <string name="masternode_key_type_platform">Mga key ng Evolution Node ID</string>
     <string name="masternode_key_type_total">%d mga susi</string>
     <string name="masternode_key_type_used">%d ginamit</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

@@ -290,7 +290,6 @@
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Πορτοφόλι %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
@@ -434,11 +433,6 @@
     <string name="reclassify_transactions_linked_accounts_message">από προεπιλογή, όλες οι συναλλαγές προς ή από τους συνδεδεμένους λογαριασμούς σας (ανταλλαγές, staking, κ.λπ.) θα επισημαίνονται ως μεταφορές.</string>
     <string name="reclassify_transactions_change_explanation">Επιλέξτε οποιαδήποτε συναλλαγή από την αρχική σελίδα και αλλάξτε την κατηγορία στη σελίδα λεπτομερειών της συναλλαγής.</string>
 
-    <string name="masternode_keys_title"> Κλειδιά Masternode</string>
-    <string name="masternode_key_type_owner">Κλειδιά Κατόχου</string>
-    <string name="masternode_key_type_voting">Κλειδιά ψήφου</string>
-    <string name="masternode_key_type_operator">Κλειδιά Χειριστή</string>
-    <string name="masternode_key_type_platform">Κλειδιά Evolution Node ID </string>
     <string name="masternode_key_type_total">%d κλειδιά</string>
     <string name="masternode_key_type_used">%d χρησιμοποιείται</string>
     <string name="masternode_key_pair_index">Ζεύγος κλειδιών %d</string>

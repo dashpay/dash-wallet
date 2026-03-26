@@ -296,7 +296,6 @@
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
-    <string name="about_copyright">Autorské práva © 2025 Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Peňaženka DashPay %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
@@ -440,11 +439,6 @@
     <string name="reclassify_transactions_linked_accounts_message">v predvolenom nastavení budú všetky transakcie do alebo z vašich prepojených účtov (výmeny, vkladanie atď.) označené ako prevody.</string>
     <string name="reclassify_transactions_change_explanation">Na domovskej stránke vyberte ľubovoľnú transakciu a zmeňte kategóriu na stránke podrobností transakcie.</string>
 
-    <string name="masternode_keys_title">Kľúče Masternode</string>
-    <string name="masternode_key_type_owner">Kľúče vlastníka</string>
-    <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
-    <string name="masternode_key_type_operator">Kľúče operátora</string>
-    <string name="masternode_key_type_platform">Identifikačné kľúče uzla Evolution</string>
     <string name="masternode_key_type_total">%d kľúče</string>
     <string name="masternode_key_type_used">%d použité</string>
     <string name="masternode_key_pair_index">Kľúčový pár %d</string>

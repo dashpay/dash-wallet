@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Potwierdź</string>
     <string name="dialog_confirm_pay_to">Wyślij do</string>
     <string name="dialog_confirm_secured_by">Zabezpieczony przez</string>
+    <string name="dialog_confirm_connected_to_unsecured">Połączono z (niezabezpieczone)</string>
     <string name="dialog_confirm_fee">Opłata sieci</string>
     <string name="dialog_confirm_total">Całkowite</string>
     <string name="dialog_confirm_accept_contact_request">Zaakceptuj prośbę o dodanie do kontaktów</string>
@@ -289,14 +290,15 @@
 
     <string name="tools_address_book">Książka Adresowa</string>
     <string name="tools_import_private_key">Zaimportuj Klucz Prywatny</string>
+    <string name="import_private_key_description">Ta akcja przeniesie wszystkie monety z papierowego portfela Dash do twojej aplikacji DashPay na tym urządzeniu.</string>
     <string name="tools_network_monitor">Monitor Sieci</string>
-    <string name="tools_show_xpub">Wydłużony Publiczny Klucz</string>
+    <string name="tools_show_xpub">Wydłużony Klucz Publiczny</string>
 
     <string name="about_help_us_improve">Pomóż nam poprawić Twoje wrażenia</string>
     <string name="about_review_and_rate">Przeglądnij i oceń appke</string>
     <string name="about_contact_support">Skontaktuj się z pomocą techniczną</string>
     <string name="about_fork_disclaimer">Jest to aplikacja typu open source opracowana na podstawie portfela Bitcoin</string>
-    <string name="about_copyright">Prawa autorskie © 2025 Dash Core Group</string>
+    <string name="about_copyright">Prawa autorskie © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Ostatnia synchronizacja Eksploruj na urządzeniu</string>
@@ -440,11 +442,11 @@
     <string name="reclassify_transactions_linked_accounts_message">domyślnie wszystkie transakcje do lub z połączonych kont (giełdy, obstawianie itp.) będą oznaczone jako przelewy.</string>
     <string name="reclassify_transactions_change_explanation">Wybierz dowolną transakcję ze strony głównej i zmień kategorię na stronie szczegółów transakcji.</string>
 
-    <string name="masternode_keys_title">Klucze do Masternoda</string>
+    <string name="masternode_keys_title">Klucze Masternoda</string>
     <string name="masternode_key_type_owner">Klucze właściciela</string>
-    <string name="masternode_key_type_voting">Klucze głosujące</string>
+    <string name="masternode_key_type_voting">Klucze głosowania</string>
     <string name="masternode_key_type_operator">Klucze operatora</string>
-    <string name="masternode_key_type_platform">Klucze Evolution Node ID</string>
+    <string name="masternode_key_type_platform">HPMN klucze operatora</string>
     <string name="masternode_key_type_total">%d kluczy</string>
     <string name="masternode_key_type_used">%d użyte</string>
     <string name="masternode_key_pair_index">Para Kluczy %d</string>
@@ -458,7 +460,7 @@
     <string name="masternode_key_ip_address_unknown">Nieznany</string>
     <string name="masternode_key_not_used">Nie użyte</string>
     <string name="masternode_key_revoked">Unieważniony</string>
-    <string name="masternode_key_private_public_base64">Prywatne / Publiczne (base64)</string>
+    <string name="masternode_key_private_public_base64">Prywatne / Publiczne Klucze (base64)</string>
     <string name="timeskew_ahead">przed</string>
     <string name="timeskew_behind">za</string>
 

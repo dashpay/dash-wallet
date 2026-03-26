@@ -294,8 +294,9 @@
     <string name="preferences_extended_public_key_title">Pokaż xpub</string>
     <string name="preferences_extended_public_key_summary">Sprawdź rozszerzony klucz publiczny twojego portfela, tak aby mógł być zaimportowany do innych aplikacji i usług. Bądź ostrożny: ta operacja ujawni poufne dane twojego portfela.</string>
     <string name="bitmap_fragment_share">Udostępnij…</string>
-    <string name="extended_public_key_fragment_title">Wydłużony Publiczny Klucz</string>
+    <string name="extended_public_key_fragment_title">Wydłużony Klucz Publiczny</string>
     <string name="extended_public_key_fragment_share">Udostępnij xpub</string>
+    <string name="extended_public_key_share_key">Udostępnij klucz</string>
     <string name="report_issue_dialog_title_issue">Zgłoś problem</string>
     <string name="report_issue_dialog_title_crash">Wykryto poprzednią awarię</string>
     <string name="report_issue_dialog_title_transaction">Zgłoś problem z wybraną płatnością</string>

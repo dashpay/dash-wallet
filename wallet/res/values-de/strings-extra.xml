@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Bestätigen</string>
     <string name="dialog_confirm_pay_to">Senden an</string>
     <string name="dialog_confirm_secured_by">Geschützt durch</string>
+    <string name="dialog_confirm_connected_to_unsecured">Verbunden mit (nicht gesichert)</string>
     <string name="dialog_confirm_fee">Netzwerk-Gebühr</string>
     <string name="dialog_confirm_total">Gesamt</string>
     <string name="dialog_confirm_accept_contact_request">Kontaktanfrage akzeptieren</string>
@@ -283,6 +284,7 @@
 
     <string name="tools_address_book">Adressbuch</string>
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
+    <string name="import_private_key_description">Diese Aktion bewegt alle Coins von deiner Dash Paper-Wallet in deine DashPay-App auf diesem Gerät</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
     <string name="tools_show_xpub">Extended Public Key</string>
 
@@ -290,7 +292,7 @@
     <string name="about_review_and_rate">Bewerte und beurteile die App</string>
     <string name="about_contact_support">Support kontaktieren</string>
     <string name="about_fork_disclaimer">Dies ist eine Open Source App, die von der Bitcoin Wallet geforked wurde</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Letzte Explore Dash Gerätesynchronisierung</string>
@@ -434,11 +436,11 @@
     <string name="reclassify_transactions_linked_accounts_message">Standardmäßig werden alle Transaktionen auf oder von Ihren verknüpften Konten (Tausch, Staking, usw.) als Überweisungen gekennzeichnet.</string>
     <string name="reclassify_transactions_change_explanation">Wähle eine beliebige Transaktion von der Webseite und ändere die Kategorie auf der Seite mit den Transaktionsdetails.</string>
 
-    <string name="masternode_keys_title">Masternode-Schlüssel</string>
-    <string name="masternode_key_type_owner">Besitzer-Schlüssel (Owner Keys)</string>
-    <string name="masternode_key_type_voting">Abstimmungs-Schlüssel</string>
-    <string name="masternode_key_type_operator">Betreiber-Schlüssel (Operator Keys)</string>
-    <string name="masternode_key_type_platform">Evolution Node ID Keys</string>
+    <string name="masternode_keys_title">Masternode-Keys</string>
+    <string name="masternode_key_type_owner">Owner-Keys</string>
+    <string name="masternode_key_type_voting">Voting-Keys</string>
+    <string name="masternode_key_type_operator">Operator-Keys</string>
+    <string name="masternode_key_type_platform">HPMN-Operator Keys</string>
     <string name="masternode_key_type_total">%d Schlüssel</string>
     <string name="masternode_key_type_used">%d verwendet</string>
     <string name="masternode_key_pair_index">Schlüsselpaar %d</string>

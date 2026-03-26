@@ -23,8 +23,7 @@
     <string name="login_error_title">Impossibile accedere al tuo %s account</string>
     <string name="login_error_message">Si è verificato un errore durante l\'accesso al tuo %s account</string>
     <string name="dash_address">Indirizzo Dash</string>
-    <string name="username">Carica la tua foto, personalizza la tua identità.
- </string>
+    <string name="username">Nome Utente</string>
     <string name="balance">Saldo:</string>
     <string name="nothing_here">Niente qui</string>
 

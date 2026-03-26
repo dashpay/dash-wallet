@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">承認</string>
     <string name="dialog_confirm_pay_to">へ送金する</string>
     <string name="dialog_confirm_secured_by">Secured by</string>
+    <string name="dialog_confirm_connected_to_unsecured">接続済み(セキュリティ保護なし)</string>
     <string name="dialog_confirm_fee">ネットワーク手数料</string>
     <string name="dialog_confirm_total">総計</string>
     <string name="dialog_confirm_accept_contact_request">連絡先リクエストを承認する</string>
@@ -282,14 +283,15 @@
 
     <string name="tools_address_book">アドレスブック</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
+    <string name="import_private_key_description">この操作により、Dashのペーパーウォレット内の全てのコインがこの端末のDashPayアプリに移動されます。</string>
     <string name="tools_network_monitor">ネットワークモニター</string>
-    <string name="tools_show_xpub">拡張公開鍵</string>
+    <string name="tools_show_xpub">拡張したパブリックキー</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>
     <string name="about_contact_support">サポートへ連絡する</string>
     <string name="about_fork_disclaimer">これはビットコインウォレットからフォークしたオープンソースのアプリです</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPayウォレット%s</string>
     <string name="about_last_explore_device_sync">前回のExploreのデバイスの同期</string>
@@ -436,10 +438,10 @@
     <string name="reclassify_transactions_change_explanation">ホームページからいずれかの取引を選択し、取引詳細ページでカテゴリを変更します。</string>
 
     <string name="masternode_keys_title">マスターノードキー</string>
-    <string name="masternode_key_type_owner">所有者の諸々のキー</string>
-    <string name="masternode_key_type_voting">投票の諸々のキー</string>
-    <string name="masternode_key_type_operator">運用者の諸々のキー</string>
-    <string name="masternode_key_type_platform">エボリューションのノードIDキー</string>
+    <string name="masternode_key_type_owner">所有者のキー</string>
+    <string name="masternode_key_type_voting">投票キー</string>
+    <string name="masternode_key_type_operator">オペレーターキー</string>
+    <string name="masternode_key_type_platform">HPMNのオペレーターキー</string>
     <string name="masternode_key_type_total">%d キー</string>
     <string name="masternode_key_type_used">%dは使用済みです</string>
     <string name="masternode_key_pair_index">キーペア%d</string>
