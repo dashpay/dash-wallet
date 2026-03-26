@@ -69,7 +69,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val args by navArgs<MayaConvertCryptoFragmentArgs>()
 
-    private var loadingDialog: AdaptiveDialog? = null
     private var selectedCoinBaseAccount: AccountDataUIModel? = null
 
     private lateinit var fragment: ConvertViewFragment
@@ -88,29 +87,27 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()
-            fragment.setViewDetails(getString(R.string.button_continue), null)
-
-            parentFragmentManager.commit {
+            childFragmentManager.commit {
                 setReorderingAllowed(true)
                 add(R.id.enter_amount_fragment_placeholder, fragment)
             }
+        } else {
+            fragment = childFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder)
+                as? ConvertViewFragment
+                ?: ConvertViewFragment.newInstance().also {
+                    childFragmentManager.commit {
+                        setReorderingAllowed(true)
+                        add(R.id.enter_amount_fragment_placeholder, it)
+                    }
+                }
         }
+        fragment.setViewDetails(getString(R.string.button_continue), null)
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)
             binding.convertView.isEnabled = hasInternet
         }
         convertViewModel.destinationAddress = getArgAddress()
-
-//        viewModel.showLoading.observe(
-//            viewLifecycleOwner
-//        ) {
-//            if (it) {
-//                showProgress(R.string.loading)
-//            } else {
-//                dismissProgress()
-//            }
-//        }
 
         convertViewModel.dashToCrypto.value?.let {
             if (it) {
@@ -133,21 +130,51 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
-            mayaViewModel.inboundAddresses.value.find { inboundAddress ->
-                inboundAddress.chain == "DASH"
-            }?.address?.let { dashAddress ->
+            lifecycleScope.launch {
+                val dashInbound = try {
+                    mayaViewModel.refreshInboundAddresses()
+                    mayaViewModel.inboundAddresses.value.find { it.chain == "DASH" }
+                } catch (e: Exception) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                }
+
+                if (dashInbound == null || dashInbound.halted) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.maya_error_trading_halted, "DASH"),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                }
+
+                val paymentIntent = try {
+                    viewModel.getUpdatedPaymentIntent(
+                        convertViewModel.enteredConvertDashAmount.value!!,
+                        Address.fromBase58(null, dashInbound.address)
+                    )
+                } catch (e: Exception) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.error),
+                        getString(R.string.something_wrong_title),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                    return@launch
+                } ?: return@launch
+
                 safeNavigate(
                     MayaConvertCryptoFragmentDirections
                         .mayaConvertCryptoFragmentToMayaConversionPreviewFragment(
                             swapTrade,
                             convertViewModel.destinationCurrency!!,
-                            viewModel.getUpdatedPaymentIntent(
-                                convertViewModel.enteredConvertDashAmount.value!!,
-                                Address.fromBase58(
-                                    null,
-                                    dashAddress
-                                )
-                            )!!
+                            paymentIntent
                         )
                 )
             }
@@ -402,20 +429,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             requireContext().resources.displayMetrics
         ).toInt()
         binding.convertView.layoutParams = params
-    }
-
-    private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(requireActivity())
-    }
-
-    private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
     }
 
     private fun showNoAssetsError() {

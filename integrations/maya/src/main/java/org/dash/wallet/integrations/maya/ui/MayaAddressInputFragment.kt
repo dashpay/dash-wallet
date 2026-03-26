@@ -37,20 +37,23 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.getMayaErrorString
 import org.dash.wallet.integrations.maya.model.getMayaErrorType
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 
 class MayaAddressInputFragment : AddressInputFragment() {
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private val mayaAddressInputViewModel by viewModels<MayaAddressInputViewModel>()
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        viewModel.paymentParsers = mayaViewModel.paymentParsers
+        val asset = requireArguments().getString("asset")
+        viewModel.paymentParsers = asset?.let { MayaCurrencyList.getPaymentProcessorForAsset(it) }
+            ?: mayaViewModel.paymentParsers
         mayaAddressInputViewModel.setCurrency(viewModel.currency)
         adapter = IconifiedListAdapter() { _, index ->
             val item = viewModel.addressSources[index]
             clickListener(item)
         }
 
-        requireArguments().getString("asset")?.let {
+        asset?.let {
             mayaAddressInputViewModel.asset = it
         }
 
@@ -80,7 +83,7 @@ class MayaAddressInputFragment : AddressInputFragment() {
 
     override fun continueAction() {
         lifecycleScope.launch {
-            val quote = mayaAddressInputViewModel.getDefaultQuote()
+            val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
             if (quote != null && quote.error == null) {
                 safeNavigate(
                     MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(

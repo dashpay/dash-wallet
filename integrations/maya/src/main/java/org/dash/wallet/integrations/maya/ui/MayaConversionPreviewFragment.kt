@@ -29,6 +29,7 @@ import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -44,10 +45,12 @@ import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
+import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
@@ -61,17 +64,18 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
-    private var loadingDialog: AdaptiveDialog? = null
     private var isRetrying = false
     private var transactionStateDialog: MayaResultDialog? = null
     private var newSwapOrderId: String? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
+    private var networkStatusView: View? = null
 
     private val countDownTimer by lazy {
         object : CountDownTimer(10000, 1000) {
 
             override fun onTick(millisUntilFinished: Long) {
                 binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                binding.confirmProgress.isGone = true
                 binding.retryIcon.visibility = View.GONE
                 setConfirmBtnStyle(
                     org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue,
@@ -122,9 +126,17 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         binding.confirmBtnContainer.setOnClickListener {
             countDownTimer.cancel()
             if (isRetrying) {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    R.color.dash_blue
+                )
                 getNewCommitOrder()
                 isRetrying = false
             } else {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    org.dash.wallet.common.R.color.dash_white
+                )
                 newSwapOrderId?.let { orderId ->
                     viewModel.swapTradeUIModel.let {
                         viewModel.commitSwapTrade(orderId)
@@ -134,19 +146,19 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
-            if (showLoading) {
-                showProgress(R.string.loading)
-            } else {
-                dismissProgress()
-            }
+            binding.cancelBtn.isEnabled = !showLoading
+            binding.confirmProgress.isGone = !showLoading
+            binding.retryIcon.isGone = showLoading || !isRetrying
+            binding.confirmBtnContainer.isEnabled = !showLoading
+            binding.confirmBtnContainer.alpha = if (showLoading) 0.6f else 1.0f
         }
 
         viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.CONVERSION_ERROR, it)
+            showBuyOrderDialog(MayaResultType.CONVERSION_ERROR, it)
         }
 
         viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.CONVERSION_SUCCESS)
+            showBuyOrderDialog(MayaResultType.CONVERSION_SUCCESS)
         }
 
         binding.contentOrderReview.mayaFeeInfoContainer.setOnClickListener {
@@ -155,7 +167,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
-            showBuyOrderDialog(MayaResultDialog.Type.SWAP_ERROR, it)
+            showBuyOrderDialog(MayaResultType.SWAP_ERROR, it)
         }
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
@@ -169,7 +181,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             } else {
                 viewModel.swapTradeUIModel.outputCurrencyName
             }
-            dismissProgress()
             safeNavigate(
                 MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
                     MayaTransactionParams(params, TransactionType.SellSwap, walletName)
@@ -177,15 +188,6 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             )
         }
         observeNavigationCallBack()
-
-        viewModel.getUserAccountAddressFailedCallback.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.error),
-                getString(R.string.error),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
             AdaptiveDialog.create(
@@ -195,19 +197,17 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 getString(R.string.button_close)
             ).show(requireActivity())
         }
-
-        viewModel.onFailure.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.send_coins_error_msg),
-                getString(R.string.insufficient_money_msg),
-                getString(R.string.button_close)
-            ).show(requireActivity())
-        }
     }
 
     private fun setNetworkState(hasInternet: Boolean) {
-        binding.previewNetworkStatusStub.isVisible = !hasInternet
+        if (!hasInternet) {
+            if (networkStatusView == null) {
+                networkStatusView = binding.previewNetworkStatusStub.inflate()
+            }
+            networkStatusView?.isVisible = true
+        } else {
+            networkStatusView?.isVisible = false
+        }
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 
@@ -373,21 +373,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         textView.text = spannableString
     }
 
-    private fun showProgress(messageResId: Int) {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-        loadingDialog = AdaptiveDialog.progress(getString(messageResId))
-        loadingDialog?.show(parentFragmentManager, "progress")
-    }
-
-    private fun dismissProgress() {
-        if (loadingDialog != null && loadingDialog?.isAdded == true) {
-            loadingDialog?.dismissAllowingStateLoss()
-        }
-    }
-
-    private fun showBuyOrderDialog(type: MayaResultDialog.Type, responseMessage: String? = null) {
+    private fun showBuyOrderDialog(type: MayaResultType, responseMessage: String? = null) {
         if (transactionStateDialog?.dialog?.isShowing == true) {
             transactionStateDialog?.dismissAllowingStateLoss()
         }
@@ -400,21 +386,21 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         ).apply {
             this.onMayaResultDialogButtonsClickListener =
                 object : MayaResultDialog.MayaBaseResultDialogButtonsClickListener {
-                    override fun onPositiveButtonClick(type: MayaResultDialog.Type) {
+                    override fun onPositiveButtonClick(type: MayaResultType) {
                         when (type) {
-                            MayaResultDialog.Type.CONVERSION_ERROR -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                            MayaResultType.CONVERSION_ERROR -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
                                 dismiss()
                                 findNavController().popBackStack()
                             }
-                            MayaResultDialog.Type.SWAP_ERROR -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_RETRY)
+                            MayaResultType.SWAP_ERROR -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
                                 dismiss()
                                 findNavController().popBackStack()
                                 findNavController().popBackStack()
                             }
-                            MayaResultDialog.Type.CONVERSION_SUCCESS -> {
-                                viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_SUCCESS_CLOSE)
+                            MayaResultType.CONVERSION_SUCCESS -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE)
                                 dismiss()
                                 val navController = findNavController()
                                 val home = navController.graph.startDestinationId
@@ -424,12 +410,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                         }
                     }
 
-                    override fun onNegativeButtonClick(type: MayaResultDialog.Type) {
+                    override fun onNegativeButtonClick(type: MayaResultType) {
                         viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
                     }
                 }
         }
-        transactionStateDialog?.showNow(parentFragmentManager, "CoinBaseBuyDashDialog")
+        transactionStateDialog?.showNow(parentFragmentManager, "MayaResultDialog")
     }
 
     override fun onResume() {
@@ -463,6 +449,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
     private fun setRetryStatus() {
         binding.confirmBtn.text = getString(R.string.button_retry)
+        binding.confirmProgress.isGone = true
         binding.retryIcon.visibility = View.VISIBLE
         isRetrying = true
         setConfirmBtnStyle(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)

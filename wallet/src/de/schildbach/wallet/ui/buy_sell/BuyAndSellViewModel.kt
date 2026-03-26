@@ -30,9 +30,11 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.ExchangeRate
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
@@ -48,6 +50,14 @@ import org.dash.wallet.integrations.uphold.api.getDashBalance
 import org.dash.wallet.integrations.uphold.api.hasValidCredentials
 import org.dash.wallet.integrations.uphold.api.isAuthenticated
 import javax.inject.Inject
+
+data class BuyAndSellUIState(
+    val servicesList: List<BuyAndSellDashServicesModel> = BuyAndSellDashServicesModel.getBuyAndSellDashServicesList(),
+    val isConnected: Boolean = true,
+    val balanceFormat: MonetaryFormat = MonetaryFormat().noCode(),
+    val isCoinbaseAuthenticated: Boolean = false,
+    val hasValidCredentials: Boolean = true
+)
 
 /**
  * @author Eric Britten
@@ -73,21 +83,16 @@ class BuyAndSellViewModel @Inject constructor(
 
     private var currentExchangeRate: org.dash.wallet.common.data.entity.ExchangeRate? = null
 
-    private val _servicesList = MutableStateFlow(BuyAndSellDashServicesModel.getBuyAndSellDashServicesList())
-    val servicesList: StateFlow<List<BuyAndSellDashServicesModel>> = _servicesList.asStateFlow()
-
-    val isDeviceConnectedToInternet: LiveData<Boolean> = networkState.isConnected.asLiveData()
-
-    val isUpholdAuthenticated: Boolean
-        get() = upholdClient.isAuthenticated
-
-    val isCoinbaseAuthenticated: Boolean
-        get() = coinBaseRepository.isAuthenticated
-
-    val hasValidCredentials: Boolean
-        get() = upholdClient.hasValidCredentials &&
-            coinBaseRepository.hasValidCredentials &&
-            topperClient.hasValidCredentials
+    private val _uiState = MutableStateFlow(
+        BuyAndSellUIState(
+            balanceFormat = config.format.noCode(),
+            isCoinbaseAuthenticated = coinBaseRepository.isAuthenticated,
+            hasValidCredentials = upholdClient.hasValidCredentials &&
+                coinBaseRepository.hasValidCredentials &&
+                topperClient.hasValidCredentials
+        )
+    )
+    val uiState: StateFlow<BuyAndSellUIState> = _uiState.asStateFlow()
 
     init {
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
@@ -102,7 +107,8 @@ class BuyAndSellViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         networkState.isConnected
-            .onEach {
+            .onEach { isConnected ->
+                _uiState.update { it.copy(isConnected = isConnected) }
                 updateServicesStatus()
                 updateBalances()
             }
@@ -115,12 +121,12 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private fun setDashServiceList(list: List<BuyAndSellDashServicesModel>) {
-        _servicesList.value = list.sortedBy { it.serviceStatus }
+        _uiState.update { it.copy(servicesList = list.sortedBy { m -> m.serviceStatus }) }
     }
 
     fun updateServicesStatus() {
         setDashServiceList(
-            _servicesList.value.map { model ->
+            _uiState.value.servicesList.map { model ->
                 val serviceStatus = getItemStatus(model.serviceType)
                 if (serviceStatus != model.serviceStatus) {
                     model.copy(serviceStatus = serviceStatus)
@@ -180,7 +186,7 @@ class BuyAndSellViewModel @Inject constructor(
     }
 
     private fun showRowBalance(serviceType: ServiceType, amount: String) {
-        val list = _servicesList.value.map { model ->
+        val list = _uiState.value.servicesList.map { model ->
             if (model.serviceType == serviceType) {
                 val balance = try {
                     Coin.parseCoin(amount)

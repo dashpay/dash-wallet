@@ -30,7 +30,6 @@ import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.SwapTransactionInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET
@@ -176,6 +175,10 @@ open class MayaWebApi @Inject constructor(
         return MayaCurrencyList[to]?.exampleAddress?.let { destination ->
             return getSwapQuote("DASH.DASH", to, value, destination)
         }
+    }
+
+    suspend fun getDefaultSwapQuote(to: String, destinationAddress: String, value: Long = 1_0000_0000): SwapQuote? {
+        return getSwapQuote("DASH.DASH", to, value, destinationAddress)
     }
 
 //    {
@@ -342,11 +345,6 @@ open class MayaWebApi @Inject constructor(
                 BigDecimal.ZERO
             )
         )
-    }
-
-    fun sendFundsToWallet(params: SendTransactionToWalletParams, nothing: String?): ResponseResource<Boolean> {
-        log.info("sendFundsToWallet($params, $nothing")
-        return ResponseResource.Success(true)
     }
 
     fun commitSwapTransaction(tradeId: String, swapTradeUIModel: SwapTradeUIModel): ResponseResource<SwapTradeUIModel> {

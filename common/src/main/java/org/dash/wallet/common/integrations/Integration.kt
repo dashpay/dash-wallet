@@ -34,4 +34,6 @@ data class ExchangeIntegration(
 
 interface ExchangeIntegrationProvider {
     suspend fun getDepositAddresses(currency: String): List<ExchangeIntegration>
+    suspend fun clearCachedAddresses()
+    suspend fun clearCachedAddresses(service: String)
 }

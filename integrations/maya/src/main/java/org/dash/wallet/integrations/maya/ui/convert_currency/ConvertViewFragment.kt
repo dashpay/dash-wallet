@@ -65,7 +65,9 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     }
 
     private val binding by viewBinding(FragmentConvertCurrencyViewBinding::bind)
-    private val viewModel by mayaViewModels<ConvertViewViewModel>()
+    private val viewModel: ConvertViewViewModel by lazy {
+        requireParentFragment().mayaViewModels<ConvertViewViewModel>().value
+    }
     private val decimalSeparator =
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false

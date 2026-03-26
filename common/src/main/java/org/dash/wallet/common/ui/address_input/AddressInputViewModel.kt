@@ -44,7 +44,17 @@ data class AddressInputResult(
     val addressInput: String = "",
     val paymentIntent: PaymentIntent? = null,
     val currency: String = Constants.DASH_CURRENCY
-)
+) {
+    val addressInputWithoutPrefix: String
+        get() {
+            val separator = addressInput.indexOf(":")
+            return if (separator == -1) {
+                addressInput
+            } else {
+                addressInput.substring(separator)
+            }
+        }
+}
 
 @HiltViewModel
 class AddressInputViewModel @Inject constructor(

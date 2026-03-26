@@ -20,24 +20,16 @@ package org.dash.wallet.integrations.maya.ui
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.api.MayaWebApi
-import org.dash.wallet.integrations.maya.model.MayaErrorResponse
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
-import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
-import org.dash.wallet.integrations.maya.utils.MayaConstants
-import java.io.IOException
+import org.dash.wallet.integrations.maya.model.MayaResultType
 import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertResultViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val mayaWebApi: MayaWebApi,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
@@ -57,98 +49,44 @@ class MayaConvertResultViewModel @Inject constructor(
         _isRetryingTransfer = isRetryingTransfer
     }
 
-    fun sendInitialTransactionToSMSTwoFactorAuth(
-        params: SendTransactionToWalletParams?
-    ) = viewModelScope.launch {
-        val sendTransactionToWalletParams = params?.copy()
-        sendTransactionToWalletParams?.let {
-            coinBaseRepository.sendFundsToWallet(it, null)
-        }
+    fun showTransactionResult(isSuccess: Boolean, errorMessage: String? = null) {
+        _loadingState.value = false
+        _transactionState.value = TransactionState(isSuccess, errorMessage)
     }
 
-    fun verifyUserAndCompleteTransaction(
-        params: SendTransactionToWalletParams?,
-        twoFaCode: String
-    ) = viewModelScope.launch(Dispatchers.Main) {
-        _loadingState.value = true
-
-        val sendTransactionToWalletParams = if (_isRetryingTransfer) {
-            params?.copy()
-        } else {
-            params
-        }
-
-        sendTransactionToWalletParams?.let {
-            _isRetryingTransfer = false
-            when (val result = coinBaseRepository.sendFundsToWallet(it, twoFaCode)) {
-                is ResponseResource.Success -> {
-                    _loadingState.value = false
-                    if (result.value == null) {
-                        _transactionState.value = TransactionState(false)
-                    } else {
-                        _transactionState.value = TransactionState(true)
-                    }
-                }
-
-                is ResponseResource.Failure -> {
-                    _loadingState.value = false
-                    try {
-                        val error = result.errorBody
-                        if (result.errorCode == 400 || result.errorCode == 402 || result.errorCode == 429) {
-                            error?.let { errorMsg ->
-                                val errorContent = MayaErrorResponse.getErrorMessage(errorMsg)
-                                if (errorContent?.id.equals(MayaConstants.ERROR_ID_INVALID_REQUEST, true) &&
-                                    errorContent?.message?.contains(MayaConstants.ERROR_MSG_INVALID_REQUEST) == true
-                                ) {
-                                    twoFaErrorState.call()
-                                } else {
-                                    _transactionState.value = TransactionState(false, errorContent?.message)
-                                }
-                            }
-                        } else {
-                            _transactionState.value = TransactionState(false, null)
-                        }
-                    } catch (e: IOException) {
-                        _transactionState.value = TransactionState(false, null)
-                    }
-                }
-            }
-        }
-    }
-
-    fun logRetry(type: MayaResultDialog.Type) {
+    fun logRetry(type: MayaResultType) {
         when (type) {
-            MayaResultDialog.Type.DEPOSIT_ERROR -> {
+            MayaResultType.DEPOSIT_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_RETRY, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_ERROR -> {
+            MayaResultType.CONVERSION_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
+            MayaResultType.TRANSFER_DASH_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_RETRY, mapOf())
             }
             else -> {}
         }
     }
 
-    fun logClose(type: MayaResultDialog.Type) {
+    fun logClose(type: MayaResultType) {
         when (type) {
-            MayaResultDialog.Type.DEPOSIT_SUCCESS -> {
+            MayaResultType.DEPOSIT_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.DEPOSIT_ERROR -> {
+            MayaResultType.DEPOSIT_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.BUY_ERROR_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_SUCCESS -> {
+            MayaResultType.CONVERSION_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.CONVERSION_ERROR -> {
+            MayaResultType.CONVERSION_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_SUCCESS -> {
+            MayaResultType.TRANSFER_DASH_SUCCESS -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_SUCCESS_CLOSE, mapOf())
             }
-            MayaResultDialog.Type.TRANSFER_DASH_ERROR -> {
+            MayaResultType.TRANSFER_DASH_ERROR -> {
                 // analyticsService.logEvent(AnalyticsConstants.Maya.TRANSFER_ERROR_CLOSE, mapOf())
             }
             else -> {}

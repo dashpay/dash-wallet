@@ -20,13 +20,13 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -34,6 +34,7 @@ import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
+import org.dash.wallet.integrations.maya.model.MayaResultType
 
 class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogMayaResultBinding::bind)
@@ -65,22 +66,19 @@ class MayaResultDialog : DialogFragment() {
         val destinationCurrency = arguments?.getString(ARG_DESTINATION) ?: getString(R.string.error)
         type?.let {
             when (type) {
-                Type.PURCHASE_ERROR.ordinal -> setPurchaseError()
-                Type.DEPOSIT_ERROR.ordinal -> setDepositError()
-                Type.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
-                Type.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(
-                    sourceCurrency,
-                    destinationCurrency
-                )
-                Type.CONVERSION_ERROR.ordinal -> setConversionError()
-                Type.SWAP_ERROR.ordinal -> setSwapError()
-                Type.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
-                Type.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
+                MayaResultType.PURCHASE_ERROR.ordinal -> setPurchaseError()
+                MayaResultType.DEPOSIT_ERROR.ordinal -> setDepositError()
+                MayaResultType.DEPOSIT_SUCCESS.ordinal -> setDepositSuccess()
+                MayaResultType.CONVERSION_SUCCESS.ordinal -> setConversionSuccess(sourceCurrency, destinationCurrency)
+                MayaResultType.CONVERSION_ERROR.ordinal -> setConversionError()
+                MayaResultType.SWAP_ERROR.ordinal -> setSwapError()
+                MayaResultType.TRANSFER_DASH_SUCCESS.ordinal -> setTransferDashSuccess(false)
+                MayaResultType.TRANSFER_DASH_ERROR.ordinal -> setTransferDashFailure()
             }
 
             binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
                 onMayaResultDialogButtonsClickListener?.onPositiveButtonClick(
-                    Type.values().first { it.ordinal == type }
+                    MayaResultType.entries.first { it.ordinal == type }
                 )
             }
         }
@@ -96,8 +94,8 @@ class MayaResultDialog : DialogFragment() {
 //            findNavController().popBackStack()
 //        }
 
-        binding.buyDialogContactCoinbaseSupport.setOnClickListener {
-            openCoinbaseHelp()
+        binding.contactSupport.setOnClickListener {
+            openMayaHelp()
         }
     }
 
@@ -111,7 +109,7 @@ class MayaResultDialog : DialogFragment() {
         } else {
             binding.coinbaseBuyDialogMessage.text = errorMessage
         }
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -130,7 +128,7 @@ class MayaResultDialog : DialogFragment() {
         }
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -139,7 +137,7 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
         binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -148,7 +146,7 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -157,7 +155,7 @@ class MayaResultDialog : DialogFragment() {
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
         binding.coinbaseBuyDialogMessage.setText(R.string.something_wrong_title)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.isVisible = false
     }
 
@@ -170,7 +168,7 @@ class MayaResultDialog : DialogFragment() {
             source,
             destination
         )
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -185,7 +183,7 @@ class MayaResultDialog : DialogFragment() {
                 R.string.maya_it_could_take_up_to_10_minutes
             }
         )
-        binding.buyDialogContactCoinbaseSupport.isGone = true
+        binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
 
@@ -201,7 +199,7 @@ class MayaResultDialog : DialogFragment() {
         }
 
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.buyDialogContactCoinbaseSupport.isVisible = true
+        binding.contactSupport.isVisible = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
     }
 
@@ -210,7 +208,7 @@ class MayaResultDialog : DialogFragment() {
         const val ARG_SOURCE: String = "ARG_SOURCE"
         const val ARG_DESTINATION: String = "ARG_DESTINATION"
         fun newInstance(
-            type: Type,
+            type: MayaResultType,
             responseMessage: String?,
             sourceCurrency: String?,
             destinationCurrency: String?
@@ -227,27 +225,16 @@ class MayaResultDialog : DialogFragment() {
         }
     }
 
-    enum class Type {
-        DEPOSIT_SUCCESS,
-        DEPOSIT_ERROR,
-        PURCHASE_ERROR,
-        CONVERSION_SUCCESS,
-        CONVERSION_ERROR,
-        SWAP_ERROR,
-        TRANSFER_DASH_SUCCESS,
-        TRANSFER_DASH_ERROR
-    }
-
     interface MayaBaseResultDialogButtonsClickListener {
-        fun onPositiveButtonClick(type: Type)
-        fun onNegativeButtonClick(type: Type) {}
+        fun onPositiveButtonClick(type: MayaResultType)
+        fun onNegativeButtonClick(type: MayaResultType) {}
     }
 
-    private fun openCoinbaseHelp() {
-        val helpUrl = "https://help.coinbase.com/en/contact-us"
+    private fun openMayaHelp() {
+        val helpUrl = "https://mayaprotocol.com"
         try {
             val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = Uri.parse(helpUrl)
+            intent.data = helpUrl.toUri()
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Toast.makeText(requireActivity(), helpUrl, Toast.LENGTH_SHORT).show()

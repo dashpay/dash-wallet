@@ -26,6 +26,7 @@ abstract class MayaPaymentIntentParser(
     currency: String,
     uriPrefix: String,
     val asset: String,
+    val shortAsset: String? = null,
     params: NetworkParameters?
 ) :
     PaymentIntentParser(
@@ -40,10 +41,17 @@ abstract class MayaPaymentIntentParser(
         } else {
             inputStr
         }
-        val metadata = "=:$asset:$destinationAddress"
+        val metadataAsset = shortAsset ?: asset
+        val metadata = "=:$metadataAsset:$destinationAddress"
+        if (metadata.length > 80) {
+            throw IllegalArgumentException(
+                "metadata is too long ($metadata[${metadata.length}] > 80 bytes).  Is there a shorter asset code?"
+            )
+        }
+        val outputScript = ScriptBuilder.createOpReturnScript(metadata.toByteArray())
         return PaymentIntent(
             null, "maya DASH pool", null,
-            arrayOf(PaymentIntent.Output(Coin.ZERO, ScriptBuilder.createOpReturnScript(metadata.toByteArray()))),
+            arrayOf(PaymentIntent.Output(Coin.ZERO, outputScript)),
             "maya swap to $currency", null, null, null, null,
             null, null, null
         )

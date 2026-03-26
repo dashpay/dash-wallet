@@ -38,6 +38,7 @@ import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.utils.MayaConfig
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.util.Locale
 import javax.inject.Inject
@@ -58,10 +59,10 @@ class MayaViewModel @Inject constructor(
     walletUIConfig: WalletUIConfig
 ) : ViewModel() {
     companion object {
-        val log = LoggerFactory.getLogger(MayaViewModel::class.java)
+        private val log: Logger = LoggerFactory.getLogger(MayaViewModel::class.java)
     }
 
-    var fiatFormat: MonetaryFormat = MonetaryFormat()
+    private var fiatFormat: MonetaryFormat = MonetaryFormat()
         .minDecimals(GenericUtils.getCurrencyDigits())
         .withLocale(Locale.getDefault())
         .noCode()
@@ -78,7 +79,8 @@ class MayaViewModel @Inject constructor(
         get() = globalConfig.format.noCode()
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
-    val inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
+    private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
+    val inboundAddresses: StateFlow<List<InboundAddress>> = _inboundAddresses.asStateFlow()
     val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
         addresses.any { it.halted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -153,9 +155,12 @@ class MayaViewModel @Inject constructor(
 
     private fun updateInboundAddresses() {
         viewModelScope.launch {
-            inboundAddresses.clear()
-            inboundAddresses.addAll(mayaApi.getInboundAddresses())
+            refreshInboundAddresses()
         }
+    }
+
+    suspend fun refreshInboundAddresses() {
+        _inboundAddresses.value = mayaApi.getInboundAddresses()
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {

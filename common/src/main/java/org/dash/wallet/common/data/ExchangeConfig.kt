@@ -80,4 +80,8 @@ open class ExchangeConfig(
         accountMap[accountId] = address
         setAddressMap(accountMap)
     }
+
+    suspend fun clearCurrencyAddresses() {
+        set(ACCOUNT_ADDRESS_MAP, Gson().toJson(mapOf<String, String>()))
+    }
 }

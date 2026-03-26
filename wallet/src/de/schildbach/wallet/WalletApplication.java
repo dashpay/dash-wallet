@@ -80,6 +80,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.data.WalletUIConfig;
+import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
@@ -231,6 +232,8 @@ public class WalletApplication extends MultiDexApplication
     SecurityInitializer securityInitializer;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
+    @Inject
+    public ExchangeIntegrationProvider exchangeIntegrationProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -530,6 +533,7 @@ public class WalletApplication extends MultiDexApplication
         initUphold();
         initCoinbase();
         initDashSpend();
+        WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
     }
 
     private void initUphold() {

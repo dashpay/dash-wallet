@@ -19,6 +19,7 @@
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
+    <string name="maya_portal_subtitle">Convert Dash from Dash Wallet to any crypto that is supported on Maya and send it to any wallet</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
     <string name="maya_crypto_convert_title">Convert Dash</string>
@@ -65,6 +66,19 @@
     <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
     <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
 
+    <string name="cryptocurrency_lld_code" translatable="false">LLD</string>
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_code" translatable="false">MOCA</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_code" translatable="false">YUM</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_code" translatable="false">ZEC</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_code" translatable="false">XRD</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_code" translatable="false">MAYA</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
 
     <string name="maya_error">Maya Error</string>
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>
@@ -81,7 +95,7 @@
     <string name="you_dont_have_enough_balance">You don’t have enough balance</string>
     <string name="you_dont_own_any_crypto">You don’t own any crypto. Buy some crypto to get started.</string>
     <string name="buy_crypto_on_coinbase">Buy Crypto on Coinbase</string>
-    <string name="coinbase_website" translatable="false">https://www.coinbase.com/</string>
+    <string name="coinbase_website" translatable="false">https://mayaprotocol.com/</string>
     <string name="purchase_failed">Purchase Failed</string>
     <string name="transfer_failed">Transfer Failed</string>
     <string name="transfer_failed_msg">The Dash was successfully deposited to your Coinbase account. But there was a problem transferring it to Dash Wallet on this device.</string>

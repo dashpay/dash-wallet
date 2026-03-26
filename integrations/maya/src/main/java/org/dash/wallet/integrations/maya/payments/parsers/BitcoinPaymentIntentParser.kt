@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.params.AbstractBitcoinNetParams
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R
@@ -34,7 +33,7 @@ import org.dash.wallet.common.payments.parsers.SegwitAddress
 import org.dash.wallet.common.util.ResourceString
 import org.slf4j.LoggerFactory
 
-class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BTC.BTC", BitcoinMainNetParams()) {
+class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BTC.BTC", null, BitcoinMainNetParams()) {
     private val log = LoggerFactory.getLogger(BitcoinPaymentIntentParser::class.java)
     private val addressParser = BitcoinAddressParser(params as NetworkParameters)
 
@@ -43,7 +42,7 @@ class BitcoinPaymentIntentParser : MayaPaymentIntentParser("BTC", "bitcoin", "BT
             try {
                 val bitcoinUri = BitcoinURI(
                     params,
-                    AbstractBitcoinNetParams.BITCOIN_SCHEME + ":" + input.substring(uriPrefix.length + 1)
+                    uriPrefix + ":" + input.substring(uriPrefix.length + 1)
                 )
                 val address = bitcoinUri.address
 
