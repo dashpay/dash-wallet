@@ -22,7 +22,6 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.params.AbstractBitcoinNetParams
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.R

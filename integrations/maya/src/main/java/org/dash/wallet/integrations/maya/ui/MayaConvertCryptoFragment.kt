@@ -92,7 +92,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 add(R.id.enter_amount_fragment_placeholder, fragment)
             }
         } else {
-            fragment = childFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder) as? ConvertViewFragment
+            fragment = childFragmentManager.findFragmentById(R.id.enter_amount_fragment_placeholder)
+                as? ConvertViewFragment
                 ?: ConvertViewFragment.newInstance().also {
                     childFragmentManager.commit {
                         setReorderingAllowed(true)

@@ -38,7 +38,6 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.MayaConvertResultFragmentBinding
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.TransactionType
-import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 
 @AndroidEntryPoint
 class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment), LockScreenAware {
@@ -146,7 +145,8 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
         when {
             errorMessage.isNullOrEmpty() -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
-            errorMessage.contains(getString(R.string.send_to_wallet_error)) -> binding.coinbaseBuyDialogMessage.text = errorMessage
+            errorMessage.contains(getString(R.string.send_to_wallet_error)) ->
+                binding.coinbaseBuyDialogMessage.text = errorMessage
             else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
         }
         binding.contactSupport.isVisible = true
@@ -161,7 +161,11 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
         binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
         binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.text = getString(R.string.maya_it_could_take_up_to_5_minutes, source, destination)
+        binding.coinbaseBuyDialogMessage.text = getString(
+            R.string.maya_it_could_take_up_to_5_minutes,
+            source,
+            destination
+        )
         binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
     }
@@ -210,7 +214,8 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
             // Intentionally consume back press without navigating for success states
             if (currentType != MayaResultType.TRANSFER_DASH_SUCCESS &&
                 currentType != MayaResultType.CONVERSION_SUCCESS &&
-                currentType != MayaResultType.DEPOSIT_SUCCESS) {
+                currentType != MayaResultType.DEPOSIT_SUCCESS
+            ) {
                 findNavController().popBackStack()
             }
         }

@@ -30,7 +30,6 @@ import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.SwapTransactionInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.slf4j.LoggerFactory
 import retrofit2.Response
 import retrofit2.http.GET

@@ -29,6 +29,7 @@ import androidx.activity.addCallback
 import androidx.annotation.ColorRes
 import androidx.annotation.StyleRes
 import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -40,7 +41,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.CenteredImageSpan
-import androidx.core.view.isGone
 import org.dash.wallet.common.ui.setRoundedBackground
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -126,11 +126,17 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         binding.confirmBtnContainer.setOnClickListener {
             countDownTimer.cancel()
             if (isRetrying) {
-                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(requireContext(), R.color.dash_blue)
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    R.color.dash_blue
+                )
                 getNewCommitOrder()
                 isRetrying = false
             } else {
-                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(requireContext(), org.dash.wallet.common.R.color.dash_white)
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    org.dash.wallet.common.R.color.dash_white
+                )
                 newSwapOrderId?.let { orderId ->
                     viewModel.swapTradeUIModel.let {
                         viewModel.commitSwapTrade(orderId)
@@ -383,7 +389,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                     override fun onPositiveButtonClick(type: MayaResultType) {
                         when (type) {
                             MayaResultType.CONVERSION_ERROR -> {
-                                //viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
                                 dismiss()
                                 findNavController().popBackStack()
                             }

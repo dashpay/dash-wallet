@@ -149,7 +149,13 @@ open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val name: String = "Maya"
     override val asset: String = "MAYA.MAYA"
     override val exampleAddress: String = "maya1x9jj85ugrpf8j0nhq9p7c4qjn9a2ufnhmlvt5e"
-    override val paymentIntentParser: PaymentIntentParser = Bech32PaymentIntentParser("MAYA", "maya", "maya", 38, "MAYA.MAYA")
+    override val paymentIntentParser: PaymentIntentParser = Bech32PaymentIntentParser(
+        "MAYA",
+        "maya",
+        "maya",
+        38,
+        "MAYA.MAYA"
+    )
     override val addressParser: AddressParser = Bech32AddressParser("maya", 38, null)
     override val codeId: Int = R.string.cryptocurrency_maya_code
     override val nameId: Int = R.string.cryptocurrency_maya_network
@@ -172,7 +178,11 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val asset: String = "XRD.XRD"
     override val exampleAddress: String = "account_rdx1680ldd0sgl547sp05eqdpt3x8wvq004qeh7rk54t65t7yxn87ukunn"
     override val paymentIntentParser: PaymentIntentParser = XrdPaymentIntentParser()
-    override val addressParser: AddressParser = Bech32AddressParser("account_rdx", "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}", null)
+    override val addressParser: AddressParser = Bech32AddressParser(
+        "account_rdx",
+        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}",
+        null
+    )
     override val codeId: Int = R.string.cryptocurrency_xrd_code
     override val nameId: Int = R.string.cryptocurrency_xrd_network
 }
@@ -360,7 +370,12 @@ object MayaCurrencyList {
         val registeredCodes = mutableSetOf<String>()
         for (currency in all) {
             if (registeredCodes.add(currency.code.lowercase())) {
-                paymentProcessors.add(currency.name, currency.code, currency.paymentIntentParser, currency.addressParser)
+                paymentProcessors.add(
+                    currency.name,
+                    currency.code,
+                    currency.paymentIntentParser,
+                    currency.addressParser
+                )
             }
         }
         return paymentProcessors

@@ -27,8 +27,8 @@ import org.dash.wallet.common.payments.parsers.Bech32AddressParser
  * - Unified: `u1...` — Bech32m, variable length (91+ chars)
  */
 class ZcashAddressParser : AddressParser("t[13][1-9A-HJ-NP-Za-km-z]{33}", null) {
-    private val saplingParser = Bech32AddressParser("zs", 75, null)   // zs1... Sapling shielded
-    private val unifiedParser = Bech32AddressParser("u", 88, null)    // u1... unified (min length)
+    private val saplingParser = Bech32AddressParser("zs", 75, null) // zs1... Sapling shielded
+    private val unifiedParser = Bech32AddressParser("u", 88, null) // u1... unified (min length)
 
     override fun exactMatch(inputText: String): Boolean {
         return super.exactMatch(inputText) ||

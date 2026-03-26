@@ -17,22 +17,16 @@
 
 package org.dash.wallet.integrations.maya.ui.dialogs
 
-import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
-import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.Window
-import androidx.browser.customtabs.CustomTabColorSchemeParams
-import androidx.browser.customtabs.CustomTabsIntent
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import org.dash.wallet.common.UserInteractionAwareCallback
-import org.dash.wallet.common.customtabs.CustomTabActivityHelper
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaFeeInfoBinding

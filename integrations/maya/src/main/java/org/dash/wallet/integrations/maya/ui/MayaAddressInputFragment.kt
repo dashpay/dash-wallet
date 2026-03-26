@@ -34,10 +34,10 @@ import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.getMayaErrorString
 import org.dash.wallet.integrations.maya.model.getMayaErrorType
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 
 class MayaAddressInputFragment : AddressInputFragment() {
     private val mayaViewModel by mayaViewModels<MayaViewModel>()

@@ -20,20 +20,11 @@ package org.dash.wallet.integrations.maya.ui
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.api.MayaWebApi
-import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.MayaResultType
-import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
-import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
-import org.dash.wallet.integrations.maya.utils.MayaConstants
-import java.io.IOException
 import javax.inject.Inject
 
 @HiltViewModel

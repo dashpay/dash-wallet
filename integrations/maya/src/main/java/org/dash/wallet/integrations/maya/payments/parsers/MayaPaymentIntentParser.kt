@@ -44,7 +44,9 @@ abstract class MayaPaymentIntentParser(
         val metadataAsset = shortAsset ?: asset
         val metadata = "=:$metadataAsset:$destinationAddress"
         if (metadata.length > 80) {
-            throw IllegalArgumentException("metadata is too long ($metadata[${metadata.length}] > 80 bytes).  Is there a shorter asset code?")
+            throw IllegalArgumentException(
+                "metadata is too long ($metadata[${metadata.length}] > 80 bytes).  Is there a shorter asset code?"
+            )
         }
         val outputScript = ScriptBuilder.createOpReturnScript(metadata.toByteArray())
         return PaymentIntent(

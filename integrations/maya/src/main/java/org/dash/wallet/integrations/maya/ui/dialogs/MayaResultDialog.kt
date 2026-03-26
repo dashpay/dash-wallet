@@ -26,6 +26,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
+import androidx.core.net.toUri
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
@@ -34,7 +35,6 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.DialogMayaResultBinding
 import org.dash.wallet.integrations.maya.model.MayaResultType
-import androidx.core.net.toUri
 
 class MayaResultDialog : DialogFragment() {
     private val binding by viewBinding(DialogMayaResultBinding::bind)

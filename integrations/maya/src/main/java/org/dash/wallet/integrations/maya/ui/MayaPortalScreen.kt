@@ -39,13 +39,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.R as CommonR
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.common.R as CommonR
 
 private val MayaLogoBackground = Color(0xFF151D3F)
 

@@ -144,8 +144,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
                             actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.content_secondary else null,
+                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
+                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
                             isEnabled = isEnabled,
                             id = pool.asset
                         )
@@ -157,8 +157,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
                             actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) org.dash.wallet.common.R.color.content_secondary else null,
+                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
+                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
                             isEnabled = isEnabled,
                             id = pool.asset
                         )
