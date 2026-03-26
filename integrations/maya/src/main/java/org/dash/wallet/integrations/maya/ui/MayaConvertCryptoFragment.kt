@@ -177,6 +177,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                         )
                 )
             }
+            }
         }
 
         viewModel.swapTradeFailedCallback.observe(viewLifecycleOwner) {

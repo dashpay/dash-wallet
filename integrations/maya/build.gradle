@@ -71,6 +71,7 @@ dependencies {
     implementation "com.google.dagger:hilt-android:$hiltVersion"
     implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
     implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose-android:2.10.0'
     ksp "com.google.dagger:hilt-android-compiler:$hiltVersion"
     ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
 
