@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.compose_views
 
+import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +31,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -39,11 +43,17 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.util.openCustomTab
 
 /**
  * Creates the main ZenLedger bottom sheet dialog.
@@ -51,26 +61,67 @@ import org.dash.wallet.common.ui.components.Style
  * Figma Node ID: 32543:9120
  *
  * Shows the ZenLedger icon, title, description, a link to zenledger.io, and
- * an "Export all transactions" primary action button.
- *
- * @param onExportClick called when the user taps "Export all transactions"
- * @param onLinkClick called when the user taps the "zenledger.io" link
- * @return ComposeBottomSheet instance ready to be shown
+ * an "Export all transactions" primary action button. Blocks dismissal while
+ * [ZenLedgerViewModel.sendTransactionInformation] is running.
  */
 fun createZenLedgerDialog(
-    onExportClick: () -> Unit = {},
-    onLinkClick: () -> Unit = {}
+    activity: FragmentActivity,
+    viewModel: ZenLedgerViewModel
 ): ComposeBottomSheet {
+    var isLoading by mutableStateOf(false)
+
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
-        forceExpand = false,
-        content = { _ ->
-            ZenLedgerContent(
-                onExportClick = onExportClick,
-                onLinkClick = onLinkClick
-            )
-        }
-    )
+        forceExpand = false
+    ) { dialog ->
+        ZenLedgerContent(
+            isLoading = isLoading,
+            onExportClick = {
+                activity.lifecycleScope.launch {
+                    if (viewModel.isSynced()) {
+                        val confirmed = AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.zenledger_export_title),
+                            activity.getString(R.string.zenledger_export_permission),
+                            activity.getString(R.string.button_cancel),
+                            activity.getString(R.string.permission_allow)
+                        ).showAsync(activity) == true
+
+                        if (confirmed) {
+                            isLoading = true
+                            dialog.dialog?.setCancelable(false)
+                            dialog.dialog?.setCanceledOnTouchOutside(false)
+
+                            if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
+                                activity.openCustomTab(viewModel.signUpUrl!!)
+                                dialog.dismiss()
+                            } else {
+                                isLoading = false
+                                dialog.dialog?.setCancelable(true)
+                                dialog.dialog?.setCanceledOnTouchOutside(true)
+                                AdaptiveDialog.create(
+                                    null,
+                                    activity.getString(R.string.zenledger_export_title),
+                                    activity.getString(R.string.zenledger_export_error),
+                                    activity.getString(R.string.button_close)
+                                ).showAsync(activity)
+                            }
+                        }
+                    } else {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.chain_syncing),
+                            activity.getString(R.string.chain_syncing_default_message),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                    }
+                }
+            },
+            onLinkClick = {
+                activity.startActivity(Intent.parseUri(activity.getString(R.string.zenledger_export_url), 0))
+            }
+        )
+    }
 }
 
 @Composable

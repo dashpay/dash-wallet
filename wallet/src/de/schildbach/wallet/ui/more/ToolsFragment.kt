@@ -33,9 +33,10 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
-import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import de.schildbach.wallet.ui.compose_views.createExtendedPublicKeyDialog
 import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
+import de.schildbach.wallet.ui.compose_views.createZenLedgerDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
@@ -66,6 +67,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
+    private val zenLedgerViewModel: ZenLedgerViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -176,7 +178,8 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
         binding.zenledgerExport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
-            ZenLedgerDialogFragment().show(requireActivity())
+            createZenLedgerDialog(requireActivity(), zenLedgerViewModel)
+                .show(requireActivity().supportFragmentManager, "zenledger_dialog")
         }
     }
 
