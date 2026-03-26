@@ -75,6 +75,7 @@ fun createZenLedgerDialog(
 
 @Composable
 internal fun ZenLedgerContent(
+    isLoading: Boolean = false,
     onExportClick: () -> Unit,
     onLinkClick: () -> Unit
 ) {
@@ -148,6 +149,8 @@ internal fun ZenLedgerContent(
             primaryButton = SheetButton(
                 text = stringResource(R.string.zenledger_export_all_tx),
                 style = Style.FilledBlue,
+                isEnabled = !isLoading,
+                isLoading = isLoading,
                 onClick = onExportClick
             )
         )

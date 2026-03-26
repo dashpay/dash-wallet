@@ -20,7 +20,11 @@ package de.schildbach.wallet.ui.more.tools
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.viewModels
+
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
@@ -36,12 +40,14 @@ import de.schildbach.wallet.ui.compose_views.ZenLedgerContent
 class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_compose_container) {
     private val binding by viewBinding(DialogComposeContainerBinding::bind)
     val viewModel by viewModels<ZenLedgerViewModel>()
+    private var isLoading by mutableStateOf(false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         binding.composeContainer.setContent {
             ZenLedgerContent(
+                isLoading = isLoading,
                 onExportClick = { handleExportClick() },
                 onLinkClick = { handleLinkClick() }
             )
@@ -59,10 +65,16 @@ class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_compose_con
                         getString(R.string.permission_allow)
                     ).showAsync(requireActivity()) == true
                 ) {
+                    isLoading = true
+                    dialog?.setCancelable(false)
+                    dialog?.setCanceledOnTouchOutside(false)
                     if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
                         requireActivity().openCustomTab(viewModel.signUpUrl!!)
                         dismiss()
                     } else {
+                        isLoading = false
+                        dialog?.setCancelable(true)
+                        dialog?.setCanceledOnTouchOutside(true)
                         AdaptiveDialog.create(
                             null,
                             getString(R.string.zenledger_export_title),
