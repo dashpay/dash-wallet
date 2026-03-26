@@ -18,10 +18,7 @@ package de.schildbach.wallet.ui.more
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -37,6 +34,7 @@ import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
 import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.compose_views.createExtendedPublicKeyDialog
 import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -48,10 +46,8 @@ import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -113,7 +109,18 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
 
         binding.showXpub.setOnClickListener {
-            handleExtendedPublicKey()
+            createExtendedPublicKeyDialog(
+                xpubWithCreationDate = viewModel.xpubWithCreationDate,
+                xpub = viewModel.xpub,
+                onCopy = {
+                    viewModel.copyXpubToClipboard()
+                    Toast(requireContext()).toast(R.string.copied)
+                    log.info("xpub copied to clipboard: {}", viewModel.xpub)
+                },
+                onShare = { xpubWithCreationDate ->
+                    createAndLaunchShareIntent(xpubWithCreationDate)
+                }
+            ).show(parentFragmentManager, "extended_public_key")
         }
 
         var isSyncing = false
@@ -173,34 +180,6 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         }
     }
 
-    private fun handleExtendedPublicKey() {
-        showExtendedPublicKeyDialog(viewModel.xpubWithCreationDate, viewModel.xpub)
-    }
-
-    private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
-        val drawable = Qr.themeAwareDrawable(xpubWithCreationDate, resources)
-        val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
-        val xpubView = view.findViewById<TextView>(R.id.extended_public_key_dialog_xpub)
-        imageView.setImageDrawable(drawable)
-        xpubView.text = xpub
-
-        xpubView.setOnClickListener {
-            handleCopyAddress(xpub)
-        }
-
-        val baseAlertDialogBuilder = BaseAlertDialogBuilder(requireContext())
-        baseAlertDialogBuilder.view = view
-        baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
-        baseAlertDialogBuilder.positiveText = getString(R.string.button_share)
-        baseAlertDialogBuilder.positiveAction = {
-            createAndLaunchShareIntent(xpubWithCreationDate)
-            Unit
-        }
-        val alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-        alertDialog.show()
-    }
-
     private fun createAndLaunchShareIntent(xpub: String) {
         val intent = Intent(Intent.ACTION_SEND)
         intent.type = "text/plain"
@@ -218,10 +197,4 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         log.info("xpub shared via intent: {}", xpub)
     }
 
-    private fun handleCopyAddress(xpub: String) {
-        viewModel.copyXpubToClipboard()
-
-        Toast(requireContext()).toast(R.string.copied)
-        log.info("xpub copied to clipboard: {}", xpub)
-    }
 }
