@@ -141,11 +141,12 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                 ).show(parentFragmentManager, "requireSyncing")
             } else {
                 viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
-                (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
+                val secureActivity = requireActivity() as? SecureActivity
+                secureActivity?.turnOffAutoLogout()
                 createExportCSVDialog(
                     activity = requireActivity(),
                     viewModel = viewModel,
-                    onDismiss = { (requireActivity() as? SecureActivity)?.turnOnAutoLogout() }
+                    onDismiss = { secureActivity?.turnOnAutoLogout() }
                 ).show(parentFragmentManager, "export_csv_dialog")
             }
         }

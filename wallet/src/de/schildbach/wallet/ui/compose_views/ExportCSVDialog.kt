@@ -75,16 +75,20 @@ fun createExportCSVDialog(
                     dialog.dialog?.setCanceledOnTouchOutside(false)
                 }
                 is ToolsViewModel.ExportCsvResult.Success -> {
-                    startSendIntent(activity, result.file)
-                    dialog.dismiss()
-                    onDismiss()
+                    if (!activity.isDestroyed) {
+                        startSendIntent(activity, result.file)
+                        dialog.dismiss()
+                        onDismiss()
+                    }
                     viewModel.resetExportCsvResult()
                 }
                 is ToolsViewModel.ExportCsvResult.Error -> {
                     dialog.dialog?.setCancelable(true)
                     dialog.dialog?.setCanceledOnTouchOutside(true)
-                    dialog.dismiss()
-                    onDismiss()
+                    if (!activity.isDestroyed) {
+                        dialog.dismiss()
+                        onDismiss()
+                    }
                     viewModel.resetExportCsvResult()
                 }
                 is ToolsViewModel.ExportCsvResult.Idle -> Unit

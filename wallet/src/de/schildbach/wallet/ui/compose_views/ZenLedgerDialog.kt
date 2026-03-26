@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.compose_views
 
-import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -83,19 +82,23 @@ fun createZenLedgerDialog(
                     dialog.dialog?.setCanceledOnTouchOutside(false)
                 }
                 is ZenLedgerViewModel.ExportResult.Success -> {
-                    activity.openCustomTab(result.signUpUrl)
-                    dialog.dismiss()
+                    if (!activity.isDestroyed) {
+                        activity.openCustomTab(result.signUpUrl)
+                        dialog.dismiss()
+                    }
                     viewModel.resetExportResult()
                 }
                 is ZenLedgerViewModel.ExportResult.Error -> {
                     dialog.dialog?.setCancelable(true)
                     dialog.dialog?.setCanceledOnTouchOutside(true)
-                    AdaptiveDialog.create(
-                        null,
-                        activity.getString(R.string.zenledger_export_title),
-                        activity.getString(R.string.zenledger_export_error),
-                        activity.getString(R.string.button_close)
-                    ).showAsync(activity)
+                    if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.zenledger_export_title),
+                            activity.getString(R.string.zenledger_export_error),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                    }
                     viewModel.resetExportResult()
                 }
                 is ZenLedgerViewModel.ExportResult.Idle -> Unit
@@ -129,7 +132,7 @@ fun createZenLedgerDialog(
                 }
             },
             onLinkClick = {
-                activity.startActivity(Intent.parseUri(activity.getString(R.string.zenledger_export_url), 0))
+                activity.openCustomTab(activity.getString(R.string.zenledger_export_url))
             }
         )
     }
