@@ -34,6 +34,7 @@ import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
 import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
+import de.schildbach.wallet.ui.compose_views.createExportCSVDialog
 import de.schildbach.wallet.ui.compose_views.createExtendedPublicKeyDialog
 import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
 import de.schildbach.wallet.ui.compose_views.createZenLedgerDialog
@@ -147,9 +148,11 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                         val transactionExporter = viewModel.getTransactionExporter()
                         viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
                         (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
-                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                        }
+                        createExportCSVDialog(
+                            activity = requireActivity(),
+                            transactionExporter = transactionExporter,
+                            onDismiss = { (requireActivity() as? SecureActivity)?.turnOnAutoLogout() }
+                        ).show(requireActivity().supportFragmentManager, "export_csv_dialog")
                     } catch (e: Exception) {
                         (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
                     }
