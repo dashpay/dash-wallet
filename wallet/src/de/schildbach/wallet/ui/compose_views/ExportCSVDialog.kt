@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -68,6 +69,10 @@ fun createExportCSVDialog(
         val exportResult by viewModel.exportCsvResult.collectAsState()
         val isLoading = exportResult is ToolsViewModel.ExportCsvResult.Loading
 
+        DisposableEffect(Unit) {
+            onDispose { onDismiss() }
+        }
+
         LaunchedEffect(exportResult) {
             when (val result = exportResult) {
                 is ToolsViewModel.ExportCsvResult.Loading -> {
@@ -78,7 +83,6 @@ fun createExportCSVDialog(
                     if (!activity.isDestroyed) {
                         startSendIntent(activity, result.file)
                         dialog.dismiss()
-                        onDismiss()
                     }
                     viewModel.resetExportCsvResult()
                 }
@@ -87,7 +91,6 @@ fun createExportCSVDialog(
                     dialog.dialog?.setCanceledOnTouchOutside(true)
                     if (!activity.isDestroyed) {
                         dialog.dismiss()
-                        onDismiss()
                     }
                     viewModel.resetExportCsvResult()
                 }
