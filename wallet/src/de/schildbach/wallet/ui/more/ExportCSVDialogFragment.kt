@@ -17,91 +17,102 @@
 
 package de.schildbach.wallet.ui.more
 
-import android.app.Dialog
 import android.content.Intent
-import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.FileProvider
-import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import com.google.common.base.Charsets
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.transactions.TransactionExporter
-import de.schildbach.wallet_test.R
+import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
+import de.schildbach.wallet.ui.compose_views.createExportCSVDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.dash.wallet.common.ui.components.ButtonData
-import org.dash.wallet.common.ui.components.ModalDialog
-import org.dash.wallet.common.ui.components.Style
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 
 /**
- * Dialog fragment for exporting transaction history to CSV with progress indication.
+ * Shows the Export CSV bottom sheet dialog and manages the export operation.
+ *
+ * Figma Node ID: 31265:8935
+ *
+ * The [isLoading] flag controls whether the dialog shows a loading state and
+ * prevents the user from dismissing it while an export operation is in progress.
  */
-class ExportCSVDialogFragment : DialogFragment() {
-    private var dismissFunction: (() -> Unit)? = null
+class ExportCSVDialogFragment {
+    private var isLoading: Boolean by mutableStateOf(false)
     private var transactionExporter: TransactionExporter? = null
+    private lateinit var bottomSheet: ComposeBottomSheet
 
     companion object {
         private val log = LoggerFactory.getLogger(ExportCSVDialogFragment::class.java)
     }
 
-    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
-        val dialog = Dialog(requireContext())
-        dialog.setCancelable(true)
-        dialog.setCanceledOnTouchOutside(true)
-        return dialog
+    fun show(activity: FragmentActivity, transactionExporter: TransactionExporter, onDismiss: () -> Unit) {
+        this.transactionExporter = transactionExporter
+
+        bottomSheet = createExportCSVDialog(
+            isLoading = { isLoading },
+            onExportClick = { startExport(activity, onDismiss) }
+        )
+        bottomSheet.show(activity.supportFragmentManager, "export_csv_dialog")
     }
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
-                ExportCSVDialog(
-                    transactionExporter = transactionExporter,
-                    onDismissRequest = {
-                        dismiss()
-                        dismissFunction?.invoke()
-                    },
-                    onExportComplete = { csvFile ->
-                        startSendIntent(csvFile)
-                        dismiss()
-                        dismissFunction?.invoke()
-                    },
-                    onError = { error ->
-                        log.error("Failed to export CSV", error)
-                        dismiss()
-                        dismissFunction?.invoke()
+    private fun startExport(activity: FragmentActivity, onDismiss: () -> Unit) {
+        val exporter = transactionExporter ?: return
+        if (isLoading) return
+
+        activity.lifecycleScope.launch {
+            try {
+                isLoading = true
+                bottomSheet.dialog?.setCancelable(false)
+                bottomSheet.dialog?.setCanceledOnTouchOutside(false)
+
+                withContext(Dispatchers.IO) {
+                    exporter.initMetadataMap()
+                }
+
+                val csvContent = withContext(Dispatchers.IO) {
+                    exporter.exportString()
+                }
+
+                val cacheDir = activity.cacheDir
+                val reportDir = File(cacheDir, "report")
+                reportDir.mkdirs()
+
+                val file = File.createTempFile("transaction-history.", ".csv", reportDir)
+                withContext(Dispatchers.IO) {
+                    OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8).use { writer ->
+                        writer.write(csvContent)
                     }
-                )
+                }
+
+                isLoading = false
+                startSendIntent(activity, file)
+                bottomSheet.dismiss()
+                onDismiss()
+            } catch (e: Exception) {
+                log.error("Failed to export CSV", e)
+                isLoading = false
+                bottomSheet.dialog?.setCancelable(true)
+                bottomSheet.dialog?.setCanceledOnTouchOutside(true)
+                bottomSheet.dismiss()
+                onDismiss()
             }
         }
     }
 
-    private fun startSendIntent(csvFile: File) {
+    private fun startSendIntent(activity: FragmentActivity, csvFile: File) {
         try {
             val uri = FileProvider.getUriForFile(
-                requireContext(),
-                "${requireContext().packageName}.file_attachment",
+                activity,
+                "${activity.packageName}.file_attachment",
                 csvFile
             )
 
@@ -110,15 +121,15 @@ class ExportCSVDialogFragment : DialogFragment() {
                 putExtra(Intent.EXTRA_STREAM, uri)
                 putExtra(
                     Intent.EXTRA_SUBJECT,
-                    Constants.REPORT_SUBJECT_BEGIN + getString(R.string.report_transaction_history_title)
+                    Constants.REPORT_SUBJECT_BEGIN + activity.getString(de.schildbach.wallet_test.R.string.report_transaction_history_title)
                 )
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
 
-            startActivity(
+            activity.startActivity(
                 Intent.createChooser(
                     intent,
-                    getString(R.string.report_transaction_history_mail_intent_chooser)
+                    activity.getString(de.schildbach.wallet_test.R.string.report_transaction_history_mail_intent_chooser)
                 )
             )
             log.info("invoked chooser for exporting transaction history")
@@ -126,96 +137,4 @@ class ExportCSVDialogFragment : DialogFragment() {
             log.error("export transaction history failed", e)
         }
     }
-
-    fun show(activity: FragmentActivity, transactionExporter: TransactionExporter, dismiss: () -> Unit) {
-        this.transactionExporter = transactionExporter
-        this.dismissFunction = dismiss
-        super.show(activity.supportFragmentManager, "export_csv_dialog")
-    }
-}
-
-@Composable
-fun ExportCSVDialog(
-    transactionExporter: TransactionExporter?,
-    onDismissRequest: () -> Unit,
-    onExportComplete: (File) -> Unit,
-    onError: (Exception) -> Unit
-) {
-    var isLoading by remember { mutableStateOf(false) }
-    var loadingMessage by remember { mutableStateOf("") }
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-
-    val handleExport = {
-        if (transactionExporter != null && !isLoading) {
-            scope.launch {
-                try {
-                    isLoading = true
-
-                    // Initialize metadata map (may take time)
-                    withContext(Dispatchers.IO) {
-                        transactionExporter.initMetadataMap()
-                    }
-
-                    // Generate CSV
-                    val csvContent = withContext(Dispatchers.IO) {
-                        transactionExporter.exportString()
-                    }
-
-                    // Write to file
-                    val cacheDir = context.cacheDir
-                    val reportDir = File(cacheDir, "report")
-                    reportDir.mkdirs()
-
-                    val file = File.createTempFile("transaction-history.", ".csv", reportDir)
-                    withContext(Dispatchers.IO) {
-                        OutputStreamWriter(FileOutputStream(file), Charsets.UTF_8).use { writer ->
-                            writer.write(csvContent)
-                        }
-                    }
-                    isLoading = false
-                    onExportComplete(file)
-                } catch (e: Exception) {
-                    isLoading = false
-                    onError(e)
-                }
-            }
-        }
-    }
-
-    ModalDialog(
-        showDialog = true,
-        onDismissRequest = onDismissRequest,
-        heading = stringResource(R.string.report_transaction_history_title),
-        textBlocks = listOf(
-            stringResource(R.string.report_transaction_history_message)
-        ),
-        moreInfoButton = null,
-        buttons = listOf(
-            ButtonData(
-                label = stringResource(R.string.button_cancel),
-                onClick = onDismissRequest,
-                style = Style.PlainBlack,
-                enabled = !isLoading
-            ),
-            ButtonData(
-                label = stringResource(R.string.report_transaction_history_export),
-                onClick = handleExport,
-                style = Style.FilledBlue,
-                enabled = !isLoading,
-                progress = isLoading
-            )
-        )
-    )
-}
-
-@Preview
-@Composable
-fun ExportCSVDialogPreview() {
-    ExportCSVDialog(
-        transactionExporter = null,
-        onDismissRequest = {},
-        onExportComplete = {},
-        onError = {}
-    )
 }
