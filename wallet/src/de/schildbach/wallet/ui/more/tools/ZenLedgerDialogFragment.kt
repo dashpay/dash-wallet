@@ -24,57 +24,65 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.DialogZenledgerBinding
+import de.schildbach.wallet_test.databinding.DialogComposeContainerBinding
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.openCustomTab
+import de.schildbach.wallet.ui.compose_views.ZenLedgerContent
 
 @AndroidEntryPoint
-class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_zenledger) {
-    private val binding by viewBinding(DialogZenledgerBinding::bind)
+class ZenLedgerDialogFragment : OffsetDialogFragment(R.layout.dialog_compose_container) {
+    private val binding by viewBinding(DialogComposeContainerBinding::bind)
     val viewModel by viewModels<ZenLedgerViewModel>()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.exportAllTransactions.setOnClickListener {
-            lifecycleScope.launch {
-                if (viewModel.isSynced()) {
-                    if (AdaptiveDialog.create(
+        binding.composeContainer.setContent {
+            ZenLedgerContent(
+                onExportClick = { handleExportClick() },
+                onLinkClick = { handleLinkClick() }
+            )
+        }
+    }
+
+    private fun handleExportClick() {
+        lifecycleScope.launch {
+            if (viewModel.isSynced()) {
+                if (AdaptiveDialog.create(
+                        null,
+                        getString(R.string.zenledger_export_title),
+                        getString(R.string.zenledger_export_permission),
+                        getString(R.string.button_cancel),
+                        getString(R.string.permission_allow)
+                    ).showAsync(requireActivity()) == true
+                ) {
+                    if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
+                        requireActivity().openCustomTab(viewModel.signUpUrl!!)
+                        dismiss()
+                    } else {
+                        AdaptiveDialog.create(
                             null,
                             getString(R.string.zenledger_export_title),
-                            getString(R.string.zenledger_export_permission),
-                            getString(R.string.button_cancel),
-                            getString(R.string.permission_allow)
-                        ).showAsync(requireActivity()) == true
-                    ) {
-                        if (viewModel.sendTransactionInformation() && viewModel.signUpUrl != null) {
-                            requireActivity().openCustomTab(viewModel.signUpUrl!!)
-                            dismiss()
-                        } else {
-                            AdaptiveDialog.create(
-                                null,
-                                getString(R.string.zenledger_export_title),
-                                getString(R.string.zenledger_export_error),
-                                getString(R.string.button_close)
-                            ).showAsync(requireActivity())
-                        }
+                            getString(R.string.zenledger_export_error),
+                            getString(R.string.button_close)
+                        ).showAsync(requireActivity())
                     }
-                } else {
-                    AdaptiveDialog.create(
-                        null,
-                        getString(R.string.chain_syncing),
-                        getString(R.string.chain_syncing_default_message),
-                        getString(R.string.button_close)
-                    ).showAsync(requireActivity())
                 }
+            } else {
+                AdaptiveDialog.create(
+                    null,
+                    getString(R.string.chain_syncing),
+                    getString(R.string.chain_syncing_default_message),
+                    getString(R.string.button_close)
+                ).showAsync(requireActivity())
             }
         }
+    }
 
-        binding.zenledgerLink.setOnClickListener {
-            startActivity(Intent.parseUri(getString(R.string.zenledger_export_url), 0))
-        }
+    private fun handleLinkClick() {
+        startActivity(Intent.parseUri(getString(R.string.zenledger_export_url), 0))
     }
 }
