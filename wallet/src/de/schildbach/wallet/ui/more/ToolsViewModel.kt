@@ -31,8 +31,11 @@ import de.schildbach.wallet.transactions.TaxBitExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.bitcoinj.crypto.DeterministicKey
@@ -68,7 +71,9 @@ class ToolsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(ToolsViewModel::class.java)
     }
 
-    val blockchainState = blockchainStateDao.observeState()
+    val isSyncing: StateFlow<Boolean> = blockchainStateDao.observeState()
+        .map { it?.isSynced() != true }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     val xpub: String
     val xpubWithCreationDate: String

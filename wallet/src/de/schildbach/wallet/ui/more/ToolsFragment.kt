@@ -125,13 +125,8 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             ).show(parentFragmentManager, "extended_public_key")
         }
 
-        var isSyncing = false
-        viewModel.blockchainState.observe(viewLifecycleOwner) {
-            isSyncing = it?.replaying == true
-        }
-
         binding.transactionExport.setOnClickListener {
-            if (isSyncing) {
+            if (viewModel.isSyncing.value) {
                 AdaptiveDialog.create(
                     null,
                     getString(R.string.report_transaction_history_not_synced_title),
