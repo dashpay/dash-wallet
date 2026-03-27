@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -65,7 +66,8 @@ import org.dash.wallet.common.util.openCustomTab
  */
 fun createZenLedgerDialog(
     activity: FragmentActivity,
-    viewModel: ZenLedgerViewModel
+    viewModel: ZenLedgerViewModel,
+    onDismiss: () -> Unit = {}
 ): ComposeBottomSheet {
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
@@ -74,6 +76,10 @@ fun createZenLedgerDialog(
         val exportResult by viewModel.exportResult.collectAsState()
         val isLoading = exportResult is ZenLedgerViewModel.ExportResult.Loading
         val coroutineScope = rememberCoroutineScope()
+
+        DisposableEffect(Unit) {
+            onDispose { onDismiss() }
+        }
 
         LaunchedEffect(exportResult) {
             when (val result = exportResult) {

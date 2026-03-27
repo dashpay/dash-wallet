@@ -172,8 +172,13 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
         binding.zenledgerExport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
-            createZenLedgerDialog(requireActivity(), zenLedgerViewModel)
-                .show(requireActivity().supportFragmentManager, "zenledger_dialog")
+            val secureActivity = requireActivity() as? SecureActivity
+            secureActivity?.turnOffAutoLogout()
+            createZenLedgerDialog(
+                activity = requireActivity(),
+                viewModel = zenLedgerViewModel,
+                onDismiss = { secureActivity?.turnOnAutoLogout() }
+            ).show(parentFragmentManager, "zenledger_dialog")
         }
     }
 
