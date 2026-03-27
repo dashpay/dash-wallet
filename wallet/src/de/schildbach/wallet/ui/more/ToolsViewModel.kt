@@ -54,10 +54,10 @@ class ToolsViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    val blockchainStateDao: BlockchainStateDao,
-    val dashPayConfig: DashPayConfig,
-    val identityConfig: BlockchainIdentityConfig,
-    val analyticsService: AnalyticsService
+    blockchainStateDao: BlockchainStateDao,
+    private val dashPayConfig: DashPayConfig,
+    private val identityConfig: BlockchainIdentityConfig,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
 
     sealed class ExportCsvResult {

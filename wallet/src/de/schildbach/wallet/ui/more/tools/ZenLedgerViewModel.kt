@@ -45,6 +45,8 @@ class ZenLedgerViewModel @Inject constructor(
 
     sealed class ExportResult {
         object Idle : ExportResult()
+        object NotSynced : ExportResult()
+        object AwaitingConfirmation : ExportResult()
         object Loading : ExportResult()
         data class Success(val signUpUrl: String) : ExportResult()
         object Error : ExportResult()
@@ -57,11 +59,19 @@ class ZenLedgerViewModel @Inject constructor(
     private val _exportResult = MutableStateFlow<ExportResult>(ExportResult.Idle)
     val exportResult: StateFlow<ExportResult> = _exportResult.asStateFlow()
 
-    suspend fun isSynced(): Boolean {
-        return blockchainStateProvider.getState()?.isSynced() ?: false
+    fun requestExport() {
+        if (_exportResult.value is ExportResult.Loading) return
+        viewModelScope.launch {
+            val synced = blockchainStateProvider.getState()?.isSynced() ?: false
+            if (!synced) {
+                _exportResult.value = ExportResult.NotSynced
+            } else {
+                _exportResult.value = ExportResult.AwaitingConfirmation
+            }
+        }
     }
 
-    fun export() {
+    fun confirmExport() {
         if (_exportResult.value is ExportResult.Loading) return
         viewModelScope.launch {
             _exportResult.value = ExportResult.Loading

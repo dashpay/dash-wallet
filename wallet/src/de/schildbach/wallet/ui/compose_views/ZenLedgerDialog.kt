@@ -35,7 +35,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -49,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -78,7 +76,6 @@ fun createZenLedgerDialog(
         val activity = remember(context) { context.findFragmentActivity() }
         val exportResult by viewModel.exportResult.collectAsState()
         val isLoading = exportResult is ZenLedgerViewModel.ExportResult.Loading
-        val coroutineScope = rememberCoroutineScope()
 
         DisposableEffect(Unit) {
             onDispose { onDismiss() }
@@ -89,6 +86,38 @@ fun createZenLedgerDialog(
                 is ZenLedgerViewModel.ExportResult.Loading -> {
                     dialog.dialog?.setCancelable(false)
                     dialog.dialog?.setCanceledOnTouchOutside(false)
+                }
+                is ZenLedgerViewModel.ExportResult.NotSynced -> {
+                    if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.chain_syncing),
+                            activity.getString(R.string.chain_syncing_default_message),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                    }
+                    viewModel.resetExportResult()
+                    dialog.dismiss()
+                }
+                is ZenLedgerViewModel.ExportResult.AwaitingConfirmation -> {
+                    dialog.dismiss()
+                    if (!activity.isDestroyed) {
+                        val confirmed = AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.zenledger_export_title),
+                            activity.getString(R.string.zenledger_export_permission),
+                            activity.getString(R.string.button_cancel),
+                            activity.getString(R.string.permission_allow)
+                        ).showAsync(activity) == true
+
+                        if (confirmed) {
+                            viewModel.confirmExport()
+                        } else {
+                            viewModel.resetExportResult()
+                        }
+                    } else {
+                        viewModel.resetExportResult()
+                    }
                 }
                 is ZenLedgerViewModel.ExportResult.Success -> {
                     if (!activity.isDestroyed) {
@@ -107,6 +136,7 @@ fun createZenLedgerDialog(
                             activity.getString(R.string.zenledger_export_error),
                             activity.getString(R.string.button_close)
                         ).showAsync(activity)
+                        dialog.dismiss()
                     }
                     viewModel.resetExportResult()
                 }
@@ -117,28 +147,7 @@ fun createZenLedgerDialog(
         ZenLedgerContent(
             isLoading = isLoading,
             onExportClick = {
-                if (!isLoading) coroutineScope.launch {
-                    if (viewModel.isSynced()) {
-                        val confirmed = AdaptiveDialog.create(
-                            null,
-                            activity.getString(R.string.zenledger_export_title),
-                            activity.getString(R.string.zenledger_export_permission),
-                            activity.getString(R.string.button_cancel),
-                            activity.getString(R.string.permission_allow)
-                        ).showAsync(activity) == true
-
-                        if (confirmed) {
-                            viewModel.export()
-                        }
-                    } else {
-                        AdaptiveDialog.create(
-                            null,
-                            activity.getString(R.string.chain_syncing),
-                            activity.getString(R.string.chain_syncing_default_message),
-                            activity.getString(R.string.button_close)
-                        ).showAsync(activity)
-                    }
-                }
+                if (!isLoading) viewModel.requestExport()
             },
             onLinkClick = {
                 activity.openCustomTab(activity.getString(R.string.zenledger_export_url))
