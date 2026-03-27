@@ -87,7 +87,7 @@ class ZenLedgerViewModel @Inject constructor(
                 )
             )
         } else {
-            val addresses = arrayListOf<ZenLedgerAddress>()
+            val seen = linkedSetOf<String>()
             transactions.forEach { tx ->
                 tx.outputs.forEach { output ->
                     if (output.isMine(wallet) && ScriptPattern.isP2PKH(output.scriptPubKey)) {
@@ -95,14 +95,12 @@ class ZenLedgerViewModel @Inject constructor(
                             Constants.NETWORK_PARAMETERS,
                             ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
                         ).toBase58()
-                        log.info(output.value.toFriendlyString(), address)
-                        addresses.add(
-                            ZenLedgerAddress(DASH_CURRENCY, DASH_CURRENCY, address, "Dash Wallet")
-                        )
+                        log.info("zenledger: output value={}, address={}", output.value.toFriendlyString(), address)
+                        seen.add(address)
                     }
                 }
             }
-            addresses
+            seen.map { ZenLedgerAddress(DASH_CURRENCY, DASH_CURRENCY, it, "Dash Wallet") }
         }
 
         try {

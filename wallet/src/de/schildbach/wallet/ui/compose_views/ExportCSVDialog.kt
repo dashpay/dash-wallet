@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.compose_views
 
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +34,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -47,10 +51,20 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import java.io.File
 
 private val log = LoggerFactory.getLogger("ExportCSVDialog")
+
+private fun Context.findFragmentActivity(): FragmentActivity {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is FragmentActivity) return ctx
+        ctx = ctx.baseContext
+    }
+    throw IllegalStateException("No FragmentActivity found in context chain")
+}
 
 /**
  * Creates the Export CSV bottom sheet dialog with all business logic.
@@ -58,7 +72,6 @@ private val log = LoggerFactory.getLogger("ExportCSVDialog")
  * Figma Node ID: 31265:8935
  */
 fun createExportCSVDialog(
-    activity: FragmentActivity,
     viewModel: ToolsViewModel,
     onDismiss: () -> Unit = {}
 ): ComposeBottomSheet {
@@ -66,6 +79,8 @@ fun createExportCSVDialog(
         backgroundStyle = R.style.SecondaryBackground,
         forceExpand = false
     ) { dialog ->
+        val context = LocalContext.current
+        val activity = remember(context) { context.findFragmentActivity() }
         val exportResult by viewModel.exportCsvResult.collectAsState()
         val isLoading = exportResult is ToolsViewModel.ExportCsvResult.Loading
 
@@ -90,6 +105,12 @@ fun createExportCSVDialog(
                     dialog.dialog?.setCancelable(true)
                     dialog.dialog?.setCanceledOnTouchOutside(true)
                     if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.report_transaction_history_title),
+                            activity.getString(R.string.report_transaction_history_dialog_export_csv_failed),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
                         dialog.dismiss()
                     }
                     viewModel.resetExportCsvResult()

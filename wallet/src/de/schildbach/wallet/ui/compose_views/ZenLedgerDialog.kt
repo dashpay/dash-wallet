@@ -17,6 +17,8 @@
 
 package de.schildbach.wallet.ui.compose_views
 
+import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,9 +36,11 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -55,6 +59,15 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.openCustomTab
 
+private fun Context.findFragmentActivity(): FragmentActivity {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is FragmentActivity) return ctx
+        ctx = ctx.baseContext
+    }
+    throw IllegalStateException("No FragmentActivity found in context chain")
+}
+
 /**
  * Creates the main ZenLedger bottom sheet dialog.
  *
@@ -65,7 +78,6 @@ import org.dash.wallet.common.util.openCustomTab
  * [ZenLedgerViewModel.export] is running.
  */
 fun createZenLedgerDialog(
-    activity: FragmentActivity,
     viewModel: ZenLedgerViewModel,
     onDismiss: () -> Unit = {}
 ): ComposeBottomSheet {
@@ -73,6 +85,8 @@ fun createZenLedgerDialog(
         backgroundStyle = R.style.SecondaryBackground,
         forceExpand = false
     ) { dialog ->
+        val context = LocalContext.current
+        val activity = remember(context) { context.findFragmentActivity() }
         val exportResult by viewModel.exportResult.collectAsState()
         val isLoading = exportResult is ZenLedgerViewModel.ExportResult.Loading
         val coroutineScope = rememberCoroutineScope()

@@ -144,7 +144,6 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
                 val secureActivity = requireActivity() as? SecureActivity
                 secureActivity?.turnOffAutoLogout()
                 createExportCSVDialog(
-                    activity = requireActivity(),
                     viewModel = viewModel,
                     onDismiss = { secureActivity?.turnOnAutoLogout() }
                 ).show(parentFragmentManager, "export_csv_dialog")
@@ -175,7 +174,6 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             val secureActivity = requireActivity() as? SecureActivity
             secureActivity?.turnOffAutoLogout()
             createZenLedgerDialog(
-                activity = requireActivity(),
                 viewModel = zenLedgerViewModel,
                 onDismiss = { secureActivity?.turnOnAutoLogout() }
             ).show(parentFragmentManager, "zenledger_dialog")
