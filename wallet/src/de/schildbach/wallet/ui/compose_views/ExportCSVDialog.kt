@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui.compose_views
 
-import android.content.Context
-import android.content.ContextWrapper
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -46,6 +44,7 @@ import androidx.core.content.FileProvider
 import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.ToolsViewModel
+import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
@@ -56,15 +55,6 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 private val log = LoggerFactory.getLogger("ExportCSVDialog")
-
-private fun Context.findFragmentActivity(): FragmentActivity {
-    var ctx = this
-    while (ctx is ContextWrapper) {
-        if (ctx is FragmentActivity) return ctx
-        ctx = ctx.baseContext
-    }
-    throw IllegalStateException("No FragmentActivity found in context chain")
-}
 
 /**
  * Creates the Export CSV bottom sheet dialog with all business logic.

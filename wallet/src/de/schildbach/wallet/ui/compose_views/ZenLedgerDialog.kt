@@ -17,8 +17,6 @@
 
 package de.schildbach.wallet.ui.compose_views
 
-import android.content.Context
-import android.content.ContextWrapper
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,8 +46,8 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.fragment.app.FragmentActivity
 import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
+import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.components.MyTheme
@@ -58,15 +56,6 @@ import org.dash.wallet.common.ui.components.SheetButtonGroup
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.openCustomTab
-
-private fun Context.findFragmentActivity(): FragmentActivity {
-    var ctx = this
-    while (ctx is ContextWrapper) {
-        if (ctx is FragmentActivity) return ctx
-        ctx = ctx.baseContext
-    }
-    throw IllegalStateException("No FragmentActivity found in context chain")
-}
 
 /**
  * Creates the main ZenLedger bottom sheet dialog.
