@@ -235,9 +235,10 @@ class TxDisplayCacheService @Inject constructor(
                     _txDataSource.value = TxDataSource.RoomLive // force new Pager with updated filter
                     _currentPagingSource.value?.invalidate()
                 }
-                walletData.observeTransactions(true, filter)
+                val allFilter = TxDirectionFilter(TxFilterType.ALL, wallet)
+                walletData.observeTransactions(true, allFilter)
                     .batchAndFilterUpdates(BATCHING_PERIOD)
-                    .onEach { txs -> updateWrappedListForTransactions(txs, filter) }
+                    .onEach { txs -> updateWrappedListForTransactions(txs) }
             }
             .catch { e -> log.error("transactionsDirection flow error", e) }
             .launchIn(serviceScope)
@@ -410,17 +411,14 @@ class TxDisplayCacheService @Inject constructor(
                 val wrapped = walletData.wrapAllTransactions(cnFactory, cjFactory)
                 val t2 = System.currentTimeMillis()
 
-                val filtered = wrapped.filter { it.passesFilter(filter, metadata) }
+                wrappedTransactionList = wrapped.sortedByDescending { it.groupDate }
                 val t3 = System.currentTimeMillis()
 
-                wrappedTransactionList = filtered.sortedByDescending { it.groupDate }
-                val t4 = System.currentTimeMillis()
-
                 log.info(
-                    "rebuildWrappedList: {} raw txs → {} wrappers → {} filtered → {} sorted | " +
-                    "getTransactions={}ms wrapAll={}ms filter={}ms sort={}ms total={}ms",
-                    rawCount, wrapped.size, filtered.size, wrappedTransactionList.size,
-                    t1 - t0, t2 - t1, t3 - t2, t4 - t3, t4 - t0
+                    "rebuildWrappedList: {} raw txs → {} wrappers → {} sorted | " +
+                    "getTransactions={}ms wrapAll={}ms sort={}ms total={}ms",
+                    rawCount, wrapped.size, wrappedTransactionList.size,
+                    t1 - t0, t2 - t1, t3 - t2, t3 - t0
                 )
 
                 persistGroupCache(wrapped)
@@ -570,7 +568,7 @@ class TxDisplayCacheService @Inject constructor(
         return wrapper
     }
 
-    private suspend fun updateWrappedListForTransactions(txs: List<Transaction>, filter: TxDirectionFilter) {
+    private suspend fun updateWrappedListForTransactions(txs: List<Transaction>) {
         val txIdToWrapper = HashMap<String, TransactionWrapper>(wrappedTransactionList.size * 4)
         wrappedTransactionList.forEach { wrapper ->
             wrapper.transactions.keys.forEach { txId ->
@@ -608,7 +606,7 @@ class TxDisplayCacheService @Inject constructor(
                     if (wrapper != null) {
                         wrapper.transactions[tx.txId] = tx
                         affectedWrappers.add(wrapper)
-                        if (wrapper.passesFilter(filter, metadata) && mutableList.none { it.id == wrapper.id }) {
+                        if (mutableList.none { it.id == wrapper.id }) {
                             mutableList.add(wrapper)
                         }
                         continue
@@ -619,8 +617,7 @@ class TxDisplayCacheService @Inject constructor(
 
                 val (cjIncluded, cjWrapper) = coinJoinWrapperFactory?.tryInclude(tx) ?: (false to null)
                 if (cjIncluded && cjWrapper != null) {
-                    if (cjWrapper.passesFilter(filter, metadata) &&
-                        mutableList.none { it.id == cjWrapper.id }) {
+                    if (mutableList.none { it.id == cjWrapper.id }) {
                         mutableList.add(cjWrapper)
                     }
                     affectedWrappers.add(cjWrapper)
@@ -630,8 +627,7 @@ class TxDisplayCacheService @Inject constructor(
                 if (!added) {
                     val (cnIncluded, cnWrapper) = crowdNodeWrapperFactory?.tryInclude(tx) ?: (false to null)
                     if (cnIncluded && cnWrapper != null) {
-                        if (cnWrapper.passesFilter(filter, metadata) &&
-                            mutableList.none { it.id == cnWrapper.id }) {
+                        if (mutableList.none { it.id == cnWrapper.id }) {
                             mutableList.add(cnWrapper)
                         }
                         affectedWrappers.add(cnWrapper)
@@ -642,9 +638,7 @@ class TxDisplayCacheService @Inject constructor(
                 if (!added) {
                     val wrapper = createSingleTxWrapper(tx)
                     affectedWrappers.add(wrapper)
-                    if (wrapper.passesFilter(filter, metadata)) {
-                        mutableList.add(wrapper)
-                    }
+                    mutableList.add(wrapper)
                 }
             }
         }
@@ -863,18 +857,6 @@ class TxDisplayCacheService @Inject constructor(
         TxFilterType.RECEIVED  -> TxDisplayCacheEntry.FLAG_RECEIVED
         TxFilterType.GIFT_CARD -> TxDisplayCacheEntry.FLAG_GIFT_CARD
         TxFilterType.ALL       -> 0
-    }
-
-    private fun TransactionWrapper.passesFilter(
-        filter: TxDirectionFilter,
-        metadata: Map<Sha256Hash, PresentableTxMetadata>
-    ): Boolean {
-        return (filter.direction == TxFilterType.GIFT_CARD && isGiftCard(metadata)) ||
-            transactions.values.any { tx -> filter.matches(tx) }
-    }
-
-    private fun TransactionWrapper.isGiftCard(metadata: Map<Sha256Hash, PresentableTxMetadata>): Boolean {
-        return ServiceName.isDashSpend(metadata[transactions.values.first().txId]?.service)
     }
 
     @VisibleForTesting
