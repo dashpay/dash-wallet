@@ -21,6 +21,17 @@ platform :android do
 
   desc "Build and upload for pre-launch report"
   lane :publish do |options|
+	snapshot_hits = []
+	Dir.glob("#{ENV['PWD']}/**/*.{gradle,gradle.kts,toml}").each do |f|
+		next if f.include?("/build/") || f.include?("/.gradle/")
+		File.readlines(f).each_with_index do |line, idx|
+			snapshot_hits << "#{f}:#{idx + 1}: #{line.strip}" if line.include?("SNAPSHOT")
+		end
+	end
+	unless snapshot_hits.empty?
+		UI.user_error!("SNAPSHOT dependencies found — remove before releasing:\n#{snapshot_hits.join("\n")}")
+	end
+
 	build(options)
 	upload(options)
   end

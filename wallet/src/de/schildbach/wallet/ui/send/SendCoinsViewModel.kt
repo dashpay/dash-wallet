@@ -204,7 +204,7 @@ class SendCoinsViewModel @Inject constructor(
 
         log.info("proceeding with {}", finalIntent)
         super.initPaymentIntent(finalIntent)
-        _state.value = State.INPUT
+        _state.postValue(State.INPUT)
         withContext(Dispatchers.IO) {
             executeDryrun(currentAmount)
         }
@@ -319,7 +319,7 @@ class SendCoinsViewModel @Inject constructor(
             throw ex
         }
 
-        _state.value = State.SENT
+        _state.postValue(State.SENT)
         transaction
     }
 
@@ -347,7 +347,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun resetState() {
-        _state.value = State.INPUT
+        _state.postValue(State.INPUT)
     }
 
     fun logSendSuccess(dashToFiat: Boolean, source: String) {

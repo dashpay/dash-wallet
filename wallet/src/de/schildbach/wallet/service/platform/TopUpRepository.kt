@@ -398,6 +398,7 @@ class TopUpRepositoryImpl @Inject constructor(
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
+        updateConfidence(confidence)
         val wasTxSent = confidence.isChainLocked ||
             confidence.isTransactionLocked ||
                 confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
@@ -434,6 +435,26 @@ class TopUpRepositoryImpl @Inject constructor(
             } else {
                 throw e
             }
+        }
+    }
+
+    private suspend fun updateConfidence(confidence: TransactionConfidence) {
+        try {
+            if (confidence.confidenceType == TransactionConfidence.ConfidenceType.UNKNOWN) {
+                platform.client.getTransactionKotlin(confidence.transactionHash.toString())?.let { txInfo ->
+                    if (txInfo.height > 0) {
+                        confidence.appearedAtChainHeight = txInfo.height
+                    }
+                    if (txInfo.isChainLocked) {
+                        confidence.setChainLock(true)
+                    }
+                    if (txInfo.isInstantLocked) {
+                        confidence.ixType = TransactionConfidence.IXType.IX_LOCKED
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            log.warn("error updating confidence using platform:", e)
         }
     }
 
@@ -545,11 +566,8 @@ class TopUpRepositoryImpl @Inject constructor(
                     }
                     try {
                         topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
-//                    TopupIdentityOperation(walletApplication)
-//                        .create(identity, assetLockTx.txId)
-//                        .enqueue()
                     } catch (e: Exception) {
-                        // swallow
+                        log.info("problem executing topup for ${assetLockTx.txId}", e)
                     }
                 }
             }
