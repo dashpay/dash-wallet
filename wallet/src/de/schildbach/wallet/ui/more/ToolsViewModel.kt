@@ -73,7 +73,7 @@ class ToolsViewModel @Inject constructor(
 
     val isSyncing: StateFlow<Boolean> = blockchainStateDao.observeState()
         .map { it?.isSynced() != true }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     val xpub: String
     val xpubWithCreationDate: String
