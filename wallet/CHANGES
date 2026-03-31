@@ -1,4 +1,7 @@
-Dash Wallet / DashPay
+DashPay Wallet
+v11.7.1
+* Fix issues with instantsend
+
 v11.7.0
 * New Feature: Invitations
 * Fix rare send contact request failure
