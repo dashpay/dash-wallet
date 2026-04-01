@@ -261,10 +261,9 @@ See `development-patterns` for the full implementation template.
 ```kotlin
 // In a Fragment or Activity:
 createExportCSVDialog(
-    activity = requireActivity(),
-    transactionExporter = transactionExporter,
+    viewModel = viewModel,
     onDismiss = { turnOnAutoLogout() }
-).show(requireActivity().supportFragmentManager, "export_csv_dialog")
+).show(parentFragmentManager, "export_csv_dialog")
 ```
 
 #### File Placement

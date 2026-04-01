@@ -103,8 +103,8 @@ class ToolsViewModel @Inject constructor(
 
     fun exportCsv(cacheDir: File) {
         if (_exportCsvResult.value is ExportCsvResult.Loading) return
+        _exportCsvResult.value = ExportCsvResult.Loading
         viewModelScope.launch {
-            _exportCsvResult.value = ExportCsvResult.Loading
             try {
                 val file = withContext(Dispatchers.IO) {
                     val exporter = TaxBitExporter(transactionMetadataProvider, walletData.wallet!!)
