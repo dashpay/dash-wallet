@@ -1,4 +1,16 @@
-Dash Wallet / DashPay
+DashPay Wallet
+v11.7.1
+* Fix issues with instantsend
+
+v11.7.0
+* New Feature: Invitations
+* Fix rare send contact request failure
+* Fix minor crashes
+* Update Tools menu functions (UI)
+
+v11.6.3
+* Fix fee's on regular transactions
+
 v11.6.2
 * CoinJoin spending does not return change (unless fee is high)
 * fix CoinJoin Mixing fee issues

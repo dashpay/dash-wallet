@@ -296,7 +296,6 @@
     <string name="about_review_and_rate">Напишіть відгук і оцініть додаток</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
-    <string name="about_copyright">Всі права захищено © 2025 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Гаманець Dash %s</string>
     <string name="about_last_explore_device_sync">Останнє дослідження синхронізації пристрою</string>
@@ -440,11 +439,6 @@
     <string name="reclassify_transactions_linked_accounts_message">за замовчуванням усі транзакції до ваших пов’язаних облікових записів або з них (обміни, ставки тощо) позначатимуться як перекази.</string>
     <string name="reclassify_transactions_change_explanation">Виберіть будь-яку транзакцію на головній сторінці та змініть категорію на сторінці з деталями транзакції.</string>
 
-    <string name="masternode_keys_title">Ключі Мастернод</string>
-    <string name="masternode_key_type_owner">Ключі власника</string>
-    <string name="masternode_key_type_voting">Ключі голосування</string>
-    <string name="masternode_key_type_operator">Ключі оператора</string>
-    <string name="masternode_key_type_platform">Ключі ідентифікатора вузла Evolution</string>
     <string name="masternode_key_type_total">%d ключів</string>
     <string name="masternode_key_type_used">%dвикористано</string>
     <string name="masternode_key_pair_index">Ключі %d</string>

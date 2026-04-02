@@ -31,6 +31,7 @@ import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.SendContactRequestOperation
@@ -59,6 +60,7 @@ class DashPayUserActivityViewModel @Inject constructor(
     val platformSyncService: PlatformSyncService,
     private val analytics: AnalyticsService,
     val platformRepo: PlatformRepo,
+    val identityRepository: IdentityRepository,
     private val dashSystemService: DashSystemService,
     private val walletData: WalletDataProvider
 ) : ViewModel() {
@@ -102,7 +104,7 @@ class DashPayUserActivityViewModel @Inject constructor(
             }
 
             try {
-                platformRepo.getUser(username).firstOrNull()?.let {
+                identityRepository.getUser(username).firstOrNull()?.let {
                     _userData.value = it
                 }
             } catch (ex: Exception) {
@@ -138,7 +140,7 @@ class DashPayUserActivityViewModel @Inject constructor(
     }
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo? {
-        return platformRepo.getIdentityBalance()
+        return identityRepository.getIdentityBalance()
     }
 
     fun getChainLockBlockHeight(): Int {
@@ -147,7 +149,7 @@ class DashPayUserActivityViewModel @Inject constructor(
 
     private fun observeContactNotifications(dashPayProfile: DashPayProfile) {
         combine(
-            platformRepo.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
+            identityRepository.observeContacts(dashPayProfile.username, UsernameSortOrderBy.DATE_ADDED, true)
                 .distinctUntilChanged(),
             walletData.observeMostRecentTransaction()
                 .distinctUntilChanged()
@@ -189,7 +191,10 @@ class DashPayUserActivityViewModel @Inject constructor(
                 }
             }
 
-            val blockchainIdentity = platformRepo.blockchainIdentity
+            val blockchainIdentity = identityRepository.blockchainIdentity ?: run {
+                log.warn("blockchainIdentity is null, cannot get contact transactions")
+                return@withContext emptyList()
+            }
             val txs = blockchainIdentity.getContactTransactions(Identifier.from(userId), accountReference)
 
             txs.forEach {

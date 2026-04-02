@@ -350,9 +350,6 @@
     <string name="reset_wallet_button">Resetovat peněženku</string>
 
 
-    <string name="masternode_key_type_owner">Klíče majitele</string>
-    <string name="masternode_key_type_voting">Klíče pro hlasování</string>
-    <string name="masternode_key_type_operator">Klíče operátora</string>
     <string name="masternode_key_address">Adresa</string>
     <string name="masternode_key_ip_address_unknown">Neznámý</string>
     <string name="masternode_key_revoked">Zrušeno</string>

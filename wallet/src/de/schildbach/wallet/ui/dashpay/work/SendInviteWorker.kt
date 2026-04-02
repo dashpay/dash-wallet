@@ -23,6 +23,7 @@ import androidx.work.workDataOf
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import de.schildbach.wallet.database.dao.InvitationsDao
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -40,6 +41,7 @@ class SendInviteWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted parameters: WorkerParameters,
     private val analytics: AnalyticsService,
+    private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val invitationsDao: InvitationsDao,
     private val topUpRepository: TopUpRepository,
@@ -90,7 +92,7 @@ class SendInviteWorker @AssistedInject constructor(
 
         return try {
             org.bitcoinj.core.Context.propagate(wallet.context)
-            val blockchainIdentity = platformRepo.blockchainIdentity
+            val blockchainIdentity = identityRepository.blockchainIdentity!!
             var invitation = invitationsDao.loadByFundingAddress(fundingAddress)
             val assetLockTx = if (invitation == null || !invitation.hasTransaction()) {
                 if (value == 0L) {
@@ -126,7 +128,7 @@ class SendInviteWorker @AssistedInject constructor(
             // create the AppsFlyer link
             invitation = invitationsDao.loadByFundingAddress(fundingAddress)!!
             if (invitation.dynamicLink == null) {
-                val dashPayProfile = platformRepo.getLocalUserProfile()
+                val dashPayProfile = identityRepository.getLocalUserProfile()
                 val appsFlyerLink = topUpRepository.createAppsFlyerLink(dashPayProfile!!, assetLockTx, encryptionKey)
                 invitation = invitation.copy(
                     shortDynamicLink = appsFlyerLink.shortLink,

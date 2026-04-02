@@ -402,11 +402,6 @@
     <string name="reclassify_transactions_linked_accounts_message">Varsayılan olarak, bağlı hesaplarınıza yapılan veya bu hesaplardan yapılan tüm işlemler (borsalar, vb.) transfer olarak işaretlenecektir.</string>
     <string name="reclassify_transactions_change_explanation">Ana sayfadan herhangi bir işlemi seçin ve işlem ayrıntıları sayfasında kategoriyi değiştirin.</string>
 
-    <string name="masternode_keys_title">Ana düğüm Anahtarları</string>
-    <string name="masternode_key_type_owner">Sahip Anahtarları</string>
-    <string name="masternode_key_type_voting">Oy Verme Anahtarları</string>
-    <string name="masternode_key_type_operator">Operatör Anahtarları</string>
-    <string name="masternode_key_type_platform">Evolution Node Kimlik Anahtarları</string>
     <string name="masternode_key_type_total">%d anahtarları</string>
     <string name="masternode_key_type_used">%d kullanıldı</string>
     <string name="masternode_key_pair_index">Tuş Çifti %d</string>

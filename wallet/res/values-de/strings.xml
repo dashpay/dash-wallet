@@ -297,6 +297,7 @@
     <string name="bitmap_fragment_share">Teilen…</string>
     <string name="extended_public_key_fragment_title">Extended Public Key</string>
     <string name="extended_public_key_fragment_share">Xpub teilen…</string>
+    <string name="extended_public_key_share_key">Key teilen</string>
     <string name="report_issue_dialog_title_issue">Problem melden</string>
     <string name="report_issue_dialog_title_crash">Absturz erkannt</string>
     <string name="report_issue_dialog_title_transaction">Melde ein Problem mit der ausgewählten Bezahlmethode</string>
@@ -338,7 +339,7 @@
 
 
     <string name="about_title">Über</string>
-    <string name="about_dash_title">Über Dash</string>
+    <string name="about_dash_title">DashPay Wallet Info</string>
     <string name="about_version_title">Version</string>
     <string name="about_copyright_title">Urheberrecht</string>
     <string name="about_license_title">Lizenz</string>
