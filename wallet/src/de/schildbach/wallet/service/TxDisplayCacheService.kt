@@ -34,6 +34,7 @@ import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import de.schildbach.wallet.database.entity.TxDisplayCacheEntry
 import de.schildbach.wallet.database.entity.TxGroupCacheEntry
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.transactions.TxDirectionFilter
 import de.schildbach.wallet.transactions.TxFilterType
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
@@ -92,6 +93,7 @@ class TxDisplayCacheService @Inject constructor(
     private val txGroupCacheDao: TxGroupCacheDao,
     private val metadataProvider: TransactionMetadataProvider,
     private val platformRepo: PlatformRepo,
+    private val identityRepo: IdentityRepository,
     private val blockchainStateProvider: BlockchainStateProvider
 ) {
 
@@ -307,7 +309,7 @@ class TxDisplayCacheService @Inject constructor(
             .catch { e -> log.error("metadata flow error", e) }
             .launchIn(serviceScope)
 
-        platformRepo.observeContacts(
+        identityRepo.observeContacts(
             "",
             de.schildbach.wallet.data.UsernameSortOrderBy.LAST_ACTIVITY,
             false
@@ -694,7 +696,7 @@ class TxDisplayCacheService @Inject constructor(
 
     private suspend fun resolveAllContacts() {
         if (contacts.isEmpty()) return
-        if (!platformRepo.hasBlockchainIdentity) return
+        if (!identityRepo.hasBlockchainIdentity) return
 
         val txsToResolve = wrappedTransactionList
             .map { it.transactions.values.first() }
@@ -714,7 +716,7 @@ class TxDisplayCacheService @Inject constructor(
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
-                            platformRepo.blockchainIdentity.getContactForTransaction(tx)?.let { id ->
+                            identityRepo.blockchainIdentity?.getContactForTransaction(tx)?.let { id ->
                                 contactsSnapshot[id]?.let { profile -> tx.txId.toString() to profile }
                             }
                         } catch (e: Exception) {
@@ -757,7 +759,7 @@ class TxDisplayCacheService @Inject constructor(
         newTxs: List<Transaction>,
         affectedWrappers: Set<TransactionWrapper>
     ) {
-        if (contacts.isEmpty() || !platformRepo.hasBlockchainIdentity) return
+        if (contacts.isEmpty() || !identityRepo.hasBlockchainIdentity) return
 
         val txsToResolve = newTxs.filter { tx ->
             !tx.isEntirelySelf(walletData.transactionBag) &&
@@ -777,7 +779,7 @@ class TxDisplayCacheService @Inject constructor(
                 .map { tx ->
                     async(Dispatchers.IO) {
                         try {
-                            platformRepo.blockchainIdentity.getContactForTransaction(tx)
+                            identityRepo.blockchainIdentity?.getContactForTransaction(tx)
                                 ?.let { id ->
                                     contactsSnapshot[id]?.let { profile ->
                                         tx.txId.toString() to profile
