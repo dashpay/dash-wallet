@@ -51,7 +51,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
@@ -63,7 +62,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
@@ -143,11 +141,12 @@ class TxDisplayCacheService @Inject constructor(
 
     /**
      * Pre-built rows for the fast startup phase (from Room display cache).
-     * Emits emptyList() once the live pager takes over.
+     * Set directly by the init coroutine so that the cacheAdapter always receives rows,
+     * even if the wallet-ready flow wins the serviceScope race and transitions
+     * _txDataSource to RoomLive before PrebuiltCache is set.
      */
-    val cachedRows: StateFlow<List<HistoryRowView>> = _txDataSource
-        .map { source -> if (source is TxDataSource.PrebuiltCache) source.rows else emptyList() }
-        .stateIn(serviceScope, SharingStarted.Eagerly, emptyList())
+    private val _cachedRows = MutableStateFlow<List<HistoryRowView>>(emptyList())
+    val cachedRows: StateFlow<List<HistoryRowView>> = _cachedRows.asStateFlow()
 
     /**
      * Live PagingData stream. Switches from empty → Room-live after the first
@@ -209,6 +208,10 @@ class TxDisplayCacheService @Inject constructor(
                     }
                     historyRows.add(txRow)
                 }
+                // Always populate the cache adapter, regardless of which coroutine won
+                // the serviceScope race (_txDataSource may already be RoomLive if
+                // getCount() completed before getAll()).
+                _cachedRows.value = historyRows
                 if (_txDataSource.value is TxDataSource.Empty) {
                     _txDataSource.value = TxDataSource.PrebuiltCache(historyRows)
                     _transactionsLoaded.value = true
