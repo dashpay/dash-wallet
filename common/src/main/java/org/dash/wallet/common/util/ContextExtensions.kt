@@ -18,7 +18,9 @@
 package org.dash.wallet.common.util
 
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import androidx.fragment.app.FragmentActivity
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
@@ -46,6 +48,15 @@ fun Context.openNotificationChannelSettings(channel: String) {
         .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
         .putExtra(Settings.EXTRA_CHANNEL_ID, channel)
     startActivity(settingsIntent)
+}
+
+fun Context.findFragmentActivity(): FragmentActivity {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is FragmentActivity) return ctx
+        ctx = ctx.baseContext
+    }
+    throw IllegalStateException("No FragmentActivity found in context chain")
 }
 
 fun Context.shareText(textToShare: String, title: String) {

@@ -27,32 +27,30 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
-import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
-import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
+import de.schildbach.wallet.ui.compose_views.createExportCSVDialog
 import de.schildbach.wallet.ui.compose_views.createExtendedPublicKeyDialog
 import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
+import de.schildbach.wallet.ui.compose_views.createZenLedgerDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
 class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject lateinit var authManager: SecurityFunctions
@@ -66,6 +64,7 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
+    private val zenLedgerViewModel: ZenLedgerViewModel by viewModels()
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -123,35 +122,23 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
             ).show(parentFragmentManager, "extended_public_key")
         }
 
-        var isSyncing = false
-        viewModel.blockchainState.observe(viewLifecycleOwner) {
-            isSyncing = it?.replaying == true
-        }
-
         binding.transactionExport.setOnClickListener {
-            if (isSyncing) {
-                val dialog = AdaptiveDialog.create(
+            if (viewModel.isSyncing.value) {
+                AdaptiveDialog.create(
                     null,
                     getString(R.string.report_transaction_history_not_synced_title),
                     getString(R.string.report_transaction_history_not_synced_message),
                     "",
                     getString(R.string.button_close)
-                )
-                dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
+                ).show(parentFragmentManager, "requireSyncing")
             } else {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        val watch = Stopwatch.createStarted()
-                        val transactionExporter = viewModel.getTransactionExporter()
-                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
-                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
-                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                        }
-                    } catch (e: Exception) {
-                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                    }
-                }
+                viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+                val secureActivity = requireActivity() as? SecureActivity
+                secureActivity?.turnOffAutoLogout()
+                createExportCSVDialog(
+                    viewModel = viewModel,
+                    onDismiss = { secureActivity?.turnOnAutoLogout() }
+                ).show(parentFragmentManager, "export_csv_dialog")
             }
         }
 
@@ -176,7 +163,12 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
 
         binding.zenledgerExport.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
-            ZenLedgerDialogFragment().show(requireActivity())
+            val secureActivity = requireActivity() as? SecureActivity
+            secureActivity?.turnOffAutoLogout()
+            createZenLedgerDialog(
+                viewModel = zenLedgerViewModel,
+                onDismiss = { secureActivity?.turnOnAutoLogout() }
+            ).show(parentFragmentManager, "zenledger_dialog")
         }
     }
 
