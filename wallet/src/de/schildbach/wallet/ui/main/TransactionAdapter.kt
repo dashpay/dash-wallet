@@ -160,6 +160,8 @@ class TransactionViewHolder(
             binding.primaryStatus.text = name
         } else if (txView.title != null) {
             binding.primaryStatus.text = txView.title!!.format(resources)
+        } else {
+            binding.primaryStatus.text = null
         }
 
         binding.primaryStatus.setTextColor(contentColor)
