@@ -18,6 +18,7 @@
 package de.schildbach.wallet.database.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 
 /**
  * Persists the grouping structure of transaction wrappers so that [MainViewModel] can
@@ -32,7 +33,11 @@ import androidx.room.Entity
  * - [sortOrder] preserves the insertion order required for correct factory reconstruction
  *   (especially important for CrowdNode whose [tryInclude] is order-sensitive).
  */
-@Entity(tableName = "tx_group_cache", primaryKeys = ["groupId", "txId"])
+@Entity(
+    tableName = "tx_group_cache",
+    primaryKeys = ["groupId", "txId"],
+    indices = [Index(value = ["txId"])]
+)
 data class TxGroupCacheEntry(
     val groupId: String,
     val txId: String,

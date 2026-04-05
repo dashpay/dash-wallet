@@ -163,6 +163,9 @@ class AppDatabaseMigrations {
                     )
                     """
                 )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `idx_tx_group_cache_txId` ON `tx_group_cache`(`txId`)"
+                )
             }
         }
 

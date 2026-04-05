@@ -301,7 +301,8 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 .distinctUntilChanged()
                 .collectLatest { loadStates ->
                     val isRefreshing = loadStates.refresh is LoadState.Loading
-                    val cacheHasItems = cacheAdapter.currentList.isNotEmpty()
+                    val cacheHasItems = concatAdapter.adapters.contains(cacheAdapter) &&
+                        cacheAdapter.currentList.isNotEmpty()
                     // Only show the loading spinner when there's nothing to display yet.
                     val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
                     val isEmpty = loadStates.refresh is LoadState.NotLoading &&
