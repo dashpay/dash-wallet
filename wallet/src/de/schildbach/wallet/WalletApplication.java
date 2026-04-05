@@ -986,6 +986,9 @@ public class WalletApplication extends MultiDexApplication
         if (wallet != null && authenticationGroupExtension != null) {
             authenticationGroupExtension.reset();
         }
+        // Clear the in-memory pre-built rows immediately so that the new Activity
+        // launched by the caller does not display stale cached transaction data.
+        txDisplayCacheService.clearInMemoryCache();
         // implicitly stops blockchain service
         resetBlockchainState();
         Intent blockchainServiceResetBlockchainIntent = new Intent(BlockchainService.ACTION_RESET_BLOCKCHAIN, null, this,

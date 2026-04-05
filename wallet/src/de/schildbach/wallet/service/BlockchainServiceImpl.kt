@@ -1962,7 +1962,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
                 }
                 log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
-                peerConnectivityListener!!.stop()
+                peerConnectivityListener?.stop()
                 log.info("CLEANUP STEP 5: peerConnectivityListener stopped")
                 delayHandler.removeCallbacksAndMessages(null)
                 log.info("CLEANUP STEP 6: delayHandler callbacks cleared")
@@ -1984,8 +1984,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
                     log.info("removing blockchain")
-                    blockChainFile!!.delete()
-                    headerChainFile!!.delete()
+                    blockChainFile?.delete()
+                    headerChainFile?.delete()
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")

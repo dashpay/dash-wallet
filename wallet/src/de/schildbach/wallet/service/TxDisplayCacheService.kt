@@ -330,10 +330,9 @@ class TxDisplayCacheService @Inject constructor(
             .onEach {
                 wrappedTransactionList = emptyList()
                 contactsByTxId = mapOf()
-                serviceScope.launch {
-                    txDisplayCacheDao.deleteAll()
-                    txGroupCacheDao.deleteAll()
-                }
+                _cachedRows.value = emptyList()
+                txDisplayCacheDao.deleteAll()
+                txGroupCacheDao.deleteAll()
                 walletData.wallet?.let { wallet ->
                     coinJoinWrapperFactory = CoinJoinTxWrapperFactory(walletData.networkParameters, wallet as WalletEx)
                     crowdNodeWrapperFactory = FullCrowdNodeSignUpTxSetFactory(walletData.networkParameters, wallet)
@@ -392,12 +391,26 @@ class TxDisplayCacheService @Inject constructor(
         }
     }
 
-    /** clear database tables during a wipe wallet operation */
+    /**
+     * Immediately clears the in-memory pre-built rows so that a new Activity started
+     * after a blockchain reset does not display stale cached data.  Call this before
+     * launching the new Activity (e.g. inside [WalletApplication.resetBlockchain]).
+     * No Room I/O — safe to call from any thread including the main thread.
+     */
+    fun clearInMemoryCache() {
+        _cachedRows.value = emptyList()
+    }
+
+    /** clear database tables during a wipe wallet or rescan operation */
     suspend fun clearDatabase() {
         txDisplayCacheDao.deleteAll()
         txGroupCacheDao.deleteAll()
         wrappedTransactionList = emptyList()
-        _txDataSource.value = TxDataSource.Empty
+        _cachedRows.value = emptyList()
+        // Invalidate the current PagingSource so it re-queries the now-empty table.
+        // Do NOT set _txDataSource = Empty: that would stop the Pager, preventing
+        // recovery as transactions are re-added during a rescan.
+        _currentPagingSource.value?.invalidate()
     }
 
     private suspend fun rebuildWrappedList(filter: TxDirectionFilter) {

@@ -44,7 +44,6 @@ import androidx.lifecycle.lifecycleScope
 import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import kotlinx.coroutines.flow.filterNot
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
@@ -241,17 +240,20 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
         // Fast cache path — ListAdapter.submitList() dispatches DiffUtil once on a background
         // thread, then posts a single update to the main thread.  No Paging3 coroutine chain.
+        // Note: we collect ALL emissions (including emptyList) so that when the cache is
+        // cleared on a blockchain reset, cacheAdapter is also cleared and cacheHasItems
+        // becomes false — allowing showEmptyView() to fire correctly.
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.cachedRows
-                .filterNot { it.isEmpty() }
-                .collect { rows ->
+            viewModel.cachedRows.collect { rows ->
+                cacheAdapter.submitList(rows)
+                if (rows.isNotEmpty()) {
                     log.info("STARTUP cache submitList: {} rows at {}", rows.size, System.currentTimeMillis())
                     if (firstPageLoadStartTime == 0L) {
                         firstPageLoadStartTime = System.currentTimeMillis()
                     }
-                    cacheAdapter.submitList(rows)
                     showTransactionList()
                 }
+            }
         }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
