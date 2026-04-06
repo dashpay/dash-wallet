@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 17,
-    "identityHash": "7ba039e89d0f2adf0148eaf497b40123",
+    "identityHash": "b1cec2f1a7c85e7baadc05284abaa59f",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -1152,14 +1152,24 @@
             "txId"
           ]
         },
-        "indices": [],
+        "indices": [
+          {
+            "name": "index_tx_group_cache_txId",
+            "unique": false,
+            "columnNames": [
+              "txId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_tx_group_cache_txId` ON `${TABLE_NAME}` (`txId`)"
+          }
+        ],
         "foreignKeys": []
       }
     ],
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '7ba039e89d0f2adf0148eaf497b40123')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b1cec2f1a7c85e7baadc05284abaa59f')"
     ]
   }
 }
