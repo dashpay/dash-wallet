@@ -162,12 +162,12 @@ internal fun ExportCSVContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 60.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
                 text = stringResource(R.string.report_transaction_history_dialog_title),
-                style = MyTheme.Typography.HeadlineLargeBold,
+                style = MyTheme.Typography.HeadlineMediumBold,
                 color = MyTheme.Colors.textPrimary
             )
 
@@ -192,8 +192,9 @@ internal fun ExportCSVContent(
                 style = Style.FilledBlue,
                 isEnabled = !isLoading,
                 isLoading = isLoading,
-                onClick = onExportClick
-            )
+                onClick = onExportClick,
+            ),
+            horizontalPadding = 60.dp
         )
     }
 }

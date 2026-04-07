@@ -181,13 +181,13 @@ internal fun ZenLedgerContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 60.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
                 text = stringResource(R.string.zenledger_export_subtitle),
-                style = MyTheme.Typography.HeadlineSmallBold,
+                style = MyTheme.Typography.HeadlineMediumBold,
                 color = MyTheme.Colors.textPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -235,7 +235,8 @@ internal fun ZenLedgerContent(
                 isEnabled = !isLoading,
                 isLoading = isLoading,
                 onClick = onExportClick
-            )
+            ),
+            horizontalPadding = 60.dp
         )
     }
 }

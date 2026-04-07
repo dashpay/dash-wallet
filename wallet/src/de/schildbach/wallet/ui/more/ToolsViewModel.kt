@@ -79,10 +79,6 @@ class ToolsViewModel @Inject constructor(
         private val log = LoggerFactory.getLogger(ToolsViewModel::class.java)
     }
 
-    val isSyncing: StateFlow<Boolean> = blockchainStateDao.observeState()
-        .map { it?.isSynced() != true }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
-
     private val _uiState = MutableStateFlow(ToolsUIState())
     val uiState: StateFlow<ToolsUIState> = _uiState.asStateFlow()
 

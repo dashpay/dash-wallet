@@ -58,8 +58,6 @@ class ToolsFragment : Fragment() {
         private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
     }
 
-    // private val binding by viewBinding(FragmentToolsBinding::bind)
-
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
@@ -77,7 +75,7 @@ class ToolsFragment : Fragment() {
                     onNetworkMonitorClick = { onNetworkMonitor() },
                     onExtendPublicKeyClick = { handleExtendedPublicKey() },
                     onMasternodeKeysClick = { onMasternodeKeys() },
-                    onCsvExportClick = { onTransactionExport(viewModel.uiState.value.isSyncing) },
+                    onCsvExportClick = { onTransactionExport() },
                     onZenLedgerExport = { onZenLedgerExport() },
                     onCreditsInfoClick = { onCreditsInfo() },
                     onBuyCredits = { onBuyCredits() }
@@ -85,58 +83,6 @@ class ToolsFragment : Fragment() {
             }
         }
     }
-
-//    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-//        super.onViewCreated(view, savedInstanceState)
-//        enterTransition = MaterialFadeThrough()
-//        reenterTransition = MaterialFadeThrough()
-//
-//        binding.appBar.toolbar.title = getString(R.string.tools_title)
-//        binding.appBar.toolbar.setNavigationOnClickListener {
-//            findNavController().popBackStack()
-//        }
-//
-//        binding.addressBook.setOnClickListener {
-//            onAddressBook()
-//        }
-//        binding.importKeys.setOnClickListener {
-//            onImportKeys()
-//        }
-//        binding.networkMonitor.setOnClickListener {
-//            onNetworkMonitor()
-//        }
-//        binding.masternodeKeys.setOnClickListener {
-//            onMasternodeKeys()
-//        }
-//
-//        binding.showXpub.setOnClickListener {
-//            handleExtendedPublicKey()
-//        }
-//
-//        var isSyncing = false
-//        viewModel.blockchainState.observe(viewLifecycleOwner) {
-//            isSyncing = it?.replaying == true
-//        }
-//
-//        binding.transactionExport.setOnClickListener {
-//            onTransactionExport(isSyncing)
-//        }
-//
-//        lifecycleScope.launch {
-//            binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
-//        }
-//        binding.buyCreditsInfoButton.setOnClickListener {
-//            WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
-//        }
-//
-//        binding.buyCreditsButton.setOnClickListener {
-//            onBuyCredits()
-//        }
-//
-//        binding.zenledgerExport.setOnClickListener {
-//            onZenLedgerExport()
-//        }
-//    }
 
     private fun onZenLedgerExport() {
         viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
@@ -162,8 +108,8 @@ class ToolsFragment : Fragment() {
         }
     }
 
-    private fun onTransactionExport(isSyncing: Boolean) {
-        if (viewModel.isSyncing.value) {
+    private fun onTransactionExport() {
+        if (viewModel.uiState.value.isSyncing) {
             AdaptiveDialog.create(
                 null,
                 getString(R.string.report_transaction_history_not_synced_title),
@@ -229,19 +175,6 @@ class ToolsFragment : Fragment() {
             }
         ).show(parentFragmentManager, "extended_public_key")
     }
-
-//    private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
-//        val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
-//        val drawable = Qr.themeAwareDrawable(xpubWithCreationDate, resources)
-//        val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
-//        val xpubView = view.findViewById<TextView>(R.id.extended_public_key_dialog_xpub)
-//        imageView.setImageDrawable(drawable)
-//        xpubView.text = xpub
-//
-//        xpubView.setOnClickListener {
-//            handleCopyAddress(xpub)
-//        }
-//    }
 
     private fun createAndLaunchShareIntent(xpub: String) {
         val intent = Intent(Intent.ACTION_SEND)

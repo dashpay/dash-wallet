@@ -273,7 +273,7 @@ fun NavBarTitleClose(
     TopNavBase(
         modifier = modifier,
         leadingPart = false,
-        trailingIcon = Icons.Default.Close,
+        trailingIcon = ImageVector.vectorResource(R.drawable.ic_nav_bar_close),
         onTrailingClick = onCloseClick,
         title = title
     )
@@ -338,7 +338,7 @@ fun NavBarClose(
         modifier = modifier,
         leadingPart = false,
         centralPart = false,
-        trailingIcon = Icons.Default.Close,
+        trailingIcon = ImageVector.vectorResource(R.drawable.ic_nav_bar_close),
         onTrailingClick = onCloseClick
     )
 }
