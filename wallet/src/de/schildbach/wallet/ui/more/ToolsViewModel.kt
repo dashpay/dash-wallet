@@ -34,10 +34,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewModelScope
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -48,6 +50,12 @@ import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.util.*
 import javax.inject.Inject
+
+data class ToolsUIState(
+    val isLoading: Boolean = false,
+    val isSyncing: Boolean = false,
+    val hasUsername: Boolean = false
+)
 
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
@@ -75,6 +83,9 @@ class ToolsViewModel @Inject constructor(
         .map { it?.isSynced() != true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
+    private val _uiState = MutableStateFlow(ToolsUIState())
+    val uiState: StateFlow<ToolsUIState> = _uiState.asStateFlow()
+
     val xpub: String
     val xpubWithCreationDate: String
 
@@ -90,6 +101,14 @@ class ToolsViewModel @Inject constructor(
             xpub,
             extendedKey.creationTimeSeconds,
         )
+
+        blockchainStateDao.observeState().onEach {
+            _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
+        }
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
+        }
     }
 
     fun copyXpubToClipboard() {

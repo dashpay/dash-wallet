@@ -36,7 +36,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight.Companion.W600
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
@@ -50,6 +49,7 @@ fun MenuItem(
     icon: Int? = null,
     showDirectionIndicator: Boolean = false,
     showInfo: Boolean = false,
+    onInfoClick: (() -> Unit)? = null,
     showChevron: Boolean = false,
     // New controlled props
     checked: Boolean? = null,
@@ -89,7 +89,7 @@ fun MenuItem(
                         modifier = Modifier.size(26.dp)
                     )
                 }
-                
+
                 // Direction indicator overlay
                 if (showDirectionIndicator) {
                     Box(
@@ -129,7 +129,7 @@ fun MenuItem(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
-                
+
                 // Title row with info icon
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -146,7 +146,12 @@ fun MenuItem(
                             painter = painterResource(id = android.R.drawable.ic_dialog_info),
                             contentDescription = "Info",
                             tint = MyTheme.Colors.textTertiary,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier
+                                .size(15.dp)
+                                .then(
+                                    if (onInfoClick != null) Modifier.clickable { onInfoClick() }
+                                    else Modifier
+                                )
                         )
                     }
                 }
@@ -174,20 +179,12 @@ fun MenuItem(
 
             // Toggle switch
             if (isToggled != null || checked != null) {
-                Switch(
+                DashSwitch(
                     checked = effectiveChecked,
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
                         (onCheckedChange ?: onToggleChanged)?.invoke(newState)
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor   = MyTheme.Colors.backgroundSecondary,
-                        checkedTrackColor   = MyTheme.Colors.dashBlue,
-                        uncheckedThumbColor = MyTheme.Colors.backgroundSecondary,
-                        uncheckedTrackColor = MyTheme.Colors.gray300
-                    ),
-                    modifier = Modifier
-                        .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
+                    }
                 )
             }
 
@@ -217,7 +214,7 @@ fun MenuItem(
                             )
                         }
                     }
-                    
+
                     // Fiat amount
                     fiatAmount?.let {
                         Text(
@@ -282,12 +279,21 @@ fun PreviewMenuItem() {
             showDirectionIndicator = true
         )
 
-        // With toggle
+        // With toggle ON
         MenuItem(
-            title = "Toggle Setting",
+            title = "Toggle Setting ON",
             subtitle = "Enable this feature",
             icon = R.drawable.ic_dash_blue_filled,
             isToggled = { true },
+            onToggleChanged = { }
+        )
+
+        // With toggle OFF
+        MenuItem(
+            title = "Toggle Setting OFF",
+            subtitle = "Enable this feature",
+            icon = R.drawable.ic_dash_blue_filled,
+            isToggled = { false },
             onToggleChanged = { }
         )
 
@@ -321,7 +327,7 @@ fun PreviewMenuItem() {
         MenuItem(
             helpTextAbove = "help text 1",
             title = "title",
-            subtitle = "help text 2", 
+            subtitle = "help text 2",
             subtitle2 = "help text 3",
             icon = R.drawable.ic_dash_blue_filled,
             showDirectionIndicator = true,
