@@ -230,7 +230,7 @@ object MyTheme {
             fontSize = 28.sp,
             lineHeight = 36.sp,
             fontFamily = interBold,
-            fontWeight = FontWeight(650)
+            fontWeight = FontWeight(700)
         )
 
         val HeadlineMediumSemibold = TextStyle(
@@ -258,7 +258,7 @@ object MyTheme {
             fontSize = 24.sp,
             lineHeight = 32.sp,
             fontFamily = interBold,
-            fontWeight = FontWeight(650)
+            fontWeight = FontWeight(750)
         )
 
         val HeadlineSmallSemibold = TextStyle(

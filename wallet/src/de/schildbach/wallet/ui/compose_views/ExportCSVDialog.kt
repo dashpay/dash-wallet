@@ -36,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -162,7 +163,8 @@ internal fun ExportCSVContent(
             modifier = Modifier.padding(horizontal = 40.dp),
             heading = stringResource(R.string.report_transaction_history_dialog_title),
             textStyle = MyTheme.Typography.HeadlineMediumBold,
-            text = "${stringResource(R.string.report_transaction_history_body_1)}\n\n${stringResource(R.string.report_transaction_history_body_2)}"
+            text = "${stringResource(R.string.report_transaction_history_body_1)}\n\n${stringResource(R.string.report_transaction_history_body_2)}",
+            textAlign = TextAlign.Start
         )
         Spacer(modifier = Modifier.height(12.dp))
 
