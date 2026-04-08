@@ -77,32 +77,22 @@ private fun ExtendedPublicKeyContent(
             )
         }
 
-        Column(
+        FeatureTopText(
+            modifier = Modifier.padding(horizontal = 40.dp),
+            heading = stringResource(R.string.extended_public_key_fragment_title),
+            textStyle = MyTheme.Typography.HeadlineMediumBold,
+            showText = false
+        )
+        Text(
+            text = xpub,
+            style = MyTheme.Body2Regular,
+            color = MyTheme.Colors.textSecondary,
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 60.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = stringResource(R.string.extended_public_key_fragment_title),
-                style = MyTheme.Typography.HeadlineMediumBold,
-                color = MyTheme.Colors.textPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = xpub,
-                style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onCopy() }
-            )
-        }
+                .padding(horizontal = 60.dp)
+                .clickable { onCopy() }
+        )
 
         Spacer(modifier = Modifier.height(28.dp))
 

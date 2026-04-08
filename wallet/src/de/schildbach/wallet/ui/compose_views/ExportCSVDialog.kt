@@ -19,14 +19,12 @@ package de.schildbach.wallet.ui.compose_views
 
 import android.content.Intent
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -46,6 +44,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.ToolsViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -159,32 +158,13 @@ internal fun ExportCSVContent(
                 .size(95.dp)
         )
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 60.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.report_transaction_history_dialog_title),
-                style = MyTheme.Typography.HeadlineMediumBold,
-                color = MyTheme.Colors.textPrimary
-            )
-
-            Text(
-                text = stringResource(R.string.report_transaction_history_body_1),
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary
-            )
-
-            Text(
-                text = stringResource(R.string.report_transaction_history_body_2),
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-        }
+        FeatureTopText(
+            modifier = Modifier.padding(horizontal = 40.dp),
+            heading = stringResource(R.string.report_transaction_history_dialog_title),
+            textStyle = MyTheme.Typography.HeadlineMediumBold,
+            text = "${stringResource(R.string.report_transaction_history_body_1)}\n\n${stringResource(R.string.report_transaction_history_body_2)}"
+        )
+        Spacer(modifier = Modifier.height(12.dp))
 
         SheetButtonGroup(
             primaryButton = SheetButton(

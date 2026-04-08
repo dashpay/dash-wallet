@@ -33,18 +33,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.dash.wallet.common.R
-
 @Composable
 fun FeatureTopText(
     heading: String,
     modifier: Modifier = Modifier,
     text: String? = null,
+    textStyle: TextStyle = MyTheme.Typography.HeadlineSmallBold,
     showText: Boolean = true,
     showButton: Boolean = false,
     buttonLabel: String? = null,
@@ -61,7 +60,7 @@ fun FeatureTopText(
     ) {
         Text(
             text = heading,
-            style = MyTheme.Typography.HeadlineSmallBold,
+            style = textStyle,
             color = MyTheme.Colors.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -133,8 +132,8 @@ private fun FeatureTopTextPreview() {
             showText = true,
             showButton = true,
             buttonLabel = "Label",
-            buttonLeadingIcon = ImageVector.vectorResource(R.drawable.ic_preview),
-            buttonTrailingIcon = ImageVector.vectorResource(R.drawable.ic_preview),
+            buttonLeadingIcon = MyImages.Preview,
+            buttonTrailingIcon = MyImages.Preview,
             onButtonClick = { }
         )
     }
