@@ -50,7 +50,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -122,7 +121,8 @@ object MainActivityExt {
                         null,
                         NavOptions.Builder()
                             .setLaunchSingleTop(true)
-                            .setPopUpTo(navController.graph.startDestinationId, false)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
                             .build()
                     )
                     return@setOnItemSelectedListener true
@@ -134,7 +134,8 @@ object MainActivityExt {
                         null,
                         NavOptions.Builder()
                             .setLaunchSingleTop(true)
-                            .setPopUpTo(navController.graph.startDestinationId, false)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
                             .build()
                     )
                     return@setOnItemSelectedListener true
@@ -146,7 +147,8 @@ object MainActivityExt {
                         null,
                         NavOptions.Builder()
                             .setLaunchSingleTop(true)
-                            .setPopUpTo(navController.graph.startDestinationId, false)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
                             .build()
                     )
                     return@setOnItemSelectedListener true
@@ -158,7 +160,8 @@ object MainActivityExt {
                         null,
                         NavOptions.Builder()
                             .setLaunchSingleTop(true)
-                            .setPopUpTo(navController.graph.startDestinationId, false)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
                             .build()
                     )
                     return@setOnItemSelectedListener true

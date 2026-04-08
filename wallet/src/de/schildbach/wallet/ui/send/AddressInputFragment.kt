@@ -163,6 +163,7 @@ class AddressInputFragment : Fragment(R.layout.fragment_address_input) {
                 SendCoinsActivity.start(requireContext(), paymentIntent)
                 viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
                 requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+                findNavController().popBackStack()
             } catch (ex: Exception) {
                 binding.inputWrapper.isErrorEnabled = true
                 binding.errorText.isVisible = true
