@@ -37,8 +37,9 @@ interface DashSpendRepository {
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
-        merchantId: String
-    ): GiftCardInfo
-    suspend fun getGiftCard(giftCardId: String): GiftCardInfo?
+        quantity: Int,
+        merchantId: String,
+    ): List<GiftCardInfo>
+    suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo>
     fun getGiftCardDiscount(merchantId: String, denomination: Double): Double
 }

@@ -32,5 +32,6 @@ data class GiftCard(
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
     var merchantUrl: String? = null,
-    var note: String? = null
+    var note: String? = null,
+    var index: Int = 0
 )

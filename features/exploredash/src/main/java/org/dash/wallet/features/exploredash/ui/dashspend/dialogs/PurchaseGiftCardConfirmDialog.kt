@@ -33,6 +33,7 @@ import coil.load
 import coil.size.Scale
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
@@ -85,8 +86,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             dismiss()
             return
         }
-        val paymentValue = viewModel.giftCardPaymentValue.value
-        val savingsFraction = viewModel.getGiftCardDiscount(paymentValue.toBigDecimal().toDouble())
+        val paymentValue = viewModel.giftCardOrderInfo.value
+        val savingsFraction = viewModel.getGiftCardDiscount(paymentValue.value.toBigDecimal().toDouble())
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
             binding.merchantLogo.load(logoLocation) {
@@ -107,10 +108,10 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             }
         }
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsFraction)
-        binding.giftCardTotalValue.text = paymentValue.toFormattedString()
-        val discountedValue = paymentValue.discountBy(savingsFraction)
+        binding.giftCardTotalValue.text = paymentValue.value.toFormattedString()
+        val discountedValue = paymentValue.value.discountBy(savingsFraction)
         binding.giftCardYouPayValue.text = discountedValue.toFormattedStringRoundUp()
-        binding.purchaseCardValue.text = paymentValue.toFormattedString()
+        binding.purchaseCardValue.text = paymentValue.value.toFormattedString()
 
         binding.cancelButton.setOnClickListener { dismiss() }
         binding.confirmButton.setOnClickListener { onConfirmButtonClicked() }
@@ -303,7 +304,17 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 return@launch
             }
 
-            if (!data.cryptoAmount.isNullOrEmpty() && viewModel.needsCrowdNodeWarning(data.cryptoAmount)) {
+            val totalAmount = Coin.valueOf(
+                data.sumOf {
+                    if (!it.cryptoAmount.isNullOrEmpty()) {
+                        Coin.parseCoin(it.cryptoAmount).value
+                    } else {
+                        0L
+                    }
+                }
+            )
+
+            if (!totalAmount.isZero && viewModel.needsCrowdNodeWarning(totalAmount)) {
                 if (!isAdded) {
                     hideLoading()
                     return@launch
@@ -316,11 +327,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 }
             }
 
-            val transactionId = createSendingRequestFromDashUri(data.paymentUrls?.get("DASH.DASH")!!)
+            val transactionId = createSendingRequestFromDashUri(data.first().paymentUrls?.get("DASH.DASH")!!)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
                 viewModel.saveGiftCardDummy(transactionId, data)
-                showGiftCardDetailsDialog(transactionId, data.id)
+                showGiftCardDetailsDialog(transactionId, data.first().id)
             }
         }
     }

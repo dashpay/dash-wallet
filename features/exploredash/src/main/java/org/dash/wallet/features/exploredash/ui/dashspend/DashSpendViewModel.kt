@@ -23,6 +23,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.android.play.core.integrity.q
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -71,6 +72,15 @@ data class DashSpendState(
     val email: String? = null,
     val isLoggedIn: Boolean = false
 )
+
+data class GiftCardOrderInfo(
+    val value: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0),
+    val quality: Int = 1
+) {
+    companion object {
+        val DEFAULT = GiftCardOrderInfo()
+    }
+}
 
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
@@ -143,8 +153,8 @@ class DashSpendViewModel @Inject constructor(
     private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
     val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
 
-    private val _giftCardPaymentValue = MutableStateFlow<Fiat>(Fiat.valueOf(Constants.USD_CURRENCY, 0))
-    val giftCardPaymentValue: StateFlow<Fiat> = _giftCardPaymentValue.asStateFlow()
+    private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderInfo>(GiftCardOrderInfo())
+    val giftCardOrderInfo: StateFlow<GiftCardOrderInfo> = _giftCardOrderInfo.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -195,10 +205,11 @@ class DashSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    suspend fun purchaseGiftCard(): GiftCardInfo = withContext(Dispatchers.IO) {
+    suspend fun purchaseGiftCard(): List<GiftCardInfo> = withContext(Dispatchers.IO) {
         _giftCardMerchant.value?.merchantId?.let {
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
-            val amountValue = _giftCardPaymentValue.value
+            val amountValue = _giftCardOrderInfo.value.value
+            val quantity = _giftCardOrderInfo.value.quality
             val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
             when (selectedProvider) {
                 GiftCardProviderType.CTX -> {
@@ -207,6 +218,7 @@ class DashSpendViewModel @Inject constructor(
                             merchantId = provider!!.sourceId,
                             fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                             fiatCurrency = Constants.USD_CURRENCY,
+                            quantity = quantity,
                             cryptoCurrency = Constants.DASH_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -229,6 +241,7 @@ class DashSpendViewModel @Inject constructor(
                             cryptoCurrency = Constants.DASH_CURRENCY,
                             merchantId = provider!!.sourceId,
                             fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            quantity = quantity,
                             fiatCurrency = Constants.USD_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -475,23 +488,26 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardInfo) {
-        val giftCard = GiftCard(
-            txId = txId,
-            merchantName = _giftCardMerchant.value?.name ?: "",
-            price = giftCardResponse.fiatAmount?.toDouble() ?: 0.0,
-            merchantUrl = giftCardResponse.redeemUrl,
-            note = giftCardResponse.id
-        )
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: List<GiftCardInfo>) {
+        var index = 0
+        val giftCard = giftCardResponse.map {
+            GiftCard(
+                txId = txId,
+                merchantName = _giftCardMerchant.value?.name ?: "",
+                price = it.fiatAmount?.toDouble() ?: 0.0,
+                merchantUrl = it.redeemUrl,
+                note = it.id,
+                index = index++
+            )
+        }
         viewModelScope.launch {
-            giftCardDao.insertGiftCard(giftCard)
+            giftCardDao.insertGiftCards(giftCard)
         }
     }
 
-    fun needsCrowdNodeWarning(dashAmount: String): Boolean {
-        val outputAmount = Coin.parseCoin(dashAmount)
+    fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {
         return try {
-            walletDataProvider.checkSendingConditions(null, outputAmount)
+            walletDataProvider.checkSendingConditions(null, dashAmount)
             false
         } catch (_: LeftoverBalanceException) {
             true
@@ -502,19 +518,19 @@ class DashSpendViewModel @Inject constructor(
         _isFixedDenomination.value = isFixed
     }
 
-    fun setGiftCardPaymentValue(fiat: Fiat) {
-        _giftCardPaymentValue.value = fiat
+    fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
+        _giftCardOrderInfo.value = GiftCardOrderInfo(fiat, quantity)
     }
 
-    fun setGiftCardPaymentValue(coin: Coin) {
+    fun setGiftCardOrderInfo(coin: Coin, quantity: Int) {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            _giftCardPaymentValue.value = myRate.coinToFiat(coin)
+            _giftCardOrderInfo.value = GiftCardOrderInfo(myRate.coinToFiat(coin), quantity)
         }
     }
 
     fun resetSelectedDenomination() {
-        _giftCardPaymentValue.value = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+        _giftCardOrderInfo.value = GiftCardOrderInfo()
     }
 
     fun logEvent(eventName: String) {
@@ -589,7 +605,9 @@ class DashSpendViewModel @Inject constructor(
 
         report.append("\n")
         report.append("Purchase Details").append("\n")
-        report.append("amount entered: ").append(_giftCardPaymentValue.value.toFriendlyString()).append("\n")
+        report.append("amount entered: ").append(_giftCardOrderInfo.value.value.toFriendlyString()).append("\n")
+        report.append("quantity: ").append(_giftCardOrderInfo.value.quality).append("\n")
+        report.append("order: ").append(ex?.orderId).append("\n")
         report.append("\n")
         ex?.let { exception ->
             exception.message?.let {

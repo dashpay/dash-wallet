@@ -328,8 +328,9 @@ class PiggyCardsRepository @Inject constructor(
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
+        quantity: Int,
         merchantId: String
-    ): GiftCardInfo {
+    ): List<GiftCardInfo> {
         val orderResponse = purchaseGiftCard(merchantId, fiatAmount, fiatCurrency)
         val rate = api.getExchangeRate(fiatCurrency)
         exchangeRateMap[orderResponse.id] = rate
@@ -339,18 +340,20 @@ class PiggyCardsRepository @Inject constructor(
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
             // return value
-            GiftCardInfo(
-                id = orderResponse.id,
-                merchantName = response.merchantName,
-                status = response.status,
-                cryptoAmount = uri.amount.toPlainString(),
-                cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
-                paymentCryptoNetwork = Constants.DASH_CURRENCY,
-                rate = rate.exchangeRate.toString(),
-                fiatAmount = fiatAmount,
-                fiatCurrency = Constants.USD_CURRENCY,
-                paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
-            )
+            response.map { giftCard ->
+                GiftCardInfo(
+                    id = orderResponse.id,
+                    merchantName = giftCard.merchantName,
+                    status = giftCard.status,
+                    cryptoAmount = uri.amount.toPlainString(),
+                    cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
+                    paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                    rate = rate.exchangeRate.toString(),
+                    fiatAmount = fiatAmount,
+                    fiatCurrency = Constants.USD_CURRENCY,
+                    paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
+                )
+            }
         } catch (e: BitcoinURIParseException) {
             if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
                 throw CTXSpendException(
@@ -371,42 +374,44 @@ class PiggyCardsRepository @Inject constructor(
         }
     }
 
-    override suspend fun getGiftCard(giftCardId: String): GiftCardInfo? {
+    override suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo> {
         val orderStatus = api.getOrderStatus(giftCardId)
 
         if (orderStatus.code != 200) {
             log.error("order status not retrieved: $giftCardId: ${orderStatus.message}")
-            return null
+            return listOf()
         }
 
         val data = orderStatus.data
-        val giftCard = orderStatus.data.cards.first()
+        val cards = orderStatus.data.cards
 
-        return GiftCardInfo(
-            id = data.orderId,
-            merchantName = giftCard.name,
-            status = when (data.status) {
-                "Payment pending" -> GiftCardStatus.UNPAID
-                "Paid" -> GiftCardStatus.PAID
-                "Processing" -> GiftCardStatus.PAID
-                "Complete" -> GiftCardStatus.FULFILLED
-                "Cancelled" -> GiftCardStatus.REJECTED
-                else -> GiftCardStatus.UNPAID
-            },
-            barcodeUrl = giftCard.barcodeLink,
-            cardNumber = giftCard.claimCode,
-            cardPin = giftCard.claimPin,
-            cryptoAmount = "0.0",
-            cryptoCurrency = Constants.DASH_CURRENCY,
-            paymentCryptoNetwork = Constants.DASH_CURRENCY,
-            paymentId = data.orderId,
-            percentDiscount = "0.0",
-            rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
-            redeemUrl = giftCard.claimLink,
-            fiatAmount = "0.0",
-            fiatCurrency = Constants.USD_CURRENCY,
-            paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
-        )
+        return cards.map { giftCard ->
+            GiftCardInfo(
+                id = data.orderId,
+                merchantName = giftCard.name,
+                status = when (data.status) {
+                    "Payment pending" -> GiftCardStatus.UNPAID
+                    "Paid" -> GiftCardStatus.PAID
+                    "Processing" -> GiftCardStatus.PAID
+                    "Complete" -> GiftCardStatus.FULFILLED
+                    "Cancelled" -> GiftCardStatus.REJECTED
+                    else -> GiftCardStatus.UNPAID
+                },
+                barcodeUrl = giftCard.barcodeLink,
+                cardNumber = giftCard.claimCode,
+                cardPin = giftCard.claimPin,
+                cryptoAmount = "0.0",
+                cryptoCurrency = Constants.DASH_CURRENCY,
+                paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                paymentId = data.orderId,
+                percentDiscount = "0.0",
+                rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
+                redeemUrl = giftCard.claimLink,
+                fiatAmount = "0.0",
+                fiatCurrency = Constants.USD_CURRENCY,
+                paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
+            )
+        }
     }
 
     suspend fun getAccountEmail(): String? {

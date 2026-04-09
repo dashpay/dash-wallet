@@ -89,6 +89,9 @@ class CTXSpendException(
             return errorCode == 500 && outOfStockRegex.matches(message) || outOfStockRegex.matches(errorBody ?: "")
         }
 
+    val orderId: String?
+        get() = giftCardResponse?.id
+
     override fun toString(): String {
         return "DashSpend error: $message\n  $giftCardResponse\n  $errorCode: $errorBody"
     }
@@ -160,8 +163,9 @@ class CTXSpendRepository @Inject constructor(
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
+        quantity: Int,
         merchantId: String
-    ): GiftCardInfo {
+    ): List<GiftCardInfo> {
         val response = purchaseGiftCard(
             merchantId = merchantId,
             fiatAmount = fiatAmount,
@@ -169,34 +173,11 @@ class CTXSpendRepository @Inject constructor(
             cryptoCurrency = cryptoCurrency
         )
 
-        return GiftCardInfo(
-            response.id,
-            response.merchantName,
-            status = GiftCardStatus.valueOf(response.status.uppercase()),
-            cryptoAmount = response.cryptoAmount,
-            cryptoCurrency = response.cryptoCurrency,
-            paymentCryptoNetwork = response.paymentCryptoNetwork,
-            paymentId = response.paymentId,
-            percentDiscount = response.percentDiscount,
-            rate = response.rate,
-            redeemUrl = response.redeemUrl,
-            fiatAmount = response.fiatAmount,
-            fiatCurrency = response.fiatCurrency,
-            paymentUrls = response.paymentUrls
-        )
-    }
-
-    override suspend fun getGiftCard(giftCardId: String): GiftCardInfo? {
-        val response = getGiftCardByTxid(giftCardId)
-
-        return response?.let {
+        return listOf(
             GiftCardInfo(
                 response.id,
-                merchantName = response.merchantName,
+                response.merchantName,
                 status = GiftCardStatus.valueOf(response.status.uppercase()),
-                barcodeUrl = response.barcodeUrl,
-                cardNumber = response.cardNumber,
-                cardPin = response.cardPin,
                 cryptoAmount = response.cryptoAmount,
                 cryptoCurrency = response.cryptoCurrency,
                 paymentCryptoNetwork = response.paymentCryptoNetwork,
@@ -208,7 +189,34 @@ class CTXSpendRepository @Inject constructor(
                 fiatCurrency = response.fiatCurrency,
                 paymentUrls = response.paymentUrls
             )
-        }
+        )
+    }
+
+    override suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo> {
+        val response = getGiftCardByTxid(giftCardId)
+
+        return response?.let {
+            listOf(
+                GiftCardInfo(
+                    response.id,
+                    merchantName = response.merchantName,
+                    status = GiftCardStatus.valueOf(response.status.uppercase()),
+                    barcodeUrl = response.barcodeUrl,
+                    cardNumber = response.cardNumber,
+                    cardPin = response.cardPin,
+                    cryptoAmount = response.cryptoAmount,
+                    cryptoCurrency = response.cryptoCurrency,
+                    paymentCryptoNetwork = response.paymentCryptoNetwork,
+                    paymentId = response.paymentId,
+                    percentDiscount = response.percentDiscount,
+                    rate = response.rate,
+                    redeemUrl = response.redeemUrl,
+                    fiatAmount = response.fiatAmount,
+                    fiatCurrency = response.fiatCurrency,
+                    paymentUrls = response.paymentUrls
+                )
+            )
+        } ?: listOf()
     }
 
     override suspend fun getMerchant(merchantId: String): UpdatedMerchantDetails? {

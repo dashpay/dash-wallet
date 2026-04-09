@@ -127,7 +127,9 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             // Update card details without affecting loading/error visibility
-            state.giftCard?.let { bindGiftCardDetailsOnly(binding, it) }
+            if (state.giftCards.isNotEmpty()) {
+                bindGiftCardDetailsOnly(binding, state.giftCards)
+            }
 
             val bitmap = state.icon
             val iconSize = resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
@@ -224,7 +226,7 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
         launcher.launch(chooser)
     }
 
-    private fun bindGiftCardDetailsOnly(binding: DialogGiftCardDetailsBinding, giftCard: GiftCard) {
+    private fun bindGiftCardDetailsOnly(binding: DialogGiftCardDetailsBinding, giftCard: List<GiftCard>) {
         // Only update card content, NO visibility management here
         binding.merchantName.text = giftCard.merchantName
         val currencyFormat = (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {

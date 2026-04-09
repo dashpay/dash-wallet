@@ -45,6 +45,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -53,9 +54,9 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 data class GiftCardUIState(
-    val giftCard: GiftCard? = null,
+    val giftCards: List<GiftCard> = listOf(),
     val icon: Bitmap? = null,
-    val barcode: Barcode? = null,
+    val barcodes: List<Barcode?> = listOf(),
     val date: LocalDateTime? = null,
     val error: Exception? = null,
     val serviceName: String? = null,
@@ -114,25 +115,29 @@ class GiftCardDetailsViewModel @Inject constructor(
         giftCardDao.observeCardForTransaction(transactionId)
             .filterNotNull()
             .distinctUntilChanged()
-            .onEach { giftCard ->
+            .onEach { giftCards ->
                 _uiState.update { currentState ->
-                    val barcodeValue = giftCard.barcodeValue
+                    //val barcodeValue = giftCards.barcodeValue
                     currentState.copy(
-                        giftCard = giftCard,
-                        barcode = barcodeValue?.let { value ->
-                            if (currentState.barcode?.value != value) {
-                                Barcode(value, giftCard.barcodeFormat!!)
-                            } else {
-                                currentState.barcode
+                        giftCards = giftCards,
+                        barcodes = if (currentState.barcodes.isNotEmpty()) {
+                            giftCards.map {
+                                if (it.barcodeValue != null && it.barcodeFormat != null) {
+                                    Barcode(it.barcodeValue!!, it.barcodeFormat!!)
+                                } else {
+                                    null
+                                }
                             }
+                        } else {
+                            currentState.barcodes
                         }
                     )
                 }
 
-                if (giftCard.number == null && giftCard.merchantUrl.isNullOrEmpty() && giftCard.note != null) {
+                if (giftCards.any { it.number == null && it.merchantUrl.isNullOrEmpty() && it.note != null }) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
-                        .onEach { fetchGiftCardInfo(giftCard.txId) }
+                        .onEach { fetchGiftCardInfo(giftCards.first().txId) }
                         .launchIn(viewModelScope)
                 } else {
                     cancelTicker()
@@ -159,8 +164,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val giftCard = ctxSpendRepository.getGiftCard(txid.toStringBase58())
-
+                    val giftCards = ctxSpendRepository.getGiftCard(txid.toStringBase58())
+                    val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
                     val newState = if (giftCard != null) {
                         when (giftCard.status) {
@@ -343,8 +348,8 @@ class GiftCardDetailsViewModel @Inject constructor(
                 )
 
                 try {
-                    val giftCard = piggyCardsRepository.getGiftCard(orderId)
-
+                    val giftCards = piggyCardsRepository.getGiftCard(orderId)
+                    val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
                     val newState = if (giftCard != null) {
                         when (giftCard.status) {
@@ -394,37 +399,45 @@ class GiftCardDetailsViewModel @Inject constructor(
                                                 )
                                         )
                                     )
-                                    ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                    // ctxSpendConfig.set(PiggyCardsConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
-                                if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
-                                    log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
-                                    giftCard.barcodeUrl?.let {
-                                        saveBarcodeUrl(it)
+                                var newCombinedState: GiftCardUIState = uiState.value.copy()
+                                giftCards.forEach { giftCard ->
+                                    if (!giftCard.cardNumber.isNullOrEmpty()) {
+                                        updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                                        log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
+                                        giftCard.barcodeUrl?.let {
+                                            saveBarcodeUrl(it)
+                                        }
+                                        val newState = uiState.value.copy(
+                                            status = giftCard.status,
+                                            queries = uiState.value.queries + 1,
+                                            error = null
+                                        )
+                                        cancelTicker()
+                                        if (newCombinedState == null) {
+                                            newCombinedState = newState
+                                        }
+                                    } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
+                                        updateGiftCard(giftCard.redeemUrl)
+                                        val newState = uiState.value.copy(
+                                            status = giftCard.status,
+                                            queries = uiState.value.queries + 1,
+                                            error = null
+                                        )
+                                        cancelTicker()
+                                        if (newCombinedState == null) {
+                                            newCombinedState = newState
+                                        }
+                                    } else {
+                                        newCombinedState = uiState.value.copy(
+                                            status = giftCard.status,
+                                            queries = uiState.value.queries + 1,
+                                            error = null
+                                        )
                                     }
-                                    val newState = uiState.value.copy(
-                                        status = giftCard.status,
-                                        queries = uiState.value.queries + 1,
-                                        error = null
-                                    )
-                                    cancelTicker()
-                                    newState
-                                } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                    updateGiftCard(giftCard.redeemUrl)
-                                    val newState = uiState.value.copy(
-                                        status = giftCard.status,
-                                        queries = uiState.value.queries + 1,
-                                        error = null
-                                    )
-                                    cancelTicker()
-                                    newState
-                                } else {
-                                    uiState.value.copy(
-                                        status = giftCard.status,
-                                        queries = uiState.value.queries + 1,
-                                        error = null
-                                    )
                                 }
+                                newCombinedState
                             }
 
                             GiftCardStatus.REJECTED -> {
