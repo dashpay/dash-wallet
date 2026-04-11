@@ -1032,6 +1032,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 peerGroup!!.setDownloadTxDependencies(0) // recursive implementation causes StackOverflowError
                 peerGroup!!.addWallet(wallet)
+                dashSystemService.system.addWallet(wallet)
                 peerGroup!!.setUserAgent(Constants.USER_AGENT, packageInfoProvider.versionName)
                 log.info("Adding PeerConnectivityListener to peerGroup: listener={}, stopped={}",
                     peerConnectivityListener, peerConnectivityListener?.stopped?.get())
@@ -1205,6 +1206,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removePreBlocksDownloadedListener(preBlocksDownloadListener)
                 peerGroup!!.removeWallet(wallet)
+                dashSystemService.system.removeWallet(wallet)
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                 peerGroup!!.stopAsync()
                 try {
