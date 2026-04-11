@@ -104,6 +104,8 @@ interface CoinJoinService {
     suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
+    /** Cancel ongoing coroutine operations so the CoinJoin lock is released before system.close() */
+    fun prepareForShutdown()
     /** shutdown coinjoin mixing */
     suspend fun shutdown()
 }
@@ -276,6 +278,11 @@ class CoinJoinMixingService @Inject constructor(
         coroutineScope.launch {
             updateTimeSkewInternal(timeSkew)
         }
+    }
+
+    override fun prepareForShutdown() {
+        log.info("coinjoin: cancelling coroutine scope so refreshUnusedKeys lock is released before system.close()")
+        coroutineJob.cancel()
     }
 
     override suspend fun shutdown() {
@@ -653,7 +660,10 @@ class CoinJoinMixingService @Inject constructor(
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
                 // though coroutineScope is on a Context propogated thread, we still need this
                 org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
+                val watch = Stopwatch.createStarted()
+                log.info("starting refreshUnusedKeys")
                 (walletDataProvider.wallet as WalletEx).coinJoin.refreshUnusedKeys()
+                log.info("refreshUnusedKeys: {}", watch)
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating(false)
             }

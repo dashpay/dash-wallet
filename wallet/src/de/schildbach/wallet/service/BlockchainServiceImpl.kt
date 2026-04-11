@@ -1952,6 +1952,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
+                    // Cancel the CoinJoin coroutine scope early so refreshUnusedKeys() can finish
+                    // and release its ReentrantLock before system.close() tries to acquire it.
+                    coinJoinService.prepareForShutdown()
                     log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
                     peerGroup!!.forceStop(7_000)
                     log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
