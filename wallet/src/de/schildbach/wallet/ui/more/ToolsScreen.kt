@@ -133,7 +133,7 @@ private fun ToolsScreenContent(
         // Scrollable Content
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

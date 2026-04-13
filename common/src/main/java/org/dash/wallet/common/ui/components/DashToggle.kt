@@ -20,8 +20,9 @@ package org.dash.wallet.common.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -86,11 +87,13 @@ fun DashSwitch(
     Box(
         modifier = modifier
             .minimumInteractiveComponentSize()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null, // No ripple to match Figma design
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
                 enabled = enabled,
-                onClick = { onCheckedChange?.invoke(!checked) }
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onValueChange = { onCheckedChange?.invoke(it) }
             ),
         contentAlignment = Alignment.Center
     ) {
