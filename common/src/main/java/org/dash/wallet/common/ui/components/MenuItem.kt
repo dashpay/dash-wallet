@@ -64,6 +64,7 @@ fun MenuItem(
     fiatAmount: String? = null,
     // Trailing button
     trailingButtonText: String? = null,
+    trailingButtonStyle: Style? = null,
     onTrailingButtonClick: (() -> Unit)? = null,
     action: (() -> Unit)? = null
 ) {
@@ -73,12 +74,12 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .background(Color.Transparent, RoundedCornerShape(8.dp))
+            .background(Color.Transparent, RoundedCornerShape(20.dp))
             .then(if (action != null) Modifier.clickable { action() } else Modifier)
             .semantics { if (action != null) role = Role.Button }
-            .padding(horizontal = 10.dp, vertical = 12.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
     ) {
             // Icon with direction indicator
             Box(modifier = Modifier.size(26.dp)) {
@@ -86,7 +87,7 @@ fun MenuItem(
                     Image(
                         painter = painterResource(id = it),
                         contentDescription = null,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(30.dp)
                     )
                 }
 
@@ -118,7 +119,7 @@ fun MenuItem(
             // Main content
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 // Help text above (if provided) - aligned with title
                 helpTextAbove?.let {
@@ -232,7 +233,7 @@ fun MenuItem(
                     modifier = Modifier,
                     onClick = onTrailingButtonClick,
                     text = trailingButtonText,
-                    style = Style.Plain,
+                    style = trailingButtonStyle ?: Style.Plain,
                     size = Size.Small,
                     stretch = false
                 )
