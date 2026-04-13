@@ -34,7 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.MyTheme.Colors
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -43,33 +44,40 @@ fun ShortcutsPane(
     onClick: (ShortcutOption) -> Unit,
     onLongClick: (ShortcutOption, Int) -> Unit
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .wrapContentHeight(unbounded = true)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Colors.backgroundSecondary)
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.fillMaxWidth()
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight(unbounded = true)
+                .clip(RoundedCornerShape(12.dp))
+                .background(colors.backgroundSecondary)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            val itemWidth = 1f / shortcuts.size
-            shortcuts.forEachIndexed { index, shortcut ->
-                Shortcut(
-                    shortcutOption = shortcut,
-                    modifier = Modifier
-                        .weight(itemWidth)
-                        .padding(6.dp)
-                        .combinedClickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(color = Colors.textPrimary, bounded = false, radius = 50.dp),
-                            onClick = { onClick(shortcut) },
-                            onLongClick = { onLongClick(shortcut, index) },
-                        )
-                )
+            Row(
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                val itemWidth = 1f / shortcuts.size
+                shortcuts.forEachIndexed { index, shortcut ->
+                    Shortcut(
+                        shortcutOption = shortcut,
+                        modifier = Modifier
+                            .weight(itemWidth)
+                            .padding(6.dp)
+                            .combinedClickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = rememberRipple(
+                                    color = colors.textPrimary,
+                                    bounded = false,
+                                    radius = 50.dp
+                                ),
+                                onClick = { onClick(shortcut) },
+                                onLongClick = { onLongClick(shortcut, index) },
+                            )
+                    )
+                }
             }
         }
     }

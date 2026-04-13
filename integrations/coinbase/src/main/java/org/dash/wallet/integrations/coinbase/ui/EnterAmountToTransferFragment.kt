@@ -54,6 +54,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 
 @AndroidEntryPoint
@@ -97,27 +99,30 @@ class EnterAmountToTransferFragment : Fragment(R.layout.enter_amount_to_transfer
             SegmentedOption(viewModel.localCurrencyCode)
         )
         binding.currencyOptions.setContent {
-            SegmentedPicker(
-                currencyOptions,
-                modifier = Modifier
-                    .height(48.dp)
-                    .width(40.dp),
-                selectedIndex = pickedCurrencyIndex,
-                style = SegmentedPickerStyle(
-                    displayMode = PickerDisplayMode.Vertical,
-                    cornerRadius = 8f,
-                    backgroundColor = Color.Transparent,
-                    thumbColor = MyTheme.Colors.primary5,
-                    textStyle = MyTheme.Micro,
-                    shadowElevation = 0
-                )
-            ) { _, index ->
-                val changed = pickedCurrencyIndex != index
-                pickedCurrencyIndex = index
-                viewModel.isFiatSelected = index == 1
-                if (changed) {
-                    val cleanedValue = viewModel.formatInput
-                    formatTransferredAmount(cleanedValue)
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    currencyOptions,
+                    modifier = Modifier
+                        .height(48.dp)
+                        .width(40.dp),
+                    selectedIndex = pickedCurrencyIndex,
+                    style = SegmentedPickerStyle(
+                        displayMode = PickerDisplayMode.Vertical,
+                        cornerRadius = 8f,
+                        backgroundColor = Color.Transparent,
+                        thumbColor = colors.primary5,
+                        textStyle = MyTheme.Micro,
+                        shadowElevation = 0
+                    )
+                ) { _, index ->
+                    val changed = pickedCurrencyIndex != index
+                    pickedCurrencyIndex = index
+                    viewModel.isFiatSelected = index == 1
+                    if (changed) {
+                        val cleanedValue = viewModel.formatInput
+                        formatTransferredAmount(cleanedValue)
+                    }
                 }
             }
         }

@@ -44,6 +44,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
 data class SegmentedOption(
@@ -132,7 +133,7 @@ fun SegmentedPicker(
                 }
             }
         )
-        
+        val colors = LocalDashColors.current
         // Draw dividers between options
         if (isHorizontal) {
             Row(
@@ -146,7 +147,7 @@ fun SegmentedPicker(
                                 .fillMaxHeight()
                                 .width(0.6.dp)
                                 .padding(vertical = 12.dp)
-                                .background(MyTheme.Colors.divider)
+                                .background(colors.divider)
                                 .align(Alignment.CenterVertically)
                         )
                     }
@@ -246,18 +247,19 @@ private fun OptionContent(
                 if (isHorizontal) Modifier.fillMaxHeight() else Modifier.fillMaxWidth()
             )
         ) {
+            val colors = LocalDashColors.current
             option.icon?.let {
                 Icon(
                     painter = painterResource(id = it),
                     contentDescription = null,
-                    tint = if (isSelected) Color.Unspecified else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
+                    tint = if (isSelected) Color.Unspecified else colors.textPrimary.copy(alpha = 0.4f),
                     modifier = Modifier.padding(end = 6.dp)
                 )
             }
 
             Text(
                 text = option.title,
-                color = if (isSelected) MyTheme.Colors.textPrimary else MyTheme.Colors.textPrimary.copy(alpha = 0.4f),
+                color = if (isSelected) colors.textPrimary else colors.textPrimary.copy(alpha = 0.4f),
                 style = textStyle,
                 textAlign = TextAlign.Center
             )
@@ -268,6 +270,7 @@ private fun OptionContent(
 @Preview(showBackground = true)
 @Composable
 fun SegmentedPickerPreview() {
+    val colors = LocalDashColors.current
     Surface(color = colorResource(id = R.color.background_primary)) {
         Column(
             modifier = Modifier
@@ -338,8 +341,8 @@ fun SegmentedPickerPreview() {
 
             val customStyle = SegmentedPickerStyle(
                 displayMode = PickerDisplayMode.Vertical,
-                backgroundColor = MyTheme.Colors.gray400.copy(alpha = 0.15f),
-                thumbColor = MyTheme.Colors.dashBlue,
+                backgroundColor = colors.gray400.copy(alpha = 0.15f),
+                thumbColor = colors.dashBlue,
                 cornerRadius = 16f
             )
             

@@ -37,6 +37,7 @@ fun Template(
     icon: ImageVector? = null,
     contentDescription: String? = null
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .size(34.dp)
@@ -46,7 +47,7 @@ fun Template(
             )
             .border(
                 width = 1.5.dp,
-                color = MyTheme.Colors.gray300.copy(alpha = 0.30f),
+                color = colors.gray300.copy(alpha = 0.30f),
                 shape = CircleShape
             ),
         contentAlignment = Alignment.Center
@@ -56,14 +57,14 @@ fun Template(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 modifier = Modifier,
-                tint = MyTheme.Colors.textPrimary
+                tint = colors.textPrimary
             )
         } else {
             Box(
                 modifier = Modifier
                     .size(5.dp)
                     .background(
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         shape = CircleShape
                     )
             )
@@ -74,14 +75,18 @@ fun Template(
 @Composable
 @Preview
 private fun TemplatePreview() {
-    Box(Modifier
-        .size(44.dp)
-        .background(MyTheme.Colors.backgroundPrimary),
-        contentAlignment = Alignment.Center
-    ) {
-        Template(
-            Modifier,
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Box(
+            Modifier
+                .size(44.dp)
+                .background(colors.backgroundPrimary),
+            contentAlignment = Alignment.Center
+        ) {
+            Template(
+                Modifier,
             MyImages.MenuChevron
-        )
+            )
+        }
     }
 }

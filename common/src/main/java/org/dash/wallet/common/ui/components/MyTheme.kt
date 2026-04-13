@@ -17,6 +17,10 @@
 
 package org.dash.wallet.common.ui.components
 
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -548,29 +552,197 @@ object MyTheme {
         val HeadlineSBold = HeadlineSmallBold
     }
 
-    object Colors {
-        val backgroundPrimary = Color(0xFFF5F6F7)
-        val textPrimary = Color(0xFF191C1F)
-        val backgroundSecondary = Color(0xFFFFFFFF)
-        val textSecondary = Color(0xFF6E757C)
-        val textTertiary = Color(0xff75808A)
-        val divider = Color(0x1A191C1F)
-        val primary4 = Color(0x14191C1F)
-        val primary8 = Color(0x14191C1F)
-        val primary5 = Color(0x0D191C1F)
-        val primary40 = Color(0x66191C1F)
-        val dashBlue = Color(0xFF008DE4)
-        val dashBlue5 = Color(0x0D008DE4)
-        val orange = Color(0xFFFA9269)
-        val yellow = Color(0xFFFFC043)
-        val green = Color(0xFF3CB878)
-        val gray = Color(0xFFB0B6BC)
-        val gray300 = Color(0xFFB0B6BC)
-        val gray400 = Color(0xFF75808A)
-        val red = Color(0xFFEA3943)
-        val red5 = Color(0x0DEA3943)
-        val extraLightGray = Color(0xFFEBEDEE)
-        val darkGray = Color(0xFF75808A)
-        val darkerGray50 = Color(0x80B0B6BC)
-    }
+    data class ColorScheme(
+        // Backgrounds
+        val backgroundPrimary: Color,
+        val backgroundSecondary: Color,
+        val backgroundTertiary: Color,
+        val overlayPrimary: Color,
+        // Text / content
+        val textPrimary: Color,
+        val textSecondary: Color,
+        val textTertiary: Color,
+        val contentDisabled: Color,
+        val contentWarning: Color,
+        // Brand
+        val dashBlue: Color,
+        val dashBlue5: Color,
+        // Palette
+        val orange: Color,
+        val yellow: Color,
+        val green: Color,
+        val systemRed: Color,
+        val systemTeal: Color,
+        val purple: Color,
+        val red: Color,
+        val red5: Color,
+        val gray: Color,
+        val gray300: Color,
+        val gray400: Color,
+        val extraLightGray: Color,
+        val lightGray: Color,
+        val extraDarkGray: Color,
+        val ultraDarkGray: Color,
+        val ultraLightGray: Color,
+        val darkGray: Color,
+        val darkerGray50: Color,
+        // Gray scale (design system)
+        val gray40: Color,
+        val gray100: Color,
+        val gray200: Color,
+        val gray600: Color,
+        // Utility
+        val blue50: Color,
+        // Dividers / strokes
+        val divider: Color,
+        val inputFocusedStroke: Color,
+        val inputErrorStroke: Color,
+        // Inputs / buttons
+        val inputBackground: Color,
+        val inputErrorBackground: Color,
+        val disabledButtonBg: Color,
+        val buttonRipple: Color,
+        val warningYellow: Color,
+        // Transaction row backgrounds
+        val txSentBackground: Color,
+        val txReceivedBackground: Color,
+        val txOrangeBackground: Color,
+        // Legacy alpha tokens (kept for existing callers)
+        val primary4: Color,
+        val primary5: Color,
+        val primary8: Color,
+        val primary40: Color,
+    )
+
+    val Colors = ColorScheme(
+        // Backgrounds
+        backgroundPrimary = Color(0xFFF5F6F7),
+        backgroundSecondary = Color(0xFFFFFFFF),
+        backgroundTertiary = Color(0xFFF2F2F2),
+        overlayPrimary = Color(0xB3000000),
+        // Text / content
+        textPrimary = Color(0xFF191C1F),
+        textSecondary = Color(0xFF6E757C),
+        textTertiary = Color(0xFF75808A),
+        contentDisabled = Color(0xFF92929C),
+        contentWarning = Color(0xFFE85C4A),
+        // Brand
+        dashBlue = Color(0xFF008DE4),
+        dashBlue5 = Color(0x0D008DE4),
+        // Palette
+        orange = Color(0xFFFA9269),
+        yellow = Color(0xFFFFC043),
+        green = Color(0xFF3CB878),
+        systemRed = Color(0xFFE85C4A),
+        systemTeal = Color(0xFF78C4F5),
+        purple = Color(0xFF6273BD),
+        red = Color(0xFFEA3943),
+        red5 = Color(0x0DEA3943),
+        gray = Color(0xFFB0B6BC),
+        gray300 = Color(0xFFB0B6BC),
+        gray400 = Color(0xFF75808A),
+        extraLightGray = Color(0xFFEBEDEE),
+        lightGray = Color(0xFFCED2D5),
+        extraDarkGray = Color(0xFF525C66),
+        ultraDarkGray = Color(0xFF2D3033),
+        ultraLightGray = Color(0xFFF5F6F7),
+        darkGray = Color(0xFF75808A),
+        darkerGray50 = Color(0x80B0B6BC),
+        // Gray scale (design system)
+        gray40 = Color(0xFFF2F3F5),
+        gray100 = Color(0xFFE1E3E6),
+        gray200 = Color(0xFFC4C8CC),
+        gray600 = Color(0xFF5D5F61),
+        // Utility
+        blue50 = Color(0xFFF0F8FE),
+        // Dividers / strokes
+        divider = Color(0x1A191C1F),
+        inputFocusedStroke = Color(0x33008DE4),
+        inputErrorStroke = Color(0x33E85C4A),
+        // Inputs / buttons
+        inputBackground = Color(0xFFEBEDEE),
+        inputErrorBackground = Color(0x1AE85C4A),
+        disabledButtonBg = Color(0xFFEEEEEE),
+        buttonRipple = Color(0x1F000000),
+        warningYellow = Color(0xFFFFF9ED),
+        // Transaction row backgrounds
+        txSentBackground = Color(0xFFE7F4FB),
+        txReceivedBackground = Color(0xFFEDF8F2),
+        txOrangeBackground = Color(0xFFFDF5F1),
+        // Legacy alpha tokens
+        primary4 = Color(0x14191C1F),
+        primary5 = Color(0x0D191C1F),
+        primary8 = Color(0x14191C1F),
+        primary40 = Color(0x66191C1F),
+    )
+
+    val DarkColors = ColorScheme(
+        // Backgrounds
+        backgroundPrimary = Color(0xFF10151F),
+        backgroundSecondary = Color(0xFF1D2532),
+        backgroundTertiary = Color.Transparent,
+        overlayPrimary = Color(0xB3000000),
+        // Text / content
+        textPrimary = Color(0xFFFAFBFC),
+        textSecondary = Color(0xFFA4ABB2),
+        textTertiary = Color(0xFF8D9399),
+        contentDisabled = Color(0xFF92929C),
+        contentWarning = Color(0xFFE96453),
+        // Brand
+        dashBlue = Color(0xFF0094F0),
+        dashBlue5 = Color(0x0D0094F0),
+        // Palette
+        orange = Color(0xFFFA9B75),
+        yellow = Color(0xFFFFC043),
+        green = Color(0xFF3FC07D),
+        systemRed = Color(0xFFE96453),
+        systemTeal = Color(0xFF84C9F6),
+        purple = Color(0xFF6A7CCC),
+        red = Color(0xFFE96453),
+        red5 = Color(0x0DE96453),
+        gray = Color(0xFF45494D),
+        gray300 = Color(0xFF45494D),
+        gray400 = Color(0xFF757A80),
+        extraLightGray = Color(0xFFA4ABB2),
+        lightGray = Color(0xFF8D9399),
+        extraDarkGray = Color(0xFF45494D),
+        ultraDarkGray = Color(0xFF2D3033),
+        ultraLightGray = Color(0xFFF5F6F7),
+        darkGray = Color(0xFF757A80),
+        darkerGray50 = Color(0x8045494D),
+        // Gray scale (no night override — same as light)
+        gray40 = Color(0xFFF2F3F5),
+        gray100 = Color(0xFFE1E3E6),
+        gray200 = Color(0xFFC4C8CC),
+        gray600 = Color(0xFF5D5F61),
+        // Utility
+        blue50 = Color(0xFFF0F8FE),
+        // Dividers / strokes
+        divider = Color(0xFF45494D),
+        inputFocusedStroke = Color(0x33008DE4),
+        inputErrorStroke = Color(0x33E85C4A),
+        // Inputs / buttons
+        inputBackground = Color(0xFF45494D),
+        inputErrorBackground = Color(0x1AE85C4A),
+        disabledButtonBg = Color(0xFF3C3C3C),
+        buttonRipple = Color(0x30FFFFFF),
+        warningYellow = Color(0xFFFFF9ED),
+        // Transaction row backgrounds
+        txSentBackground = Color(0xFF20262E),
+        txReceivedBackground = Color(0xFF232826),
+        txOrangeBackground = Color(0xFF302D2D),
+        // Legacy alpha tokens
+        primary4 = Color(0x14FAFBFC),
+        primary5 = Color(0x0DFAFBFC),
+        primary8 = Color(0x14FAFBFC),
+        primary40 = Color(0x66FAFBFC),
+    )
+}
+
+val LocalDashColors = staticCompositionLocalOf { MyTheme.Colors }
+
+@Composable
+fun DashWalletTheme(content: @Composable () -> Unit) {
+    val colors = if (isSystemInDarkTheme()) MyTheme.DarkColors else MyTheme.Colors
+    CompositionLocalProvider(LocalDashColors provides colors, content = content)
 }

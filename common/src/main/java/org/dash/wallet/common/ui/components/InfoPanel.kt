@@ -49,10 +49,11 @@ fun InfoPanel(
     @DrawableRes actionIconRes: Int? = null,
     onAction: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+            .background(colors.backgroundSecondary, RoundedCornerShape(16.dp))
             .shadow(elevation = 20.dp, spotColor = Color(0x1AB8C1CC), ambientColor = Color(0x1AB8C1CC)),
     ) {
         Row(
@@ -88,7 +89,7 @@ fun InfoPanel(
                 Text(
                     text = description,
                     style = MyTheme.Caption,
-                    color = MyTheme.Colors.textSecondary
+                    color = colors.textSecondary
                 )
             }
 
@@ -102,7 +103,7 @@ fun InfoPanel(
                     Icon(
                         painter = painterResource(id = actionIconRes),
                         contentDescription = "Close",
-                        tint = MyTheme.Colors.gray
+                        tint = colors.gray
                     )
                 }
             }

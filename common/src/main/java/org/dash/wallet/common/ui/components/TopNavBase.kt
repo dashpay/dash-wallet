@@ -81,6 +81,7 @@ fun TopNavBase(
     centralPart: Boolean = true,
     title: String = "Label"
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -100,7 +101,7 @@ fun TopNavBase(
                     Text(
                         text = leadingText,
                         style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                 }
             }
@@ -147,7 +148,7 @@ fun TopNavBase(
                     Text(
                         text = trailingText,
                         style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.dashBlue
+                        color = colors.dashBlue
                     )
                 }
             }
@@ -171,7 +172,7 @@ fun TopNavBase(
                         Icon(
                             imageVector = trailingIcon,
                             contentDescription = trailingContentDescription,
-                            tint = MyTheme.Colors.dashBlue,
+                            tint = colors.dashBlue,
                             modifier = Modifier
                                 .size(22.dp)
                                 .then(if (onTrailingClick != null) Modifier.clickable { onTrailingClick() } else Modifier)
@@ -403,37 +404,40 @@ fun NavBarBackAction(
 @Preview(showBackground = true, widthDp = 393)
 @Composable
 private fun NavBarPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        NavBarBack(onBackClick = {})
-        NavBarBackTitle(title = "Label", onBackClick = {})
-        NavBarBackTitleInfo(title = "Label", onBackClick = {}, onInfoClick = {})
-        NavBarTitleClose(title = "Label", onCloseClick = {})
-        NavBarBackTitlePlus(title = "Label", onBackClick = {}, onPlusClick = {})
-        NavBarBackPlus(onBackClick = {}, onPlusClick = {})
-        NavBarTitle(title = "Label")
-        NavBarClose(onCloseClick = {})
-        NavBarActionTitleAction(
-            title = "Label",
-            leadingActionText = "Cancel",
-            onLeadingActionClick = {},
-            trailingActionText = "Apply",
-            onTrailingActionClick = {}
-        )
-        NavBarBackTitleAction(
-            title = "Label",
-            onBackClick = {},
-            actionText = "Quick voting",
-            onActionClick = {}
-        )
-        NavBarBackAction(
-            onBackClick = {},
-            actionText = "Quick voting",
-            onActionClick = {}
-        )
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
+            modifier = Modifier
+                .background(colors.backgroundPrimary)
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            NavBarBack(onBackClick = {})
+            NavBarBackTitle(title = "Label", onBackClick = {})
+            NavBarBackTitleInfo(title = "Label", onBackClick = {}, onInfoClick = {})
+            NavBarTitleClose(title = "Label", onCloseClick = {})
+            NavBarBackTitlePlus(title = "Label", onBackClick = {}, onPlusClick = {})
+            NavBarBackPlus(onBackClick = {}, onPlusClick = {})
+            NavBarTitle(title = "Label")
+            NavBarClose(onCloseClick = {})
+            NavBarActionTitleAction(
+                title = "Label",
+                leadingActionText = "Cancel",
+                onLeadingActionClick = {},
+                trailingActionText = "Apply",
+                onTrailingActionClick = {}
+            )
+            NavBarBackTitleAction(
+                title = "Label",
+                onBackClick = {},
+                actionText = "Quick voting",
+                onActionClick = {}
+            )
+            NavBarBackAction(
+                onBackClick = {},
+                actionText = "Quick voting",
+                onActionClick = {}
+            )
+        }
     }
 }

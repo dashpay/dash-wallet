@@ -32,15 +32,16 @@ fun DashCheckbox(
     trailingHelpText: String? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
-    val textPrimary = MyTheme.Colors.textPrimary
-    val textSecondary = MyTheme.Colors.textSecondary
+    val colors = LocalDashColors.current
+    val textPrimary = colors.textPrimary
+    val textSecondary = colors.textSecondary
 
     Row(
         modifier = modifier
             .fillMaxWidth()
             .defaultMinSize(minHeight = 50.dp)
             //.clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
+            .background(colors.backgroundSecondary)
             .padding(horizontal = 10.dp, vertical = 8.dp)
             .clickable(
                 interactionSource = interactionSource,
@@ -89,7 +90,7 @@ fun DashCheckbox(
                     subtitle?.let {
                         Text(
                             text = it,
-                            color = MyTheme.Colors.darkGray,
+                            color = colors.darkGray,
                             style = MyTheme.OverlineCaptionMedium,
                             textAlign = TextAlign.Start
                         )
@@ -120,7 +121,7 @@ fun DashCheckbox(
                     trailingHelpText?.let {
                         Text(
                             text = it,
-                            color = MyTheme.Colors.darkGray,
+                            color = colors.darkGray,
                             style = MyTheme.OverlineCaptionMedium,
                             textAlign = TextAlign.End
                         )
@@ -135,11 +136,11 @@ fun DashCheckbox(
                     .clip(RoundedCornerShape(6.dp))
                     .border(
                         width = 1.5.dp,
-                        color = if (checked) MyTheme.Colors.dashBlue else MyTheme.Colors.darkerGray50,
+                        color = if (checked) colors.dashBlue else colors.darkerGray50,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(
-                        if (checked) MyTheme.Colors.dashBlue else Color.Transparent
+                        if (checked) colors.dashBlue else Color.Transparent
                     ),
                 contentAlignment = Alignment.Center
             ) {

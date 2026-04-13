@@ -42,6 +42,8 @@ class TransactionMetadataDialog : OffsetDialogFragment(R.layout.dialog_transacti
             }
         }
     }
+
+    override val forceExpand: Boolean = true
     private val binding by viewBinding(DialogTransactionMetadataBinding::bind)
     @OptIn(ExperimentalCoroutinesApi::class)
     private val viewModel by viewModels<TransactionMetadataSettingsViewModel>()

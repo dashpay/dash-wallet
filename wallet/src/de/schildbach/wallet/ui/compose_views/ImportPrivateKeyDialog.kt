@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Text
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -40,10 +41,11 @@ fun createImportPrivateKeyDialog(
 private fun ImportPrivateKeyContent(
     onScanClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(colors.backgroundPrimary)
             .padding(top = 60.dp)
     ) {
         Column(
@@ -65,7 +67,7 @@ private fun ImportPrivateKeyContent(
             Text(
                 text = stringResource(R.string.tools_import_private_key),
                 style = MyTheme.H5Bold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -75,7 +77,7 @@ private fun ImportPrivateKeyContent(
             Text(
                 text = stringResource(R.string.import_private_key_description),
                 style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textSecondary,
+                color = colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )

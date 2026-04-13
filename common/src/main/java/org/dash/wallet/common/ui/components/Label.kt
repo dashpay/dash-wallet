@@ -33,6 +33,7 @@ fun Label(
     text: String = "Label",
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -42,7 +43,7 @@ fun Label(
             style = MyTheme.Subtitle2Semibold.copy(
                 textAlign = TextAlign.Center
             ),
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

@@ -33,10 +33,11 @@ import androidx.compose.ui.unit.dp
 @Preview(showBackground = true)
 @Composable
 fun TypographyPreview() {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(20.dp)
             .verticalScroll(rememberScrollState())
     ) {
@@ -47,37 +48,37 @@ fun TypographyPreview() {
             Text(
                 text = "Display large",
                 style = MyTheme.Typography.DisplayLarge,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Display large",
                 style = MyTheme.Typography.DisplayLargeBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Display medium",
                 style = MyTheme.Typography.DisplayMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Display medium",
                 style = MyTheme.Typography.DisplayMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Display small",
                 style = MyTheme.Typography.DisplaySmall,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Display small",
                 style = MyTheme.Typography.DisplaySmallBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -89,31 +90,31 @@ fun TypographyPreview() {
             Text(
                 text = "Headline large",
                 style = MyTheme.Typography.HeadlineLarge,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Headline large",
                 style = MyTheme.Typography.HeadlineLargeBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Headline medium",
                 style = MyTheme.Typography.HeadlineMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Headline medium",
                 style = MyTheme.Typography.HeadlineMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Headline small",
                 style = MyTheme.Typography.HeadlineSmallBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -125,37 +126,37 @@ fun TypographyPreview() {
             Text(
                 text = "Title large",
                 style = MyTheme.Typography.TitleLarge,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Title large",
                 style = MyTheme.Typography.TitleLargeBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Title medium",
                 style = MyTheme.Typography.TitleMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Title medium",
                 style = MyTheme.Typography.TitleMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Title small",
                 style = MyTheme.Typography.TitleSmall,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Title small",
                 style = MyTheme.Typography.TitleSmallBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -167,37 +168,37 @@ fun TypographyPreview() {
             Text(
                 text = "Label large",
                 style = MyTheme.Typography.LabelLarge,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Label large",
                 style = MyTheme.Typography.LabelLargeBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Label medium",
                 style = MyTheme.Typography.LabelMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Label medium",
                 style = MyTheme.Typography.LabelMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Label small",
                 style = MyTheme.Typography.LabelSmall,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Label small",
                 style = MyTheme.Typography.LabelSmallBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -209,37 +210,37 @@ fun TypographyPreview() {
             Text(
                 text = "Body large",
                 style = MyTheme.Typography.BodyLarge,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Body large",
                 style = MyTheme.Typography.BodyLargeBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Body medium",
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Body medium",
                 style = MyTheme.Typography.BodyMediumBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Body small",
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = "Body small",
                 style = MyTheme.Typography.BodySmallBold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }

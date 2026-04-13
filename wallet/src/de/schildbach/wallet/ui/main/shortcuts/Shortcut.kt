@@ -30,6 +30,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
 @Composable
@@ -37,6 +38,7 @@ fun Shortcut(
     shortcutOption: ShortcutOption,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Top,
@@ -53,7 +55,7 @@ fun Shortcut(
         Text(
             text = stringResource(id = shortcutOption.textResId),
             style = MyTheme.Overline,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .padding(top = 4.dp, bottom = 6.dp)

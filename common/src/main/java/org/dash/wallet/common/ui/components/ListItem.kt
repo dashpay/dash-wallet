@@ -137,7 +137,7 @@ fun ListItem(
         !trailingTextLines.isNullOrEmpty() || trailingHelpText != null ||
         trailingActionText != null || trailingLabel != null ||
         trailingLeadingIcon != null || trailingTrailingIcon != null
-
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -147,7 +147,7 @@ fun ListItem(
             Text(
                 text = it,
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textTertiary,
+                color = colors.textTertiary,
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, top = 4.dp)
             )
         }
@@ -172,7 +172,7 @@ fun ListItem(
                         Text(
                             text = it,
                             style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textTertiary
+                            color = colors.textTertiary
                         )
                     }
                     title?.let { titleText ->
@@ -183,13 +183,13 @@ fun ListItem(
                             Text(
                                 text = titleText,
                                 style = MyTheme.Typography.LabelLarge,
-                                color = MyTheme.Colors.textPrimary
+                                color = colors.textPrimary
                             )
                             if (showInfoIcon) {
                                 Icon(
                                     painter = painterResource(android.R.drawable.ic_dialog_info),
                                     contentDescription = null,
-                                    tint = MyTheme.Colors.textTertiary,
+                                    tint = colors.textTertiary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -199,14 +199,14 @@ fun ListItem(
                         Text(
                             text = it,
                             style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textTertiary
+                            color = colors.textTertiary
                         )
                     }
                     bottomHelpText?.let {
                         Text(
                             text = it,
                             style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textTertiary
+                            color = colors.textTertiary
                         )
                     }
                 }
@@ -219,13 +219,13 @@ fun ListItem(
                     Text(
                         text = label,
                         style = MyTheme.Typography.LabelLarge,
-                        color = MyTheme.Colors.textTertiary
+                        color = colors.textTertiary
                     )
                     if (showInfoIcon) {
                         Icon(
                             painter = painterResource(android.R.drawable.ic_dialog_info),
                             contentDescription = null,
-                            tint = MyTheme.Colors.textTertiary,
+                            tint = colors.textTertiary,
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -256,7 +256,7 @@ fun ListItem(
                                             Text(
                                                 text = line,
                                                 style = MyTheme.Body2Regular,
-                                                color = MyTheme.Colors.textPrimary
+                                                color = colors.textPrimary
                                             )
                                         }
                                     }
@@ -265,7 +265,7 @@ fun ListItem(
                                         Text(
                                             text = it,
                                             style = MyTheme.Body2Regular,
-                                            color = MyTheme.Colors.textPrimary
+                                            color = colors.textPrimary
                                         )
                                     }
                                 }
@@ -283,14 +283,14 @@ fun ListItem(
                                     Icon(
                                         painter = painterResource(iconRes),
                                         contentDescription = null,
-                                        tint = MyTheme.Colors.textTertiary,
+                                        tint = colors.textTertiary,
                                         modifier = Modifier.size(12.dp)
                                     )
                                 }
                                 Text(
                                     text = helpText,
                                     style = MyTheme.Typography.BodySmall,
-                                    color = MyTheme.Colors.textTertiary
+                                    color = colors.textTertiary
                                 )
                             }
                         }
@@ -300,7 +300,7 @@ fun ListItem(
                             Text(
                                 text = it,
                                 style = MyTheme.Typography.LabelLarge,
-                                color = MyTheme.Colors.dashBlue,
+                                color = colors.dashBlue,
                                 modifier = if (onTrailingActionClick != null) {
                                     Modifier.clickable { onTrailingActionClick() }
                                 } else {
@@ -314,11 +314,11 @@ fun ListItem(
                             Text(
                                 text = it,
                                 style = MyTheme.Typography.BodySmall,
-                                color = MyTheme.Colors.textPrimary,
+                                color = colors.textPrimary,
                                 modifier = Modifier
                                     .border(
                                         width = 1.dp,
-                                        color = MyTheme.Colors.textTertiary.copy(alpha = 0.4f),
+                                        color = colors.textTertiary.copy(alpha = 0.4f),
                                         shape = RoundedCornerShape(6.dp)
                                     )
                                     .padding(horizontal = 6.dp, vertical = 4.dp)
@@ -333,7 +333,7 @@ fun ListItem(
             Text(
                 text = it,
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textTertiary,
+                color = colors.textTertiary,
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp, bottom = 4.dp)
             )
         }
@@ -355,6 +355,7 @@ fun ListEmptyState(
     body: String? = null,
     actions: (@Composable RowScope.() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -363,12 +364,12 @@ fun ListEmptyState(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         icon()
-        Text(heading, style = MyTheme.Typography.LabelLarge, color = MyTheme.Colors.textPrimary)
+        Text(heading, style = MyTheme.Typography.LabelLarge, color = colors.textPrimary)
         body?.let {
             Text(
                 text = it,
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textTertiary
+                color = colors.textTertiary
             )
         }
         actions?.let {
@@ -384,10 +385,10 @@ fun ListEmptyState(
 private fun ListItemPreview() {
     var checked1 by remember { mutableStateOf(false) }
     var checked2 by remember { mutableStateOf(true) }
-
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
@@ -487,7 +488,7 @@ private fun ListItemPreview() {
                 Icon(
                     painter = painterResource(R.drawable.ic_dash_blue_filled),
                     contentDescription = null,
-                    tint = MyTheme.Colors.dashBlue,
+                    tint = colors.dashBlue,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -517,8 +518,8 @@ private fun ListItemPreview() {
                 ) {
                     CheckboxIcon(checked = true, onToggle = {})
                     Column {
-                        Text("text", style = MyTheme.Body2Regular, color = MyTheme.Colors.textPrimary)
-                        Text("help text", style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textTertiary)
+                        Text("text", style = MyTheme.Body2Regular, color = colors.textPrimary)
+                        Text("help text", style = MyTheme.Typography.BodySmall, color = colors.textTertiary)
                     }
                 }
             }
@@ -529,13 +530,14 @@ private fun ListItemPreview() {
 @Preview(showBackground = true)
 @Composable
 private fun ListEmptyStatePreview() {
+    val colors = LocalDashColors.current
     ListEmptyState(
-        modifier = Modifier.background(MyTheme.Colors.backgroundSecondary),
+        modifier = Modifier.background(colors.backgroundSecondary),
         icon = {
             Icon(
                 painter = painterResource(R.drawable.ic_dash_blue_filled),
                 contentDescription = null,
-                tint = MyTheme.Colors.dashBlue,
+                tint = colors.dashBlue,
                 modifier = Modifier.size(48.dp)
             )
         },
@@ -545,18 +547,18 @@ private fun ListEmptyStatePreview() {
             Text(
                 text = "Label",
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.dashBlue,
+                color = colors.dashBlue,
                 modifier = Modifier
-                    .border(1.dp, MyTheme.Colors.dashBlue, RoundedCornerShape(6.dp))
+                    .border(1.dp, colors.dashBlue, RoundedCornerShape(6.dp))
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             )
             Spacer(Modifier.width(4.dp))
             Text(
                 text = "Label",
                 style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.dashBlue,
+                color = colors.dashBlue,
                 modifier = Modifier
-                    .border(1.dp, MyTheme.Colors.dashBlue, RoundedCornerShape(6.dp))
+                    .border(1.dp, colors.dashBlue, RoundedCornerShape(6.dp))
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             )
         }
@@ -572,16 +574,17 @@ private fun ListEmptyStatePreview() {
  */
 @Composable
 private fun CheckboxIcon(checked: Boolean, onToggle: (Boolean) -> Unit) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .size(22.dp)
             .clip(RoundedCornerShape(6.dp))
             .border(
                 width = 1.5.dp,
-                color = if (checked) MyTheme.Colors.dashBlue else MyTheme.Colors.darkerGray50,
+                color = if (checked) colors.dashBlue else colors.darkerGray50,
                 shape = RoundedCornerShape(6.dp)
             )
-            .background(if (checked) MyTheme.Colors.dashBlue else Color.Transparent)
+            .background(if (checked) colors.dashBlue else Color.Transparent)
             .clickable { onToggle(!checked) },
         contentAlignment = Alignment.Center
     ) {

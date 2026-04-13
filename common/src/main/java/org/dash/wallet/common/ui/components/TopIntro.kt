@@ -35,6 +35,7 @@ fun TopIntro(
     text: String? = null,
     modifier: Modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(2.dp),
@@ -44,7 +45,7 @@ fun TopIntro(
         Text(
             text = heading,
             style = MyTheme.H5Bold,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
         
@@ -53,7 +54,7 @@ fun TopIntro(
             Text(
                 text = it,
                 style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -63,26 +64,29 @@ fun TopIntro(
 @Composable
 @Preview
 fun TopIntroPreview() {
-    Column(
-        modifier = Modifier.padding(16.dp)
-            .background(MyTheme.Colors.backgroundPrimary),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        // With heading and text
-        TopIntro(
-            heading = "Heading",
-            text = "Text"
-        )
-        
-        // Heading only
-        TopIntro(
-            heading = "Heading Only"
-        )
-        
-        // Longer examples
-        TopIntro(
-            heading = "Welcome to Dash",
-            text = "Your digital cash for everyday payments"
-        )
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
+            modifier = Modifier.padding(16.dp)
+                .background(colors.backgroundPrimary),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            // With heading and text
+            TopIntro(
+                heading = "Heading",
+                text = "Text"
+            )
+
+            // Heading only
+            TopIntro(
+                heading = "Heading Only"
+            )
+
+            // Longer examples
+            TopIntro(
+                heading = "Welcome to Dash",
+                text = "Your digital cash for everyday payments"
+            )
+        }
     }
 }

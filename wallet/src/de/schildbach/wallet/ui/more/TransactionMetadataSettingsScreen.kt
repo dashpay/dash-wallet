@@ -43,6 +43,8 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashCheckbox
 import org.dash.wallet.common.ui.components.DashRadioButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
 import java.text.SimpleDateFormat
@@ -58,189 +60,206 @@ fun TransactionMetadataSettingsScreen(
     onSaveToNetwork: () -> Unit,
     viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
-    val backgroundColor = MyTheme.Colors.backgroundPrimary
-    val primaryTextColor = MyTheme.Colors.textPrimary
-    val secondaryTextColor = MyTheme.Colors.textSecondary
-    val scrollState = rememberScrollState()
-    val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        val backgroundColor = colors.backgroundPrimary
+        val primaryTextColor = colors.textPrimary
+        val secondaryTextColor = colors.textSecondary
+        val scrollState = rememberScrollState()
+        val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
-    val filterState by viewModel.filterState.collectAsState()
-    val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
-    val lastSaveDate by viewModel.lastSaveDate.collectAsState()
-    val futureSaveDate by viewModel.futureSaveDate.collectAsState()
-    val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
-    val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
-    val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
-    val currentDate = Date(System.currentTimeMillis())
+        val filterState by viewModel.filterState.collectAsState()
+        val lastSaveWorkId by viewModel.lastSaveWorkId.collectAsState()
+        val lastSaveDate by viewModel.lastSaveDate.collectAsState()
+        val futureSaveDate by viewModel.futureSaveDate.collectAsState()
+        val hasPastTransactionsToSave by viewModel.hasPastTransactionsToSave.collectAsState()
+        val publishingState by viewModel.observePublishOperation(lastSaveWorkId ?: "").collectAsState(Resource.canceled())
+        val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
+        val currentDate = Date(System.currentTimeMillis())
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(painter = painterResource(id = R.drawable.ic_chevron), contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onInfoButtonClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_info),
-                            contentDescription = "Info",
-                            tint = MyTheme.Colors.dashBlue
-                        )
-                    }
-                },
-                // TODO: Why is this bar white
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Unspecified
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { },
+                    navigationIcon = {
+                        IconButton(onClick = onBackClick) {
+                            Icon(painter = painterResource(id = R.drawable.ic_chevron), contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onInfoButtonClick) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_info),
+                                contentDescription = "Info",
+                                tint = colors.dashBlue
+                            )
+                        }
+                    },
+                    // TODO: Why is this bar white
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Unspecified
+                    )
                 )
-            )
-        },
-        bottomBar = {
+            },
+            bottomBar = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            color = backgroundColor
+                        ),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    DashButton(
+                        onClick = { onSaveToNetwork() },
+                        modifier = Modifier
+                            .padding(20.dp, 0.dp)
+                            .fillMaxWidth(),
+                        style = Style.FilledBlue,
+                        text = stringResource(
+                            if (filterState.modified && !filterState.saveToNetwork) {
+                                R.string.transaction_metadata_save_to_network
+                            } else {
+                                R.string.save_changes
+                            }
+                        ),
+                        isEnabled = filterState.modified && filterState.isValid()
+                    )
+                }
+            }
+        ) { paddingValues ->
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = backgroundColor
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(paddingValues)
+                    .fillMaxSize()
+                    .background(backgroundColor)
+                    .verticalScroll(scrollState)
+                    .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 60.dp)
             ) {
-                Spacer(modifier = Modifier.height(20.dp))
-                DashButton(
-                    onClick = { onSaveToNetwork() },
-                    modifier = Modifier
-                        .padding(20.dp, 0.dp)
-                        .fillMaxWidth(),
-                    style = Style.FilledBlue,
-                    text = stringResource(if (filterState.modified && !filterState.saveToNetwork) {
-                        R.string.transaction_metadata_save_to_network
-                    } else {
-                        R.string.save_changes
-                    }),
-                    isEnabled = filterState.modified && filterState.isValid()
+                // Title and description
+                Text(
+                    text = stringResource(R.string.transaction_metadata_title),
+                    color = primaryTextColor,
+                    style = MyTheme.H5Bold
                 )
-            }
-        }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(backgroundColor)
-                .verticalScroll(scrollState)
-                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 60.dp)
-        ) {
-            // Title and description
-            Text(
-                text = stringResource(R.string.transaction_metadata_title),
-                color = primaryTextColor,
-                style = MyTheme.H5Bold
-            )
-            Text(
-                text = stringResource(R.string.transaction_metadata_description),
-                modifier = Modifier.padding(top = 4.dp),
-                color = secondaryTextColor,
-                style = MyTheme.Body2Regular
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // SECTION 1: Select transactions types
-            SectionTitle("Select transactions types")
-            CardSection {
-                // Past transactions checkbox
-                DashCheckbox(
-                    checked = filterState.savePastTxToNetwork,
-                    onCheckedChange = {
-                        viewModel.updatePreferences(filterState.copy(savePastTxToNetwork = it))
-                    },
-                    title = stringResource(R.string.transaction_metadata_past_title),
-                    subtitle = if (isSaving) {
-                        stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
-                    } else if (hasPastTransactionsToSave) {
-                        stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
-                    } else if (lastSaveDate != 0L){
-                        stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
-                    } else {
-                        stringResource(R.string.transaction_metadata_past_already_saved_none, dateFormat.format(Date(lastSaveDate)))
-                    },
-                    enabled = hasPastTransactionsToSave && !isSaving
+                Text(
+                    text = stringResource(R.string.transaction_metadata_description),
+                    modifier = Modifier.padding(top = 4.dp),
+                    color = secondaryTextColor,
+                    style = MyTheme.Body2Regular
                 )
-                // Future transactions checkbox
-                DashCheckbox(
-                    checked = filterState.saveToNetwork,
-                    onCheckedChange = {
-                        viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
-                    },
-                    title = stringResource(R.string.transaction_metadata_future_title),
-                    subtitle = if (futureSaveDate != 0L) {
-                        stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
-                    } else {
-                        stringResource(R.string.transaction_metadata_future_subtitle, stringResource(R.string.time_today))
-                    }
-                )
-            }
 
-            if (filterState.saveToNetwork) {
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // SECTION 2: How often to save?
-                SectionTitle(R.string.transaction_metadata_save_frequency)
+                // SECTION 1: Select transactions types
+                SectionTitle("Select transactions types")
                 CardSection {
-                    // Radio buttons for frequency
-                    stringArrayResource(R.array.transaction_metadata_save_frequency).forEachIndexed { index, s ->
-                        DashRadioButton(
-                            selected = index == filterState.saveFrequency.ordinal,
-                            onClick = {
-                                viewModel.updatePreferences(filterState.copy(saveFrequency = TxMetadataSaveFrequency.entries[index]))
-                            },
-                            text = s
-                        )
-                    }
+                    // Past transactions checkbox
+                    DashCheckbox(
+                        checked = filterState.savePastTxToNetwork,
+                        onCheckedChange = {
+                            viewModel.updatePreferences(filterState.copy(savePastTxToNetwork = it))
+                        },
+                        title = stringResource(R.string.transaction_metadata_past_title),
+                        subtitle = if (isSaving) {
+                            stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
+                        } else if (hasPastTransactionsToSave) {
+                            stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
+                        } else if (lastSaveDate != 0L) {
+                            stringResource(
+                                R.string.transaction_metadata_past_already_saved,
+                                dateFormat.format(Date(lastSaveDate))
+                            )
+                        } else {
+                            stringResource(
+                                R.string.transaction_metadata_past_already_saved_none,
+                                dateFormat.format(Date(lastSaveDate))
+                            )
+                        },
+                        enabled = hasPastTransactionsToSave && !isSaving
+                    )
+                    // Future transactions checkbox
+                    DashCheckbox(
+                        checked = filterState.saveToNetwork,
+                        onCheckedChange = {
+                            viewModel.updatePreferences(filterState.copy(saveToNetwork = it))
+                        },
+                        title = stringResource(R.string.transaction_metadata_future_title),
+                        subtitle = if (futureSaveDate != 0L) {
+                            stringResource(
+                                R.string.transaction_metadata_future_subtitle,
+                                dateFormat.format(Date(futureSaveDate))
+                            )
+                        } else {
+                            stringResource(
+                                R.string.transaction_metadata_future_subtitle,
+                                stringResource(R.string.time_today)
+                            )
+                        }
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                if (filterState.saveToNetwork) {
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                // SECTION 3: What to save?
-                SectionTitle(R.string.transaction_metadata_what_to_save)
-                CardSection {
-                    // Checkboxes for data types
-                    DashCheckbox(
-                        checked = filterState.savePaymentCategory,
-                        onCheckedChange = {
-                            viewModel.updatePreferences(filterState.copy(savePaymentCategory = it))
-                        },
-                        title = stringResource(R.string.transaction_metadata_payment_category)
-                    )
-                    DashCheckbox(
-                        checked = filterState.saveTaxCategory,
-                        onCheckedChange = {
-                            viewModel.updatePreferences(filterState.copy(saveTaxCategory = it))
-                        },
-                        title = stringResource(R.string.transaction_metadata_tax_category)
-                    )
-                    DashCheckbox(
-                        checked = filterState.saveExchangeRates,
-                        onCheckedChange = {
-                            viewModel.updatePreferences(filterState.copy(saveExchangeRates = it))
-                        },
-                        title = stringResource(R.string.transaction_metadata_fiat_prices)
-                    )
-                    DashCheckbox(
-                        checked = filterState.savePrivateMemos,
-                        onCheckedChange = {
-                            viewModel.updatePreferences(filterState.copy(savePrivateMemos = it))
-                        },
-                        title = stringResource(R.string.private_memo)
-                    )
-                    DashCheckbox(
-                        checked = filterState.saveGiftcardInfo,
-                        onCheckedChange = {
-                            viewModel.updatePreferences(filterState.copy(saveGiftcardInfo = it))
-                        },
-                        title = stringResource(R.string.transaction_metadata_gift_card_data)
-                    )
+                    // SECTION 2: How often to save?
+                    SectionTitle(R.string.transaction_metadata_save_frequency)
+                    CardSection {
+                        // Radio buttons for frequency
+                        stringArrayResource(R.array.transaction_metadata_save_frequency).forEachIndexed { index, s ->
+                            DashRadioButton(
+                                selected = index == filterState.saveFrequency.ordinal,
+                                onClick = {
+                                    viewModel.updatePreferences(filterState.copy(saveFrequency = TxMetadataSaveFrequency.entries[index]))
+                                },
+                                text = s
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // SECTION 3: What to save?
+                    SectionTitle(R.string.transaction_metadata_what_to_save)
+                    CardSection {
+                        // Checkboxes for data types
+                        DashCheckbox(
+                            checked = filterState.savePaymentCategory,
+                            onCheckedChange = {
+                                viewModel.updatePreferences(filterState.copy(savePaymentCategory = it))
+                            },
+                            title = stringResource(R.string.transaction_metadata_payment_category)
+                        )
+                        DashCheckbox(
+                            checked = filterState.saveTaxCategory,
+                            onCheckedChange = {
+                                viewModel.updatePreferences(filterState.copy(saveTaxCategory = it))
+                            },
+                            title = stringResource(R.string.transaction_metadata_tax_category)
+                        )
+                        DashCheckbox(
+                            checked = filterState.saveExchangeRates,
+                            onCheckedChange = {
+                                viewModel.updatePreferences(filterState.copy(saveExchangeRates = it))
+                            },
+                            title = stringResource(R.string.transaction_metadata_fiat_prices)
+                        )
+                        DashCheckbox(
+                            checked = filterState.savePrivateMemos,
+                            onCheckedChange = {
+                                viewModel.updatePreferences(filterState.copy(savePrivateMemos = it))
+                            },
+                            title = stringResource(R.string.private_memo)
+                        )
+                        DashCheckbox(
+                            checked = filterState.saveGiftcardInfo,
+                            onCheckedChange = {
+                                viewModel.updatePreferences(filterState.copy(saveGiftcardInfo = it))
+                            },
+                            title = stringResource(R.string.transaction_metadata_gift_card_data)
+                        )
+                    }
                 }
             }
         }
@@ -249,6 +268,7 @@ fun TransactionMetadataSettingsScreen(
 
 @Composable
 fun SectionTitle(titleId: Int) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -256,7 +276,7 @@ fun SectionTitle(titleId: Int) {
     ) {
         Text(
             text = stringResource(titleId),
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             style = MyTheme.CaptionMedium
         )
     }
@@ -264,6 +284,7 @@ fun SectionTitle(titleId: Int) {
 
 @Composable
 fun SectionTitle(title: String) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -271,7 +292,7 @@ fun SectionTitle(title: String) {
     ) {
         Text(
             text = title,
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             style = MyTheme.CaptionMedium
         )
     }
@@ -279,11 +300,12 @@ fun SectionTitle(title: String) {
 
 @Composable
 fun CardSection(content: @Composable ColumnScope.() -> Unit) {
+    val colors = LocalDashColors.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = colors.backgroundSecondary
         )
     ) {
         Column(

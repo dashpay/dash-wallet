@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
@@ -521,7 +522,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
         binding.itemDetails.setContent {
             val item by viewModel.selectedItem.collectAsStateWithLifecycle()
             item?.let {
-                ItemDetailsComposable(it)
+                DashWalletTheme {
+                    ItemDetailsComposable(it)
+                }
             }
         }
 

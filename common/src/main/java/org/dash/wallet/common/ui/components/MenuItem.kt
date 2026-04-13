@@ -69,6 +69,7 @@ fun MenuItem(
 ) {
     var internalChecked by remember(checked) { mutableStateOf(checked ?: isToggled?.invoke() ?: false) }
     val effectiveChecked = checked ?: internalChecked
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -95,7 +96,7 @@ fun MenuItem(
                     Box(
                         modifier = Modifier
                             .size(19.dp)
-                            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(32.dp))
+                            .background(colors.backgroundSecondary, RoundedCornerShape(32.dp))
                             .align(Alignment.BottomEnd)
                             .offset(x = 8.dp, y = 8.dp),
                         contentAlignment = Alignment.Center
@@ -107,7 +108,7 @@ fun MenuItem(
                                 .background(Color.Transparent, RoundedCornerShape(7.dp))
                                 .border(
                                     width = 2.dp,
-                                    color = MyTheme.Colors.gray300,
+                                    color = colors.gray300,
                                     shape = RoundedCornerShape(7.dp)
                                 )
                         )
@@ -125,7 +126,7 @@ fun MenuItem(
                     Text(
                         text = it,
                         style = MyTheme.OverlineMedium,
-                        color = MyTheme.Colors.textTertiary,
+                        color = colors.textTertiary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -138,14 +139,14 @@ fun MenuItem(
                     Text(
                         text = title,
                         style = MyTheme.Body2Medium,//.copy(fontWeight = W600),
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
 
                     if (showInfo) {
                         Icon(
                             painter = painterResource(id = android.R.drawable.ic_dialog_info),
                             contentDescription = "Info",
-                            tint = MyTheme.Colors.textTertiary,
+                            tint = colors.textTertiary,
                             modifier = Modifier
                                 .size(15.dp)
                                 .then(
@@ -161,7 +162,7 @@ fun MenuItem(
                     Text(
                         text = it,
                         style = MyTheme.OverlineCaptionRegular,
-                        color = MyTheme.Colors.textTertiary,
+                        color = colors.textTertiary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -171,7 +172,7 @@ fun MenuItem(
                     Text(
                         text = it,
                         style = MyTheme.OverlineCaptionRegular,
-                        color = MyTheme.Colors.textTertiary,
+                        color = colors.textTertiary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -184,7 +185,9 @@ fun MenuItem(
                     onCheckedChange = { newState ->
                         if (checked == null) internalChecked = newState
                         (onCheckedChange ?: onToggleChanged)?.invoke(newState)
-                    }
+                    },
+                    modifier = Modifier
+                        .minimumInteractiveComponentSize() // ensures at least 48 dp touch target
                 )
             }
 
@@ -202,7 +205,7 @@ fun MenuItem(
                         Text(
                             text = dashAmount,
                             style = MyTheme.CaptionMedium,
-                            color = MyTheme.Colors.textPrimary
+                            color = colors.textPrimary
                         )
                         // Dash logo
                         dashIcon?.let { dashIcon ->
@@ -220,7 +223,7 @@ fun MenuItem(
                         Text(
                             text = it,
                             style = MyTheme.OverlineCaptionRegular,
-                            color = MyTheme.Colors.textSecondary
+                            color = colors.textSecondary
                         )
                     }
                 }
@@ -252,7 +255,7 @@ fun MenuItem(
                 Icon(
                     painter = painterResource(id = R.drawable.ic_menu_row_arrow),
                     contentDescription = "Chevron",
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = colors.textTertiary,
                     modifier = Modifier.size(16.dp)
                 )
             }
@@ -262,31 +265,33 @@ fun MenuItem(
 @Preview(showBackground = true)
 @Composable
 fun PreviewMenuItem() {
-    Column(
-        modifier = Modifier
-            .padding(16.dp)
-            .background(MyTheme.Colors.backgroundPrimary),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        // Basic with help text above
-        MenuItem(
-            helpTextAbove = "help text 1",
-            title = "title",
-            subtitle = "help text 2",
-            subtitle2 = "help text 3",
-            icon = R.drawable.ic_dash_blue_filled,
-            showInfo = true,
-            showDirectionIndicator = true
-        )
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .background(colors.backgroundPrimary),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Basic with help text above
+            MenuItem(
+                helpTextAbove = "help text 1",
+                title = "title",
+                subtitle = "help text 2",
+                subtitle2 = "help text 3",
+                icon = R.drawable.ic_dash_blue_filled,
+                showInfo = true,
+                showDirectionIndicator = true
+            )
 
         // With toggle ON
-        MenuItem(
+            MenuItem(
             title = "Toggle Setting ON",
-            subtitle = "Enable this feature",
-            icon = R.drawable.ic_dash_blue_filled,
-            isToggled = { true },
-            onToggleChanged = { }
-        )
+                subtitle = "Enable this feature",
+                icon = R.drawable.ic_dash_blue_filled,
+                isToggled = { true },
+                onToggleChanged = { }
+            )
 
         // With toggle OFF
         MenuItem(
@@ -297,31 +302,31 @@ fun PreviewMenuItem() {
             onToggleChanged = { }
         )
 
-        // With balance display
-        MenuItem(
-            title = "Wallet Balance",
-            subtitle = "Available balance",
-            icon = R.drawable.ic_dash_blue_filled,
-            dashAmount = "0.00",
-            fiatAmount = "0.00 US$"
-        )
+            // With balance display
+            MenuItem(
+                title = "Wallet Balance",
+                subtitle = "Available balance",
+                icon = R.drawable.ic_dash_blue_filled,
+                dashAmount = "0.00",
+                fiatAmount = "0.00 US$"
+            )
 
-        // With trailing button
-        MenuItem(
-            title = "Action Item w/ Chevron",
-            icon = R.drawable.ic_dash_blue_filled,
-            onTrailingButtonClick = { },
-            showChevron = true
-        )
+            // With trailing button
+            MenuItem(
+                title = "Action Item w/ Chevron",
+                icon = R.drawable.ic_dash_blue_filled,
+                onTrailingButtonClick = { },
+                showChevron = true
+            )
 
-        // With trailing button
-        MenuItem(
-            title = "Action Item",
-            subtitle = "Tap button to proceed",
-            icon = R.drawable.ic_dash_blue_filled,
-            trailingButtonText = "Label",
-            onTrailingButtonClick = { }
-        )
+            // With trailing button
+            MenuItem(
+                title = "Action Item",
+                subtitle = "Tap button to proceed",
+                icon = R.drawable.ic_dash_blue_filled,
+                trailingButtonText = "Label",
+                onTrailingButtonClick = { }
+            )
 
         // Complex example matching Figma
         MenuItem(
@@ -340,13 +345,14 @@ fun PreviewMenuItem() {
             onTrailingButtonClick = { }
         )
 
-        // Complex example matching Figma
-        MenuItem(
-            title = "CoinJoin",
-            subtitle = "Mixing",
-            icon = R.drawable.ic_dash_blue_filled,
-            dashAmount = "0.0011 of 1.0000",
-            //fiatAmount = "0.0011 of 1.0000"
-        )
+            // Complex example matching Figma
+            MenuItem(
+                title = "CoinJoin",
+                subtitle = "Mixing",
+                icon = R.drawable.ic_dash_blue_filled,
+                dashAmount = "0.0011 of 1.0000",
+                //fiatAmount = "0.0011 of 1.0000"
+            )
+        }
     }
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import org.dash.wallet.common.R
 
+@Deprecated(message = "use DashButton instead")
 object ButtonStyles {
     @Composable
     fun whiteWithBlueText() = ButtonDefaults.buttonColors(

@@ -160,6 +160,7 @@ fun RescanBlockchainDialog(
         datePickerDialog?.show()
     }
 
+    val colors = LocalDashColors.current
     ModalDialog(
         showDialog = true,
         onDismissRequest = onDismissRequest,
@@ -185,13 +186,13 @@ fun RescanBlockchainDialog(
                     Text(
                         text = stringResource(R.string.rescan_blockchain_select_date_label),
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
 
                     Icon(
                         imageVector = ImageVector.vectorResource(R.drawable.ic_info_circle),
                         contentDescription = stringResource(R.string.rescan_blockchain_date_info_description),
-                        tint = MyTheme.Colors.dashBlue,
+                        tint = colors.dashBlue,
                         modifier = Modifier
                             .size(20.dp)
                             .clickable(onClick = onShowDateInfo)
@@ -203,7 +204,7 @@ fun RescanBlockchainDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = MyTheme.Colors.backgroundPrimary,
+                            color = colors.backgroundPrimary,
                             shape = RoundedCornerShape(16.dp)
                         )
                         .clickable(onClick = { showDatePicker() })
@@ -219,7 +220,7 @@ fun RescanBlockchainDialog(
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_calendar),
                             contentDescription = null,
-                            tint = MyTheme.Colors.textPrimary,
+                            tint = colors.textPrimary,
                             modifier = Modifier.size(24.dp)
                         )
 
@@ -228,7 +229,7 @@ fun RescanBlockchainDialog(
                                 dateFormat.format(Date(it * 1000L))
                             } ?: stringResource(R.string.rescan_blockchain_select_date_placeholder),
                             style = MyTheme.Body2Regular,
-                            color = MyTheme.Colors.textPrimary
+                            color = colors.textPrimary
                         )
                     }
 
@@ -237,7 +238,7 @@ fun RescanBlockchainDialog(
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.ic_x),
                             contentDescription = stringResource(R.string.button_cancel),
-                            tint = MyTheme.Colors.textSecondary,
+                            tint = colors.textSecondary,
                             modifier = Modifier
                                 .size(20.dp)
                                 .clickable(onClick = { selectedCreationDate = null })

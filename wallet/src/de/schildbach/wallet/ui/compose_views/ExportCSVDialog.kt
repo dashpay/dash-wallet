@@ -44,6 +44,7 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.more.ToolsViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
@@ -144,6 +145,7 @@ internal fun ExportCSVContent(
     isLoading: Boolean = false,
     onExportClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()

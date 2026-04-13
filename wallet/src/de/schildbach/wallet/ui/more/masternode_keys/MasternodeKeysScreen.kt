@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.ui.components.ListItem
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
@@ -65,10 +66,11 @@ private fun MasternodeKeysScreenContent(
     onBackClick: () -> Unit = {},
     onKeyTypeClick: (MasternodeKeyType) -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         NavBarBack(
             onBackClick = onBackClick
@@ -109,7 +111,7 @@ private fun TableListMasternodeKeyItem(
             MasternodeKeyType.PLATFORM -> R.string.masternode_key_type_platform
         }
     )
-
+    val colors = LocalDashColors.current
     ListItem(
         title = typeName,
         subtitle = stringResource(R.string.masternode_key_type_total, info.totalKeys),
@@ -121,12 +123,12 @@ private fun TableListMasternodeKeyItem(
                 Text(
                     text = stringResource(R.string.masternode_key_type_used, info.usedKeys),
                     style = MyTheme.Typography.LabelMedium,
-                    color = MyTheme.Colors.textPrimary
+                    color = colors.textPrimary
                 )
                 Icon(
                     painter = painterResource(id = R.drawable.ic_list_chevron_right),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = colors.textTertiary,
                     modifier = Modifier.size(width = 5.dp, height = 10.dp)
                 )
             }

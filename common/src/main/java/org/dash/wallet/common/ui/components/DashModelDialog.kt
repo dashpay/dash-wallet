@@ -61,165 +61,168 @@ fun ModalDialog(
     horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp
 ) {
     if (showDialog) {
-        Dialog(
-            onDismissRequest = onDismissRequest,
-            properties = DialogProperties(
-                dismissOnBackPress = true,
-                dismissOnClickOutside = true
-            ),
-        ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = horizontalPadding),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White
-                )
+        DashWalletTheme {
+            Dialog(
+                onDismissRequest = onDismissRequest,
+                properties = DialogProperties(
+                    dismissOnBackPress = true,
+                    dismissOnClickOutside = true
+                ),
             ) {
-                Column(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .padding(horizontal = horizontalPadding),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = Color.White
+                    )
                 ) {
-                    // Info icon if provided
-                    icon?.let {
-                        Box(
-                            modifier = Modifier
-                                .size(46.dp),
-                                //.background(iconBackgroundColor, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = Color.Unspecified,
-                                modifier = Modifier.size(46.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(20.dp))
-                    }
-
-                    // Content wrapper
+                    val colors = LocalDashColors.current
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Heading and text blocks
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Text(
-                                text = heading,
-                                style = MyTheme.SubtitleSemibold,
-                                textAlign = textAlign,
-                                color = Color(0xFF191C1F)
-                            )
-
-                            // First part of text blocks (before limitation items)
-                            val textBlocksPart1 = if (limitationItems.isEmpty()) textBlocks else textBlocks.take(2)
-                            textBlocksPart1.forEach { textBlock ->
-                                Text(
-                                    text = textBlock,
-                                    style = MyTheme.Body2Regular,
-                                    textAlign = textAlign,
-                                    color = Color(0xFF525C66)
+                        // Info icon if provided
+                        icon?.let {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp),
+                                //.background(iconBackgroundColor, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    tint = Color.Unspecified,
+                                    modifier = Modifier.size(46.dp)
                                 )
                             }
                             Spacer(modifier = Modifier.height(20.dp))
                         }
 
-                        // Limitation items if provided
-                        if (limitationItems.isNotEmpty()) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                    //.padding(vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                        // Content wrapper
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Heading and text blocks
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
-                                limitationItems.forEach { item ->
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        horizontalAlignment = Alignment.CenterHorizontally
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                Text(
+                                    text = heading,
+                                    style = MyTheme.SubtitleSemibold,
+                                    textAlign = textAlign,
+                                    color = colors.textPrimary
+                                )
+
+                                // First part of text blocks (before limitation items)
+                                val textBlocksPart1 = if (limitationItems.isEmpty()) textBlocks else textBlocks.take(2)
+                                textBlocksPart1.forEach { textBlock ->
+                                    Text(
+                                        text = textBlock,
+                                        style = MyTheme.Body2Regular,
+                                        textAlign = textAlign,
+                                        color = colors.extraDarkGray //Color(0xFF525C66)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(20.dp))
+                            }
+
+                            // Limitation items if provided
+                            if (limitationItems.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth(),
+                                    //.padding(vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    limitationItems.forEach { item ->
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.CenterHorizontally
                                         ) {
-                                            Text(
-                                                text = item.value,
-                                                style = MyTheme.OverlineCaptionMedium,
-                                                color = Color(0xFF191C1F)
-                                            )
-                                            if (item.showDashIcon) {
-                                                Icon(
-                                                    imageVector = ImageVector.vectorResource(id = R.drawable.ic_dash_d_black),
-                                                    contentDescription = null,
-                                                    tint = Color(0xFF191C1F),
-                                                    modifier = Modifier.size(12.dp)
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = item.value,
+                                                    style = MyTheme.OverlineCaptionMedium,
+                                                    color = colors.textPrimary //Color(0xFF191C1F)
                                                 )
+                                                if (item.showDashIcon) {
+                                                    Icon(
+                                                        imageVector = ImageVector.vectorResource(id = R.drawable.ic_dash_d_black),
+                                                        contentDescription = null,
+                                                        tint = colors.textPrimary, //Color(0xFF191C1F),
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
                                             }
+                                            Text(
+                                                text = item.label,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Normal,
+                                                lineHeight = 16.sp,
+                                                color = colors.extraDarkGray //Color(0xFF525C66)
+                                            )
                                         }
+                                    }
+                                }
+
+                                // Remaining text blocks after limitation items
+                                if (textBlocks.size > 2) {
+                                    textBlocks.drop(2).forEach { textBlock ->
                                         Text(
-                                            text = item.label,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Normal,
-                                            lineHeight = 16.sp,
-                                            color = Color(0xFF525C66)
+                                            text = textBlock,
+                                            style = MyTheme.Body2Regular,
+                                            textAlign = textAlign,
+                                            color = colors.extraDarkGray //Color(0xFF525C66)
                                         )
                                     }
                                 }
                             }
 
-                            // Remaining text blocks after limitation items
-                            if (textBlocks.size > 2) {
-                                textBlocks.drop(2).forEach { textBlock ->
-                                    Text(
-                                        text = textBlock,
-                                        style = MyTheme.Body2Regular,
-                                        textAlign = textAlign,
-                                        color = Color(0xFF525C66)
-                                    )
-                                }
-                            }
+                            // Custom content (if provided)
+                            content?.invoke()
                         }
 
-                        // Custom content (if provided)
-                        content?.invoke()
-                    }
-
-                    // Learn More Button
-                    moreInfoButton?.let {
-                        DashButton(
-                            text = moreInfoButton.label,
-                            style = Style.PlainBlue,
-                            size = Size.Small,
-                            onClick = moreInfoButton.onClick,
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(32.dp))
-
-                    // Bottom buttons group
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        buttons.forEach { buttonData ->
+                        // Learn More Button
+                        moreInfoButton?.let {
                             DashButton(
-                                text = buttonData.label,
-                                onClick = buttonData.onClick,
-                                modifier = Modifier.fillMaxWidth(),
-                                size = Size.Medium,
-                                style = buttonData.style,
-                                isEnabled = buttonData.enabled,
-                                isLoading = buttonData.progress
+                                text = moreInfoButton.label,
+                                style = Style.PlainBlue,
+                                size = Size.Small,
+                                onClick = moreInfoButton.onClick,
                             )
+                        }
+
+                        Spacer(modifier = Modifier.height(32.dp))
+
+                        // Bottom buttons group
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            buttons.forEach { buttonData ->
+                                DashButton(
+                                    text = buttonData.label,
+                                    onClick = buttonData.onClick,
+                                    modifier = Modifier.fillMaxWidth(),
+                                    size = Size.Medium,
+                                    style = buttonData.style,
+                                    isEnabled = buttonData.enabled,
+                                    isLoading = buttonData.progress
+                                )
+                            }
                         }
                     }
                 }

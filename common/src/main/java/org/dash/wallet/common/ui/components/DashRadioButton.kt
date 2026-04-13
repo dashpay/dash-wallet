@@ -44,10 +44,11 @@ fun DashRadioButton(
     enabled: Boolean = true,
     onlyOption: Boolean = false
 ) {
-    val primaryTextColor = MyTheme.Colors.textPrimary
-    val secondaryTextColor = MyTheme.Colors.textSecondary
-    val radioButtonColor = MyTheme.Colors.dashBlue
-    val borderColor = if (selected) radioButtonColor else Color(0xFFCED2D5)  // #CED2D5 from Figma
+    val colors = LocalDashColors.current
+    val primaryTextColor = colors.textPrimary
+    val secondaryTextColor = colors.textSecondary
+    val radioButtonColor = colors.dashBlue
+    val borderColor = if (selected) radioButtonColor else colors.lightGray //Color(0xFFCED2D5)  // #CED2D5 from Figma
 
     val contentAlpha = if (enabled) 1f else 0.6f
 

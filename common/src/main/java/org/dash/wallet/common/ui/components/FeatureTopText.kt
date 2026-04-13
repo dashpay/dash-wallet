@@ -51,6 +51,7 @@ fun FeatureTopText(
     buttonTrailingIcon: ImageVector? = null,
     onButtonClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -61,7 +62,7 @@ fun FeatureTopText(
         Text(
             text = heading,
             style = textStyle,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -70,7 +71,7 @@ fun FeatureTopText(
             Text(
                 text = text,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
+                color = colors.textSecondary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -91,7 +92,7 @@ fun FeatureTopText(
                             imageVector = buttonLeadingIcon,
                             contentDescription = null,
                             modifier = Modifier.size(13.dp),
-                            tint = MyTheme.Colors.dashBlue
+                            tint = colors.dashBlue
                         )
                     }
 
@@ -99,7 +100,7 @@ fun FeatureTopText(
                         text = buttonLabel,
                         fontSize = 13.sp,
                         lineHeight = 18.sp,
-                        color = MyTheme.Colors.dashBlue,
+                        color = colors.dashBlue,
                         textAlign = TextAlign.Center
                     )
 
@@ -108,7 +109,7 @@ fun FeatureTopText(
                             imageVector = buttonTrailingIcon,
                             contentDescription = null,
                             modifier = Modifier.size(13.dp),
-                            tint = MyTheme.Colors.dashBlue
+                            tint = colors.dashBlue
                         )
                     }
                 }

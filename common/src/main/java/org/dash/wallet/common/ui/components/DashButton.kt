@@ -189,10 +189,6 @@ enum class Size(
     ExtraSmall(12.sp, 16.sp,13.dp, 6.dp, 8.dp, 4.dp, 6.dp, 28.dp)
 }
 
-val DashBlue = Color(0xFF008DE4)
-val PrimaryText = Color(0xFF000000)
-val TertiaryText = Color(0xFF888888)
-
 @Composable
 @Preview
 fun DashButtonPreview() {

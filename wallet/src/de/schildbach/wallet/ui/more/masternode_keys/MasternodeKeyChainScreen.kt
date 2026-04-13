@@ -46,7 +46,9 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.wallet.authentication.AuthenticationKeyStatus
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.ListItem
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackPlus
@@ -86,30 +88,33 @@ private fun MasternodeKeyChainScreenContent(
         )
     } ?: ""
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
-    ) {
-        NavBarBackPlus(
-            onBackClick = onBackClick,
-            onPlusClick = onAddKeyClick
-        )
-
-        TopIntro(
-            heading = keyTypeName,
-            modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
-        )
-
+    DashWalletTheme {
+        val colors = LocalDashColors.current
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(40.dp)
+                .background(colors.backgroundPrimary)
         ) {
-            uiState.keypairs.forEach { keypair ->
-                KeypairSection(keypair = keypair, onCopy = onCopy)
+            NavBarBackPlus(
+                onBackClick = onBackClick,
+                onPlusClick = onAddKeyClick
+            )
+
+            TopIntro(
+                heading = keyTypeName,
+                modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(bottom = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(40.dp)
+            ) {
+                uiState.keypairs.forEach { keypair ->
+                    KeypairSection(keypair = keypair, onCopy = onCopy)
+                }
             }
         }
     }
@@ -128,6 +133,7 @@ private fun KeypairSection(
         AuthenticationKeyStatus.REVOKED -> stringResource(R.string.masternode_key_revoked)
         else -> stringResource(R.string.masternode_key_not_used)
     }
+    val colors = LocalDashColors.current
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -142,12 +148,12 @@ private fun KeypairSection(
             Text(
                 text = stringResource(R.string.masternode_key_pair_index, keypair.index),
                 style = MyTheme.Typography.TitleMediumBold,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             Text(
                 text = usageText,
                 style = MyTheme.Typography.TitleSmall,
-                color = MyTheme.Colors.textTertiary
+                color = colors.textTertiary
             )
         }
 
@@ -161,6 +167,7 @@ private fun KeypairSection(
 
 @Composable
 fun TableListExtendedPublicKeyItem(label: String, value: String, onCopy: (String) -> Unit) {
+    val colors = LocalDashColors.current
     ListItem(
         helpTextAbove = label,
         title = value,
@@ -174,7 +181,7 @@ fun TableListExtendedPublicKeyItem(label: String, value: String, onCopy: (String
                 Icon(
                     painter = painterResource(id = R.drawable.ic_copy),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = colors.textTertiary,
                     modifier = Modifier.size(13.6.dp)
                 )
             }
@@ -199,7 +206,7 @@ private fun KeyFieldRow(
             KeyFieldType.PRIVATE_PUBLIC_BASE64 -> R.string.masternode_key_private_public_base64
         }
     )
-
+    val colors = LocalDashColors.current
     if (field.value != null) {
         TableListExtendedPublicKeyItem(
             label = label,
@@ -213,8 +220,8 @@ private fun KeyFieldRow(
             trailingContent = {
                 LinearProgressIndicator(
                     modifier = Modifier.width(60.dp),
-                    color = MyTheme.Colors.dashBlue,
-                    trackColor = MyTheme.Colors.dashBlue.copy(alpha = 0.2f)
+                    color = colors.dashBlue,
+                    trackColor = colors.dashBlue.copy(alpha = 0.2f)
                 )
             }
         )

@@ -47,6 +47,7 @@ import coil.compose.AsyncImage
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashRadioButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -133,6 +134,7 @@ private fun MerchantDetailsContent(
     val isGrouped = merchant.physicalAmount > 0
     val isDash = merchant.paymentMethod?.trim()?.lowercase() == PaymentMethod.DASH
     val hasMultipleProviders = merchant.giftCardProviders.size > 1
+    val colors = LocalDashColors.current
 
     Column(
         modifier = modifier
@@ -169,7 +171,7 @@ private fun MerchantDetailsContent(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary)
+            colors = CardDefaults.cardColors(containerColor = colors.backgroundSecondary)
         ) {
             Column(
                 modifier = Modifier.padding(16.dp)
@@ -245,6 +247,7 @@ private fun MerchantHeader(
     merchant: Merchant,
     isOnline: Boolean
 ) {
+    val colors = LocalDashColors.current
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
@@ -266,13 +269,13 @@ private fun MerchantHeader(
             Text(
                 text = merchant.name ?: "",
                 style = MyTheme.SubtitleSemibold,
-                color = MyTheme.Colors.textPrimary
+                color = colors.textPrimary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = getMerchantTypeText(merchant.type, isOnline),
                 style = MyTheme.Caption,
-                color = MyTheme.Colors.textSecondary
+                color = colors.textSecondary
             )
         }
     }
@@ -290,12 +293,12 @@ private fun MultipleProvidersSection(
             minimumFractionDigits = 0
         }
     }
-
+    val colors = LocalDashColors.current
     Column {
         Text(
             text = stringResource(R.string.select_gift_card_provider),
             style = MyTheme.CaptionMedium,
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             modifier = Modifier.padding(start = 16.dp, bottom = 8.dp, top = 2.dp)
         )
 
@@ -340,10 +343,11 @@ private fun SingleProviderSection(
     val isEnabled = provider.active
     val onSelected = { }
 
-    val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
-    val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
-    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
-    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
+    val colors = LocalDashColors.current
+    val backgroundColor = if (isSelected) colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
+    val borderColor = if (isSelected) colors.dashBlue else colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) colors.textPrimary else colors.gray400
+    val subtitleColor = if (isEnabled) colors.textTertiary else colors.gray400
     DashRadioButton(
         modifier = Modifier
             .fillMaxWidth()
@@ -370,10 +374,11 @@ private fun ProviderOption(
     isEnabled: Boolean,
     onSelected: () -> Unit
 ) {
-    val backgroundColor = if (isSelected) MyTheme.Colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
-    val borderColor = if (isSelected) MyTheme.Colors.dashBlue else MyTheme.Colors.gray300.copy(alpha = 0.5f)
-    val textColor = if (isEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray400
-    val subtitleColor = if (isEnabled) MyTheme.Colors.textTertiary else MyTheme.Colors.gray400
+    val colors = LocalDashColors.current
+    val backgroundColor = if (isSelected) colors.dashBlue.copy(alpha = 0.1f) else Color.Transparent
+    val borderColor = if (isSelected) colors.dashBlue else colors.gray300.copy(alpha = 0.5f)
+    val textColor = if (isEnabled) colors.textPrimary else colors.gray400
+    val subtitleColor = if (isEnabled) colors.textTertiary else colors.gray400
 
     Row(
         modifier = Modifier
@@ -406,13 +411,14 @@ private fun ActionButton(
     val isEnabled = merchant.giftCardProviders.find {
         it.provider == selectedProvider.name
     }?.active ?: true
+    val colors = LocalDashColors.current
 
     Column {
         if (!isEnabled) {
             Text(
                 text = stringResource(R.string.temporarily_unavailable),
                 style = MyTheme.Overline,
-                color = MyTheme.Colors.gray400,
+                color = colors.gray400,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -424,7 +430,7 @@ private fun ActionButton(
             Text(
                 text = stringResource(R.string.country_availability),
                 style = MyTheme.Overline,
-                color = MyTheme.Colors.gray400,
+                color = colors.gray400,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
@@ -462,7 +468,7 @@ private fun ActionButton(
                     .align(Alignment.End)
                     .offset(y = (-24).dp)
                     .background(
-                        color = MyTheme.Colors.textPrimary,
+                        color = colors.textPrimary,
                         shape = RoundedCornerShape(4.dp)
                     )
                     .padding(horizontal = 5.dp, vertical = 1.dp)
@@ -473,7 +479,7 @@ private fun ActionButton(
                         merchant.savingsPercentageAsDouble
                     ),
                     style = MyTheme.Overline,
-                    color = MyTheme.Colors.backgroundSecondary
+                    color = colors.backgroundSecondary
                 )
             }
         }
@@ -485,13 +491,14 @@ private fun UserLoginStatus(
     email: String,
     onLogOutClicked: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val annotatedText = buildAnnotatedString {
         append(stringResource(R.string.logged_in_as, email.maskEmail()))
         append(" ")
         pushStringAnnotation(tag = "logout", annotation = "logout")
         withStyle(
             SpanStyle(
-                color = Color(0xFF008DE4),
+                color = colors.dashBlue, //Color(0xFF008DE4),
                 textDecoration = TextDecoration.Underline
             )
         ) {
@@ -503,7 +510,7 @@ private fun UserLoginStatus(
     Text(
         text = annotatedText,
         fontSize = 13.sp,
-        color = Color(0xFF525C66),
+        color = colors.extraDarkGray, //Color(0xFF525C66),
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
@@ -526,6 +533,7 @@ private fun ItemContactDetails(
     val hasAddress = !isOnline && item.getDisplayAddress("\n").isNotEmpty()
     val hasPhone = !item.phone.isNullOrEmpty()
     val hasWebsite = !item.website.isNullOrEmpty()
+    val colors = LocalDashColors.current
 
     Column(modifier = Modifier.fillMaxWidth()) {
         // Only show card if there are details to display
@@ -533,7 +541,7 @@ private fun ItemContactDetails(
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isOnline) Color.White else MyTheme.Colors.backgroundSecondary
+                    containerColor = if (isOnline) Color.White else colors.backgroundSecondary
                 )
             ) {
                 Column(modifier = Modifier.padding(if (isOnline) 6.dp else 10.dp)) {
@@ -576,7 +584,7 @@ private fun ItemContactDetails(
         if (!isOnline && isGrouped && item is Merchant && item.physicalAmount > 1) {
             Card(
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary),
+                colors = CardDefaults.cardColors(containerColor = colors.backgroundSecondary),
                 modifier = Modifier.padding(top = 12.dp)
             ) {
                 ShowAllLocationsItem(
@@ -599,6 +607,7 @@ private fun DetailItem(
     onContentClick: (() -> Unit)? = null,
     onActionClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -619,13 +628,13 @@ private fun DetailItem(
             Text(
                 text = title,
                 style = MyTheme.Overline,
-                color = MyTheme.Colors.textSecondary
+                color = colors.textSecondary
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = content,
                 style = MyTheme.Body2Regular,
-                color = if (isClickable) MyTheme.Colors.dashBlue else MyTheme.Colors.textPrimary
+                color = if (isClickable) colors.dashBlue else colors.textPrimary
             )
 
             if (!subtitle.isNullOrEmpty()) {
@@ -633,7 +642,7 @@ private fun DetailItem(
                 Text(
                     text = subtitle,
                     style = MyTheme.Overline,
-                    color = MyTheme.Colors.textSecondary
+                    color = colors.textSecondary
                 )
             }
         }
@@ -659,6 +668,7 @@ private fun ShowAllLocationsItem(
     count: Int,
     onClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -670,13 +680,13 @@ private fun ShowAllLocationsItem(
             text = stringResource(R.string.explore_show_all_locations, count),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = Color(0xFF191C1F),
+            color = colors.textPrimary, //Color(0xFF191C1F),
             modifier = Modifier.weight(1f)
         )
         Icon(
             painter = painterResource(id = R.drawable.ic_show_all),
             contentDescription = null,
-            tint = MyTheme.Colors.textTertiary
+            tint = colors.textTertiary
         )
     }
 }
@@ -691,6 +701,7 @@ private fun AtmDetailsContent(
     onOpenWebsiteButtonClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -700,7 +711,7 @@ private fun AtmDetailsContent(
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = MyTheme.Colors.backgroundSecondary)
+            colors = CardDefaults.cardColors(containerColor = colors.backgroundSecondary)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 // Logo and manufacturer
@@ -720,7 +731,7 @@ private fun AtmDetailsContent(
                         text = atm.manufacturer?.replaceFirstChar { it.uppercase() } ?: "",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = Color(0xFF191C1F)
+                        color = colors.textPrimary //Color(0xFF191C1F)
                     )
                 }
 
@@ -736,7 +747,7 @@ private fun AtmDetailsContent(
                                 .height(48.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MyTheme.Colors.green
+                                containerColor = colors.green
                             )
                         ) {
                             Text(
@@ -760,7 +771,7 @@ private fun AtmDetailsContent(
                                 .height(48.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF008DE4)
+                                containerColor = colors.dashBlue //Color(0xFF008DE4)
                             )
                         ) {
                             Text(
@@ -781,7 +792,7 @@ private fun AtmDetailsContent(
         Text(
             text = stringResource(R.string.explore_atm_location_hint),
             style = MyTheme.Overline,
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             modifier = Modifier.padding(start = 12.dp, bottom = 5.dp)
         )
 
@@ -790,7 +801,7 @@ private fun AtmDetailsContent(
             Text(
                 text = atm.name!!,
                 style = MyTheme.SubtitleSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 modifier = Modifier.padding(start = 12.dp, bottom = 16.dp)
             )
         }

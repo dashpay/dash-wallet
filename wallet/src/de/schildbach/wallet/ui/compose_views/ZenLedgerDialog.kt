@@ -43,6 +43,7 @@ import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.FeatureTopText
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -157,6 +158,7 @@ internal fun ZenLedgerContent(
     onExportClick: () -> Unit,
     onLinkClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()

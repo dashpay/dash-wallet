@@ -19,11 +19,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.MyTheme.Colors
 import de.schildbach.wallet.ui.compose_views.Shadows.softShadow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.components.LocalDashColors
 
 // Index must be kept in sync with preferences_block_explorer_values
 enum class BlockExplorer(val index: Int) {
@@ -42,6 +42,7 @@ fun BlockExplorerSelectionView(
             BlockExplorer.INSIGHT
         )
     }
+    val colors = LocalDashColors.current
 
     Column(
         modifier = Modifier
@@ -57,7 +58,7 @@ fun BlockExplorerSelectionView(
                 text = stringResource(R.string.block_explorer_selection_title),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color = Colors.textPrimary,
+                color = colors.textPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.align(Alignment.Center)
             )
@@ -70,7 +71,7 @@ fun BlockExplorerSelectionView(
                 .padding(top = 25.dp, bottom = 50.dp)
                 .softShadow(cornerRadius = 12.dp),
             shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Colors.backgroundSecondary)
+            colors = CardDefaults.cardColors(containerColor = colors.backgroundSecondary)
         ) {
             Column(
                 modifier = Modifier.padding(vertical = 6.dp)
@@ -80,7 +81,7 @@ fun BlockExplorerSelectionView(
                         .fillMaxWidth()
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
-                            indication = rememberRipple(color = Colors.textPrimary),
+                            indication = rememberRipple(color = colors.textPrimary),
                             onClick = {
                                 analytics.logEvent(when(explorer) {
                                     BlockExplorer.BLOCKCHAIR -> AnalyticsConstants.BlockchainExplorer.BLOCKCHAIR_PICKED
@@ -120,7 +121,7 @@ fun BlockExplorerSelectionView(
                                 text = resources.getStringArray(R.array.preferences_block_explorer_labels)[explorer.index],
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Medium,
-                                color = Colors.textPrimary
+                                color = colors.textPrimary
                             )
                         }
                     }
@@ -133,7 +134,8 @@ fun BlockExplorerSelectionView(
 @Preview
 @Composable
 fun BlockExplorerSelectionViewPreview() {
-    Box(Modifier.background(Colors.backgroundPrimary)) {
+    val colors = LocalDashColors.current
+    Box(Modifier.background(colors.backgroundPrimary)) {
         BlockExplorerSelectionView(object: AnalyticsService {
             override fun logEvent(event: String, params: Map<AnalyticsConstants.Parameter, Any>) {}
             override fun logError(error: Throwable, details: String?) {}

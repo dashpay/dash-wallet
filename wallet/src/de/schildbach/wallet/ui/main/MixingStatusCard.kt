@@ -27,6 +27,8 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.bitcoinj.core.Coin
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.util.toBigDecimal
 import java.text.DecimalFormat
@@ -59,140 +61,156 @@ fun MixingStatusCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val mode by coinJoinModeFlow.collectAsState(CoinJoinMode.NONE)
-    val status by statusFlow.collectAsState(MixingStatus.NOT_STARTED)
-    val isVisible = when (mode) {
-        CoinJoinMode.NONE -> when (status) {
-            MixingStatus.FINISHING -> true
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        val mode by coinJoinModeFlow.collectAsState(CoinJoinMode.NONE)
+        val status by statusFlow.collectAsState(MixingStatus.NOT_STARTED)
+        val isVisible = when (mode) {
+            CoinJoinMode.NONE -> when (status) {
+                MixingStatus.FINISHING -> true
+                else -> false
+            }
+
+            else -> when (status) {
+                MixingStatus.NOT_STARTED,
+                MixingStatus.ERROR,
+                MixingStatus.FINISHED -> false
+
+                else -> true
+            }
+        }
+        val mixingNow = when (status) {
+            MixingStatus.MIXING, MixingStatus.FINISHING -> true
             else -> false
         }
-        else -> when (status) {
-            MixingStatus.NOT_STARTED,
-            MixingStatus.ERROR,
-            MixingStatus.FINISHED -> false
-            else -> true
-        }
-    }
-    val mixingNow = when (status) {
-        MixingStatus.MIXING, MixingStatus.FINISHING -> true
-        else -> false
-    }
-    val statusTextId = when (status) {
-        MixingStatus.MIXING -> {
-            R.string.coinjoin_mixing
-        }
-        MixingStatus.FINISHING -> {
-            R.string.coinjoin_mixing_finishing
-        }
-        MixingStatus.PAUSED -> {
-            R.string.coinjoin_paused
-        }
-        else -> {
-            R.string.error
-        }
-    }
-    val percentageDouble by percentageFlow.collectAsState(0.0)
-    val percentageInt = percentageDouble.toInt()
-    val mixedBalance by mixedBalanceFlow.collectAsState(Coin.ZERO)
-    val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
-    val hideBalance by hideBalanceFlow.collectAsState(false)
-    val decimalFormat = DecimalFormat("0.0000")
-    val totalBalanceString = decimalFormat.format(totalBalance.toBigDecimal())
-    val mixedBalanceString = decimalFormat.format(mixedBalance.toBigDecimal())
+        val statusTextId = when (status) {
+            MixingStatus.MIXING -> {
+                R.string.coinjoin_mixing
+            }
 
-    if (isVisible) {
-        Card(
-            modifier = modifier
-                .fillMaxWidth()
-                .height(60.dp)
-                .shadow(
-                    elevation = 8.dp,
-                    shape = RoundedCornerShape(12.dp),
-                    ambientColor = Color(0xFFB8C1CC).copy(alpha = 0.15f),
-                    spotColor = Color(0xFFB8C1CC).copy(alpha = 0.15f)
-                ),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-            onClick = onClick
-        ) {
-            Row(
-                modifier = Modifier
+            MixingStatus.FINISHING -> {
+                R.string.coinjoin_mixing_finishing
+            }
+
+            MixingStatus.PAUSED -> {
+                R.string.coinjoin_paused
+            }
+
+            else -> {
+                R.string.error
+            }
+        }
+        val percentageDouble by percentageFlow.collectAsState(0.0)
+        val percentageInt = percentageDouble.toInt()
+        val mixedBalance by mixedBalanceFlow.collectAsState(Coin.ZERO)
+        val totalBalance by totalBalanceFlow.collectAsState(Coin.ZERO)
+        val hideBalance by hideBalanceFlow.collectAsState(false)
+        val decimalFormat = DecimalFormat("0.0000")
+        val totalBalanceString = decimalFormat.format(totalBalance.toBigDecimal())
+        val mixedBalanceString = decimalFormat.format(mixedBalance.toBigDecimal())
+
+        if (isVisible) {
+            Card(
+                modifier = modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .height(60.dp)
+                    .shadow(
+                        elevation = 8.dp,
+                        shape = RoundedCornerShape(12.dp),
+                        ambientColor = Color(0xFFB8C1CC).copy(alpha = 0.15f),
+                        spotColor = Color(0xFFB8C1CC).copy(alpha = 0.15f)
+                    ),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = colors.backgroundSecondary),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                onClick = onClick
             ) {
-                MixingAnimation(mixingNow)
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Status and balance row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
+                    MixingAnimation(mixingNow)
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Status & percentage
+                        // Status and balance row
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.Top
                         ) {
-                            Text(
-                                text = stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusTextId), percentageInt),
-                                style = MyTheme.Caption,
-                                color = MyTheme.Colors.textPrimary,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                        }
-
-                        // Balance with logo
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = if (hideBalance) stringResource(R.string.coinjoin_progress_amount_hidden) else stringResource(R.string.coinjoin_progress_balance, mixedBalanceString, totalBalanceString),
-                                style = MyTheme.Caption,
-                                color = MyTheme.Colors.textPrimary,
-                                textAlign = TextAlign.End
-                            )
-
-                            Icon(
-                                painter = painterResource(id = R.drawable.ic_dash_d_black),
-                                contentDescription = "Dash logo",
-                                modifier = Modifier.size(10.47.dp),
-                                tint = Color(0xFF0C0C0D)
-                            )
-                        }
-                    }
-
-                    // Progress bar
-                    Column {
-                        val progressFraction = percentageDouble.let { raw ->
-                            val safe = if (raw.isNaN()) 0.0 else raw.coerceIn(0.0, 100.0)
-                            (safe / 100.0).toFloat()
-                        }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(5.dp)
-                                .background(
-                                    color = MyTheme.Colors.extraLightGray,
-                                    shape = RoundedCornerShape(4.dp)
+                            // Status & percentage
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = stringResource(
+                                        R.string.coinjoin_progress_status_percentage,
+                                        stringResource(statusTextId),
+                                        percentageInt
+                                    ),
+                                    style = MyTheme.Caption,
+                                    color = colors.textPrimary,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
-                        ) {
+                            }
+
+                            // Balance with logo
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = if (hideBalance) stringResource(R.string.coinjoin_progress_amount_hidden) else stringResource(
+                                        R.string.coinjoin_progress_balance,
+                                        mixedBalanceString,
+                                        totalBalanceString
+                                    ),
+                                    style = MyTheme.Caption,
+                                    color = colors.textPrimary,
+                                    textAlign = TextAlign.End
+                                )
+
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_dash_d_black),
+                                    contentDescription = "Dash logo",
+                                    modifier = Modifier.size(10.47.dp),
+                                    tint = Color(0xFF0C0C0D)
+                                )
+                            }
+                        }
+
+                        // Progress bar
+                        Column {
+                            val progressFraction = percentageDouble.let { raw ->
+                                val safe = if (raw.isNaN()) 0.0 else raw.coerceIn(0.0, 100.0)
+                                (safe / 100.0).toFloat()
+                            }
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(progressFraction)
-                                    .fillMaxHeight()
+                                    .fillMaxWidth()
+                                    .height(5.dp)
                                     .background(
-                                        color = MyTheme.Colors.dashBlue,
+                                        color = colors.extraLightGray,
                                         shape = RoundedCornerShape(4.dp)
                                     )
-                            )
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth(progressFraction)
+                                        .fillMaxHeight()
+                                        .background(
+                                            color = colors.dashBlue,
+                                            shape = RoundedCornerShape(4.dp)
+                                        )
+                                )
+                            }
                         }
                     }
                 }
