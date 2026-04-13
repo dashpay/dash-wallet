@@ -1205,6 +1205,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                 peerGroup!!.removePreBlocksDownloadedListener(preBlocksDownloadListener)
+                dashSystemService.system.removeWallet(wallet)
                 peerGroup!!.removeWallet(wallet)
                 dashSystemService.system.removeWallet(wallet)
                 platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
