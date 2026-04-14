@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -117,10 +118,11 @@ private fun ToolsScreenContent(
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Top Navigation
         TopNavBase(

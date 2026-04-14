@@ -17,7 +17,6 @@
 
 package org.dash.wallet.common.ui.dialogs
 
-import android.graphics.Rect
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -25,6 +24,7 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.LayoutRes
 import androidx.annotation.StyleRes
+import androidx.appcompat.widget.AppCompatImageButton
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
 import androidx.fragment.app.FragmentActivity
@@ -108,8 +108,10 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
             }
         }
 
-        view.findViewById<android.widget.ImageButton?>(R.id.collapse_button)?.apply {
-            setImageResource(R.drawable.ic_popup_close_circle)
+        view.findViewById<View?>(R.id.collapse_button)?.apply {
+            if (this is AppCompatImageButton) {
+                setImageResource(R.drawable.ic_popup_close_circle)
+            }
             setOnClickListener { dismiss() }
         }
 

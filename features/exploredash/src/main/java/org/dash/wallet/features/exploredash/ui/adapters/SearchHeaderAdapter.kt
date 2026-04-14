@@ -32,8 +32,10 @@ import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
@@ -129,10 +131,15 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
         )
         binding.filterOptions.setContent {
             DashWalletTheme {
+                val colors = LocalDashColors.current
                 SegmentedPicker(
                     options,
                     modifier = Modifier.height(36.dp),
-                    selectedIndex = currentFilterOption
+                    selectedIndex = currentFilterOption,
+                    style = SegmentedPickerStyle(
+                        backgroundColor = colors.gray400,
+                        thumbColor = colors.backgroundSecondary
+                    )
                 ) { option, index ->
                     currentFilterOption = index
                     onFilterOptionChosen?.invoke(

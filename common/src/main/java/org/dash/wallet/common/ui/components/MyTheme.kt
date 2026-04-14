@@ -678,8 +678,8 @@ object MyTheme {
 
     val DarkColors = ColorScheme(
         // Backgrounds
-        backgroundPrimary = Color(0xFF10151F),
-        backgroundSecondary = Color(0xFF1D2532),
+        backgroundPrimary = Color(0xFF0A0B0D),
+        backgroundSecondary = Color(0xFF1E1F24),
         backgroundTertiary = Color.Transparent,
         overlayPrimary = Color(0xB3000000),
         // Text / content
