@@ -142,19 +142,19 @@ class WalletObserver(
                                 log.error("Failed to send transaction confidence event", it)
                             }
                         }
-                        // log.info("tx listener: {} for {}", changeReason, transactionConfidence.transactionHash)
+
                         val isCoinBase = tx?.isCoinBase == true
                         val shouldStopListening = shouldStopListeningToTxConfidence(changeReason, transactionConfidence, isCoinBase)
                         if (shouldStopListening) {
                             log.info(
-                                "observing transaction: stop listening to {} at depth {} with ISLock: {}",
+                                "observing transaction: stop listening to {} at depth {} with ISLock: {}; chainlock: {}",
                                 transactionConfidence.transactionHash,
                                 transactionConfidence.depthInBlocks,
-                                transactionConfidence.isTransactionLocked
+                                transactionConfidence.isTransactionLocked,
+                                transactionConfidence.isChainLocked
                             )
                             transactionConfidence.removeEventListener(transactionConfidenceListener)
                             transactions.remove(transactionConfidence.transactionHash)
-                            // wallet.removeManualNotifyConfidenceChangeTransaction(tx)
                         }
                     } catch (e: Exception) {
                         log.error("Error in transactionConfidenceChangedListener", e)
