@@ -43,7 +43,6 @@ private fun ImportPrivateKeyContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(top = 60.dp)
     ) {
         Column(
