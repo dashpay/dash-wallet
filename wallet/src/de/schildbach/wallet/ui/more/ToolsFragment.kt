@@ -170,7 +170,7 @@ class ToolsFragment : Fragment() {
             onCopy = {
                 viewModel.copyXpubToClipboard()
                 Toast(requireContext()).toast(R.string.copied)
-                log.info("xpub copied to clipboard: {}", viewModel.xpub)
+                log.info("xpub copied to clipboard")
             },
             onShare = { xpubWithCreationDate ->
                 createAndLaunchShareIntent(xpubWithCreationDate)

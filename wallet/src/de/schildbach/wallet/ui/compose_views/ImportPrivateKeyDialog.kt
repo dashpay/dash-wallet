@@ -95,8 +95,6 @@ private fun ImportPrivateKeyContent(
                 onClick = onScanClick
             )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
