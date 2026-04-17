@@ -291,15 +291,17 @@ class WalletFragment : Fragment(R.layout.home_content) {
         )
 
         binding.shortcutsPane.setContent {
-            ShortcutsPane(
-                shortcuts = shortcutViewModel.shortcuts,
-                onClick = { shortcut ->
-                    onShortcutTap(shortcut)
-                },
-                onLongClick = { shortcut, index ->
-                    onShortcutLongTap(shortcut, index)
-                }
-            )
+            DashWalletTheme {
+                ShortcutsPane(
+                    shortcuts = shortcutViewModel.shortcuts,
+                    onClick = { shortcut ->
+                        onShortcutTap(shortcut)
+                    },
+                    onLongClick = { shortcut, index ->
+                        onShortcutLongTap(shortcut, index)
+                    }
+                )
+            }
         }
 
         refreshShortcutBar()

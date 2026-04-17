@@ -88,33 +88,31 @@ private fun MasternodeKeyChainScreenContent(
         )
     } ?: ""
 
-    DashWalletTheme {
-        val colors = LocalDashColors.current
+    val colors = LocalDashColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(colors.backgroundPrimary)
+    ) {
+        NavBarBackPlus(
+            onBackClick = onBackClick,
+            onPlusClick = onAddKeyClick
+        )
+
+        TopIntro(
+            heading = keyTypeName,
+            modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
+        )
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(colors.backgroundPrimary)
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(40.dp)
         ) {
-            NavBarBackPlus(
-                onBackClick = onBackClick,
-                onPlusClick = onAddKeyClick
-            )
-
-            TopIntro(
-                heading = keyTypeName,
-                modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(40.dp)
-            ) {
-                uiState.keypairs.forEach { keypair ->
-                    KeypairSection(keypair = keypair, onCopy = onCopy)
-                }
+            uiState.keypairs.forEach { keypair ->
+                KeypairSection(keypair = keypair, onCopy = onCopy)
             }
         }
     }

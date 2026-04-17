@@ -53,6 +53,7 @@ import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.services.SystemActionsService
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.exchange_rates.ExchangeRatesDialog
 import org.dash.wallet.common.util.observe
@@ -83,7 +84,8 @@ class SettingsFragment : Fragment() {
 
         return ComposeView(requireContext()).apply {
             setContent {
-                SettingsScreen(
+                DashWalletTheme {
+                    SettingsScreen(
                     onBackClick = {
                         findNavController().popBackStack()
                     },
@@ -138,6 +140,7 @@ class SettingsFragment : Fragment() {
                     },
                     onBatteryOptimizationClick = { batteryOptimization() }
                 )
+                }
             }
         }
     }

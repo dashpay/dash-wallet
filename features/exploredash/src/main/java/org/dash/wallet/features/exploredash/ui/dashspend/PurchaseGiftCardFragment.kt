@@ -231,7 +231,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         binding.fixedDenomText.text = fixedAmountFormat.format(0)
 
         binding.composeContainer.setContent {
-            DenominationsBottomContainer()
+            DashWalletTheme {
+                DenominationsBottomContainer()
+            }
         }
     }
 
@@ -428,9 +430,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val merchant = viewModel.giftCardMerchant.collectAsState().value ?: return
         val isReplaying = viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
 
-        DashWalletTheme {
-            val colors = LocalDashColors.current
-            Box(
+        val colors = LocalDashColors.current
+        Box(
                 modifier = Modifier.background(
                     color = colors.backgroundSecondary,
                     shape = RoundedCornerShape(
@@ -459,7 +460,6 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                     }
                 )
             }
-        }
     }
 
     // taken from SendCoinsFragment.updateView

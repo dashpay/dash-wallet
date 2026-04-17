@@ -87,18 +87,20 @@ See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` us
 
 #### Color Mapping
 
-| Figma Token | MyTheme Reference | Hex |
-|-------------|-------------------|-----|
-| `text/primary` | `MyTheme.Colors.textPrimary` | `#191C1F` |
-| `text/secondary` | `MyTheme.Colors.textSecondary` | `#6E757C` |
-| `text/tertiary` | `MyTheme.Colors.textTertiary` | `#75808A` |
-| `background/primary` | `MyTheme.Colors.backgroundPrimary` | `#F5F6F7` |
-| `background/secondary` | `MyTheme.Colors.backgroundSecondary` | `#FFFFFF` |
-| `colors/dash-blue` | `MyTheme.Colors.dashBlue` | `#008DE4` |
-| `colors/orange` | `MyTheme.Colors.orange` | `#FA9269` |
-| `colors/red` | `MyTheme.Colors.red` | `#EA3943` |
-| `colors/green` | `MyTheme.Colors.green` | `#3CB878` |
-| `colors/gray` | `MyTheme.Colors.gray` | `#B0B6BC` |
+**Important:** Never reference `MyTheme.Colors.*` directly in composables. Always read the current theme colors via `val colors = LocalDashColors.current` at the top of each composable, then use `colors.*`. This ensures correct values in both light and dark mode.
+
+| Figma Token | `colors.*` field | Light hex | Dark hex |
+|-------------|-----------------|-----------|----------|
+| `text/primary` | `colors.textPrimary` | `#191C1F` | `#FFFFFF` |
+| `text/secondary` | `colors.textSecondary` | `#6E757C` | `#92929C` |
+| `text/tertiary` | `colors.textTertiary` | `#75808A` | `#75808A` |
+| `background/primary` | `colors.backgroundPrimary` | `#F5F6F7` | `#10151F` |
+| `background/secondary` | `colors.backgroundSecondary` | `#FFFFFF` | `#1D2532` |
+| `colors/dash-blue` | `colors.dashBlue` | `#008DE4` | `#008DE4` |
+| `colors/orange` | `colors.orange` | `#FA9269` | `#FA9269` |
+| `colors/red` | `colors.red` | `#EA3943` | `#EA3943` |
+| `colors/green` | `colors.green` | `#3CB878` | `#3CB878` |
+| `colors/gray` | `colors.gray` | `#B0B6BC` | `#B0B6BC` |
 
 ### 4. Handle Icons and Image Assets
 
@@ -293,6 +295,79 @@ After implementation:
 2. Verify all `R.drawable.*` references exist as files in the drawable directory
 3. Verify all `R.string.*` references have entries in strings.xml
 4. Confirm the nav graph `tools:layout` attribute is removed if the fragment uses ComposeView
+
+## Dark Mode Compatibility
+
+Every new screen, dialog, and component must work correctly in both light and dark mode. Follow these rules without exception.
+
+### Compose: Theme Color Access
+
+**Root entry point** — The composable entry point called from a Fragment's `ComposeView.setContent { }` must be wrapped in `DashWalletTheme`:
+
+```kotlin
+// In Fragment.onCreateView or onViewCreated:
+composeView.setContent {
+    DashWalletTheme {
+        MyScreen(...)
+    }
+}
+```
+
+**Inside every composable** — read current colors once at the top:
+
+```kotlin
+@Composable
+fun MyComponent(...) {
+    val colors = LocalDashColors.current
+    // Use colors.textPrimary, colors.backgroundSecondary, etc.
+    // NEVER use MyTheme.Colors.* directly here
+}
+```
+
+**Rules:**
+- Never call `isSystemInDarkTheme()` inside individual components or screens — `DashWalletTheme` handles this once at the root
+- Never use `MyTheme.Colors.*` directly in a composable body — it always returns light-mode values
+- `MyTheme.Colors` and `MyTheme.DarkColors` are the source-of-truth data class instances; `LocalDashColors.current` selects the right one automatically
+
+### Compose: Preview Dark Mode
+
+Always include both a light and dark preview for new components:
+
+```kotlin
+@Composable
+@Preview(name = "Light")
+fun MyComponentPreviewLight() {
+    DashWalletTheme { MyComponent(...) }
+}
+
+@Composable
+@Preview(name = "Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+fun MyComponentPreviewDark() {
+    DashWalletTheme { MyComponent(...) }
+}
+```
+
+### XML Layouts: Semantic Color Tokens
+
+Use semantic color names that have night-mode overrides in `values-night/colors.xml`. Never use raw `@android:color/white` or literal hex values for surfaces or text.
+
+| Purpose | Use this color token |
+|---------|---------------------|
+| Page background | `@color/background_primary` |
+| Card / sheet surface | `@color/background_secondary` |
+| Primary text | `@color/content_primary` |
+| Secondary text | `@color/content_secondary` |
+| Dividers / borders | `@color/divider_color` |
+
+### XML Drawables: Adaptive Colors
+
+- **Shape drawables** (cards, panels): fill with `@color/background_secondary`, not `@android:color/white`
+- **Vector icons**: add `android:tint="@color/content_primary"` to the `<vector>` element instead of hardcoding a fill color
+- **Color state lists** (selectors): default state should use `@color/content_primary`, not a hardcoded dark hex
+
+### DashButton Disabled State
+
+`DashButton` handles disabled appearance automatically through `colors.disabledButtonBg` and `colors.contentDisabled` from `LocalDashColors`. Do not override button colors manually for the disabled case.
 
 ## Common Pitfalls
 

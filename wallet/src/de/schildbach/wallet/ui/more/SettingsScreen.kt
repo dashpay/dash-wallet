@@ -155,9 +155,8 @@ private fun SettingsScreenContent(
 
         else -> stringResource(statusId)
     }
-    DashWalletTheme {
-        val colors = LocalDashColors.current
-        Column(
+    val colors = LocalDashColors.current
+    Column(
             modifier = Modifier
                 .fillMaxSize()
                 .background(colors.backgroundPrimary)
@@ -249,13 +248,14 @@ private fun SettingsScreenContent(
                 }
             }
         }
-    }
 }
 
 @Composable
 @Preview
 fun MoreScreenPreview() {
-    SettingsScreenContent(uiState = SettingsUIState())
+    DashWalletTheme {
+        SettingsScreenContent(uiState = SettingsUIState())
+    }
 }
 
 @Composable
@@ -273,5 +273,7 @@ fun MoreScreenPreviewWithCoinJoin() {
         transactionMetadataVisible = true,
         transactionMetadataSubtitle = "Last saved: Jan 15, 2024"
     )
-    SettingsScreenContent(uiState = customState)
+    DashWalletTheme {
+        SettingsScreenContent(uiState = customState)
+    }
 }
