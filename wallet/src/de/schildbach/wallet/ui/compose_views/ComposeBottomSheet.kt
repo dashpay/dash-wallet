@@ -25,7 +25,8 @@ class ComposeBottomSheet(
         binding.composeContainer.setContent {
             DashWalletTheme {
                 Box(modifier = Modifier.navigationBarsPadding()) {
-                content(this@ComposeBottomSheet)
+                    content(this@ComposeBottomSheet)
+                }
             }
         }
     }
