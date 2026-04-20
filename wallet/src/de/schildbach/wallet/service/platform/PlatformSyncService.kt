@@ -493,7 +493,7 @@ class PlatformSynchronizationService @Inject constructor(
                             }
                         )
                     } catch (e: Exception) {
-                        log.error("error obtaining encryption key", e)
+                        log.error("error syncing secondary items: ", e)
                         return@coroutineScope
                     }
                 }

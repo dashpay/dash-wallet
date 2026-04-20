@@ -21,6 +21,7 @@ import android.view.View
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.view.isVisible
 import androidx.fragment.app.viewModels
+import androidx.paging.PagingData
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.transactions.coinjoin.CoinJoinMixingTxSet
@@ -88,7 +89,7 @@ class TransactionGroupDetailsFragment() : OffsetDialogFragment(R.layout.transact
         )
 
         viewModel.transactions.observe(viewLifecycleOwner) { transactions ->
-            adapter.submitList(transactions)
+            adapter.submitData(viewLifecycleOwner.lifecycle, PagingData.from(transactions))
         }
 
         viewModel.dashValue.observe(viewLifecycleOwner) {

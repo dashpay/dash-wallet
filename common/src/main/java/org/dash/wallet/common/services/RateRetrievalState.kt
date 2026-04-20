@@ -23,4 +23,8 @@ data class RateRetrievalState(
     val volatile: Boolean
 ) {
     val isStale = lastAttemptFailed || staleRates || volatile
+
+    companion object {
+        val DEFAULT = RateRetrievalState(lastAttemptFailed = false, staleRates = false, volatile = false)
+    }
 }

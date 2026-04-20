@@ -18,20 +18,19 @@
 package de.schildbach.wallet.ui.transactions
 
 import android.text.format.DateUtils
-import android.util.Log
 import androidx.annotation.StringRes
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet_test.R
 import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionBag
 import org.bitcoinj.core.TransactionConfidence
 import org.bitcoinj.evolution.AssetLockTransaction
+import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.bitcoinj.wallet.AuthenticationKeyChainGroup
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension
-import de.schildbach.wallet.Constants
-import de.schildbach.wallet_test.R
-import org.bitcoinj.wallet.AuthenticationKeyChain
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
 import org.slf4j.LoggerFactory
 import java.util.concurrent.TimeUnit
@@ -164,7 +163,7 @@ open class TxResourceMapper {
         var statusId = -1
         if (confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
             val confirmations = confidence.depthInBlocks
-            val isChainLocked = bestChainLockBlockHeight >= confidence.appearedAtChainHeight
+            val isChainLocked = confidence.isChainLocked
 
             // process coinbase transactions (Mining Rewards) before other BUILDING transactions
             if (tx.isCoinBase) {
