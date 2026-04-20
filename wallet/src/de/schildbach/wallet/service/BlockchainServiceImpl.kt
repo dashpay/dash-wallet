@@ -1943,6 +1943,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
                         peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
                     }
+                    dashSystemService.system.removeWallet(wallet)
                     peerGroup!!.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
