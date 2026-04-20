@@ -25,7 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.vectorResource
+
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -275,8 +275,8 @@ fun DashButtonPreview() {
             text = "Large",
             size = Size.Large,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = true,
             onClick = { }
         )
@@ -285,8 +285,8 @@ fun DashButtonPreview() {
             text = "Medium",
             size = Size.Medium,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = true,
             onClick = { }
         )
@@ -295,8 +295,8 @@ fun DashButtonPreview() {
             text = "Small",
             size = Size.Small,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = true,
             onClick = { }
         )
@@ -305,8 +305,8 @@ fun DashButtonPreview() {
             text = "Extra Small",
             size = Size.ExtraSmall,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = true,
             onClick = { }
         )
@@ -315,8 +315,8 @@ fun DashButtonPreview() {
             text = "Large",
             size = Size.Large,
             stretch = true,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = false,
             onClick = { }
         )
@@ -325,8 +325,8 @@ fun DashButtonPreview() {
             text = "Medium",
             size = Size.Medium,
             stretch = true,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = false,
             onClick = { }
         )
@@ -335,8 +335,8 @@ fun DashButtonPreview() {
             text = "Small",
             size = Size.Small,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = false,
             onClick = { }
         )
@@ -345,8 +345,8 @@ fun DashButtonPreview() {
             text = "Extra Small",
             size = Size.ExtraSmall,
             stretch = false,
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_error),
-            trailingIcon = ImageVector.vectorResource(R.drawable.ic_dash_d_white),
+            leadingIcon = MyImages.Error,
+            trailingIcon = MyImages.DashDWhite,
             isLoading = false,
             onClick = { }
         )
