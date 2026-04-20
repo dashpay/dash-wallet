@@ -140,6 +140,11 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
                 showNoPaymentMethodsError()
                 false
             }
+
+            CoinbaseErrorType.NO_USD_ACCOUNT -> {
+                showNoUSDAccountError()
+                false
+            }
             else -> false
         }
     }
@@ -162,6 +167,21 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
             getString(R.string.close),
             getString(R.string.add_payment_method),
         ).show(requireActivity()) { addMethod ->
+            if (addMethod == true) {
+                viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
+                openCoinbaseWebsite()
+            }
+        }
+    }
+
+    private fun showNoUSDAccountError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.coinbase),
+            getString(R.string.coinbase_usd_wallet_error_message),
+            getString(R.string.close),
+            getString(R.string.add_payment_method),
+            ).show(requireActivity()) { addMethod ->
             if (addMethod == true) {
                 viewModel.logEvent(AnalyticsConstants.Coinbase.BUY_ADD_PAYMENT_METHOD)
                 openCoinbaseWebsite()

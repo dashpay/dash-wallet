@@ -68,7 +68,11 @@ class CoinbaseBuyDashViewModel @Inject constructor(
         previewBuyOrder(amount)
 
         val fiatAmount = uiState.value.order ?: return CoinbaseErrorType.NO_EXCHANGE_RATE
-        val fiatAccount = coinBaseRepository.getFiatAccount()
+        val fiatAccount = try {
+            coinBaseRepository.getFiatAccount()
+        } catch (_: NoSuchElementException) {
+            return CoinbaseErrorType.NO_USD_ACCOUNT
+        }
         val balance = Fiat.parseFiatInexact(
             CoinbaseConstants.DEFAULT_CURRENCY_USD,
             fiatAccount.availableBalance.value
