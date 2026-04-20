@@ -416,7 +416,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             }
         }
 
-        mainActivityViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) {
+        mainActivityViewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) {
             binding.dashpayContainer.isVisible = it
         }
 

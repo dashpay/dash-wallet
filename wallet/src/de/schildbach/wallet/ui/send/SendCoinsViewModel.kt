@@ -204,7 +204,9 @@ class SendCoinsViewModel @Inject constructor(
 
         log.info("proceeding with {}", finalIntent)
         super.initPaymentIntent(finalIntent)
-        _state.postValue(State.INPUT)
+        withContext(Dispatchers.Main.immediate) {
+            _state.value = State.INPUT
+        }
         withContext(Dispatchers.IO) {
             executeDryrun(currentAmount)
         }

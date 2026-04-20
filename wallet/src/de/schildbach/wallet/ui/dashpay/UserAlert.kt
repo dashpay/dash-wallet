@@ -28,8 +28,8 @@ data class UserAlert(
     @PrimaryKey val stringResId: Int,
     @DrawableRes val iconResId: Int,
     var dismissed: Boolean = false,
-    val createdAt: Long = Date().time)
-{
+    val createdAt: Long = Date().time
+) {
     companion object {
         const val INVITATION_NOTIFICATION_TEXT = 1
         val textMap = hashMapOf(INVITATION_NOTIFICATION_TEXT to R.string.invitation_notification_text)

@@ -2,7 +2,10 @@ package de.schildbach.wallet.ui.compose_views
 
 import android.os.Bundle
 import android.view.View
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.fragment.app.DialogFragment
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import de.schildbach.wallet_test.R
@@ -21,7 +24,8 @@ class ComposeBottomSheet(
         super.onViewCreated(view, savedInstanceState)
         binding.composeContainer.setContent {
             DashWalletTheme {
-                content(this)
+                Box(modifier = Modifier.navigationBarsPadding()) {
+                content(this@ComposeBottomSheet)
             }
         }
     }

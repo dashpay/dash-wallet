@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.launchIn
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -100,7 +101,7 @@ class ToolsViewModel @Inject constructor(
 
         blockchainStateDao.observeState().onEach {
             _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
-        }
+        }.launchIn(viewModelScope)
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(hasUsername = hasUsername())

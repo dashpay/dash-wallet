@@ -443,6 +443,7 @@ class TopUpRepositoryImpl @Inject constructor(
             if (confidence.confidenceType == TransactionConfidence.ConfidenceType.UNKNOWN) {
                 platform.client.getTransactionKotlin(confidence.transactionHash.toString())?.let { txInfo ->
                     if (txInfo.height > 0) {
+                        confidence.confidenceType = TransactionConfidence.ConfidenceType.BUILDING
                         confidence.appearedAtChainHeight = txInfo.height
                     }
                     if (txInfo.isChainLocked) {

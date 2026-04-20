@@ -44,6 +44,7 @@ fun FeatureTopText(
     modifier: Modifier = Modifier,
     text: String? = null,
     textStyle: TextStyle = MyTheme.Typography.HeadlineSmallBold,
+    textAlign: TextAlign = TextAlign.Center,
     showText: Boolean = true,
     showButton: Boolean = false,
     buttonLabel: String? = null,
@@ -72,7 +73,7 @@ fun FeatureTopText(
                 text = text,
                 style = MyTheme.Typography.BodyMedium,
                 color = colors.textSecondary,
-                textAlign = TextAlign.Center,
+                textAlign = textAlign,
                 modifier = Modifier.fillMaxWidth()
             )
         }

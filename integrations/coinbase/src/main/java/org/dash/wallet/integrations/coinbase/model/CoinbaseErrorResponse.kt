@@ -30,7 +30,8 @@ enum class CoinbaseErrorType {
     INSUFFICIENT_BALANCE,
     NO_BANK_ACCOUNT,
     NO_EXCHANGE_RATE,
-    DEPOSIT_FAILED
+    DEPOSIT_FAILED,
+    NO_USD_ACCOUNT
 }
 
 class CoinbaseException(val errorType: CoinbaseErrorType, message: String?) : Exception(message)

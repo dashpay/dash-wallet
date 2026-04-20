@@ -40,6 +40,8 @@ import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarBack
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 
@@ -125,23 +127,18 @@ private fun ToolsScreenContent(
             .background(colors.backgroundPrimary)
     ) {
         // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
+        NavBarBack(onBackClick = onBackClick)
 
         // Tools Header
         TopIntro(
-            heading = "Tools",
+            heading = stringResource(R.string.tools_title),
             modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
         )
 
         // Scrollable Content
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -149,35 +146,35 @@ private fun ToolsScreenContent(
                 // Address Book
                 MenuItem(
                     title = stringResource(R.string.tools_address_book),
-                    //icon = R.drawable.address_book,
+                    icon = R.drawable.ic_menu_address_book,
                     action = onAddressBookClick
                 )
 
                 // Import Private Key
                 MenuItem(
-                    title = stringResource(R.string.sweep_wallet_activity_title),
+                    title = stringResource(R.string.tools_import_private_key),
                     icon = R.drawable.ic_menu_import_private_key,
                     action = onImportPrivateKeyClick
                 )
 
                 // Network Monitor
                 MenuItem(
-                    title = stringResource(R.string.network_monitor_activity_title),
-                    icon = R.drawable.ic_network_monitor,
+                    title = stringResource(R.string.tools_network_monitor),
+                    icon = R.drawable.ic_menu_network_monitor,
                     action = onNetworkMonitorClick
                 )
 
                 // Extend Public Key
                 MenuItem(
-                    title = stringResource(R.string.extended_public_key_fragment_title),
-                    icon = R.drawable.ic_extended_public_key,
+                    title = stringResource(R.string.tools_show_xpub),
+                    icon = R.drawable.ic_menu_extended_public_key,
                     action = onExtendPublicKeyClick
                 )
 
                 // Masternode Keys
                 MenuItem(
                     title = stringResource(R.string.masternode_keys_title),
-                    icon = R.drawable.ic_masternode_keys,
+                    icon = R.drawable.ic_menu_masternode_keys,
                     action = onMasternodeKeysClick
                 )
 
@@ -197,19 +194,30 @@ private fun ToolsScreenContent(
                     action = onZenLedgerExport
                 )
             }
-            if (uiState.hasUsername) {
+                if (uiState.hasUsername) {
                 Menu {
                     // Credits (only shown when user has a username)
                     MenuItem(
                         title = stringResource(R.string.tools_credits_title),
-                        icon = R.drawable.ic_credits,
+                        icon = R.drawable.ic_menu_credits,
                         showInfo = true,
                         onInfoClick = onCreditsInfoClick,
                         trailingButtonText = stringResource(R.string.tools_credits_buy_button),
+                        trailingButtonStyle = Style.PlainBlue,
                         onTrailingButtonClick = onBuyCredits,
                         action = onBuyCredits
                     )
                 }
+            }
+
+            Menu {
+                // ZenLedger Export
+                MenuItem(
+                    title = stringResource(R.string.zenledger_export_title),
+                    subtitle = stringResource(R.string.zenledger_export_subtitle),
+                    icon = R.drawable.ic_zenledger,
+                    action = onZenLedgerExport
+                )
             }
         }
     }

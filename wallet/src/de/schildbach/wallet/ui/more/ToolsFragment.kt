@@ -22,6 +22,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -68,6 +69,7 @@ class ToolsFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 DashWalletTheme {
                     ToolsScreen(
@@ -108,8 +110,8 @@ class ToolsFragment : Fragment() {
             }
         } else {
             SendCoinsActivity.startBuyCredits(requireActivity())
-        }
     }
+            }
 
     private fun onTransactionExport() {
         if (viewModel.uiState.value.isSyncing) {
@@ -171,7 +173,7 @@ class ToolsFragment : Fragment() {
             onCopy = {
                 viewModel.copyXpubToClipboard()
                 Toast(requireContext()).toast(R.string.copied)
-                log.info("xpub copied to clipboard: {}", viewModel.xpub)
+                log.info("xpub copied to clipboard")
             },
             onShare = { xpubWithCreationDate ->
                 createAndLaunchShareIntent(xpubWithCreationDate)

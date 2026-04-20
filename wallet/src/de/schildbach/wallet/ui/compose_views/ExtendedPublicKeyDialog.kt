@@ -109,8 +109,6 @@ private fun ExtendedPublicKeyContent(
                 onClick = onShare
             )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 
