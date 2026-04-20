@@ -185,6 +185,20 @@ class MayaBlockchainApiImpl @Inject constructor(
                     return ResponseResource.Failure(MayaException("swap transaction fee too small"), false, 0, null)
                 }
 
+                // Replace sendRequest.tx with a fresh Transaction before committing.
+                // wallet.completeTx() caches a TransactionConfidence (keyed to the txid at
+                // that moment) in Transaction.confidence.  After we modify outputs and re-sign,
+                // the txid changes but the cached field is not updated — it still points to the
+                // stale confidence.  Creating a new Transaction and moving the same input/output
+                // objects into it leaves confidence == null, so wallet.commitTx() will create
+                // the correct confidence for the final txid, keeping the TxConfidenceTable and
+                // any confidence listeners in sync.  All transient state (connectedOutput,
+                // input.value, signatures) is preserved because we reuse the same objects.
+                val freshTx = Transaction(params)
+                sendRequest.tx.outputs.forEach { freshTx.addOutput(it) }
+                sendRequest.tx.inputs.forEach { freshTx.addInput(it) }
+                sendRequest.tx = freshTx
+
                 // send the transaction
                 log.info("maya swap transaction: {}", sendRequest.tx.toStringHex())
                 val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
