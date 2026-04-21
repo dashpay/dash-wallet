@@ -113,8 +113,6 @@ private fun CreateInstantUsernameContent(
             )
         }
         
-        // Home indicator space
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

@@ -27,6 +27,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.annotation.StringRes
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -63,7 +64,7 @@ import java.util.Date
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SettingsFragment : Fragment(R.layout.fragment_settings) {
+class SettingsFragment : Fragment() {
     private val log = LoggerFactory.getLogger(SettingsFragment::class.java)
     private val viewModel: SettingsViewModel by viewModels()
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -80,8 +81,9 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         setupTransactionMetadataObservers()
-        
+
         return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 SettingsScreen(
                     onBackClick = {
@@ -147,14 +149,14 @@ class SettingsFragment : Fragment(R.layout.fragment_settings) {
         lifecycleScope.launch {
             transactionMetadataSettingsViewModel.loadLastWorkId()
         }
-        
+
         transactionMetadataSettingsViewModel.lastSaveWorkId.filterNotNull().observe(viewLifecycleOwner) { workId ->
             transactionMetadataSettingsViewModel.observePublishOperation(workId).observe(viewLifecycleOwner) {
                 val progress = it.data?.progress?.let { data -> BaseWorker.extractProgress(data) } ?: 0
                 setTransactionMetadataText(progress != 100 && progress != -1, progress)
             }
         }
-        
+
         setTransactionMetadataText(isSaving = false, saveProgress = -1)
     }
 

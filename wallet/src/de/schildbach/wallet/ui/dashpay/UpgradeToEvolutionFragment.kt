@@ -26,6 +26,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.util.observe
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.main.MainViewModel
@@ -49,7 +50,7 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
             findNavController().popBackStack()
         }
 
-        mainViewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { isAble ->
+        mainViewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { isAble ->
             binding.upgradeBtn.isEnabled = isAble
             binding.balanceRequirementDisclaimer.isVisible = !isAble
         }
@@ -62,6 +63,6 @@ class UpgradeToEvolutionFragment : Fragment(R.layout.fragment_upgrade_to_evoluti
 
     override fun onResume() {
         super.onResume()
-        binding.upgradeBtn.isEnabled = mainViewModel.isAbleToCreateIdentity
+        binding.upgradeBtn.isEnabled = mainViewModel.isAbleToCreateIdentity.value
     }
 }

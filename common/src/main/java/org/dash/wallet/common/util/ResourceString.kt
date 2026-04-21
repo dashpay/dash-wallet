@@ -21,10 +21,13 @@ import android.content.res.Resources
 import androidx.annotation.StringRes
 
 data class ResourceString(
-    @StringRes val resourceId: Int,
-    val args: List<Any> = listOf()
+    @StringRes val resourceId: Int = 0,
+    val args: List<Any> = listOf(),
+    val resolvedText: String? = null
 ) {
     fun format(resources: Resources): String {
+        if (resolvedText != null) return resolvedText
+        if (resourceId == 0) return ""
         return resources.getString(resourceId, *args.toTypedArray())
     }
 }

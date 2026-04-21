@@ -18,17 +18,12 @@
 package de.schildbach.wallet.ui.compose_views
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -42,12 +37,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
 import org.dash.wallet.common.util.findFragmentActivity
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -177,56 +172,17 @@ internal fun ZenLedgerContent(
                 .size(95.dp)
         )
 
-        // Title and description
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.zenledger_export_subtitle),
-                style = MyTheme.Typography.HeadlineSmallBold,
-                color = MyTheme.Colors.textPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Text(
-                text = stringResource(R.string.zenledger_export_description),
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // zenledger.io clickable link with external link icon
-            Row(
-                modifier = Modifier
-                    .clickable { onLinkClick() }
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.zenledger_export_link),
-                    style = MyTheme.Caption,
-                    color = MyTheme.Colors.dashBlue,
-                    textAlign = TextAlign.Center
-                )
-                Icon(
-                    imageVector = ImageVector.vectorResource(R.drawable.ic_open_link),
-                    contentDescription = null,
-                    modifier = Modifier.size(13.dp),
-                    tint = MyTheme.Colors.dashBlue
-                )
-            }
-
-            Spacer(modifier = Modifier.height(36.dp))
-        }
+        FeatureTopText(
+            modifier = Modifier.padding(horizontal = 40.dp),
+            heading = stringResource(R.string.zenledger_export_subtitle),
+            textStyle = MyTheme.Typography.HeadlineMediumBold,
+            text = stringResource(R.string.zenledger_export_description),
+            showButton = true,
+            buttonLabel = stringResource(R.string.zenledger_export_link),
+            buttonTrailingIcon = ImageVector.vectorResource(R.drawable.ic_open_link),
+            onButtonClick = onLinkClick
+        )
+        Spacer(modifier = Modifier.height(36.dp))
 
         SheetButtonGroup(
             primaryButton = SheetButton(
@@ -235,7 +191,8 @@ internal fun ZenLedgerContent(
                 isEnabled = !isLoading,
                 isLoading = isLoading,
                 onClick = onExportClick
-            )
+            ),
+            horizontalPadding = 60.dp
         )
     }
 }

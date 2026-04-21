@@ -69,6 +69,11 @@
 
     <string name="pay_title">Send</string>
     <string name="history_title">History</string>
+    <string name="wallet_transactions_building_cache">Determining transaction history…</string>
+    <string name="history_refresh_dialog_title">Refresh Transaction List</string>
+    <string name="history_refresh_dialog_message">This will clear the transaction display cache and rebuild it from scratch. The list will be temporarily unavailable while it rebuilds.</string>
+    <string name="history_refresh_dialog_confirm">Refresh</string>
+    <string name="history_refresh_complete">Transaction list refreshed</string>
     <string name="more_title">More</string>
     <string name="settings_title">Settings</string>
     <string name="security_title">Security</string>
@@ -285,11 +290,11 @@
     <string name="menu_explore_title">Explore</string>
     <string name="menu_explore_subtitle">Find merchants that accept DASH</string>
 
-    <string name="tools_address_book">Address Book</string>
-    <string name="tools_import_private_key">Import Private Key</string>
+    <string name="tools_address_book">Address book</string>
+    <string name="tools_import_private_key">Import private key</string>
     <string name="import_private_key_description">This action will move all coins from the Dash paper wallet to your DashPay app on this device.</string>
-    <string name="tools_network_monitor">Network Monitor</string>
-    <string name="tools_show_xpub">Extended Public Key</string>
+    <string name="tools_network_monitor">Network monitor</string>
+    <string name="tools_show_xpub">Extended public key (BIP44)</string>
 
     <string name="about_help_us_improve">Help us improve your experience</string>
     <string name="about_review_and_rate">Review and rate the app</string>

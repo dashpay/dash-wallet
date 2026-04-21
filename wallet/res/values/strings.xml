@@ -294,7 +294,7 @@
     <string name="preferences_extended_public_key_title">Show xpub</string>
     <string name="preferences_extended_public_key_summary">View the extended public key of your wallet, so it can be imported into other apps and services. Be careful: doing so will disclose your monetary privacy to that app.</string>
     <string name="bitmap_fragment_share">Share…</string>
-    <string name="extended_public_key_fragment_title">Extended Public Key</string>
+    <string name="extended_public_key_fragment_title">Extended public key (BIP44)</string>
     <string name="extended_public_key_fragment_share">Share xpub…</string>
     <string name="extended_public_key_share_key">Share key</string>
     <string name="report_issue_dialog_title_issue">Report issue</string>
@@ -320,9 +320,9 @@
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">finishing</string>
     <string name="report_transaction_history_export">Export transactions</string>
-    <string name="report_transaction_history_title">CSV Export</string>
+    <string name="report_transaction_history_title">CSV export</string>
     <string name="report_transaction_history_dialog_title">The full transaction history will be exported as a CSV file</string>
-    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_not_synced_title">CSV export</string>
     <string name="report_transaction_history_not_synced_message">Please wait until the wallet is fully synced before exporting your transaction history.</string>
     <string name="report_transaction_history_message">The full transaction history will be exported.\n\nAll payments will be considered as an expense and all incoming transactions will be income.  The owner of this wallet is responsible for making any cost basis adjustments in their chosen tax reporting system.</string>
     <string name="report_transaction_history_body_1">All payments will be considered as an expense and all incoming transactions will be income.</string>

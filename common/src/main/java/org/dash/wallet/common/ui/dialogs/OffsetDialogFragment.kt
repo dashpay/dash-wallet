@@ -108,8 +108,9 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
             }
         }
 
-        view.findViewById<View?>(R.id.collapse_button)?.setOnClickListener {
-            dismiss()
+        view.findViewById<android.widget.ImageButton?>(R.id.collapse_button)?.apply {
+            setImageResource(R.drawable.ic_popup_close_circle)
+            setOnClickListener { dismiss() }
         }
 
         dialog?.window?.callback =

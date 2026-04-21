@@ -872,24 +872,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         init {
             // Setup security health monitoring
             securityFunctions.observeHealth().observe(this@BlockchainServiceImpl) { status ->
-                // val isKeyStoreHealthyNow = isKeyStoreHealthy
                 isKeyStoreHealthy = status.isHealthy
-//                when(status) {
-//                    SecuritySystemStatus.HEALTHY,
-//                    SecuritySystemStatus.HEALTHY_WITH_FALLBACKS -> true
-//                    else -> false
-//                }
-                //if (isKeyStoreHealthyNow != isKeyStoreHealthy) {
-                    if (isKeyStoreHealthy) {
-                        impediments.remove(Impediment.SECURITY)
-                    } else {
-                        impediments.add(Impediment.SECURITY)
-                    }
-                    updateBlockchainStateImpediments()
-                    check()
-                //}
+                if (isKeyStoreHealthy) {
+                    impediments.remove(Impediment.SECURITY)
+                } else {
+                    impediments.add(Impediment.SECURITY)
+                }
+                updateBlockchainStateImpediments()
+                check()
             }
         }
+
         override fun onAvailable(network: Network) {
             serviceScope.launch {
                 val capabilities = connectivityManager.getNetworkCapabilities(network)
@@ -1975,7 +1968,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
                 }
                 log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
-                peerConnectivityListener!!.stop()
+                peerConnectivityListener?.stop()
                 log.info("CLEANUP STEP 5: peerConnectivityListener stopped")
                 delayHandler.removeCallbacksAndMessages(null)
                 log.info("CLEANUP STEP 6: delayHandler callbacks cleared")
@@ -1997,8 +1990,8 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
                     log.info("removing blockchain")
-                    blockChainFile!!.delete()
-                    headerChainFile!!.delete()
+                    blockChainFile?.delete()
+                    headerChainFile?.delete()
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")

@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
@@ -76,32 +77,22 @@ private fun ExtendedPublicKeyContent(
             )
         }
 
-        Column(
+        FeatureTopText(
+            modifier = Modifier.padding(horizontal = 40.dp),
+            heading = stringResource(R.string.extended_public_key_fragment_title),
+            textStyle = MyTheme.Typography.HeadlineMediumBold,
+            showText = false
+        )
+        Text(
+            text = xpub,
+            style = MyTheme.Body2Regular,
+            color = MyTheme.Colors.textSecondary,
+            textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 40.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = stringResource(R.string.extended_public_key_fragment_title),
-                style = MyTheme.Typography.HeadlineSmallBold,
-                color = MyTheme.Colors.textPrimary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            Text(
-                text = xpub,
-                style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textSecondary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onCopy() }
-            )
-        }
+                .padding(horizontal = 60.dp)
+                .clickable { onCopy() }
+        )
 
         Spacer(modifier = Modifier.height(28.dp))
 
@@ -117,8 +108,6 @@ private fun ExtendedPublicKeyContent(
                 onClick = onShare
             )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

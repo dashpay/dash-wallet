@@ -27,6 +27,7 @@ import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.database.AppDatabase
 import de.schildbach.wallet.database.AppDatabaseMigrations
 import de.schildbach.wallet.database.dao.*
+import de.schildbach.wallet.database.dao.TxGroupCacheDao
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Singleton
 
@@ -42,7 +43,8 @@ object DatabaseModule {
                 AppDatabaseMigrations.migration12To13,
                 AppDatabaseMigrations.migration13to14,
                 AppDatabaseMigrations.migration14to15,
-                AppDatabaseMigrations.migration15to16
+                AppDatabaseMigrations.migration15to16,
+                AppDatabaseMigrations.migration16to17
             )
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()
@@ -128,5 +130,15 @@ object DatabaseModule {
     @Provides
     fun provideTopUpsDao(appDatabase: AppDatabase): TopUpsDao {
         return appDatabase.topUpsDao()
+    }
+
+    @Provides
+    fun provideTxDisplayCacheDao(appDatabase: AppDatabase): TxDisplayCacheDao {
+        return appDatabase.txDisplayCacheDao()
+    }
+
+    @Provides
+    fun provideTxGroupCacheDao(appDatabase: AppDatabase): TxGroupCacheDao {
+        return appDatabase.txGroupCacheDao()
     }
 }
