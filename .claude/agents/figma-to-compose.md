@@ -39,6 +39,7 @@ common/src/main/java/org/dash/wallet/common/ui/components/
 ```
 
 #### Component Mapping
+You MUST consult the component mapping table for every Figma component before writing any Compose code.
 
 | Figma Component | Kotlin Composable | Import |
 |----------------|-------------------|--------|
@@ -58,64 +59,7 @@ common/src/main/java/org/dash/wallet/common/ui/components/
 | `label` / `tag` | `Label` | `org.dash.wallet.common.ui.components.Label` |
 | `Toast` | `Toast` composable | `org.dash.wallet.common.ui.components.Toast` |
 
-#### TopNavBase Variants
-
-```kotlin
-// Back chevron only (most common — matches Figma node 24007:4540 pattern)
-TopNavBase(
-    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-    onLeadingClick = onBackClick,
-    centralPart = false,
-    trailingPart = false
-)
-
-// Back chevron + centered title
-TopNavBase(
-    title = stringResource(R.string.screen_title),
-    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-    onLeadingClick = onBackClick,
-    trailingPart = false
-)
-
-// Back chevron + title + trailing icon
-TopNavBase(
-    title = stringResource(R.string.screen_title),
-    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-    onLeadingClick = onBackClick,
-    trailingIcon = Icons.Default.Info,
-    onTrailingClick = onInfoClick
-)
-```
-
-#### TopIntro Variants
-
-```kotlin
-// Left-aligned (standard)
-TopIntro(
-    heading = stringResource(R.string.screen_heading),
-    text = stringResource(R.string.screen_subtitle)  // optional
-)
-
-// Centered with icon above (use trailing-lambda overload)
-TopIntro(
-    heading = stringResource(R.string.screen_heading),
-    text = stringResource(R.string.screen_subtitle)  // optional
-) {
-    // Icon composable — e.g. a Box with colored background + Image
-    Box(
-        modifier = Modifier
-            .size(width = 79.dp, height = 80.dp)
-            .background(Color(0xFF151D3F), RoundedCornerShape(20.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_service_logo),
-            contentDescription = null,
-            modifier = Modifier.size(44.dp)
-        )
-    }
-}
-```
+See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` usage examples and all named NavBar variants.
 
 #### Button Mapping (btn → DashButton)
 
@@ -296,100 +240,53 @@ I plan to create [NewComponentName] in common/ui/components/.
 Approve? (yes/no)
 ```
 
-### 6. Implement the Screen
+### 6. Implement Bottom Sheet Dialogs
 
-Follow the structure from `development-patterns`:
+When the Figma design is a bottom sheet / dialog (Figma component `BottomSheet` or `Sheet`), use the `createXxxDialog` factory function pattern — **not** a Fragment subclass.
+
+Key rules:
+- Factory function takes the ViewModel (not raw dependencies or `activity`) plus an `onDismiss` callback
+- The ViewModel exposes a sealed `Result` StateFlow (`Idle`, `Loading`, `Success`, `Error`); the factory subscribes via `collectAsState()` and `LaunchedEffect`
+- `isLoading` is derived from the StateFlow: `val isLoading = result is MyViewModel.Result.Loading`
+- Obtain the activity inside the composable via `LocalContext.current.findFragmentActivity()`
+- Use `DisposableEffect(Unit) { onDispose { onDismiss() } }` for the dismiss callback
+- Use `SheetButtonGroup` + `SheetButton(isLoading = isLoading, isEnabled = !isLoading)` for buttons
+- Always add `padding(top = 60.dp)` for the drag indicator and close button
+- Include both an idle and a loading `@Preview`
+
+See `development-patterns` for the full implementation template.
+
+#### Usage at Call Site
 
 ```kotlin
-// Fragment host (for Navigation Component fragments)
-@AndroidEntryPoint
-class MyFragment : Fragment() {
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setContent {
-                MyScreen(
-                    onBackClick = { findNavController().popBackStack() },
-                    onActionClick = { safeNavigate(MyFragmentDirections.myAction()) }
-                )
-            }
-        }
-    }
-}
-
-// Screen with ViewModel
-@Composable
-fun MyScreen(
-    onBackClick: () -> Unit = {},
-    onActionClick: () -> Unit = {}
-) {
-    val viewModel: MyViewModel = hiltViewModel()
-    MyScreen(
-        uiStateFlow = viewModel.uiState,
-        onBackClick = onBackClick,
-        onActionClick = onActionClick
-    )
-}
-
-// Screen with StateFlow
-@Composable
-fun MyScreen(
-    uiStateFlow: StateFlow<MyUIState>,
-    onBackClick: () -> Unit = {},
-    onActionClick: () -> Unit = {}
-) {
-    val uiState by uiStateFlow.collectAsState()
-    MyScreenContent(uiState = uiState, onBackClick = onBackClick, onActionClick = onActionClick)
-}
-
-// Private content composable
-@Composable
-private fun MyScreenContent(
-    uiState: MyUIState,
-    onBackClick: () -> Unit = {},
-    onActionClick: () -> Unit = {}
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
-    ) {
-        TopNavBase(...)
-        // scrollable content
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            TopIntro(...)
-            Menu { MenuItem(...) }
-        }
-        // optional fixed footer
-        DashButton(...)
-    }
-}
-
-@Composable
-@Preview
-private fun MyScreenPreview() {
-    MyScreenContent(uiState = MyUIState())
-}
+// In a Fragment or Activity:
+createExportCSVDialog(
+    viewModel = viewModel,
+    onDismiss = { turnOnAutoLogout() }
+).show(parentFragmentManager, "export_csv_dialog")
 ```
 
-### 7. String Resources
+#### File Placement
+
+Place dialog files in:
+```
+wallet/src/de/schildbach/wallet/ui/compose_views/
+```
+
+Name: `{FeatureName}Dialog.kt` — both the factory function and the content composable live in this one file. No separate `*DialogFragment.kt` file.
+
+### 7. Implement the Screen
+
+Follow the 3-layer screen structure from `development-patterns` (public ViewModel-receiving composable → public StateFlow-collecting composable → private content composable). Always use `NavBarBack`/`NavBarBackTitle`/etc. named variants, `TopIntro`, `Menu`/`MenuItem`, and a `DashButton` footer where the design requires. See `development-patterns` for the full screen structure template and examples.
+
+### 8. String Resources
 
 All user-visible text must be string resources. Add new strings to the appropriate `strings.xml`:
 - Wallet module: `wallet/res/values/strings.xml`
 - Maya module: `integrations/maya/src/main/res/values/strings-maya.xml`
 - Common module: `common/src/main/res/values/strings.xml`
 
-### 8. Verify
+### 9. Verify
 
 After implementation:
 1. Check for IDE diagnostics with `mcp__ide__getDiagnostics`

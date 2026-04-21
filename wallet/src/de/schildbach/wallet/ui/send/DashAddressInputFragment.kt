@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.send
 
 import android.os.Bundle
 import android.view.View
+import androidx.navigation.fragment.findNavController
 import com.google.common.base.Preconditions
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.R
@@ -40,5 +41,6 @@ class DashAddressInputFragment : AddressInputFragment() {
         SendCoinsActivity.start(requireActivity(), viewModel.addressResult.paymentIntent!!)
         viewModel.logEvent(AnalyticsConstants.AddressInput.CONTINUE)
         requireActivity().overridePendingTransition(R.anim.slide_in_right, R.anim.activity_stay)
+        findNavController().popBackStack()
     }
 }

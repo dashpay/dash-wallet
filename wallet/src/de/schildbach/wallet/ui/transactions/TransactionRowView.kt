@@ -51,7 +51,9 @@ data class TransactionRowView(
     val timeFormat: Int,
     val hasErrors: Boolean,
     val service: String?,
-    val txWrapper: TransactionWrapper?
+    val txWrapper: TransactionWrapper?,
+    /** Pre-resolved status text from the display cache. Used when [statusRes] is -1. */
+    val statusText: String? = null
 ): HistoryRowView() {
     companion object {
         fun fromTransactionWrapper(

@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Confirme</string>
     <string name="dialog_confirm_pay_to">Enviar para</string>
     <string name="dialog_confirm_secured_by">Protegido por</string>
+    <string name="dialog_confirm_connected_to_unsecured">Conectado (não seguro)</string>
     <string name="dialog_confirm_fee">Taxa de rede</string>
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Aceitar solicitação de contato</string>
@@ -286,6 +287,7 @@
 
     <string name="tools_address_book">Livro de endereços</string>
     <string name="tools_import_private_key">Importar Chave Privada</string>
+    <string name="import_private_key_description">Esta ação irá transferir todas as moedas da sua carteira de papel Dash para o aplicativo DashPay neste dispositivo.</string>
     <string name="tools_network_monitor">Monitor de rede</string>
     <string name="tools_show_xpub">Chave Pública Estendida</string>
 
@@ -293,7 +295,7 @@
     <string name="about_review_and_rate">Avalie o aplicativo</string>
     <string name="about_contact_support">Contato com o Suporte</string>
     <string name="about_fork_disclaimer">Este é um aplicativo de código aberto bifurcado da Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Carteira DashPay %s</string>
     <string name="about_last_explore_device_sync">Última sincronização do dispositivo Explore</string>
@@ -437,11 +439,11 @@
     <string name="reclassify_transactions_linked_accounts_message">por padrão, todas as transações de ou para suas contas vinculadas (trocas, staking, etc.) serão marcadas como transferências.</string>
     <string name="reclassify_transactions_change_explanation">Escolha qualquer transação na página inicial e altere a categoria na página de detalhes da transação.</string>
 
-    <string name="masternode_keys_title">Chaves do Masternode</string>
-    <string name="masternode_key_type_owner">Chaves do Proprietário</string>
-    <string name="masternode_key_type_voting">Chaves de Votação</string>
-    <string name="masternode_key_type_operator">Chaves do Operador</string>
-    <string name="masternode_key_type_platform">Chaves de Identificação de Nós Evolution </string>
+    <string name="masternode_keys_title">Chaves do masternode</string>
+    <string name="masternode_key_type_owner">Chaves do proprietário</string>
+    <string name="masternode_key_type_voting">Chaves de votação</string>
+    <string name="masternode_key_type_operator">Chaves do operador</string>
+    <string name="masternode_key_type_platform">Chaves do operador HPMN</string>
     <string name="masternode_key_type_total">%d chaves</string>
     <string name="masternode_key_type_used">%d utilizado</string>
     <string name="masternode_key_pair_index">Par de chaves %d</string>

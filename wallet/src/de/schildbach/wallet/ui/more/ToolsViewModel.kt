@@ -20,37 +20,74 @@ package de.schildbach.wallet.ui.more
 import android.content.ClipData
 import android.content.ClipboardManager
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.common.base.Charsets
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.transactions.TaxBitExporter
-import de.schildbach.wallet.transactions.TransactionExporter
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.launchIn
 import org.bitcoinj.crypto.DeterministicKey
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.slf4j.LoggerFactory
+import java.io.File
+import java.io.FileOutputStream
+import java.io.OutputStreamWriter
 import java.util.*
 import javax.inject.Inject
+
+data class ToolsUIState(
+    val isLoading: Boolean = false,
+    val isSyncing: Boolean = false,
+    val hasUsername: Boolean = false
+)
 
 @HiltViewModel
 class ToolsViewModel @Inject constructor(
     private val walletData: WalletDataProvider,
     private val clipboardManager: ClipboardManager,
     private val transactionMetadataProvider: TransactionMetadataProvider,
-    val blockchainStateDao: BlockchainStateDao,
-    val dashPayConfig: DashPayConfig,
-    val identityConfig: BlockchainIdentityConfig,
-    val analyticsService: AnalyticsService
+    blockchainStateDao: BlockchainStateDao,
+    private val dashPayConfig: DashPayConfig,
+    private val identityConfig: BlockchainIdentityConfig,
+    private val analyticsService: AnalyticsService
 ) : ViewModel() {
-    val blockchainState = blockchainStateDao.observeState()
+
+    sealed class ExportCsvResult {
+        object Idle : ExportCsvResult()
+        object Loading : ExportCsvResult()
+        data class Success(val file: File) : ExportCsvResult()
+        object Error : ExportCsvResult()
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(ToolsViewModel::class.java)
+    }
+
+    private val _uiState = MutableStateFlow(ToolsUIState())
+    val uiState: StateFlow<ToolsUIState> = _uiState.asStateFlow()
 
     val xpub: String
     val xpubWithCreationDate: String
+
+    private val _exportCsvResult = MutableStateFlow<ExportCsvResult>(ExportCsvResult.Idle)
+    val exportCsvResult: StateFlow<ExportCsvResult> = _exportCsvResult.asStateFlow()
 
     init {
         val extendedKey: DeterministicKey = walletData.wallet!!.watchingKey
@@ -61,6 +98,14 @@ class ToolsViewModel @Inject constructor(
             xpub,
             extendedKey.creationTimeSeconds,
         )
+
+        blockchainStateDao.observeState().onEach {
+            _uiState.value = uiState.value.copy(isSyncing = it?.isSynced() != true)
+        }.launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(hasUsername = hasUsername())
+        }
     }
 
     fun copyXpubToClipboard() {
@@ -72,11 +117,30 @@ class ToolsViewModel @Inject constructor(
         )
     }
 
-    suspend fun getTransactionExporter(): TransactionExporter = withContext(Dispatchers.IO) {
-        TaxBitExporter(
-            transactionMetadataProvider,
-            walletData.wallet!!,
-        )
+    fun exportCsv(cacheDir: File) {
+        if (_exportCsvResult.value is ExportCsvResult.Loading) return
+        _exportCsvResult.value = ExportCsvResult.Loading
+        viewModelScope.launch {
+            try {
+                val file = withContext(Dispatchers.IO) {
+                    val exporter = TaxBitExporter(transactionMetadataProvider, walletData.wallet!!)
+                    exporter.initMetadataMap()
+                    val csvContent = exporter.exportString()
+                    val reportDir = File(cacheDir, "report").also { it.mkdirs() }
+                    val f = File.createTempFile("transaction-history.", ".csv", reportDir)
+                    OutputStreamWriter(FileOutputStream(f), Charsets.UTF_8).use { it.write(csvContent) }
+                    f
+                }
+                _exportCsvResult.value = ExportCsvResult.Success(file)
+            } catch (e: Exception) {
+                log.error("Failed to export CSV", e)
+                _exportCsvResult.value = ExportCsvResult.Error
+            }
+        }
+    }
+
+    fun resetExportCsvResult() {
+        _exportCsvResult.value = ExportCsvResult.Idle
     }
 
     suspend fun setCreditsExplained() = dashPayConfig.set(DashPayConfig.CREDIT_INFO_SHOWN, true)

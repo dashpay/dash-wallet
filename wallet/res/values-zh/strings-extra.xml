@@ -287,7 +287,6 @@
     <string name="about_review_and_rate">对app评价并评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
-    <string name="about_copyright">版权所有 © 2025 Dash Core Group</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">DashPay 钱包 %s</string>
     <string name="about_last_explore_device_sync">最后一次探索设备同步</string>
@@ -431,11 +430,6 @@
     <string name="reclassify_transactions_linked_accounts_message">在默认下, 所有进出您关联账户的交易 (交易所, 质押等) 都将被标记为转账.</string>
     <string name="reclassify_transactions_change_explanation">从主页选择任何交易并在交易详情页面更改类别.</string>
 
-    <string name="masternode_keys_title">主节点密钥</string>
-    <string name="masternode_key_type_owner">所有者私钥</string>
-    <string name="masternode_key_type_voting">投票者密钥</string>
-    <string name="masternode_key_type_operator">运营者私钥</string>
-    <string name="masternode_key_type_platform">Evolution 节点 ID 私钥</string>
     <string name="masternode_key_type_total">%d 密钥</string>
     <string name="masternode_key_type_used">%d 已使用</string>
     <string name="masternode_key_pair_index">密钥对 %d</string>

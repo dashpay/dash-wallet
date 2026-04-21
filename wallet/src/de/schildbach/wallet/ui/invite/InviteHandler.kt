@@ -26,6 +26,7 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Resource.Companion.error
 import de.schildbach.wallet.livedata.Resource.Companion.loading
 import de.schildbach.wallet.livedata.Status
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.OnboardingActivity
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -39,13 +40,10 @@ import org.dashj.platform.dpp.errors.concensus.basic.identity.IdentityAssetLockT
 import org.dashj.platform.dpp.errors.concensus.basic.identity.InvalidInstantAssetLockProofSignatureException
 import org.dashj.platform.dpp.errors.concensus.fee.BalanceIsNotEnoughException
 import org.slf4j.LoggerFactory
-import javax.inject.Inject
 
 class InviteHandler(val activity: FragmentActivity, private val analytics: AnalyticsService) {
 
     private var inviteLoadingDialog: AdaptiveDialog? = null
-    @Inject lateinit var platformRepo: PlatformRepo
-
     companion object {
         private val log = LoggerFactory.getLogger(InviteHandler::class.java)
 
@@ -206,7 +204,10 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
      * handle non-recoverable errors from using an invite
      */
     // TODO: this needs to be updated to Platform SDK > 1.x
-    suspend fun handleError(blockchainIdentityData: BlockchainIdentityBaseData): Boolean {
+    suspend fun handleError(
+        blockchainIdentityData: BlockchainIdentityBaseData,
+        identityRepository: IdentityRepository
+    ): Boolean {
         // handle errors
         var exception: ConcensusException
         if (blockchainIdentityData.creationStateErrorMessage.also {
@@ -218,7 +219,7 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                 exception is IdentityAssetLockTransactionOutPointAlreadyExistsException -> {
                     showInviteAlreadyClaimedDialog(blockchainIdentityData.invite!!)
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
 
@@ -226,13 +227,13 @@ class InviteHandler(val activity: FragmentActivity, private val analytics: Analy
                     handle(loading(blockchainIdentityData.invite, 0))
                     handle(error(exception.message!!, blockchainIdentityData.invite))
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
                 exception is BalanceIsNotEnoughException -> {
                     showInsufficientFundsDialog()
                     // now erase the blockchain data
-                    platformRepo.clearBlockchainIdentityData()
+                    identityRepository.clearBlockchainIdentityData()
                     return true
                 }
             }

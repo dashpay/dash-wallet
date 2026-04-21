@@ -33,6 +33,7 @@ import de.schildbach.wallet.payments.MaxOutputAmountCoinSelector
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.Dispatchers
@@ -84,6 +85,7 @@ class SendCoinsViewModel @Inject constructor(
     private val configuration: Configuration,
     private val sendCoinsTaskRunner: SendCoinsTaskRunner,
     private val notificationService: NotificationService,
+    private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val dashPayContactRequestDao: DashPayContactRequestDao,
     coinJoinConfig: CoinJoinConfig,
@@ -202,7 +204,9 @@ class SendCoinsViewModel @Inject constructor(
 
         log.info("proceeding with {}", finalIntent)
         super.initPaymentIntent(finalIntent)
-        _state.value = State.INPUT
+        withContext(Dispatchers.Main.immediate) {
+            _state.value = State.INPUT
+        }
         withContext(Dispatchers.IO) {
             executeDryrun(currentAmount)
         }
@@ -218,7 +222,7 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         return try {
-            platformRepo.searchUsernames(username, true).firstOrNull()
+            identityRepository.searchUsernames(username, true).firstOrNull()
         } catch (ex: Exception) {
             analytics.logError(ex, "Failed to load user")
             null
@@ -317,7 +321,7 @@ class SendCoinsViewModel @Inject constructor(
             throw ex
         }
 
-        _state.value = State.SENT
+        _state.postValue(State.SENT)
         transaction
     }
 
@@ -345,7 +349,7 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     fun resetState() {
-        _state.value = State.INPUT
+        _state.postValue(State.INPUT)
     }
 
     fun logSendSuccess(dashToFiat: Boolean, source: String) {
@@ -494,14 +498,14 @@ class SendCoinsViewModel @Inject constructor(
     }
 
     private suspend fun checkIdentity(paymentIntent: PaymentIntent): PaymentIntent {
-        var isDashUserOrNotMe = platformRepo.hasIdentity()
+        var isDashUserOrNotMe = identityRepository.hasIdentity()
 
         // make sure that this payment intent is not to me
         if (paymentIntent.isIdentityPaymentRequest &&
             paymentIntent.payeeUsername != null &&
-            platformRepo.hasIdentity() &&
-            platformRepo.hasUsername() &&
-            paymentIntent.payeeUsername == platformRepo.getUsername()
+            identityRepository.hasIdentity() &&
+            identityRepository.hasUsername() &&
+            paymentIntent.payeeUsername == identityRepository.getUsername()
         ) {
             isDashUserOrNotMe = false
         }
@@ -557,7 +561,7 @@ class SendCoinsViewModel @Inject constructor(
         }
 
         val mostRecentContactRequest = map[firstTimestamp]
-        val address = platformRepo.getNextContactAddress(
+        val address = identityRepository.getNextContactAddress(
             dashPayProfile.userId,
             mostRecentContactRequest!!.accountReference
         )

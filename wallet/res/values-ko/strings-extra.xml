@@ -287,7 +287,6 @@
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
-    <string name="about_copyright">Copyright © 2025 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시페이 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
@@ -431,11 +430,6 @@
     <string name="reclassify_transactions_linked_accounts_message">귀하의 연결된 계정 (거래소, 스테이킹 외 기타) 으로 받거나 보내는 모든 거래는 기본값으로써 송금으로 표시됩니다.</string>
     <string name="reclassify_transactions_change_explanation">홈페이지에서 거래를 선택하여 거래 세부 내역 페이지의 카테고리를 변경하세요.</string>
 
-    <string name="masternode_keys_title">마스터노드 키</string>
-    <string name="masternode_key_type_owner">소유자 키</string>
-    <string name="masternode_key_type_voting">투표 키</string>
-    <string name="masternode_key_type_operator">운영자 키</string>
-    <string name="masternode_key_type_platform">에볼루션 노드 ID 키</string>
     <string name="masternode_key_type_total">%d 키</string>
     <string name="masternode_key_type_used">%d 사용됨</string>
     <string name="masternode_key_pair_index">키페어 %d</string>

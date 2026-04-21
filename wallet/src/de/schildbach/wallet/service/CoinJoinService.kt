@@ -532,6 +532,7 @@ class CoinJoinMixingService @Inject constructor(
 
     /** set CoinJoinClientOptions based on CoinJoinMode */
     private fun configureMixing(amount: Coin) {
+        val walletEx = walletDataProvider.wallet as? WalletEx ?: return
         when (mode) {
             CoinJoinMode.NONE -> {
                 // no options to set
@@ -539,12 +540,12 @@ class CoinJoinMixingService @Inject constructor(
             CoinJoinMode.INTERMEDIATE -> {
                 CoinJoinClientOptions.setEnabled(true)
                 CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS)
-                (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS)
+                walletEx.coinJoin.setRounds(DEFAULT_ROUNDS)
             }
             CoinJoinMode.ADVANCED -> {
                 CoinJoinClientOptions.setEnabled(true)
                 CoinJoinClientOptions.setRounds(DEFAULT_ROUNDS * 2)
-                (walletDataProvider.wallet as WalletEx).coinJoin.setRounds(DEFAULT_ROUNDS * 2)
+                walletEx.coinJoin.setRounds(DEFAULT_ROUNDS * 2)
             }
         }
 

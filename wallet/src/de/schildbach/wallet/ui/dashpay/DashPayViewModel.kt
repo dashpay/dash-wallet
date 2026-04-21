@@ -34,6 +34,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformBroadcastService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -63,6 +64,7 @@ open class DashPayViewModel @Inject constructor(
     private val walletApplication: WalletApplication,
     private val analytics: AnalyticsService,
     private val platformRepo: PlatformRepo,
+    private val identityRepository: IdentityRepository,
     blockchainState: BlockchainStateDao,
     dashPayProfileDao: DashPayProfileDao,
     blockchainIdentityDataDao: BlockchainIdentityConfig,
@@ -171,7 +173,7 @@ open class DashPayViewModel @Inject constructor(
                     log,
                     AnalyticsConstants.Process.PROCESS_USERNAME_SEARCH_QUERY
                 )
-                var result = platformRepo.searchUsernames(search.text, false, search.limit)
+                var result = identityRepository.searchUsernames(search.text, false, search.limit)
                 result = result.filter { !search.excludeIds.contains(it.dashPayProfile.userId) }
                 if (result.isNotEmpty()) {
                     val limit = result.size.coerceAtMost(search.limit)
@@ -209,7 +211,7 @@ open class DashPayViewModel @Inject constructor(
         searchContactsJob = Job()
         liveData(context = searchContactsJob + Dispatchers.IO) {
             emit(Resource.loading(null))
-            emit(platformRepo.searchContacts(usernameSearch.text, usernameSearch.orderBy))
+            emit(identityRepository.searchContacts(usernameSearch.text, usernameSearch.orderBy))
         }
     }
 
@@ -219,7 +221,7 @@ open class DashPayViewModel @Inject constructor(
 
     fun usernameDoneAndDismiss() {
         viewModelScope.launch(Dispatchers.IO) {
-            platformRepo.doneAndDismiss()
+            identityRepository.doneAndDismiss()
         }
     }
 
@@ -324,6 +326,6 @@ open class DashPayViewModel @Inject constructor(
     )
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo? {
-        return platformRepo.getIdentityBalance()
+        return identityRepository.getIdentityBalance()
     }
 }

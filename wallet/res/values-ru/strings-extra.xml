@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Подтвердить</string>
     <string name="dialog_confirm_pay_to">Отправить</string>
     <string name="dialog_confirm_secured_by">Защищено</string>
+    <string name="dialog_confirm_connected_to_unsecured">Подключено к (незащищённое соединение) </string>
     <string name="dialog_confirm_fee">Комиссия сети</string>
     <string name="dialog_confirm_total">Итого</string>
     <string name="dialog_confirm_accept_contact_request">Принять запрос на добавление в контакты</string>
@@ -289,6 +290,7 @@
 
     <string name="tools_address_book">Адресная книга</string>
     <string name="tools_import_private_key">Импортировать приватный ключ</string>
+    <string name="import_private_key_description">Все средства перейдут из бумажного кошелька Dash на Ваш кошелёк DashPay на этом устройстве.</string>
     <string name="tools_network_monitor">Сетевой монитор</string>
     <string name="tools_show_xpub">Расширенный  публичный ключ</string>
 
@@ -296,7 +298,7 @@
     <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>
     <string name="about_contact_support">Связаться с поддержкой</string>
     <string name="about_fork_disclaimer">Это приложение с открытым кодом, основанное на Bitcoin Wallet</string>
-    <string name="about_copyright">Авторские права © 2025 Dash Core Group</string>
+    <string name="about_copyright">Авторские права © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Кошелёк DashPay %s</string>
     <string name="about_last_explore_device_sync">Последняя синхронизация с Explore</string>
@@ -440,11 +442,11 @@
     <string name="reclassify_transactions_linked_accounts_message">по умолчанию все транзакции с привязанных аккаунтов или на них (биржи, стейкинг и т.д.) будут отмечены как переводы.</string>
     <string name="reclassify_transactions_change_explanation">Выберите любую транзакцию на домашней странице и измените категорию на странице сведений о транзакции.</string>
 
-    <string name="masternode_keys_title">Masternode ключи</string>
+    <string name="masternode_keys_title">Ключи мастерноды</string>
     <string name="masternode_key_type_owner">Ключи владельца</string>
     <string name="masternode_key_type_voting">Ключи голосования</string>
     <string name="masternode_key_type_operator">Ключи оператора</string>
-    <string name="masternode_key_type_platform">Ключи идентификаторов Evolution нод</string>
+    <string name="masternode_key_type_platform">HPMN Ключи оператора</string>
     <string name="masternode_key_type_total">ключи</string>
     <string name="masternode_key_type_used">%d использовано</string>
     <string name="masternode_key_pair_index">Ключи %d</string>

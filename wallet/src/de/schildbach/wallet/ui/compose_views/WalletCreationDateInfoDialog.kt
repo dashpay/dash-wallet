@@ -71,8 +71,6 @@ private fun WalletCreationDateInfoContent() {
             )
         }
 
-        // Bottom spacing for home indicator
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

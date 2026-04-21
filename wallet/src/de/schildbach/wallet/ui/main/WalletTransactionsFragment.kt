@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.main
 
+import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Rect
 import android.graphics.Typeface
@@ -36,15 +37,18 @@ import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
 import de.schildbach.wallet.ui.invite.InviteHandler
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
+import androidx.paging.LoadState
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.data.InvitationValidationState
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
@@ -54,22 +58,31 @@ import de.schildbach.wallet.ui.transactions.TransactionRowView
 import de.schildbach.wallet.ui.unregisterLockScreenDeactivated
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.WalletTransactionsFragmentBinding
-import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
+import org.slf4j.LoggerFactory
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.common.util.safeNavigate
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragment) {
     companion object {
         private const val HEADER_ITEM_TAG = "header"
+        private val log = LoggerFactory.getLogger(WalletTransactionsFragment::class.java)
     }
+
+    private var firstPageLoadStartTime: Long = 0L
+    private var onViewCreatedTime: Long = 0L
+    private var pendingManualRefresh: Boolean = false
 
     private val viewModel by activityViewModels<MainViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
@@ -79,54 +92,106 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         get() = (binding.walletTransactionsList.adapter?.itemCount ?: 0) == 0
 
     private lateinit var header: HistoryHeaderAdapter
+    @Inject
+    lateinit var identityRepository: IdentityRepository
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        onViewCreatedTime = System.currentTimeMillis()
+        log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
 
-        val adapter = TransactionAdapter(
-            viewModel.balanceDashFormat,
-            resources,
-            true
-        ) { rowView, _, isProfileClick ->
+        val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             if (rowView is TransactionRowView) {
                 if (isProfileClick && rowView.contact != null) {
                     requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
                 } else {
-                    val fragment = if (rowView.txWrapper != null) {
-                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionGroupDetailsFragment(rowView.txWrapper)
-                    } else if (ServiceName.isDashSpend(rowView.service)) {
-                        viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                        GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
-                    } else {
-                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                        TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
-                    }
-
-                    fragment.show(requireActivity())
-                }
-            }
-        }
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            // these observers had exceptions after the view was destroyed
-            viewLifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                val observer = object : RecyclerView.AdapterDataObserver() {
-                    override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                        if (positionStart == 0) {
-                            binding.walletTransactionsList.scrollToPosition(0)
+                    // For rows loaded from the display cache, txWrapper is null.
+                    // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
+                    val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
+                    val fragment = when {
+                        txWrapper != null && txWrapper.transactions.size > 1 -> {
+                            // Multi-tx group (CrowdNode / CoinJoin) — open group detail.
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionGroupDetailsFragment(txWrapper)
+                        }
+                        txWrapper != null -> {
+                            // Single-tx wrapper found in memory — open TX detail directly.
+                            // TransactionGroupDetailsFragment would show the wrong (default
+                            // CrowdNode) icon for non-group wrappers, so route here instead.
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                        }
+                        ServiceName.isDashSpend(rowView.service) -> {
+                            viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
+                            GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
+                        }
+                        rowView.transactionAmount == 1 -> {
+                            // Individual transaction — rowId is a 64-char txId hex string.
+                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                            TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
+                        }
+                        else -> {
+                            // Group row whose wrapper isn't loaded yet (lazy startup) —
+                            // load it on demand so the user can still open the detail view.
+                            viewLifecycleOwner.lifecycleScope.launch {
+                                val wrapper = viewModel.loadGroupWrapper(rowView.id)
+                                val activity = if (isAdded) activity else null
+                                if (wrapper != null && activity != null) {
+                                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                    TransactionGroupDetailsFragment(wrapper).show(activity)
+                                } else if (wrapper == null) {
+                                    log.warn("group {} not found in cache — cannot open details", rowView.id)
+                                }
+                            }
+                            null  // fragment already shown inside the coroutine above
                         }
                     }
-                }
 
-                adapter.registerAdapterDataObserver(observer)
-                try {
-                    awaitCancellation() // Keeps the block alive
-                } finally {
-                    adapter.unregisterAdapterDataObserver(observer)
+                    fragment?.show(requireActivity())
                 }
             }
         }
+
+        // Long-press "History" title → offer to wipe and rebuild the transaction cache.
+        binding.transactionListTitle.setOnLongClickListener {
+            AdaptiveDialog.create(
+                icon = null,
+                negativeButtonText = getString(R.string.cancel),
+                positiveButtonText = getString(R.string.history_refresh_dialog_confirm),
+                title = getString(R.string.history_refresh_dialog_title),
+                message = getString(R.string.history_refresh_dialog_message)
+            ).show(requireActivity()) { result ->
+                if (result == true) {
+                    pendingManualRefresh = true
+                    viewModel.forceRebuildTransactionCache()
+                }
+            }
+            true // consume
+        }
+
+        // Cache adapter (plain ListAdapter) — shown immediately using pre-built rows from Room.
+        // submitList() is a single background DiffUtil + one main-thread handler post: much faster
+        // than PagingDataAdapter.submitData() which dispatches through 4+ coroutine contexts.
+        val cacheAdapter = CacheTransactionAdapter(viewModel.balanceDashFormat, resources, true, clickHandler)
+        // Live adapter (PagingDataAdapter) — activated after the wallet finishes loading.
+        val liveAdapter = TransactionAdapter(viewModel.balanceDashFormat, resources, true, clickHandler)
+
+        // Scroll to top when new live transactions arrive at the top of the list.
+        // Register once per view; unregister on view destroy to avoid duplicate observers
+        // across lifecycle STARTED/STOPPED transitions.
+        val scrollObserver = object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                if (positionStart == 0) {
+                    binding.walletTransactionsList.scrollToPosition(0)
+                }
+            }
+        }
+        liveAdapter.registerAdapterDataObserver(scrollObserver)
+        viewLifecycleOwner.lifecycle.addObserver(object : DefaultLifecycleObserver {
+            override fun onDestroy(owner: LifecycleOwner) {
+                liveAdapter.unregisterAdapterDataObserver(scrollObserver)
+            }
+        })
 
         binding.transactionFilterBtn.setOnClickListener {
             val dialogFragment = TransactionsFilterDialog(viewModel.transactionsDirection) { direction, _ ->
@@ -150,12 +215,45 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         header.setOnAcceptInviteCreateClicked { onAcceptInvite() }
         header.setOnAcceptInviteHideClicked { onHideInvite() }
 
+        // Single ConcatAdapter kept for the entire Fragment lifetime.
+        // We swap cacheAdapter ↔ liveAdapter inside it (removeAdapter / addAdapter) to avoid
+        // the ConcatAdapterController "cannot find wrapper" crash that occurs when two separate
+        // ConcatAdapter instances try to call onViewDetachedFromWindow on each other's ViewHolders.
+        val concatAdapter = ConcatAdapter(header, cacheAdapter)
+
         binding.walletTransactionsList.setHasFixedSize(true)
         binding.walletTransactionsList.layoutManager = LinearLayoutManager(requireContext())
-        binding.walletTransactionsList.adapter = ConcatAdapter(header, adapter)
+        binding.walletTransactionsList.adapter = concatAdapter
 
-        viewLifecycleOwner.observeOnDestroy {
-            binding.walletTransactionsList.adapter = null
+        // Log when cache items are actually inserted into the RecyclerView (after DiffUtil).
+        cacheAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                if (firstPageLoadStartTime > 0L && cacheAdapter.itemCount > 0) {
+                    log.info("STARTUP cache items visible: {}ms from onViewCreated, {}ms from submitList ({} items)",
+                        System.currentTimeMillis() - onViewCreatedTime,
+                        System.currentTimeMillis() - firstPageLoadStartTime,
+                        cacheAdapter.itemCount)
+                    firstPageLoadStartTime = -1L
+                }
+            }
+        })
+
+        // Fast cache path — ListAdapter.submitList() dispatches DiffUtil once on a background
+        // thread, then posts a single update to the main thread.  No Paging3 coroutine chain.
+        // Note: we collect ALL emissions (including emptyList) so that when the cache is
+        // cleared on a blockchain reset, cacheAdapter is also cleared and cacheHasItems
+        // becomes false — allowing showEmptyView() to fire correctly.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.cachedRows.collect { rows ->
+                cacheAdapter.submitList(rows)
+                if (rows.isNotEmpty()) {
+                    log.info("STARTUP cache submitList: {} rows at {}", rows.size, System.currentTimeMillis())
+                    if (firstPageLoadStartTime == 0L) {
+                        firstPageLoadStartTime = System.currentTimeMillis()
+                    }
+                    showTransactionList()
+                }
+            }
         }
 
         val horizontalMargin = resources.getDimensionPixelOffset(R.dimen.default_horizontal_padding)
@@ -188,24 +286,67 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         }
         viewModel.blockchainSyncPercentage.observe(viewLifecycleOwner) { updateSyncState() }
 
-        viewModel.transactions.observe(viewLifecycleOwner) { transactionViews ->
-            binding.loading.isVisible = false
+        // Collect live PagingData and submit to the live (PagingDataAdapter) adapter.
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.transactions.collectLatest { pagingData ->
+                log.info("STARTUP submitData called on thread={} at {}", Thread.currentThread().name, System.currentTimeMillis())
+                liveAdapter.submitData(pagingData)
+            }
+        }
 
-            if (transactionViews.isEmpty() && header.isEmpty()) {
-                showEmptyView()
-            } else if (transactionViews.isNotEmpty()) {
-                val groupedByDate = transactionViews.entries
-                    .sortedByDescending { it.key }
-                    .map {
-                        val outList = mutableListOf<HistoryRowView>()
-                        outList.add(HistoryRowView(null, it.key))
-                        outList.apply { addAll(it.value) }
-                    }.reduce { acc, list -> acc.apply { addAll(list) } }
+        // Handle loading/empty states via liveAdapter's loadStateFlow.
+        // Also swaps the RecyclerView from cacheAdapter to liveAdapter once live items arrive.
+        viewLifecycleOwner.lifecycleScope.launch {
+            liveAdapter.loadStateFlow
+                .distinctUntilChanged()
+                .collectLatest { loadStates ->
+                    val isRefreshing = loadStates.refresh is LoadState.Loading
+                    val cacheHasItems = concatAdapter.adapters.contains(cacheAdapter) &&
+                        cacheAdapter.currentList.isNotEmpty()
+                    // Only show the loading spinner when there's nothing to display yet.
+                    val isLoading = isRefreshing && liveAdapter.itemCount == 0 && !cacheHasItems
+                    val isEmpty = loadStates.refresh is LoadState.NotLoading &&
+                        liveAdapter.itemCount == 0 && !cacheHasItems
 
-                adapter.submitList(groupedByDate)
-                showTransactionList()
-            } else {
-                showTransactionList()
+                    // Swap cacheAdapter → liveAdapter inside the same ConcatAdapter once live
+                    // items are ready.  Keeping one ConcatAdapter instance avoids the
+                    // "cannot find wrapper" crash from ConcatAdapterController.
+                    if (loadStates.refresh is LoadState.NotLoading && liveAdapter.itemCount > 0 &&
+                        concatAdapter.adapters.contains(cacheAdapter)) {
+                        log.info("STARTUP swapping to live adapter: {} items at {}",
+                            liveAdapter.itemCount, System.currentTimeMillis())
+                        val lm = binding.walletTransactionsList.layoutManager as LinearLayoutManager
+                        val scrollState = lm.onSaveInstanceState()
+                        concatAdapter.removeAdapter(cacheAdapter)
+                        concatAdapter.addAdapter(liveAdapter)
+                        lm.onRestoreInstanceState(scrollState)
+                    }
+
+                    if (!isRefreshing && liveAdapter.itemCount > 0 && firstPageLoadStartTime > 0L) {
+                        log.info("STARTUP first live items visible: {}ms from onViewCreated, {}ms from first-load-start ({} items)",
+                            System.currentTimeMillis() - onViewCreatedTime,
+                            System.currentTimeMillis() - firstPageLoadStartTime,
+                            liveAdapter.itemCount)
+                        firstPageLoadStartTime = -1L // prevent re-logging on subsequent invalidations
+                    }
+
+                    val buildingFromScratch = viewModel.isBuildingCache.value &&
+                        liveAdapter.itemCount == 0 && cacheAdapter.currentList.isEmpty()
+                    binding.loading.isVisible = isLoading || buildingFromScratch
+                    if (isEmpty && header.isEmpty()) showEmptyView() else showTransactionList()
+                }
+        }
+
+        // Show the "determining transaction history" overlay only when building the cache
+        // from scratch (no rows displayed yet). If rows are already visible, suppress the
+        // overlay so the existing list stays on screen during background rebuilds.
+        viewModel.isBuildingCache.observe(viewLifecycleOwner) { building ->
+            val hasRows = viewModel.transactionsLoaded.value &&
+                (liveAdapter.itemCount > 0 || cacheAdapter.currentList.isNotEmpty())
+            binding.loading.isVisible = building && !hasRows
+            if (!building && pendingManualRefresh) {
+                pendingManualRefresh = false
+                Toast.makeText(requireContext(), R.string.history_refresh_complete, Toast.LENGTH_SHORT).show()
             }
         }
 
@@ -229,7 +370,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             }
         }
 
-        viewModel.isAbleToCreateIdentityLiveData.observe(viewLifecycleOwner) { canJoinDashPay ->
+        viewModel.isAbleToCreateIdentity.observe(viewLifecycleOwner) { canJoinDashPay ->
             header.canJoinDashPay = canJoinDashPay && header.invitation == null
         }
 
@@ -324,9 +465,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun onAcceptInvite() {
+        val invitation = inviteHandlerViewModel.invitation.value ?: return
         val createUsernameActivityIntent = CreateUsernameActivity.createIntentFromInvite(
             requireContext(),
-            inviteHandlerViewModel.invitation.value!!,
+            invitation,
             inviteHandlerViewModel.fromOnboarding
         )
         startActivity(createUsernameActivityIntent)
@@ -370,7 +512,10 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     }
 
     private fun showEmptyView() {
-        binding.walletTransactionsEmpty.isVisible = viewModel.transactionsLoaded
+        // Don't show "no transactions" text while the cache is being built — the loading
+        // overlay covers this state and showing both at once is confusing.
+        binding.walletTransactionsEmpty.isVisible =
+            viewModel.transactionsLoaded.value && !viewModel.isBuildingCache.value
         binding.walletTransactionsList.isVisible = false
     }
 
@@ -394,7 +539,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                 viewLifecycleOwner.lifecycleScope.launch {
                     val handler = InviteHandler(requireActivity(), viewModel.analytics)
 
-                    if (handler.handleError(blockchainIdentityData)) {
+                    if (handler.handleError(blockchainIdentityData, identityRepository)) {
                         header.blockchainIdentityData = null
                     } else {
                         requireActivity().startService(

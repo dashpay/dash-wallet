@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Bevestig</string>
     <string name="dialog_confirm_pay_to">Verstuur naar</string>
     <string name="dialog_confirm_secured_by">Beveiligd door</string>
+    <string name="dialog_confirm_connected_to_unsecured">Verbonden met (onbeveiligd)</string>
     <string name="dialog_confirm_fee">Netwerk transactiekosten</string>
     <string name="dialog_confirm_total">Totaal</string>
     <string name="dialog_confirm_accept_contact_request">Contactverzoek accepteren</string>
@@ -283,6 +284,7 @@
 
     <string name="tools_address_book">Adresboek</string>
     <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
+    <string name="import_private_key_description">Met deze actie worden het saldo van de papieren portemonnee overgezet naar je DashPay app op dit apparaat.</string>
     <string name="tools_network_monitor">Netwerk monitor</string>
     <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
 
@@ -290,7 +292,7 @@
     <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>
     <string name="about_contact_support">Neem contact op</string>
     <string name="about_fork_disclaimer">Dit is een open source app afgesplitst van de Bitcoin portemonnee</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Portemonnee %s</string>
     <string name="about_last_explore_device_sync">Laatste Explore-apparaatsynchronisatie</string>
@@ -437,8 +439,8 @@
     <string name="masternode_keys_title">Masternode sleutels</string>
     <string name="masternode_key_type_owner">Eigenaar sleutels</string>
     <string name="masternode_key_type_voting">Stem sleutels</string>
-    <string name="masternode_key_type_operator">Operator sleutels</string>
-    <string name="masternode_key_type_platform">Evolution Node ID sleutels</string>
+    <string name="masternode_key_type_operator">Operateur sleutels</string>
+    <string name="masternode_key_type_platform">HPMN operateur sleutels</string>
     <string name="masternode_key_type_total">%d sleutels</string>
     <string name="masternode_key_type_used">%dgebruikt</string>
     <string name="masternode_key_pair_index">Sleutelpaar %d</string>

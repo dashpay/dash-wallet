@@ -140,6 +140,7 @@ class ScanActivity : SecureActivity(), TextureView.SurfaceTextureListener {
             setResult(RESULT_CANCELED)
             finish()
         }
+        binding.scanCloseButton.setOnClickListener { onBackPressedDispatcher.onBackPressed() }
 
         if (savedInstanceState == null) {
             val intent = intent

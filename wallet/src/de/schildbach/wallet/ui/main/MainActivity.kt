@@ -195,7 +195,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     }
 
     fun initViewModel() {
-        viewModel.isAbleToCreateIdentityLiveData.observe(this) {
+        viewModel.isAbleToCreateIdentity.observe(this) {
             // empty observer just to trigger data loading
             // viewModel is shared with some fragments keeping the observer active
             // inside the parent Activity will avoid recreation of relatively complex

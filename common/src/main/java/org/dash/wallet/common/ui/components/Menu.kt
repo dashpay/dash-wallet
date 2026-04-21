@@ -22,17 +22,17 @@ fun Menu(
     Box(
         modifier = Modifier.fillMaxWidth()
             .padding(horizontal = 20.dp)
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(12.dp)),
+            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp)),
     ) {
-    Column(
-        modifier = Modifier.fillMaxWidth()
-            .padding(6.dp)
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(12.dp)),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        menuItems.invoke()
-    }
+        Column(
+            modifier = Modifier.fillMaxWidth()
+                .padding(6.dp)
+                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp)),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            menuItems.invoke()
         }
+    }
 }
 
 @Composable

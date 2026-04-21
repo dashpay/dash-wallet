@@ -33,6 +33,7 @@ import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.GoogleDriveService
 import de.schildbach.wallet.ui.dashpay.utils.ImgurService
@@ -63,6 +64,7 @@ class EditProfileViewModel @Inject constructor(
     blockchainIdentityDataDao: BlockchainIdentityConfig,
     dashPayProfileDao: DashPayProfileDao,
     val platformRepo: PlatformRepo,
+    val identityRepository: IdentityRepository,
     private val imgurService: ImgurService,
     private val googleDriveService: GoogleDriveService,
     private val dashPayConfig: DashPayConfig
@@ -283,7 +285,7 @@ class EditProfileViewModel @Inject constructor(
     }
 
     suspend fun hasEnoughCredits(): CreditBalanceInfo? {
-        return platformRepo.getIdentityBalance()
+        return identityRepository.getIdentityBalance()
     }
 
     fun getGoogleDriveAuthRequest(): AuthorizationRequest {

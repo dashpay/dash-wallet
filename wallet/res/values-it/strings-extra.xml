@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Conferma</string>
     <string name="dialog_confirm_pay_to">Manda a</string>
     <string name="dialog_confirm_secured_by">Garantito da</string>
+    <string name="dialog_confirm_connected_to_unsecured">Connesso a (non protetto)</string>
     <string name="dialog_confirm_fee">Commissione di Rete</string>
     <string name="dialog_confirm_total">Totale</string>
     <string name="dialog_confirm_accept_contact_request">Accetta richiesta di contatto</string>
@@ -286,6 +287,7 @@
 
     <string name="tools_address_book">Rubrica degli indirizzi</string>
     <string name="tools_import_private_key">Importa chiave privata</string>
+    <string name="import_private_key_description">Questa operazione trasferirà tutte le monete dal portafoglio cartaceo Dash all\'app DashPay su questo dispositivo.</string>
     <string name="tools_network_monitor">Controllo della rete</string>
     <string name="tools_show_xpub">Chiave pubblica estesa</string>
 
@@ -293,7 +295,7 @@
     <string name="about_review_and_rate">Recensisci e valuta l\'app</string>
     <string name="about_contact_support">Contatta il Supporto</string>
     <string name="about_fork_disclaimer">Questa è un\'app open source forcata dal Portafoglio Bitcoin</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portafoglio DashPay %s</string>
     <string name="about_last_explore_device_sync">Verifica l\'ultima sincronizzazione del dispositivo</string>
@@ -439,9 +441,9 @@
 
     <string name="masternode_keys_title">Chiavi Masternode</string>
     <string name="masternode_key_type_owner">Chiavi proprietario</string>
-    <string name="masternode_key_type_voting">Chiavi  di Voto</string>
+    <string name="masternode_key_type_voting">Chiavi di Voto</string>
     <string name="masternode_key_type_operator">Chiavi operatore</string>
-    <string name="masternode_key_type_platform">ID Keys del nodo Evolution</string>
+    <string name="masternode_key_type_platform">Chiavi Operatore HPMN</string>
     <string name="masternode_key_type_total">%d chiavi</string>
     <string name="masternode_key_type_used">%d usata</string>
     <string name="masternode_key_pair_index">Coppia di chiavi%d</string>

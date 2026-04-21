@@ -34,12 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.dash.wallet.common.R
 
 data class FeatureItem(
     val heading: String,
@@ -208,22 +206,22 @@ private fun FeatureListWithIconsPreview() {
                 FeatureItem(
                     "Enhanced Security",
                     "Your wallet will use the latest encryption technology",
-                    ImageVector.vectorResource(R.drawable.ic_preview)
+                    MyImages.Preview
                 ),
                 FeatureItem(
                     "Biometric Support",
                     "Unlock your wallet with fingerprint or face recognition",
-                    ImageVector.vectorResource(R.drawable.ic_preview)
+                    MyImages.Preview
                 ),
                 FeatureItem(
                     "PIN Protection",
                     "Set a secure PIN to protect your funds",
-                    ImageVector.vectorResource(R.drawable.ic_preview)
+                    MyImages.Preview
                 ),
                 FeatureItem(
                     "Recovery Options",
                     "Multiple ways to recover your wallet if needed",
-                    ImageVector.vectorResource(R.drawable.ic_preview)
+                    MyImages.Preview
                 )
             )
         )

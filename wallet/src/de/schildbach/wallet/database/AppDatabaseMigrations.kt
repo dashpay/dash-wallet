@@ -124,6 +124,51 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration16to17 = object : Migration(16, 17) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `tx_display_cache` (
+                        `rowId` TEXT NOT NULL,
+                        `title` TEXT NOT NULL,
+                        `valueSatoshis` INTEGER NOT NULL,
+                        `iconType` INTEGER NOT NULL,
+                        `iconBgType` INTEGER NOT NULL,
+                        `statusText` TEXT NOT NULL,
+                        `comment` TEXT NOT NULL,
+                        `transactionAmount` INTEGER NOT NULL,
+                        `time` INTEGER NOT NULL,
+                        `hasErrors` INTEGER NOT NULL,
+                        `service` TEXT,
+                        `exchangeRateFiatCode` TEXT,
+                        `exchangeRateFiatValue` INTEGER,
+                        `contactUsername` TEXT,
+                        `contactDisplayName` TEXT,
+                        `contactAvatarUrl` TEXT,
+                        `contactUserId` TEXT,
+                        `filterFlags` INTEGER NOT NULL,
+                        PRIMARY KEY(`rowId`)
+                    )
+                    """
+                )
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `tx_group_cache` (
+                        `groupId` TEXT NOT NULL,
+                        `txId` TEXT NOT NULL,
+                        `wrapperType` TEXT NOT NULL,
+                        `groupDate` TEXT NOT NULL,
+                        `sortOrder` INTEGER NOT NULL,
+                        PRIMARY KEY(`groupId`, `txId`)
+                    )
+                    """
+                )
+                database.execSQL(
+                    "CREATE INDEX IF NOT EXISTS `index_tx_group_cache_txId` ON `tx_group_cache`(`txId`)"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

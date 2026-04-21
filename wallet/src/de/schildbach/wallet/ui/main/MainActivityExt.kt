@@ -50,7 +50,6 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.NavigationUI.onNavDestinationSelected
 import androidx.navigation.ui.NavigationUI.setupWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import de.schildbach.wallet.WalletBalanceWidgetProvider
@@ -117,19 +116,55 @@ object MainActivityExt {
                 }
                 R.id.paymentsFragment -> {
                     viewModel.logEvent(AnalyticsConstants.Home.SEND_RECEIVE_BUTTON)
-                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                    navController.navigate(
+                        R.id.paymentsFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
+                            .build()
+                    )
+                    return@setOnItemSelectedListener true
                 }
                 R.id.moreFragment -> {
                     viewModel.logEvent(AnalyticsConstants.Home.NAV_MORE)
-                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                    navController.navigate(
+                        R.id.moreFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
+                            .build()
+                    )
+                    return@setOnItemSelectedListener true
                 }
                 R.id.contactsFragment -> {
                     viewModel.logEvent(AnalyticsConstants.Home.NAV_CONTACTS)
-                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                    navController.navigate(
+                        R.id.contactsFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
+                            .build()
+                    )
+                    return@setOnItemSelectedListener true
                 }
                 R.id.exploreFragment -> {
                     viewModel.logEvent(AnalyticsConstants.Home.NAV_EXPLORE)
-                    return@setOnItemSelectedListener onNavDestinationSelected(item, navController)
+                    navController.navigate(
+                        R.id.exploreFragment,
+                        null,
+                        NavOptions.Builder()
+                            .setLaunchSingleTop(true)
+                            .setPopUpTo(navController.graph.startDestinationId, false, true)
+                            .setRestoreState(true)
+                            .build()
+                    )
+                    return@setOnItemSelectedListener true
                 }
                 else -> {
                     return@setOnItemSelectedListener false

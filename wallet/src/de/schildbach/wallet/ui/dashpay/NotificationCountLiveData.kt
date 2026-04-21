@@ -16,6 +16,7 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CoroutineScope
@@ -23,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class NotificationCountLiveData(
+    private val identityRepository: IdentityRepository,
     val platformRepo: PlatformRepo,
     platformSyncService: PlatformSyncService,
     private val dashPayConfig: DashPayConfig,
@@ -33,7 +35,7 @@ class NotificationCountLiveData(
         scope.launch(Dispatchers.IO) {
             if (!dashPayConfig.areNotificationsDisabled()) {
                 val lastSeen = dashPayConfig.get(DashPayConfig.LAST_SEEN_NOTIFICATION_TIME) ?: 0
-                val notificationCount = platformRepo.getNotificationCount(lastSeen)
+                val notificationCount = identityRepository.getNotificationCount(lastSeen)
 
                 // TODO: Count other types of notifications such as:
                 // * payments

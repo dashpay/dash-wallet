@@ -159,6 +159,7 @@ interface TopUpRepository {
 class TopUpRepositoryImpl @Inject constructor(
     private val walletApplication: WalletApplication,
     private val walletDataProvider: WalletDataProvider,
+    private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val topUpsDao: TopUpsDao,
     private val dashPayProfileDao: DashPayProfileDao,
@@ -381,7 +382,7 @@ class TopUpRepositoryImpl @Inject constructor(
     private suspend fun addTopUp(txId: Sha256Hash): TopUp {
         val topUp = TopUp(
             txId,
-            platformRepo.blockchainIdentity.uniqueIdString
+            identityRepository.blockchainIdentity!!.uniqueIdString
         )
         topUpsDao.insert(topUp)
         return topUp
@@ -397,6 +398,7 @@ class TopUpRepositoryImpl @Inject constructor(
         Context.propagate(walletDataProvider.wallet!!.context)
         val confidence = topUpTx.getConfidence(walletDataProvider.wallet!!.context)
         log.info("topup tx confidence: {}", confidence)
+        updateConfidence(confidence)
         val wasTxSent = confidence.isChainLocked ||
             confidence.isTransactionLocked ||
                 confidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING ||
@@ -416,7 +418,7 @@ class TopUpRepositoryImpl @Inject constructor(
         }
         log.info("topup tx sent: {}; tx = {}", status, topUpTx.txId)
         try {
-            platformRepo.blockchainIdentity.topUp(
+            identityRepository.blockchainIdentity!!.topUp(
                 topUpTx,
                 aesKeyParameter,
                 useISLock = true,
@@ -433,6 +435,27 @@ class TopUpRepositoryImpl @Inject constructor(
             } else {
                 throw e
             }
+        }
+    }
+
+    private suspend fun updateConfidence(confidence: TransactionConfidence) {
+        try {
+            if (confidence.confidenceType == TransactionConfidence.ConfidenceType.UNKNOWN) {
+                platform.client.getTransactionKotlin(confidence.transactionHash.toString())?.let { txInfo ->
+                    if (txInfo.height > 0) {
+                        confidence.confidenceType = TransactionConfidence.ConfidenceType.BUILDING
+                        confidence.appearedAtChainHeight = txInfo.height
+                    }
+                    if (txInfo.isChainLocked) {
+                        confidence.setChainLock(true)
+                    }
+                    if (txInfo.isInstantLocked) {
+                        confidence.ixType = TransactionConfidence.IXType.IX_LOCKED
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            log.warn("error updating confidence using platform:", e)
         }
     }
 
@@ -538,17 +561,14 @@ class TopUpRepositoryImpl @Inject constructor(
             authExtension.topupFundingTransactions.forEach { assetLockTx ->
                 val topUp = topUpsDao.getByTxId(assetLockTx.txId)
                 if (topUp == null || topUp.notUsed()) {
-                    val identity = topUp?.toUserId ?: platformRepo.blockchainIdentity.uniqueIdentifier.toString()
+                    val identity = topUp?.toUserId ?: identityRepository.blockchainIdentity!!.uniqueIdentifier.toString()
                     if (topUp == null) {
                         topUpsDao.insert(TopUp(assetLockTx.txId, identity))
                     }
                     try {
                         topUpIdentity(assetLockTx, platformRepo.getWalletEncryptionKey()!!)
-//                    TopupIdentityOperation(walletApplication)
-//                        .create(identity, assetLockTx.txId)
-//                        .enqueue()
                     } catch (e: Exception) {
-                        // swallow
+                        log.info("problem executing topup for ${assetLockTx.txId}", e)
                     }
                 }
             }
@@ -671,7 +691,7 @@ class TopUpRepositoryImpl @Inject constructor(
                         fundingTxes.remove(invitation.txid)
                     } else {
                         // TODO: should we fix the link now or let the user do it
-                        val dashPayProfile = platformRepo.getLocalUserProfile()
+                        val dashPayProfile = identityRepository.getLocalUserProfile()
                         val assetLockTx = fundingTxes[invitation.txid]
                         if (assetLockTx != null) {
                             val appsFlyerLink = createAppsFlyerLink(dashPayProfile!!, assetLockTx, encryptionKey)
@@ -736,7 +756,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun handleSentAssetLockTransaction(cftx: AssetLockTransaction, blockTimestamp: Long) {
         val extension = authExtension
 
-        if (platformRepo.hasBlockchainIdentity) {
+        if (identityRepository.hasBlockchainIdentity) {
             workerScope.launch(Dispatchers.IO) {
                 // Context.getOrCreate(platform.params)
                 val inviteKey = extension.invitationFundingKeyChain.findKeyFromPubHash(cftx.assetLockPublicKeyId.bytes)

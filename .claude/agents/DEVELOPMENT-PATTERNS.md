@@ -63,7 +63,7 @@ Our Design System in Figma uses different names for components.  Here is a list 
 component to our component:
 
 ## Component Mapping from Figma to JetPack Compose in this project
-- TopNavBase - TopNavBase
+- NavBar - use a named NavBar variant function (see NavBar section below); `TopNavBase` is the underlying base and remains available for full control
 - top-intro - TopIntro
 - menu - Menu
 - menuitem - MenuItem
@@ -74,6 +74,101 @@ component to our component:
 - feature.list - FeatureList
 - feature.single.item - FeatureSingleItem
 - Sheet/Buttons group - SheetButtonGroup
+- ListX - ListItem (X is number 1 to 20)
+- ListEmptyState - ListEmptyState
+- tablelist-masternodekeys - TableListMasternodeKeyRow
+
+## NavBar / TopNavBase (Figma: NavBar)
+
+The navigation bar lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/TopNavBase.kt
+```
+
+**Always use a named variant function** — they map 1-to-1 to the Figma NavBar playground variants and set the correct defaults automatically. `TopNavBase` is the base composable kept for full control and backward compatibility.
+
+**Figma Design System node:** `6828-4232`
+
+### Named variant functions
+
+| Figma variant | Kotlin function | Leading | Centre | Trailing |
+|---|---|---|---|---|
+| NavBarBack | `NavBarBack` | ← chevron | — | — |
+| NavBarBackTitle | `NavBarBackTitle` | ← chevron | title | — |
+| NavBarBackTitleInfo | `NavBarBackTitleInfo` | ← chevron | title | ℹ bare icon (blue) |
+| NavBarTitleClose | `NavBarTitleClose` | — | title | ✕ circle button |
+| NavBarBackTitlePlus | `NavBarBackTitlePlus` | ← chevron | title | + circle button |
+| NavBarBackPlus | `NavBarBackPlus` | ← chevron | — | + circle button |
+| NavBarTitle | `NavBarTitle` | — | title | — |
+| NavBarClose | `NavBarClose` | — | — | ✕ circle button |
+| NavBarActionTitleAction | `NavBarActionTitleAction` | text action | title | blue text action |
+| NavBarBackTitleAction | `NavBarBackTitleAction` | ← chevron | title | blue text action |
+| NavBarBackAction | `NavBarBackAction` | ← chevron | — | blue text action |
+
+### Layout specs
+- Height: 64 dp, horizontal padding: 20 dp
+- Leading/trailing icon buttons: 34 dp circle (1.5 dp border) via `Template`
+- Info icon (bare, no border): 22 dp, blue tint
+- Title: 225 dp wide, absolutely centred in the bar
+- Text actions: `MyTheme.CaptionMedium` (13sp medium); trailing text = `dashBlue`, leading text = `textPrimary`
+
+### Examples
+
+```kotlin
+// Back only
+NavBarBack(onBackClick = { findNavController().popBackStack() })
+
+// Back + title
+NavBarBackTitle(
+    title = stringResource(R.string.masternode_keys_title),
+    onBackClick = { findNavController().popBackStack() }
+)
+
+// Back + title + info icon
+NavBarBackTitleInfo(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onInfoClick = { showInfoDialog() }
+)
+
+// Back + title + plus button
+NavBarBackTitlePlus(
+    title = stringResource(R.string.owner_keys_title),
+    onBackClick = { findNavController().popBackStack() },
+    onPlusClick = { viewModel.addKey() }
+)
+
+// Title + close button
+NavBarTitleClose(
+    title = stringResource(R.string.confirm_title),
+    onCloseClick = { dialog.dismiss() }
+)
+
+// Text action + title + blue text action
+NavBarActionTitleAction(
+    title = stringResource(R.string.filter_title),
+    leadingActionText = stringResource(R.string.cancel),
+    onLeadingActionClick = { dismiss() },
+    trailingActionText = stringResource(R.string.apply),
+    onTrailingActionClick = { applyFilters() }
+)
+```
+
+### TopNavBase (base function — use only when no named variant fits)
+
+```kotlin
+TopNavBase(
+    leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+    onLeadingClick = onBackClick,
+    trailingIcon = Icons.Default.Add,
+    onTrailingClick = onAddClick,
+    centralPart = false          // hide title area
+)
+```
+
+Key parameters: `leadingIcon`, `leadingText`, `onLeadingClick`, `trailingIcon`, `trailingIconCircle` (false = bare icon, no border), `trailingText`, `onTrailingClick`, `centralPart`, `title`.
+
+---
 
 ## Button Mapping (btn -> DashButton)
 When Figma designs specify button styles, map them to DashButton as follows:
@@ -111,6 +206,236 @@ DashButton(
     size = Size.Large,
     onClick = { /* action */ }
 )
+```
+
+## ListItem / ListEmptyState (Figma: List1–List23, ListEmptyState)
+
+The `ListItem` composable covers all numbered Figma list variants (`List1` … `List23`) in a **single component**. `ListEmptyState` handles the empty-list placeholder. Both live in:
+
+```
+common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
+```
+
+**Figma section node ID:** `2760:14713`
+
+### Layout structure
+
+```
+[topLabel                                    ]
+Row { [leadingContent]  [left]  [trailing]   }
+[bottomLabel                                 ]
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `topLabel` | `String?` | Full-width gray label above the row (List12/18 style) |
+| `bottomLabel` | `String?` | Full-width gray label below the row |
+| `leadingContent` | `@Composable (() -> Unit)?` | Icon/thumbnail prepended to the row (Merchant/ATM style) |
+| `label` | `String?` | Tertiary gray "key" text — left side of **key-value** rows |
+| `showInfoIcon` | `Boolean` | ℹ icon after `label` or `title` (List10) |
+| `helpTextAbove` | `String?` | Small gray text above `title` (List13/14/22) |
+| `title` | `String?` | Primary bold text — **content-block** mode |
+| `subtitle` | `String?` | Small gray text below `title` |
+| `bottomHelpText` | `String?` | Small gray text at the bottom of the left column (List13) |
+| `trailingText` | `String?` | Primary value text on the right |
+| `trailingTextLines` | `List<String>?` | Multiple lines of value text (List6) |
+| `trailingHelpText` | `String?` | Secondary text below the trailing value |
+| `trailingHelpIcon` | `@DrawableRes Int?` | Small icon before `trailingHelpText` (List16) |
+| `trailingActionText` | `String?` | Blue action link below the value (List5) |
+| `trailingLabel` | `String?` | Small outlined chip badge (List7) |
+| `trailingLeadingIcon` | `@Composable (RowScope.() -> Unit)?` | Icon **before** trailing text (List2/15/17) |
+| `trailingTrailingIcon` | `@Composable (RowScope.() -> Unit)?` | Icon **after** trailing text (List3/4/20) |
+| `trailingContent` | `@Composable (() -> Unit)?` | Fully custom right-side slot (List18, ATM Buy/Sell) |
+| `onClick` | `(() -> Unit)?` | Row click handler |
+
+### Left-side modes (mutually exclusive)
+
+**Key-value mode** — set `label`:
+- `label` renders as tertiary gray text at its natural width
+- A `Spacer(weight=1f)` automatically pushes trailing content to the end
+
+**Content-block mode** — set `title` (and optionally surrounding texts):
+- The column expands to fill available width (`weight=1f`)
+- Stack order: `helpTextAbove` (BodySmall/gray) → `title` (Body2Medium/primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+
+### Variant quick-reference
+
+| Figma variant | Parameters to use |
+|---|---|
+| List1, List11 | `label`, `trailingText` |
+| List2, List15 | `label`, `trailingLeadingIcon { }`, `trailingText` |
+| List3 | `label`, `trailingText`, `trailingTrailingIcon { }` |
+| List4 | `label`, `trailingTrailingIcon { }` |
+| List5 | `label`, `trailingText`, `trailingActionText` |
+| List6 | `label`, `trailingTextLines` |
+| List7 | `label`, `trailingLabel` |
+| List8, List9 | `title` only |
+| List10 | `label`, `showInfoIcon = true`, `trailingText` |
+| List12 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingText` |
+| List13 | `helpTextAbove`, `title`, `subtitle`, `bottomHelpText`, `trailingTrailingIcon { }` |
+| List14, List22 | `helpTextAbove`, `title` |
+| List16 | `title`, `subtitle`, `trailingText`, `trailingHelpText`, `trailingHelpIcon` |
+| List17 | `label`, `trailingLeadingIcon { }`, `trailingText`, `trailingHelpText` |
+| List18 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingContent { }` |
+| List20 | `title`, `subtitle`, `trailingText`, `trailingTrailingIcon { }` |
+| List23 | `title`, `subtitle` |
+| MerchantListPrev | `leadingContent { }`, `title`, `subtitle`, `trailingText`, `trailingTrailingIcon { }` |
+| ATMListPrev | `leadingContent { }`, `title`, `subtitle`, `trailingContent { BuySell() }` |
+
+### Examples
+
+```kotlin
+// List1 — key-value
+ListItem(label = "Fee", trailingText = "0.001 DASH")
+
+// List2 — key-value with leading checkbox
+ListItem(
+    label = "Network",
+    trailingText = "Mainnet",
+    trailingLeadingIcon = { CheckboxIcon(checked = true) }
+)
+
+// List5 — key-value with blue action link
+ListItem(
+    label = "Address",
+    trailingText = "XabCD…1234",
+    trailingActionText = "Copy"
+)
+
+// List6 — key-value with multi-line value
+ListItem(
+    label = "Notes",
+    trailingTextLines = listOf("Line 1", "Line 2", "Line 3")
+)
+
+// List7 — key-value with chip badge
+ListItem(label = "Status", trailingLabel = "Active")
+
+// List8 — standalone title
+ListItem(title = "Section header")
+
+// List10 — label with ℹ info icon
+ListItem(label = "Public key", showInfoIcon = true, trailingText = "XpubABCD…")
+
+// List13 — full multi-line left block with trailing icon
+ListItem(
+    helpTextAbove = "Registered on",
+    title = "XAbcDeFgHi1234…",
+    subtitle = "Valid until 2025-12-31",
+    bottomHelpText = "Tap to view details",
+    trailingTrailingIcon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_dash_blue_filled),
+            contentDescription = null,
+            tint = MyTheme.Colors.dashBlue,
+            modifier = Modifier.size(32.dp)
+        )
+    }
+)
+
+// List12 — wrapper labels + leading checkbox + trailing value
+ListItem(
+    topLabel = "Voting keys",
+    bottomLabel = "Tap to select",
+    leadingContent = { CheckboxIcon(checked = false) },
+    title = "Key #1",
+    subtitle = "Not used",
+    trailingText = "0 used"
+)
+
+// List16 — two-line content on both sides
+ListItem(
+    title = "Operator key",
+    subtitle = "Active",
+    trailingText = "XpubABCD…",
+    trailingHelpText = "last used today",
+    trailingHelpIcon = R.drawable.ic_swap_blue
+)
+
+// Merchant-style — leading image + trailing price + arrow
+ListItem(
+    leadingContent = {
+        AsyncImage(
+            model = merchant.logoUrl,
+            contentDescription = null,
+            modifier = Modifier.size(40.dp).clip(CircleShape)
+        )
+    },
+    title = merchant.name,
+    subtitle = merchant.address,
+    trailingText = "~2%",
+    trailingTrailingIcon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_menu_row_arrow),
+            contentDescription = null,
+            tint = MyTheme.Colors.textTertiary,
+            modifier = Modifier.size(16.dp)
+        )
+    }
+)
+
+// ATM-style — custom Buy/Sell trailing buttons
+ListItem(
+    leadingContent = {
+        Image(
+            painter = painterResource(R.drawable.ic_atm),
+            contentDescription = null,
+            modifier = Modifier.size(40.dp)
+        )
+    },
+    title = "Coinme ATM",
+    subtitle = "0.3 mi away",
+    trailingContent = {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            DashButton(text = "Buy", style = Style.TintedBlue,
+                size = Size.Small, stretch = false, onClick = { })
+            DashButton(text = "Sell", style = Style.TintedGray,
+                size = Size.Small, stretch = false, onClick = { })
+        }
+    }
+)
+```
+
+### ListEmptyState
+
+Displays a centred icon, heading, optional body text, and optional action row when a list has no items.
+
+```kotlin
+ListEmptyState(
+    icon = {
+        Icon(
+            painter = painterResource(R.drawable.ic_dash_blue_filled),
+            contentDescription = null,
+            tint = MyTheme.Colors.dashBlue,
+            modifier = Modifier.size(48.dp)
+        )
+    },
+    heading = stringResource(R.string.no_masternode_keys),
+    body = stringResource(R.string.no_masternode_keys_description),
+    actions = {
+        DashButton(
+            text = stringResource(R.string.add_key),
+            style = Style.PlainBlue,
+            size = Size.Small,
+            stretch = false,
+            onClick = onAddKeyClick
+        )
+    }
+)
+```
+
+### Wrapping with Menu
+
+`ListItem` is transparent — it does not add its own card background. Wrap one or more items in `Menu` for the standard rounded white card:
+
+```kotlin
+Menu {
+    ListItem(label = "Owner",    trailingText = "XpubAB…")
+    ListItem(label = "Voting",   trailingText = "XpubCD…")
+    ListItem(label = "Operator", trailingText = "XpubEF…")
+}
 ```
 
 ## Feature Components (feature.top.text, feature.list, feature.single.item)
@@ -667,12 +992,7 @@ private fun SettingsScreenContent(
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
         // Top Navigation
-        TopNavBase(
-            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
-            onLeadingClick = onBackClick,
-            centralPart = false,
-            trailingPart = false
-        )
+        NavBarBack(onBackClick = onBackClick)
 
         // Settings Header
         TopIntro(
@@ -781,135 +1101,169 @@ fun MoreScreenPreviewWithCoinJoin() {
 
 When creating bottom sheet dialogs with Compose content, use the `ComposeBottomSheet` class as the base. This provides consistent bottom sheet behavior with drag indicators, close buttons, and proper theming.
 
-## Creating a Compose Dialog
+## Factory Function Pattern
 
-1. **Factory Function Pattern**: Create a factory function that returns a `ComposeBottomSheet` instance
-2. **String Resources**: Use string resources with descriptive prefixes (e.g., `create_instant_username_`)
-3. **DashButton Components**: Use `DashButton` with appropriate styles instead of Material3 buttons
-4. **Preview Function**: Always include a `@Preview` for the Compose content
+**Never** create a separate `*DialogFragment` subclass. Instead, create a factory function that returns a `ComposeBottomSheet` instance. The ViewModel owns all async work; the factory function receives the ViewModel and an `onDismiss` callback only.
 
-### Example Implementation
+### ViewModel: sealed result state
+
+Define a sealed class in the ViewModel to represent the async operation's state:
 
 ```kotlin
-// Factory function that returns ComposeBottomSheet
-fun createInstantUsernameDialog(
-    onCreateInstantUsername: () -> Unit = {},
-    onCancel: () -> Unit = {}
+sealed class ExportCsvResult {
+    object Idle : ExportCsvResult()
+    object Loading : ExportCsvResult()
+    data class Success(val file: File) : ExportCsvResult()
+    object Error : ExportCsvResult()
+}
+
+private val _exportCsvResult = MutableStateFlow<ExportCsvResult>(ExportCsvResult.Idle)
+val exportCsvResult: StateFlow<ExportCsvResult> = _exportCsvResult.asStateFlow()
+
+fun exportCsv(cacheDir: File) {
+    if (_exportCsvResult.value is ExportCsvResult.Loading) return
+    viewModelScope.launch {
+        _exportCsvResult.value = ExportCsvResult.Loading
+        try {
+            val file = withContext(Dispatchers.IO) { /* ... produce file ... */ }
+            _exportCsvResult.value = ExportCsvResult.Success(file)
+        } catch (e: Exception) {
+            _exportCsvResult.value = ExportCsvResult.Error
+        }
+    }
+}
+
+fun resetExportCsvResult() {
+    _exportCsvResult.value = ExportCsvResult.Idle
+}
+```
+
+### Factory function
+
+```kotlin
+fun createExportCSVDialog(
+    viewModel: ToolsViewModel,
+    onDismiss: () -> Unit = {}
 ): ComposeBottomSheet {
     return ComposeBottomSheet(
         backgroundStyle = R.style.SecondaryBackground,
-        forceExpand = false,
-        content = { dialog ->
-            CreateInstantUsernameContent(
-                onCreateClick = {
-                    onCreateInstantUsername()
-                    dialog.dismiss()
-                },
-                onCancelClick = {
-                    onCancel()
-                    dialog.dismiss()
-                }
-            )
-        }
-    )
-}
+        forceExpand = false
+    ) { dialog ->
+        val context = LocalContext.current
+        val activity = remember(context) { context.findFragmentActivity() }
+        val exportResult by viewModel.exportCsvResult.collectAsState()
+        val isLoading = exportResult is ToolsViewModel.ExportCsvResult.Loading
 
+        DisposableEffect(Unit) {
+            onDispose { onDismiss() }
+        }
+
+        LaunchedEffect(exportResult) {
+            when (val result = exportResult) {
+                is ToolsViewModel.ExportCsvResult.Loading -> {
+                    dialog.dialog?.setCancelable(false)
+                    dialog.dialog?.setCanceledOnTouchOutside(false)
+                }
+                is ToolsViewModel.ExportCsvResult.Success -> {
+                    if (!activity.isDestroyed) {
+                        startSendIntent(activity, result.file)
+                        dialog.dismiss()
+                    }
+                    viewModel.resetExportCsvResult()
+                }
+                is ToolsViewModel.ExportCsvResult.Error -> {
+                    dialog.dialog?.setCancelable(true)
+                    dialog.dialog?.setCanceledOnTouchOutside(true)
+                    if (!activity.isDestroyed) {
+                        AdaptiveDialog.create(
+                            null,
+                            activity.getString(R.string.error_title),
+                            activity.getString(R.string.error_message),
+                            activity.getString(R.string.button_close)
+                        ).showAsync(activity)
+                        dialog.dismiss()
+                    }
+                    viewModel.resetExportCsvResult()
+                }
+                is ToolsViewModel.ExportCsvResult.Idle -> Unit
+            }
+        }
+
+        ExportCSVContent(
+            isLoading = isLoading,
+            onExportClick = {
+                if (isLoading) return@ExportCSVContent
+                viewModel.exportCsv(activity.cacheDir)
+            }
+        )
+    }
+}
+```
+
+### Content composable
+
+Keep the `@Composable` content function separate and `internal`. Use `SheetButtonGroup` for all button layouts. Include two `@Preview` functions — one for idle, one for loading state:
+
+```kotlin
 @Composable
-private fun CreateInstantUsernameContent(
-    onCreateClick: () -> Unit,
-    onCancelClick: () -> Unit
+internal fun ExportCSVContent(
+    isLoading: Boolean = false,
+    onExportClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
-            .padding(top = 60.dp) // Space for drag indicator and close button
+            .padding(top = 60.dp), // space for drag indicator and close button
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Content wrapper
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Title
-            Text(
-                text = stringResource(R.string.create_instant_username_title),
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF191C1F),
-                textAlign = TextAlign.Center
-            )
-            
-            Spacer(modifier = Modifier.height(6.dp))
-            
-            // Description
-            Text(
-                text = stringResource(R.string.create_instant_username_description),
-                fontSize = 14.sp,
-                color = Color(0xFF525C66),
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
-        }
-        
-        // Buttons section
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Primary action button
-            DashButton(
-                text = stringResource(R.string.create_instant_username_button),
+        // icon, title, body text ...
+
+        SheetButtonGroup(
+            primaryButton = SheetButton(
+                text = stringResource(R.string.export_transactions),
                 style = Style.FilledBlue,
-                size = Size.Large,
-                onClick = onCreateClick
+                isEnabled = !isLoading,
+                isLoading = isLoading,
+                onClick = onExportClick
             )
-            
-            // Secondary action button
-            DashButton(
-                text = stringResource(R.string.create_instant_username_cancel),
-                style = Style.TintedGray,
-                size = Size.Large,
-                onClick = onCancelClick
-            )
-        }
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
-private fun CreateInstantUsernameContentPreview() {
-    CreateInstantUsernameContent(
-        onCreateClick = { },
-        onCancelClick = { }
-    )
+private fun ExportCSVContentPreview() {
+    ExportCSVContent(isLoading = false, onExportClick = {})
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ExportCSVContentLoadingPreview() {
+    ExportCSVContent(isLoading = true, onExportClick = {})
 }
 ```
 
-### Usage
+### Usage at call site
 
 ```kotlin
-// Show the dialog
-val dialog = createInstantUsernameDialog(
-    onCreateInstantUsername = { 
-        // Handle primary action
-    },
-    onCancel = { 
-        // Handle cancel action
-    }
-)
-dialog.show(supportFragmentManager, "create_instant_username")
+val secureActivity = requireActivity() as? SecureActivity
+secureActivity?.turnOffAutoLogout()
+createExportCSVDialog(
+    viewModel = viewModel,
+    onDismiss = { secureActivity?.turnOnAutoLogout() }
+).show(parentFragmentManager, "export_csv_dialog")
 ```
 
-### Key Points
+### Key rules
 
-- **Top Padding**: Always add 60dp top padding for the drag indicator and close button
-- **Button Spacing**: Use 10dp spacing between buttons in a Column with `Arrangement.spacedBy(10.dp)`
-- **Content Padding**: Use 40dp horizontal padding for content to match design system
-- **Auto-dismiss**: Call `dialog.dismiss()` in button click handlers
-- **String Resources**: Prefix all strings with a descriptive name (e.g., `create_instant_username_`)
-- **DashButton Styles**: Use `Style.FilledBlue` for primary actions, `Style.TintedGray` for secondary actions
-- **Preview**: Always include a preview for development and design review
+- **ViewModel owns async work**: The ViewModel exposes a `StateFlow<SealedResult>` and a trigger function (e.g. `exportCsv()`). The factory function never launches coroutines itself.
+- **`isLoading` from state**: Derive `isLoading` from the StateFlow inside the composable: `val isLoading = result is MyViewModel.Result.Loading`.
+- **`LaunchedEffect(result)`**: React to state changes — lock/unlock dismissal, trigger navigation, show error dialogs, and call `viewModel.resetResult()`.
+- **`DisposableEffect(Unit)`**: Use `onDispose { onDismiss() }` to call the dismiss callback regardless of how the dialog is dismissed.
+- **`context.findFragmentActivity()`**: Obtain the activity inside the composable via `LocalContext.current`, not as a factory parameter.
+- **Blocking dismissal**: Set `setCancelable(false)` / `setCanceledOnTouchOutside(false)` in the `Loading` branch; reset in the `Error` branch.
+- **Top padding**: Always add `padding(top = 60.dp)` for the drag indicator and close button.
+- **SheetButtonGroup**: Use for all button layouts (pass `isLoading` and `isEnabled` to the primary `SheetButton`).
+- **File placement**: `wallet/src/de/schildbach/wallet/ui/compose_views/{Feature}Dialog.kt` — factory function and content composable in one file.
+- **String resources**: Prefix all strings with a descriptive name.
+- **Preview**: Always include both an idle and a loading `@Preview`.

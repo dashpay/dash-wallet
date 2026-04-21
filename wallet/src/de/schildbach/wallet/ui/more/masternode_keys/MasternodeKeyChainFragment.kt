@@ -17,101 +17,77 @@
 package de.schildbach.wallet.ui.more.masternode_keys
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentMasternodeKeyChainBinding
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import org.bitcoinj.crypto.IKey
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.viewBinding
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-class MasternodeKeyChainFragment : Fragment(R.layout.fragment_masternode_key_chain) {
+class MasternodeKeyChainFragment : Fragment() {
 
     companion object {
         private val log = LoggerFactory.getLogger(MasternodeKeyChainFragment::class.java)
     }
-    private val binding by viewBinding(FragmentMasternodeKeyChainBinding::bind)
 
     @Inject
     lateinit var analytics: AnalyticsService
+
     private val viewModel: MasternodeKeysViewModel by activityViewModels()
-    private lateinit var masternodeKeyChainAdapter: MasternodeKeyChainAdapter
     private val masternodeKeyType by lazy { requireArguments()["type"] as MasternodeKeyType }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setContent {
+                MasternodeKeyChainScreen(
+                    uiStateFlow = viewModel.uiState,
+                    onBackClick = { findNavController().popBackStack() },
+                    onAddKeyClick = {
+                        lifecycleScope.launch {
+                            viewModel.addKey(masternodeKeyType)
+                            viewModel.initKeyChainScreen(masternodeKeyType)
+                        }
+                    },
+                    onCopy = { text ->
+                        viewModel.copyToClipboard(text)
+                        Toast(requireContext()).toast(R.string.copied)
+                        log.info("text copied to clipboard: {}", text)
+                    }
+                )
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        viewModel.initKeyChainScreen(masternodeKeyType)
 
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-        binding.title.setText(
-            when (masternodeKeyType) {
-                MasternodeKeyType.OWNER -> R.string.masternode_key_type_owner
-                MasternodeKeyType.VOTING -> R.string.masternode_key_type_voting
-                MasternodeKeyType.OPERATOR -> R.string.masternode_key_type_operator
-                MasternodeKeyType.PLATFORM -> R.string.masternode_key_type_platform
-                else -> throw IllegalArgumentException("invalid masternode key type")
-            }
-        )
-        masternodeKeyChainAdapter = MasternodeKeyChainAdapter(
-            viewModel.getKeyChainInfo(masternodeKeyType, false),
-            viewModel.getKeyUsage(),
-            { handleCopyAddress(it) },
-            { key, position -> handleDecryptKey(key, position) }
-        )
-        binding.keyList.adapter = masternodeKeyChainAdapter
-        binding.keyList.layoutManager = LinearLayoutManager(activity)
-        binding.keyList.setHasFixedSize(true)
-        masternodeKeyChainAdapter.notifyDataSetChanged()
-
-        binding.addMasternodeKey.setOnClickListener {
-            lifecycleScope.launch {
-                binding.addMasternodeKey.isEnabled = false
-                val position = viewModel.addKey(masternodeKeyType)
-                masternodeKeyChainAdapter.addKey(position)
-                (binding.keyList.layoutManager as LinearLayoutManager).scrollToPositionWithOffset(
-                    position,
-                    0
-                )
-                binding.addMasternodeKey.isEnabled = true
-            }
-        }
-        viewModel.newKeysFound.observe(viewLifecycleOwner) { isAdded ->
-            if (isAdded == true) {
-                masternodeKeyChainAdapter.notifyDataSetChanged()
-            }
-        }
-    }
-
-    private fun handleCopyAddress(text: String) {
-        viewModel.copyToClipboard(text)
-
-        Toast(requireContext()).toast(R.string.copied)
-        log.info("text copied to clipboard: {}", text)
-    }
-
-    private fun handleDecryptKey(key: IKey, position: Int) {
-        lifecycleScope.launch {
-            val mninfo = viewModel.getDecryptedKey(key)
-            masternodeKeyChainAdapter.keyChainInfo.masternodeKeyInfoList[position] = mninfo
-            if (binding.keyList.isComputingLayout) {
-                delay(500)
-                handleDecryptKey(key, position)
-            } else {
-                masternodeKeyChainAdapter.notifyItemChanged(position)
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState
+                    .map { it.newKeysFound }
+                    .distinctUntilChanged()
+                    .filter { it }
+                    .collect { viewModel.initKeyChainScreen(masternodeKeyType) }
             }
         }
     }

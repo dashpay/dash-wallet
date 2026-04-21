@@ -20,185 +20,162 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.ImageView
-import android.widget.TextView
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.findNavController
-import com.google.android.material.transition.MaterialFadeThrough
-import com.google.common.base.Stopwatch
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.ui.AddressBookActivity
 import de.schildbach.wallet.ui.NetworkMonitorActivity
 import de.schildbach.wallet.ui.more.tools.WhatAreCreditsDialogFragment
-import de.schildbach.wallet.ui.more.tools.ZenLedgerDialogFragment
+import de.schildbach.wallet.ui.more.tools.ZenLedgerViewModel
+import de.schildbach.wallet.ui.compose_views.createExportCSVDialog
+import de.schildbach.wallet.ui.compose_views.createExtendedPublicKeyDialog
 import de.schildbach.wallet.ui.compose_views.createImportPrivateKeyDialog
+import de.schildbach.wallet.ui.compose_views.createZenLedgerDialog
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.util.Toast
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentToolsBinding
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.FlowPreview
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
-import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.Qr
-import org.dash.wallet.common.util.observe
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
-@FlowPreview
 @AndroidEntryPoint
-class ToolsFragment : Fragment(R.layout.fragment_tools) {
+class ToolsFragment : Fragment() {
     @Inject lateinit var authManager: SecurityFunctions
 
     companion object {
         private val log = LoggerFactory.getLogger(ToolsFragment::class.java)
     }
 
-    private val binding by viewBinding(FragmentToolsBinding::bind)
-
     @Inject
     lateinit var analytics: AnalyticsService
     private val viewModel: ToolsViewModel by viewModels()
+    private val zenLedgerViewModel: ZenLedgerViewModel by viewModels()
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        enterTransition = MaterialFadeThrough()
-        reenterTransition = MaterialFadeThrough()
-
-        binding.appBar.toolbar.title = getString(R.string.tools_title)
-        binding.appBar.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-
-        binding.addressBook.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, mapOf())
-            startActivity(Intent(requireContext(), AddressBookActivity::class.java))
-        }
-        binding.importKeys.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
-            createImportPrivateKeyDialog(
-                onScanPrivateKey = {
-                    SweepWalletActivity.start(requireContext(), false)
-                }
-            ).show(parentFragmentManager, "import_private_key")
-        }
-        binding.networkMonitor.setOnClickListener {
-            analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
-            startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
-        }
-        binding.masternodeKeys.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                val pin = authManager.authenticate(requireActivity(), true)
-                pin?.let {
-                    findNavController().navigate(
-                        R.id.masternodeKeyTypeFragment,
-                        bundleOf(),
-                        NavOptions.Builder()
-                            .setEnterAnim(R.anim.slide_in_bottom)
-                            .build()
-                    )
-                }
-            }
-        }
-
-        binding.showXpub.setOnClickListener {
-            handleExtendedPublicKey()
-        }
-
-        var isSyncing = false
-        viewModel.blockchainState.observe(viewLifecycleOwner) {
-            isSyncing = it?.replaying == true
-        }
-
-        binding.transactionExport.setOnClickListener {
-            if (isSyncing) {
-                val dialog = AdaptiveDialog.create(
-                    null,
-                    getString(R.string.report_transaction_history_not_synced_title),
-                    getString(R.string.report_transaction_history_not_synced_message),
-                    "",
-                    getString(R.string.button_close)
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                ToolsScreen(
+                    onBackClick = { findNavController().popBackStack() },
+                    onAddressBookClick = { onAddressBook() },
+                    onImportPrivateKeyClick = { onImportKeys() },
+                    onNetworkMonitorClick = { onNetworkMonitor() },
+                    onExtendPublicKeyClick = { handleExtendedPublicKey() },
+                    onMasternodeKeysClick = { onMasternodeKeys() },
+                    onCsvExportClick = { onTransactionExport() },
+                    onZenLedgerExport = { onZenLedgerExport() },
+                    onCreditsInfoClick = { onCreditsInfo() },
+                    onBuyCredits = { onBuyCredits() }
                 )
-                dialog.show(requireActivity().supportFragmentManager, "requireSyncing")
-            } else {
-                viewLifecycleOwner.lifecycleScope.launch {
-                    try {
-                        val watch = Stopwatch.createStarted()
-                        val transactionExporter = viewModel.getTransactionExporter()
-                        viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
-                        (requireActivity() as? SecureActivity)?.turnOffAutoLogout()
-                        ExportCSVDialogFragment().show(requireActivity(), transactionExporter) {
-                            (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                        }
-                    } catch (e: Exception) {
-                        (requireActivity() as? SecureActivity)?.turnOnAutoLogout()
-                    }
-                }
             }
         }
+    }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            binding.buyCreditsContainer.isVisible = viewModel.hasUsername()
-        }
-        binding.buyCreditsInfoButton.setOnClickListener {
-            WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
-        }
+    private fun onZenLedgerExport() {
+        viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
+        val secureActivity = requireActivity() as? SecureActivity
+        secureActivity?.turnOffAutoLogout()
+        createZenLedgerDialog(
+            viewModel = zenLedgerViewModel,
+            onDismiss = { secureActivity?.turnOnAutoLogout() }
+        ).show(parentFragmentManager, "zenledger_dialog")
+    }
 
-        binding.buyCreditsButton.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                if (!viewModel.creditsExplained()) {
-                    WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
-                        SendCoinsActivity.startBuyCredits(requireActivity())
-                    }
-                } else {
-                    SendCoinsActivity.startBuyCredits(requireActivity())
-                }
+    private fun onCreditsInfo() {
+        WhatAreCreditsDialogFragment.newInstance(false).show(requireActivity())
+    }
+
+    private fun onBuyCredits() = lifecycleScope.launch {
+        if (!viewModel.creditsExplained()) {
+            WhatAreCreditsDialogFragment.newInstance(true).show(requireActivity()) {
+                SendCoinsActivity.startBuyCredits(requireActivity())
             }
+        } else {
+            SendCoinsActivity.startBuyCredits(requireActivity())
         }
+    }
 
-        binding.zenledgerExport.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Tools.ZENLEDGER)
-            ZenLedgerDialogFragment().show(requireActivity())
+    private fun onTransactionExport() {
+        if (viewModel.uiState.value.isSyncing) {
+            AdaptiveDialog.create(
+                null,
+                getString(R.string.report_transaction_history_not_synced_title),
+                getString(R.string.report_transaction_history_not_synced_message),
+                "",
+                getString(R.string.button_close)
+            ).show(parentFragmentManager, "requireSyncing")
+        } else {
+            viewModel.logEvent(AnalyticsConstants.Tools.EXPORT_CSV)
+            val secureActivity = requireActivity() as? SecureActivity
+            secureActivity?.turnOffAutoLogout()
+            createExportCSVDialog(
+                viewModel = viewModel,
+                onDismiss = { secureActivity?.turnOnAutoLogout() }
+            ).show(parentFragmentManager, "export_csv_dialog")
         }
+    }
+
+    private fun onMasternodeKeys() = lifecycleScope.launch {
+        val pin = authManager.authenticate(requireActivity(), true)
+        pin?.let {
+            findNavController().navigate(
+                R.id.masternodeKeyTypeFragment,
+                bundleOf(),
+                NavOptions.Builder()
+                    .setEnterAnim(R.anim.slide_in_bottom)
+                    .build()
+            )
+        }
+    }
+
+    private fun onNetworkMonitor() {
+        analytics.logEvent(AnalyticsConstants.Settings.NETWORK_MONITORING, mapOf())
+        startActivity(Intent(requireContext(), NetworkMonitorActivity::class.java))
+    }
+
+    private fun onImportKeys() {
+        analytics.logEvent(AnalyticsConstants.Settings.IMPORT_PRIVATE_KEY, mapOf())
+        createImportPrivateKeyDialog(
+            onScanPrivateKey = {
+                SweepWalletActivity.start(requireContext(), false)
+            }
+        ).show(parentFragmentManager, "import_private_key")
+
+    }
+
+    private fun onAddressBook() {
+        analytics.logEvent(AnalyticsConstants.Settings.ADDRESS_BOOK, mapOf())
+        startActivity(Intent(requireContext(), AddressBookActivity::class.java))
     }
 
     private fun handleExtendedPublicKey() {
-        showExtendedPublicKeyDialog(viewModel.xpubWithCreationDate, viewModel.xpub)
-    }
-
-    private fun showExtendedPublicKeyDialog(xpubWithCreationDate: String, xpub: String) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.extended_public_key_dialog, null)
-        val drawable = Qr.themeAwareDrawable(xpubWithCreationDate, resources)
-        val imageView = view.findViewById<ImageView>(R.id.extended_public_key_dialog_image)
-        val xpubView = view.findViewById<TextView>(R.id.extended_public_key_dialog_xpub)
-        imageView.setImageDrawable(drawable)
-        xpubView.text = xpub
-
-        xpubView.setOnClickListener {
-            handleCopyAddress(xpub)
-        }
-
-        val baseAlertDialogBuilder = BaseAlertDialogBuilder(requireContext())
-        baseAlertDialogBuilder.view = view
-        baseAlertDialogBuilder.negativeText = getString(R.string.button_dismiss)
-        baseAlertDialogBuilder.positiveText = getString(R.string.button_share)
-        baseAlertDialogBuilder.positiveAction = {
-            createAndLaunchShareIntent(xpubWithCreationDate)
-            Unit
-        }
-        val alertDialog = baseAlertDialogBuilder.buildAlertDialog()
-        alertDialog.show()
+        createExtendedPublicKeyDialog(
+            xpubWithCreationDate = viewModel.xpubWithCreationDate,
+            xpub = viewModel.xpub,
+            onCopy = {
+                viewModel.copyXpubToClipboard()
+                Toast(requireContext()).toast(R.string.copied)
+                log.info("xpub copied to clipboard")
+            },
+            onShare = { xpubWithCreationDate ->
+                createAndLaunchShareIntent(xpubWithCreationDate)
+            }
+        ).show(parentFragmentManager, "extended_public_key")
     }
 
     private fun createAndLaunchShareIntent(xpub: String) {
@@ -218,10 +195,4 @@ class ToolsFragment : Fragment(R.layout.fragment_tools) {
         log.info("xpub shared via intent: {}", xpub)
     }
 
-    private fun handleCopyAddress(xpub: String) {
-        viewModel.copyXpubToClipboard()
-
-        Toast(requireContext()).toast(R.string.copied)
-        log.info("xpub copied to clipboard: {}", xpub)
-    }
 }

@@ -288,9 +288,6 @@
     <string name="reset_wallet_button">Нулиране на портфейла</string>
 
 
-    <string name="masternode_key_type_owner">Ключове на собственика</string>
-    <string name="masternode_key_type_voting">Ключове за гласуване</string>
-    <string name="masternode_key_type_operator">Операторски ключове</string>
     <string name="masternode_key_address">Адрес</string>
     <string name="masternode_key_ip_address_unknown">Непознат</string>
     </resources>

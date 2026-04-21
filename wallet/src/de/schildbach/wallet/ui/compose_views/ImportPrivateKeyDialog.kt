@@ -43,7 +43,6 @@ private fun ImportPrivateKeyContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
             .padding(top = 60.dp)
     ) {
         Column(
@@ -95,8 +94,6 @@ private fun ImportPrivateKeyContent(
                 onClick = onScanClick
             )
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

@@ -38,6 +38,8 @@ interface WalletDataProvider {
     @Deprecated("The wallet is in here temporary and will be moved to a separate holder, limited to the the wallet module. In feature modules, use transactionBag instead.")
     val wallet: Wallet?
 
+    fun observeWallet(): Flow<Wallet?>
+
     val transactionBag: TransactionBag
 
     val networkParameters: NetworkParameters

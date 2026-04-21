@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Confirmar</string>
     <string name="dialog_confirm_pay_to">Enviar a</string>
     <string name="dialog_confirm_secured_by">Protegido por</string>
+    <string name="dialog_confirm_connected_to_unsecured">Conectado a (no asegurado)</string>
     <string name="dialog_confirm_fee">Comisión de red</string>
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Aceptar solicitud de contacto</string>
@@ -286,6 +287,7 @@
 
     <string name="tools_address_book">Libreta de direcciones</string>
     <string name="tools_import_private_key">Barrer billetera de papel</string>
+    <string name="import_private_key_description">Esta acción moverá todas las monedas de la billetera de papel Dash a su aplicación DashPay en este dispositivo.</string>
     <string name="tools_network_monitor">Monitor de Red</string>
     <string name="tools_show_xpub">Extender llave publica</string>
 
@@ -293,7 +295,7 @@
     <string name="about_review_and_rate">Critica o evalúa la aplicación</string>
     <string name="about_contact_support">Contactar Soporte</string>
     <string name="about_fork_disclaimer">Esta es una aplicación de código abierto derivada de una billetera de Bitcoin</string>
-    <string name="about_copyright">Copyright © 2025 Grupo Dash Core </string>
+    <string name="about_copyright">Derechos de autor © 2026 Dash Core Group</string>
     <string name="about_license">Licencia pública general GNU v3.0</string>
     <string name="about_version_name">Billetera DashPay %s</string>
     <string name="about_last_explore_device_sync">Última exploración de sincronización del dispositivo</string>
@@ -437,11 +439,11 @@
     <string name="reclassify_transactions_linked_accounts_message">de forma predeterminada, todas las transacciones hacia o desde tus cuentas vinculadas (intercambios, apuestas, etc.) se marcarán como transferencias.</string>
     <string name="reclassify_transactions_change_explanation">Elije cualquier transacción de la página de inicio y cambia la categoría en la página de detalles de la transacción.</string>
 
-    <string name="masternode_keys_title">Llave de Masternodo</string>
-    <string name="masternode_key_type_owner">Llaves del propietario</string>
-    <string name="masternode_key_type_voting">Llaves para votar</string>
-    <string name="masternode_key_type_operator">Llaves de operador</string>
-    <string name="masternode_key_type_platform">Llaves de identificación del nodo de evolución</string>
+    <string name="masternode_keys_title">Llaves del Masternode</string>
+    <string name="masternode_key_type_owner">Llaves del dueño</string>
+    <string name="masternode_key_type_voting">Llaves de votación</string>
+    <string name="masternode_key_type_operator">Llaves del operador</string>
+    <string name="masternode_key_type_platform">Llaves del operador HPMN</string>
     <string name="masternode_key_type_total">%d llaves</string>
     <string name="masternode_key_type_used">%d usado</string>
     <string name="masternode_key_pair_index">Par de llaves %d</string>

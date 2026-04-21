@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Confirmer</string>
     <string name="dialog_confirm_pay_to">Envoyer à</string>
     <string name="dialog_confirm_secured_by">Sécurisé par</string>
+    <string name="dialog_confirm_connected_to_unsecured">Connecté à (non sécurisé)</string>
     <string name="dialog_confirm_fee">Frais de réseau</string>
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Accepter la demande de contact</string>
@@ -286,6 +287,7 @@
 
     <string name="tools_address_book">Carnet d\'adresses</string>
     <string name="tools_import_private_key">Importer une clé privée</string>
+    <string name="import_private_key_description">Cette action déplacera tous les fonds du portefeuille papier Dash vers votre application DashPay sur cet appareil.</string>
     <string name="tools_network_monitor">Surveillance du réseau</string>
     <string name="tools_show_xpub">Clé privée étendue</string>
 
@@ -293,7 +295,7 @@
     <string name="about_review_and_rate">Commentez et notez l\'application</string>
     <string name="about_contact_support">Contacter le service d\'aide</string>
     <string name="about_fork_disclaimer">Ceci est une application open source forkée de Bitcoin Wallet</string>
-    <string name="about_copyright">Copyright © 2025 Dash Core Group</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Portefeuille DashPay %s</string>
     <string name="about_last_explore_device_sync">Dernière synchro Explore de l\'appareil</string>
@@ -441,7 +443,7 @@
     <string name="masternode_key_type_owner">Clés de propriétaire</string>
     <string name="masternode_key_type_voting">Clés de vote</string>
     <string name="masternode_key_type_operator">Clés d\'opérateur</string>
-    <string name="masternode_key_type_platform">Clés ID pour nœud Evolution</string>
+    <string name="masternode_key_type_platform">Clés d\'opérateur HPMN</string>
     <string name="masternode_key_type_total">%d clés</string>
     <string name="masternode_key_type_used">%d utilisés</string>
     <string name="masternode_key_pair_index">Paire de clés %d</string>
