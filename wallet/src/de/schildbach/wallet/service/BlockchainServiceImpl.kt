@@ -1958,9 +1958,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     // Cancel the CoinJoin coroutine scope early so refreshUnusedKeys() can finish
                     // and release its ReentrantLock before system.close() tries to acquire it.
                     coinJoinService.prepareForShutdown()
-                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
-                    peerGroup!!.forceStop(7_000)
-                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
+                    log.info("CLEANUP STEP 2: About to call peerGroup.stop()")
+                    //peerGroup!!.forceStop(7_000)
+                    val peerGroupStopWatch = Stopwatch.createStarted()
+                    peerGroup!!.stop()
+                    log.info("CLEANUP STEP 2: peerGroup.stop() completed: {}", peerGroupStopWatch)
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
                     dashSystemService.system.close()
