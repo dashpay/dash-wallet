@@ -73,13 +73,25 @@ data class DashSpendState(
     val isLoggedIn: Boolean = false
 )
 
-data class GiftCardOrderInfo(
+data class GiftCardOrderItem(
     val value: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0),
     val quality: Int = 1
 ) {
     companion object {
-        val DEFAULT = GiftCardOrderInfo()
+        val DEFAULT = GiftCardOrderItem()
     }
+}
+
+data class GiftCardShoppingCart constructor(
+    private val items: ArrayList<GiftCardOrderItem>,
+    //var provider: GiftCardProviderType,
+    //var merchant: Merchant
+) {
+    constructor(value: Fiat, quantity: Int):
+            this(arrayListOf(GiftCardOrderItem(value, quantity)))
+
+    fun add(item: GiftCardOrderItem) = items.add(item)
+    fun get(index: Int) = items[index]
 }
 
 @HiltViewModel
@@ -153,8 +165,8 @@ class DashSpendViewModel @Inject constructor(
     private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
     val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
 
-    private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderInfo>(GiftCardOrderInfo())
-    val giftCardOrderInfo: StateFlow<GiftCardOrderInfo> = _giftCardOrderInfo.asStateFlow()
+    private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
+    val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -519,18 +531,18 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
-        _giftCardOrderInfo.value = GiftCardOrderInfo(fiat, quantity)
+        _giftCardOrderInfo.value = GiftCardOrderItem(fiat, quantity)
     }
 
     fun setGiftCardOrderInfo(coin: Coin, quantity: Int) {
         _exchangeRate.value?.let {
             val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            _giftCardOrderInfo.value = GiftCardOrderInfo(myRate.coinToFiat(coin), quantity)
+            _giftCardOrderInfo.value = GiftCardOrderItem(myRate.coinToFiat(coin), quantity)
         }
     }
 
     fun resetSelectedDenomination() {
-        _giftCardOrderInfo.value = GiftCardOrderInfo()
+        _giftCardOrderInfo.value = GiftCardOrderItem()
     }
 
     fun logEvent(eventName: String) {

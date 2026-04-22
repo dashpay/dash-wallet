@@ -22,16 +22,16 @@ import androidx.room.PrimaryKey
 import com.google.zxing.BarcodeFormat
 import org.bitcoinj.core.Sha256Hash
 
-@Entity(tableName = "gift_cards")
+@Entity(tableName = "gift_cards", primaryKeys = ["txId", "index"])
 data class GiftCard(
-    @PrimaryKey var txId: Sha256Hash,
+    var txId: Sha256Hash,
     var merchantName: String = "",
     var price: Double = 0.0,
     var number: String? = null,
     var pin: String? = null,
     var barcodeValue: String? = null,
     var barcodeFormat: BarcodeFormat? = null,
-    var merchantUrl: String? = null,
-    var note: String? = null,
+    var merchantUrl: String? = null, // holds claimLink or redeemUrl
+    var note: String? = null, // holds order number
     var index: Int = 0
 )

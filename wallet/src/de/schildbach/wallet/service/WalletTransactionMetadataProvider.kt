@@ -529,7 +529,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
                                 }
 
                                 if (ServiceName.isDashSpend(metadata.service)) {
-                                    metadata.title = giftCards[metadata.txId]?.merchantName
+                                    metadata.title = giftCards[metadata.txId]?.firstOrNull()?.merchantName
                                 }
                             }
                             metadataList
@@ -669,7 +669,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             return
         }
 
-        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId)
+        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index}
 
         if (existingGiftCard == null) {
             giftCardDao.insertGiftCard(giftCard)

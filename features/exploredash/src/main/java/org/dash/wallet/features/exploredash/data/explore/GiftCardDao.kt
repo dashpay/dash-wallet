@@ -39,7 +39,7 @@ interface GiftCardDao {
     suspend fun updateGiftCard(giftCard: GiftCard)
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId")
-    suspend fun getCardForTransaction(txId: Sha256Hash): GiftCard?
+    suspend fun getCardForTransaction(txId: Sha256Hash): List<GiftCard>
 
     @Query("SELECT * FROM gift_cards WHERE txId = :txId")
     fun observeCardForTransaction(txId: Sha256Hash): Flow<List<GiftCard>>
@@ -49,5 +49,5 @@ interface GiftCardDao {
 
     @MapInfo(keyColumn = "txId")
     @Query("SELECT * FROM gift_cards")
-    fun observeGiftCards(): Flow<Map<Sha256Hash, GiftCard>>
+    fun observeGiftCards(): Flow<Map<Sha256Hash, List<GiftCard>>>
 }

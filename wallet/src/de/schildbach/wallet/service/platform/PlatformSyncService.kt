@@ -1207,7 +1207,7 @@ class PlatformSynchronizationService @Inject constructor(
                     val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId)!!
                     val giftCard = giftCardDao.getCardForTransaction(tx.txId)
 
-                    if (!previouslySaved.compare(currentItem, giftCard)) {
+                    if (!previouslySaved.compare(currentItem, giftCard.first())) {
                         listOfUnsaved.add(tx)
                         firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
                             min(firstUnsavedTxDate, tx.updateTime.time)
@@ -1243,7 +1243,7 @@ class PlatformSynchronizationService @Inject constructor(
 
                     val metadataItem = TransactionMetadataCacheItem(
                         metadata,
-                        giftCard
+                        giftCard.first()
                     )
                     log.info("publish: item: {}", metadataItem)
                     val diff = metadataItem - saved
