@@ -64,8 +64,8 @@ data class GiftCardUIState(
     val status: GiftCardStatus? = null,
     val queries: Int = 0
 ) {
-    val giftCard: GiftCard? get() = giftCards[index]
-    val barcode: Barcode? get() = barcodes[index]
+    val giftCard: GiftCard? get() = giftCards.getOrNull(index)
+    val barcode: Barcode? get() = barcodes.getOrNull(index)
 }
 
 @HiltViewModel

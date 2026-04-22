@@ -265,24 +265,24 @@ internal fun GiftCardDetailsView(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.purchase_gift_card_details),
-            style = MyTheme.Subtitle2Semibold,
-            color = MyTheme.Colors.textPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-        )
+//        Text(
+//            text = stringResource(R.string.purchase_gift_card_details),
+//            style = MyTheme.Typography.TitleMediumSemibold,
+//            color = MyTheme.Colors.textPrimary,
+//            textAlign = TextAlign.Center,
+//            modifier = Modifier
+//                .fillMaxWidth()
+//                .padding(bottom = 20.dp)
+//        )
 
         MerchantHeader(uiState = uiState)
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         // Order number is shared across all cards in one order — show it once above the card list
         val orderNumber = uiState.giftCard?.note
         if (!orderNumber.isNullOrEmpty()) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
@@ -309,21 +309,31 @@ internal fun GiftCardDetailsView(
             onCopyPin = onCopyPin
         )
 
-        Spacer(modifier = Modifier.height(15.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        NavigationRow(
-            label = stringResource(R.string.purchase_view_transaction),
-            onClick = onViewTransaction
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MyTheme.Colors.backgroundSecondary)
+        ) {
+            NavigationRow(
+                label = stringResource(R.string.purchase_view_transaction),
+                onClick = onViewTransaction
+            )
 
-        if (shouldShowError) {
-            Spacer(modifier = Modifier.height(12.dp))
-            val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
-                ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
-                ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
-                else -> stringResource(R.string.gift_card_contact_support)
+            if (shouldShowError) {
+                HorizontalDivider(
+                    color = MyTheme.Colors.divider,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
+                val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
+                    ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
+                    ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
+                    else -> stringResource(R.string.gift_card_contact_support)
+                }
+                NavigationRow(label = supportLabel, onClick = onContactSupport)
             }
-            NavigationRow(label = supportLabel, onClick = onContactSupport)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -341,11 +351,11 @@ internal fun GiftCardDetailsView(
             HowToUseCard()
         }
 
-        Spacer(modifier = Modifier.height(30.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
             text = stringResource(R.string.purchase_powered_by),
-            style = MyTheme.Overline,
+            style = MyTheme.Typography.LabelMedium,
             color = MyTheme.Colors.textTertiary,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
@@ -362,7 +372,7 @@ internal fun GiftCardDetailsView(
             painter = painterResource(poweredByRes),
             contentDescription = null,
             modifier = Modifier
-                .height(18.dp)
+                .height(20.dp)
                 .align(Alignment.CenterHorizontally)
         )
 
@@ -375,10 +385,10 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 10.dp),
+            .padding(start = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(48.dp)) {
+        Box(modifier = Modifier.size(52.dp)) {
             val icon = uiState.icon
             if (icon != null) {
                 Image(
@@ -386,14 +396,14 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(96.dp))
+                        .size(52.dp)
+                        .clip(RoundedCornerShape(100.dp))
                 )
                 Image(
                     painter = painterResource(R.drawable.ic_gift_card_tx),
                     contentDescription = null,
                     modifier = Modifier
-                        .size(24.dp)
+                        .size(22.dp)
                         .align(Alignment.BottomEnd)
                         .background(Color.White, CircleShape)
                         .padding(2.dp)
@@ -402,22 +412,22 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                 Image(
                     painter = painterResource(R.drawable.ic_gift_card_tx),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.size(52.dp)
                 )
             }
         }
 
-        Column(modifier = Modifier.padding(start = 10.dp)) {
+        Column(modifier = Modifier.padding(start = 12.dp)) {
             Text(
                 text = uiState.giftCard?.merchantName ?: "",
-                style = MyTheme.Body2Medium,
+                style = MyTheme.Typography.TitleSmallSemibold,
                 color = MyTheme.Colors.textPrimary
             )
             uiState.date?.let { date ->
                 val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
                 Text(
                     text = date.format(formatter),
-                    style = MyTheme.Overline,
+                    style = MyTheme.Typography.LabelMedium,
                     color = MyTheme.Colors.textTertiary
                 )
             }
@@ -457,7 +467,7 @@ private fun GiftCardItemCard(
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MyTheme.Colors.backgroundSecondary)
-            .padding(bottom = 8.dp)
+            .padding(bottom = 4.dp)
     ) {
         // Barcode area
         if (!shouldShowError && !hasMerchantUrl) {
@@ -471,33 +481,34 @@ private fun GiftCardItemCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 15.dp, top = 20.dp, bottom = 12.dp, end = 15.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = stringResource(R.string.purchase_original_purchase),
-                style = MyTheme.CaptionMedium,
+                style = MyTheme.Typography.LabelMediumMedium,
                 color = MyTheme.Colors.textTertiary,
                 maxLines = 1
             )
             Text(
                 text = currencyFormat.format(giftCard?.price ?: 0.0),
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.LabelMediumSemibold,
                 color = MyTheme.Colors.textPrimary
             )
         }
 
         // Balance check link
         if (hasMerchantUrl && !shouldShowError) {
+            // HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
             Text(
                 text = stringResource(R.string.purchase_check_current_balance),
-                style = MyTheme.OverlineMedium,
+                style = MyTheme.Typography.LabelMediumMedium,
                 color = MyTheme.Colors.dashBlue,
                 modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(end = 15.dp, bottom = 8.dp)
+                    .fillMaxWidth()
                     .clickable { onBalanceCheck() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             )
         }
 
@@ -517,19 +528,20 @@ private fun GiftCardItemCard(
                 HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
             } ?: stringResource(R.string.gift_card_details_error)
 
+            HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
             Text(
                 text = errorText,
-                style = MyTheme.Caption,
-                color = MyTheme.Colors.textPrimary,
+                style = MyTheme.Typography.BodySmall,
+                color = MyTheme.Colors.textSecondary,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 15.dp, vertical = 22.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             )
         }
 
         // Card number row
         if (hasNumber && !shouldShowError) {
-            HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 10.dp))
+            //HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
             CardFieldRow(
                 label = stringResource(R.string.purchase_card_number),
                 value = giftCard.number ?: "",
@@ -539,7 +551,7 @@ private fun GiftCardItemCard(
 
         // Card PIN row
         if (hasPin && !shouldShowError) {
-            HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 10.dp))
+            //HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
             CardFieldRow(
                 label = stringResource(R.string.purchase_card_pin),
                 value = giftCard.pin ?: "",
@@ -552,7 +564,7 @@ private fun GiftCardItemCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 22.dp),
+                    .padding(vertical = 24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator(
@@ -573,13 +585,13 @@ private fun CardFieldRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 15.dp, top = 10.dp, bottom = 10.dp, end = 10.dp),
+            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MyTheme.CaptionMedium,
+            style = MyTheme.Typography.LabelMediumMedium,
             color = MyTheme.Colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
@@ -587,19 +599,19 @@ private fun CardFieldRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = value,
-                style = MyTheme.Caption,
+                style = MyTheme.Typography.LabelMedium,
                 color = MyTheme.Colors.textPrimary,
                 maxLines = 1,
                 modifier = Modifier.padding(end = 4.dp)
             )
             IconButton(
                 onClick = onCopy,
-                modifier = Modifier.size(32.dp)
+                modifier = Modifier.size(36.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_copy_blue),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textPrimary,
+                    tint = MyTheme.Colors.dashBlue,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -640,12 +652,10 @@ private fun BarcodeSection(
         }
     }
 
-    // need to put the order number here
-
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 5.dp, start = 5.dp, end = 5.dp)
+            .padding(top = 8.dp, start = 8.dp, end = 8.dp)
             .onGloballyPositioned { containerWidthPx = it.size.width }
     ) {
 
@@ -654,7 +664,7 @@ private fun BarcodeSection(
                 PlaceholderBox(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.gift_card_barcode_failed),
-                        style = MyTheme.Overline,
+                        style = MyTheme.Typography.BodySmall,
                         color = MyTheme.Colors.red,
                         textAlign = TextAlign.Center
                     )
@@ -662,7 +672,7 @@ private fun BarcodeSection(
             }
 
             barcodeBitmap != null -> {
-                val barcodeHeight = if (isQrCode) 160.dp else 108.dp
+                val barcodeHeight = if (isQrCode) 160.dp else 112.dp
                 Image(
                     bitmap = barcodeBitmap!!.asImageBitmap(),
                     contentDescription = null,
@@ -670,7 +680,7 @@ private fun BarcodeSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(barcodeHeight)
-                        .padding(horizontal = 10.dp, vertical = 10.dp)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
 
@@ -679,7 +689,7 @@ private fun BarcodeSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(108.dp),
+                        .height(112.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
@@ -694,7 +704,7 @@ private fun BarcodeSection(
                 PlaceholderBox(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = stringResource(R.string.barcode_placeholder),
-                        style = MyTheme.Caption,
+                        style = MyTheme.Typography.BodySmall,
                         color = MyTheme.Colors.textSecondary,
                         textAlign = TextAlign.Center
                     )
@@ -711,9 +721,9 @@ private fun PlaceholderBox(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .background(MyTheme.Colors.backgroundPrimary)
-            .padding(20.dp),
+            .padding(vertical = 24.dp, horizontal = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         content()
@@ -725,21 +735,21 @@ private fun NavigationRow(label: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
             .clickable { onClick() }
-            .padding(horizontal = 15.dp, vertical = 17.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = MyTheme.CaptionMedium,
+            style = MyTheme.Typography.TitleSmallMedium,
             color = MyTheme.Colors.textPrimary
         )
-        Image(
+        Icon(
             painter = painterResource(R.drawable.ic_light_gray_arrow_right),
-            contentDescription = null
+            contentDescription = null,
+            tint = MyTheme.Colors.gray,
+            modifier = Modifier.size(16.dp)
         )
     }
 }
@@ -749,16 +759,16 @@ private fun HowToUseCard() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(MyTheme.Colors.backgroundSecondary)
-            .padding(start = 15.dp, end = 15.dp, bottom = 35.dp)
+            .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 20.dp)
     ) {
         Text(
             text = stringResource(R.string.purchase_how_to_use_gift_card),
-            style = MyTheme.CaptionMedium,
+            style = MyTheme.Typography.LabelMediumMedium,
             color = MyTheme.Colors.textTertiary,
             maxLines = 1,
-            modifier = Modifier.padding(top = 20.dp)
+            modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
         )
 
         HowToUseItem(
@@ -786,25 +796,28 @@ private fun HowToUseItem(iconRes: Int, title: String, description: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 29.dp, start = 15.dp),
+            .padding(top = 20.dp),
         verticalAlignment = Alignment.Top
     ) {
         Image(
             painter = painterResource(iconRes),
             contentDescription = null,
-            modifier = Modifier.size(24.dp)
+            modifier = Modifier
+                .size(26.dp)
+                .padding(top = 2.dp)
         )
-        Spacer(modifier = Modifier.width(25.dp))
+        Spacer(modifier = Modifier.width(16.dp))
         Column {
             Text(
                 text = title,
-                style = MyTheme.Subtitle2Semibold,
+                style = MyTheme.Typography.TitleSmallSemibold,
                 color = MyTheme.Colors.textPrimary,
                 maxLines = 1
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                style = MyTheme.Body2Regular,
+                style = MyTheme.Typography.BodySmall,
                 color = MyTheme.Colors.textTertiary
             )
         }
