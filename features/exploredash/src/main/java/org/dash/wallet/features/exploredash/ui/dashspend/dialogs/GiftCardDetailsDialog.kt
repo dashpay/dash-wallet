@@ -40,7 +40,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -81,6 +80,8 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashList
+import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
@@ -310,28 +311,22 @@ internal fun GiftCardDetailsView(
         )
 
         Spacer(modifier = Modifier.height(12.dp))
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MyTheme.Colors.backgroundSecondary)
-        ) {
+        
+        DashList {
             NavigationRow(
                 label = stringResource(R.string.purchase_view_transaction),
                 onClick = onViewTransaction
             )
+        }
 
-            if (shouldShowError) {
-                HorizontalDivider(
-                    color = MyTheme.Colors.divider,
-                    modifier = Modifier.padding(horizontal = 12.dp)
-                )
-                val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
-                    ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
-                    ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
-                    else -> stringResource(R.string.gift_card_contact_support)
-                }
+        if (shouldShowError) {
+            Spacer(modifier = Modifier.height(12.dp))
+            val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
+                ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
+                ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
+                else -> stringResource(R.string.gift_card_contact_support)
+            }
+            DashList {
                 NavigationRow(label = supportLabel, onClick = onContactSupport)
             }
         }
@@ -462,13 +457,7 @@ private fun GiftCardItemCard(
         barcode == null &&
         !shouldShowError
 
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
-            .padding(bottom = 4.dp)
-    ) {
+    DashList {
         // Barcode area
         if (!shouldShowError && !hasMerchantUrl) {
             BarcodeSection(
@@ -477,38 +466,18 @@ private fun GiftCardItemCard(
             )
         }
 
-        // Original purchase row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.purchase_original_purchase),
-                style = MyTheme.Typography.LabelMediumMedium,
-                color = MyTheme.Colors.textTertiary,
-                maxLines = 1
+        if (!hasMerchantUrl) {
+            // Original purchase row
+            ListItem(
+                label = stringResource(R.string.purchase_original_purchase),
+                trailingText = currencyFormat.format(giftCard?.price ?: 0.0)
             )
-            Text(
-                text = currencyFormat.format(giftCard?.price ?: 0.0),
-                style = MyTheme.Typography.LabelMediumSemibold,
-                color = MyTheme.Colors.textPrimary
-            )
-        }
-
-        // Balance check link
-        if (hasMerchantUrl && !shouldShowError) {
-            // HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
-            Text(
-                text = stringResource(R.string.purchase_check_current_balance),
-                style = MyTheme.Typography.LabelMediumMedium,
-                color = MyTheme.Colors.dashBlue,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onBalanceCheck() }
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
+        } else {
+            ListItem(
+                label = stringResource(R.string.purchase_original_purchase),
+                trailingText = currencyFormat.format(giftCard?.price ?: 0.0),
+                trailingActionText = stringResource(R.string.purchase_check_current_balance),
+                onTrailingActionClick = { onBalanceCheck() }
             )
         }
 
@@ -528,34 +497,48 @@ private fun GiftCardItemCard(
                 HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
             } ?: stringResource(R.string.gift_card_details_error)
 
-            HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
-            Text(
-                text = errorText,
-                style = MyTheme.Typography.BodySmall,
-                color = MyTheme.Colors.textSecondary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            )
+            ListItem(title = errorText)
         }
 
         // Card number row
         if (hasNumber && !shouldShowError) {
-            //HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
-            CardFieldRow(
+            ListItem(
                 label = stringResource(R.string.purchase_card_number),
-                value = giftCard.number ?: "",
-                onCopy = { onCopyNumber(giftCard.number!!) }
+                trailingText = giftCard.number ?: "",
+                trailingTrailingIcon = {
+                    IconButton(
+                        onClick = { onCopyNumber(giftCard.number!!) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy_blue),
+                            contentDescription = null,
+                            tint = MyTheme.Colors.dashBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             )
         }
 
         // Card PIN row
         if (hasPin && !shouldShowError) {
-            //HorizontalDivider(color = MyTheme.Colors.divider, modifier = Modifier.padding(horizontal = 12.dp))
-            CardFieldRow(
+            ListItem(
                 label = stringResource(R.string.purchase_card_pin),
-                value = giftCard.pin ?: "",
-                onCopy = { onCopyPin(giftCard.pin!!) }
+                trailingText = giftCard.pin ?: "",
+                trailingTrailingIcon = {
+                    IconButton(
+                        onClick = { onCopyPin(giftCard.pin!!) },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy_blue),
+                            contentDescription = null,
+                            tint = MyTheme.Colors.dashBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             )
         }
 

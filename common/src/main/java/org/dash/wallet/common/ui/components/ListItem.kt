@@ -212,8 +212,13 @@ fun ListItem(
                 }
             } else if (label != null) {
                 // Key-value label (tertiary, natural width) + spacer pushes trailing right
+                val rowAlignment = if (trailingActionText != null || trailingHelpText != null) {
+                    Alignment.Top
+                } else {
+                    Alignment.CenterVertically
+                }
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = rowAlignment,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
