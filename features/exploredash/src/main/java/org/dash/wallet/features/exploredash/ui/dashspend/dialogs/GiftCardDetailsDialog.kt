@@ -22,7 +22,6 @@ import android.os.Bundle
 import android.util.Size
 import android.view.View
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.StyleRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,7 +59,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -85,7 +83,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
-import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
+import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.DeepLinkDestination
 import org.dash.wallet.common.util.Qr
@@ -104,7 +102,10 @@ import java.time.format.DateTimeFormatter
 import java.util.Currency
 
 @AndroidEntryPoint
-class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_details) {
+class GiftCardDetailsDialog : ComposeBottomSheet(
+    backgroundStyle = R.style.PrimaryBackground,
+    forceExpand = true
+) {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
         private const val ARG_CARD_INDEX = "cardIndex"
@@ -119,8 +120,6 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
             }
     }
 
-    @StyleRes override val backgroundStyle = R.style.PrimaryBackground
-    override val forceExpand = true
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
     private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
     private var originalBrightness: Float = -1f
@@ -134,21 +133,22 @@ class GiftCardDetailsDialog : OffsetDialogFragment(R.layout.dialog_gift_card_det
 
     private val launcher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {}
 
+    @Composable
+    override fun Content() {
+        GiftCardDetailsContent(
+            viewModel = viewModel,
+            waitLimitForError = WAIT_LIMIT_FOR_ERROR,
+            onMaxBrightness = { enable -> setMaxBrightness(enable) },
+            onViewTransaction = {
+                deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+            },
+            onContactSupport = { contactSupport() },
+            onErrorLogged = { error, message -> ctxSpendViewModel.logError(error, message) }
+        )
+    }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        view.findViewById<ComposeView>(R.id.compose_container).setContent {
-            GiftCardDetailsContent(
-                viewModel = viewModel,
-                waitLimitForError = WAIT_LIMIT_FOR_ERROR,
-                onMaxBrightness = { enable -> setMaxBrightness(enable) },
-                onViewTransaction = {
-                    deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
-                },
-                onContactSupport = { contactSupport() },
-                onErrorLogged = { error, message -> ctxSpendViewModel.logError(error, message) }
-            )
-        }
 
         (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
             val cardIndex = requireArguments().getInt(ARG_CARD_INDEX, 0)
