@@ -411,7 +411,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val myRate = ExchangeRate(rate.fiat)
         // this is called when the after a purchase with the user's selected currency, not USD
         if (paymentValue.value.currencyCode != Constants.USD_CURRENCY) {
-            paymentValue = GiftCardOrderInfo(
+            paymentValue = GiftCardOrderItem(
                 Fiat.valueOf(
                     Constants.USD_CURRENCY,
                     paymentValue.value.value

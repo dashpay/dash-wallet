@@ -55,6 +55,7 @@ import kotlin.time.Duration.Companion.seconds
 
 data class GiftCardUIState(
     val giftCards: List<GiftCard> = listOf(),
+    val index: Int = 0,
     val icon: Bitmap? = null,
     val barcodes: List<Barcode?> = listOf(),
     val date: LocalDateTime? = null,
@@ -62,7 +63,10 @@ data class GiftCardUIState(
     val serviceName: String? = null,
     val status: GiftCardStatus? = null,
     val queries: Int = 0
-)
+) {
+    val giftCard: GiftCard? get() = giftCards[index]
+    val barcode: Barcode? get() = barcodes[index]
+}
 
 @HiltViewModel
 class GiftCardDetailsViewModel @Inject constructor(
@@ -81,6 +85,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     lateinit var transactionId: Sha256Hash
         private set
+    private var cardIndex: Int = 0
     private var tickerJob: Job? = null
 
     private var exchangeRate: ExchangeRate? = null
@@ -89,8 +94,9 @@ class GiftCardDetailsViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(GiftCardUIState())
     val uiState: StateFlow<GiftCardUIState> = _uiState.asStateFlow()
 
-    fun init(transactionId: Sha256Hash) {
+    fun init(transactionId: Sha256Hash, cardIndex: Int = 0) {
         this.transactionId = transactionId
+        this.cardIndex = cardIndex
 
         metadataProvider.observeTransactionMetadata(transactionId)
             .filterNotNull()
@@ -116,12 +122,13 @@ class GiftCardDetailsViewModel @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCards ->
+                val card = giftCards.getOrNull(cardIndex)
+                val cards = if (card != null) listOf(card) else emptyList()
                 _uiState.update { currentState ->
-                    //val barcodeValue = giftCards.barcodeValue
                     currentState.copy(
-                        giftCards = giftCards,
-                        barcodes = if (currentState.barcodes.isNotEmpty()) {
-                            giftCards.map {
+                        giftCards = cards,
+                        barcodes = if (currentState.barcodes.isEmpty()) {
+                            cards.map {
                                 if (it.barcodeValue != null && it.barcodeFormat != null) {
                                     Barcode(it.barcodeValue!!, it.barcodeFormat!!)
                                 } else {
@@ -134,10 +141,10 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (giftCards.any { it.number == null && it.merchantUrl.isNullOrEmpty() && it.note != null }) {
+                if (card != null && card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
-                        .onEach { fetchGiftCardInfo(giftCards.first().txId) }
+                        .onEach { fetchGiftCardInfo(transactionId) }
                         .launchIn(viewModelScope)
                 } else {
                     cancelTicker()
@@ -195,7 +202,7 @@ class GiftCardDetailsViewModel @Inject constructor(
 
                             GiftCardStatus.FULFILLED -> {
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                    updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                                    updateGiftCard(0, giftCard.cardNumber, giftCard.cardPin)
                                     log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
                                     saveBarcode(giftCard.cardNumber)
                                     val startPurchaseTime =
@@ -336,7 +343,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     return
                 }
 
-                val orderId = giftCardDao.getCardForTransaction(txid)?.note
+                val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
                 if (orderId == null) {
                     log.error("piggycards order # is missing for $txid")
                     return
@@ -402,9 +409,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     // ctxSpendConfig.set(PiggyCardsConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
                                 var newCombinedState: GiftCardUIState = uiState.value.copy()
-                                giftCards.forEach { giftCard ->
+                                giftCards.forEachIndexed { index, giftCard ->
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                        updateGiftCard(giftCard.cardNumber, giftCard.cardPin)
+                                        updateGiftCard(index, giftCard.cardNumber, giftCard.cardPin)
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
                                             saveBarcodeUrl(it)
@@ -419,7 +426,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             newCombinedState = newState
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                        updateGiftCard(giftCard.redeemUrl)
+                                        updateGiftCard(index, giftCard.redeemUrl)
                                         val newState = uiState.value.copy(
                                             status = giftCard.status,
                                             queries = uiState.value.queries + 1,
@@ -510,14 +517,15 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private fun updateGiftCard(number: String, pinCode: String?) {
+    private fun updateGiftCard(index: Int, number: String, pinCode: String?) {
         val giftCard = uiState.value.giftCard ?: return
 
         viewModelScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
                     number = number,
-                    pin = pinCode
+                    pin = pinCode,
+                    index = index
                 )
             )
         }
@@ -525,13 +533,14 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    private fun updateGiftCard(merchantUrl: String) {
+    private fun updateGiftCard(index: Int, merchantUrl: String) {
         val giftCard = uiState.value.giftCard ?: return
 
         viewModelScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
-                    merchantUrl = merchantUrl
+                    merchantUrl = merchantUrl,
+                    index = index
                 )
             )
         }

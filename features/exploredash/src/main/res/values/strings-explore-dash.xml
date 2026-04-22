@@ -246,6 +246,7 @@
     <string name="accept_to_proceed">To create an account at DashSpend you have to accept DashSpend terms and conditions</string>
     <string name="view_terms_conditions">Terms &amp; conditions</string>
     <string name="barcode_placeholder">Please wait for the gift card details to be delivered.</string>
+    <string name="purchase_order_number">Order Number</string>
     <string name="gift_card_contact_ctx">Contact CTX Support</string>
     <string name="gift_card_contact_piggycards">Contact PiggyCards Support</string>
     <string name="gift_card_contact_support">Contact Support</string>
