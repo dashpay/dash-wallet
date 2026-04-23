@@ -38,8 +38,11 @@ import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.explore.model.Merchant
@@ -173,6 +176,10 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 }
             }
 
+            val discountHintText = remember(amountText, merchant, minFiat, maxFiat, exchangeRate, isBlockchainReplaying) {
+                buildDiscountHintText(amountText, merchant, minFiat, maxFiat, isBlockchainReplaying)
+            }
+
             val uiState = PurchaseGiftCardV2UiState(
                 mode = mode,
                 merchantName = merchant?.name.orEmpty(),
@@ -182,12 +189,13 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 showBalance = showBalance,
                 currencySymbol = "$", // should be the correct symble for USD based the current locale
                 amountText = amountText,
-                minHintText = if (errorText.isEmpty()) minHintText else "",
-                maxHintText = if (errorText.isEmpty()) maxHintText else "",
+                minHintText = minHintText,
+                maxHintText = maxHintText,
                 denominationQuantities = denominationQuantities.toMap(),
                 totalAmountText = totalAmountText,
                 canContinue = canContinue,
-                errorText = errorText
+                errorText = errorText,
+                discountHintText = discountHintText
             )
 
             PurchaseGiftCardScreenV2(
@@ -324,6 +332,30 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 GiftCardPurchaseMode.FlexibleMultiple(denominations)
             }
         }
+    }
+
+    private fun buildDiscountHintText(
+        amountText: String,
+        merchant: Merchant?,
+        minFiat: Fiat?,
+        maxFiat: Fiat?,
+        isBlockchainReplaying: Boolean
+    ): String {
+        merchant ?: return ""
+        if (isBlockchainReplaying) return ""
+        val savingsFraction = merchant.savingsFraction
+        if (savingsFraction == 0.0) return ""
+        val amount = try { Fiat.parseFiat(Constants.USD_CURRENCY, amountText) } catch (e: Exception) { return "" }
+        if (amount.isZero) return ""
+        if (minFiat != null && amount.isLessThan(minFiat)) return ""
+        if (maxFiat != null && amount.isGreaterThan(maxFiat)) return ""
+        val discountedAmount = amount.discountBy(savingsFraction)
+        return getString(
+            R.string.purchase_gift_card_discount_hint,
+            amount.toFormattedString(),
+            discountedAmount.toFormattedStringRoundUp(),
+            GenericUtils.formatPercent(savingsFraction)
+        )
     }
 
     private fun buildFiatBalanceText(balance: Coin?, exchangeRate: ExchangeRate?): Pair<String, String> {

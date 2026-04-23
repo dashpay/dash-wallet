@@ -90,7 +90,8 @@ data class PurchaseGiftCardV2UiState(
     val denominationQuantities: Map<Double, Int> = emptyMap(),
     val totalAmountText: String = "$0.00",
     val canContinue: Boolean = false,
-    val errorText: String = ""
+    val errorText: String = "",
+    val discountHintText: String = ""
 )
 
 @Composable
@@ -172,9 +173,15 @@ fun PurchaseGiftCardScreenV2(
                 }
             }
 
-            // Keyboard pinned above the button for the flexible-single mode
+            // Min/max limits + keyboard pinned above the button for the flexible-single mode
             if (uiState.mode is GiftCardPurchaseMode.FlexibleSingle) {
-                Spacer(modifier = Modifier.height(24.dp))
+                PurchaseLimitsHint(
+                    minHintText = uiState.minHintText,
+                    maxHintText = uiState.maxHintText,
+                    errorText = uiState.errorText,
+                    discountHintText = uiState.discountHintText
+                )
+                Spacer(modifier = Modifier.height(16.dp))
                 NumericKeyboardCompose(
                     modifier = Modifier.fillMaxWidth(),
                     onKeyInput = onKeyInput
@@ -192,6 +199,60 @@ fun PurchaseGiftCardScreenV2(
             )
             Spacer(modifier = Modifier.height(20.dp))
         }
+    }
+}
+
+@Composable
+private fun PurchaseLimitsHint(
+    minHintText: String,
+    maxHintText: String,
+    errorText: String,
+    discountHintText: String,
+    modifier: Modifier = Modifier
+) {
+    if (minHintText.isEmpty() && maxHintText.isEmpty() && errorText.isEmpty() && discountHintText.isEmpty()) return
+
+    // Detect which bound is exceeded so we can colour it red independently.
+    val minError = errorText.isNotEmpty() && errorText == minHintText
+    val maxError = errorText.isNotEmpty() && errorText == maxHintText
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = minHintText,
+            style = MyTheme.Caption,
+            color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+        )
+        Text(
+            text = maxHintText,
+            style = MyTheme.Caption,
+            color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+        )
+    }
+
+    // Non-range errors (e.g. blockchain replaying) shown above the min/max row.
+    if (errorText.isNotEmpty() && !minError && !maxError) {
+        Text(
+            text = errorText,
+            style = MyTheme.Caption,
+            color = MyTheme.Colors.red,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+
+    // Discount explanation, shown when amount is valid and within limits
+    if (discountHintText.isNotEmpty() && errorText.isEmpty()) {
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = discountHintText,
+            style = MyTheme.Caption,
+            color = MyTheme.Colors.textSecondary,
+            modifier = Modifier.fillMaxWidth()
+        )
     }
 }
 
@@ -305,33 +366,6 @@ private fun FlexibleSingleContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        if (uiState.errorText.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = uiState.errorText,
-                style = MyTheme.Caption,
-                color = MyTheme.Colors.red,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-        } else if (uiState.minHintText.isNotEmpty() || uiState.maxHintText.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = uiState.minHintText,
-                    style = MyTheme.Caption,
-                    color = MyTheme.Colors.textSecondary
-                )
-                Text(
-                    text = uiState.maxHintText,
-                    style = MyTheme.Caption,
-                    color = MyTheme.Colors.textSecondary
-                )
-            }
-        }
     }
 }
 
