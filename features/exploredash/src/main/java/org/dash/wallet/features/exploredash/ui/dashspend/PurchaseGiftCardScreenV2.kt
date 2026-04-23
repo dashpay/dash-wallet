@@ -140,13 +140,6 @@ fun PurchaseGiftCardScreenV2(
                     fiatBalance = uiState.fiatBalance,
                     modifier = Modifier,
                 )
-//                GiftCardHeader(
-//                    merchantName = uiState.merchantName,
-//                    merchantLogoUrl = uiState.merchantLogoUrl,
-//                    balanceText = uiState.balanceText,
-//                    showBalance = uiState.showBalance,
-//                    onToggleBalance = onToggleBalance
-//                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -154,9 +147,7 @@ fun PurchaseGiftCardScreenV2(
                     is GiftCardPurchaseMode.FlexibleSingle -> {
                         FlexibleSingleContent(
                             uiState = uiState,
-                            onTabChanged = onTabChanged,
-                            onKeyInput = onKeyInput,
-                            onContinue = onContinue
+                            onTabChanged = onTabChanged
                         )
                     }
                     is GiftCardPurchaseMode.FlexibleMultiple -> {
@@ -165,10 +156,8 @@ fun PurchaseGiftCardScreenV2(
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
-                            canContinue = uiState.canContinue,
                             onTabChanged = onTabChanged,
-                            onQuantityChanged = onQuantityChanged,
-                            onContinue = onContinue
+                            onQuantityChanged = onQuantityChanged
                         )
                     }
                     is GiftCardPurchaseMode.Fixed -> {
@@ -177,107 +166,31 @@ fun PurchaseGiftCardScreenV2(
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
-                            canContinue = uiState.canContinue,
-                            onQuantityChanged = onQuantityChanged,
-                            onContinue = onContinue
+                            onQuantityChanged = onQuantityChanged
                         )
                     }
                 }
             }
-        }
 
-
-    }
-}
-
-@Composable
-private fun GiftCardHeader(
-    merchantName: String,
-    merchantLogoUrl: String?,
-    balanceText: String,
-    showBalance: Boolean,
-    onToggleBalance: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(
-                color = MyTheme.Colors.backgroundSecondary,
-                shape = RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
-            )
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        if (!merchantLogoUrl.isNullOrEmpty()) {
-            AsyncImage(
-                model = merchantLogoUrl,
-                contentDescription = merchantName,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(8.dp))
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        } else {
-            Icon(
-                painter = painterResource(R.drawable.ic_image_placeholder),
-                contentDescription = merchantName,
-                tint = MyTheme.Colors.gray,
-                modifier = Modifier.size(56.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-        }
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = stringResource(R.string.explore_option_buy),
-                style = MyTheme.Typography.BodyLarge,
-                color = MyTheme.Colors.textSecondary
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = stringResource(R.string.purchase_gift_card_at),
-                style = MyTheme.Typography.BodyLarge,
-                color = MyTheme.Colors.textSecondary
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = merchantName,
-                style = MyTheme.Typography.BodyLargeMedium,
-                color = MyTheme.Colors.textPrimary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Row(
-            modifier = Modifier.clickable { onToggleBalance() },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = stringResource(org.dash.wallet.common.R.string.balance),
-                style = MyTheme.CaptionMedium,
-                color = MyTheme.Colors.textSecondary
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            if (showBalance) {
-                Text(
-                    text = balanceText,
-                    style = MyTheme.CaptionMedium,
-                    color = MyTheme.Colors.textPrimary
-                )
-            } else {
-                Text(
-                    text = "••••",
-                    style = MyTheme.CaptionMedium,
-                    color = MyTheme.Colors.textSecondary
+            // Keyboard pinned above the button for the flexible-single mode
+            if (uiState.mode is GiftCardPurchaseMode.FlexibleSingle) {
+                Spacer(modifier = Modifier.height(24.dp))
+                NumericKeyboardCompose(
+                    modifier = Modifier.fillMaxWidth(),
+                    onKeyInput = onKeyInput
                 )
             }
+
+            // Single continue button pinned outside the scroll area
+            Spacer(modifier = Modifier.height(16.dp))
+            ButtonLarge(
+                onClick = onContinue,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonStyles.blueWithWhiteText(),
+                textId = org.dash.wallet.common.R.string.button_continue,
+                enabled = uiState.canContinue
+            )
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -376,9 +289,7 @@ private fun TotalAmountDisplay(
 @Composable
 private fun FlexibleSingleContent(
     uiState: PurchaseGiftCardV2UiState,
-    onTabChanged: (isMultiple: Boolean) -> Unit,
-    onKeyInput: (String) -> Unit,
-    onContinue: () -> Unit
+    onTabChanged: (isMultiple: Boolean) -> Unit
 ) {
     Column {
         GiftCardSegmentedControl(
@@ -401,12 +312,12 @@ private fun FlexibleSingleContent(
                 style = MyTheme.Caption,
                 color = MyTheme.Colors.red,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
+                modifier = Modifier.fillMaxWidth()
             )
         } else if (uiState.minHintText.isNotEmpty() || uiState.maxHintText.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
@@ -421,27 +332,6 @@ private fun FlexibleSingleContent(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        NumericKeyboardCompose(
-            modifier = Modifier,//.padding(horizontal = 20.dp),
-            onKeyInput = onKeyInput
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ButtonLarge(
-            onClick = onContinue,
-            modifier = Modifier
-                .fillMaxWidth(),
-                //.padding(horizontal = 20.dp),
-            colors = ButtonStyles.blueWithWhiteText(),
-            textId = org.dash.wallet.common.R.string.button_continue,
-            enabled = uiState.canContinue
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 
@@ -451,10 +341,8 @@ private fun FlexibleMultipleContent(
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
-    canContinue: Boolean,
     onTabChanged: (isMultiple: Boolean) -> Unit,
-    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
-    onContinue: () -> Unit
+    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
 ) {
     Column {
         GiftCardSegmentedControl(
@@ -488,20 +376,6 @@ private fun FlexibleMultipleContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-
-        ButtonLarge(
-            onClick = onContinue,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            colors = ButtonStyles.blueWithWhiteText(),
-            textId = org.dash.wallet.common.R.string.button_continue,
-            enabled = canContinue
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 
@@ -511,9 +385,7 @@ private fun FixedContent(
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
-    canContinue: Boolean,
-    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
-    onContinue: () -> Unit
+    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
 ) {
     Column {
         Spacer(modifier = Modifier.height(8.dp))
@@ -541,19 +413,6 @@ private fun FixedContent(
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ButtonLarge(
-            onClick = onContinue,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            colors = ButtonStyles.blueWithWhiteText(),
-            textId = org.dash.wallet.common.R.string.button_continue,
-            enabled = canContinue
-        )
-
-        Spacer(modifier = Modifier.height(20.dp))
     }
 }
 

@@ -164,7 +164,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 else -> {
                     val balanceMax = fiatBalance.toBigDecimal().toDouble()
                     if (totalDouble > balanceMax) {
-                        getString(R.string.insufficient_money_msg)
+                        getString(R.string.purchase_gift_card_insufficient_money_error)
                     } else if (totalDouble > 2500.0) {
                         getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat("$", 2500.00.toString()).toFormattedString())
                     } else {
