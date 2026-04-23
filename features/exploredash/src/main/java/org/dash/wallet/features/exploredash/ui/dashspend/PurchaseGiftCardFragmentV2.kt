@@ -176,8 +176,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 }
             }
 
-            val discountHintText = remember(amountText, merchant, minFiat, maxFiat, exchangeRate, isBlockchainReplaying) {
-                buildDiscountHintText(amountText, merchant, minFiat, maxFiat, isBlockchainReplaying)
+            val discountHintText = remember(mode, amountText, totalDouble, merchant, minFiat, maxFiat, exchangeRate, isBlockchainReplaying) {
+                buildDiscountHintText(mode, amountText, totalDouble, merchant, minFiat, maxFiat, isBlockchainReplaying)
             }
 
             val uiState = PurchaseGiftCardV2UiState(
@@ -335,7 +335,9 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
     }
 
     private fun buildDiscountHintText(
+        mode: GiftCardPurchaseMode,
         amountText: String,
+        totalDouble: Double,
         merchant: Merchant?,
         minFiat: Fiat?,
         maxFiat: Fiat?,
@@ -345,10 +347,27 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
         if (isBlockchainReplaying) return ""
         val savingsFraction = merchant.savingsFraction
         if (savingsFraction == 0.0) return ""
-        val amount = try { Fiat.parseFiat(Constants.USD_CURRENCY, amountText) } catch (e: Exception) { return "" }
+        val amount = when (mode) {
+            GiftCardPurchaseMode.FlexibleSingle -> {
+                try {
+                    Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                } catch (_: Exception) {
+                    return ""
+                }
+            }
+            else -> {
+                try {
+                    Fiat.parseFiat(Constants.USD_CURRENCY, totalDouble.toBigDecimal().toPlainString())
+                } catch (_: Exception) {
+                    return ""
+                }
+            }
+        }
         if (amount.isZero) return ""
-        if (minFiat != null && amount.isLessThan(minFiat)) return ""
-        if (maxFiat != null && amount.isGreaterThan(maxFiat)) return ""
+        if (mode is GiftCardPurchaseMode.FlexibleSingle) {
+            if (minFiat != null && amount.isLessThan(minFiat)) return ""
+            if (maxFiat != null && amount.isGreaterThan(maxFiat)) return ""
+        }
         val discountedAmount = amount.discountBy(savingsFraction)
         return getString(
             R.string.purchase_gift_card_discount_hint,

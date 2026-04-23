@@ -166,7 +166,7 @@ fun PurchaseGiftCardScreenV2(
 
             // Min/max limits + keyboard pinned above the button for the flexible-single mode
             if (uiState.mode is GiftCardPurchaseMode.FlexibleSingle) {
-                PurchaseLimitsHint(
+                PurchaseLimitsErrorDiscountHint(
                     minHintText = uiState.minHintText,
                     maxHintText = uiState.maxHintText,
                     errorText = uiState.errorText,
@@ -178,7 +178,7 @@ fun PurchaseGiftCardScreenV2(
                     onKeyInput = onKeyInput
                 )
             } else {
-                PurchaseLimitsHint(
+                PurchaseLimitsErrorDiscountHint(
                     minHintText = "",
                     maxHintText = "",
                     errorText = uiState.errorText,
@@ -201,7 +201,7 @@ fun PurchaseGiftCardScreenV2(
 }
 
 @Composable
-private fun PurchaseLimitsHint(
+private fun PurchaseLimitsErrorDiscountHint(
     minHintText: String,
     maxHintText: String,
     errorText: String,
@@ -222,12 +222,12 @@ private fun PurchaseLimitsHint(
             Text(
                 text = minHintText,
                 style = MyTheme.Caption,
-                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textPrimary
             )
             Text(
                 text = maxHintText,
                 style = MyTheme.Caption,
-                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textPrimary
             )
         }
     }
@@ -251,7 +251,7 @@ private fun PurchaseLimitsHint(
             text = discountHintText,
             textAlign = TextAlign.Center,
             style = MyTheme.Caption,
-            color = MyTheme.Colors.textSecondary,
+            color = MyTheme.Colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
     }
