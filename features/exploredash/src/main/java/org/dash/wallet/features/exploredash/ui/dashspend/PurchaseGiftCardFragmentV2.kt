@@ -53,6 +53,7 @@ import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import androidx.lifecycle.lifecycleScope
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
+import kotlin.math.max
 
 @AndroidEntryPoint
 class PurchaseGiftCardFragmentV2 : Fragment() {
@@ -88,8 +89,10 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             var minFiat by remember { mutableStateOf<Fiat?>(null) }
             var maxFiat by remember { mutableStateOf<Fiat?>(null) }
 
-            // Refresh min/max values whenever the exchange rate changes
-            LaunchedEffect(exchangeRate) {
+            // Refresh min/max values whenever the exchange rate or merchant changes.
+            // Keying on both is necessary because the merchant loads asynchronously after
+            // the exchange rate, so a rate-only key would read before the merchant is set.
+            LaunchedEffect(exchangeRate, merchant) {
                 viewModel.refreshMinMaxCardPurchaseValues()
                 minFiat = viewModel.minCardPurchaseFiat
                 maxFiat = viewModel.maxCardPurchaseFiat
@@ -103,12 +106,16 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
 
             // Compute the purchase mode from ViewModel state
             val mode = remember(isFixedDenomination, merchant, maxFiat, isMultiple) {
-                buildPurchaseMode(isFixedDenomination, isMultiple, merchant, maxFiat)
+                buildPurchaseMode(isFixedDenomination, isMultiple, merchant)
             }
 
             // Balance text
-            val (dashBalance, fiatBalance) = remember(balance, exchangeRate) {
+            val (dashBalanceString, fiatBalanceString) = remember(balance, exchangeRate) {
                 buildFiatBalanceText(balance, exchangeRate)
+            }
+            
+            val fiatBalance = remember(balance, exchangeRate) {
+                buildFiatBalance(balance, exchangeRate)
             }
 
             // Total amount for multiple/fixed modes
@@ -121,12 +128,13 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.0
                     val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
-                    amount > 0 && amount >= min && amount <= max && !isBlockchainReplaying
+                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
+                    amount > 0 && amount >= min && amount <= max && amount < balanceMax && !isBlockchainReplaying
                 }
                 is GiftCardPurchaseMode.FlexibleMultiple,
                 is GiftCardPurchaseMode.Fixed -> {
                     val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
-                    totalDouble > 0 && totalDouble <= max && !isBlockchainReplaying
+                    totalDouble > 0 && totalDouble <= max && totalDouble < fiatBalance.toBigDecimal().toDouble() && !isBlockchainReplaying && totalDouble < 2500
                 }
                 else -> false
             }
@@ -144,22 +152,35 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     val amount = amountText.toDoubleOrNull() ?: 0.0
                     val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.0
                     val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
+                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
+
                     when {
                         amount > 0 && amount < min -> getString(R.string.purchase_gift_card_min, minFiat?.toFormattedString() ?: "")
+                        amount > balanceMax -> getString(R.string.insufficient_money_msg)
                         amount > max -> getString(R.string.purchase_gift_card_max, maxFiat?.toFormattedString() ?: "")
                         else -> ""
                     }
                 }
-                else -> ""
+                else -> {
+                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
+                    if (totalDouble > balanceMax) {
+                        getString(R.string.insufficient_money_msg)
+                    } else if (totalDouble > 2500.0) {
+                        getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat("$", 2500.00.toString()).toFormattedString())
+                    } else {
+                        ""
+                    }
+                }
             }
 
             val uiState = PurchaseGiftCardV2UiState(
                 mode = mode,
                 merchantName = merchant?.name.orEmpty(),
                 merchantLogoUrl = merchant?.logoLocation,
-                dashBalance = dashBalance,
-                fiatBalance = fiatBalance,
+                dashBalance = dashBalanceString,
+                fiatBalance = fiatBalanceString,
                 showBalance = showBalance,
+                currencySymbol = "$", // should be the correct symble for USD based the current locale
                 amountText = amountText,
                 minHintText = if (errorText.isEmpty()) minHintText else "",
                 maxHintText = if (errorText.isEmpty()) maxHintText else "",
@@ -283,16 +304,25 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
     private fun buildPurchaseMode(
         isFixed: Boolean?,
         isMultiple: Boolean?,
-        merchant: Merchant?,
-        maxFiat: Fiat?
+        merchant: Merchant?
     ): GiftCardPurchaseMode {
         return when {
-            isFixed == null -> GiftCardPurchaseMode.FlexibleSingle
-            isFixed && isMultiple == true -> {
+            isFixed != true && isMultiple != true -> GiftCardPurchaseMode.FlexibleSingle
+            isFixed == true -> {
                 val denoms = merchant?.denominations ?: emptyList()
                 GiftCardPurchaseMode.Fixed(denoms)
             }
-            else -> GiftCardPurchaseMode.FlexibleSingle
+            else -> {
+                val denominations = arrayListOf<Double>()
+                val minimum = max(merchant?.minCardPurchase ?: 0.0, 5.0)
+                val maximum = merchant?.maxCardPurchase ?: 500.00
+                denominations.add(minimum)
+                denominations.add(minimum * 2)
+                denominations.add(minimum * 4)
+                denominations.add(maximum / 2)
+                denominations.add(maximum)
+                GiftCardPurchaseMode.FlexibleMultiple(denominations)
+            }
         }
     }
 
@@ -304,6 +334,17 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             Pair(dashText, fiatRate.coinToFiat(balance).toFormattedString())
         } else {
             Pair(dashText, "")
+        }
+    }
+
+    private fun buildFiatBalance(balance: Coin?, exchangeRate: ExchangeRate?): Fiat {
+        val defaultResult = Fiat.valueOf(exchangeRate?.currencySymbol ?: Constants.USD_CURRENCY, 0)
+        balance ?: return defaultResult
+        val fiatRate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
+        return if (fiatRate != null) {
+            fiatRate.coinToFiat(balance)
+        } else {
+            defaultResult
         }
     }
 }

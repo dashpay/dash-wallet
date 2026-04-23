@@ -52,6 +52,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -82,6 +83,7 @@ data class PurchaseGiftCardV2UiState(
     val dashBalance: String = "",
     val fiatBalance: String = "",
     val showBalance: Boolean = false,
+    val currencySymbol: String = "$",
     val amountText: String = "0",
     val minHintText: String = "",
     val maxHintText: String = "",
@@ -132,7 +134,7 @@ fun PurchaseGiftCardScreenV2(
                     balanceVisible = uiState.showBalance,
                     onToggleVisibility = onToggleBalance,
                     dashBalance = uiState.dashBalance,
-                    preposition = stringResource(R.string.preposition_at),
+                    preposition = stringResource(org.dash.wallet.common.R.string.preposition_at),
                     toIconUrl = uiState.merchantLogoUrl,
                     toName = uiState.merchantName,
                     fiatBalance = uiState.fiatBalance,
@@ -159,6 +161,7 @@ fun PurchaseGiftCardScreenV2(
                     }
                     is GiftCardPurchaseMode.FlexibleMultiple -> {
                         FlexibleMultipleContent(
+                            uiState = uiState,
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
@@ -170,6 +173,7 @@ fun PurchaseGiftCardScreenV2(
                     }
                     is GiftCardPurchaseMode.Fixed -> {
                         FixedContent(
+                            uiState = uiState,
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
@@ -338,19 +342,12 @@ private fun SegmentedTab(
 
 @Composable
 private fun AmountDisplay(
+    currencySymbol: String = "$",
     amountText: String,
     modifier: Modifier = Modifier
 ) {
     val annotated = buildAnnotatedString {
-        withStyle(
-            SpanStyle(
-                fontSize = 28.sp,
-                color = MyTheme.Colors.textPrimary,
-                baselineShift = BaselineShift(0.2f)
-            )
-        ) {
-            append("$")
-        }
+        append(currencySymbol)
         append(amountText)
     }
     Text(
@@ -392,6 +389,7 @@ private fun FlexibleSingleContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         AmountDisplay(
+            currencySymbol = uiState.currencySymbol,
             amountText = uiState.amountText,
             modifier = Modifier.fillMaxWidth()
         )
@@ -403,7 +401,7 @@ private fun FlexibleSingleContent(
                 style = MyTheme.Caption,
                 color = MyTheme.Colors.red,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
+                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
             )
         } else if (uiState.minHintText.isNotEmpty() || uiState.maxHintText.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
@@ -427,7 +425,7 @@ private fun FlexibleSingleContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         NumericKeyboardCompose(
-            modifier = Modifier.padding(horizontal = 20.dp),
+            modifier = Modifier,//.padding(horizontal = 20.dp),
             onKeyInput = onKeyInput
         )
 
@@ -436,8 +434,8 @@ private fun FlexibleSingleContent(
         ButtonLarge(
             onClick = onContinue,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .fillMaxWidth(),
+                //.padding(horizontal = 20.dp),
             colors = ButtonStyles.blueWithWhiteText(),
             textId = org.dash.wallet.common.R.string.button_continue,
             enabled = uiState.canContinue
@@ -449,6 +447,7 @@ private fun FlexibleSingleContent(
 
 @Composable
 private fun FlexibleMultipleContent(
+    uiState: PurchaseGiftCardV2UiState,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
@@ -478,7 +477,19 @@ private fun FlexibleMultipleContent(
             onQuantityChanged = onQuantityChanged
         )
 
+        if (uiState.errorText.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = uiState.errorText,
+                style = MyTheme.Caption,
+                color = MyTheme.Colors.red,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
+            )
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
+
 
         ButtonLarge(
             onClick = onContinue,
@@ -496,6 +507,7 @@ private fun FlexibleMultipleContent(
 
 @Composable
 private fun FixedContent(
+    uiState: PurchaseGiftCardV2UiState,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
@@ -518,6 +530,16 @@ private fun FixedContent(
             denominationQuantities = denominationQuantities,
             onQuantityChanged = onQuantityChanged
         )
+        if (uiState.errorText.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = uiState.errorText,
+                style = MyTheme.Caption,
+                color = MyTheme.Colors.red,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
+            )
+        }
 
         Spacer(modifier = Modifier.height(16.dp))
 

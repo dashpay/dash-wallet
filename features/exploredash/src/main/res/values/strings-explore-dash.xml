@@ -215,6 +215,7 @@
     <string name="gift_card_tx_title">Gift card · %s</string>
     <string name="select_amount">Select amount</string>
     <string name="select_fixed_amount">This merchant sells gift cards at fixed prices</string>
+    <string name="purchase_gift_card_max_multiple_error">The maximum allowed amount is %s</string>
 
     <!-- dash spend login-->
     <string name="enter_verification_code">Enter verification code</string>
