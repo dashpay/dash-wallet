@@ -164,6 +164,9 @@ class DashSpendViewModel @Inject constructor(
     private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
     val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
 
+    val isFixedDenominationMultiple = MutableStateFlow<Boolean?>(null)
+    // val isFixedDenominationMultiple: StateFlow<Boolean?> = _isFixedDenominationMultiple.asStateFlow()
+
     private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
     val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
 

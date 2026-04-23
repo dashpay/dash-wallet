@@ -182,6 +182,9 @@
     <string name="purchase_gift_card_at">at</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="gift_card_tab_single">Single</string>
+    <string name="gift_card_tab_multiple">Multiple</string>
+    <string name="gift_card_buy_title">Buy gift card</string>
     <string name="purchase_gift_card_discount_hint">You are buying a %s gift card for %s (%s discount)</string>
     <string name="button_next">Next</string>
     <string name="purchase_gift_card_from">From</string>

@@ -240,7 +240,11 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                 if (success) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                     hideKeyboard()
-                    safeNavigate(DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
+                    when (viewModel.selectedProvider) {
+                        GiftCardProviderType.CTX -> safeNavigate(DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment())
+                        GiftCardProviderType.PiggyCards -> safeNavigate(DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragmentV2())
+                        else -> error("serious error. provider = null")
+                    }
                 }
             } catch (e: Exception) {
                 binding.inputWrapper.isErrorEnabled = true
