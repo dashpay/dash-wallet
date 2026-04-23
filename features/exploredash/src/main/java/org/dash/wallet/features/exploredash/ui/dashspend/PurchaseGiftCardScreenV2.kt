@@ -47,18 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.ui.text.style.BaselineShift
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.ButtonLarge
 import org.dash.wallet.common.ui.components.ButtonStyles
 import org.dash.wallet.common.ui.components.MyImages
@@ -153,7 +146,6 @@ fun PurchaseGiftCardScreenV2(
                     }
                     is GiftCardPurchaseMode.FlexibleMultiple -> {
                         FlexibleMultipleContent(
-                            uiState = uiState,
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
@@ -163,7 +155,6 @@ fun PurchaseGiftCardScreenV2(
                     }
                     is GiftCardPurchaseMode.Fixed -> {
                         FixedContent(
-                            uiState = uiState,
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
@@ -185,6 +176,13 @@ fun PurchaseGiftCardScreenV2(
                 NumericKeyboardCompose(
                     modifier = Modifier.fillMaxWidth(),
                     onKeyInput = onKeyInput
+                )
+            } else {
+                PurchaseLimitsHint(
+                    minHintText = "",
+                    maxHintText = "",
+                    errorText = uiState.errorText,
+                    discountHintText = uiState.discountHintText
                 )
             }
 
@@ -216,24 +214,27 @@ private fun PurchaseLimitsHint(
     val minError = errorText.isNotEmpty() && errorText == minHintText
     val maxError = errorText.isNotEmpty() && errorText == maxHintText
 
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = minHintText,
-            style = MyTheme.Caption,
-            color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
-        )
-        Text(
-            text = maxHintText,
-            style = MyTheme.Caption,
-            color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
-        )
+    if (minHintText.isNotEmpty() && maxHintText.isNotEmpty()) {
+        Row(
+            modifier = modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = minHintText,
+                style = MyTheme.Caption,
+                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+            )
+            Text(
+                text = maxHintText,
+                style = MyTheme.Caption,
+                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+            )
+        }
     }
 
     // Non-range errors (e.g. blockchain replaying) shown above the min/max row.
     if (errorText.isNotEmpty() && !minError && !maxError) {
+        Spacer(modifier = Modifier.height(30.dp))
         Text(
             text = errorText,
             style = MyTheme.Caption,
@@ -241,14 +242,14 @@ private fun PurchaseLimitsHint(
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(4.dp))
     }
 
     // Discount explanation, shown when amount is valid and within limits
     if (discountHintText.isNotEmpty() && errorText.isEmpty()) {
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(30.dp))
         Text(
             text = discountHintText,
+            textAlign = TextAlign.Center,
             style = MyTheme.Caption,
             color = MyTheme.Colors.textSecondary,
             modifier = Modifier.fillMaxWidth()
@@ -371,7 +372,6 @@ private fun FlexibleSingleContent(
 
 @Composable
 private fun FlexibleMultipleContent(
-    uiState: PurchaseGiftCardV2UiState,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
@@ -394,28 +394,16 @@ private fun FlexibleMultipleContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         DenominationList(
+            allowMultipleDenominations = true,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
             onQuantityChanged = onQuantityChanged
         )
-
-        if (uiState.errorText.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = uiState.errorText,
-                style = MyTheme.Caption,
-                color = MyTheme.Colors.red,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
-            )
-        }
-
     }
 }
 
 @Composable
 private fun FixedContent(
-    uiState: PurchaseGiftCardV2UiState,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
@@ -432,26 +420,17 @@ private fun FixedContent(
         Spacer(modifier = Modifier.height(24.dp))
 
         DenominationList(
+            allowMultipleDenominations = false,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
             onQuantityChanged = onQuantityChanged
         )
-        if (uiState.errorText.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = uiState.errorText,
-                style = MyTheme.Caption,
-                color = MyTheme.Colors.red,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()//.padding(horizontal = 20.dp)
-            )
-        }
-
     }
 }
 
 @Composable
 private fun DenominationList(
+    allowMultipleDenominations: Boolean,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
@@ -460,6 +439,8 @@ private fun DenominationList(
         currency = Currency.getInstance("USD")
         minimumFractionDigits = 0
     }
+
+    val hasAnySelection = denominationQuantities.values.any { it > 0 }
 
     Column(
         modifier = Modifier
@@ -471,16 +452,18 @@ private fun DenominationList(
             .padding(horizontal = 20.dp)
     ) {
         denominations.forEachIndexed { index, denomination ->
+            val quantity = denominationQuantities[denomination] ?: 0
+            val increaseEnabled = allowMultipleDenominations || !hasAnySelection || quantity > 0
+
             DenominationRow(
                 label = currencyFormat.format(denomination),
-                quantity = denominationQuantities[denomination] ?: 0,
+                quantity = quantity,
+                increaseEnabled = increaseEnabled,
                 onDecrease = {
-                    val current = denominationQuantities[denomination] ?: 0
-                    if (current > 0) onQuantityChanged(denomination, current - 1)
+                    if (quantity > 0) onQuantityChanged(denomination, quantity - 1)
                 },
                 onIncrease = {
-                    val current = denominationQuantities[denomination] ?: 0
-                    onQuantityChanged(denomination, current + 1)
+                    onQuantityChanged(denomination, quantity + 1)
                 }
             )
             if (index < denominations.lastIndex) {
@@ -497,9 +480,13 @@ private fun DenominationList(
 private fun DenominationRow(
     label: String,
     quantity: Int,
+    increaseEnabled: Boolean,
     onDecrease: () -> Unit,
     onIncrease: () -> Unit
 ) {
+    val decreaseEnabled = quantity > 0
+    val quantityColor = if (increaseEnabled || quantity > 0) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -508,7 +495,7 @@ private fun DenominationRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            painter = painterResource(R.drawable.ic_gift_card),
+            painter = painterResource(R.drawable.ic_gift_card_icon),
             contentDescription = null,
             tint = Color.Unspecified,
             modifier = Modifier.size(40.dp)
@@ -529,31 +516,31 @@ private fun DenominationRow(
         ) {
             CircleButton(
                 onClick = onDecrease,
-                enabled = quantity > 0
+                enabled = decreaseEnabled
             ) {
                 Text(
                     text = "−",
                     style = MyTheme.Typography.TitleMediumSemibold,
-                    color = if (quantity > 0) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
+                    color = if (decreaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
                 )
             }
 
             Text(
                 text = quantity.toString(),
                 style = MyTheme.Typography.TitleMediumSemibold,
-                color = MyTheme.Colors.textPrimary,
+                color = quantityColor,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.width(24.dp)
             )
 
             CircleButton(
                 onClick = onIncrease,
-                enabled = true
+                enabled = increaseEnabled
             ) {
                 Icon(
                     imageVector = Icons.Default.Add,
                     contentDescription = null,
-                    tint = MyTheme.Colors.textPrimary,
+                    tint = if (increaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
                     modifier = Modifier.size(16.dp)
                 )
             }
