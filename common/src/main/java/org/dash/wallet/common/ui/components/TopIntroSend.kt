@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -25,9 +26,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,6 +41,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
@@ -45,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import org.dash.wallet.common.R
 
 /**
@@ -81,6 +88,9 @@ fun TopIntroSend(
     dashBalance: String,
     preposition: String = stringResource(R.string.to),
     toAddress: String? = null,
+    toIcon: Painter? = null,
+    toIconUrl: String? = null,
+    toName: String? = null,
     fiatBalance: String? = null,
     balanceVisible: Boolean? = null,
     onToggleVisibility: (() -> Unit)? = null,
@@ -103,8 +113,49 @@ fun TopIntroSend(
             modifier = Modifier.fillMaxWidth()
         )
 
-        // "to {address}" line
-        if (toAddress != null) {
+        // "to/at {address|icon+name}" line
+        if (toIcon != null || toIconUrl != null || toName != null) {
+            // Icon variant: "[preposition] [icon] [name]" — all textPrimary
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = preposition,
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.textPrimary
+                )
+                if (toIconUrl != null) {
+                    AsyncImage(
+                        model = toIconUrl,
+                        contentDescription = toName,
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    )
+                } else if (toIcon != null) {
+                    Image(
+                        painter = toIcon,
+                        contentDescription = toName,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                    )
+                }
+                if (toName != null) {
+                    Text(
+                        text = toName,
+                        style = MyTheme.Body2Regular,
+                        color = MyTheme.Colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        } else if (toAddress != null) {
+            // Address variant: "to [address]" — preposition secondary, address primary
             Text(
                 text = buildAnnotatedString {
                     withStyle(MyTheme.Body2Regular.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
@@ -138,7 +189,9 @@ fun TopIntroSend(
 }
 
 /**
- * Internal balance row: "dash · fiat available  [eye icon]"
+ * Internal balance row: "[Dash logo] amount · fiat available  [eye icon]"
+ *
+ * [dashBalance] should be the formatted amount without the "ɗ" prefix — the logo replaces it.
  */
 @Composable
 private fun BalanceRow(
@@ -148,46 +201,55 @@ private fun BalanceRow(
     onToggleClick: () -> Unit
 ) {
     val hiddenPlaceholder = "*****"
-    val availableLabel = stringResource(R.string.enter_amount_available)
-
-    // Build the annotated balance text so primary and secondary segments share one Text.
-    val balanceText = buildAnnotatedString {
-        val dashSpanStyle = MyTheme.Typography.BodyMedium.toSpanStyle()
-            .copy(color = MyTheme.Colors.textPrimary)
-        val fiatSpanStyle = MyTheme.Typography.BodyMedium.toSpanStyle()
-            .copy(color = MyTheme.Colors.textSecondary)
-        val availableSpanStyle = MyTheme.Typography.BodyMedium.toSpanStyle()
-            .copy(color = MyTheme.Colors.textSecondary)
-
-        // Dash portion
-        withStyle(dashSpanStyle) {
-            append(if (isVisible) dashBalance else hiddenPlaceholder)
-        }
-
-        // Fiat portion (optional)
-        if (fiatBalance != null) {
-            withStyle(fiatSpanStyle) {
-                append(" · ")
-                append(if (isVisible) fiatBalance else hiddenPlaceholder)
-            }
-        }
-
-        // " available" suffix
-        withStyle(availableSpanStyle) {
-            append(" ")
-            append(availableLabel)
-        }
-    }
+    val balanceLabel = stringResource(R.string.balance)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Start
     ) {
+        // "Balance:" — always visible
         Text(
-            text = balanceText,
-            modifier = Modifier.weight(1f, fill = false)
+            text = "$balanceLabel ",
+            style = MyTheme.Typography.BodyMedium,
+            color = MyTheme.Colors.textSecondary
         )
+
+        // Toggleable content: icon + amounts, or placeholder
+        if (isVisible) {
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_dash_d_gray),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = buildAnnotatedString {
+                        withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textPrimary)) {
+                            append(dashBalance)
+                        }
+                        if (fiatBalance != null) {
+                            withStyle(MyTheme.Typography.BodyMedium.toSpanStyle().copy(color = MyTheme.Colors.textSecondary)) {
+                                append(" · ")
+                                append(fiatBalance)
+                            }
+                        }
+                    }
+                )
+            }
+        } else {
+            Text(
+                text = hiddenPlaceholder,
+                style = MyTheme.Typography.BodyMedium,
+                color = MyTheme.Colors.textSecondary,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+        }
 
         Spacer(modifier = Modifier.width(6.dp))
 
@@ -227,7 +289,7 @@ private fun TopIntroSendVisiblePreview() {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
-            dashBalance = "ɗ 1.23456789",
+            dashBalance = "1.23456789",
             fiatBalance = "USD 45.67"
         )
     }
@@ -244,7 +306,7 @@ private fun TopIntroSendHiddenPreview() {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
-            dashBalance = "ɗ 1.23456789",
+            dashBalance = "1.23456789",
             fiatBalance = "USD 45.67",
             balanceVisible = false,
             onToggleVisibility = {}
@@ -263,7 +325,26 @@ private fun TopIntroSendNoFiatPreview() {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
-            dashBalance = "ɗ 0.50000000"
+            dashBalance = "0.50000000"
+        )
+    }
+}
+
+@Preview(showBackground = true, widthDp = 393)
+@Composable
+private fun TopIntroSendIconPreview() {
+    Column(
+        modifier = Modifier
+            .background(MyTheme.Colors.backgroundPrimary)
+            .padding(vertical = 8.dp)
+    ) {
+        TopIntroSend(
+            heading = "Buy gift card",
+            preposition = "at",
+            toIcon = painterResource(R.drawable.ic_dash_blue_filled),
+            toName = "Amazon",
+            dashBalance = "1.23456789",
+            fiatBalance = "USD 45.67"
         )
     }
 }
