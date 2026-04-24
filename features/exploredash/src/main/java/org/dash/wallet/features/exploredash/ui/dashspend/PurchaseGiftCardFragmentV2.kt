@@ -56,6 +56,7 @@ import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import androidx.lifecycle.lifecycleScope
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import kotlin.math.max
 
 @AndroidEntryPoint
@@ -201,7 +202,9 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             PurchaseGiftCardScreenV2(
                 uiState = uiState,
                 onBack = { findNavController().popBackStack() },
-                onInfo = { /* TODO: show info dialog */ },
+                onInfo = {
+                    ExploreDashInfoDialog().show(requireActivity())
+                },
                 onTabChanged = { isMultiple ->
                     amountText = "0"
                     denominationQuantities.clear()

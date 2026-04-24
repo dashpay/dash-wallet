@@ -26,6 +26,9 @@ object MyImages {
     val MenuChevron: ImageVector
         @Composable get() = ImageVector.vectorResource(R.drawable.ic_menu_chevron)
 
+    val NavBarInfo: ImageVector
+        @Composable get() = ImageVector.vectorResource(R.drawable.ic_nav_bar_info)
+
     val NavBarClose: ImageVector
         @Composable get() = ImageVector.vectorResource(R.drawable.ic_nav_bar_close)
 

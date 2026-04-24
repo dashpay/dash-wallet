@@ -59,6 +59,9 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntroSend
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
+import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.features.exploredash.R
 import java.text.NumberFormat
 import java.util.Currency
@@ -109,7 +112,7 @@ fun PurchaseGiftCardScreenV2(
             leadingIcon = MyImages.MenuChevron,
             onLeadingClick = onBack,
             centralPart = false,
-            trailingIcon = Icons.Default.Info,
+            trailingIcon = MyImages.NavBarInfo,
             trailingIconCircle = false,
             onTrailingClick = onInfo
         )
@@ -233,8 +236,8 @@ private fun PurchaseLimitsErrorDiscountHint(
     }
 
     // Non-range errors (e.g. blockchain replaying) shown above the min/max row.
+    Spacer(modifier = Modifier.height(30.dp))
     if (errorText.isNotEmpty() && !minError && !maxError) {
-        Spacer(modifier = Modifier.height(30.dp))
         Text(
             text = errorText,
             style = MyTheme.Caption,
@@ -246,7 +249,7 @@ private fun PurchaseLimitsErrorDiscountHint(
 
     // Discount explanation, shown when amount is valid and within limits
     if (discountHintText.isNotEmpty() && errorText.isEmpty()) {
-        Spacer(modifier = Modifier.height(30.dp))
+        // Spacer(modifier = Modifier.height(30.dp))
         Text(
             text = discountHintText,
             textAlign = TextAlign.Center,
@@ -257,63 +260,6 @@ private fun PurchaseLimitsErrorDiscountHint(
     }
 }
 
-@Composable
-private fun GiftCardSegmentedControl(
-    isMultipleSelected: Boolean,
-    onTabChanged: (isMultiple: Boolean) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .background(
-                color = MyTheme.Colors.primary5,
-                shape = RoundedCornerShape(10.dp)
-            )
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        SegmentedTab(
-            text = stringResource(R.string.gift_card_tab_single),
-            selected = !isMultipleSelected,
-            onClick = { onTabChanged(false) },
-            modifier = Modifier.weight(1f)
-        )
-        SegmentedTab(
-            text = stringResource(R.string.gift_card_tab_multiple),
-            selected = isMultipleSelected,
-            onClick = { onTabChanged(true) },
-            modifier = Modifier.weight(1f)
-        )
-    }
-}
-
-@Composable
-private fun SegmentedTab(
-    text: String,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .height(34.dp)
-            .background(
-                color = if (selected) MyTheme.Colors.backgroundSecondary else Color.Transparent,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            style = MyTheme.OverlineMedium,
-            color = if (selected) MyTheme.Colors.textPrimary else MyTheme.Colors.textSecondary,
-            textAlign = TextAlign.Center
-        )
-    }
-}
 
 @Composable
 private fun AmountDisplay(
@@ -327,7 +273,7 @@ private fun AmountDisplay(
     }
     Text(
         text = annotated,
-        style = MyTheme.Typography.DisplaySmallMedium,
+        style = MyTheme.Typography.HeadlineLargeMedium,
         color = MyTheme.Colors.textPrimary,
         textAlign = TextAlign.Center,
         modifier = modifier
@@ -354,9 +300,16 @@ private fun FlexibleSingleContent(
     onTabChanged: (isMultiple: Boolean) -> Unit
 ) {
     Column {
-        GiftCardSegmentedControl(
-            isMultipleSelected = false,
-            onTabChanged = onTabChanged
+        val tabOptions = listOf(
+            SegmentedOption(stringResource(R.string.gift_card_tab_single)),
+            SegmentedOption(stringResource(R.string.gift_card_tab_multiple))
+        )
+        SegmentedPicker(
+            options = tabOptions,
+            selectedIndex = 0,
+            onOptionSelected = { _, index -> onTabChanged(index == 1) },
+            style = SegmentedPickerStyle(cornerRadius = 20f),
+            modifier = Modifier.fillMaxWidth().height(42.dp)
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -379,9 +332,16 @@ private fun FlexibleMultipleContent(
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
 ) {
     Column {
-        GiftCardSegmentedControl(
-            isMultipleSelected = true,
-            onTabChanged = onTabChanged
+        val tabOptions = listOf(
+            SegmentedOption(stringResource(R.string.gift_card_tab_single)),
+            SegmentedOption(stringResource(R.string.gift_card_tab_multiple))
+        )
+        SegmentedPicker(
+            options = tabOptions,
+            selectedIndex = 1,
+            onOptionSelected = { _, index -> onTabChanged(index == 1) },
+            style = SegmentedPickerStyle(cornerRadius = 20f),
+            modifier = Modifier.fillMaxWidth().height(42.dp)
         )
 
         Spacer(modifier = Modifier.height(24.dp))

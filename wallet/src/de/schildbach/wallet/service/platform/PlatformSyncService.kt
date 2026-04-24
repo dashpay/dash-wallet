@@ -1207,7 +1207,7 @@ class PlatformSynchronizationService @Inject constructor(
                     val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId)!!
                     val giftCard = giftCardDao.getCardForTransaction(tx.txId)
 
-                    if (!previouslySaved.compare(currentItem, giftCard.first())) {
+                    if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
                         listOfUnsaved.add(tx)
                         firstUnsavedTxDate = if (firstUnsavedTxDate != 0L) {
                             min(firstUnsavedTxDate, tx.updateTime.time)
