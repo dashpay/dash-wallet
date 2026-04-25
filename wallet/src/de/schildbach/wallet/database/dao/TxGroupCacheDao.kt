@@ -40,6 +40,10 @@ interface TxGroupCacheDao {
     @Query("SELECT COUNT(DISTINCT groupId) FROM tx_group_cache")
     suspend fun getGroupCount(): Int
 
+    /** Returns the total number of individual transactions tracked across all groups. */
+    @Query("SELECT COUNT(*) FROM tx_group_cache")
+    suspend fun getTotalTxCount(): Int
+
     /**
      * Returns only the "active" groups that may still receive new transactions:
      * - CoinJoin groups dated [today] (today's mixing sessions)

@@ -58,6 +58,8 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
@@ -137,6 +139,7 @@ class TxDisplayCacheService @Inject constructor(
     @Volatile private var contactsByTxId: Map<String, DashPayProfile> = mapOf()
     @Volatile private var minContactCreatedDate: LocalDate = LocalDate.MIN
     @Volatile private var chainLockBlockHeight: Int = 0
+    private var wasReplaying: Boolean? = null
 
     private var crowdNodeWrapperFactory: FullCrowdNodeSignUpTxSetFactory? = null
     private var coinJoinWrapperFactory: CoinJoinTxWrapperFactory? = null
@@ -346,6 +349,21 @@ class TxDisplayCacheService @Inject constructor(
             .onEach { state ->
                 if (state != null) {
                     chainLockBlockHeight = state.chainlockHeight
+                    val prev = wasReplaying
+                    wasReplaying = state.replaying
+                    when {
+                        prev == true && !state.replaying -> {
+                            // Sync just completed in this session — verify cache is complete.
+                            rebuildIfCacheIncomplete()
+                        }
+                        prev == null && !state.replaying -> {
+                            // First observation and blockchain is already synced. A previous
+                            // session may have been killed mid-replay (e.g. after a rescan),
+                            // leaving the cache partial. Check now rather than waiting for a
+                            // replaying→false transition that will never come.
+                            rebuildIfCacheIncomplete()
+                        }
+                    }
                 }
             }
             .catch { e -> log.error("blockchain state flow error (cache service)", e) }
@@ -374,6 +392,54 @@ class TxDisplayCacheService @Inject constructor(
         wrappedTransactionList.find { it.id == rowId }?.let { return it }
         val firstEntry = txGroupCacheDao.getGroupEntries(rowId).firstOrNull() ?: return null
         return loadWrapperOnDemand(rowId, firstEntry.wrapperType)
+    }
+
+    /**
+     * Called when blockchain sync transitions from replaying to synced.
+     *
+     * Two independent inconsistencies can leave the display stale:
+     *   1. **Missing group-cache entries** — the group cache has fewer individual tx rows
+     *      than the wallet (`walletTxCount > cachedTxCount`).  This happens when the
+     *      previous session was killed before its replay finished and the incremental
+     *      update path (`updateWrappedListForTransactions`) never saw those txs.
+     *   2. **Display / group-cache mismatch** — the group cache was updated incrementally
+     *      (all tx entries are present) but the display cache was not fully written, so it
+     *      has fewer rows than there are distinct groups.  This can occur when all replayed
+     *      txs merged into existing CoinJoin date-groups (REPLACE instead of INSERT in
+     *      `tx_display_cache`) while the underlying tx membership changed.
+     *
+     * Either condition triggers a full rebuild.
+     */
+    private fun rebuildIfCacheIncomplete() {
+        serviceScope.launch {
+            // No prior-session cache exists (fresh install or post-wipe) — nothing to verify.
+            if (txGroupCacheDao.getTotalTxCount() == 0) return@launch
+
+            // If the wallet isn't loaded yet (blockchain state can fire before the wallet
+            // is restored from disk), suspend until it becomes available.
+            val wallet = walletData.wallet
+                ?: walletData.observeWallet().filterNotNull().first()
+            val walletTxCount = wallet.getTransactionCount(true)
+            val cachedTxCount = txGroupCacheDao.getTotalTxCount()
+            val groupCount = txGroupCacheDao.getGroupCount()
+            val displayRowCount = txDisplayCacheDao.getCount()
+
+            val txsMissing = walletTxCount > cachedTxCount
+            val displayIncomplete = displayRowCount < groupCount
+            val needsRebuild = txsMissing || displayIncomplete
+
+            log.info(
+                "Sync complete: wallet={} txs | group cache={} txs/{} groups | display={} rows — {}",
+                walletTxCount, cachedTxCount, groupCount, displayRowCount,
+                if (needsRebuild)
+                    "rebuilding (txsMissing=$txsMissing, displayIncomplete=$displayIncomplete)"
+                else
+                    "cache is complete"
+            )
+            if (needsRebuild) {
+                forceRebuildTransactionCache()
+            }
+        }
     }
 
     /**
@@ -679,7 +745,15 @@ class TxDisplayCacheService @Inject constructor(
             TxDisplayCacheEntry.fromTransactionRowView(row, walletApplication, computeFilterFlags(wrapper))
         }
         if (displayEntries.isNotEmpty()) {
+            val beforeCount = txDisplayCacheDao.getCount()
             txDisplayCacheDao.insertAll(displayEntries)
+            val afterCount = txDisplayCacheDao.getCount()
+            if (afterCount != beforeCount) {
+                log.info(
+                    "updateWrappedList: {} batch txs → {} affected wrappers | display {} → {} rows",
+                    txs.size, affectedWrappers.size, beforeCount, afterCount
+                )
+            }
         }
 
         val groupEntries = affectedWrappers.flatMap { wrapper ->
