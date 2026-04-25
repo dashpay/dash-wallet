@@ -190,9 +190,15 @@
     <string name="purchase_gift_card_from">From</string>
     <string name="purchase_gift_card_to">To</string>
     <string name="purchase_confirm_transaction">Confirm</string>
-    <string name="purchase_gift_card_total_label">Gift card total</string>
+    <string name="purchase_gift_card_total_label">Gift card value</string>
     <string name="purchase_gift_card_discount">Discount</string>
     <string name="purchase_gift_card_you_pay">You pay</string>
+    <string name="purchase_gift_card_quantity_label">Quantity</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d card</item>
+        <item quantity="other">%d cards</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Card value</string>
     <string name="purchase_gift_card_confirm">Confirm</string>
     <string name="purchase_gift_card_details">Gift card details</string>
     <string name="purchase_original_purchase">Original purchase</string>

@@ -424,7 +424,7 @@ class PiggyCardsRepository @Inject constructor(
 
     override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
         return giftCardMap[merchantId]?.find {
-            it.isFixed && it.denomination == numberFormat.format(denomination)
+            it.isFixed && it.denomination == numberFormat.format(denomination) || !it.isFixed
         }?.discountPercentage?.let {
             (it - SERVICE_FEE_PERCENT) / 100.0
         } ?: 0.0

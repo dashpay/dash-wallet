@@ -82,6 +82,7 @@
             android:paddingHorizontal="15dp"
             android:paddingVertical="5dp">
 
+            <!-- FROM row -->
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/from_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -113,6 +114,7 @@
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/from_label" />
 
+            <!-- TO row -->
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/to_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -145,6 +147,19 @@
                 app:layout_constraintTop_toTopOf="@+id/to_label"
                 tools:text="@string/dash_wallet_name" />
 
+            <!-- Optional rows container: denomination breakdown for FlexibleMultiple,
+                 card value for Fixed. Populated programmatically; gone by default. -->
+            <LinearLayout
+                android:id="@+id/extra_rows_container"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toBottomOf="@+id/gift_card_total_label" />
+
+            <!-- GIFT CARD TOTAL row -->
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_total_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -168,6 +183,7 @@
                 app:layout_constraintTop_toTopOf="@+id/gift_card_total_label"
                 tools:text="$10.00" />
 
+            <!-- DISCOUNT row -->
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_discount_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -180,7 +196,7 @@
                 android:text="@string/purchase_gift_card_discount"
                 android:textSize="13sp"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@+id/gift_card_total_label" />
+                app:layout_constraintTop_toBottomOf="@+id/extra_rows_container" />
 
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_discount_value"
@@ -189,8 +205,9 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/gift_card_discount_label"
-                tools:text="$10.00" />
+                tools:text="5%" />
 
+            <!-- YOU PAY row -->
             <androidx.appcompat.widget.AppCompatTextView
                 android:id="@+id/gift_card_you_pay_label"
                 style="@style/Caption.Medium.Tertiary"
@@ -212,7 +229,8 @@
                 android:layout_height="wrap_content"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintTop_toTopOf="@+id/gift_card_you_pay_label"
-                tools:text="$10.00" />
+                tools:text="$9.50" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.cardview.widget.CardView>
 

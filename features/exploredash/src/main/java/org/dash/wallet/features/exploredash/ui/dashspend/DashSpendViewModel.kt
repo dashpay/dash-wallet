@@ -170,6 +170,8 @@ class DashSpendViewModel @Inject constructor(
     private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
     val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
 
+    val denominationQuantities = MutableStateFlow<Map<Double, Int>>(emptyMap())
+
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
     private val _giftCardMerchant = MutableStateFlow<Merchant?>(null)

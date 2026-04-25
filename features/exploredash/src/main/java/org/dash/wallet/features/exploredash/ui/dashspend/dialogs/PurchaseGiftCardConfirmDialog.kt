@@ -20,11 +20,14 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.widget.LinearLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StyleRes
+import androidx.appcompat.widget.AppCompatTextView
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.core.widget.TextViewCompat
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -37,6 +40,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
+import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
@@ -45,6 +49,7 @@ import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
@@ -54,14 +59,27 @@ import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
+import java.text.NumberFormat
+import java.util.Currency
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confirm_purchase_gift_card) {
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
+        private val currency = Currency.getInstance(Constants.USD_CURRENCY)
+        private val noCentsFormat = NumberFormat.getCurrencyInstance().apply {
+            currency = PurchaseGiftCardConfirmDialog@currency
+            minimumFractionDigits = 0
+        }
+        private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
+            currency = PurchaseGiftCardConfirmDialog@currency
+        }
+
     }
 
     @StyleRes override val backgroundStyle = R.style.PrimaryBackground
@@ -86,8 +104,11 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             dismiss()
             return
         }
-        val paymentValue = viewModel.giftCardOrderInfo.value
-        val savingsFraction = viewModel.getGiftCardDiscount(paymentValue.value.toBigDecimal().toDouble())
+
+        val orderInfo = viewModel.giftCardOrderInfo.value
+        val savingsFraction = viewModel.getGiftCardDiscount(orderInfo.value.toBigDecimal().toDouble())
+
+        // Merchant info
         binding.merchantName.text = merchant.name
         merchant.logoLocation?.let { logoLocation ->
             binding.merchantLogo.load(logoLocation) {
@@ -98,20 +119,54 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
                 listener(
                     onError = { _, result ->
                         log.error(
-                            "Image load error for ${
-                            merchant?.name
-                            }: ${merchant?.logoLocation}: ${result.throwable.message}",
+                            "Image load error for ${merchant.name}: ${merchant.logoLocation}: ${result.throwable.message}",
                             result.throwable
                         )
                     }
                 )
             }
         }
+
+        // Determine mode
+        val isFixed = viewModel.isFixedDenomination.value
+        val isMultiple = viewModel.isFixedDenominationMultiple.value
+        val mode = when {
+            isFixed != true && isMultiple != true -> GiftCardPurchaseMode.FlexibleSingle
+            isFixed == true -> GiftCardPurchaseMode.Fixed(merchant.denominations)
+            else -> GiftCardPurchaseMode.FlexibleMultiple(emptyList())
+        }
+
+        // Bind the large amount shown at the top of the dialog with cents
+        binding.purchaseCardValue.text = currencyFormat.format(orderInfo.value.toBigDecimal().toDouble())
+
+        // Populate the optional extra rows container
+        val container = binding.extraRowsContainer
+        container.removeAllViews()
+        when (mode) {
+            is GiftCardPurchaseMode.FlexibleSingle -> {
+                container.isVisible = false
+            }
+            is GiftCardPurchaseMode.FlexibleMultiple,
+            is GiftCardPurchaseMode.Fixed -> {
+                val denomQtys = viewModel.denominationQuantities.value
+                val nonZero = denomQtys.filter { it.value > 0 }.toSortedMap()
+                if (nonZero.isNotEmpty()) {
+                    val lines = nonZero.entries.joinToString("\n") { (denom, qty) ->
+                        "$qty x ${noCentsFormat.format(denom)}"
+                    }
+                    addInfoRow(container, getString(R.string.purchase_gift_card_quantity_label), lines)
+                    container.isVisible = true
+                } else {
+                    container.isVisible = false
+                }
+            }
+        }
+
+        // Always-visible summary rows
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsFraction)
-        binding.giftCardTotalValue.text = paymentValue.value.toFormattedString()
-        val discountedValue = paymentValue.value.discountBy(savingsFraction)
-        binding.giftCardYouPayValue.text = discountedValue.toFormattedStringRoundUp()
-        binding.purchaseCardValue.text = paymentValue.value.toFormattedString()
+        binding.giftCardTotalValue.text = noCentsFormat.format(orderInfo.value.toBigDecimal().toDouble())
+        val discountedValue = orderInfo.value.discountBy(savingsFraction)
+        binding.giftCardYouPayValue.text = currencyFormat.format(discountedValue.toBigDecimal().setScale(currency.defaultFractionDigits, RoundingMode.UP).toDouble())
 
         binding.cancelButton.setOnClickListener { dismiss() }
         binding.confirmButton.setOnClickListener { onConfirmButtonClicked() }
@@ -527,6 +582,35 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             binding.confirmButtonLoading.isGone = true
             binding.confirmButton.isClickable = true
         }
+    }
+
+    private fun addInfoRow(container: LinearLayout, label: String, value: String) {
+        val topPx = dpToPx(12)
+        val row = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.HORIZONTAL
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).also { it.topMargin = topPx }
+        }
+        val labelView = AppCompatTextView(requireContext()).apply {
+            text = label
+            TextViewCompat.setTextAppearance(this, R.style.Caption_Medium_Tertiary)
+            setPadding(0, 0, 0, topPx)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val valueView = AppCompatTextView(requireContext()).apply {
+            text = value
+            TextViewCompat.setTextAppearance(this, R.style.Caption)
+            gravity = android.view.Gravity.END
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            )
+        }
+        row.addView(labelView)
+        row.addView(valueView)
+        container.addView(row)
     }
 
     private fun dpToPx(dp: Int): Int {

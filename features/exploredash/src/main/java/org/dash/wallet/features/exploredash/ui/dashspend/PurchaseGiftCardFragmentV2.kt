@@ -228,6 +228,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     } else {
                         denominationQuantities[denomination] = quantity
                     }
+                    viewModel.denominationQuantities.value = denominationQuantities.toMap()
                     // Update viewModel with total for the confirm dialog
                     val newTotal = denominationQuantities.entries.sumOf { (d, q) -> d * q }
                     val newQty = denominationQuantities.values.sum()
