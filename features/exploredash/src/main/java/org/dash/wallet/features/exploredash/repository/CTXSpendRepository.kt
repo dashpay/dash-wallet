@@ -30,6 +30,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
 import org.dash.wallet.features.exploredash.network.authenticator.TokenAuthenticator
 import org.dash.wallet.features.exploredash.network.service.ctxspend.CTXSpendApi
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import java.io.IOException
 import java.util.UUID
@@ -162,10 +163,10 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun orderGiftcard(
         cryptoCurrency: String,
         fiatCurrency: String,
-        fiatAmount: String,
-        quantity: Int,
+        order: GiftCardShoppingCart,
         merchantId: String
     ): List<GiftCardInfo> {
+        val fiatAmount = order.first().valueAsString
         val response = purchaseGiftCard(
             merchantId = merchantId,
             fiatAmount = fiatAmount,

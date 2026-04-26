@@ -228,14 +228,14 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     } else {
                         denominationQuantities[denomination] = quantity
                     }
-                    viewModel.denominationQuantities.value = denominationQuantities.toMap()
+                    viewModel.giftCardOrderInfo.value = denominationQuantities.toMap()
                     // Update viewModel with total for the confirm dialog
-                    val newTotal = denominationQuantities.entries.sumOf { (d, q) -> d * q }
-                    val newQty = denominationQuantities.values.sum()
-                    if (newTotal > 0) {
-                        val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, newTotal.toString())
-                        viewModel.setGiftCardOrderInfo(fiat, newQty)
-                    }
+//                    val newTotal = denominationQuantities.entries.sumOf { (d, q) -> d * q }
+//                    val newQty = denominationQuantities.values.sum()
+//                    if (newTotal > 0) {
+//                        val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, newTotal.toString())
+//                        viewModel.setGiftCardOrderInfo(fiat, newQty)
+//                    }
                 },
                 onContinue = {
                     when (val m = mode) {
@@ -249,12 +249,12 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         }
                         is GiftCardPurchaseMode.FlexibleMultiple,
                         is GiftCardPurchaseMode.Fixed -> {
-                            val total = denominationQuantities.entries.sumOf { (d, q) -> d * q }
-                            val qty = denominationQuantities.values.sum()
-                            if (total > 0) {
-                                val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, total.toString())
-                                viewModel.setGiftCardOrderInfo(fiat, qty)
-                            }
+//                            val total = denominationQuantities.entries.sumOf { (d, q) -> d * q }
+//                            val qty = denominationQuantities.values.sum()
+//                            if (total > 0) {
+//                                val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, total.toString())
+//                                viewModel.setGiftCardOrderInfo(fiat, qty)
+//                            }
                         }
                     }
                     PurchaseGiftCardConfirmDialog().show(requireActivity())

@@ -40,6 +40,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.User
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.UserMetadata
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
 import java.text.NumberFormat
@@ -274,39 +275,46 @@ class PiggyCardsRepository @Inject constructor(
 
     private suspend fun purchaseGiftCard(
         merchantId: String,
-        fiatAmount: String,
+        order: GiftCardShoppingCart,
         fiatCurrency: String
     ): OrderResponse {
         val userEmail = userEmail.first()!!
         val giftCards = giftCardMap[merchantId]
+        val thisOrder = order.copy()
         if (!giftCards.isNullOrEmpty()) {
             val optionGiftcard = giftCards.find { it.isOption }
             val rangeGiftCard = giftCards.find { it.isRange }
-            val productId = if (rangeGiftCard != null) {
-                rangeGiftCard.id
-            } else if (optionGiftcard != null) {
-                optionGiftcard.id
-            } else {
-                val card = giftCards.find {
-                    it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
-                        it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
-                } ?: giftCards.find {
-                    it.quantity > 0 && it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
+            if (rangeGiftCard != null) {
+                thisOrder.forEach { orderItem ->
+                    orderItem.productId = rangeGiftCard.id
                 }
-                card?.id ?: throw IllegalStateException(
-                    "cannot find the selected fixed card $fiatAmount for brand $merchantId"
-                )
+            } else if (optionGiftcard != null) {
+                // there is probably a bug here, but there are no option cards to test
+                thisOrder.first().productId = optionGiftcard.id
+            } else {
+                thisOrder.forEach { orderItem ->
+                    val card = giftCards.find {
+                        it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
+                                it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
+                    } ?: giftCards.find {
+                        it.quantity > 0 && it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
+                    }
+                    card?.id ?: throw IllegalStateException(
+                        "cannot find the selected fixed card ${orderItem.value} for brand $merchantId"
+                    )
+                    orderItem.productId = card.id
+                }
             }
             return api.createOrder(
                 OrderRequest(
-                    listOf(
+                    thisOrder.map { orderItem ->
                         Order(
-                            productId = productId,
-                            quantity = 1,
-                            denomination = fiatAmount.toDouble(),
+                            productId = orderItem.productId,
+                            quantity = orderItem.quantity,
+                            denomination = orderItem.value,
                             currency = fiatCurrency
                         )
-                    ),
+                    },
                     recipientEmail = userEmail,
                     user = User(
                         name = "none",
@@ -327,11 +335,10 @@ class PiggyCardsRepository @Inject constructor(
     override suspend fun orderGiftcard(
         cryptoCurrency: String,
         fiatCurrency: String,
-        fiatAmount: String,
-        quantity: Int,
+        order: GiftCardShoppingCart,
         merchantId: String
     ): List<GiftCardInfo> {
-        val orderResponse = purchaseGiftCard(merchantId, fiatAmount, fiatCurrency)
+        val orderResponse = purchaseGiftCard(merchantId, order, fiatCurrency)
         val rate = api.getExchangeRate(fiatCurrency)
         exchangeRateMap[orderResponse.id] = rate
         delay(250)
@@ -340,7 +347,7 @@ class PiggyCardsRepository @Inject constructor(
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
             // return value
-            response.map { giftCard ->
+            response.mapIndexed { index, giftCard ->
                 GiftCardInfo(
                     id = orderResponse.id,
                     merchantName = giftCard.merchantName,
@@ -349,7 +356,7 @@ class PiggyCardsRepository @Inject constructor(
                     cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
                     paymentCryptoNetwork = Constants.DASH_CURRENCY,
                     rate = rate.exchangeRate.toString(),
-                    fiatAmount = fiatAmount,
+                    fiatAmount = order.get(index).value.toString(),
                     fiatCurrency = Constants.USD_CURRENCY,
                     paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
                 )

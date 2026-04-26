@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.repository
 import kotlinx.coroutines.flow.Flow
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 
 interface DashSpendRepository {
     val userEmail: Flow<String?>
@@ -36,8 +37,7 @@ interface DashSpendRepository {
     suspend fun orderGiftcard(
         cryptoCurrency: String,
         fiatCurrency: String,
-        fiatAmount: String,
-        quantity: Int,
+        order: GiftCardShoppingCart,
         merchantId: String,
     ): List<GiftCardInfo>
     suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo>

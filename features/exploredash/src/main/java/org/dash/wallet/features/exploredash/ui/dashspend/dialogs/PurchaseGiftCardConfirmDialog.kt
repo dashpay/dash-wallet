@@ -40,7 +40,6 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.uri.BitcoinURIParseException
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
@@ -53,8 +52,6 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.discountBy
 import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFormattedString
-import org.dash.wallet.common.util.toFormattedStringRoundUp
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.DialogConfirmPurchaseGiftCardBinding
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
@@ -105,8 +102,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             return
         }
 
-        val orderInfo = viewModel.giftCardOrderInfo.value
-        val savingsFraction = viewModel.getGiftCardDiscount(orderInfo.value.toBigDecimal().toDouble())
+        val orderTotalAmount = viewModel.giftCardOrderInfo.value.keys.sumOf { it }
+        val savingsFraction = viewModel.getGiftCardDiscount(orderTotalAmount.toBigDecimal().toDouble())
 
         // Merchant info
         binding.merchantName.text = merchant.name
@@ -137,7 +134,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
         }
 
         // Bind the large amount shown at the top of the dialog with cents
-        binding.purchaseCardValue.text = currencyFormat.format(orderInfo.value.toBigDecimal().toDouble())
+        binding.purchaseCardValue.text = currencyFormat.format(orderTotalAmount.toBigDecimal().toDouble())
 
         // Populate the optional extra rows container
         val container = binding.extraRowsContainer
@@ -148,7 +145,7 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
             }
             is GiftCardPurchaseMode.FlexibleMultiple,
             is GiftCardPurchaseMode.Fixed -> {
-                val denomQtys = viewModel.denominationQuantities.value
+                val denomQtys = viewModel.giftCardOrderInfo.value
                 val nonZero = denomQtys.filter { it.value > 0 }.toSortedMap()
                 if (nonZero.isNotEmpty()) {
                     val lines = nonZero.entries.joinToString("\n") { (denom, qty) ->
@@ -164,8 +161,8 @@ class PurchaseGiftCardConfirmDialog : OffsetDialogFragment(R.layout.dialog_confi
 
         // Always-visible summary rows
         binding.giftCardDiscountValue.text = GenericUtils.formatPercent(savingsFraction)
-        binding.giftCardTotalValue.text = noCentsFormat.format(orderInfo.value.toBigDecimal().toDouble())
-        val discountedValue = orderInfo.value.discountBy(savingsFraction)
+        binding.giftCardTotalValue.text = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble())
+        val discountedValue = orderTotalAmount - savingsFraction * orderTotalAmount
         binding.giftCardYouPayValue.text = currencyFormat.format(discountedValue.toBigDecimal().setScale(currency.defaultFractionDigits, RoundingMode.UP).toDouble())
 
         binding.cancelButton.setOnClickListener { dismiss() }

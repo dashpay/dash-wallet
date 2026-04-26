@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.content.Intent
+import android.icu.text.NumberFormat
 import androidx.lifecycle.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -48,6 +49,7 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
@@ -65,6 +67,8 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 data class DashSpendState(
@@ -73,12 +77,17 @@ data class DashSpendState(
 )
 
 data class GiftCardOrderItem(
-    val value: Fiat = Fiat.valueOf(Constants.USD_CURRENCY, 0),
-    val quality: Int = 1
+    val value: Double = 0.00,
+    val quantity: Int = 1,
+    var productId: Int = 0
 ) {
     companion object {
         val DEFAULT = GiftCardOrderItem()
     }
+    val valueAsString: String
+        get() = DecimalFormat.getNumberInstance().apply {
+            minimumFractionDigits = 2
+        }.format(value)
 }
 
 data class GiftCardShoppingCart constructor(
@@ -86,11 +95,22 @@ data class GiftCardShoppingCart constructor(
     //var provider: GiftCardProviderType,
     //var merchant: Merchant
 ) {
-    constructor(value: Fiat, quantity: Int):
+    constructor(items: List<GiftCardOrderItem>) : this(ArrayList(items))
+    constructor(value: Double, quantity: Int):
             this(arrayListOf(GiftCardOrderItem(value, quantity)))
 
     fun add(item: GiftCardOrderItem) = items.add(item)
+    fun copy(): GiftCardShoppingCart {
+        return GiftCardShoppingCart(
+            items.map { it.copy() }
+        )
+    }
+    fun first() = items.first()
     fun get(index: Int) = items[index]
+    fun<R> map(transform: (GiftCardOrderItem) -> R): List<R> = items.map(transform)
+    fun forEach(function: (GiftCardOrderItem) -> Unit) {
+        items.forEach(function)
+    }
 }
 
 @HiltViewModel
@@ -167,10 +187,11 @@ class DashSpendViewModel @Inject constructor(
     val isFixedDenominationMultiple = MutableStateFlow<Boolean?>(null)
     // val isFixedDenominationMultiple: StateFlow<Boolean?> = _isFixedDenominationMultiple.asStateFlow()
 
-    private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
-    val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
+    //private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
+    //val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
 
-    val denominationQuantities = MutableStateFlow<Map<Double, Int>>(emptyMap())
+    val giftCardOrderInfo = MutableStateFlow<Map<Double, Int>>(emptyMap())
+    // val giftCardOrderInfo: StateFlow<Map<Double, Int>> = _giftCardOrderInfo.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -224,17 +245,22 @@ class DashSpendViewModel @Inject constructor(
     suspend fun purchaseGiftCard(): List<GiftCardInfo> = withContext(Dispatchers.IO) {
         _giftCardMerchant.value?.merchantId?.let {
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
-            val amountValue = _giftCardOrderInfo.value.value
-            val quantity = _giftCardOrderInfo.value.quality
+            val giftCardOrderShoppingCart = GiftCardShoppingCart(
+                giftCardOrderInfo.value.map {
+                    GiftCardOrderItem(
+                        it.key,
+                        it.value
+                    )
+                }
+            )
             val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
             when (selectedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
                         ctxSpendRepository.orderGiftcard(
                             merchantId = provider!!.sourceId,
-                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                             fiatCurrency = Constants.USD_CURRENCY,
-                            quantity = quantity,
+                            order = giftCardOrderShoppingCart,
                             cryptoCurrency = Constants.DASH_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -256,8 +282,7 @@ class DashSpendViewModel @Inject constructor(
                         piggyCardsRepository.orderGiftcard(
                             cryptoCurrency = Constants.DASH_CURRENCY,
                             merchantId = provider!!.sourceId,
-                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
-                            quantity = quantity,
+                            order = giftCardOrderShoppingCart,
                             fiatCurrency = Constants.USD_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -535,18 +560,18 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
-        _giftCardOrderInfo.value = GiftCardOrderItem(fiat, quantity)
+        giftCardOrderInfo.value = mapOf(fiat.toBigDecimal().toDouble() to quantity)
     }
 
-    fun setGiftCardOrderInfo(coin: Coin, quantity: Int) {
-        _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            _giftCardOrderInfo.value = GiftCardOrderItem(myRate.coinToFiat(coin), quantity)
-        }
-    }
+//    fun setGiftCardOrderInfo(coin: Coin, quantity: Int) {
+//        _exchangeRate.value?.let {
+//            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
+//            giftCardOrderInfo.value = GiftCardOrderItem(myRate.coinToFiat(coin), quantity)
+//        }
+//    }
 
     fun resetSelectedDenomination() {
-        _giftCardOrderInfo.value = GiftCardOrderItem()
+        giftCardOrderInfo.value = mapOf<Double, Int>()
     }
 
     fun logEvent(eventName: String) {
@@ -621,8 +646,8 @@ class DashSpendViewModel @Inject constructor(
 
         report.append("\n")
         report.append("Purchase Details").append("\n")
-        report.append("amount entered: ").append(_giftCardOrderInfo.value.value.toFriendlyString()).append("\n")
-        report.append("quantity: ").append(_giftCardOrderInfo.value.quality).append("\n")
+        report.append("amount(s) entered: ").append(giftCardOrderInfo.value.keys.joinToString(", ")).append("\n")
+        report.append("quantity: ").append(giftCardOrderInfo.value.values.joinToString(", ")).append("\n")
         report.append("order: ").append(ex?.orderId).append("\n")
         report.append("\n")
         ex?.let { exception ->
@@ -687,5 +712,13 @@ class DashSpendViewModel @Inject constructor(
 
     fun logError(ctxSpendException: Throwable, message: String) {
         analytics.logError(ctxSpendException, message)
+    }
+
+    fun getFirstCardValueAsFiat(): Fiat {
+        return Fiat.parseFiat(Constants.USD_CURRENCY, giftCardOrderInfo.value.keys.first().toBigDecimal().setScale(2, RoundingMode.UP).toString())
+    }
+
+    fun getFirstCardQuantity(): Int {
+        return giftCardOrderInfo.value.values.first()
     }
 }

@@ -58,6 +58,7 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
 import java.text.NumberFormat
 import java.util.Currency
 
@@ -135,7 +136,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             viewModel.giftCardMerchant.value?.let { merchant ->
                 if (!merchant.fixedDenomination) {
                     showCardPurchaseLimits()
-                    viewModel.setGiftCardOrderInfo(it, viewModel.giftCardOrderInfo.value.quality)
+                    viewModel.setGiftCardOrderInfo(it, viewModel.getFirstCardQuantity())
                 }
             }
         }
@@ -294,14 +295,14 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
         val savingsFraction = if (merchant.fixedDenomination) {
-            viewModel.getGiftCardDiscount(viewModel.giftCardOrderInfo.value.value.toBigDecimal().toDouble())
+            viewModel.getGiftCardDiscount(viewModel.getFirstCardValueAsFiat().toBigDecimal().toDouble())
         } else {
             merchant.savingsFraction
         }
 
         // do not show discount if the entered value is zero or the discount is zero
         if (savingsFraction == DEFAULT_DISCOUNT_AS_DOUBLE ||
-            viewModel.giftCardOrderInfo.value.value.isZero
+            viewModel.getFirstCardValueAsFiat().isZero
         ) {
             binding.discountValue.isVisible = false
             return
@@ -322,18 +323,18 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             return
         }
 
-        if (!viewModel.withinLimits(viewModel.giftCardOrderInfo.value.value)) {
+        if (!viewModel.withinLimits(viewModel.getFirstCardValueAsFiat())) {
             binding.discountValue.isVisible = false
             return
         }
 
         binding.discountValue.setTextColor(resources.getColor(R.color.content_primary, null))
-        val purchaseAmount = viewModel.giftCardOrderInfo.value
-        val discountedAmount = purchaseAmount.value.discountBy(savingsFraction)
+        val purchaseAmount = viewModel.getFirstCardValueAsFiat()
+        val discountedAmount = purchaseAmount.discountBy(savingsFraction)
 
         binding.discountValue.text = getString(
             R.string.purchase_gift_card_discount_hint,
-            purchaseAmount.value.toFormattedString(),
+            purchaseAmount.toFormattedString(),
             discountedAmount.toFormattedStringRoundUp(),
             GenericUtils.formatPercent(savingsFraction)
         )
@@ -407,19 +408,13 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         val balanceWithDiscount = viewModel.balanceWithDiscount ?: return false
 
-        var paymentValue = viewModel.giftCardOrderInfo.value
+        var paymentValue = viewModel.getFirstCardValueAsFiat()
         val myRate = ExchangeRate(rate.fiat)
         // this is called when the after a purchase with the user's selected currency, not USD
-        if (paymentValue.value.currencyCode != Constants.USD_CURRENCY) {
-            paymentValue = GiftCardOrderItem(
-                Fiat.valueOf(
-                    Constants.USD_CURRENCY,
-                    paymentValue.value.value
-                ),
-                paymentValue.quality
-            )
+        if (paymentValue.currencyCode != Constants.USD_CURRENCY) {
+            paymentValue = Fiat.valueOf(Constants.USD_CURRENCY, paymentValue.value)
         }
-        val amountDash = myRate.fiatToCoin(paymentValue.value)
+        val amountDash = myRate.fiatToCoin(paymentValue)
 
         return amountDash.isGreaterThan(balanceWithDiscount)
     }
@@ -445,11 +440,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 modifier = Modifier.padding(20.dp),
                 denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
-                selectedDenomination = selectedDenomination.value.value.toBigDecimal().toDouble(),
+                selectedDenomination = selectedDenomination.value.keys.first().toBigDecimal().toDouble(),
                 canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
-                    viewModel.setGiftCardOrderInfo(fiat, viewModel.giftCardOrderInfo.value.quality)
+                    viewModel.setGiftCardOrderInfo(fiat, selectedDenomination.value.values.first())
                     binding.fixedDenomText.text = fixedAmountFormat.format(denomination)
                     setDiscountHint()
                 },
