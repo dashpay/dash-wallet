@@ -18,19 +18,21 @@ package org.dash.wallet.common.ui.dialogs
 
 import android.os.Bundle
 import android.view.View
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.DialogComposeContainerBinding
 import org.dash.wallet.common.ui.viewBinding
 
-open class ComposeBottomSheet(
-    override val backgroundStyle: Int = R.style.SecondaryBackground,
-    override val forceExpand: Boolean = false
-) : OffsetDialogFragment(R.layout.dialog_compose_container) {
+open class ComposeBottomSheet: OffsetDialogFragment(R.layout.dialog_compose_container) {
     private val binding by viewBinding(DialogComposeContainerBinding::bind)
+    /* the composable content should use a NavBar for the close button */
+    override val showCloseButton: Boolean = false
 
     @Composable
     open fun Content() {}
@@ -38,7 +40,8 @@ open class ComposeBottomSheet(
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.composeContainer.setContent {
-            Box(modifier = Modifier.navigationBarsPadding()) {
+            Column(modifier = Modifier.navigationBarsPadding()) {
+                Spacer(modifier = Modifier.height(17.dp))
                 Content()
             }
         }

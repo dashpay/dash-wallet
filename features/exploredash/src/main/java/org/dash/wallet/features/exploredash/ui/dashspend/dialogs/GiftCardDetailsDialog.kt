@@ -103,10 +103,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Currency
 
 @AndroidEntryPoint
-class GiftCardDetailsDialog : ComposeBottomSheet(
-    backgroundStyle = R.style.PrimaryBackground,
-    forceExpand = true
-) {
+class GiftCardDetailsDialog : ComposeBottomSheet() {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
         private const val ARG_CARD_INDEX = "cardIndex"
@@ -120,6 +117,8 @@ class GiftCardDetailsDialog : ComposeBottomSheet(
                 )
             }
     }
+    override val backgroundStyle = R.style.PrimaryBackground
+    override val forceExpand = true
 
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
     private val ctxSpendViewModel by viewModels<DashSpendViewModel>()

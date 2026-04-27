@@ -40,6 +40,7 @@ import androidx.core.view.WindowInsetsCompat
 open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomSheetDialogFragment() {
     protected open val forceExpand: Boolean = false
     @StyleRes protected open val backgroundStyle: Int = R.style.SecondaryBackground
+    protected open val showCloseButton: Boolean = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,10 +110,14 @@ open class OffsetDialogFragment(@LayoutRes private val layout: Int) : BottomShee
         }
 
         view.findViewById<View?>(R.id.collapse_button)?.apply {
-            if (this is AppCompatImageButton) {
-                setImageResource(R.drawable.ic_popup_close_circle)
+            if (showCloseButton) {
+                if (this is AppCompatImageButton) {
+                    setImageResource(R.drawable.ic_popup_close_circle)
+                }
+                setOnClickListener { dismiss() }
+            } else {
+                visibility = View.INVISIBLE
             }
-            setOnClickListener { dismiss() }
         }
 
         dialog?.window?.callback =

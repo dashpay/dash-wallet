@@ -62,8 +62,12 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarTitle
+import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
@@ -94,10 +98,8 @@ data class PurchaseConfirmUIState(
 )
 
 @AndroidEntryPoint
-class PurchaseGiftCardConfirmDialog : ComposeBottomSheet(
-    backgroundStyle = R.style.PrimaryBackground,
-    forceExpand = false
-) {
+class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
+    override val backgroundStyle = R.style.PrimaryBackground
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
         private val currency = Currency.getInstance(Constants.USD_CURRENCY)
@@ -534,35 +536,32 @@ internal fun PurchaseGiftCardConfirmView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 60.dp, bottom = 15.dp)
+            .padding(bottom = 15.dp)
     ) {
-        // Title (Subtitle2 → TitleSmallSemibold)
-        Text(
-            text = stringResource(R.string.purchase_confirm_transaction),
-            style = MyTheme.Typography.TitleSmallSemibold,
-            color = MyTheme.Colors.textPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+        // NavBar — back chevron + centred title (NavBarBackTitle Figma variant)
+        NavBarTitle(
+            title = stringResource(R.string.purchase_confirm_transaction),
+            modifier = Modifier.background(MyTheme.Colors.dashBlue)
         )
 
-        // Big amount (Headline3.Medium → HeadlineLargeMedium)
+        // Big amount — Headline M Bold (Amount display)
         Text(
             text = uiState.purchaseValueText,
-            style = MyTheme.Typography.HeadlineLargeMedium,
+            style = MyTheme.Typography.HeadlineMediumBold,
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(top = 26.dp)
+                .padding(top = 16.dp, bottom = 24.dp)
         )
 
         // Detail card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 15.dp, vertical = 26.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .padding(horizontal = 16.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(MyTheme.Colors.backgroundSecondary)
-                .padding(horizontal = 15.dp, vertical = 5.dp)
+                .padding(horizontal = 16.dp, vertical = 4.dp)
         ) {
             // FROM row — Dash Wallet
             ConfirmRow(label = stringResource(R.string.purchase_gift_card_from)) {
@@ -571,7 +570,7 @@ internal fun PurchaseGiftCardConfirmView(
                     contentDescription = null,
                     modifier = Modifier
                         .size(18.dp)
-                        .padding(end = 10.dp)
+                        .padding(end = 8.dp)
                 )
                 ConfirmValueText(text = stringResource(R.string.dash_wallet_name))
             }
@@ -585,7 +584,7 @@ internal fun PurchaseGiftCardConfirmView(
                     error = painterResource(R.drawable.ic_image_placeholder),
                     modifier = Modifier
                         .size(18.dp)
-                        .padding(end = 10.dp)
+                        .padding(end = 8.dp)
                 )
                 ConfirmValueText(text = uiState.merchantName)
             }
@@ -616,26 +615,26 @@ internal fun PurchaseGiftCardConfirmView(
             }
         }
 
-        // Bottom buttons (Button.Primary.Large.Grey → TintedGray, Button.Primary.Large.Blue → FilledBlue)
+        // Bottom buttons (btn-l tinted-gray + btn-l filled-blue)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 15.dp, end = 15.dp, top = 22.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 24.dp)
                 .animateContentSize(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            //if (!uiState.isLoading) {
-                DashButton(
-                    text = stringResource(R.string.cancel),
-                    style = Style.TintedGray,
-                    onClick = onCancel,
-                    modifier = Modifier.weight(1f),
-                    isEnabled = !uiState.isLoading
-                )
-            //}
+            DashButton(
+                text = stringResource(R.string.cancel),
+                style = Style.TintedGray,
+                size = Size.Large,
+                onClick = onCancel,
+                modifier = Modifier.weight(1f),
+                isEnabled = !uiState.isLoading
+            )
             DashButton(
                 text = stringResource(R.string.purchase_gift_card_confirm),
                 style = Style.FilledBlue,
+                size = Size.Large,
                 isLoading = uiState.isLoading,
                 onClick = onConfirm,
                 modifier = Modifier.weight(1f)
@@ -653,13 +652,13 @@ private fun ConfirmRow(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        // Caption.Medium.Tertiary → LabelLargeMedium with tertiary color
+        // Body M Regular / textSecondary — confirm-sheet label
         Text(
             text = label,
-            style = MyTheme.Typography.LabelLargeMedium,
-            color = MyTheme.Colors.textTertiary,
+            style = MyTheme.Typography.BodyMedium,
+            color = MyTheme.Colors.textSecondary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
@@ -673,10 +672,10 @@ private fun ConfirmValueText(
     text: String,
     textAlign: TextAlign = TextAlign.End
 ) {
-    // Caption → LabelLarge with primary color
+    // Body M Medium / textPrimary — confirm-sheet value
     Text(
         text = text,
-        style = MyTheme.Typography.LabelLarge,
+        style = MyTheme.Typography.BodyMediumMedium,
         color = MyTheme.Colors.textPrimary,
         textAlign = textAlign
     )

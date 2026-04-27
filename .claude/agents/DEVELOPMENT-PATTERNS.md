@@ -1101,6 +1101,31 @@ fun MoreScreenPreviewWithCoinJoin() {
 
 When creating bottom sheet dialogs with Compose content, use the `ComposeBottomSheet` class as the base. This provides consistent bottom sheet behavior with drag indicators, close buttons, and proper theming.
 
+## Background Color
+
+The bottom sheet's background color is set via the `backgroundStyle` parameter on `ComposeBottomSheet` (which forwards to `OffsetDialogFragment.backgroundStyle`). It uses one of the predefined styles:
+
+- `R.style.PrimaryBackground` — primary surface color
+- `R.style.SecondaryBackground` — secondary surface color (default)
+
+```kotlin
+// Factory pattern
+ComposeBottomSheet(
+    backgroundStyle = R.style.PrimaryBackground,
+    forceExpand = false
+) { dialog -> /* content */ }
+
+// Subclass pattern
+class MyDialog : ComposeBottomSheet(
+    backgroundStyle = R.style.PrimaryBackground,
+    forceExpand = false
+) { /* ... */ }
+```
+
+**Do not set the background on the first/outermost composable in `Content()`** (e.g., `Modifier.background(...)` or wrapping in a `Surface`/`Box` with a color). The sheet's drawable provides the rounded top corners. If you paint a solid background on the root composable, it covers those corners and the sheet appears with square edges.
+
+If you need a different background color than the two existing styles offer, define a new style in `themes.xml` that points to a drawable with rounded top corners, and pass it via `backgroundStyle` — do not work around it in Compose.
+
 ## Factory Function Pattern
 
 **Never** create a separate `*DialogFragment` subclass. Instead, create a factory function that returns a `ComposeBottomSheet` instance. The ViewModel owns all async work; the factory function receives the ViewModel and an `onDismiss` callback only.

@@ -6,12 +6,13 @@
 
     <View
         android:id="@+id/drag_indicator"
-        android:layout_width="40dp"
-        android:layout_height="4dp"
+        android:layout_width="36dp"
+        android:layout_height="5dp"
         android:layout_gravity="center|top"
         android:background="@drawable/rounded_background"
         android:theme="@style/DragIndicatorBackground"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="6dp"
+        android:layout_marginBottom="6dp"
         tools:background="@color/light_gray" />
 
     <androidx.compose.ui.platform.ComposeView
@@ -22,5 +23,6 @@
     <ImageButton
         android:id="@+id/collapse_button"
         android:layout_marginTop="18dp"
+        android:contentDescription="@string/button_close"
         style="@style/DialogCloseButton" />
 </FrameLayout>
