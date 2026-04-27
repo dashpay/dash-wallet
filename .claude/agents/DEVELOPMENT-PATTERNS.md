@@ -1103,28 +1103,39 @@ When creating bottom sheet dialogs with Compose content, use the `ComposeBottomS
 
 ## Background Color
 
-The bottom sheet's background color is set via the `backgroundStyle` parameter on `ComposeBottomSheet` (which forwards to `OffsetDialogFragment.backgroundStyle`). It uses one of the predefined styles:
+The bottom sheet's background color is set via the `backgroundStyle` property on `OffsetDialogFragment` (the parent of `ComposeBottomSheet`). It uses one of the predefined styles:
 
 - `R.style.PrimaryBackground` — primary surface color
 - `R.style.SecondaryBackground` — secondary surface color (default)
 
-```kotlin
-// Factory pattern
-ComposeBottomSheet(
-    backgroundStyle = R.style.PrimaryBackground,
-    forceExpand = false
-) { dialog -> /* content */ }
+`ComposeBottomSheet` itself has a **no-arg constructor**. Subclasses override the `backgroundStyle` and `forceExpand` properties from `OffsetDialogFragment`:
 
-// Subclass pattern
-class MyDialog : ComposeBottomSheet(
-    backgroundStyle = R.style.PrimaryBackground,
-    forceExpand = false
-) { /* ... */ }
+```kotlin
+@AndroidEntryPoint
+class MyDialog : ComposeBottomSheet() {
+    override val backgroundStyle: Int = R.style.PrimaryBackground
+    override val forceExpand: Boolean = false  // optional — false is the default
+
+    @Composable
+    override fun Content() {
+        // your screen content here
+    }
+}
 ```
+
+(The factory-function variant — `ComposeBottomSheet(backgroundStyle = …, forceExpand = …) { dialog -> … }` with a trailing content lambda — is a separate class in the wallet module, documented below under "Factory Function Pattern". Don't confuse it with the common `ComposeBottomSheet`.)
 
 **Do not set the background on the first/outermost composable in `Content()`** (e.g., `Modifier.background(...)` or wrapping in a `Surface`/`Box` with a color). The sheet's drawable provides the rounded top corners. If you paint a solid background on the root composable, it covers those corners and the sheet appears with square edges.
 
 If you need a different background color than the two existing styles offer, define a new style in `themes.xml` that points to a drawable with rounded top corners, and pass it via `backgroundStyle` — do not work around it in Compose.
+
+## Drag Indicator (Grabber)
+
+`ComposeBottomSheet` automatically renders the drag indicator (the small horizontal pill at the top of the sheet) via the `Grabber` composable in `org.dash.wallet.common.ui.components`. The base class inserts it above your `Content()` for you.
+
+**Do not add `Grabber()` inside your `Content()` composable** — you'll end up with two pills stacked on top of each other. Just start your `Content()` with the actual screen content (title, body, etc.); the parent class has already laid out the grabber and 17dp of vertical space above your composition.
+
+If you need the grabber in a non-`ComposeBottomSheet` context (e.g., a custom dialog or a draggable Compose-only sheet), import `Grabber` and call it directly — it lives in the common components package alongside `DashButton`, `TopNavBase`, etc.
 
 ## Factory Function Pattern
 

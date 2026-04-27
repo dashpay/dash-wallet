@@ -540,8 +540,7 @@ internal fun PurchaseGiftCardConfirmView(
     ) {
         // NavBar — back chevron + centred title (NavBarBackTitle Figma variant)
         NavBarTitle(
-            title = stringResource(R.string.purchase_confirm_transaction),
-            modifier = Modifier.background(MyTheme.Colors.dashBlue)
+            title = stringResource(R.string.purchase_confirm_transaction)
         )
 
         // Big amount — Headline M Bold (Amount display)

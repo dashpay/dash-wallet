@@ -570,6 +570,7 @@ object MyTheme {
         val red = Color(0xFFEA3943)
         val red5 = Color(0x0DEA3943)
         val extraLightGray = Color(0xFFEBEDEE)
+        val lightGray = Color(0xFFCED2D5)
         val darkGray = Color(0xFF75808A)
         val darkerGray50 = Color(0x80B0B6BC)
     }
