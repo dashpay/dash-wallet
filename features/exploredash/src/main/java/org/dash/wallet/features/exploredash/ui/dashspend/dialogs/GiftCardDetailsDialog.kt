@@ -401,9 +401,10 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                 color = MyTheme.Colors.textPrimary
             )
             uiState.date?.let { date ->
-                val formatter = DateTimeFormatter.ofPattern("MMMM dd, yyyy, hh:mm a")
+                val datePart = date.format(DateTimeFormatter.ofPattern("MMMM dd, yyyy"))
+                val timePart = date.format(DateTimeFormatter.ofPattern("h:mm a"))
                 Text(
-                    text = date.format(formatter),
+                    text = stringResource(R.string.purchase_gift_card_date_format, datePart, timePart),
                     style = MyTheme.Typography.LabelMedium,
                     color = MyTheme.Colors.textTertiary
                 )
@@ -525,29 +526,23 @@ private fun GiftCardItemCard(
             )
         }
 
-        if (BuildConfig.DEBUG && order != null) {
-            val orderNumber = order
-            if (!orderNumber.isNullOrEmpty()) {
-//                Box(
-//                    modifier = Modifier
-//                        .fillMaxWidth()
-//                        .clip(RoundedCornerShape(12.dp))
-//                        .background(MyTheme.Colors.backgroundSecondary)
-//                ) {
-//                    CardFieldRow(
-//                        label = stringResource(R.string.purchase_order_number),
-//                        value = orderNumber,
-//                        onCopy = { onCopyNumber(orderNumber) }
-//                    )
-//                }
-//                Spacer(modifier = Modifier.height(12.dp))
+        // Cashier instructions
+        if ((hasNumber || hasPin) && !shouldShowError) {
+            ListItem(
+                helpTextAbove = stringResource(R.string.purchase_cashier_instructions),
+                title = stringResource(R.string.purchase_cashier_instructions_body)
+            )
+        }
 
+        if (BuildConfig.DEBUG && order != null) {
+            // there are UI bugs with this
+            if (order.isNotEmpty()) {
                 ListItem(
                     label = stringResource(R.string.purchase_order_number),
-                    trailingText = orderNumber,
+                    trailingText = order,
                     trailingTrailingIcon = {
                         IconButton(
-                            onClick = { onCopyPin(orderNumber) },
+                            onClick = { onCopyPin(order) },
                             modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
@@ -557,7 +552,8 @@ private fun GiftCardItemCard(
                                 modifier = Modifier.size(18.dp)
                             )
                         }
-                    }
+                    },
+                    onTrailingActionClick = { onCopyNumber(order) }
                 )
             }
         }

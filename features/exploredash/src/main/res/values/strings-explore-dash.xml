@@ -214,6 +214,9 @@
     <string name="purchase_tell_the_cashier">Tell the cashier that you are paying with a digital gift card. Cashier: type the total amount on the Bankcard field, then type the gift card number in the Account field and press Enter.</string>
     <string name="purchase_in_the_payment_section">In the payment section, enter your digital gift card number into the gift card field.</string>
     <string name="purchase_powered_by">Powered by</string>
+    <string name="purchase_cashier_instructions">Cashier instructions</string>
+    <string name="purchase_cashier_instructions_body">Accept the gift card or eGift Card at checkout and process it as payment.</string>
+    <string name="purchase_gift_card_date_format">%1$s at %2$s</string>
     <string name="insufficient_money_title">Not enough coins</string>
     <string name="insufficient_money_msg">Insufficient funds</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
