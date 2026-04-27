@@ -52,10 +52,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.ButtonLarge
-import org.dash.wallet.common.ui.components.ButtonStyles
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.TopIntroSend
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
@@ -191,12 +192,13 @@ fun PurchaseGiftCardScreenV2(
 
             // Single continue button pinned outside the scroll area
             Spacer(modifier = Modifier.height(16.dp))
-            ButtonLarge(
+            DashButton(
                 onClick = onContinue,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonStyles.blueWithWhiteText(),
-                textId = org.dash.wallet.common.R.string.button_continue,
-                enabled = uiState.canContinue
+                text = stringResource(org.dash.wallet.common.R.string.button_continue),
+                style = Style.FilledBlue,
+                size = Size.Large,
+                isEnabled = uiState.canContinue
             )
             Spacer(modifier = Modifier.height(20.dp))
         }
