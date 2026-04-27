@@ -1267,3 +1267,240 @@ createExportCSVDialog(
 - **File placement**: `wallet/src/de/schildbach/wallet/ui/compose_views/{Feature}Dialog.kt` — factory function and content composable in one file.
 - **String resources**: Prefix all strings with a descriptive name.
 - **Preview**: Always include both an idle and a loading `@Preview`.
+
+# Compose Bottom Sheet Dialogs with an Owned ViewModel (Subclass Pattern)
+
+The factory function pattern above is the default. Use this **subclass pattern** only when the factory function pattern is insufficient — specifically, when the dialog needs to **own** its own Hilt-injected ViewModel with a lifecycle scoped to the dialog itself (not the host fragment/activity), and/or needs Fragment-only APIs that cannot be obtained reliably from inside a `@Composable`.
+
+## When to use this pattern
+
+Use the subclass pattern when **any** of the following apply:
+
+1. **Dialog-scoped Hilt ViewModel.** The dialog has its own `@HiltViewModel` injected via `by viewModels<MyViewModel>()` and that ViewModel must be scoped to the dialog instance (e.g. it holds per-instance state like `transactionId`, polling jobs, retry counters, or temporary caches that should die with the dialog).
+2. **Bundle arguments via `newInstance(...)`.** The dialog is opened with non-trivial parameters that need to survive configuration changes — pass them via `arguments = bundleOf(...)` and read them in `onViewCreated`.
+3. **Fragment-only APIs.** The dialog needs `registerForActivityResult` (must be called before `STARTED`), `BottomSheetBehavior` callbacks, dialog window manipulation (e.g. `screenBrightness`), or `onDestroyView` cleanup.
+4. **Multiple Hilt-injected ViewModels** that need to coexist (e.g. one dialog-scoped, one shared with the parent activity).
+
+If none of these apply, prefer the factory function pattern — it has fewer moving parts.
+
+## Structure
+
+The dialog file contains three logical layers, each with a clear responsibility:
+
+```
+@AndroidEntryPoint
+class FeatureDetailsDialog : ComposeBottomSheet(...) {   // Layer 1: lifecycle + plumbing
+    override fun Content() { FeatureDetailsContent(...) } // bridges to layer 2
+}
+
+@Composable
+private fun FeatureDetailsContent(viewModel, callbacks)   // Layer 2: state collection
+                                                          // collectAsState, LaunchedEffect, side effects
+
+@Composable
+internal fun FeatureDetailsView(uiState, callbacks)       // Layer 3: pure UI (preview-friendly)
+```
+
+**Layer 1 — `ComposeBottomSheet` subclass:** owns the ViewModel, reads arguments, manages window/sheet behaviour, exposes Fragment-only callbacks. Overrides `Content()` to bridge into the composable layer.
+
+**Layer 2 — `*Content` composable (private):** receives the ViewModel, calls `collectAsState`, runs `LaunchedEffect` side effects, then delegates UI to layer 3. Holds **no** UI of its own.
+
+**Layer 3 — `*View` composable (internal):** pure UI. Takes a `UIState` data class plus stateless lambda callbacks. Drives all `@Preview` functions.
+
+## Example
+
+```kotlin
+@AndroidEntryPoint
+class GiftCardDetailsDialog : ComposeBottomSheet(
+    backgroundStyle = R.style.PrimaryBackground,
+    forceExpand = true
+) {
+    companion object {
+        private const val ARG_TRANSACTION_ID = "transactionId"
+        private const val ARG_CARD_INDEX = "cardIndex"
+        private const val WAIT_LIMIT_FOR_ERROR = 60
+
+        fun newInstance(transactionId: Sha256Hash, cardIndex: Int = 0) =
+            GiftCardDetailsDialog().apply {
+                arguments = bundleOf(
+                    ARG_TRANSACTION_ID to transactionId,
+                    ARG_CARD_INDEX to cardIndex
+                )
+            }
+    }
+
+    // Dialog-scoped Hilt ViewModel (lives and dies with this dialog instance)
+    private val viewModel by viewModels<GiftCardDetailsViewModel>()
+    // Activity-scoped ViewModel for cross-screen state (use `by activityViewModels()` if needed)
+    private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
+
+    private var originalBrightness: Float = -1f
+
+    private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
+        override fun onStateChanged(bottomSheet: View, newState: Int) {}
+        override fun onSlide(bottomSheet: View, slideOffset: Float) {
+            if (slideOffset < -0.5) setMaxBrightness(false)
+        }
+    }
+
+    // registerForActivityResult MUST be a property of the Fragment — cannot live in a composable
+    private val launcher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { /* handle result */ }
+
+    @Composable
+    override fun Content() {
+        GiftCardDetailsContent(
+            viewModel = viewModel,
+            waitLimitForError = WAIT_LIMIT_FOR_ERROR,
+            onMaxBrightness = { enable -> setMaxBrightness(enable) },
+            onViewTransaction = {
+                deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+            },
+            onContactSupport = { contactSupport() },
+            onErrorLogged = { error, msg -> ctxSpendViewModel.logError(error, msg) }
+        )
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        // Read Bundle args and forward to the ViewModel exactly once
+        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { txId ->
+            val cardIndex = requireArguments().getInt(ARG_CARD_INDEX, 0)
+            viewModel.init(txId, cardIndex)
+        }
+        subscribeToBottomSheetCallback()
+    }
+
+    private fun setMaxBrightness(enable: Boolean) {
+        val window = dialog?.window ?: return
+        val params = window.attributes
+        if (enable) {
+            if (originalBrightness < 0) originalBrightness = params.screenBrightness
+            params.screenBrightness = 1.0f
+        } else {
+            params.screenBrightness = originalBrightness
+        }
+        window.attributes = params
+    }
+
+    private fun subscribeToBottomSheetCallback() {
+        val sheet = (dialog as BottomSheetDialog)
+            .findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        sheet?.let { BottomSheetBehavior.from(it).addBottomSheetCallback(bottomSheetCallback) }
+    }
+
+    override fun dismiss() {
+        setMaxBrightness(false)
+        super.dismiss()
+    }
+
+    override fun onDestroyView() {
+        val sheet = dialog?.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet)
+        sheet?.let { BottomSheetBehavior.from(it).removeBottomSheetCallback(bottomSheetCallback) }
+        setMaxBrightness(false)
+        super.onDestroyView()
+    }
+}
+
+// ─── Layer 2: state-collection bridge ────────────────────────────────────────
+@Composable
+private fun GiftCardDetailsContent(
+    viewModel: GiftCardDetailsViewModel,
+    waitLimitForError: Int,
+    onMaxBrightness: (Boolean) -> Unit,
+    onViewTransaction: () -> Unit,
+    onContactSupport: () -> Unit,
+    onErrorLogged: (Exception, String) -> Unit
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val activity = remember(context) { context.findFragmentActivity() }
+
+    LaunchedEffect(uiState.error, uiState.queries) {
+        if (uiState.error != null && uiState.queries == waitLimitForError) {
+            onErrorLogged(uiState.error!!, "delivery failed after retries")
+        }
+    }
+
+    GiftCardDetailsView(
+        uiState = uiState,
+        waitLimitForError = waitLimitForError,
+        onMaxBrightness = onMaxBrightness,
+        onViewTransaction = onViewTransaction,
+        onContactSupport = onContactSupport,
+        onHowToUse = { viewModel.logEvent(AnalyticsConstants.DashSpend.HOW_TO_USE) },
+        onBalanceCheck = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
+        onCopyNumber = { number -> number.copy(activity, "card number") },
+        onCopyPin = { pin -> pin.copy(activity, "card pin") }
+    )
+}
+
+// ─── Layer 3: pure UI (used by previews) ─────────────────────────────────────
+@Composable
+internal fun GiftCardDetailsView(
+    uiState: GiftCardUIState,
+    waitLimitForError: Int = 60,
+    onMaxBrightness: (Boolean) -> Unit = {},
+    onViewTransaction: () -> Unit = {},
+    onContactSupport: () -> Unit = {},
+    onHowToUse: () -> Unit = {},
+    onBalanceCheck: (String) -> Unit = {},
+    onCopyNumber: (String) -> Unit = {},
+    onCopyPin: (String) -> Unit = {}
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 60.dp)) {
+        // … pure UI driven by uiState …
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun LoadingPreview() {
+    GiftCardDetailsView(uiState = GiftCardUIState(/* loading state */))
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ErrorPreview() {
+    GiftCardDetailsView(uiState = GiftCardUIState(/* error state */))
+}
+```
+
+## Usage at call site
+
+```kotlin
+GiftCardDetailsDialog
+    .newInstance(transactionId, cardIndex)
+    .show(parentFragmentManager, "gift_card_details")
+```
+
+## Key rules
+
+- **`@AndroidEntryPoint` is required** on the subclass for Hilt to inject the ViewModel obtained via `by viewModels<...>()`.
+- **`newInstance(...) + bundleOf(...)`** for arguments — never pass parameters through constructors. Read in `onViewCreated` and forward to the ViewModel via an `init(...)` function exactly once.
+- **ViewModel scope:**
+  - `by viewModels<X>()` → scoped to the dialog (recreated per instance) — use this when state must die with the dialog.
+  - `by activityViewModels<X>()` / `by exploreViewModels<X>()` (project helper) → shared with the host — use this only for cross-screen state already owned by the host.
+- **Three-layer separation is mandatory.** Keep the `*Content` bridge composable **private** and **stateless apart from `collectAsState`/`LaunchedEffect`**. Keep the `*View` composable **internal** and **pure** so previews can drive it directly with `UIState` instances.
+- **Side effects in layer 2, not layer 3.** All `LaunchedEffect`, `DisposableEffect`, `findFragmentActivity()`, `LocalContext` access happens in the `*Content` layer. Layer 3 receives only `uiState` and lambdas.
+- **Fragment APIs stay in the subclass.** `registerForActivityResult`, `BottomSheetBehavior` callbacks, `dialog?.window` manipulation, `onDestroyView` cleanup — all live in layer 1 and are exposed to the composable via lambda parameters (e.g. `onMaxBrightness`).
+- **Lifecycle cleanup is mandatory.** Anything subscribed in `onViewCreated` (sheet callbacks, brightness overrides) must be reverted in `onDestroyView` and `dismiss()`. Don't leak `BottomSheetBehavior` callbacks across recreations.
+- **`forceExpand`:** set `true` for full-height detail dialogs (e.g. gift card details), `false` for short confirmation/info sheets.
+- **Top padding:** the `*View` composable still needs `padding(top = 60.dp)` to clear the drag indicator and close button.
+- **Previews:** drive every meaningful state (loading, success, error, empty) through layer 3 with hand-built `UIState` instances. Never preview layer 2 — it depends on a real ViewModel.
+- **File placement:** `features/{module}/.../dialogs/{Feature}Dialog.kt` — all three layers in one file.
+
+## Choosing between the two patterns
+
+| Need | Factory function | Subclass |
+|---|---|---|
+| ViewModel already lives in the host (activity/parent fragment) | ✅ | — |
+| One-shot async action (export, submit, retry) | ✅ | — |
+| Dialog has no parameters, or only simple lambdas | ✅ | — |
+| Dialog-scoped ViewModel with per-instance state | — | ✅ |
+| Bundle arguments needed (survives config changes) | — | ✅ |
+| `registerForActivityResult` from inside the dialog | — | ✅ |
+| `BottomSheetBehavior` callbacks / window brightness control | — | ✅ |
+| Long-lived polling, ticker jobs, or retry loops scoped to the dialog | — | ✅ |
