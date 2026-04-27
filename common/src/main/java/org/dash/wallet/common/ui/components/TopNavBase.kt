@@ -225,6 +225,24 @@ fun NavBarBack(
     )
 }
 
+/** NavBarBack — back chevron only, no title. */
+@Composable
+fun NavBarBackClose(
+    onBackClick: () -> Unit,
+    onCloseClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TopNavBase(
+        modifier = modifier,
+        leadingIcon = MyImages.MenuChevron,
+        onLeadingClick = onBackClick,
+        centralPart = false,
+        trailingPart = true,
+        trailingIcon = MyImages.NavBarClose,
+        onTrailingClick = onCloseClick
+    )
+}
+
 /** NavBarBackTitle — back chevron + centred title. */
 @Composable
 fun NavBarBackTitle(

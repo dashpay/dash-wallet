@@ -118,25 +118,32 @@ internal fun GiftCardOrderDetailsView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
     ) {
         NavBarClose(onCloseClick = onCloseClick)
-        Spacer(Modifier.height(20.dp))
-        MerchantHeader(uiState = uiState)
-        Spacer(Modifier.height(20.dp))
-        if (uiState.giftCards.isNotEmpty()) {
-            DashList(modifier = Modifier
+
+        Column(
+            modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-            ) {
-                uiState.giftCards.forEach { card ->
-                    GiftCardRow(card = card, onClick = { onCardClick(card) })
+                .padding(horizontal = 20.dp),
+        ) {
+            Spacer(Modifier.height(20.dp))
+            MerchantHeader(uiState = uiState)
+            Spacer(Modifier.height(20.dp))
+            if (uiState.giftCards.isNotEmpty()) {
+                DashList(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    uiState.giftCards.forEach { card ->
+                        GiftCardRow(card = card, onClick = { onCardClick(card) })
+                    }
                 }
             }
+            Spacer(Modifier.height(20.dp))
+            PoweredByFooter(serviceName = uiState.serviceName)
+            Spacer(Modifier.height(12.dp))
         }
-        Spacer(Modifier.height(20.dp))
-        PoweredByFooter(serviceName = uiState.serviceName)
-        Spacer(Modifier.height(12.dp))
     }
 }
 
@@ -154,9 +161,20 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            uiState.merchantIcon?.let { icon ->
+            if (uiState.merchantIcon != null) {
+                uiState.merchantIcon?.let { icon ->
+                    Image(
+                        bitmap = icon.asImageBitmap(),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(CircleShape)
+                    )
+                }
+            } else {
                 Image(
-                    bitmap = icon.asImageBitmap(),
+                    painter = painterResource(R.drawable.ic_gift_card_tx),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

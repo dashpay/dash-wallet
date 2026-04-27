@@ -69,8 +69,9 @@ import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
-import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -85,6 +86,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
     private var pendingManualRefresh: Boolean = false
 
     private val viewModel by activityViewModels<MainViewModel>()
+    private val giftCardViewModel by activityViewModels<GiftCardViewModel>()
     private val binding by viewBinding(WalletTransactionsFragmentBinding::bind)
     private val inviteHandlerViewModel by activityViewModels<InviteHandlerViewModel>()
 
@@ -101,55 +103,72 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         log.info("STARTUP WalletTransactionsFragment.onViewCreated at {}", onViewCreatedTime)
 
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
-            if (rowView is TransactionRowView) {
-                if (isProfileClick && rowView.contact != null) {
-                    requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
-                } else {
-                    // For rows loaded from the display cache, txWrapper is null.
-                    // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
-                    val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
-                    val fragment = when {
-                        txWrapper != null && txWrapper.transactions.size > 1 -> {
-                            // Multi-tx group (CrowdNode / CoinJoin) — open group detail.
-                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                            TransactionGroupDetailsFragment(txWrapper)
-                        }
-                        txWrapper != null -> {
-                            // Single-tx wrapper found in memory — open TX detail directly.
-                            // TransactionGroupDetailsFragment would show the wrong (default
-                            // CrowdNode) icon for non-group wrappers, so route here instead.
-                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                            TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
-                        }
-                        ServiceName.isDashSpend(rowView.service) -> {
-                            viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                            GiftCardDetailsDialog.newInstance(Sha256Hash.wrap(rowView.id))
-                        }
-                        rowView.transactionAmount == 1 -> {
-                            // Individual transaction — rowId is a 64-char txId hex string.
-                            viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                            TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
-                        }
-                        else -> {
-                            // Group row whose wrapper isn't loaded yet (lazy startup) —
-                            // load it on demand so the user can still open the detail view.
-                            viewLifecycleOwner.lifecycleScope.launch {
-                                val wrapper = viewModel.loadGroupWrapper(rowView.id)
-                                val activity = if (isAdded) activity else null
-                                if (wrapper != null && activity != null) {
-                                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                    TransactionGroupDetailsFragment(wrapper).show(activity)
-                                } else if (wrapper == null) {
-                                    log.warn("group {} not found in cache — cannot open details", rowView.id)
-                                }
+            viewLifecycleOwner.lifecycleScope.launch {
+                if (rowView is TransactionRowView) {
+                    if (isProfileClick && rowView.contact != null) {
+                        requireContext().startActivity(
+                            DashPayUserActivity.createIntent(
+                                requireContext(),
+                                rowView.contact
+                            )
+                        )
+                    } else {
+                        // For rows loaded from the display cache, txWrapper is null.
+                        // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
+                        val txWrapper = rowView.txWrapper ?: viewModel.getTransactionWrapper(rowView.id)
+                        val fragment = when {
+                            txWrapper != null && txWrapper.transactions.size > 1 -> {
+                                // Multi-tx group (CrowdNode / CoinJoin) — open group detail.
+                                viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                TransactionGroupDetailsFragment(txWrapper)
                             }
-                            null  // fragment already shown inside the coroutine above
-                        }
-                    }
 
-                    fragment?.show(requireActivity())
+                            txWrapper != null -> {
+                                // Single-tx wrapper found in memory — open TX detail directly.
+                                // TransactionGroupDetailsFragment would show the wrong (default
+                                // CrowdNode) icon for non-group wrappers, so route here instead.
+                                viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                            }
+
+                            ServiceName.isDashSpend(rowView.service) -> {
+                                viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
+                                val txId = Sha256Hash.wrap(rowView.id)
+                                //if (giftCardViewModel.getGiftCardCount(txId) > 1) {
+                                    GiftCardOrderDetailsDialog.newInstance(txId)
+                                //} else {
+                                //    GiftCardDetailsDialog.newInstance(txId)
+                               // }
+                            }
+
+                            rowView.transactionAmount == 1 -> {
+                                // Individual transaction — rowId is a 64-char txId hex string.
+                                viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                TransactionDetailsDialogFragment.newInstance(Sha256Hash.wrap(rowView.id))
+                            }
+
+                            else -> {
+                                // Group row whose wrapper isn't loaded yet (lazy startup) —
+                                // load it on demand so the user can still open the detail view.
+                                viewLifecycleOwner.lifecycleScope.launch {
+                                    val wrapper = viewModel.loadGroupWrapper(rowView.id)
+                                    val activity = if (isAdded) activity else null
+                                    if (wrapper != null && activity != null) {
+                                        viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                        TransactionGroupDetailsFragment(wrapper).show(activity)
+                                    } else if (wrapper == null) {
+                                        log.warn("group {} not found in cache — cannot open details", rowView.id)
+                                    }
+                                }
+                                null  // fragment already shown inside the coroutine above
+                            }
+                        }
+
+                        fragment?.show(requireActivity())
+                    }
                 }
             }
+            Unit // don't return the job
         }
 
         // Long-press "History" title → offer to wipe and rebuild the transaction cache.

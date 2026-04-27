@@ -83,6 +83,7 @@ import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashList
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarBackClose
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.util.Constants
@@ -91,6 +92,7 @@ import org.dash.wallet.common.util.Qr
 import org.dash.wallet.common.util.copy
 import org.dash.wallet.common.util.deepLinkNavigate
 import org.dash.wallet.common.util.findFragmentActivity
+import org.dash.wallet.features.exploredash.BuildConfig
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.Barcode
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
@@ -138,6 +140,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
         GiftCardDetailsContent(
             viewModel = viewModel,
             waitLimitForError = WAIT_LIMIT_FOR_ERROR,
+            onCloseClick = { dismiss() },
             onMaxBrightness = { enable -> setMaxBrightness(enable) },
             onViewTransaction = {
                 deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
@@ -206,6 +209,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
 private fun GiftCardDetailsContent(
     viewModel: GiftCardDetailsViewModel,
     waitLimitForError: Int,
+    onCloseClick: () -> Unit,
     onMaxBrightness: (Boolean) -> Unit,
     onViewTransaction: () -> Unit,
     onContactSupport: () -> Unit,
@@ -227,6 +231,7 @@ private fun GiftCardDetailsContent(
     GiftCardDetailsView(
         uiState = uiState,
         waitLimitForError = waitLimitForError,
+        onCloseClick = onCloseClick,
         onMaxBrightness = onMaxBrightness,
         onViewTransaction = onViewTransaction,
         onContactSupport = onContactSupport,
@@ -241,6 +246,7 @@ private fun GiftCardDetailsContent(
 internal fun GiftCardDetailsView(
     uiState: GiftCardUIState,
     waitLimitForError: Int = 60,
+    onCloseClick: () -> Unit = {},
     onMaxBrightness: (Boolean) -> Unit = {},
     onViewTransaction: () -> Unit = {},
     onContactSupport: () -> Unit = {},
@@ -261,116 +267,93 @@ internal fun GiftCardDetailsView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 60.dp) // leave room for close button overlay
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp)
     ) {
-//        Text(
-//            text = stringResource(R.string.purchase_gift_card_details),
-//            style = MyTheme.Typography.TitleMediumSemibold,
-//            color = MyTheme.Colors.textPrimary,
-//            textAlign = TextAlign.Center,
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(bottom = 20.dp)
-//        )
+        NavBarBackClose(onBackClick = onCloseClick, onCloseClick = onCloseClick)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+        ) {
+            MerchantHeader(uiState = uiState)
 
-        MerchantHeader(uiState = uiState)
+            Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(16.dp))
+            GiftCardItemCard(
+                giftCard = uiState.giftCard,
+                barcode = uiState.barcode,
+                order = uiState.giftCard?.note,
+                shouldShowError = shouldShowError,
+                shouldShowTimeoutError = shouldShowTimeoutError,
+                error = uiState.error,
+                onMaxBrightness = onMaxBrightness,
+                onBalanceCheck = { uiState.giftCard?.merchantUrl?.let { onBalanceCheck(it) } },
+                onCopyNumber = onCopyNumber,
+                onCopyPin = onCopyPin
+            )
 
-        // Order number is shared across all cards in one order — show it once above the card list
-        val orderNumber = uiState.giftCard?.note
-        if (!orderNumber.isNullOrEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MyTheme.Colors.backgroundSecondary)
-            ) {
-                CardFieldRow(
-                    label = stringResource(R.string.purchase_order_number),
-                    value = orderNumber,
-                    onCopy = { onCopyNumber(orderNumber) }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            DashList {
+                NavigationRow(
+                    label = stringResource(R.string.purchase_view_transaction),
+                    onClick = onViewTransaction
                 )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-        }
 
-        GiftCardItemCard(
-            giftCard = uiState.giftCard,
-            barcode = uiState.barcode,
-            shouldShowError = shouldShowError,
-            shouldShowTimeoutError = shouldShowTimeoutError,
-            error = uiState.error,
-            onMaxBrightness = onMaxBrightness,
-            onBalanceCheck = { uiState.giftCard?.merchantUrl?.let { onBalanceCheck(it) } },
-            onCopyNumber = onCopyNumber,
-            onCopyPin = onCopyPin
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        DashList {
-            NavigationRow(
-                label = stringResource(R.string.purchase_view_transaction),
-                onClick = onViewTransaction
-            )
-        }
-
-        if (shouldShowError) {
-            Spacer(modifier = Modifier.height(12.dp))
-            val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
-                ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
-                ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
-                else -> stringResource(R.string.gift_card_contact_support)
-            }
-            DashList {
-                NavigationRow(label = supportLabel, onClick = onContactSupport)
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (!showHowToUse) {
-            DashButton(
-                text = stringResource(R.string.purchase_see_how_to_use_gift_card),
-                style = Style.TintedBlue,
-                onClick = {
-                    onHowToUse()
-                    showHowToUse = true
+            if (shouldShowError) {
+                Spacer(modifier = Modifier.height(12.dp))
+                val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
+                    ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
+                    ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
+                    else -> stringResource(R.string.gift_card_contact_support)
                 }
+                DashList {
+                    NavigationRow(label = supportLabel, onClick = onContactSupport)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (!showHowToUse) {
+                DashButton(
+                    text = stringResource(R.string.purchase_see_how_to_use_gift_card),
+                    style = Style.TintedBlue,
+                    onClick = {
+                        onHowToUse()
+                        showHowToUse = true
+                    }
+                )
+            } else {
+                HowToUseCard()
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = stringResource(R.string.purchase_powered_by),
+                style = MyTheme.Typography.LabelMedium,
+                color = MyTheme.Colors.textTertiary,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
-        } else {
-            HowToUseCard()
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            val poweredByRes = if (uiState.serviceName == ServiceName.CTXSpend) {
+                R.drawable.ic_ctx_logo_blue
+            } else {
+                R.drawable.ic_piggycards_logo
+            }
+            Image(
+                painter = painterResource(poweredByRes),
+                contentDescription = null,
+                modifier = Modifier
+                    .height(20.dp)
+                    .align(Alignment.CenterHorizontally)
+            )
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
-
-        Spacer(modifier = Modifier.height(32.dp))
-
-        Text(
-            text = stringResource(R.string.purchase_powered_by),
-            style = MyTheme.Typography.LabelMedium,
-            color = MyTheme.Colors.textTertiary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val poweredByRes = if (uiState.serviceName == ServiceName.CTXSpend) {
-            R.drawable.ic_ctx_logo_blue
-        } else {
-            R.drawable.ic_piggycards_logo
-        }
-        Image(
-            painter = painterResource(poweredByRes),
-            contentDescription = null,
-            modifier = Modifier
-                .height(20.dp)
-                .align(Alignment.CenterHorizontally)
-        )
-
-        Spacer(modifier = Modifier.height(40.dp))
     }
 }
 
@@ -433,6 +416,7 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
 private fun GiftCardItemCard(
     giftCard: GiftCard?,
     barcode: Barcode?,
+    order: String?,
     shouldShowError: Boolean,
     shouldShowTimeoutError: Boolean,
     error: Exception?,
@@ -539,6 +523,43 @@ private fun GiftCardItemCard(
                     }
                 }
             )
+        }
+
+        if (BuildConfig.DEBUG && order != null) {
+            val orderNumber = order
+            if (!orderNumber.isNullOrEmpty()) {
+//                Box(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .clip(RoundedCornerShape(12.dp))
+//                        .background(MyTheme.Colors.backgroundSecondary)
+//                ) {
+//                    CardFieldRow(
+//                        label = stringResource(R.string.purchase_order_number),
+//                        value = orderNumber,
+//                        onCopy = { onCopyNumber(orderNumber) }
+//                    )
+//                }
+//                Spacer(modifier = Modifier.height(12.dp))
+
+                ListItem(
+                    label = stringResource(R.string.purchase_order_number),
+                    trailingText = orderNumber,
+                    trailingTrailingIcon = {
+                        IconButton(
+                            onClick = { onCopyPin(orderNumber) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                painter = painterResource(R.drawable.ic_copy_blue),
+                                contentDescription = null,
+                                tint = MyTheme.Colors.dashBlue,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                )
+            }
         }
 
         // Loading indicator

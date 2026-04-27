@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.update
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.features.exploredash.data.explore.GiftCardDao
 import javax.inject.Inject
 

@@ -38,6 +38,9 @@ interface GiftCardDao {
     @Update(entity = GiftCard::class)
     suspend fun updateGiftCard(giftCard: GiftCard)
 
+    @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
+    suspend fun getCardCountForTransaction(txId: Sha256Hash): Int
+
     @Query("SELECT * FROM gift_cards WHERE txId = :txId")
     suspend fun getCardForTransaction(txId: Sha256Hash): List<GiftCard>
 
