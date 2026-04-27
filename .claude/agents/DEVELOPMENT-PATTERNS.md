@@ -1325,7 +1325,7 @@ The dialog file contains three logical layers, each with a clear responsibility:
 
 ```
 @AndroidEntryPoint
-class FeatureDetailsDialog : ComposeBottomSheet(...) {   // Layer 1: lifecycle + plumbing
+class FeatureDetailsDialog : ComposeBottomSheet() {   // Layer 1: lifecycle + plumbing
     override fun Content() { FeatureDetailsContent(...) } // bridges to layer 2
 }
 
@@ -1347,10 +1347,9 @@ internal fun FeatureDetailsView(uiState, callbacks)       // Layer 3: pure UI (p
 
 ```kotlin
 @AndroidEntryPoint
-class GiftCardDetailsDialog : ComposeBottomSheet(
-    backgroundStyle = R.style.PrimaryBackground,
-    forceExpand = true
-) {
+class GiftCardDetailsDialog : ComposeBottomSheet() {
+    override val backgroundStyle = R.style.PrimaryBackground,
+    override val forceExpand = true
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
         private const val ARG_CARD_INDEX = "cardIndex"
