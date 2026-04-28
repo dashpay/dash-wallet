@@ -144,7 +144,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             return
         }
 
-        val orderTotalAmount = viewModel.giftCardOrderInfo.value.keys.sumOf { it }
+        val orderTotalAmount = viewModel.giftCardOrderInfo.value.entries.sumOf { it.key * it.value }
         val savingsFraction = viewModel.getGiftCardDiscount(orderTotalAmount.toBigDecimal().toDouble())
 
         val isFixed = viewModel.isFixedDenomination.value

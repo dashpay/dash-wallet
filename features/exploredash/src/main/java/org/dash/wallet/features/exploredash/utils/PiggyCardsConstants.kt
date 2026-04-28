@@ -17,6 +17,10 @@
 
 package org.dash.wallet.features.exploredash.utils
 
+import org.dash.wallet.features.exploredash.BuildConfig
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
+data class TestMerchant(val merchantId: String, val id: String, val denominationType: DenominationType)
+
 object PiggyCardsConstants {
     const val REPORT_EMAIL = "support@piggy.cards"
     const val BASE_URL_DEV = "https://api.piggy.cards/dash/v1/"
@@ -26,7 +30,18 @@ object PiggyCardsConstants {
     const val TOKEN_EXPIRES_IN_SECONDS = 3600
 
     // Test Merchants
+    const val SUPPORT_PIGGY_CARDS_TEST_MERCHANT = BuildConfig.PIGGY_CARDS_TEST_MERCHANT
     const val PIGGY_CARDS_TEST_FIXED_MERCHANT_ID = "2e393eee-4508-47fe-954d-66209333fc96"
     const val PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID = "2e393fff-4508-47fe-954d-66209333fc96"
-    const val PIGGY_CARDS_TEST_BRAND_ID = "177"
+    const val APPLE_TEST_FLEXIBLE_MERCHANT_ID = "2e393ddd-4508-47fe-954d-66209333fc96"
+    const val DOMINOS_TEST_FLEXIBLE_MERCHANT_ID = "2e393ccc-4508-47fe-954d-66209333fc96"
+    const val HOME_DEPOT_TEST_FLEXIBLE_MERCHANT_ID = "2e393aaa-4508-47fe-954d-66209333fc96"
+
+    val TEST_CARDS = hashMapOf<String, TestMerchant>(
+        PIGGY_CARDS_TEST_FIXED_MERCHANT_ID to TestMerchant(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID, "177", DenominationType.Fixed),
+        PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID to TestMerchant(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID, "177", DenominationType.MinMax),
+        APPLE_TEST_FLEXIBLE_MERCHANT_ID to TestMerchant(APPLE_TEST_FLEXIBLE_MERCHANT_ID, "13", DenominationType.MinMax),
+        DOMINOS_TEST_FLEXIBLE_MERCHANT_ID to TestMerchant(DOMINOS_TEST_FLEXIBLE_MERCHANT_ID, "177", DenominationType.MinMax),
+        HOME_DEPOT_TEST_FLEXIBLE_MERCHANT_ID to TestMerchant(HOME_DEPOT_TEST_FLEXIBLE_MERCHANT_ID, "74", DenominationType.MinMax)
+    )
 }

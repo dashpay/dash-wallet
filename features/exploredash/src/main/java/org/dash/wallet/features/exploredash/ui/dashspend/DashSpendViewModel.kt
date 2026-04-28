@@ -67,6 +67,7 @@ import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -409,17 +410,11 @@ class DashSpendViewModel @Inject constructor(
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
         return giftCardProvider?.let {
             // check for PiggyCards test cards
-            if (it.provider == GiftCardProviderType.PiggyCards.name) {
-                val sourceId = merchant.sourceId
-                if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
-                    when (merchant.merchantId) {
-                        PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
-                            return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, DenominationType.Fixed)
-                        }
-                        PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
-                            return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, DenominationType.MinMax)
-                        }
-                    }
+            if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT && it.provider == GiftCardProviderType.PiggyCards.name) {
+                val sourceId = merchant.sourceId!!
+                //if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
+                PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
+                    return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, it.denominationType)
                 }
             }
             providers[GiftCardProviderType.fromProviderName(it.provider)]?.getMerchant(
@@ -452,15 +447,18 @@ class DashSpendViewModel @Inject constructor(
 
                 "PiggyCards" -> {
                     if (piggyCardsRepository.isUserSignedIn()) {
-                        if (provider.sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
-                            when (merchant.merchantId) {
-                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
-                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.Fixed)
-                                }
-                                PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
-                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.MinMax)
-                                }
+                        if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+                            PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
+                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, it.denominationType)
                             }
+//                            when (merchant.merchantId) {
+//                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
+//                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.Fixed)
+//                                }
+//                                PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
+//                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.MinMax)
+//                                }
+//                            }
                         } else {
                             piggyCardsRepository.getMerchant(provider.sourceId)?.let {
                                 merchantResponseList.add(it)

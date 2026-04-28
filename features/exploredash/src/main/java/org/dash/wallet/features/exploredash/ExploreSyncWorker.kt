@@ -33,8 +33,10 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
 import org.slf4j.LoggerFactory
 import java.text.SimpleDateFormat
 import java.util.*
@@ -171,24 +173,22 @@ class ExploreSyncWorker @AssistedInject constructor(
     }
 
     private suspend fun addPiggyCardsTestMerchantIfNeeded() {
-        if (!BuildConfig.DEBUG) return
+        val database = ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+        val merchantDao = database.merchantDao()
+        val giftCardProviderDao = database.giftCardProviderDao()
 
-        try {
-            val database = ExploreDatabase.getAppDatabase(appContext, exploreConfig)
-            val merchantDao = database.merchantDao()
-            val giftCardProviderDao = database.giftCardProviderDao()
-
-            val testMerchantIds = listOf(
-                PIGGY_CARDS_TEST_FIXED_MERCHANT_ID,
-                PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID
-            )
+        //if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+            val testMerchantIds = PiggyCardsConstants.TEST_CARDS.keys.map { it }
             val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
             val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
             log.info(
                 "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
-                    "$deletedProviders provider(s)"
+                        "$deletedProviders provider(s)"
             )
+        //    return
+        //}
 
+        try {
             if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
                 log.info("PiggyCards test merchant(s) already exist, skipping")
                 return
@@ -237,10 +237,67 @@ class ExploreSyncWorker @AssistedInject constructor(
                 website = "https://piggy.cards"
             }
 
+            val homeDepotTestMerchant = Merchant(
+                merchantId = PiggyCardsConstants.HOME_DEPOT_TEST_FLEXIBLE_MERCHANT_ID,
+                paymentMethod = "gift card",
+                redeemType = "online",
+                savingsPercentage = 100,
+                denominationsType = "min-max",
+                addDate = now,
+                updateDate = now
+            ).apply {
+                name = "Home Depot [Flexible]"
+                active = true
+                source = "PiggyCards"
+                sourceId = "74"
+                logoLocation = "https://piggy.cards/image/catalog/piggycards/Home_Depot_Copy.jpg"
+                type = "online"
+                website = "https://www.homedepot.com"
+            }
+
+            val appleTestMerchant = Merchant(
+                merchantId = PiggyCardsConstants.APPLE_TEST_FLEXIBLE_MERCHANT_ID,
+                paymentMethod = "gift card",
+                redeemType = "online",
+                savingsPercentage = 100,
+                denominationsType = "min-max",
+                addDate = now,
+                updateDate = now
+            ).apply {
+                name = "Apple [Flexible]"
+                active = true
+                source = "PiggyCards"
+                sourceId = "13"
+                logoLocation = "https://piggy.cards/image/catalog/incenti/8aaa3d5d-logo.png"
+                type = "online"
+                website = "https://www.apple.com"
+            }
+
+            val dominosTestMerchant = Merchant(
+                merchantId = PiggyCardsConstants.APPLE_TEST_FLEXIBLE_MERCHANT_ID,
+                paymentMethod = "gift card",
+                redeemType = "online",
+                savingsPercentage = 100,
+                denominationsType = "min-max",
+                addDate = now,
+                updateDate = now
+            ).apply {
+                name = "Dominos [Flexible]"
+                active = true
+                source = "PiggyCards"
+                sourceId = "45"
+                logoLocation = "https://piggy.cards/image/catalog/incenti/68ea431c-logo.png"
+                type = "online"
+                website = "https://www.apple.com"
+            }
+
             merchantDao.save(
                 listOf(
                     testFlexibleMerchant,
-                    testFixedMerchant
+                    testFixedMerchant,
+                    homeDepotTestMerchant,
+                    appleTestMerchant,
+                    dominosTestMerchant
                 )
             )
 
@@ -249,7 +306,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                     merchantId = PIGGY_CARDS_TEST_FIXED_MERCHANT_ID,
                     provider = "PiggyCards",
                     redeemType = "online",
-                    savingsPercentage = 1000,
+                    savingsPercentage = 100,
                     active = true,
                     denominationsType = "fixed",
                     sourceId = "177"
@@ -261,10 +318,46 @@ class ExploreSyncWorker @AssistedInject constructor(
                     merchantId = PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID,
                     provider = "PiggyCards",
                     redeemType = "online",
-                    savingsPercentage = 1000,
+                    savingsPercentage = -250,
                     active = true,
                     denominationsType = "min-max",
                     sourceId = "177"
+                )
+            )
+
+            giftCardProviderDao.insert(
+                GiftCardProvider(
+                    merchantId = PiggyCardsConstants.HOME_DEPOT_TEST_FLEXIBLE_MERCHANT_ID,
+                    provider = "PiggyCards",
+                    redeemType = "online",
+                    savingsPercentage = -250,
+                    active = true,
+                    denominationsType = "min-max",
+                    sourceId = "74"
+                )
+            )
+
+            giftCardProviderDao.insert(
+                GiftCardProvider(
+                    merchantId = PiggyCardsConstants.APPLE_TEST_FLEXIBLE_MERCHANT_ID,
+                    provider = "PiggyCards",
+                    redeemType = "online",
+                    savingsPercentage = 100,
+                    active = true,
+                    denominationsType = "min-max",
+                    sourceId = "13"
+                )
+            )
+
+            giftCardProviderDao.insert(
+                GiftCardProvider(
+                    merchantId = PiggyCardsConstants.DOMINOS_TEST_FLEXIBLE_MERCHANT_ID,
+                    provider = "PiggyCards",
+                    redeemType = "online",
+                    savingsPercentage = 150,
+                    active = true,
+                    denominationsType = "min-max",
+                    sourceId = "45"
                 )
             )
 

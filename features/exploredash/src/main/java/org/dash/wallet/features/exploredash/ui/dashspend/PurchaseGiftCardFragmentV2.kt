@@ -338,9 +338,14 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 denominations.add(minimum * 4)
                 denominations.add(maximum / 2)
                 denominations.add(maximum)
-                if (merchant?.merchantId == PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID) {
-                    denominations.clear()
-                    denominations.addAll(listOf(1.0, 2.0, 3.0, 4.0, 5.0))
+                if (PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+                    if (PiggyCardsConstants.TEST_CARDS.keys.contains(merchant?.merchantId)) {
+                        denominations.clear()
+                        val min = merchant?.minCardPurchase ?: 1.0
+                        for (i in 0 until 5) {
+                            denominations.add(min + 1.0 * i)
+                        }
+                    }
                 }
                 GiftCardPurchaseMode.FlexibleMultiple(denominations)
             }
