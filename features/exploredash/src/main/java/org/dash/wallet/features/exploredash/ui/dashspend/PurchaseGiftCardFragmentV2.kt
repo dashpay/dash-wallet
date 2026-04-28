@@ -59,6 +59,7 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import java.math.BigDecimal
 import kotlin.math.max
 
@@ -339,7 +340,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 denominations.add(maximum / 2)
                 denominations.add(maximum)
                 if (PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
-                    if (PiggyCardsConstants.TEST_CARDS.keys.contains(merchant?.merchantId)) {
+                    if (PiggyCardsTestMerchants.ALL.any { it.merchantId == merchant?.merchantId }) {
                         denominations.clear()
                         val min = merchant?.minCardPurchase ?: 1.0
                         for (i in 0 until 5) {

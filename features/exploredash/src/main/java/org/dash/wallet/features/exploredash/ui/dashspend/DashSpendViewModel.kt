@@ -68,6 +68,7 @@ import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
 import java.text.DecimalFormat
@@ -413,8 +414,11 @@ class DashSpendViewModel @Inject constructor(
             if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT && it.provider == GiftCardProviderType.PiggyCards.name) {
                 val sourceId = merchant.sourceId!!
                 //if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
-                PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
-                    return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, it.denominationType)
+                PiggyCardsTestMerchants.ALL.find { it.merchantId ==merchant.merchantId }?.let {
+                    return (piggyCardsRepository as PiggyCardsRepository).getMerchant(
+                        sourceId,
+                        DenominationType.fromString(it.providerDenominationsType)
+                    )
                 }
             }
             providers[GiftCardProviderType.fromProviderName(it.provider)]?.getMerchant(
@@ -448,8 +452,14 @@ class DashSpendViewModel @Inject constructor(
                 "PiggyCards" -> {
                     if (piggyCardsRepository.isUserSignedIn()) {
                         if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
-                            PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
-                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, it.denominationType)
+//                            PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
+//                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, it.denominationType)
+//                            }
+                            PiggyCardsTestMerchants.ALL.find { it.merchantId ==merchant.merchantId }?.let {
+                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(
+                                    provider.sourceId,
+                                    DenominationType.fromString(it.providerDenominationsType)
+                                )
                             }
 //                            when (merchant.merchantId) {
 //                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
