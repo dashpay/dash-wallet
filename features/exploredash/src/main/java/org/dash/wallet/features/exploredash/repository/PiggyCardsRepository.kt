@@ -24,6 +24,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
@@ -225,6 +226,95 @@ class PiggyCardsRepository @Inject constructor(
                 )
             } else {
                 return UpdatedMerchantDetails(
+                    it.id,
+                    listOf(),
+                    "fixed",
+                    0,
+                    redeemType = "",
+                    enabled = false
+                )
+            }
+        }
+        return UpdatedMerchantDetails(
+            merchantId,
+            listOf(0.0),
+            "fixed",
+            0,
+            redeemType = "",
+            enabled = false
+        )
+    }
+
+    suspend fun getMerchant(merchantId: String, type: DenominationType): UpdatedMerchantDetails? {
+        val brandList = api.getBrands(DEFAULT_COUNTRY)
+        val brandWithMerchantId = brandList.find { it.id == merchantId }
+        brandWithMerchantId?.let { it ->
+            val allGiftCards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
+            val disabledGiftCardsForMerchant = disabledGiftCards[brandWithMerchantId.id.toInt()].orEmpty()
+            val giftcards = if (disabledGiftCardsForMerchant.isEmpty()) {
+                allGiftCards?.data
+            } else {
+                allGiftCards?.data?.filter { giftCard ->
+                    !disabledGiftCardsForMerchant.any { name -> giftCard.name.contains(name) }
+                }
+            }
+            when (type) {
+                is DenominationType.Fixed -> {
+                    val immediateDeliveryCards = giftcards?.filter { giftCard ->
+                        giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
+                    } ?: listOf()
+
+                    val nonImmediateDeliveryFixedCards = giftcards?.filter { giftCard ->
+                        !giftCard.name.lowercase()
+                            .contains(INSTANT_DELIVERY) && giftCard.quantity > 0 && giftCard.isFixed
+                    } ?: listOf()
+
+                    val allFixedCards = immediateDeliveryCards.plus(nonImmediateDeliveryFixedCards)
+
+                    if (allFixedCards.isNotEmpty()) {
+                        return updatedMerchantDetails(allFixedCards, brandWithMerchantId)
+                    }
+
+                    // is this an option card, if not fixed
+                    val optionCard = giftcards?.find { it.isOption }
+                    if (optionCard != null) {
+                        val denominations = optionCard.denomination.split(",").map { it.toDouble() }
+                        val denominationsType = "fixed"
+                        val discountPercentage = (optionCard.discountPercentage * 100).toInt() - SERVICE_FEE
+                        giftCardMap[it.id] = listOf(optionCard)
+                        return UpdatedMerchantDetails(
+                            optionCard.brandId.toString(),
+                            denominations,
+                            denominationsType,
+                            discountPercentage,
+                            redeemType = "barcode",
+                            enabled = optionCard.quantity > 0 && !disabledMerchants.contains(optionCard.name),
+                            productId = optionCard.id.toString()
+                        )
+                    }
+                }
+                is DenominationType.MinMax -> {
+                    // do we have a range card
+                    giftcards?.find { !it.isFixed }?.let { rangeGiftCard ->
+                        val denominations = listOf(
+                            rangeGiftCard.minDenomination,
+                            rangeGiftCard.maxDenomination
+                        )
+                        val denominationsType = "min-max"
+                        val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt() - SERVICE_FEE
+                        giftCardMap[it.id] = listOf(rangeGiftCard)
+                        return UpdatedMerchantDetails(
+                            rangeGiftCard.brandId.toString(),
+                            denominations,
+                            denominationsType,
+                            discountPercentage,
+                            redeemType = "barcode",
+                            enabled = rangeGiftCard.quantity > 0 && !disabledMerchants.contains(rangeGiftCard.name),
+                            productId = rangeGiftCard.id.toString()
+                        )
+                    }
+                }
+                else -> return UpdatedMerchantDetails(
                     it.id,
                     listOf(),
                     "fixed",

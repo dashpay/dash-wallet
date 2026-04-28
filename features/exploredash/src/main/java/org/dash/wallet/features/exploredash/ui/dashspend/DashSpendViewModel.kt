@@ -63,6 +63,7 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
+import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
@@ -407,7 +408,21 @@ class DashSpendViewModel @Inject constructor(
     private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
         return giftCardProvider?.let {
-            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(
+            // check for PiggyCards test cards
+            if (it.provider == GiftCardProviderType.PiggyCards.name) {
+                val sourceId = merchant.sourceId
+                if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
+                    when (merchant.merchantId) {
+                        PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
+                            return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, DenominationType.Fixed)
+                        }
+                        PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
+                            return (piggyCardsRepository as PiggyCardsRepository).getMerchant(sourceId, DenominationType.MinMax)
+                        }
+                    }
+                }
+            }
+            providers[GiftCardProviderType.fromProviderName(it.provider)]?.getMerchant(
                 giftCardProvider.sourceId
             )
         }
@@ -437,14 +452,25 @@ class DashSpendViewModel @Inject constructor(
 
                 "PiggyCards" -> {
                     if (piggyCardsRepository.isUserSignedIn()) {
-                        piggyCardsRepository.getMerchant(provider.sourceId)?.let {
-                            merchantResponseList.add(it)
-                            providerResponseList.add(
-                                provider.copy(
-                                    savingsPercentage = it.savingsPercentage,
-                                    active = it.enabled
+                        if (provider.sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
+                            when (merchant.merchantId) {
+                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
+                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.Fixed)
+                                }
+                                PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
+                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.MinMax)
+                                }
+                            }
+                        } else {
+                            piggyCardsRepository.getMerchant(provider.sourceId)?.let {
+                                merchantResponseList.add(it)
+                                providerResponseList.add(
+                                    provider.copy(
+                                        savingsPercentage = it.savingsPercentage,
+                                        active = it.enabled
+                                    )
                                 )
-                            )
+                            }
                         }
                     } else {
                         providerResponseList.add(provider)

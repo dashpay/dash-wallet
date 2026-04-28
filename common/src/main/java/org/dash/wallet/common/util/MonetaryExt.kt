@@ -37,6 +37,10 @@ fun Fiat.toBigDecimal() : BigDecimal {
     return BigDecimal(this.value).scaleByPowerOfTen(-Fiat.SMALLEST_UNIT_EXPONENT)
 }
 
+fun Fiat.toDouble(): Double {
+    return toBigDecimal().toDouble()
+}
+
 fun BigDecimal.toCoin() : Coin {
     return Coin.valueOf(this.scaleByPowerOfTen(Coin.SMALLEST_UNIT_EXPONENT).toLong())
 }

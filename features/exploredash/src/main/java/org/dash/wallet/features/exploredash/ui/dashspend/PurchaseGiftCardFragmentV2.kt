@@ -56,7 +56,10 @@ import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import androidx.lifecycle.lifecycleScope
 import org.bitcoinj.core.Coin
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
+import java.math.BigDecimal
 import kotlin.math.max
 
 @AndroidEntryPoint
@@ -129,16 +132,16 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             // canContinue logic per mode
             val canContinue = when (mode) {
                 is GiftCardPurchaseMode.FlexibleSingle -> {
-                    val amount = amountText.toDoubleOrNull() ?: 0.0
-                    val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.0
-                    val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
-                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
-                    amount > 0 && amount >= min && amount <= max && amount < balanceMax && !isBlockchainReplaying
+                    val amount = amountText.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                    val min = minFiat?.toBigDecimal() ?: BigDecimal.ZERO
+                    val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
+                    val balanceMax = fiatBalance.toBigDecimal()
+                    amount > BigDecimal.ZERO && amount >= min && amount <= max && amount < balanceMax && !isBlockchainReplaying
                 }
                 is GiftCardPurchaseMode.FlexibleMultiple,
                 is GiftCardPurchaseMode.Fixed -> {
-                    val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
-                    totalDouble > 0 && totalDouble <= max && totalDouble < fiatBalance.toBigDecimal().toDouble() && !isBlockchainReplaying && totalDouble < 2500
+                    val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.00
+                    totalDouble >= min && totalDouble < fiatBalance.toBigDecimal().toDouble() && !isBlockchainReplaying && totalDouble < 2500
                 }
                 else -> false
             }
@@ -153,13 +156,13 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             val errorText = when {
                 isBlockchainReplaying -> getString(R.string.send_coins_fragment_hint_replaying)
                 mode is GiftCardPurchaseMode.FlexibleSingle -> {
-                    val amount = amountText.toDoubleOrNull() ?: 0.0
-                    val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.0
-                    val max = maxFiat?.toBigDecimal()?.toDouble() ?: Double.MAX_VALUE
-                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
+                    val amount = amountText.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                    val min = minFiat?.toBigDecimal() ?: BigDecimal.ZERO
+                    val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
+                    val balanceMax = fiatBalance.toBigDecimal()
 
                     when {
-                        amount > 0 && amount < min -> getString(R.string.purchase_gift_card_min, minFiat?.toFormattedString() ?: "")
+                        amount > BigDecimal.ZERO && amount < min -> getString(R.string.purchase_gift_card_min, minFiat?.toFormattedString() ?: "")
                         amount > balanceMax -> getString(R.string.insufficient_money_msg)
                         amount > max -> getString(R.string.purchase_gift_card_max, maxFiat?.toFormattedString() ?: "")
                         else -> ""
@@ -310,7 +313,9 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             return
         }
         viewModel.setGiftCardMerchant(updated)
-        viewModel.setIsFixedDenomination(updated.fixedDenomination)
+        val currentProviderName = viewModel.selectedProvider!!.name
+        val provider = updated.giftCardProviders.find { it.provider == currentProviderName }!!
+        viewModel.setIsFixedDenomination(DenominationType.fromString(provider.denominationsType) is DenominationType.Fixed)
     }
 
     private fun buildPurchaseMode(
@@ -333,6 +338,10 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 denominations.add(minimum * 4)
                 denominations.add(maximum / 2)
                 denominations.add(maximum)
+                if (merchant?.merchantId == PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID) {
+                    denominations.clear()
+                    denominations.addAll(listOf(1.0, 2.0, 3.0, 4.0, 5.0))
+                }
                 GiftCardPurchaseMode.FlexibleMultiple(denominations)
             }
         }

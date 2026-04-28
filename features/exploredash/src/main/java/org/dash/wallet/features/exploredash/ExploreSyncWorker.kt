@@ -28,10 +28,15 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID
 import org.slf4j.LoggerFactory
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
@@ -126,6 +131,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                     exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
+                    addPiggyCardsTestMerchantIfNeeded()
                     return@withContext Result.success()
                 }
                 syncStatus.setSyncProgress(10.0)
@@ -140,6 +146,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             log.info("sync explore db finished, took $timeInMillis ms")
 
             syncStatus.setSyncProgress(100.0)
+            addPiggyCardsTestMerchantIfNeeded()
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
             syncStatus.setSyncError(ex)
@@ -161,5 +168,109 @@ class ExploreSyncWorker @AssistedInject constructor(
         databasePrefs = exploreConfig.exploreDatabasePrefs.first()
         exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
+    }
+
+    private suspend fun addPiggyCardsTestMerchantIfNeeded() {
+        if (!BuildConfig.DEBUG) return
+
+        try {
+            val database = ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+            val merchantDao = database.merchantDao()
+            val giftCardProviderDao = database.giftCardProviderDao()
+
+            val testMerchantIds = listOf(
+                PIGGY_CARDS_TEST_FIXED_MERCHANT_ID,
+                PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID
+            )
+            val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
+            val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
+            log.info(
+                "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
+                    "$deletedProviders provider(s)"
+            )
+
+            if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
+                log.info("PiggyCards test merchant(s) already exist, skipping")
+                return
+            }
+
+            log.info("adding PiggyCards test merchant")
+
+            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+            val testFixedMerchant = Merchant(
+                merchantId = PIGGY_CARDS_TEST_FIXED_MERCHANT_ID,
+                paymentMethod = "gift card",
+                redeemType = "online",
+                savingsPercentage = -2500,
+                denominationsType = "Fixed",
+                addDate = now,
+                updateDate = now
+            ).apply {
+                name = "Piggy Cards Test Merchant"
+                active = true
+                source = "PiggyCards"
+                sourceId = "177"
+                logoLocation = "https://piggy.cards/image/catalog/piggycards/logo2023_mobile.png"
+                type = "online"
+                territory = "MA"
+                city = "Boston"
+                website = "https://piggy.cards"
+            }
+
+            val testFlexibleMerchant = Merchant(
+                merchantId = PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID,
+                paymentMethod = "gift card",
+                redeemType = "online",
+                savingsPercentage = -2500,
+                denominationsType = "min-max",
+                addDate = now,
+                updateDate = now
+            ).apply {
+                name = "Piggy Cards Flexible Test Merchant"
+                active = true
+                source = "PiggyCards"
+                sourceId = "177"
+                logoLocation = "https://piggy.cards/image/catalog/piggycards/logo2023_mobile.png"
+                type = "online"
+                territory = "MA"
+                city = "Boston"
+                website = "https://piggy.cards"
+            }
+
+            merchantDao.save(
+                listOf(
+                    testFlexibleMerchant,
+                    testFixedMerchant
+                )
+            )
+
+            giftCardProviderDao.insert(
+                GiftCardProvider(
+                    merchantId = PIGGY_CARDS_TEST_FIXED_MERCHANT_ID,
+                    provider = "PiggyCards",
+                    redeemType = "online",
+                    savingsPercentage = 1000,
+                    active = true,
+                    denominationsType = "fixed",
+                    sourceId = "177"
+                )
+            )
+
+            giftCardProviderDao.insert(
+                GiftCardProvider(
+                    merchantId = PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID,
+                    provider = "PiggyCards",
+                    redeemType = "online",
+                    savingsPercentage = 1000,
+                    active = true,
+                    denominationsType = "min-max",
+                    sourceId = "177"
+                )
+            )
+
+            log.info("PiggyCards test merchant added successfully")
+        } catch (ex: Exception) {
+            log.error("error adding PiggyCards test merchant", ex)
+        }
     }
 }

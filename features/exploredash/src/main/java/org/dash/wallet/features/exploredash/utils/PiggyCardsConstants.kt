@@ -24,4 +24,9 @@ object PiggyCardsConstants {
     const val BASE_URL = BASE_URL_PROD
 
     const val TOKEN_EXPIRES_IN_SECONDS = 3600
+
+    // Test Merchants
+    const val PIGGY_CARDS_TEST_FIXED_MERCHANT_ID = "2e393eee-4508-47fe-954d-66209333fc96"
+    const val PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID = "2e393fff-4508-47fe-954d-66209333fc96"
+    const val PIGGY_CARDS_TEST_BRAND_ID = "177"
 }
