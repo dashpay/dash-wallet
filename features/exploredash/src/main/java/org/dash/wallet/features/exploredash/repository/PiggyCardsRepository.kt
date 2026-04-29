@@ -437,7 +437,8 @@ class PiggyCardsRepository @Inject constructor(
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
             // return value
-            response.mapIndexed { index, giftCard ->
+            val giftCard = response.first()
+            order.mapIndexed { index, orderItem ->
                 GiftCardInfo(
                     id = orderResponse.id,
                     merchantName = giftCard.merchantName,
@@ -446,7 +447,7 @@ class PiggyCardsRepository @Inject constructor(
                     cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
                     paymentCryptoNetwork = Constants.DASH_CURRENCY,
                     rate = rate.exchangeRate.toString(),
-                    fiatAmount = order.get(index).value.toString(),
+                    fiatAmount = orderItem.value.toString(),//get(index).value.toString(),
                     fiatCurrency = Constants.USD_CURRENCY,
                     paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
                 )

@@ -95,8 +95,6 @@ data class GiftCardOrderItem(
 
 data class GiftCardShoppingCart constructor(
     private val items: ArrayList<GiftCardOrderItem>,
-    //var provider: GiftCardProviderType,
-    //var merchant: Merchant
 ) {
     constructor(items: List<GiftCardOrderItem>) : this(ArrayList(items))
     constructor(value: Double, quantity: Int):
@@ -111,9 +109,12 @@ data class GiftCardShoppingCart constructor(
     fun first() = items.first()
     fun get(index: Int) = items[index]
     fun<R> map(transform: (GiftCardOrderItem) -> R): List<R> = items.map(transform)
+    fun<R> mapIndexed(transform: (Int, GiftCardOrderItem) -> R): List<R> = items.mapIndexed(transform)
+
     fun forEach(function: (GiftCardOrderItem) -> Unit) {
         items.forEach(function)
     }
+    fun cardCount(): Int = items.sumOf { it.quantity }
 }
 
 @HiltViewModel
@@ -563,9 +564,10 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: List<GiftCardInfo>) {
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+        log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
         var index = 0
-        val giftCard = giftCardResponse.map {
+        val giftCard = giftCards.map {
             GiftCard(
                 txId = txId,
                 merchantName = _giftCardMerchant.value?.name ?: "",

@@ -344,20 +344,27 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
-        giftCardDao.updateGiftCard(giftCard)
-        transactionMetadataChangeCacheDao.insertGiftCardData(
-            giftCard.txId,
-            giftCard.number,
-            giftCard.pin,
-            giftCard.merchantName,
-            giftCard.price,
-            giftCard.merchantUrl
-        )
+        if (giftCardDao.updateGiftCard(giftCard) == 0) {
+            giftCardDao.insertGiftCard(giftCard)
+        }
+        // for now, only save the first card
+        if (giftCard.index == 0) {
+            transactionMetadataChangeCacheDao.insertGiftCardData(
+                giftCard.txId,
+                giftCard.number,
+                giftCard.pin,
+                giftCard.merchantName,
+                giftCard.price,
+                giftCard.merchantUrl
+            )
+        }
     }
 
-    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, barcodeValue: String, barcodeFormat: BarcodeFormat) {
-        giftCardDao.updateBarcode(txId, barcodeValue, barcodeFormat)
-        transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
+    override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
+        giftCardDao.updateBarcode(txId, index, barcodeValue, barcodeFormat)
+        if (index == 0) {
+            transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
+        }
     }
 
     override fun syncTransactionBlocking(tx: Transaction) {

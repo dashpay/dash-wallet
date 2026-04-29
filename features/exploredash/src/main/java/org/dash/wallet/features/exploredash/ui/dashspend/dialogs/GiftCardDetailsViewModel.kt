@@ -204,7 +204,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 if (!giftCard.cardNumber.isNullOrEmpty()) {
                                     updateGiftCard(0, giftCard.cardNumber, giftCard.cardPin)
                                     log.info("CTXSpend: saving barcode for: ${giftCard.barcodeUrl}")
-                                    saveBarcode(giftCard.cardNumber)
+                                    saveBarcode(giftCard.cardNumber, 0)
                                     val startPurchaseTime =
                                         ctxSpendConfig.get(CTXSpendConfig.PREFS_LAST_PURCHASE_START) ?: -1
                                     if (startPurchaseTime != -1L) {
@@ -414,7 +414,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         updateGiftCard(index, giftCard.cardNumber, giftCard.cardPin)
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
-                                            saveBarcodeUrl(it)
+                                            if(!saveBarcodeUrl(it, index)) {
+                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, index)
+                                            }
                                         }
                                         val newState = uiState.value.copy(
                                             status = giftCard.status,
@@ -517,48 +519,43 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private fun updateGiftCard(index: Int, number: String, pinCode: String?) {
+    private suspend fun updateGiftCard(index: Int, number: String, pinCode: String?) {
         val giftCard = uiState.value.giftCard ?: return
-
-        viewModelScope.launch {
-            metadataProvider.updateGiftCardMetadata(
-                giftCard.copy(
-                    number = number,
-                    pin = pinCode,
-                    index = index
-                )
+         metadataProvider.updateGiftCardMetadata(
+            giftCard.copy(
+                number = number,
+                pin = pinCode,
+                index = index
             )
-        }
+         )
 
         logOnPurchaseEvents(giftCard)
     }
 
-    private fun updateGiftCard(index: Int, merchantUrl: String) {
+    private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
         val giftCard = uiState.value.giftCard ?: return
 
-        viewModelScope.launch {
-            metadataProvider.updateGiftCardMetadata(
-                giftCard.copy(
-                    merchantUrl = merchantUrl,
-                    index = index
-                )
+        metadataProvider.updateGiftCardMetadata(
+            giftCard.copy(
+                merchantUrl = merchantUrl,
+                index = index
             )
-        }
+        )
+
 
         logOnPurchaseEvents(giftCard)
     }
 
-    private fun saveBarcode(giftCardNumber: String) {
-        applicationScope.launch {
-            try {
-                metadataProvider.updateGiftCardBarcode(
-                    transactionId,
-                    giftCardNumber.replace(" ", "").replace("-", ""),
-                    BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
-                )
-            } catch (ex: Exception) {
-                log.error("Failed to save barcode for $giftCardNumber", ex)
-            }
+    private suspend fun saveBarcode(giftCardNumber: String, index: Int) {
+        try {
+            metadataProvider.updateGiftCardBarcode(
+                transactionId,
+                index,
+                giftCardNumber.replace(" ", "").replace("-", ""),
+                BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
+            )
+        } catch (ex: Exception) {
+            log.error("Failed to save barcode for $giftCardNumber", ex)
         }
     }
 
@@ -576,26 +573,28 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private fun saveBarcodeUrl(barcodeUrl: String) {
-        applicationScope.launch {
-            try {
-                val result = Constants.HTTP_CLIENT.get(barcodeUrl)
-                require(result.isSuccessful && result.body != null) { "call is not successful" }
-                val bitmap = result.body!!.decodeBitmap()
-                val decodeResult = Qr.scanBarcode(bitmap)
+    private suspend fun saveBarcodeUrl(barcodeUrl: String, index: Int): Boolean {
+        return try {
+            val result = Constants.HTTP_CLIENT.get(barcodeUrl)
+            require(result.isSuccessful && result.body != null) { "call is not successful" }
+            val bitmap = result.body!!.decodeBitmap()
+            val decodeResult = Qr.scanBarcode(bitmap)
 
-                if (decodeResult != null) {
-                    metadataProvider.updateGiftCardBarcode(
-                        transactionId,
-                        decodeResult.first.replace(" ", "").replace("-", ""),
-                        decodeResult.second
-                    )
-                } else {
-                    log.error("ScanBarcode returned null: $barcodeUrl")
-                }
-            } catch (ex: Exception) {
-                log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
+            return if (decodeResult != null) {
+                metadataProvider.updateGiftCardBarcode(
+                    transactionId,
+                    index,
+                    decodeResult.first.replace(" ", "").replace("-", ""),
+                    decodeResult.second
+                )
+                true
+            } else {
+                log.error("ScanBarcode returned null: $barcodeUrl")
+                false
             }
+        } catch (ex: Exception) {
+            log.error("Failed to resize and decode barcode: $barcodeUrl", ex)
+            false
         }
     }
 
