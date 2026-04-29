@@ -412,9 +412,6 @@ class TxDisplayCacheService @Inject constructor(
      */
     private fun rebuildIfCacheIncomplete() {
         serviceScope.launch {
-            // No prior-session cache exists (fresh install or post-wipe) — nothing to verify.
-            if (txGroupCacheDao.getTotalTxCount() == 0) return@launch
-
             // If the wallet isn't loaded yet (blockchain state can fire before the wallet
             // is restored from disk), suspend until it becomes available.
             val wallet = walletData.wallet
@@ -424,6 +421,11 @@ class TxDisplayCacheService @Inject constructor(
             val groupCount = txGroupCacheDao.getGroupCount()
             val displayRowCount = txDisplayCacheDao.getCount()
 
+            // Fresh install / post-wipe: nothing in the wallet and nothing cached.
+            if (walletTxCount == 0 && cachedTxCount == 0 && displayRowCount == 0) {
+                return@launch
+            }
+            
             val txsMissing = walletTxCount > cachedTxCount
             val displayIncomplete = displayRowCount < groupCount
             val needsRebuild = txsMissing || displayIncomplete
