@@ -18,6 +18,7 @@
 package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
 import android.graphics.Bitmap
+import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.zxing.BarcodeFormat
@@ -520,20 +521,20 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     private suspend fun updateGiftCard(index: Int, number: String, pinCode: String?) {
-        val giftCard = uiState.value.giftCard ?: return
-         metadataProvider.updateGiftCardMetadata(
+        val giftCard = uiState.value.giftCards[index]
+        metadataProvider.updateGiftCardMetadata(
             giftCard.copy(
                 number = number,
                 pin = pinCode,
                 index = index
             )
-         )
+        )
 
         logOnPurchaseEvents(giftCard)
     }
 
     private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
-        val giftCard = uiState.value.giftCard ?: return
+        val giftCard = uiState.value.giftCards[index]
 
         metadataProvider.updateGiftCardMetadata(
             giftCard.copy(
@@ -574,6 +575,25 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private suspend fun saveBarcodeUrl(barcodeUrl: String, index: Int): Boolean {
         return try {
+            // first try to read the url
+            val url = barcodeUrl.toUri()
+            // example: "https://piggy.cards/index.php?route=tool/barcode\u0026type=code-128\u0026text=98081562014457367722189
+            if (url.getQueryParameter("route") == "tool/barcode") {
+                val cardNumber = url.getQueryParameter("text")
+                val format = when(url.getQueryParameter("type")) {
+                    "code-128" -> BarcodeFormat.CODE_128
+                    else -> null
+                }
+                if (cardNumber != null && format != null) {
+                    metadataProvider.updateGiftCardBarcode(
+                        transactionId,
+                        index,
+                        cardNumber.replace(" ", "").replace("-", ""),
+                        format
+                    )
+                    return true
+                }
+            }
             val result = Constants.HTTP_CLIENT.get(barcodeUrl)
             require(result.isSuccessful && result.body != null) { "call is not successful" }
             val bitmap = result.body!!.decodeBitmap()

@@ -226,6 +226,7 @@
     <string name="select_fixed_amount">This merchant sells gift cards at fixed prices</string>
     <string name="purchase_gift_card_max_multiple_error">You can buy up to %s in gift cards per order</string>
     <string name="purchase_gift_card_insufficient_money_error">Insufficient Dash to buy these gift cards</string>
+    <string name="purchase_gift_card_insufficient_inventory">Insufficient inventory for %s to buy %d x %s cards</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Enter verification code</string>
     <string name="verification_check_email">Check your email and enter the verification code</string>

@@ -341,16 +341,19 @@ class PiggyCardsRepository @Inject constructor(
         val denominations = arrayListOf<Double>()
         var discountPercentage = -100.0 // very low number for max
         val activeGiftCards = arrayListOf<Giftcard>()
+        val quantities = hashMapOf<Double, Int>()
         data.forEach { card ->
             if (card.quantity > 0) {
-                denominations.add(card.denomination.toDouble())
+                val denomination = card.denomination.toDouble()
+                denominations.add(denomination)
                 discountPercentage = max(card.discountPercentage, discountPercentage)
                 activeGiftCards.add(card)
+                quantities[denomination] = card.quantity
             }
         }
         val denominationsType = "fixed"
         giftCardMap[it.id] = activeGiftCards
-        // val format = DecimalFormat("0.##")
+
         return UpdatedMerchantDetails(
             it.id,
             denominations.sorted(),
@@ -359,7 +362,8 @@ class PiggyCardsRepository @Inject constructor(
             redeemType = "barcode",
             enabled = denominations.isNotEmpty() && !disabledMerchants.contains(
                 activeGiftCards.firstOrNull()?.name ?: ""
-            )
+            ),
+            quantity = quantities
         )
     }
 
@@ -436,7 +440,8 @@ class PiggyCardsRepository @Inject constructor(
 
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
-            // return value
+            // the first query may return only one item, rather than all, so
+            // let us fill out a mock of what the cards should be
             val giftCard = response.first()
             order.mapIndexed { index, orderItem ->
                 GiftCardInfo(

@@ -349,7 +349,7 @@ class DashSpendViewModel @Inject constructor(
                     if (index == 0 && selectedProvider?.name == "CTX") {
                         giftCardProvider.copy(
                             savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled
+                            active = apiResponse.enabled,
                         )
                     } else if (index == 0 && selectedProvider?.name == "PiggyCards") {
                         giftCardProvider.copy(
@@ -371,6 +371,7 @@ class DashSpendViewModel @Inject constructor(
                     copy.fixedDenomination = apiResponse.denominationType == DenominationType.Fixed
                     copy.denominations = apiResponse.denominations
                     copy.denominationsType = apiResponse.denominationsType
+                    copy.quantities = apiResponse.quantity
                 }
             }
         } catch (e: Exception) {
@@ -669,6 +670,7 @@ class DashSpendViewModel @Inject constructor(
                 .append("discount: ").append(merchant.savingsFraction).append("\n")
                 .append("denominations type: ").append(merchant.denominationsType).append("\n")
                 .append("denominations: ").append(merchant.denominations).append("\n")
+                .append("quantities: ").append(merchant.quantities).append("\n")
                 .append("\n")
         } ?: run {
             report.append("No merchant selected").append("\n")

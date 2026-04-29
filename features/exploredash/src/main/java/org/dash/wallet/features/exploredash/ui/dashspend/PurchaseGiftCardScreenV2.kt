@@ -38,7 +38,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -88,7 +87,8 @@ data class PurchaseGiftCardV2UiState(
     val totalAmountText: String = "$0.00",
     val canContinue: Boolean = false,
     val errorText: String = "",
-    val discountHintText: String = ""
+    val discountHintText: String = "",
+    val allowedQuantities: Map<Double, Int>
 )
 
 @Composable
@@ -551,6 +551,7 @@ private fun PreviewFlexibleSingle() {
             maxHintText = "Max: $200.00",
             totalAmountText = "$0.00",
             canContinue = true,
+            allowedQuantities = mapOf(),
             errorText = ""
         ),
         onBack = {},
@@ -580,6 +581,7 @@ private fun PreviewFlexibleMultiple() {
             denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
             totalAmountText = "$40.00",
             canContinue = true,
+            allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
             errorText = ""
         ),
         onBack = {},
@@ -609,6 +611,7 @@ private fun PreviewFixed() {
             denominationQuantities = mapOf(25.0 to 1),
             totalAmountText = "$25.00",
             canContinue = true,
+            allowedQuantities = mapOf(15.0 to 1),
             errorText = ""
         ),
         onBack = {},

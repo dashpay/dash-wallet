@@ -141,8 +141,11 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 }
                 is GiftCardPurchaseMode.FlexibleMultiple,
                 is GiftCardPurchaseMode.Fixed -> {
+                    val exceedsInventory = denominationQuantities.entries.any { (denomination, quantity) ->
+                        merchant?.quantities[denomination]?.let { it < quantity} == true
+                    }
                     val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.00
-                    totalDouble >= min && totalDouble < fiatBalance.toBigDecimal().toDouble() && !isBlockchainReplaying && totalDouble < 2500
+                    totalDouble >= min && totalDouble < fiatBalance.toBigDecimal().toDouble() && !isBlockchainReplaying && totalDouble < 2500 && !exceedsInventory
                 }
                 else -> false
             }
@@ -171,10 +174,21 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 }
                 else -> {
                     val balanceMax = fiatBalance.toBigDecimal().toDouble()
+                    val denomsExceedInventory = denominationQuantities.entries.filter { (denomination, quantity) ->
+                        merchant?.quantities[denomination]?.let { it < quantity } == true
+                    }
                     if (totalDouble > balanceMax) {
                         getString(R.string.purchase_gift_card_insufficient_money_error)
                     } else if (totalDouble > 2500.0) {
                         getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat("$", 2500.00.toString()).toFormattedString())
+                    } else if (denomsExceedInventory.isNotEmpty()) {
+                        val firstCard = denominationQuantities.entries.first()
+                        getString(
+                            R.string.purchase_gift_card_insufficient_inventory,
+                            merchant?.name,
+                            firstCard.value,
+                            Fiat.parseFiat("$", firstCard.key.toString()).toFormattedString()
+                        )
                     } else {
                         ""
                     }
@@ -200,7 +214,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 totalAmountText = totalAmountText,
                 canContinue = canContinue,
                 errorText = errorText,
-                discountHintText = discountHintText
+                discountHintText = discountHintText,
+                allowedQuantities = merchant?.quantities ?: mapOf()
             )
 
             PurchaseGiftCardScreenV2(
