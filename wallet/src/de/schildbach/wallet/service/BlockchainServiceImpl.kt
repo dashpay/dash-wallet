@@ -1948,9 +1948,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
-                    peerGroup!!.forceStop(7_000)
-                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
+                    // Block new refreshUnusedKeys() calls and wait for any in-progress one to finish
+                    // so its ReentrantLock is released before system.close() tries to acquire it.
+                    coinJoinService.prepareForShutdown()
+                    log.info("CLEANUP STEP 2: About to call peerGroup.stop()")
+                    //peerGroup!!.forceStop(7_000)
+                    val peerGroupStopWatch = Stopwatch.createStarted()
+                    peerGroup!!.stop()
+                    log.info("CLEANUP STEP 2: peerGroup.stop() completed: {}", peerGroupStopWatch)
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
                     dashSystemService.system.close()

@@ -28,16 +28,17 @@ import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.getTimeSkew
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -64,9 +65,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.core.MasternodeAddress
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.utils.ContextPropagatingThreadFactory
 import org.bitcoinj.utils.Threading
-import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletEx
 import org.bouncycastle.crypto.params.KeyParameter
 import org.dash.wallet.common.WalletDataProvider
@@ -77,7 +76,6 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -104,6 +102,8 @@ interface CoinJoinService {
     suspend fun getMixingProgress(): Double
     fun observeMixingProgress(): Flow<Double>
     fun updateTimeSkew(timeSkew: Long)
+    /** Signal shutdown and wait for any in-progress refreshUnusedKeys to finish before system.close() */
+    suspend fun prepareForShutdown()
     /** shutdown coinjoin mixing */
     suspend fun shutdown()
 }
@@ -172,6 +172,9 @@ class CoinJoinMixingService @Inject constructor(
 
     val coroutineJob = SupervisorJob()
     val coroutineScope = CoroutineScope(Dispatchers.IO + coroutineJob)
+
+    private val isShuttingDown = AtomicBoolean(false)
+    private var refreshKeysJob: Deferred<Boolean>? = null
 
     private val uiCoroutineScope = CoroutineScope(Dispatchers.Main)
 
@@ -275,6 +278,17 @@ class CoinJoinMixingService @Inject constructor(
     override fun updateTimeSkew(timeSkew: Long) {
         coroutineScope.launch {
             updateTimeSkewInternal(timeSkew)
+        }
+    }
+
+    override suspend fun prepareForShutdown() {
+        log.info("coinjoin: preparing for shutdown - blocking new refreshUnusedKeys and awaiting any in-progress call")
+        isShuttingDown.set(true)
+        val job = refreshKeysJob
+        if (job != null && job.isActive) {
+            log.info("coinjoin: waiting for in-progress refreshUnusedKeys to finish")
+            withTimeoutOrNull(10_000) { job.join() }
+                ?: log.warn("coinjoin: timed out waiting for refreshUnusedKeys to finish")
         }
     }
 
@@ -565,6 +579,7 @@ class CoinJoinMixingService @Inject constructor(
     }
 
     private suspend fun prepareMixing() {
+        isShuttingDown.set(false)
         log.info("coinjoin: Mixing preparation began")
         clear()
         val wallet = walletDataProvider.wallet!!
@@ -649,14 +664,21 @@ class CoinJoinMixingService @Inject constructor(
             log.info("Mixing has been started already.")
             false
         } else {
-            // run this on a different thread?
+            if (isShuttingDown.get()) {
+                log.info("coinjoin: skipping refreshUnusedKeys - shutdown in progress")
+                return false
+            }
             val asyncStart = coroutineScope.async(Dispatchers.IO) {
                 // though coroutineScope is on a Context propogated thread, we still need this
                 org.bitcoinj.core.Context.propagate(walletDataProvider.wallet!!.context)
+                val watch = Stopwatch.createStarted()
+                log.info("starting refreshUnusedKeys")
                 (walletDataProvider.wallet as WalletEx).coinJoin.refreshUnusedKeys()
+                log.info("refreshUnusedKeys: {}", watch)
                 coinJoinManager?.initMasternodeGroup(blockChain)
                 clientManager.doAutomaticDenominating(false)
             }
+            refreshKeysJob = asyncStart
             val result = asyncStart.await()
             log.info(
                 "Mixing " + if (result) "started successfully" else "start failed: " + clientManager.statuses + ", will retry"
