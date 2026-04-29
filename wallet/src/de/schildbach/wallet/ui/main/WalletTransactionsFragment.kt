@@ -70,6 +70,7 @@ import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardOrderDetailsDialog
 import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.GiftCardViewModel
 import javax.inject.Inject
@@ -127,18 +128,28 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 // Single-tx wrapper found in memory — open TX detail directly.
                                 // TransactionGroupDetailsFragment would show the wrong (default
                                 // CrowdNode) icon for non-group wrappers, so route here instead.
-                                viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
-                                TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                                if (ServiceName.isDashSpend(rowView.service)) {
+                                    viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
+                                    val txId = Sha256Hash.wrap(rowView.id)
+                                    if (giftCardViewModel.getGiftCardCount(txId) > 1) {
+                                        GiftCardOrderDetailsDialog.newInstance(txId)
+                                    } else {
+                                        GiftCardDetailsDialog.newInstance(txId)
+                                    }
+                                } else {
+                                    viewModel.logEvent(AnalyticsConstants.Home.TRANSACTION_DETAILS)
+                                    TransactionDetailsDialogFragment.newInstance(txWrapper.transactions.keys.first())
+                                }
                             }
 
                             ServiceName.isDashSpend(rowView.service) -> {
                                 viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
                                 val txId = Sha256Hash.wrap(rowView.id)
-                                //if (giftCardViewModel.getGiftCardCount(txId) > 1) {
+                                if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                     GiftCardOrderDetailsDialog.newInstance(txId)
-                                //} else {
-                                //    GiftCardDetailsDialog.newInstance(txId)
-                               // }
+                                } else {
+                                    GiftCardDetailsDialog.newInstance(txId)
+                                }
                             }
 
                             rowView.transactionAmount == 1 -> {

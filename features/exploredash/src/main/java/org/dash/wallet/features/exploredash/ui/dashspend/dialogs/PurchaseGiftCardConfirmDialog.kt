@@ -487,11 +487,18 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     private fun showGiftCardDetailsDialog(txId: Sha256Hash, giftCardId: String) {
         if (isAdded) {
-            GiftCardDetailsDialog.newInstance(txId).show(requireActivity()).also {
-                val navController = findNavController()
-                navController.popBackStack(navController.graph.startDestinationId, false)
-
-                this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+            if (viewModel.giftCardOrderInfo.value.values.size > 1) {
+                GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
+                    this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+                }
+            } else {
+                GiftCardDetailsDialog.newInstance(txId).show(requireActivity()).also {
+                    val navController = findNavController()
+                    navController.popBackStack(navController.graph.startDestinationId, false)
+                    this@PurchaseGiftCardConfirmDialog.dismissAllowingStateLoss()
+                }
             }
         }
     }

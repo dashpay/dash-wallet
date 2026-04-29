@@ -317,7 +317,7 @@ internal fun GiftCardDetailsView(
             if (!showHowToUse) {
                 DashButton(
                     text = stringResource(R.string.purchase_see_how_to_use_gift_card),
-                    style = Style.TintedBlue,
+                    style = Style.PlainBlue,
                     onClick = {
                         onHowToUse()
                         showHowToUse = true
@@ -526,14 +526,6 @@ private fun GiftCardItemCard(
             )
         }
 
-        // Cashier instructions
-        if ((hasNumber || hasPin) && !shouldShowError) {
-            ListItem(
-                helpTextAbove = stringResource(R.string.purchase_cashier_instructions),
-                title = stringResource(R.string.purchase_cashier_instructions_body)
-            )
-        }
-
         if (BuildConfig.DEBUG && order != null) {
             // there are UI bugs with this
             if (order.isNotEmpty()) {
@@ -556,6 +548,14 @@ private fun GiftCardItemCard(
                     onTrailingActionClick = { onCopyNumber(order) }
                 )
             }
+        }
+
+        // Cashier instructions
+        if ((hasNumber || hasPin) && !shouldShowError) {
+            ListItem(
+                helpTextAbove = stringResource(R.string.purchase_cashier_instructions),
+                title = stringResource(R.string.purchase_cashier_instructions_body)
+            )
         }
 
         // Loading indicator
