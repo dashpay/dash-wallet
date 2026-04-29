@@ -18,7 +18,6 @@
 package org.dash.wallet.features.exploredash.ui.dashspend
 
 import android.content.Intent
-import android.icu.text.NumberFormat
 import androidx.lifecycle.*
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData

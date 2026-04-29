@@ -424,9 +424,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             error = null
                                         )
                                         cancelTicker()
-                                        if (newCombinedState == null) {
+                                        //if (newCombinedState == null) {
                                             newCombinedState = newState
-                                        }
+                                        //}
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                         updateGiftCard(index, giftCard.redeemUrl)
                                         val newState = uiState.value.copy(
@@ -435,9 +435,9 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             error = null
                                         )
                                         cancelTicker()
-                                        if (newCombinedState == null) {
+                                        //if (newCombinedState == null) {
                                             newCombinedState = newState
-                                        }
+                                        //}
                                     } else {
                                         newCombinedState = uiState.value.copy(
                                             status = giftCard.status,
@@ -559,17 +559,16 @@ class GiftCardDetailsViewModel @Inject constructor(
         }
     }
 
-    private fun saveBarcode(giftCardNumber: String, cardFormat: BarcodeFormat) {
-        applicationScope.launch {
-            try {
-                metadataProvider.updateGiftCardBarcode(
-                    transactionId,
-                    giftCardNumber.replace(" ", "").replace("-", ""),
-                    cardFormat
-                )
-            } catch (ex: Exception) {
-                log.error("Failed to save barcode for $giftCardNumber", ex)
-            }
+    private suspend fun saveBarcode(giftCardNumber: String, cardFormat: BarcodeFormat, index: Int) {
+        try {
+            metadataProvider.updateGiftCardBarcode(
+                transactionId,
+                index,
+                giftCardNumber.replace(" ", "").replace("-", ""),
+                cardFormat
+            )
+        } catch (ex: Exception) {
+            log.error("Failed to save barcode for $giftCardNumber", ex)
         }
     }
 

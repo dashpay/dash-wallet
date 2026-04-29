@@ -191,7 +191,7 @@ class ExploreSyncWorker @AssistedInject constructor(
                 return
             }
 
-            log.info("adding PiggyCards test merchant")
+            log.info("adding PiggyCards test merchants")
 
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
 
