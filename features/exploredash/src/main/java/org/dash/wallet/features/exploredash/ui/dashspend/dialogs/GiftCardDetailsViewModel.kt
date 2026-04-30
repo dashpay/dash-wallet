@@ -126,19 +126,15 @@ class GiftCardDetailsViewModel @Inject constructor(
                 _uiState.update { currentState ->
                     currentState.copy(
                         giftCards = giftCards.toMutableList(),
-                        barcodes = if (currentState.barcodes.isEmpty()) {
-                            giftCards.map {
-                                if (it.barcodeValue != null && it.barcodeFormat != null) {
+                        barcodes = giftCards.map {
+                            when {
+                                it.barcodeValue != null && it.barcodeFormat != null ->
                                     Barcode(it.barcodeValue!!, it.barcodeFormat!!)
-                                } else if (it.number != null) {
+                                it.number != null ->
                                     // in case the barcodeValue is missing
                                     Barcode(it.number!!, BarcodeFormat.CODE_128)
-                                } else {
-                                    null
-                                }
+                                else -> null
                             }
-                        } else {
-                            currentState.barcodes
                         },
                         index = cardIndex
                     )
