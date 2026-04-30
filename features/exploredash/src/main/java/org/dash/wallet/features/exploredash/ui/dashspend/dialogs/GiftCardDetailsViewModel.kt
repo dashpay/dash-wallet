@@ -532,13 +532,15 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private suspend fun updateGiftCard(index: Int, number: String, pinCode: String?) {
         val giftCard = uiState.value.giftCards[index]
-        metadataProvider.updateGiftCardMetadata(
-            giftCard.copy(
-                number = number,
-                pin = pinCode,
-                index = index
+        applicationScope.launch {
+            metadataProvider.updateGiftCardMetadata(
+                giftCard.copy(
+                    number = number,
+                    pin = pinCode,
+                    index = index
+                )
             )
-        )
+        }.join()
 
         logOnPurchaseEvents(giftCard)
     }
@@ -546,25 +548,28 @@ class GiftCardDetailsViewModel @Inject constructor(
     private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
         val giftCard = uiState.value.giftCards[index]
 
-        metadataProvider.updateGiftCardMetadata(
-            giftCard.copy(
-                merchantUrl = merchantUrl,
-                index = index
+        applicationScope.launch {
+            metadataProvider.updateGiftCardMetadata(
+                giftCard.copy(
+                    merchantUrl = merchantUrl,
+                    index = index
+                )
             )
-        )
-
+        }.join()
 
         logOnPurchaseEvents(giftCard)
     }
 
     private suspend fun saveBarcode(giftCardNumber: String, index: Int) {
         try {
-            metadataProvider.updateGiftCardBarcode(
-                transactionId,
-                index,
-                giftCardNumber.replace(" ", "").replace("-", ""),
-                BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
-            )
+            applicationScope.launch {
+                metadataProvider.updateGiftCardBarcode(
+                    transactionId,
+                    index,
+                    giftCardNumber.replace(" ", "").replace("-", ""),
+                    BarcodeFormat.CODE_128 // Assuming CTX barcodes are all CODE_128
+                )
+            }.join()
         } catch (ex: Exception) {
             log.error("Failed to save barcode for $giftCardNumber", ex)
         }
@@ -572,12 +577,14 @@ class GiftCardDetailsViewModel @Inject constructor(
 
     private suspend fun saveBarcode(giftCardNumber: String, cardFormat: BarcodeFormat, index: Int) {
         try {
-            metadataProvider.updateGiftCardBarcode(
-                transactionId,
-                index,
-                giftCardNumber.replace(" ", "").replace("-", ""),
-                cardFormat
-            )
+            applicationScope.launch {
+                metadataProvider.updateGiftCardBarcode(
+                    transactionId,
+                    index,
+                    giftCardNumber.replace(" ", "").replace("-", ""),
+                    cardFormat
+                )
+            }.join()
         } catch (ex: Exception) {
             log.error("Failed to save barcode for $giftCardNumber", ex)
         }
@@ -595,12 +602,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                     else -> null
                 }
                 if (cardNumber != null && format != null) {
-                    metadataProvider.updateGiftCardBarcode(
-                        transactionId,
-                        index,
-                        cardNumber.replace(" ", "").replace("-", ""),
-                        format
-                    )
+                    applicationScope.launch {
+                        metadataProvider.updateGiftCardBarcode(
+                            transactionId,
+                            index,
+                            cardNumber.replace(" ", "").replace("-", ""),
+                            format
+                        )
+                    }.join()
                     return true
                 }
             }
@@ -610,12 +619,14 @@ class GiftCardDetailsViewModel @Inject constructor(
             val decodeResult = Qr.scanBarcode(bitmap)
 
             return if (decodeResult != null) {
-                metadataProvider.updateGiftCardBarcode(
-                    transactionId,
-                    index,
-                    decodeResult.first.replace(" ", "").replace("-", ""),
-                    decodeResult.second
-                )
+                applicationScope.launch {
+                    metadataProvider.updateGiftCardBarcode(
+                        transactionId,
+                        index,
+                        decodeResult.first.replace(" ", "").replace("-", ""),
+                        decodeResult.second
+                    )
+                }.join()
                 true
             } else {
                 log.error("ScanBarcode returned null: $barcodeUrl")
