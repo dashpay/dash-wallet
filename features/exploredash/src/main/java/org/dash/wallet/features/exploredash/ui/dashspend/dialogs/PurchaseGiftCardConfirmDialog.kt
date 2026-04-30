@@ -487,7 +487,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     private fun showGiftCardDetailsDialog(txId: Sha256Hash, giftCardId: String) {
         if (isAdded) {
-            if (viewModel.giftCardOrderInfo.value.values.size > 1) {
+            if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {
                     val navController = findNavController()
                     navController.popBackStack(navController.graph.startDestinationId, false)

@@ -436,27 +436,36 @@ class PiggyCardsRepository @Inject constructor(
         val rate = api.getExchangeRate(fiatCurrency)
         exchangeRateMap[orderResponse.id] = rate
         delay(250)
-        val response = getGiftCard(orderResponse.id) ?: throw Exception("invalid order number ${orderResponse.id}")
+        val response = getGiftCard(orderResponse.id)
+        if (response.isEmpty()) {
+            throw Exception("invalid order number ${orderResponse.id}")
+        }
 
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
             // the first query may return only one item, rather than all, so
             // let us fill out a mock of what the cards should be
             val giftCard = response.first()
-            order.mapIndexed { index, orderItem ->
-                GiftCardInfo(
-                    id = orderResponse.id,
-                    merchantName = giftCard.merchantName,
-                    status = giftCard.status,
-                    cryptoAmount = uri.amount.toPlainString(),
-                    cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
-                    paymentCryptoNetwork = Constants.DASH_CURRENCY,
-                    rate = rate.exchangeRate.toString(),
-                    fiatAmount = orderItem.value.toString(),//get(index).value.toString(),
-                    fiatCurrency = Constants.USD_CURRENCY,
-                    paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
-                )
+            val cardsOrdered = arrayListOf<GiftCardInfo>()
+            order.forEach { orderItem ->
+                for (i in 0 until orderItem.quantity) {
+                    cardsOrdered.add(
+                        GiftCardInfo(
+                            id = orderResponse.id,
+                            merchantName = giftCard.merchantName,
+                            status = giftCard.status,
+                            cryptoAmount = uri.amount.toPlainString(),
+                            cryptoCurrency = Constants.DASH_CURRENCY,
+                            paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                            rate = rate.exchangeRate.toString(),
+                            fiatAmount = orderItem.value.toString(),
+                            fiatCurrency = Constants.USD_CURRENCY,
+                            paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
+                        )
+                    )
+                }
             }
+            cardsOrdered
         } catch (e: BitcoinURIParseException) {
             if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
                 throw CTXSpendException(

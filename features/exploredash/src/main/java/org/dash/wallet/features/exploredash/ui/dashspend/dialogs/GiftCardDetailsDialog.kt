@@ -833,7 +833,7 @@ private fun HowToUseItem(iconRes: Int, title: String, description: String) {
 // ─── Previews ────────────────────────────────────────────────────────────────
 
 private fun previewState(vararg cards: GiftCard) = GiftCardUIState(
-    giftCards = cards.toList(),
+    giftCards = cards.toMutableList(),
     barcodes = cards.toList().map {
         Barcode(it.barcodeValue!!, it.barcodeFormat!!)
     },
@@ -876,7 +876,7 @@ private fun RenderedBarcodePreview() {
 private fun LoadingPreview() {
     GiftCardDetailsView(
         uiState = GiftCardUIState(
-            giftCards = listOf(fakeCard(index = 0)),
+            giftCards = mutableListOf(fakeCard(index = 0)),
             date = LocalDateTime.of(2024, 8, 26, 10, 56),
             serviceName = ServiceName.CTXSpend
         )
@@ -888,7 +888,7 @@ private fun LoadingPreview() {
 private fun ClaimLinkPreview() {
     GiftCardDetailsView(
         uiState = GiftCardUIState(
-            giftCards = listOf(fakeCard(index = 0, merchantUrl = "https://dash.org")),
+            giftCards = mutableListOf(fakeCard(index = 0, merchantUrl = "https://dash.org")),
             date = LocalDateTime.of(2024, 8, 26, 10, 56),
             serviceName = ServiceName.CTXSpend
         )
@@ -900,7 +900,7 @@ private fun ClaimLinkPreview() {
 private fun ErrorPreview() {
     GiftCardDetailsView(
         uiState = GiftCardUIState(
-            giftCards = listOf(fakeCard(index = 0)),
+            giftCards = mutableListOf(fakeCard(index = 0)),
             date = LocalDateTime.of(2024, 8, 26, 10, 56),
             serviceName = ServiceName.CTXSpend,
             status = GiftCardStatus.REJECTED,

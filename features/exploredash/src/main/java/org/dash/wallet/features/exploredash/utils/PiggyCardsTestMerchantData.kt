@@ -58,7 +58,7 @@ object PiggyCardsTestMerchants {
         ),
         PiggyCardsTestMerchantData(
             merchantId = PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID,
-            name = "Piggy Cards Flexible Test Merchant",
+            name = "Piggy Cards Test [Flexible]",
             sourceId = "177",
             merchantSavingsPercentage = -250,
             merchantDenominationsType = "min-max",

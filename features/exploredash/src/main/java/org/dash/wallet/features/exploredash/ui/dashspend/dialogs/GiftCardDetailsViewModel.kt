@@ -55,7 +55,7 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 data class GiftCardUIState(
-    val giftCards: List<GiftCard> = listOf(),
+    val giftCards: MutableList<GiftCard> = mutableListOf(),
     val index: Int = 0,
     val icon: Bitmap? = null,
     val barcodes: List<Barcode?> = listOf(),
@@ -125,11 +125,14 @@ class GiftCardDetailsViewModel @Inject constructor(
             .onEach { giftCards ->
                 _uiState.update { currentState ->
                     currentState.copy(
-                        giftCards = giftCards,
+                        giftCards = giftCards.toMutableList(),
                         barcodes = if (currentState.barcodes.isEmpty()) {
                             giftCards.map {
                                 if (it.barcodeValue != null && it.barcodeFormat != null) {
                                     Barcode(it.barcodeValue!!, it.barcodeFormat!!)
+                                } else if (it.number != null) {
+                                    // in case the barcodeValue is missing
+                                    Barcode(it.number!!, BarcodeFormat.CODE_128)
                                 } else {
                                     null
                                 }
@@ -141,26 +144,34 @@ class GiftCardDetailsViewModel @Inject constructor(
                     )
                 }
 
-                if (giftCards.any { card ->
+                val needsPolling = giftCards.any { card ->
                     card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
-                }) {
+                }
+                if (needsPolling && tickerJob?.isActive != true) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(transactionId) }
                         .launchIn(viewModelScope)
-                } else {
-                    cancelTicker()
                 }
             }
             .launchIn(viewModelScope)
     }
 
+    // for testing/debugging only
     fun refresh() {
-        if (tickerJob?.isActive != true) {
-            tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
-                .cancellable()
-                .onEach { fetchGiftCardInfo(transactionId) }
-                .launchIn(viewModelScope)
+        viewModelScope.launch(Dispatchers.IO) {
+            if (tickerJob?.isActive != true) {
+                // let's delete the card numbers and other information to force a reload
+                val cards = giftCardDao.getCardForTransaction(transactionId)
+                val newCards = cards.map { it.copy(number = null, pin = null, barcodeValue = null, barcodeFormat = null, merchantUrl = null) }
+                newCards.forEach {
+                    giftCardDao.updateGiftCard(it)
+                }
+                tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
+                    .cancellable()
+                    .onEach { fetchGiftCardInfo(transactionId) }
+                    .launchIn(viewModelScope)
+            }
         }
     }
 
@@ -418,6 +429,15 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         )
                                     )
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                }
+                                if (uiState.value.giftCards.size < giftCards.size) {
+                                    // add dummy cards
+                                    val cardToCopy = uiState.value.giftCards.last()
+                                    for (i in 0 until giftCards.size - uiState.value.giftCards.size) {
+                                        val newGiftCard = cardToCopy.copy(index = cardToCopy.index + i + 1)
+                                        giftCardDao.insertGiftCard(newGiftCard)
+                                        uiState.value.giftCards.add(newGiftCard)
+                                    }
                                 }
                                 giftCards.forEachIndexed { index, giftCard ->
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
