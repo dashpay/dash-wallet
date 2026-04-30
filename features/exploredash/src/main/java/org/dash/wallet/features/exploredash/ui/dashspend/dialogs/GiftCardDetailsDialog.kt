@@ -238,7 +238,10 @@ private fun GiftCardDetailsContent(
         onHowToUse = { viewModel.logEvent(AnalyticsConstants.DashSpend.HOW_TO_USE) },
         onBalanceCheck = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
         onCopyNumber = { number -> number.copy(activity, "card number") },
-        onCopyPin = { pin -> pin.copy(activity, "card pin") }
+        onCopyPin = { pin -> pin.copy(activity, "card pin") },
+        onRefresh = {
+            viewModel.refresh()
+        }
     )
 }
 
@@ -253,7 +256,8 @@ internal fun GiftCardDetailsView(
     onHowToUse: () -> Unit = {},
     onBalanceCheck: (String) -> Unit = {},
     onCopyNumber: (String) -> Unit = {},
-    onCopyPin: (String) -> Unit = {}
+    onCopyPin: (String) -> Unit = {},
+    onRefresh: () -> Unit = {}
 ) {
     var showHowToUse by remember { mutableStateOf(false) }
 
@@ -288,7 +292,8 @@ internal fun GiftCardDetailsView(
                 onMaxBrightness = onMaxBrightness,
                 onBalanceCheck = { uiState.giftCard?.merchantUrl?.let { onBalanceCheck(it) } },
                 onCopyNumber = onCopyNumber,
-                onCopyPin = onCopyPin
+                onCopyPin = onCopyPin,
+                onRefresh = onRefresh
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -424,7 +429,8 @@ private fun GiftCardItemCard(
     onMaxBrightness: (Boolean) -> Unit,
     onBalanceCheck: () -> Unit,
     onCopyNumber: (String) -> Unit,
-    onCopyPin: (String) -> Unit
+    onCopyPin: (String) -> Unit,
+    onRefresh: () -> Unit
 ) {
     val currencyFormat = remember {
         (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
@@ -545,7 +551,8 @@ private fun GiftCardItemCard(
                             )
                         }
                     },
-                    onTrailingActionClick = { onCopyNumber(order) }
+                    onTrailingActionClick = { onCopyNumber(order) },
+                    onClick = { onRefresh() }
                 )
             }
         }

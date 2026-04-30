@@ -123,13 +123,11 @@ class GiftCardDetailsViewModel @Inject constructor(
             .filterNotNull()
             .distinctUntilChanged()
             .onEach { giftCards ->
-                val card = giftCards.getOrNull(cardIndex)
-                val cards = if (card != null) listOf(card) else emptyList()
                 _uiState.update { currentState ->
                     currentState.copy(
-                        giftCards = cards,
+                        giftCards = giftCards,
                         barcodes = if (currentState.barcodes.isEmpty()) {
-                            cards.map {
+                            giftCards.map {
                                 if (it.barcodeValue != null && it.barcodeFormat != null) {
                                     Barcode(it.barcodeValue!!, it.barcodeFormat!!)
                                 } else {
@@ -138,11 +136,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                             }
                         } else {
                             currentState.barcodes
-                        }
+                        },
+                        index = cardIndex
                     )
                 }
 
-                if (card != null && card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null) {
+                if (giftCards.any { card ->
+                    card.number == null && card.merchantUrl.isNullOrEmpty() && card.note != null
+                }) {
                     tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
                         .cancellable()
                         .onEach { fetchGiftCardInfo(transactionId) }
@@ -154,7 +155,16 @@ class GiftCardDetailsViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    private suspend fun fetchGiftCardInfo(txid: Sha256Hash) {
+    fun refresh() {
+        if (tickerJob?.isActive != true) {
+            tickerJob = TickerFlow(period = 0.5.seconds, initialDelay = 1.seconds)
+                .cancellable()
+                .onEach { fetchGiftCardInfo(transactionId) }
+                .launchIn(viewModelScope)
+        }
+    }
+
+    private suspend fun fetchGiftCardInfo(txid: Sha256Hash) = withContext(Dispatchers.IO) {
         val metadata = metadataProvider.getTransactionMetadata(txid)
         when (metadata?.service) {
             ServiceName.CTXSpend -> {
@@ -168,7 +178,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                         )
                     }
                     cancelTicker()
-                    return
+                    return@withContext
                 }
 
                 try {
@@ -304,7 +314,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     } else {
                         if (retries > 0) {
                             retries--
-                            return
+                            return@withContext
                         }
                         cancelTicker()
                         log.error("CTXSpend returned null gift card")
@@ -323,7 +333,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 } catch (ex: Exception) {
                     if (retries > 0) {
                         retries--
-                        return
+                        return@withContext
                     }
                     cancelTicker()
                     log.error("Failed to fetch gift card info", ex)
@@ -341,13 +351,13 @@ class GiftCardDetailsViewModel @Inject constructor(
                         )
                     }
                     cancelTicker()
-                    return
+                    return@withContext
                 }
 
                 val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
                 if (orderId == null) {
                     log.error("piggycards order # is missing for $txid")
-                    return
+                    return@withContext
                 }
                 log.info(
                     "piggycard tx: {} and order: {}",
@@ -407,47 +417,27 @@ class GiftCardDetailsViewModel @Inject constructor(
                                                 )
                                         )
                                     )
-                                    // ctxSpendConfig.set(PiggyCardsConfig.PREFS_LAST_PURCHASE_START, -1L)
+                                    ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
-                                var newCombinedState: GiftCardUIState = uiState.value.copy()
                                 giftCards.forEachIndexed { index, giftCard ->
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
                                         updateGiftCard(index, giftCard.cardNumber, giftCard.cardPin)
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
-                                            if(!saveBarcodeUrl(it, index)) {
+                                            if (!saveBarcodeUrl(it, index)) {
                                                 saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, index)
                                             }
                                         }
-                                        val newState = uiState.value.copy(
-                                            status = giftCard.status,
-                                            queries = uiState.value.queries + 1,
-                                            error = null
-                                        )
-                                        cancelTicker()
-                                        //if (newCombinedState == null) {
-                                            newCombinedState = newState
-                                        //}
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                         updateGiftCard(index, giftCard.redeemUrl)
-                                        val newState = uiState.value.copy(
-                                            status = giftCard.status,
-                                            queries = uiState.value.queries + 1,
-                                            error = null
-                                        )
-                                        cancelTicker()
-                                        //if (newCombinedState == null) {
-                                            newCombinedState = newState
-                                        //}
-                                    } else {
-                                        newCombinedState = uiState.value.copy(
-                                            status = giftCard.status,
-                                            queries = uiState.value.queries + 1,
-                                            error = null
-                                        )
                                     }
                                 }
-                                newCombinedState
+                                cancelTicker()
+                                uiState.value.copy(
+                                    status = giftCard.status,
+                                    queries = uiState.value.queries + 1,
+                                    error = null
+                                )
                             }
 
                             GiftCardStatus.REJECTED -> {
@@ -489,7 +479,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                     } else {
                         if (retries > 0) {
                             retries--
-                            return
+                            return@withContext
                         }
                         cancelTicker()
                         log.error("PiggyCards returned null gift card")
@@ -508,7 +498,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                 } catch (ex: Exception) {
                     if (retries > 0) {
                         retries--
-                        return
+                        return@withContext
                     }
                     cancelTicker()
                     log.error("Failed to fetch gift card info", ex)
@@ -576,8 +566,8 @@ class GiftCardDetailsViewModel @Inject constructor(
     private suspend fun saveBarcodeUrl(barcodeUrl: String, index: Int): Boolean {
         return try {
             // first try to read the url
-            val url = barcodeUrl.toUri()
             // example: "https://piggy.cards/index.php?route=tool/barcode\u0026type=code-128\u0026text=98081562014457367722189
+            val url = barcodeUrl.toUri()
             if (url.getQueryParameter("route") == "tool/barcode") {
                 val cardNumber = url.getQueryParameter("text")
                 val format = when(url.getQueryParameter("type")) {
@@ -649,4 +639,6 @@ class GiftCardDetailsViewModel @Inject constructor(
         tickerJob = null
         retries = 0
     }
+
+
 }
