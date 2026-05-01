@@ -125,7 +125,7 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
 
         combine(viewModel.poolList, viewModel.inboundAddresses) { pools, addresses ->
             pools.filter { pool -> pool.asset != "DASH.DASH" }
-                .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
+                .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status.equals("available", ignoreCase = true) }
                 .map { pool ->
                     val chain = pool.asset.substringBefore('.')
                     val inbound = addresses.find { it.chain == chain }

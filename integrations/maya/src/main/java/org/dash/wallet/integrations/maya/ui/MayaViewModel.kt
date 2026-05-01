@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.*
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -28,10 +29,13 @@ import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
+import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.model.InboundAddress
@@ -40,6 +44,8 @@ import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Locale
 import javax.inject.Inject
 
@@ -69,7 +75,7 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    //private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
@@ -81,6 +87,8 @@ class MayaViewModel @Inject constructor(
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
     val inboundAddresses: StateFlow<List<InboundAddress>> = _inboundAddresses.asStateFlow()
+    val _exchangeRates = MutableStateFlow<List<ExchangeRate>>(listOf())
+    val exchangeRates = _exchangeRates.asStateFlow()
     val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
         addresses.any { it.halted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
@@ -88,43 +96,80 @@ class MayaViewModel @Inject constructor(
 
     init {
         // TODO: is this really needed? we don't support DASH swaps
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
-            .onEach { rate ->
-                dashExchangeRate = rate?.let {
-                    org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat)
-                }
-                _uiState.update { it.copy() }
-            }
-            .launchIn(viewModelScope)
+        exchangeRatesProvider.observeExchangeRates()
+            .onEach {
+                _exchangeRates.value = it
+            }.launchIn(viewModelScope)
+
+//        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+//            .filterNotNull()
+//            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
+//            .onEach { rate ->
+//                dashExchangeRate = rate?.let {
+//                    org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat)
+//                }
+//                _uiState.update { it.copy() }
+//            }
+//            .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { log.info("exchange rate selected currency: {}", it) }
-            .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
-            .onEach {
-                it?.let { fiatRate ->
-                    fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
-                    fiatExchangeRate = fiatRate.fiat
-                }
-                log.info("exchange rate: $it")
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
+            .filterNotNull()
+            .onEach { fiatRate ->
+                fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
+                fiatExchangeRate = fiatRate.fiat
+                log.info("exchange rate: {}", fiatRate)
             }
-            .flatMapLatest { mayaApi.observePoolList(it!!.fiat) }
-            .onEach { newPoolList ->
-                log.info("exchange rate in view model: {}", fiatExchangeRate?.toFriendlyString())
-                newPoolList.forEach { pool ->
-                    pool.setAssetPrice(fiatExchangeRate!!)
+            .flatMapLatest { fiatRate ->
+                mayaApi.observePoolList(fiatRate.fiat).mapLatest { pools ->
+                    pools to fiatRate.fiat
                 }
+            }
+            .onEach { (newPoolList, dashFiat) ->
+                applyPoolPrices(newPoolList, dashFiat)
                 log.info(
                     "exchange rate Pool List: {}",
-                    newPoolList.map { pool -> pool.assetPriceFiat.toFriendlyString() }
+                    newPoolList.map { pool -> "${pool.asset}=${pool.assetPriceFiat.toFriendlyString()}" }
                 )
                 poolList.value = newPoolList
             }
             .launchIn(viewModelScope)
 
         updateInboundAddresses()
+    }
+
+    private suspend fun applyPoolPrices(pools: List<PoolInfo>, dashFiat: Fiat) {
+        // Quote 10 DASH instead of 1 to amortize the fixed outbound fee — at 1 DASH
+        // input the network fee can eat several percent of the output and inflate
+        // the implied asset price.
+        val quoteDashCount = 10L
+        val quoteAtomicInput = Coin.COIN.value * quoteDashCount
+        val quoteInputBd = BigDecimal(quoteAtomicInput)
+        pools.forEach { pool ->
+            if (pool.asset == "DASH.DASH") {
+                pool.assetPriceFiat = dashFiat
+                return@forEach
+            }
+            val quote = mayaApi.getDefaultSwapQuote(pool.asset, quoteAtomicInput)
+                ?.takeIf { it.error == null }
+            val expectedOut = quote?.expectedAmountOut?.toBigDecimalOrNull()
+            if (quote == null || expectedOut == null || expectedOut.signum() <= 0) {
+                log.info("no quote for {}: {}", pool.asset, quote?.error)
+                return@forEach
+            }
+            // expectedAmountOut is post-fees; add fees.total back to recover the
+            // gross swap rate so the implied price tracks the mid-market rate.
+            val totalFees = quote.fees.total.toBigDecimalOrNull() ?: BigDecimal.ZERO
+            val grossOut = expectedOut + totalFees
+            // quoteAtomicInput atoms of DASH -> grossOut atoms of asset
+            // 1 asset = (quoteAtomicInput / grossOut) DASH; price in fiat = that ratio * dashFiat
+            pool.assetPriceFiat = quoteInputBd
+                .divide(grossOut, 8, RoundingMode.HALF_UP)
+                .multiply(dashFiat.toBigDecimal())
+                .toFiat(dashFiat.currencyCode)
+        }
     }
 
     fun formatFiat(fiatAmount: Fiat): String {
@@ -154,7 +199,7 @@ class MayaViewModel @Inject constructor(
     }
 
     private fun updateInboundAddresses() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             refreshInboundAddresses()
         }
     }

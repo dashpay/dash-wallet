@@ -38,6 +38,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
+import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
 import java.util.concurrent.Executors
@@ -55,6 +56,7 @@ interface MayaApi {
 
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
     suspend fun getInboundAddresses(): List<InboundAddress>
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
 }
 
 class MayaApiAggregator @Inject constructor(
@@ -109,21 +111,15 @@ class MayaApiAggregator @Inject constructor(
     }
 
     private suspend fun updatePoolList(fiatExchangeRate: Fiat) {
-        val resultWithUSDRates = webApi.getPoolInfo()
-        val resultWithFiatRates = resultWithUSDRates.map { pool ->
-            log.info("adjusting fiat value {}: {}", pool.asset, pool)
-            log.info("  {}", fiatExchangeRate.toFriendlyString())
-            pool.setAssetPrice(fiatExchangeRate)
-            log.info("  {}", pool.assetPriceFiat.toFriendlyString())
-            pool
-        }
-        log.info("USD: {}", resultWithUSDRates.map { it.assetPriceFiat })
-        log.info("Fiat: {}", resultWithFiatRates.map { it.assetPriceFiat })
-        poolInfoList.value = resultWithFiatRates
+        poolInfoList.value = webApi.getPoolInfo()
     }
 
     override suspend fun getInboundAddresses(): List<InboundAddress> {
         return webApi.getInboundAddresses()
+    }
+
+    override suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote? {
+        return webApi.getDefaultSwapQuote(toAsset, value)
     }
 
     override suspend fun reset() {

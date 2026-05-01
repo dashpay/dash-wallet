@@ -28,30 +28,33 @@ import java.math.BigDecimal
 
 @Parcelize
 data class PoolInfo(
-    @SerializedName("annualPercentageRate") val annualPercentageRate: String = "",
+    @SerializedName("balance_cacao") val balanceCacao: String = "",
+    @SerializedName("balance_asset") val balanceAsset: String = "",
     @SerializedName("asset") val asset: String = "",
-    @SerializedName("assetDepth") val assetDepth: String = "",
-    @SerializedName("assetPrice") val assetPrice: String = "",
-    @SerializedName("assetPriceUSD") val assetPriceUSD: String = "",
-    @SerializedName("liquidityUnits") val liquidityUnits: String = "",
-    @SerializedName("poolAPY") val poolAPY: String = "",
-    @SerializedName("runeDepth") val runeDepth: String = "",
+    @SerializedName("LP_units") val lpUnits: String = "",
+    @SerializedName("pool_units") val poolUnits: String = "",
+    /** status must be "Available" */
     @SerializedName("status") val status: String = "",
-    @SerializedName("synthSupply") val synthSupply: String = "",
-    @SerializedName("synthUnits") val synthUnits: String = "",
-    @SerializedName("units") val units: String = "",
-    @SerializedName("volume24h") val volume24h: String = ""
+    @SerializedName("synth_units") val synthUnits: String = "",
+    @SerializedName("synth_supply") val synthSupply: String = "",
+    @SerializedName("pending_inbound_cacao") val pendingInboundCacao: String = "",
+    @SerializedName("pending_inbound_asset") val pendingInboundAsset: String = "",
+    @SerializedName("synth_mint_paused") val synthMintPaused: Boolean = false,
+    @SerializedName("bondable") val bondable: Boolean = false
 ) : Parcelable {
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
-    fun getAssetPriceUSD(): Fiat {
-        return Fiat.parseFiatInexact("USD", assetPriceUSD)
-    }
+    val assetPriceInCacao: BigDecimal
+        get() {
+            val asset = balanceAsset.toBigDecimalOrNull() ?: return BigDecimal.ZERO
+            if (asset.signum() == 0) return BigDecimal.ZERO
+            return BigDecimal(balanceCacao).divide(asset, 8, java.math.RoundingMode.HALF_UP)
+        }
 
-    fun setAssetPrice(fiatExchangeRate: Fiat) {
-        assetPriceFiat = BigDecimal(assetPriceUSD)
-            .multiply(fiatExchangeRate.toBigDecimal())
-            .toFiat(fiatExchangeRate.currencyCode)
+    fun setAssetPrice(cacaoToFiatRate: Fiat) {
+        assetPriceFiat = assetPriceInCacao
+            .multiply(cacaoToFiatRate.toBigDecimal())
+            .toFiat(cacaoToFiatRate.currencyCode)
     }
 
     val currencyCode: String

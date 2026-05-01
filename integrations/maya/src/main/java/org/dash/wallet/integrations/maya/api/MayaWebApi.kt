@@ -72,7 +72,6 @@ interface MayaEndpoint {
 
 open class MayaWebApi @Inject constructor(
     private val endpoint: MayaEndpoint,
-    private val legacyEndpoint: MayaLegacyEndpoint,
     private val analyticsService: AnalyticsService
 ) {
     companion object {
@@ -85,7 +84,7 @@ open class MayaWebApi @Inject constructor(
 
     suspend fun getPoolInfo(): List<PoolInfo> {
         return try {
-            val response = legacyEndpoint.getPoolInfo()
+            val response = endpoint.getPoolInfo()
             log.info("maya: response: {}", response)
 
             return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
