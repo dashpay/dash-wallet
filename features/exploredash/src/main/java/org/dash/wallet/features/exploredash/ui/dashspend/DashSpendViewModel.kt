@@ -752,10 +752,14 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun getFirstCardValueAsFiat(): Fiat {
-        return Fiat.parseFiat(Constants.USD_CURRENCY, giftCardOrderInfo.value.keys.first().toBigDecimal().setScale(2, RoundingMode.UP).toString())
+        val firstCardValue =  giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
+        return Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            firstCardValue.toBigDecimal().setScale(2, RoundingMode.UP).toString()
+        )
     }
 
     fun getFirstCardQuantity(): Int {
-        return giftCardOrderInfo.value.values.first()
+        return giftCardOrderInfo.value.values.firstOrNull() ?: 0
     }
 }
