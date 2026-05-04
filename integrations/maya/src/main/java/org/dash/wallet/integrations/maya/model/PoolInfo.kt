@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.model
 
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.toBigDecimal
@@ -42,8 +43,10 @@ data class PoolInfo(
     @SerializedName("synth_mint_paused") val synthMintPaused: Boolean = false,
     @SerializedName("bondable") val bondable: Boolean = false
 ) : Parcelable {
+    @IgnoredOnParcel
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
+    @IgnoredOnParcel
     val assetPriceInCacao: BigDecimal
         get() {
             val asset = balanceAsset.toBigDecimalOrNull() ?: return BigDecimal.ZERO

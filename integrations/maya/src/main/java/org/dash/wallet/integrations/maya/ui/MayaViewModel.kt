@@ -32,6 +32,7 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toBigDecimal
@@ -112,10 +113,25 @@ class MayaViewModel @Inject constructor(
 //            }
 //            .launchIn(viewModelScope)
 
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
+            .filterNotNull()
+            .onEach { exchangeRate ->
+                val usdPrice = exchangeRatesProvider.getExchangeRate(Constants.USD_CURRENCY)
+                if (usdPrice != null) {
+                    val rate = exchangeRate.rate!!.toDouble() / usdPrice.rate!!.toDouble()
+                    log.info("exchange rate from CTX: {}", rate)
+                }
+            }
+            .launchIn(viewModelScope)
+
+
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .onEach { log.info("exchange rate selected currency: {}", it) }
-            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
+            .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
             .filterNotNull()
             .onEach { fiatRate ->
                 fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
@@ -127,8 +143,8 @@ class MayaViewModel @Inject constructor(
                     pools to fiatRate.fiat
                 }
             }
-            .onEach { (newPoolList, dashFiat) ->
-                applyPoolPrices(newPoolList, dashFiat)
+            .onEach { (newPoolList, usdToFiat) ->
+                applyPoolPrices(newPoolList, usdToFiat)
                 log.info(
                     "exchange rate Pool List: {}",
                     newPoolList.map { pool -> "${pool.asset}=${pool.assetPriceFiat.toFriendlyString()}" }
@@ -140,36 +156,53 @@ class MayaViewModel @Inject constructor(
         updateInboundAddresses()
     }
 
-    private suspend fun applyPoolPrices(pools: List<PoolInfo>, dashFiat: Fiat) {
-        // Quote 10 DASH instead of 1 to amortize the fixed outbound fee — at 1 DASH
-        // input the network fee can eat several percent of the output and inflate
-        // the implied asset price.
-        val quoteDashCount = 10L
-        val quoteAtomicInput = Coin.COIN.value * quoteDashCount
-        val quoteInputBd = BigDecimal(quoteAtomicInput)
-        pools.forEach { pool ->
-            if (pool.asset == "DASH.DASH") {
-                pool.assetPriceFiat = dashFiat
-                return@forEach
-            }
-            val quote = mayaApi.getDefaultSwapQuote(pool.asset, quoteAtomicInput)
-                ?.takeIf { it.error == null }
-            val expectedOut = quote?.expectedAmountOut?.toBigDecimalOrNull()
-            if (quote == null || expectedOut == null || expectedOut.signum() <= 0) {
-                log.info("no quote for {}: {}", pool.asset, quote?.error)
-                return@forEach
-            }
-            // expectedAmountOut is post-fees; add fees.total back to recover the
-            // gross swap rate so the implied price tracks the mid-market rate.
-            val totalFees = quote.fees.total.toBigDecimalOrNull() ?: BigDecimal.ZERO
-            val grossOut = expectedOut + totalFees
-            // quoteAtomicInput atoms of DASH -> grossOut atoms of asset
-            // 1 asset = (quoteAtomicInput / grossOut) DASH; price in fiat = that ratio * dashFiat
-            pool.assetPriceFiat = quoteInputBd
-                .divide(grossOut, 8, RoundingMode.HALF_UP)
-                .multiply(dashFiat.toBigDecimal())
-                .toFiat(dashFiat.currencyCode)
+    private fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
+        // Liquidity-weighted USD price of CACAO from all available USD-stable pools.
+        // Sum of asset balances / sum of cacao balances naturally weights by depth.
+        val stablePools = pools.filter {
+            (it.currencyCode == "USDT" || it.currencyCode == "USDC") &&
+                it.status.equals("available", ignoreCase = true)
         }
+        val sumStableCacao = stablePools.fold(BigDecimal.ZERO) { acc, p ->
+            acc + (p.balanceCacao.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+        }
+        val sumStableAsset = stablePools.fold(BigDecimal.ZERO) { acc, p ->
+            acc + (p.balanceAsset.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+        }
+        if (sumStableCacao.signum() <= 0 || sumStableAsset.signum() <= 0) {
+            log.warn("no stablecoin pool data; skipping price update")
+            return
+        }
+        log.info("stable pools: {} ({} pools)", stablePools.map { it.asset }, stablePools.size)
+
+        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Each pool's
+        // USD price is computed via the (balance_cacao * Σstable_asset) /
+        // (balance_asset * Σstable_cacao) cross-product (CACAO's decimals cancel,
+        // and pool assets share 8 decimals so the result is USD per whole asset).
+        // Multiply by usdToFiat to land in the selected fiat.
+        val fiatPerUsd = usdToFiat.toBigDecimal()
+
+        pools.forEach { pool ->
+            val priceUsd = priceInUsd(pool, sumStableCacao, sumStableAsset)
+            if (priceUsd == null || priceUsd.signum() <= 0) {
+                log.info("no USD price for {}", pool.asset)
+                return@forEach
+            }
+            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiat(usdToFiat.currencyCode)
+            log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
+        }
+    }
+
+    private fun priceInUsd(
+        pool: PoolInfo,
+        sumStableCacao: BigDecimal,
+        sumStableAsset: BigDecimal
+    ): BigDecimal? {
+        val cacao = pool.balanceCacao.toBigDecimalOrNull() ?: return null
+        val asset = pool.balanceAsset.toBigDecimalOrNull() ?: return null
+        if (asset.signum() == 0 || sumStableCacao.signum() == 0) return null
+        return cacao.multiply(sumStableAsset)
+            .divide(asset.multiply(sumStableCacao), 10, RoundingMode.HALF_UP)
     }
 
     fun formatFiat(fiatAmount: Fiat): String {
