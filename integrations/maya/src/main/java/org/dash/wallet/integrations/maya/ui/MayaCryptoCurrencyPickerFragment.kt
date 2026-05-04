@@ -231,8 +231,5 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 getString(R.string.maya_address_input_hint, pool.currencyCode)
             )
         )
-
-        // AdaptiveDialog.simple("${pool.currencyCode} was chosen", "Close").show(requireActivity()) {
-        // }
     }
 }
