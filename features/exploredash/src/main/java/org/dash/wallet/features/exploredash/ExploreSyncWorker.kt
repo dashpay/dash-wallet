@@ -200,8 +200,8 @@ class ExploreSyncWorker @AssistedInject constructor(
                     merchantId = data.merchantId,
                     paymentMethod = data.paymentMethod,
                     redeemType = data.redeemType,
-                    savingsPercentage = data.merchantSavingsPercentage,
-                    denominationsType = data.merchantDenominationsType,
+                    savingsPercentage = data.providerSavingsPercentage,
+                    denominationsType = data.providerDenominationsType,
                     addDate = now,
                     updateDate = now
                 ).apply {
