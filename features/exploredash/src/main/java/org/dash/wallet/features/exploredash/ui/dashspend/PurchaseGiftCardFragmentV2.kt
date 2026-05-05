@@ -317,19 +317,42 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
     }
 
     private suspend fun loadMerchant(merchant: Merchant) {
+        // Invalidate any mode flag carried over from a previously-viewed merchant in the same
+        // ViewModel scope. Without this, a Flexible→Fixed (or Fixed→Flexible) transition would
+        // briefly render the previous merchant's mode before the new one resolves.
+        viewModel.setIsFixedDenomination(null)
         viewModel.setGiftCardMerchant(merchant)
         if (viewModel.giftCardMerchant.value?.active != true) {
             findNavController().popBackStack()
             return
         }
+
+        // Optimistic mode determination from cached data so the screen renders immediately
+        // without waiting for updateMerchantDetails (which makes a network call that can take
+        // several seconds). Prefer the active provider's cached type; fall back to the merchant
+        // row's persisted denominationsType for deeplink-loaded merchants whose @Ignore
+        // giftCardProviders list isn't populated.
+        val currentProviderName = viewModel.selectedProvider?.name
+        val cachedDenominationType = currentProviderName?.let { name ->
+            merchant.giftCardProviders.find { it.provider == name }?.denominationsType
+        } ?: merchant.denominationsType
+        cachedDenominationType?.takeIf { it.isNotEmpty() }?.let { typeStr ->
+            try {
+                val isFixed = DenominationType.fromString(typeStr) is DenominationType.Fixed
+                viewModel.setIsFixedDenomination(isFixed)
+            } catch (_: IllegalArgumentException) {
+                // Unknown cached type — leave null and let the network response decide.
+            }
+        }
+
         val updated = viewModel.updateMerchantDetails(merchant)
         if (viewModel.giftCardMerchant.value?.active != true) {
             findNavController().popBackStack()
             return
         }
         viewModel.setGiftCardMerchant(updated)
-        val currentProviderName = viewModel.selectedProvider!!.name
-        val provider = updated.giftCardProviders.find { it.provider == currentProviderName }!!
+        val providerName = viewModel.selectedProvider!!.name
+        val provider = updated.giftCardProviders.find { it.provider == providerName }!!
         viewModel.setIsFixedDenomination(DenominationType.fromString(provider.denominationsType) is DenominationType.Fixed)
     }
 

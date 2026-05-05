@@ -591,7 +591,7 @@ class DashSpendViewModel @Inject constructor(
         }
     }
 
-    fun setIsFixedDenomination(isFixed: Boolean) {
+    fun setIsFixedDenomination(isFixed: Boolean?) {
         _isFixedDenomination.value = isFixed
     }
 
