@@ -62,6 +62,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarTitle
@@ -90,6 +91,7 @@ data class PurchaseConfirmUIState(
     val merchantName: String = "",
     val merchantLogoUrl: String? = null,
     val purchaseValueText: String = "",
+    val purchaseValueCurrency: String = "$",
     val giftCardTotalText: String = "",
     val discountText: String = "",
     val youPayText: String = "",
@@ -107,8 +109,8 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             currency = PurchaseGiftCardConfirmDialog@currency
             minimumFractionDigits = 0
         }
-        private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = PurchaseGiftCardConfirmDialog@currency
+        private val currencyFormat = NumberFormat.getInstance().apply {
+            // currency = PurchaseGiftCardConfirmDialog@currency
         }
     }
 
@@ -181,6 +183,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             merchantName = merchant.name ?: "",
             merchantLogoUrl = merchant.logoLocation,
             purchaseValueText = currencyFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
+            purchaseValueCurrency = "$",
             giftCardTotalText = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
             discountText = GenericUtils.formatPercent(savingsFraction) ?: "",
             youPayText = youPayText,
@@ -550,15 +553,22 @@ internal fun PurchaseGiftCardConfirmView(
             title = stringResource(R.string.purchase_confirm_transaction)
         )
 
-        // Big amount — Headline M Bold (Amount display)
-        Text(
-            text = uiState.purchaseValueText,
-            style = MyTheme.Typography.HeadlineMediumBold,
-            color = MyTheme.Colors.textPrimary,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(top = 16.dp, bottom = 24.dp)
+        EnterAmount(
+            primaryAmount = uiState.purchaseValueText,
+            currencyCodes = listOf(Constants.USD_CURRENCY),
+            showSecondary = false,
+            showMaxButton = false,
+            showPrimaryChevron = false,
+            showBalanceButton = false
         )
+//        Text(
+//            text = uiState.purchaseValueText,
+//            style = MyTheme.Typography.HeadlineLargeMedium,
+//            color = MyTheme.Colors.textPrimary,
+//            modifier = Modifier
+//                .align(Alignment.CenterHorizontally)
+//                .padding(top = 16.dp, bottom = 24.dp)
+//        )
 
         // Detail card
         Column(
@@ -695,7 +705,7 @@ private fun PurchaseGiftCardConfirmPreview() {
     PurchaseGiftCardConfirmView(
         uiState = PurchaseConfirmUIState(
             merchantName = "Target",
-            purchaseValueText = "$25.00",
+            purchaseValueText = "25.00",
             giftCardTotalText = "$25",
             discountText = "5%",
             youPayText = "$23.75"
@@ -709,7 +719,7 @@ private fun PurchaseGiftCardConfirmBreakdownPreview() {
     PurchaseGiftCardConfirmView(
         uiState = PurchaseConfirmUIState(
             merchantName = "Target",
-            purchaseValueText = "$60.00",
+            purchaseValueText = "60.00",
             giftCardTotalText = "$60",
             breakdownText = "1 x $10\n2 x $25",
             discountText = "5%",
@@ -724,7 +734,7 @@ private fun PurchaseGiftCardConfirmBreakdown2Preview() {
     PurchaseGiftCardConfirmView(
         uiState = PurchaseConfirmUIState(
             merchantName = "Target",
-            purchaseValueText = "$60.00",
+            purchaseValueText = "60.00",
             giftCardTotalText = "$60",
             breakdownText = "3 x $20",
             discountText = "5%",
@@ -739,7 +749,7 @@ private fun PurchaseGiftCardConfirmLoadingPreview() {
     PurchaseGiftCardConfirmView(
         uiState = PurchaseConfirmUIState(
             merchantName = "Target",
-            purchaseValueText = "$25.00",
+            purchaseValueText = "25.00",
             giftCardTotalText = "$25",
             discountText = "5%",
             youPayText = "$23.75",

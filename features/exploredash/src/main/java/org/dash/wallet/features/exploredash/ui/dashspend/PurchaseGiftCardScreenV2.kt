@@ -48,10 +48,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -62,6 +62,7 @@ import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
 import java.text.NumberFormat
 import java.util.Currency
@@ -79,7 +80,6 @@ data class PurchaseGiftCardV2UiState(
     val dashBalance: String = "",
     val fiatBalance: String = "",
     val showBalance: Boolean = false,
-    val currencySymbol: String = "$",
     val amountText: String = "0",
     val minHintText: String = "",
     val maxHintText: String = "",
@@ -114,9 +114,9 @@ fun PurchaseGiftCardScreenV2(
             leadingIcon = MyImages.MenuChevron,
             onLeadingClick = onBack,
             centralPart = false,
-            trailingIcon = MyImages.NavBarInfo,
-            trailingIconCircle = false,
-            onTrailingClick = onInfo
+            // trailingIcon = MyImages.NavBarInfo,
+            // trailingIconCircle = false,
+            // onTrailingClick = onInfo
         )
         Column(modifier = Modifier.fillMaxSize()
             .padding(horizontal = 20.dp)
@@ -267,39 +267,6 @@ private fun PurchaseLimitsErrorDiscountHint(
 
 
 @Composable
-private fun AmountDisplay(
-    currencySymbol: String = "$",
-    amountText: String,
-    modifier: Modifier = Modifier
-) {
-    val annotated = buildAnnotatedString {
-        append(currencySymbol)
-        append(amountText)
-    }
-    Text(
-        text = annotated,
-        style = MyTheme.Typography.HeadlineLargeMedium,
-        color = MyTheme.Colors.textPrimary,
-        textAlign = TextAlign.Center,
-        modifier = modifier
-    )
-}
-
-@Composable
-private fun TotalAmountDisplay(
-    totalAmountText: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = totalAmountText,
-        style = MyTheme.Typography.HeadlineLargeMedium,
-        color = MyTheme.Colors.textPrimary,
-        textAlign = TextAlign.Center,
-        modifier = modifier
-    )
-}
-
-@Composable
 private fun FlexibleSingleContent(
     uiState: PurchaseGiftCardV2UiState,
     onTabChanged: (isMultiple: Boolean) -> Unit
@@ -317,11 +284,16 @@ private fun FlexibleSingleContent(
             modifier = Modifier.fillMaxWidth().height(42.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        AmountDisplay(
-            currencySymbol = uiState.currencySymbol,
-            amountText = uiState.amountText,
+        EnterAmount(
+            primaryAmount = uiState.amountText,
+            currencyCodes = listOf("USD"),
+            selectedCurrencyIndex = 0,
+            showMaxButton = false,
+            showBalanceButton = false,
+            showSecondary = false,
+            showPrimaryChevron = false,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -350,10 +322,16 @@ private fun FlexibleMultipleContent(
             modifier = Modifier.fillMaxWidth().height(42.dp)
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
-        TotalAmountDisplay(
-            totalAmountText = totalAmountText,
+        EnterAmount(
+            primaryAmount = totalAmountText,
+            currencyCodes = listOf(Constants.USD_CURRENCY),
+            selectedCurrencyIndex = 0,
+            showMaxButton = false,
+            showBalanceButton = false,
+            showSecondary = false,
+            showPrimaryChevron = false,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -378,10 +356,16 @@ private fun FixedContent(
     onReset: () -> Unit
 ) {
     Column {
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-        TotalAmountDisplay(
-            totalAmountText = totalAmountText,
+        EnterAmount(
+            primaryAmount = totalAmountText,
+            currencyCodes = listOf(Constants.USD_CURRENCY),
+            selectedCurrencyIndex = 0,
+            showMaxButton = false,
+            showBalanceButton = false,
+            showSecondary = false,
+            showPrimaryChevron = false,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -391,7 +375,8 @@ private fun FixedContent(
             allowMultipleDenominations = false,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
-            onQuantityChanged = onQuantityChanged
+            onQuantityChanged = onQuantityChanged,
+            onReset = onReset
         )
     }
 }
@@ -405,7 +390,7 @@ private fun DenominationList(
     onReset: () -> Unit
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-        currency = Currency.getInstance("USD")
+        currency = Currency.getInstance(Constants.USD_CURRENCY)
         minimumFractionDigits = 0
     }
 
@@ -570,7 +555,7 @@ private fun PreviewFlexibleSingle() {
             amountText = "25",
             minHintText = "Min: $5.00",
             maxHintText = "Max: $200.00",
-            totalAmountText = "$0.00",
+            totalAmountText = "0.00",
             canContinue = true,
             allowedQuantities = mapOf(),
             errorText = ""
@@ -581,6 +566,7 @@ private fun PreviewFlexibleSingle() {
         onToggleBalance = {},
         onKeyInput = {},
         onQuantityChanged = { _, _ -> },
+        onReset = {},
         onContinue = {}
     )
 }
@@ -600,7 +586,7 @@ private fun PreviewFlexibleMultiple() {
             showBalance = true,
             amountText = "0",
             denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
-            totalAmountText = "$40.00",
+            totalAmountText = "40.00",
             canContinue = true,
             allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
             errorText = ""
@@ -611,6 +597,7 @@ private fun PreviewFlexibleMultiple() {
         onToggleBalance = {},
         onKeyInput = {},
         onQuantityChanged = { _, _ -> },
+        onReset = {},
         onContinue = {}
     )
 }
@@ -630,7 +617,7 @@ private fun PreviewFixed() {
             showBalance = false,
             amountText = "0",
             denominationQuantities = mapOf(25.0 to 1),
-            totalAmountText = "$25.00",
+            totalAmountText = "25.00",
             canContinue = true,
             allowedQuantities = mapOf(15.0 to 1),
             errorText = ""
@@ -641,6 +628,7 @@ private fun PreviewFixed() {
         onToggleBalance = {},
         onKeyInput = {},
         onQuantityChanged = { _, _ -> },
+        onReset = {},
         onContinue = {}
     )
 }

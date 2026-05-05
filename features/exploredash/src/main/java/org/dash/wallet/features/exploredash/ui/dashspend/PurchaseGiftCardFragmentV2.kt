@@ -51,7 +51,6 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import java.text.NumberFormat
-import java.util.Currency
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import androidx.lifecycle.lifecycleScope
 import org.bitcoinj.core.Coin
@@ -73,8 +72,9 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
     private val viewModel by exploreViewModels<DashSpendViewModel>()
     private val exploreViewModel by exploreViewModels<ExploreViewModel>()
 
-    private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-        currency = Currency.getInstance(Constants.USD_CURRENCY)
+    private val numberFormat = NumberFormat.getNumberInstance().apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
     }
 
     override fun onCreateView(
@@ -128,7 +128,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
 
             // Total amount for multiple/fixed modes
             val totalDouble = denominationQuantities.entries.sumOf { (denom, qty) -> denom * qty }
-            val totalAmountText = if (totalDouble > 0) currencyFormat.format(totalDouble) else "$0.00"
+            val totalAmountText = numberFormat.format(totalDouble)
 
             // canContinue logic per mode
             val canContinue = when (mode) {
@@ -180,14 +180,14 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     if (totalDouble > balanceMax) {
                         getString(R.string.purchase_gift_card_insufficient_money_error)
                     } else if (totalDouble > 2500.0) {
-                        getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat("$", 2500.00.toString()).toFormattedString())
+                        getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat(Constants.USD_CURRENCY, 2500.00.toString()).toFormattedString())
                     } else if (denomsExceedInventory.isNotEmpty()) {
                         val firstCard = denominationQuantities.entries.first()
                         getString(
                             R.string.purchase_gift_card_insufficient_inventory,
                             merchant?.name,
                             firstCard.value,
-                            Fiat.parseFiat("$", firstCard.key.toString()).toFormattedString()
+                            Fiat.parseFiat(Constants.USD_CURRENCY, firstCard.key.toString()).toFormattedString()
                         )
                     } else {
                         ""
@@ -206,7 +206,6 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 dashBalance = dashBalanceString,
                 fiatBalance = fiatBalanceString,
                 showBalance = showBalance,
-                currencySymbol = "$", // should be the correct symble for USD based the current locale
                 amountText = amountText,
                 minHintText = minHintText,
                 maxHintText = maxHintText,
