@@ -227,6 +227,8 @@
     <string name="purchase_gift_card_max_multiple_error">You can buy up to %s in gift cards per order</string>
     <string name="purchase_gift_card_insufficient_money_error">Insufficient Dash to buy these gift cards</string>
     <string name="purchase_gift_card_insufficient_inventory">Insufficient inventory for %s to buy %d x %s cards</string>
+    <string name="purchase_gift_card_inventory_toast">Merchant has only %d cards available</string>
+    <string name="purchase_gift_card_single_card_only_toast">You can choose only one card amount</string>
     <string name="purchase_gift_card_reset">Reset</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Enter verification code</string>

@@ -109,8 +109,11 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             currency = PurchaseGiftCardConfirmDialog@currency
             minimumFractionDigits = 0
         }
-        private val currencyFormat = NumberFormat.getInstance().apply {
+        private val currencyFormatNoSymbol = NumberFormat.getInstance().apply {
             // currency = PurchaseGiftCardConfirmDialog@currency
+        }
+        private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
+            currency = PurchaseGiftCardConfirmDialog@currency
         }
     }
 
@@ -182,7 +185,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         _uiState.value = PurchaseConfirmUIState(
             merchantName = merchant.name ?: "",
             merchantLogoUrl = merchant.logoLocation,
-            purchaseValueText = currencyFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
+            purchaseValueText = currencyFormatNoSymbol.format(orderTotalAmount.toBigDecimal().toDouble()),
             purchaseValueCurrency = "$",
             giftCardTotalText = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
             discountText = GenericUtils.formatPercent(savingsFraction) ?: "",

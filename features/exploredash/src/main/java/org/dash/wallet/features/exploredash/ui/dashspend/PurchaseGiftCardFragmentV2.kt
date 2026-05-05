@@ -21,6 +21,10 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -28,8 +32,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import org.dash.wallet.common.ui.components.MyTheme
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +96,18 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             val isBlockchainReplaying by viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
             val balance by viewModel.balance.asFlow().collectAsStateWithLifecycle(null)
             val exchangeRate by viewModel.usdExchangeRate.asFlow().collectAsStateWithLifecycle(null)
+
+            // Hold the screen blank until the merchant is loaded and the Fixed/Flexible mode
+            // has been resolved. Without this gate we briefly render FlexibleSingle (the default
+            // for null/null) before flipping to the real mode after loadMerchant completes.
+            if (merchant == null || isFixedDenomination == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MyTheme.Colors.backgroundPrimary)
+                )
+                return@setContent
+            }
 
             var amountText by rememberSaveable { mutableStateOf("0") }
             val denominationQuantities = remember { mutableStateMapOf<Double, Int>() }
@@ -174,21 +192,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                 }
                 else -> {
                     val balanceMax = fiatBalance.toBigDecimal().toDouble()
-                    val denomsExceedInventory = denominationQuantities.entries.filter { (denomination, quantity) ->
-                        merchant?.quantities[denomination]?.let { it < quantity } == true
-                    }
                     if (totalDouble > balanceMax) {
                         getString(R.string.purchase_gift_card_insufficient_money_error)
-                    } else if (totalDouble > 2500.0) {
-                        getString(R.string.purchase_gift_card_max_multiple_error, Fiat.parseFiat(Constants.USD_CURRENCY, 2500.00.toString()).toFormattedString())
-                    } else if (denomsExceedInventory.isNotEmpty()) {
-                        val firstCard = denominationQuantities.entries.first()
-                        getString(
-                            R.string.purchase_gift_card_insufficient_inventory,
-                            merchant?.name,
-                            firstCard.value,
-                            Fiat.parseFiat(Constants.USD_CURRENCY, firstCard.key.toString()).toFormattedString()
-                        )
                     } else {
                         ""
                     }
@@ -251,13 +256,9 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         denominationQuantities[denomination] = quantity
                     }
                     viewModel.giftCardOrderInfo.value = denominationQuantities.toMap()
-                    // Update viewModel with total for the confirm dialog
-//                    val newTotal = denominationQuantities.entries.sumOf { (d, q) -> d * q }
-//                    val newQty = denominationQuantities.values.sum()
-//                    if (newTotal > 0) {
-//                        val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, newTotal.toString())
-//                        viewModel.setGiftCardOrderInfo(fiat, newQty)
-//                    }
+                },
+                onShowToast = { message ->
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
                 },
                 onContinue = {
                     when (val m = mode) {
@@ -271,12 +272,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         }
                         is GiftCardPurchaseMode.FlexibleMultiple,
                         is GiftCardPurchaseMode.Fixed -> {
-//                            val total = denominationQuantities.entries.sumOf { (d, q) -> d * q }
-//                            val qty = denominationQuantities.values.sum()
-//                            if (total > 0) {
-//                                val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, total.toString())
-//                                viewModel.setGiftCardOrderInfo(fiat, qty)
-//                            }
+
                         }
                     }
                     PurchaseGiftCardConfirmDialog().show(requireActivity())

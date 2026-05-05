@@ -99,6 +99,7 @@ fun PurchaseGiftCardScreenV2(
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
     onReset: () -> Unit,
     onContinue: () -> Unit,
+    onShowToast: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -158,19 +159,23 @@ fun PurchaseGiftCardScreenV2(
                         FlexibleMultipleContent(
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
+                            allowedQuantities = uiState.allowedQuantities,
                             totalAmountText = uiState.totalAmountText,
                             onTabChanged = onTabChanged,
                             onQuantityChanged = onQuantityChanged,
-                            onReset = onReset
+                            onReset = onReset,
+                            onShowToast = onShowToast
                         )
                     }
                     is GiftCardPurchaseMode.Fixed -> {
                         FixedContent(
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
+                            allowedQuantities = uiState.allowedQuantities,
                             totalAmountText = uiState.totalAmountText,
                             onQuantityChanged = onQuantityChanged,
-                            onReset = onReset
+                            onReset = onReset,
+                            onShowToast = onShowToast
                         )
                     }
                 }
@@ -323,10 +328,12 @@ private fun FlexibleSingleContent(
 private fun FlexibleMultipleContent(
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
+    allowedQuantities: Map<Double, Int>,
     totalAmountText: String,
     onTabChanged: (isMultiple: Boolean) -> Unit,
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onShowToast: (String) -> Unit
 ) {
     Column {
         val tabOptions = listOf(
@@ -363,8 +370,10 @@ private fun FlexibleMultipleContent(
             allowMultipleDenominations = true,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
+            allowedQuantities = allowedQuantities,
             onQuantityChanged = onQuantityChanged,
-            onReset = onReset
+            onReset = onReset,
+            onShowToast = onShowToast
         )
     }
 }
@@ -373,9 +382,11 @@ private fun FlexibleMultipleContent(
 private fun FixedContent(
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
+    allowedQuantities: Map<Double, Int>,
     totalAmountText: String,
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onShowToast: (String) -> Unit
 ) {
     // Per Figma node 3115:44204 the Fixed-mode layout has no leading spacer:
     // EnterAmount sits directly under TopIntroSend (20dp gap controlled by the
@@ -399,8 +410,10 @@ private fun FixedContent(
             allowMultipleDenominations = false,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
+            allowedQuantities = allowedQuantities,
             onQuantityChanged = onQuantityChanged,
-            onReset = onReset
+            onReset = onReset,
+            onShowToast = onShowToast
         )
     }
 }
@@ -410,8 +423,10 @@ private fun DenominationList(
     allowMultipleDenominations: Boolean,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
+    allowedQuantities: Map<Double, Int>,
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
-    onReset: () -> Unit
+    onReset: () -> Unit,
+    onShowToast: (String) -> Unit
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance().apply {
         currency = Currency.getInstance(Constants.USD_CURRENCY)
@@ -419,6 +434,10 @@ private fun DenominationList(
     }
 
     val hasAnySelection = denominationQuantities.values.any { it > 0 }
+    val currentTotal = denominationQuantities.entries.sumOf { (d, q) -> d * q }
+
+    val singleCardOnlyToast = stringResource(R.string.purchase_gift_card_single_card_only_toast)
+    val orderTotalToast = stringResource(R.string.purchase_gift_card_max_multiple_error, "$2,500")
 
     // Per Figma node 3135:57658 — white card, 20px radius, 20px padding all sides,
     // 20px gap between the rows-block and the Reset button. Inside the rows-block,
@@ -439,17 +458,28 @@ private fun DenominationList(
         ) {
             denominations.forEach { denomination ->
                 val quantity = denominationQuantities[denomination] ?: 0
-                val increaseEnabled = allowMultipleDenominations || !hasAnySelection || quantity > 0
+                val maxQty = allowedQuantities[denomination]
+                val isFixedSelectionBlocked = !allowMultipleDenominations && hasAnySelection && quantity == 0
+                val inventoryToast = maxQty?.let {
+                    stringResource(R.string.purchase_gift_card_inventory_toast, it)
+                }
 
                 DenominationRow(
                     label = currencyFormat.format(denomination),
                     quantity = quantity,
-                    increaseEnabled = increaseEnabled,
+                    increaseEnabled = !isFixedSelectionBlocked,
                     onDecrease = {
                         if (quantity > 0) onQuantityChanged(denomination, quantity - 1)
                     },
                     onIncrease = {
-                        onQuantityChanged(denomination, quantity + 1)
+                        when {
+                            isFixedSelectionBlocked -> onShowToast(singleCardOnlyToast)
+                            maxQty != null && quantity >= maxQty -> {
+                                inventoryToast?.let { onShowToast(it) }
+                            }
+                            currentTotal + denomination > 2500.0 -> onShowToast(orderTotalToast)
+                            else -> onQuantityChanged(denomination, quantity + 1)
+                        }
                     }
                 )
             }
@@ -554,11 +584,12 @@ private fun CircleButton(
     content: @Composable () -> Unit
 ) {
     // Per Figma: 34dp visible circle (1.5dp stroke) wrapped in a 42dp touch area
-    // (4dp padding on each side). `enabled` uses primary5 (5% black), disabled uses primary4 (8%).
+    // (4dp padding on each side). `enabled` controls visual styling only — clicks always fire
+    // so callers can show a toast explaining why the action is blocked.
     Box(
         modifier = modifier
             .size(42.dp)
-            .clickable(enabled = enabled) { onClick() },
+            .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
         Box(
