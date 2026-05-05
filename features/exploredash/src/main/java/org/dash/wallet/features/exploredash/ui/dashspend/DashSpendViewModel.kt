@@ -760,6 +760,6 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun getFirstCardQuantity(): Int {
-        return giftCardOrderInfo.value.values.firstOrNull() ?: 0
+        return giftCardOrderInfo.value.values.firstOrNull() ?: 1
     }
 }
