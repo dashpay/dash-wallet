@@ -241,6 +241,10 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     }
                     fiatAmount?.let { viewModel.setGiftCardOrderInfo(it, 1) }
                 },
+                onReset = {
+                    denominationQuantities.clear()
+                    viewModel.giftCardOrderInfo.value = emptyMap()
+                },
                 onQuantityChanged = { denomination, quantity ->
                     if (quantity == 0) {
                         denominationQuantities.remove(denomination)

@@ -100,6 +100,7 @@ fun PurchaseGiftCardScreenV2(
     onToggleBalance: () -> Unit,
     onKeyInput: (String) -> Unit,
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
+    onReset: () -> Unit,
     onContinue: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -154,7 +155,8 @@ fun PurchaseGiftCardScreenV2(
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
                             onTabChanged = onTabChanged,
-                            onQuantityChanged = onQuantityChanged
+                            onQuantityChanged = onQuantityChanged,
+                            onReset = onReset
                         )
                     }
                     is GiftCardPurchaseMode.Fixed -> {
@@ -162,7 +164,8 @@ fun PurchaseGiftCardScreenV2(
                             denominations = mode.denominations,
                             denominationQuantities = uiState.denominationQuantities,
                             totalAmountText = uiState.totalAmountText,
-                            onQuantityChanged = onQuantityChanged
+                            onQuantityChanged = onQuantityChanged,
+                            onReset = onReset
                         )
                     }
                 }
@@ -331,7 +334,8 @@ private fun FlexibleMultipleContent(
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
     onTabChanged: (isMultiple: Boolean) -> Unit,
-    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
+    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
+    onReset: () -> Unit
 ) {
     Column {
         val tabOptions = listOf(
@@ -359,7 +363,8 @@ private fun FlexibleMultipleContent(
             allowMultipleDenominations = true,
             denominations = denominations,
             denominationQuantities = denominationQuantities,
-            onQuantityChanged = onQuantityChanged
+            onQuantityChanged = onQuantityChanged,
+            onReset = onReset
         )
     }
 }
@@ -369,7 +374,8 @@ private fun FixedContent(
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
     totalAmountText: String,
-    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
+    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
+    onReset: () -> Unit
 ) {
     Column {
         Spacer(modifier = Modifier.height(8.dp))
@@ -395,7 +401,8 @@ private fun DenominationList(
     allowMultipleDenominations: Boolean,
     denominations: List<Double>,
     denominationQuantities: Map<Double, Int>,
-    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit
+    onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
+    onReset: () -> Unit
 ) {
     val currencyFormat = NumberFormat.getCurrencyInstance().apply {
         currency = Currency.getInstance("USD")
@@ -434,6 +441,20 @@ private fun DenominationList(
                     thickness = 1.dp
                 )
             }
+        }
+
+        if (hasAnySelection) {
+            DashButton(
+                text = stringResource(R.string.purchase_gift_card_reset),
+                style = Style.TintedGray,
+                size = Size.ExtraSmall,
+                stretch = false,
+                onClick = onReset,
+                modifier = Modifier
+                    .align(Alignment.End)
+                    .width(126.dp)
+                    .padding(bottom = 16.dp)
+            )
         }
     }
 }
