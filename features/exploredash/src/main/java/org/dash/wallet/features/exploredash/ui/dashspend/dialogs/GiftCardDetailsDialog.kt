@@ -496,17 +496,13 @@ private fun GiftCardItemCard(
                 label = stringResource(R.string.purchase_card_number),
                 trailingText = giftCard.number ?: "",
                 trailingTrailingIcon = {
-                    IconButton(
-                        onClick = { onCopyNumber(giftCard.number!!) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_copy_blue),
-                            contentDescription = null,
-                            tint = MyTheme.Colors.dashBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_copy),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clickable { onCopyPin(giftCard.number!!) }
+                    )
                 }
             )
         }
@@ -517,17 +513,13 @@ private fun GiftCardItemCard(
                 label = stringResource(R.string.purchase_card_pin),
                 trailingText = giftCard.pin ?: "",
                 trailingTrailingIcon = {
-                    IconButton(
-                        onClick = { onCopyPin(giftCard.pin!!) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_copy_blue),
-                            contentDescription = null,
-                            tint = MyTheme.Colors.dashBlue,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(R.drawable.ic_copy),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .size(14.dp)
+                            .clickable { onCopyPin(giftCard.pin!!) }
+                    )
                 }
             )
         }
@@ -539,19 +531,14 @@ private fun GiftCardItemCard(
                     label = stringResource(R.string.purchase_order_number),
                     trailingText = order,
                     trailingTrailingIcon = {
-                        IconButton(
-                            onClick = { onCopyPin(order) },
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_copy_blue),
-                                contentDescription = null,
-                                tint = MyTheme.Colors.dashBlue,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onCopyPin(order) }
+                        )
                     },
-                    onTrailingActionClick = { onCopyNumber(order) },
                     onClick = { onRefresh() }
                 )
             }
@@ -838,7 +825,7 @@ private fun previewState(vararg cards: GiftCard) = GiftCardUIState(
         Barcode(it.barcodeValue!!, it.barcodeFormat!!)
     },
     date = LocalDateTime.of(2024, 8, 26, 10, 56),
-    serviceName = ServiceName.CTXSpend
+    serviceName = ServiceName.CTXSpend,
 )
 
 private fun fakeCard(
@@ -867,7 +854,7 @@ private fun RenderedBarcodePreview() {
     GiftCardDetailsView(
         uiState = previewState(
             fakeCard(index = 1, number = "6006491727005748", pin = "1411", barcode = "6006491727005748", barcodeFormat = BarcodeFormat.CODE_128),
-            ),
+        )
     )
 }
 
