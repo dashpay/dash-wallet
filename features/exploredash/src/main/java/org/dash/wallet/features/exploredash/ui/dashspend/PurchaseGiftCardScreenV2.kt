@@ -36,9 +36,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -119,13 +116,13 @@ fun PurchaseGiftCardScreenV2(
             // onTrailingClick = onInfo
         )
         Column(modifier = Modifier.fillMaxSize()
-            .padding(horizontal = 20.dp)
             .padding(top = 10.dp)) {
             Spacer(modifier = Modifier.height(64.dp))
 
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .padding(horizontal = 20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
                 TopIntroSend(
@@ -140,13 +137,21 @@ fun PurchaseGiftCardScreenV2(
                     modifier = Modifier,
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 when (val mode = uiState.mode) {
                     is GiftCardPurchaseMode.FlexibleSingle -> {
                         FlexibleSingleContent(
                             uiState = uiState,
                             onTabChanged = onTabChanged
+                        )
+                        // Per Figma: error/discount hint sits directly under the amount,
+                        // not pinned above the keyboard, so it scrolls with the top section.
+                        PurchaseLimitsErrorDiscountHint(
+                            minHintText = uiState.minHintText,
+                            maxHintText = uiState.maxHintText,
+                            errorText = uiState.errorText,
+                            discountHintText = uiState.discountHintText
                         )
                     }
                     is GiftCardPurchaseMode.FlexibleMultiple -> {
@@ -171,39 +176,47 @@ fun PurchaseGiftCardScreenV2(
                 }
             }
 
-            // Min/max limits + keyboard pinned above the button for the flexible-single mode
+            // Bottom area: FlexibleSingle uses a single rounded-top panel that contains
+            // both the numeric keyboard and the Continue button, flush with the screen edges.
+            // Other modes keep the inset hint + button layout.
             if (uiState.mode is GiftCardPurchaseMode.FlexibleSingle) {
-                PurchaseLimitsErrorDiscountHint(
-                    minHintText = uiState.minHintText,
-                    maxHintText = uiState.maxHintText,
-                    errorText = uiState.errorText,
-                    discountHintText = uiState.discountHintText
-                )
-                Spacer(modifier = Modifier.height(16.dp))
                 NumericKeyboardCompose(
                     modifier = Modifier.fillMaxWidth(),
-                    onKeyInput = onKeyInput
+                    onKeyInput = onKeyInput,
+                    bottomSlot = {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DashButton(
+                            onClick = onContinue,
+                            modifier = Modifier.fillMaxWidth(),
+                            text = stringResource(org.dash.wallet.common.R.string.button_continue),
+                            style = Style.FilledBlue,
+                            size = Size.Large,
+                            isEnabled = uiState.canContinue
+                        )
+                    }
                 )
             } else {
-                PurchaseLimitsErrorDiscountHint(
-                    minHintText = "",
-                    maxHintText = "",
-                    errorText = uiState.errorText,
-                    discountHintText = uiState.discountHintText
-                )
+                // Per Figma node 3118:45588 the bottom keyboard panel has 20px padding all sides
+                // and a 20px gap between the hint text and the Continue button.
+                Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                    PurchaseLimitsErrorDiscountHint(
+                        minHintText = "",
+                        maxHintText = "",
+                        errorText = uiState.errorText,
+                        discountHintText = uiState.discountHintText
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                    DashButton(
+                        onClick = onContinue,
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(org.dash.wallet.common.R.string.button_continue),
+                        style = Style.FilledBlue,
+                        size = Size.Large,
+                        isEnabled = uiState.canContinue
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
             }
-
-            // Single continue button pinned outside the scroll area
-            Spacer(modifier = Modifier.height(16.dp))
-            DashButton(
-                onClick = onContinue,
-                modifier = Modifier.fillMaxWidth(),
-                text = stringResource(org.dash.wallet.common.R.string.button_continue),
-                style = Style.FilledBlue,
-                size = Size.Large,
-                isEnabled = uiState.canContinue
-            )
-            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
@@ -222,43 +235,49 @@ private fun PurchaseLimitsErrorDiscountHint(
     val minError = errorText.isNotEmpty() && errorText == minHintText
     val maxError = errorText.isNotEmpty() && errorText == maxHintText
 
-    if (minHintText.isNotEmpty() && maxHintText.isNotEmpty()) {
+    val hasMinMaxRow = minHintText.isNotEmpty() && maxHintText.isNotEmpty()
+    val hasCenteredError = errorText.isNotEmpty() && !minError && !maxError
+    val hasDiscountText = discountHintText.isNotEmpty() && errorText.isEmpty()
+
+    // Per Figma (helpWrap): Body M Regular = 14sp/20 line height; centered when only error/discount,
+    // SpaceBetween for min/max row.
+    if (hasMinMaxRow) {
         Row(
             modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = minHintText,
-                style = MyTheme.Caption,
-                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textPrimary
+                style = MyTheme.Typography.BodyMedium,
+                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
             )
             Text(
                 text = maxHintText,
-                style = MyTheme.Caption,
-                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textPrimary
+                style = MyTheme.Typography.BodyMedium,
+                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
             )
         }
     }
 
-    // Non-range errors (e.g. blockchain replaying) shown above the min/max row.
-    Spacer(modifier = Modifier.height(30.dp))
-    if (errorText.isNotEmpty() && !minError && !maxError) {
+    // Non-range errors (e.g. blockchain replaying or "Insufficient funds") shown centered.
+    if (hasCenteredError) {
+        if (hasMinMaxRow) Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = errorText,
-            style = MyTheme.Caption,
+            style = MyTheme.Typography.BodyMedium,
             color = MyTheme.Colors.red,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
     }
 
-    // Discount explanation, shown when amount is valid and within limits
-    if (discountHintText.isNotEmpty() && errorText.isEmpty()) {
-        // Spacer(modifier = Modifier.height(30.dp))
+    // Discount explanation, shown when amount is valid and within limits.
+    if (hasDiscountText) {
+        if (hasMinMaxRow) Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = discountHintText,
             textAlign = TextAlign.Center,
-            style = MyTheme.Caption,
+            style = MyTheme.Typography.BodyMedium,
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
@@ -281,7 +300,7 @@ private fun FlexibleSingleContent(
             selectedIndex = 0,
             onOptionSelected = { _, index -> onTabChanged(index == 1) },
             style = SegmentedPickerStyle(cornerRadius = 20f),
-            modifier = Modifier.fillMaxWidth().height(42.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -314,12 +333,13 @@ private fun FlexibleMultipleContent(
             SegmentedOption(stringResource(R.string.gift_card_tab_single)),
             SegmentedOption(stringResource(R.string.gift_card_tab_multiple))
         )
+        // Per Figma node 3118:45513 the SegmentedControl is 40px tall (matches Single mode).
         SegmentedPicker(
             options = tabOptions,
             selectedIndex = 1,
             onOptionSelected = { _, index -> onTabChanged(index == 1) },
             style = SegmentedPickerStyle(cornerRadius = 20f),
-            modifier = Modifier.fillMaxWidth().height(42.dp)
+            modifier = Modifier.fillMaxWidth().height(40.dp)
         )
 
         Spacer(modifier = Modifier.height(20.dp))
@@ -335,7 +355,9 @@ private fun FlexibleMultipleContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // Per Figma the gap between EnterAmount and the denomination card is the parent
+        // 20px column gap (not 24).
+        Spacer(modifier = Modifier.height(20.dp))
 
         DenominationList(
             allowMultipleDenominations = true,
@@ -355,9 +377,11 @@ private fun FixedContent(
     onQuantityChanged: (denomination: Double, quantity: Int) -> Unit,
     onReset: () -> Unit
 ) {
+    // Per Figma node 3115:44204 the Fixed-mode layout has no leading spacer:
+    // EnterAmount sits directly under TopIntroSend (20dp gap controlled by the
+    // parent column), then a 20dp gap before the DenominationList card —
+    // identical to FlexibleMultiple's spacing.
     Column {
-        Spacer(modifier = Modifier.height(4.dp))
-
         EnterAmount(
             primaryAmount = totalAmountText,
             currencyCodes = listOf(Constants.USD_CURRENCY),
@@ -369,7 +393,7 @@ private fun FixedContent(
             modifier = Modifier.fillMaxWidth()
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
 
         DenominationList(
             allowMultipleDenominations = false,
@@ -396,34 +420,37 @@ private fun DenominationList(
 
     val hasAnySelection = denominationQuantities.values.any { it > 0 }
 
+    // Per Figma node 3135:57658 — white card, 20px radius, 20px padding all sides,
+    // 20px gap between the rows-block and the Reset button. Inside the rows-block,
+    // a 10px gap between rows (no dividers).
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(
                 color = MyTheme.Colors.backgroundSecondary,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(20.dp)
             )
-            .padding(horizontal = 20.dp)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
-        denominations.forEachIndexed { index, denomination ->
-            val quantity = denominationQuantities[denomination] ?: 0
-            val increaseEnabled = allowMultipleDenominations || !hasAnySelection || quantity > 0
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            denominations.forEach { denomination ->
+                val quantity = denominationQuantities[denomination] ?: 0
+                val increaseEnabled = allowMultipleDenominations || !hasAnySelection || quantity > 0
 
-            DenominationRow(
-                label = currencyFormat.format(denomination),
-                quantity = quantity,
-                increaseEnabled = increaseEnabled,
-                onDecrease = {
-                    if (quantity > 0) onQuantityChanged(denomination, quantity - 1)
-                },
-                onIncrease = {
-                    onQuantityChanged(denomination, quantity + 1)
-                }
-            )
-            if (index < denominations.lastIndex) {
-                HorizontalDivider(
-                    color = MyTheme.Colors.divider,
-                    thickness = 1.dp
+                DenominationRow(
+                    label = currencyFormat.format(denomination),
+                    quantity = quantity,
+                    increaseEnabled = increaseEnabled,
+                    onDecrease = {
+                        if (quantity > 0) onQuantityChanged(denomination, quantity - 1)
+                    },
+                    onIncrease = {
+                        onQuantityChanged(denomination, quantity + 1)
+                    }
                 )
             }
         }
@@ -438,7 +465,6 @@ private fun DenominationList(
                 modifier = Modifier
                     .align(Alignment.End)
                     .width(126.dp)
-                    .padding(bottom = 16.dp)
             )
         }
     }
@@ -455,50 +481,54 @@ private fun DenominationRow(
     val decreaseEnabled = quantity > 0
     val quantityColor = if (increaseEnabled || quantity > 0) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
 
+    // Per Figma node 3118:45517 the row has natural height (icon 26h, stepper 34h with 4px touch
+    // padding = 42 total). Card padding (20dp) + 10dp inter-row gaps already control spacing.
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(64.dp)
-            .padding(horizontal = 0.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_gift_card_icon),
             contentDescription = null,
             tint = Color.Unspecified,
-            modifier = Modifier.size(40.dp)
+            modifier = Modifier.size(width = 40.dp, height = 26.dp)
         )
 
         Spacer(modifier = Modifier.width(12.dp))
 
         Text(
             text = label,
-            style = MyTheme.Typography.TitleMediumSemibold,
+            // Body/Body L Medium per Figma (16sp / 24 line-height / Medium 500).
+            style = MyTheme.Typography.BodyLargeMedium,
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
 
+        // Stepper: per Figma each touchArea has 4px padding around a 34px circle, with a 6px
+        // gap between (touchArea | qty | touchArea).
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             CircleButton(
                 onClick = onDecrease,
                 enabled = decreaseEnabled
             ) {
-                Text(
-                    text = "−",
-                    style = MyTheme.Typography.TitleMediumSemibold,
-                    color = if (decreaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
+                Icon(
+                    painter = painterResource(R.drawable.ic_stepper_minus),
+                    contentDescription = null,
+                    tint = if (decreaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
+                    modifier = Modifier.size(11.dp)
                 )
             }
 
             Text(
                 text = quantity.toString(),
-                style = MyTheme.Typography.TitleMediumSemibold,
+                // Per Figma: subtitle1-semibold (16sp / 22 / SemiBold), 30px width, centered.
+                style = MyTheme.SubtitleSemibold,
                 color = quantityColor,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.width(24.dp)
+                modifier = Modifier.width(30.dp)
             )
 
             CircleButton(
@@ -506,10 +536,10 @@ private fun DenominationRow(
                 enabled = increaseEnabled
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    painter = painterResource(R.drawable.ic_stepper_plus),
                     contentDescription = null,
                     tint = if (increaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(11.dp)
                 )
             }
         }
@@ -523,19 +553,27 @@ private fun CircleButton(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    // Per Figma: 34dp visible circle (1.5dp stroke) wrapped in a 42dp touch area
+    // (4dp padding on each side). `enabled` uses primary5 (5% black), disabled uses primary4 (8%).
     Box(
         modifier = modifier
-            .size(34.dp)
-            .border(
-                width = 1.dp,
-                color = if (enabled) MyTheme.Colors.primary4 else MyTheme.Colors.primary5,
-                shape = CircleShape
-            )
-            .clip(CircleShape)
+            .size(42.dp)
             .clickable(enabled = enabled) { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        content()
+        Box(
+            modifier = Modifier
+                .size(34.dp)
+                .border(
+                    width = 1.5.dp,
+                    color = if (enabled) MyTheme.Colors.primary5 else MyTheme.Colors.primary4,
+                    shape = CircleShape
+                )
+                .clip(CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            content()
+        }
     }
 }
 

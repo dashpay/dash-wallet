@@ -22,6 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -42,6 +43,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -102,7 +104,6 @@ fun TopIntroSend(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(2.dp),
         horizontalAlignment = Alignment.Start
     ) {
         // Heading
@@ -112,6 +113,9 @@ fun TopIntroSend(
             color = MyTheme.Colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
+
+        // Per Figma: 4dp gap between heading and the merchant/address row.
+        Spacer(modifier = Modifier.height(4.dp))
 
         // "to/at {address|icon+name}" line
         if (toIcon != null || toIconUrl != null || toName != null) {
@@ -171,6 +175,9 @@ fun TopIntroSend(
                 modifier = Modifier.fillMaxWidth()
             )
         }
+
+        // Per Figma: 2dp gap between merchant/address row and balance row.
+        Spacer(modifier = Modifier.height(2.dp))
 
         // Balance availability row
         BalanceRow(
@@ -253,26 +260,33 @@ private fun BalanceRow(
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Eye toggle icon — no ripple to keep it subtle.
+        // Eye toggle as a btn-xs chip — rounded-12 with subtle dark tint, per Figma.
         val interactionSource = remember { MutableInteractionSource() }
-        Icon(
-            painter = painterResource(
-                if (isVisible) R.drawable.ic_show else R.drawable.ic_hide
-            ),
-            contentDescription = if (isVisible) {
-                "Hide balance"
-            } else {
-                "Show balance"
-            },
-            tint = MyTheme.Colors.textSecondary,
+        Box(
             modifier = Modifier
-                .size(20.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0x0D0A0B0D))
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = onToggleClick
                 )
-        )
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (isVisible) R.drawable.ic_show else R.drawable.ic_hide
+                ),
+                contentDescription = if (isVisible) {
+                    "Hide balance"
+                } else {
+                    "Show balance"
+                },
+                tint = MyTheme.Colors.textSecondary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
     }
 }
 

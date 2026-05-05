@@ -23,6 +23,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -62,11 +63,18 @@ fun processAmountKeyInput(current: String, key: String, maxDecimalPlaces: Int = 
     }
 }
 
-/** 4×3 numeric keyboard for amount entry — fires [onKeyInput] with "0"–"9", ".", "back", or "back_long". */
+/**
+ * 4×3 numeric keyboard for amount entry — fires [onKeyInput] with "0"–"9", ".", "back", or "back_long".
+ *
+ * The panel has rounded top corners only and is meant to sit flush with the screen's bottom edge.
+ * [bottomSlot] is rendered inside the same panel below the keyboard rows — typically a primary
+ * action button (e.g. Continue).
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NumericKeyboardCompose(
     modifier: Modifier = Modifier,
+    bottomSlot: (@Composable ColumnScope.() -> Unit)? = null,
     onKeyInput: (String) -> Unit
 ) {
     val rows = listOf(
@@ -78,7 +86,10 @@ fun NumericKeyboardCompose(
 
     Column(
         modifier = modifier
-            .background(color = MyTheme.Colors.backgroundSecondary, shape = RoundedCornerShape(32.dp))
+            .background(
+                color = MyTheme.Colors.backgroundSecondary,
+                shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+            )
             .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -124,6 +135,7 @@ fun NumericKeyboardCompose(
                 }
             }
         }
+        bottomSlot?.invoke(this)
     }
 }
 
