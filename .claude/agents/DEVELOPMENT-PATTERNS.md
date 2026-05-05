@@ -77,6 +77,7 @@ component to our component:
 - ListX - ListItem (X is number 1 to 20)
 - ListEmptyState - ListEmptyState
 - tablelist-masternodekeys - TableListMasternodeKeyRow
+- EnterAmount (input bar) - EnterAmount
 
 ## NavBar / TopNavBase (Figma: NavBar)
 
@@ -761,6 +762,113 @@ fun createConfirmationDialog(
     )
 }
 ```
+
+## EnterAmount (Figma: EnterAmount)
+
+A horizontal **amount-input bar** from the design system. Renders, left to right: an optional circular `Max` button, a centered amount column (primary amount with currency symbol + Dash logo + currency-picker chevron, optional secondary amount, optional top/bottom help text), an optional circular `show balance` (eye) button, and an optional vertical currency picker.
+
+**Figma file:** Design system - Android — node `4414:23352`
+
+The component lives in:
+```
+common/src/main/java/org/dash/wallet/common/ui/components/EnterAmount.kt
+```
+
+### Public API
+
+```kotlin
+enum class EnterAmountMode { Dash, Fiat }
+const val DASH_CURRENCY_CODE: String = "DASH"
+
+@Composable
+fun EnterAmount(
+    primaryAmount: String = "0",
+    secondaryAmount: String = "0",
+    currencyCodes: List<String> = listOf("USD", DASH_CURRENCY_CODE),
+    selectedCurrencyIndex: Int = 0,
+    locale: Locale = Locale.getDefault(),
+    helpTextTop: String? = null,
+    helpTextBottom: String? = null,
+    showMaxButton: Boolean = true,
+    showBalanceButton: Boolean = true,
+    showPrimaryChevron: Boolean = true,
+    showSecondary: Boolean = true,
+    showCurrencyPicker: Boolean = false,
+    onMaxClick: () -> Unit = {},
+    onBalanceClick: () -> Unit = {},
+    onPrimaryAmountClick: () -> Unit = {},
+    onSecondaryAmountClick: () -> Unit = {},
+    onCurrencyPickerSelect: (SegmentedOption, Int) -> Unit = { _, _ -> },
+    modifier: Modifier = Modifier
+)
+```
+
+### Modes & locale
+
+- **Two display modes**: `Dash` and `Fiat`. Only ONE symbol/icon shows per row at a time:
+  - `Dash` mode renders the Dash D logo (no fiat character).
+  - `Fiat` mode renders the fiat currency symbol derived from the ISO code via `Currency.getInstance(code).getSymbol(locale)`.
+- **Currency codes drive both rows.** `currencyCodes` is a list (commonly 2 entries, e.g. `["USD", "DASH"]`). The entry at `selectedCurrencyIndex` is the **primary** amount; the entry at `(selectedCurrencyIndex + 1) % size` is the **secondary** amount. The sentinel code `"DASH"` (`DASH_CURRENCY_CODE`) maps to `EnterAmountMode.Dash`; any other code is treated as a fiat ISO 4217 code.
+- **Locale-aware symbol position.** The component reads the locale's `NumberFormat` pattern (`DecimalFormat.toPattern()`) and places the symbol/logo before or after the amount accordingly — `$1,234.56` (en-US) vs `1 234,56 €` (fr-FR). The Dash logo follows the same rule (it occupies the "currency symbol" slot).
+- The optional inline currency picker (`showCurrencyPicker = true`) is rendered using the existing `SegmentedPicker` — pass codes via `currencyCodes` and they appear as picker options.
+
+### Layout & tokens
+
+- Container: `Row`, `fillMaxWidth()`, `defaultMinSize(minHeight = 110.dp)`, 20 dp gap, items vertically centred.
+- **Max button**: 40 dp circle, background `Color(0x1A008DE4)` (dashBlue 10% alpha), text `MyTheme.Typography.LabelSmallSemibold` (closest preset to the spec's 10 sp SemiBold), color `MyTheme.Colors.dashBlue`.
+- **Show-balance button**: 40 dp circle, background `MyTheme.Colors.primary8`, eye icon `R.drawable.ic_show` sized 17.5 × 14.6 dp.
+- **Primary amount row**: 4 dp gap. Amount + symbol/logo in `MyTheme.Typography.HeadlineLargeMedium` (32 sp / 40 sp Medium) on `textPrimary`. Dash logo: `R.drawable.ic_dash_d_black` (20 dp). Optional small chevron `R.drawable.ic_chevron_down_small` (10 × 6 dp).
+- **Secondary amount row**: 6 dp outer gap, 2 dp inner gap. `MyTheme.Typography.BodyMedium` on `textTertiary`. Smaller Dash logo: `R.drawable.ic_dash_d_gray` (9 dp). Tiny chevron (5 × 2.5 dp) tinted `textTertiary`.
+- **Help text** (top + bottom): `MyTheme.Typography.BodySmall`, `textTertiary`, centered.
+
+### Usage
+
+```kotlin
+// USD primary, Dash secondary (en-US locale → "$1,234.00")
+EnterAmount(
+    primaryAmount = uiState.primaryAmount,
+    secondaryAmount = uiState.secondaryAmount,
+    currencyCodes = listOf("USD", DASH_CURRENCY_CODE),
+    selectedCurrencyIndex = 0,
+    onMaxClick = viewModel::onMaxClicked,
+    onBalanceClick = viewModel::onToggleBalance,
+    onPrimaryAmountClick = viewModel::openCurrencyPicker
+)
+
+// Tap-to-flip primary/secondary — toggle the index
+EnterAmount(
+    primaryAmount = uiState.primary,
+    secondaryAmount = uiState.secondary,
+    currencyCodes = listOf("EUR", DASH_CURRENCY_CODE),
+    selectedCurrencyIndex = uiState.selectedIndex,
+    onPrimaryAmountClick = { viewModel.flipCurrency() }
+)
+
+// With picker exposed (3 options including DASH)
+EnterAmount(
+    primaryAmount = uiState.amount,
+    currencyCodes = listOf("USD", "EUR", DASH_CURRENCY_CODE),
+    selectedCurrencyIndex = uiState.selectedIndex,
+    showCurrencyPicker = true,
+    onCurrencyPickerSelect = { _, index -> viewModel.selectCurrency(index) }
+)
+
+// French locale — symbol renders AFTER the amount automatically
+EnterAmount(
+    primaryAmount = "1 234,00",
+    secondaryAmount = "12,3456",
+    currencyCodes = listOf("EUR", DASH_CURRENCY_CODE),
+    locale = Locale.FRANCE
+)
+```
+
+### Notes
+
+- The component is "dumb" — it owns no state. Wire it to a ViewModel via the `on*` callbacks and pass already-formatted strings via `primaryAmount` / `secondaryAmount`. The component only handles symbol selection and positioning; numeric formatting (grouping, decimals) is the caller's responsibility.
+- Detection rule: a currency code equal (case-insensitive) to `"DASH"` switches that row to `EnterAmountMode.Dash`. Anything else is treated as a fiat ISO code; an unrecognized code falls back to displaying the code itself.
+- This is the **input bar widget**, not the older numeric-keypad screen. The legacy numeric keypad still lives at `common/ui/enter_amount/EnterAmountFragment.kt` and is unrelated.
+- Typography substitutions vs. the Figma spec: `LabelSmallSemibold` (11 sp) is used in place of the spec's 10 sp SemiBold for the Max label — closest available preset, ~1 sp visual diff.
+- The chevron icon `ic_chevron_down_small.xml` is a small (10 × 6 dp) stroke vector created specifically for this component.
 
 ## Typography Mapping (Figma Design System → MyTheme.Typography)
 
