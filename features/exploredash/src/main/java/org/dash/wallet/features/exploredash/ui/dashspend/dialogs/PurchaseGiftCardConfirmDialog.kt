@@ -29,9 +29,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +41,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -63,19 +66,16 @@ import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
-import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarTitle
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
-import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
@@ -549,88 +549,103 @@ internal fun PurchaseGiftCardConfirmView(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 15.dp)
+            .padding(bottom = 24.dp)
     ) {
-        // NavBar — back chevron + centred title (NavBarBackTitle Figma variant)
         NavBarTitle(
             title = stringResource(R.string.purchase_confirm_transaction)
         )
 
-        EnterAmount(
-            primaryAmount = uiState.purchaseValueText,
-            currencyCodes = listOf(Constants.USD_CURRENCY),
-            showSecondary = false,
-            showMaxButton = false,
-            showPrimaryChevron = false,
-            showBalanceButton = false
-        )
-//        Text(
-//            text = uiState.purchaseValueText,
-//            style = MyTheme.Typography.HeadlineLargeMedium,
-//            color = MyTheme.Colors.textPrimary,
-//            modifier = Modifier
-//                .align(Alignment.CenterHorizontally)
-//                .padding(top = 16.dp, bottom = 24.dp)
-//        )
-
-        // Detail card
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(MyTheme.Colors.backgroundSecondary)
-                .padding(horizontal = 16.dp, vertical = 4.dp)
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // FROM row — Dash Wallet
-            ConfirmRow(label = stringResource(R.string.purchase_gift_card_from)) {
-                Image(
-                    painter = painterResource(R.drawable.ic_dash_pay),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .padding(end = 8.dp)
-                )
-                ConfirmValueText(text = stringResource(R.string.dash_wallet_name))
-            }
+            EnterAmount(
+                primaryAmount = uiState.purchaseValueText,
+                currencyCodes = listOf(Constants.USD_CURRENCY),
+                showSecondary = false,
+                showMaxButton = false,
+                showPrimaryChevron = false,
+                showBalanceButton = false
+            )
 
-            // TO row — Merchant
-            ConfirmRow(label = stringResource(R.string.purchase_gift_card_to)) {
-                AsyncImage(
-                    model = uiState.merchantLogoUrl,
-                    contentDescription = null,
-                    placeholder = painterResource(R.drawable.ic_image_placeholder),
-                    error = painterResource(R.drawable.ic_image_placeholder),
-                    modifier = Modifier
-                        .size(18.dp)
-                        .padding(end = 8.dp)
-                )
-                ConfirmValueText(text = uiState.merchantName)
-            }
-
-            // GIFT CARD VALUE row
-            ConfirmRow(label = stringResource(R.string.purchase_gift_card_total_label)) {
-                ConfirmValueText(text = uiState.giftCardTotalText)
-            }
-
-            // Optional denomination breakdown
-            uiState.breakdownText?.let { breakdown ->
-                ConfirmRow(label = stringResource(R.string.purchase_gift_card_quantity_label)) {
+            // Detail card
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .shadow(
+                        elevation = 20.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color(0x1AB8C1CC),
+                        ambientColor = Color(0x1AB8C1CC)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(MyTheme.Colors.backgroundSecondary)
+                    .padding(6.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                // FROM row — Dash Wallet
+                ConfirmRow(
+                    label = stringResource(R.string.purchase_gift_card_from),
+                    isCaption = true
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.ic_dash_pay),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
                     ConfirmValueText(
-                        text = breakdown,
-                        textAlign = TextAlign.End
+                        text = stringResource(R.string.dash_wallet_name),
+                        isCaption = true
                     )
                 }
-            }
 
-            // DISCOUNT row
-            ConfirmRow(label = stringResource(R.string.purchase_gift_card_discount)) {
-                ConfirmValueText(text = uiState.discountText)
-            }
+                // TO row — Merchant
+                ConfirmRow(
+                    label = stringResource(R.string.purchase_gift_card_to),
+                    isCaption = true
+                ) {
+                    AsyncImage(
+                        model = uiState.merchantLogoUrl,
+                        contentDescription = null,
+                        placeholder = painterResource(R.drawable.ic_image_placeholder),
+                        error = painterResource(R.drawable.ic_image_placeholder),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ConfirmValueText(
+                        text = uiState.merchantName,
+                        isCaption = true
+                    )
+                }
 
-            // YOU PAY row
-            ConfirmRow(label = stringResource(R.string.purchase_gift_card_you_pay)) {
-                ConfirmValueText(text = uiState.youPayText)
+                // GIFT CARD VALUE row
+                ConfirmRow(label = stringResource(R.string.purchase_gift_card_total_label)) {
+                    ConfirmValueText(text = uiState.giftCardTotalText)
+                }
+
+                // Optional denomination breakdown
+                uiState.breakdownText?.let { breakdown ->
+                    ConfirmRow(label = stringResource(R.string.purchase_gift_card_quantity_label)) {
+                        ConfirmValueText(
+                            text = breakdown,
+                            textAlign = TextAlign.End
+                        )
+                    }
+                }
+
+                // DISCOUNT row
+                ConfirmRow(label = stringResource(R.string.purchase_gift_card_discount)) {
+                    ConfirmValueText(text = uiState.discountText)
+                }
+
+                // YOU PAY row
+                ConfirmRow(label = stringResource(R.string.purchase_gift_card_you_pay)) {
+                    ConfirmValueText(text = uiState.youPayText)
+                }
             }
         }
 
@@ -638,9 +653,9 @@ internal fun PurchaseGiftCardConfirmView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 24.dp)
+                .padding(20.dp)
                 .animateContentSize(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             DashButton(
                 text = stringResource(R.string.cancel),
@@ -665,23 +680,24 @@ internal fun PurchaseGiftCardConfirmView(
 @Composable
 private fun ConfirmRow(
     label: String,
+    isCaption: Boolean = false,
     trailing: @Composable () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp),
+            .heightIn(min = 46.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Body M Regular / textSecondary — confirm-sheet label
         Text(
             text = label,
-            style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textSecondary,
+            style = if (isCaption) MyTheme.CaptionMedium else MyTheme.Typography.BodyMediumMedium,
+            color = MyTheme.Colors.textTertiary,
             maxLines = 1,
             modifier = Modifier.weight(1f)
         )
-        Spacer(modifier = Modifier.size(8.dp))
+        Spacer(modifier = Modifier.width(20.dp))
         Row(verticalAlignment = Alignment.CenterVertically) { trailing() }
     }
 }
@@ -689,12 +705,12 @@ private fun ConfirmRow(
 @Composable
 private fun ConfirmValueText(
     text: String,
+    isCaption: Boolean = false,
     textAlign: TextAlign = TextAlign.End
 ) {
-    // Body M Medium / textPrimary — confirm-sheet value
     Text(
         text = text,
-        style = MyTheme.Typography.BodyMediumMedium,
+        style = if (isCaption) MyTheme.Caption else MyTheme.Typography.BodyMedium,
         color = MyTheme.Colors.textPrimary,
         textAlign = textAlign
     )
