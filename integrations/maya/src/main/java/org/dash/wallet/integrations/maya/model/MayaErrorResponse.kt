@@ -34,7 +34,8 @@ enum class MayaErrorType {
     INVALID_DESTINATION_ADDRESS,
     TRADING_IS_HALTED,
     QUOTE_ERROR,
-    UNKNOWN_ERROR
+    UNKNOWN_ERROR,
+    AMOUNT_TOO_LOW
 }
 
 class MayaException(val errorType: MayaErrorType, message: String?) : Exception(message)
@@ -53,6 +54,7 @@ fun getMayaErrorType(error: String): MayaErrorType {
         "failed to simulate swap" -> {
             when {
                 error.contains("trading is halted") -> MayaErrorType.TRADING_IS_HALTED
+                error.contains("not enough asset to pay for fees") -> MayaErrorType.AMOUNT_TOO_LOW
                 else -> MayaErrorType.QUOTE_ERROR
             }
         }
@@ -62,7 +64,9 @@ fun getMayaErrorType(error: String): MayaErrorType {
 
 private val errorMap = mapOf(
     MayaErrorType.INVALID_DESTINATION_ADDRESS to R.string.maya_error_invalid_destination_address,
-    MayaErrorType.TRADING_IS_HALTED to R.string.maya_error_trading_halted
+    MayaErrorType.TRADING_IS_HALTED to R.string.maya_error_trading_halted,
+    MayaErrorType.AMOUNT_TOO_LOW to R.string.maya_error_below_allowed_minimum,
+    MayaErrorType.QUOTE_ERROR to R.string.maya_error_quote
 )
 fun getMayaErrorString(error: String): Int? {
     return errorMap[getMayaErrorType(error)]
