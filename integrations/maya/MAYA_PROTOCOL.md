@@ -11,21 +11,36 @@ Maya Protocol is a cross-chain liquidity protocol (based on THORChain) that enab
 ### Primary API Base URLs
 
 - **Main API**: `https://mayanode.mayachain.info/mayachain/`
-- **Legacy API (Midgard)**: `https://midgard.mayachain.info/v2/`
+
+> **Note**: The Midgard v2 API (`https://midgard.mayachain.info/v2/`) was previously used as the source for pool information but has been removed. All data now comes from the mayanode endpoint.
 
 ### Available Endpoints
 
 #### 1. Pools Information
-**Endpoint**: `GET https://midgard.mayachain.info/v2/pools`
+**Endpoint**: `GET https://mayanode.mayachain.info/mayachain/pools`
 
-Returns detailed information about all available liquidity pools including:
-- Asset prices (USD and CACAO ratios)
-- Pool depths and liquidity
-- APY/APR
-- 24h volume
-- Pool status (available, staged)
+Returns the raw mayanode pool list. Each pool exposes balances in CACAO and the paired asset, plus liquidity-unit accounting and status flags.
 
-**Used by**: `MayaWebApi.getPoolInfo()` via `legacyEndpoint.getPoolInfo()`
+**Response fields** (per pool):
+- `asset`: Asset identifier (e.g., `BTC.BTC`, `ETH.USDT-0x...`)
+- `balance_cacao`: Pool depth in CACAO base units
+- `balance_asset`: Pool depth in the paired asset's base units
+- `LP_units`: Liquidity provider units
+- `pool_units`: Total pool units
+- `status`: Pool status — must be `Available` to be usable
+- `synth_units`, `synth_supply`: Synthetic asset accounting
+- `pending_inbound_cacao`, `pending_inbound_asset`: Pending liquidity
+- `synth_mint_paused`: Whether minting synths is paused
+- `bondable`: Whether the pool is bondable
+
+**Asset price derivation**: Unlike the old Midgard response, mayanode pools do **not** include an `assetPriceUSD` field. Prices are derived client-side:
+- Each pool's CACAO ratio: `balance_cacao / balance_asset` (see `PoolInfo.assetPriceInCacao`)
+- USD price of any asset: computed via the USD-stable pools (USDT, USDC). The liquidity-weighted formula is
+  `(balance_cacao × Σ stable_balance_asset) / (balance_asset × Σ stable_balance_cacao)`,
+  which collapses CACAO out of both sides and yields USD per whole asset. Implementation: `MayaViewModel.applyPoolPrices()` / `priceInUsd()`.
+- Fiat conversion: multiply the derived USD price by the `usdToFiat` rate from the wallet's selected currency.
+
+**Used by**: `MayaWebApi.getPoolInfo()` via `endpoint.getPoolInfo()` (mayanode)
 
 #### 2. Inbound Addresses
 **Endpoint**: `GET https://mayanode.mayachain.info/mayachain/inbound_addresses`
@@ -119,22 +134,28 @@ Holds amounts in Dash, fiat, and crypto currencies simultaneously with automatic
 #### PoolInfo
 Location: `model/PoolInfo.kt`
 
+Mirrors the mayanode `/pools` response (snake_case fields are mapped via `@SerializedName`):
+
 ```kotlin
-- annualPercentageRate: String
-- asset: String (e.g., "BTC.BTC", "ETH.ETH")
-- assetDepth: String (pool liquidity depth)
-- assetPrice: String (CACAO ratio)
-- assetPriceUSD: String (USD price)
-- liquidityUnits: String
-- poolAPY: String
-- runeDepth: String
-- status: String (available, staged)
-- synthSupply: String
+- asset: String (e.g., "BTC.BTC", "ETH.USDT-0x...")
+- balanceCacao: String (pool depth in CACAO base units)
+- balanceAsset: String (pool depth in asset base units)
+- lpUnits: String
+- poolUnits: String
+- status: String (must be "Available" to use)
 - synthUnits: String
-- units: String
-- volume24h: String
-- assetPriceFiat: Fiat (computed based on selected fiat currency)
+- synthSupply: String
+- pendingInboundCacao: String
+- pendingInboundAsset: String
+- synthMintPaused: Boolean
+- bondable: Boolean
+
+// Computed (not part of the API response, @IgnoredOnParcel):
+- assetPriceInCacao: BigDecimal  // balanceCacao / balanceAsset
+- assetPriceFiat: Fiat            // populated by MayaViewModel.applyPoolPrices()
 ```
+
+**Note**: The previous Midgard-shaped fields (`annualPercentageRate`, `assetDepth`, `assetPrice`, `assetPriceUSD`, `liquidityUnits`, `poolAPY`, `runeDepth`, `units`, `volume24h`) were removed when Midgard was dropped as a data source. APY/volume metrics are no longer surfaced.
 
 #### InboundAddress
 Location: `model/InboundAddress.kt`
@@ -187,8 +208,7 @@ MayaApi (Interface)
 MayaApiAggregator (Main Implementation)
     ↓
 ├── MayaWebApi (HTTP API Layer)
-│   ├── MayaEndpoint (Retrofit - New API)
-│   └── MayaLegacyEndpoint (Retrofit - Midgard v2)
+│   └── MayaEndpoint (Retrofit - mayanode)
 │
 ├── MayaBlockchainApi (Transaction Layer)
 │   └── Builds and sends blockchain transactions
@@ -202,12 +222,15 @@ MayaApiAggregator (Main Implementation)
 ### Key Implementation Files
 
 - **API Interface**: `api/MayaApi.kt`
-- **HTTP Layer**: `api/MayaWebApi.kt`, `api/MayaLegacyWebApi.kt`
+- **HTTP Layer**: `api/MayaWebApi.kt`
 - **Blockchain Layer**: `api/MayaBlockchainApi.kt`
 - **Retrofit Factory**: `api/RemoteDataSource.kt`
 - **Dependency Injection**: `di/MayaModule.kt`
-- **Models**: `model/` directory (15 model files)
+- **Models**: `model/` directory
 - **Constants**: `utils/MayaConstants.kt`
+- **USD-pool pricing**: `ui/MayaViewModel.kt` (`applyPoolPrices()`, `priceInUsd()`)
+
+> **Removed in this branch**: `api/MayaLegacyWebApi.kt` and the `MayaLegacyEndpoint` Retrofit interface. Midgard is no longer wired into Hilt — `MayaModule.provideMayaLegacyEndpoint()` was deleted.
 
 ### Swap Flow
 
@@ -331,29 +354,34 @@ Exchange rates are cached with expiration tracking.
 
 ## API Compatibility Status
 
-**Last Verified**: December 2025
+**Last Verified**: May 2026
 
 All endpoints are functional and compatible with current data models:
 
 ✅ **InboundAddress** - Compatible (API has extra `router` field, safely ignored)
-✅ **PoolInfo** - Compatible (using correct Midgard v2 endpoint)
+✅ **PoolInfo** - Migrated to mayanode `/pools` (Midgard removed); USD pricing now derived client-side from USDT/USDC pools
 ✅ **SwapQuote** - Compatible (extra streaming fields safely ignored)
 ✅ **Network** - Compatible
 ✅ **Transaction Status** - Compatible
 
-**Recent API Changes** (from THORChain version updates):
+**Recent Changes**:
+- Removed Midgard v2 (`midgard.mayachain.info`) as a data source — pools are now fetched from mayanode
+- `PoolInfo` model rewritten to match mayanode's snake_case schema (`balance_cacao`, `balance_asset`, etc.); legacy fields like `assetPriceUSD`, `assetDepth`, `poolAPY`, `volume24h` are no longer available
+- USD prices are computed from USDT/USDC pool depths using a liquidity-weighted cross-product (see `MayaViewModel.applyPoolPrices`)
+- `FiatExchangeRateAggregatedProvider.observeFiatRate` now filters by the requested `currencyCode` so flat-mapped consumers don't receive rates for the wrong currency
+
+**THORChain version updates** (still applicable):
 - Deprecated: QueryObservedTx BlockHeight and FinaliseHeight fields
 - Added: Streaming swap support
 - Added: Router field for EVM chains
-- Status: All changes are backward compatible with current implementation
 
 ## Testing Endpoints
 
 You can test the API endpoints directly:
 
 ```bash
-# Get pools
-curl "https://midgard.mayachain.info/v2/pools"
+# Get pools (mayanode — replaces the old Midgard endpoint)
+curl "https://mayanode.mayachain.info/mayachain/pools"
 
 # Get inbound addresses
 curl "https://mayanode.mayachain.info/mayachain/inbound_addresses"
