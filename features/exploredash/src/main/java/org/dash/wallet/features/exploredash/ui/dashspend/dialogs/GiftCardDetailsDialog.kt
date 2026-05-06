@@ -41,7 +41,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -277,10 +276,10 @@ internal fun GiftCardDetailsView(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             MerchantHeader(uiState = uiState)
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             GiftCardItemCard(
                 giftCard = uiState.giftCard,
@@ -296,8 +295,6 @@ internal fun GiftCardDetailsView(
                 onRefresh = onRefresh
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             DashList {
                 NavigationRow(
                     label = stringResource(R.string.purchase_view_transaction),
@@ -306,7 +303,6 @@ internal fun GiftCardDetailsView(
             }
 
             if (shouldShowError) {
-                Spacer(modifier = Modifier.height(12.dp))
                 val supportLabel = when ((uiState.error as? CTXSpendException)?.serviceName) {
                     ServiceName.CTXSpend -> stringResource(R.string.gift_card_contact_ctx)
                     ServiceName.PiggyCards -> stringResource(R.string.gift_card_contact_piggycards)
@@ -316,8 +312,6 @@ internal fun GiftCardDetailsView(
                     NavigationRow(label = supportLabel, onClick = onContactSupport)
                 }
             }
-
-            Spacer(modifier = Modifier.height(12.dp))
 
             if (!showHowToUse) {
                 DashButton(
@@ -332,32 +326,30 @@ internal fun GiftCardDetailsView(
                 HowToUseCard()
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.purchase_powered_by),
+                    style = MyTheme.Typography.LabelMedium,
+                    color = MyTheme.Colors.textTertiary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Text(
-                text = stringResource(R.string.purchase_powered_by),
-                style = MyTheme.Typography.LabelMedium,
-                color = MyTheme.Colors.textTertiary,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val poweredByRes = if (uiState.serviceName == ServiceName.CTXSpend) {
-                R.drawable.ic_ctx_logo_blue
-            } else {
-                R.drawable.ic_piggycards_logo
+                val poweredByRes = if (uiState.serviceName == ServiceName.CTXSpend) {
+                    R.drawable.ic_ctx_logo_blue
+                } else {
+                    R.drawable.ic_piggycards_logo
+                }
+                Image(
+                    painter = painterResource(poweredByRes),
+                    contentDescription = null,
+                    modifier = Modifier.height(22.dp)
+                )
             }
-            Image(
-                painter = painterResource(poweredByRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .height(20.dp)
-                    .align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
@@ -365,12 +357,10 @@ internal fun GiftCardDetailsView(
 @Composable
 private fun MerchantHeader(uiState: GiftCardUIState) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 4.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(52.dp)) {
+        Box(modifier = Modifier.size(50.dp)) {
             val icon = uiState.icon
             if (icon != null) {
                 Image(
@@ -378,7 +368,7 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(52.dp)
+                        .size(50.dp)
                         .clip(RoundedCornerShape(100.dp))
                 )
                 Image(
@@ -394,15 +384,15 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
                 Image(
                     painter = painterResource(R.drawable.ic_gift_card_tx),
                     contentDescription = null,
-                    modifier = Modifier.size(52.dp)
+                    modifier = Modifier.size(50.dp)
                 )
             }
         }
 
-        Column(modifier = Modifier.padding(start = 12.dp)) {
+        Column(modifier = Modifier.padding(start = 15.dp)) {
             Text(
                 text = uiState.giftCard?.merchantName ?: "",
-                style = MyTheme.Typography.TitleSmallSemibold,
+                style = MyTheme.Typography.BodyMediumMedium,
                 color = MyTheme.Colors.textPrimary
             )
             uiState.date?.let { date ->
@@ -501,7 +491,7 @@ private fun GiftCardItemCard(
                         contentDescription = null,
                         modifier = Modifier
                             .size(14.dp)
-                            .clickable { onCopyPin(giftCard.number!!) }
+                            .clickable { onCopyNumber(giftCard.number!!) }
                     )
                 }
             )
@@ -563,49 +553,6 @@ private fun GiftCardItemCard(
                 CircularProgressIndicator(
                     color = MyTheme.Colors.dashBlue,
                     modifier = Modifier.size(28.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CardFieldRow(
-    label: String,
-    value: String,
-    onCopy: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MyTheme.Typography.LabelMediumMedium,
-            color = MyTheme.Colors.textTertiary,
-            maxLines = 1,
-            modifier = Modifier.weight(1f)
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = value,
-                style = MyTheme.Typography.LabelMedium,
-                color = MyTheme.Colors.textPrimary,
-                maxLines = 1,
-                modifier = Modifier.padding(end = 4.dp)
-            )
-            IconButton(
-                onClick = onCopy,
-                modifier = Modifier.size(36.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_copy_blue),
-                    contentDescription = null,
-                    tint = MyTheme.Colors.dashBlue,
-                    modifier = Modifier.size(18.dp)
                 )
             }
         }
