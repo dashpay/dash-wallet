@@ -26,13 +26,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -57,7 +57,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
-import org.dash.wallet.common.ui.components.DashList
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
@@ -124,25 +123,27 @@ internal fun GiftCardOrderDetailsView(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Spacer(Modifier.height(20.dp))
             MerchantHeader(uiState = uiState)
-            Spacer(Modifier.height(20.dp))
             if (uiState.giftCards.isNotEmpty()) {
-                DashList(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .verticalScroll(rememberScrollState())
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(MyTheme.Colors.backgroundSecondary)
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     uiState.giftCards.forEach { card ->
                         GiftCardRow(card = card, onClick = { onCardClick(card) })
                     }
                 }
             }
-            Spacer(Modifier.height(20.dp))
             PoweredByFooter(serviceName = uiState.serviceName)
-            Spacer(Modifier.height(12.dp))
         }
     }
 }
@@ -185,7 +186,7 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
         }
         Text(
             text = uiState.merchantName,
-            style = MyTheme.Typography.LabelLarge,
+            style = MyTheme.Typography.LabelLargeMedium,
             color = MyTheme.Colors.textPrimary
         )
     }
@@ -201,8 +202,8 @@ private fun GiftCardRow(card: GiftCard, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .height(42.dp)
+            .clickable { onClick() },
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
