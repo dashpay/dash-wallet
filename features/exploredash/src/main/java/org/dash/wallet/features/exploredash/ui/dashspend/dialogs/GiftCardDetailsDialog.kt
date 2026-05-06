@@ -36,7 +36,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,7 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -360,33 +358,22 @@ private fun MerchantHeader(uiState: GiftCardUIState) {
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(modifier = Modifier.size(50.dp)) {
-            val icon = uiState.icon
-            if (icon != null) {
-                Image(
-                    bitmap = icon.asImageBitmap(),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(100.dp))
-                )
-                Image(
-                    painter = painterResource(R.drawable.ic_gift_card_tx),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(22.dp)
-                        .align(Alignment.BottomEnd)
-                        .background(Color.White, CircleShape)
-                        .padding(2.dp)
-                )
-            } else {
-                Image(
-                    painter = painterResource(R.drawable.ic_gift_card_tx),
-                    contentDescription = null,
-                    modifier = Modifier.size(50.dp)
-                )
-            }
+        val icon = uiState.icon
+        if (icon != null) {
+            Image(
+                bitmap = icon.asImageBitmap(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(100.dp))
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.ic_gift_card_tx),
+                contentDescription = null,
+                modifier = Modifier.size(50.dp)
+            )
         }
 
         Column(modifier = Modifier.padding(start = 15.dp)) {
@@ -595,10 +582,10 @@ private fun BarcodeSection(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 8.dp, start = 8.dp, end = 8.dp)
-            .onGloballyPositioned { containerWidthPx = it.size.width }
+            .padding(vertical = 20.dp)
+            .onGloballyPositioned { containerWidthPx = it.size.width },
+        contentAlignment = Alignment.Center
     ) {
-
         when {
             barcodeError -> {
                 PlaceholderBox(modifier = Modifier.fillMaxWidth()) {
@@ -612,7 +599,7 @@ private fun BarcodeSection(
             }
 
             barcodeBitmap != null -> {
-                val barcodeHeight = if (isQrCode) 160.dp else 112.dp
+                val barcodeHeight = if (isQrCode) 160.dp else 78.dp
                 Image(
                     bitmap = barcodeBitmap!!.asImageBitmap(),
                     contentDescription = null,
@@ -620,7 +607,6 @@ private fun BarcodeSection(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(barcodeHeight)
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
                 )
             }
 
@@ -629,7 +615,7 @@ private fun BarcodeSection(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(112.dp),
+                        .height(78.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator(
