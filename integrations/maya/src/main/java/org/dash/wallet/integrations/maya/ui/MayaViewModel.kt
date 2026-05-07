@@ -23,7 +23,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -76,7 +75,7 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    //private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    // private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
@@ -113,7 +112,6 @@ class MayaViewModel @Inject constructor(
 //            }
 //            .launchIn(viewModelScope)
 
-
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
             .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
@@ -126,7 +124,6 @@ class MayaViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
