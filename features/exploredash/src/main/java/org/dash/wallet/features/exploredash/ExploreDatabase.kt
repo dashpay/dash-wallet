@@ -25,7 +25,9 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.suspendCancellableCoroutine
+import net.lingala.zip4j.ZipFile
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.explore.AtmDao
@@ -39,6 +41,9 @@ import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.RoomConverters
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.io.InputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -62,6 +67,7 @@ abstract class ExploreDatabase : RoomDatabase() {
 
     companion object {
         private const val EXPLORE_DB_NAME = "explore-database"
+        private const val EXPLORE_DB_STAGING_NAME = "explore-database.staging"
         private val log = LoggerFactory.getLogger(ExploreDatabase::class.java)
         private var instance: ExploreDatabase? = null
 
@@ -72,41 +78,193 @@ abstract class ExploreDatabase : RoomDatabase() {
             return instance!!
         }
 
-        suspend fun updateDatabase(context: Context, repository: ExploreRepository) {
+        suspend fun updateDatabase(
+            context: Context,
+            repository: ExploreRepository,
+            exploreConfig: ExploreConfig
+        ) {
             log.info("force update explore db")
             if (instance != null) {
                 instance!!.close()
             }
-            instance = update(context, repository)
+            instance = update(context, repository, exploreConfig)
+        }
+
+        @VisibleForTesting
+        internal fun resetInstanceForTest() {
+            instance?.close()
+            instance = null
         }
 
         private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
             fixObsoleteName(context, exploreConfig)
 
-            val dbBuilder = Room.databaseBuilder(
+            return try {
+                buildAndProbe(context)
+            } catch (ex: RuntimeException) {
+                // RoomOpenHelper.checkIdentity throws IllegalStateException when the on-disk
+                // file is missing room_master_table or has a schema that doesn't match the
+                // entity definitions. Older interrupted update flows could leave the file in
+                // this state with no way to self-heal (no version delta = no destructive
+                // fallback).
+                log.error("explore DB failed to open, recovering", ex)
+                cleanupPreviousDatabases(context)
+                clearLocalTimestamp(exploreConfig)
+                try {
+                    // Best effort: rebuild from the bundled asset so the user gets data
+                    // back immediately. If the asset itself is broken (bad schema, failing
+                    // migrations, missing entirely in the test classpath, etc.), fall
+                    // through to the empty rebuild — the sync worker will populate later.
+                    rebuildFromAsset(context, exploreConfig)
+                } catch (preloadEx: Exception) {
+                    log.error("asset preload failed during recovery, returning empty DB", preloadEx)
+                    cleanupPreviousDatabases(context)
+                    buildAndProbe(context)
+                }
+            }
+        }
+
+        private suspend fun rebuildFromAsset(
+            context: Context,
+            exploreConfig: ExploreConfig
+        ): ExploreDatabase {
+            // zip4j needs a File for AES-protected zips (random access for the password
+            // path), so spool the asset into the cache dir first.
+            val assetName = pickAssetName(context, exploreConfig)
+            val cacheZip = File(context.cacheDir, "explore-recovery.zip")
+            cacheZip.delete()
+            context.assets.open(assetName).use { input ->
+                FileOutputStream(cacheZip).use { output -> input.copyTo(output) }
+            }
+
+            try {
+                val password = ZipFile(cacheZip).comment.split("#")[1]
+                context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
+
+                val staging = Room.databaseBuilder(
+                    context,
+                    ExploreDatabase::class.java,
+                    EXPLORE_DB_STAGING_NAME
+                )
+                    .createFromInputStream({ openInnerDb(cacheZip, password) })
+                    .setJournalMode(JournalMode.TRUNCATE)
+                    .addMigrations(
+                        ExploreDatabaseMigrations.migration1To2,
+                        ExploreDatabaseMigrations.migration2To3,
+                        ExploreDatabaseMigrations.migration3To4
+                    )
+                    .build()
+                try {
+                    // Force open: surfaces schema mismatch, migration failure, etc. now
+                    // (so the outer try/catch in open() can fall back to empty rebuild).
+                    val supportDb = staging.openHelper.writableDatabase
+                    if (!hasExpectedData(supportDb)) {
+                        throw SQLiteException("asset DB has empty merchant or atm")
+                    }
+                } finally {
+                    staging.close()
+                }
+
+                promoteStagingToProduction(context)
+                log.info("recovered explore DB from bundled asset {}", assetName)
+                return buildAndProbe(context)
+            } finally {
+                cacheZip.delete()
+            }
+        }
+
+        private suspend fun pickAssetName(context: Context, exploreConfig: ExploreConfig): String {
+            // Prefer whichever flavor was last preloaded; fall back to the other if the
+            // bundled APK doesn't ship it. Matches GCExploreDatabase.preloadFromAssetsInto.
+            val preferTest = exploreConfig.get(ExploreConfig.PRELOADED_TEST_DB) ?: false
+            val first = if (preferTest) "explore/explore-testnet.db" else "explore/explore.db"
+            val second = if (preferTest) "explore/explore.db" else "explore/explore-testnet.db"
+            return try {
+                context.assets.open(first).close()
+                first
+            } catch (e: IOException) {
+                context.assets.open(second).close()
+                second
+            }
+        }
+
+        private fun openInnerDb(zipFile: File, password: String): InputStream {
+            val zip = ZipFile(zipFile, password.toCharArray())
+            return zip.getInputStream(zip.getFileHeader("explore.db"))
+        }
+
+        private fun buildAndProbe(context: Context): ExploreDatabase {
+            log.info("Open database {}", EXPLORE_DB_NAME)
+            val database = Room.databaseBuilder(
                 context,
                 ExploreDatabase::class.java,
                 EXPLORE_DB_NAME
             )
-
-            log.info("Open database {}", EXPLORE_DB_NAME)
-            return dbBuilder
                 .setJournalMode(JournalMode.TRUNCATE)
+                .addMigrations(
+                    ExploreDatabaseMigrations.migration1To2,
+                    ExploreDatabaseMigrations.migration2To3,
+                    ExploreDatabaseMigrations.migration3To4
+                )
                 .fallbackToDestructiveMigration()
                 .build()
+            // Force the underlying SQLite open + checkIdentity now so any schema mismatch
+            // surfaces here (and can be recovered) instead of crashing the first DAO caller.
+            database.openHelper.writableDatabase
+            return database
         }
 
-        private suspend fun update(context: Context, repository: ExploreRepository): ExploreDatabase {
-            cleanupPreviousDatabases(context)
+        private suspend fun clearLocalTimestamp(exploreConfig: ExploreConfig) {
+            val prefs = exploreConfig.exploreDatabasePrefs.first()
+            exploreConfig.saveExploreDatabasePrefs(prefs.copy(localDbTimestamp = 0L))
+        }
+
+        private suspend fun update(
+            context: Context,
+            repository: ExploreRepository,
+            exploreConfig: ExploreConfig
+        ): ExploreDatabase {
+            // Clear any leftover staging file from a previously interrupted update.
+            context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
 
             val dbUpdateFile = repository.getUpdateFile()
             val dbBuilder = Room.databaseBuilder(
                 context,
                 ExploreDatabase::class.java,
-                EXPLORE_DB_NAME
+                EXPLORE_DB_STAGING_NAME
             )
 
-            return preloadAndOpen(dbBuilder, repository, dbUpdateFile)
+            // Build and validate against the staging name. If preloadAndOpen throws,
+            // the production DB on disk is left untouched.
+            val staging = preloadAndOpen(dbBuilder, repository, dbUpdateFile)
+            staging.close()
+
+            promoteStagingToProduction(context)
+
+            return open(context, exploreConfig)
+        }
+
+        private fun promoteStagingToProduction(context: Context) {
+            val dbDir = context.getDatabasePath(EXPLORE_DB_NAME).parentFile
+                ?: throw IOException("databases directory unavailable")
+            val stagingFile = File(dbDir, EXPLORE_DB_STAGING_NAME)
+            val prodFile = File(dbDir, EXPLORE_DB_NAME)
+
+            if (!stagingFile.exists()) {
+                throw IOException("staging DB missing at ${stagingFile.absolutePath}")
+            }
+
+            // Drop the production file (and its journal/wal/shm).
+            context.deleteDatabase(EXPLORE_DB_NAME)
+
+            if (!stagingFile.renameTo(prodFile)) {
+                throw IOException("could not promote staging DB to production")
+            }
+
+            // Discard staging journal/wal/shm; Room will recreate them under the production name.
+            File(dbDir, "$EXPLORE_DB_STAGING_NAME-journal").delete()
+            File(dbDir, "$EXPLORE_DB_STAGING_NAME-shm").delete()
+            File(dbDir, "$EXPLORE_DB_STAGING_NAME-wal").delete()
         }
 
         @VisibleForTesting
@@ -204,17 +362,11 @@ abstract class ExploreDatabase : RoomDatabase() {
         }
 
         private fun cleanupPreviousDatabases(context: Context) {
-            var list = context.databaseList()
-            log.info("cleanup, before: ${list.joinToString("; ")}")
-
-            for (database in list) {
-                if (database.startsWith(EXPLORE_DB_NAME)) {
-                    context.deleteDatabase(database)
-                }
-            }
-
-            list = context.databaseList()
-            log.info("cleanup, after: ${list.joinToString("; ")}")
+            log.info("cleanup, before: ${context.databaseList().joinToString("; ")}")
+            // deleteDatabase removes the main file plus -journal/-wal/-shm side files.
+            context.deleteDatabase(EXPLORE_DB_NAME)
+            context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
+            log.info("cleanup, after: ${context.databaseList().joinToString("; ")}")
         }
     }
 }

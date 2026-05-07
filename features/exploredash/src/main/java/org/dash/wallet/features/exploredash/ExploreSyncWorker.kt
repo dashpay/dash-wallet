@@ -92,17 +92,15 @@ class ExploreSyncWorker @AssistedInject constructor(
                     preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
                     log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                    val forceLoad = (
-                        databasePrefs.localDbTimestamp != remoteDataTimestamp &&
-                            databasePrefs.localDbTimestamp != preloadedDbTimestamp
-                        )
+                    // Only take the asset path when the asset can actually improve on
+                    // local state: fresh install (local == 0) or asset is newer. The
+                    // "local doesn't match remote" case is what the server download
+                    // below is for — loading a stale asset over a newer local DB just
+                    // forces migrations on an old user_version and risks crashing.
                     if (databasePrefs.localDbTimestamp == 0L ||
-                        databasePrefs.localDbTimestamp < preloadedDbTimestamp ||
-                        forceLoad
+                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
                     ) {
-                        // force data preloading for fresh installs
-                        // and a newer preloaded DB
-                        ExploreDatabase.updateDatabase(appContext, exploreRepository)
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
                         databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
                         exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
@@ -134,7 +132,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(appContext, exploreRepository)
+                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
