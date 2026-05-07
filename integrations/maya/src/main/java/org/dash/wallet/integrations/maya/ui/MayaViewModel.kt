@@ -38,7 +38,7 @@ import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
-import org.dash.wallet.integrations.maya.api.MayaApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
@@ -59,7 +59,7 @@ data class MayaPortalUIState(
 class MayaViewModel @Inject constructor(
     private val globalConfig: Configuration,
     private val config: MayaConfig,
-    private val mayaApi: MayaApi,
+    private val swapProvider: SwapProvider,
     private val fiatExchangeRateProvider: FiatExchangeRateProvider,
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
@@ -139,12 +139,12 @@ class MayaViewModel @Inject constructor(
                 log.info("exchange rate: {}", fiatRate)
             }
             .flatMapLatest { fiatRate ->
-                mayaApi.observePoolList(fiatRate.fiat).mapLatest { pools ->
+                swapProvider.observePoolList(fiatRate.fiat).mapLatest { pools ->
                     pools to fiatRate.fiat
                 }
             }
             .onEach { (newPoolList, usdToFiat) ->
-                applyPoolPrices(newPoolList, usdToFiat)
+                swapProvider.applyPoolPrices(newPoolList, usdToFiat)
                 log.info(
                     "exchange rate Pool List: {}",
                     newPoolList.map { pool -> "${pool.asset}=${pool.assetPriceFiat.toFriendlyString()}" }
@@ -154,55 +154,6 @@ class MayaViewModel @Inject constructor(
             .launchIn(viewModelScope)
 
         updateInboundAddresses()
-    }
-
-    private fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
-        // Liquidity-weighted USD price of CACAO from all available USD-stable pools.
-        // Sum of asset balances / sum of cacao balances naturally weights by depth.
-        val stablePools = pools.filter {
-            (it.currencyCode == "USDT" || it.currencyCode == "USDC") &&
-                it.status.equals("available", ignoreCase = true)
-        }
-        val sumStableCacao = stablePools.fold(BigDecimal.ZERO) { acc, p ->
-            acc + (p.balanceCacao.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-        }
-        val sumStableAsset = stablePools.fold(BigDecimal.ZERO) { acc, p ->
-            acc + (p.balanceAsset.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-        }
-        if (sumStableCacao.signum() <= 0 || sumStableAsset.signum() <= 0) {
-            log.warn("no stablecoin pool data; skipping price update")
-            return
-        }
-        log.info("stable pools: {} ({} pools)", stablePools.map { it.asset }, stablePools.size)
-
-        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Each pool's
-        // USD price is computed via the (balance_cacao * Σstable_asset) /
-        // (balance_asset * Σstable_cacao) cross-product (CACAO's decimals cancel,
-        // and pool assets share 8 decimals so the result is USD per whole asset).
-        // Multiply by usdToFiat to land in the selected fiat.
-        val fiatPerUsd = usdToFiat.toBigDecimal()
-
-        pools.forEach { pool ->
-            val priceUsd = priceInUsd(pool, sumStableCacao, sumStableAsset)
-            if (priceUsd == null || priceUsd.signum() <= 0) {
-                log.info("no USD price for {}", pool.asset)
-                return@forEach
-            }
-            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiat(usdToFiat.currencyCode)
-            log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
-        }
-    }
-
-    private fun priceInUsd(
-        pool: PoolInfo,
-        sumStableCacao: BigDecimal,
-        sumStableAsset: BigDecimal
-    ): BigDecimal? {
-        val cacao = pool.balanceCacao.toBigDecimalOrNull() ?: return null
-        val asset = pool.balanceAsset.toBigDecimalOrNull() ?: return null
-        if (asset.signum() == 0 || sumStableCacao.signum() == 0) return null
-        return cacao.multiply(sumStableAsset)
-            .divide(asset.multiply(sumStableCacao), 10, RoundingMode.HALF_UP)
     }
 
     fun formatFiat(fiatAmount: Fiat): String {
@@ -238,7 +189,7 @@ class MayaViewModel @Inject constructor(
     }
 
     suspend fun refreshInboundAddresses() {
-        _inboundAddresses.value = mayaApi.getInboundAddresses()
+        _inboundAddresses.value = swapProvider.getInboundAddresses()
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {

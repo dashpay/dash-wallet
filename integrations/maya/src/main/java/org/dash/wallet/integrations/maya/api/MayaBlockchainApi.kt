@@ -38,8 +38,21 @@ import java.math.RoundingMode
 import javax.inject.Inject
 
 interface MayaBlockchainApi {
+    /**
+     * Re-fetches a fresh quote via Maya, then builds + signs + broadcasts the DASH transaction.
+     * Used by the direct Maya backend.
+     */
     suspend fun commitSwapTransaction(
         tradeId: String,
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel>
+
+    /**
+     * Builds + signs + broadcasts the DASH transaction for an already-resolved trade
+     * (vault address + memo + fee already populated). The SwapKit backend uses this
+     * directly after refreshing the route via SwapKit's own API.
+     */
+    suspend fun buildAndSendSwapTx(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
 }
@@ -57,7 +70,6 @@ class MayaBlockchainApiImpl @Inject constructor(
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> {
         log.info("commitSwapTransaction($tradeId, $swapTradeUIModel")
-        val params = walletProviderData.networkParameters
         val resultSwapTrade = mayaWebApi.getSwapInfo(
             SwapQuoteRequest(
                 amount = swapTradeUIModel.amount,
@@ -68,147 +80,154 @@ class MayaBlockchainApiImpl @Inject constructor(
                 maximum = swapTradeUIModel.maximum
             )
         )
-        if (resultSwapTrade is ResponseResource.Success) {
-            try {
-                val sendRequest: SendRequest
-                val memo = swapTradeUIModel.memo
-                    ?: "=:${resultSwapTrade.value.outputAsset}:${resultSwapTrade.value.destinationAddress}"
-                val tx = Transaction(params)
+        return if (resultSwapTrade is ResponseResource.Success) {
+            buildAndSendSwapTx(resultSwapTrade.value)
+        } else {
+            resultSwapTrade
+        }
+    }
 
-                // set outputs according to:
-                //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/sending-transactions#utxo-chains
-                // Send the transaction with Asgard vault as VOUT0
-                if (!swapTradeUIModel.maximum) {
-                    val dashAmountWithFees = if (!swapTradeUIModel.maximum) {
-                        (resultSwapTrade.value.amount.dash + resultSwapTrade.value.feeAmount.dash)
-                    } else {
-                        resultSwapTrade.value.amount.dash
-                    }.setScale(8, RoundingMode.HALF_UP).toCoin()
-                    tx.addOutput(
-                        dashAmountWithFees,
-                        Address.fromBase58(params, resultSwapTrade.value.vaultAddress)
-                    )
-                    // Include the memo as an OP_RETURN in VOUT1
-                    // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
-                    // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
-                    log.info("memo: {}", memo)
-                    tx.addOutput(
-                        TransactionOutput(
-                            params,
-                            tx,
-                            Coin.ZERO,
-                            ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
-                        )
-                    )
-                    sendRequest = SendRequest.forTx(tx)
+    override suspend fun buildAndSendSwapTx(
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel> {
+        val params = walletProviderData.networkParameters
+        try {
+            val sendRequest: SendRequest
+            val memo = swapTradeUIModel.memo
+                ?: "=:${swapTradeUIModel.outputAsset}:${swapTradeUIModel.destinationAddress}"
+            val tx = Transaction(params)
+
+            // set outputs according to:
+            //   https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/sending-transactions#utxo-chains
+            // Send the transaction with Asgard vault as VOUT0
+            if (!swapTradeUIModel.maximum) {
+                val dashAmountWithFees = if (!swapTradeUIModel.maximum) {
+                    (swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash)
                 } else {
-                    sendRequest = SendRequest.emptyWallet(Address.fromBase58(params, swapTradeUIModel.vaultAddress))
-                }
+                    swapTradeUIModel.amount.dash
+                }.setScale(8, RoundingMode.HALF_UP).toCoin()
+                tx.addOutput(
+                    dashAmountWithFees,
+                    Address.fromBase58(params, swapTradeUIModel.vaultAddress)
+                )
+                // Include the memo as an OP_RETURN in VOUT1
+                // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
+                // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
+                log.info("memo: {}", memo)
+                tx.addOutput(
+                    TransactionOutput(
+                        params,
+                        tx,
+                        Coin.ZERO,
+                        ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
+                    )
+                )
+                sendRequest = SendRequest.forTx(tx)
+            } else {
+                sendRequest = SendRequest.emptyWallet(Address.fromBase58(params, swapTradeUIModel.vaultAddress))
+            }
 
-                // Override randomised VOUT ordering; MAYAChain requires specific output ordering.
-                sendRequest.sortByBIP69 = false // we don't want the output order changed
-                sendRequest.shuffleOutputs = false // we don't want the output order changed
+            // Override randomised VOUT ordering; MAYAChain requires specific output ordering.
+            sendRequest.sortByBIP69 = false // we don't want the output order changed
+            sendRequest.shuffleOutputs = false // we don't want the output order changed
 
-                // this will complete the transaction by adding inputs and an output for change
-                sendPaymentService.completeTransaction(sendRequest)
+            // this will complete the transaction by adding inputs and an output for change
+            sendPaymentService.completeTransaction(sendRequest)
 
-                // verify that there are only 3 outputs in the transaction
-                if (!swapTradeUIModel.maximum && sendRequest.tx.outputs.size != 3) {
-                    return ResponseResource.Failure(
-                        IncorrectSwapOutputCount(sendRequest.tx),
+            // verify that there are only 3 outputs in the transaction
+            if (!swapTradeUIModel.maximum && sendRequest.tx.outputs.size != 3) {
+                return ResponseResource.Failure(
+                    IncorrectSwapOutputCount(sendRequest.tx),
+                    false,
+                    0,
+                    null
+                )
+            }
+
+            if (swapTradeUIModel.maximum) {
+                // Include the memo as an OP_RETURN in VOUT1
+                // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
+                // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
+                sendRequest.tx.addOutput(
+                    TransactionOutput(
+                        params,
+                        tx,
+                        Coin.ZERO,
+                        ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
+                    )
+                )
+                // account for the size and possibly larger signatures when re-signed
+                val size = sendRequest.tx.bitcoinSerialize().size + sendRequest.tx.inputs.size
+                sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin() -
+                    Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
+            } else {
+                // Pass all change back to the VIN0 address in VOUT2
+                val connectedOutput = sendRequest.tx.getInput(0).connectedOutput
+                    ?: return ResponseResource.Failure(
+                        MayaException("transaction input not connected"),
                         false,
                         0,
                         null
                     )
-                }
+                val scriptPubKey = connectedOutput.scriptPubKey
 
-                if (swapTradeUIModel.maximum) {
-                    // Include the memo as an OP_RETURN in VOUT1
-                    // memo documentation: https://docs.mayaprotocol.com/mayachain-dev-docs/concepts/transaction-memos#swap
-                    // SWAP:ASSET:DESTADDR[:AFFILIATE:FEE]
-                    sendRequest.tx.addOutput(
-                        TransactionOutput(
-                            params,
-                            tx,
-                            Coin.ZERO,
-                            ScriptBuilder.createOpReturnScript(memo.toByteArray()).program
-                        )
-                    )
-                    // account for the size and possibly larger signatures when re-signed
-                    val size = sendRequest.tx.bitcoinSerialize().size + sendRequest.tx.inputs.size
-                    sendRequest.tx.outputs[0].value = swapTradeUIModel.amount.dash.toCoin() -
-                        Coin.valueOf(size * Transaction.REFERENCE_DEFAULT_MIN_TX_FEE.value / 1000)
-                } else {
-                    // Pass all change back to the VIN0 address in VOUT2
-                    val connectedOutput = sendRequest.tx.getInput(0).connectedOutput
-                        ?: return ResponseResource.Failure(
-                            MayaException("transaction input not connected"),
-                            false,
-                            0,
-                            null
-                        )
-                    val scriptPubKey = connectedOutput.scriptPubKey
-
-                    // to replace output[2], we must clear all outputs and them back
-                    // this is because Transaction.getOutputs returns an immutable list
-                    val outputs = sendRequest.tx.outputs.map { it }
-                    sendRequest.tx.clearOutputs()
-                    for (i in outputs.indices) {
-                        if (i != 2) {
-                            sendRequest.tx.addOutput(outputs[i])
-                        } else {
-                            sendRequest.tx.addOutput(outputs[i].value, scriptPubKey)
-                        }
+                // to replace output[2], we must clear all outputs and them back
+                // this is because Transaction.getOutputs returns an immutable list
+                val outputs = sendRequest.tx.outputs.map { it }
+                sendRequest.tx.clearOutputs()
+                for (i in outputs.indices) {
+                    if (i != 2) {
+                        sendRequest.tx.addOutput(outputs[i])
+                    } else {
+                        sendRequest.tx.addOutput(outputs[i].value, scriptPubKey)
                     }
                 }
-
-                // remove all signatures since we changed the last output.
-                for (input in sendRequest.tx.inputs) {
-                    input.clearScriptBytes()
-                }
-
-                log.info("maya swap transaction: {}", sendRequest.tx)
-
-                sendPaymentService.signTransaction(sendRequest)
-                log.info("maya swap transaction resigned: {}", sendRequest.tx)
-
-                // check that vout3 is using vin0
-                if (!swapTradeUIModel.maximum && ScriptPattern.isP2PKH(sendRequest.tx.outputs[2].scriptPubKey)) {
-                    val input0 = sendRequest.tx.inputs[0]
-                    if (sendRequest.tx.outputs[2].scriptPubKey != input0.connectedOutput?.scriptPubKey) {
-                        return ResponseResource.Failure(MayaException("vout3 script != vin0"), false, 0, null)
-                    }
-                }
-                // check the fee
-                val fee = sendRequest.tx.fee / sendRequest.tx.bitcoinSerialize().size * 1000
-                if (fee < Transaction.DEFAULT_TX_FEE) {
-                    return ResponseResource.Failure(MayaException("swap transaction fee too small"), false, 0, null)
-                }
-
-                // Replace sendRequest.tx with a fresh Transaction before committing.
-                // wallet.completeTx() caches a TransactionConfidence (keyed to the txid at
-                // that moment) in Transaction.confidence.  After we modify outputs and re-sign,
-                // the txid changes but the cached field is not updated — it still points to the
-                // stale confidence.  Creating a new Transaction and moving the same input/output
-                // objects into it leaves confidence == null, so wallet.commitTx() will create
-                // the correct confidence for the final txid, keeping the TxConfidenceTable and
-                // any confidence listeners in sync.  All transient state (connectedOutput,
-                // input.value, signatures) is preserved because we reuse the same objects.
-                val freshTx = Transaction(params)
-                sendRequest.tx.outputs.forEach { freshTx.addOutput(it) }
-                sendRequest.tx.inputs.forEach { freshTx.addInput(it) }
-                sendRequest.tx = freshTx
-
-                // send the transaction
-                log.info("maya swap transaction: {}", sendRequest.tx.toStringHex())
-                val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
-                swapTradeUIModel.txid = sentTransaction.txId
-                return ResponseResource.Success(swapTradeUIModel)
-            } catch (e: InsufficientMoneyException) {
-                return ResponseResource.Failure(e, false, 0, e.message)
             }
-        } else {
-            return resultSwapTrade
+
+            // remove all signatures since we changed the last output.
+            for (input in sendRequest.tx.inputs) {
+                input.clearScriptBytes()
+            }
+
+            log.info("maya swap transaction: {}", sendRequest.tx)
+
+            sendPaymentService.signTransaction(sendRequest)
+            log.info("maya swap transaction resigned: {}", sendRequest.tx)
+
+            // check that vout3 is using vin0
+            if (!swapTradeUIModel.maximum && ScriptPattern.isP2PKH(sendRequest.tx.outputs[2].scriptPubKey)) {
+                val input0 = sendRequest.tx.inputs[0]
+                if (sendRequest.tx.outputs[2].scriptPubKey != input0.connectedOutput?.scriptPubKey) {
+                    return ResponseResource.Failure(MayaException("vout3 script != vin0"), false, 0, null)
+                }
+            }
+            // check the fee
+            val fee = sendRequest.tx.fee / sendRequest.tx.bitcoinSerialize().size * 1000
+            if (fee < Transaction.DEFAULT_TX_FEE) {
+                return ResponseResource.Failure(MayaException("swap transaction fee too small"), false, 0, null)
+            }
+
+            // Replace sendRequest.tx with a fresh Transaction before committing.
+            // wallet.completeTx() caches a TransactionConfidence (keyed to the txid at
+            // that moment) in Transaction.confidence.  After we modify outputs and re-sign,
+            // the txid changes but the cached field is not updated — it still points to the
+            // stale confidence.  Creating a new Transaction and moving the same input/output
+            // objects into it leaves confidence == null, so wallet.commitTx() will create
+            // the correct confidence for the final txid, keeping the TxConfidenceTable and
+            // any confidence listeners in sync.  All transient state (connectedOutput,
+            // input.value, signatures) is preserved because we reuse the same objects.
+            val freshTx = Transaction(params)
+            sendRequest.tx.outputs.forEach { freshTx.addOutput(it) }
+            sendRequest.tx.inputs.forEach { freshTx.addInput(it) }
+            sendRequest.tx = freshTx
+
+            // send the transaction
+            log.info("maya swap transaction: {}", sendRequest.tx.toStringHex())
+            val sentTransaction = sendPaymentService.sendTransaction(sendRequest)
+            swapTradeUIModel.txid = sentTransaction.txId
+            return ResponseResource.Success(swapTradeUIModel)
+        } catch (e: InsufficientMoneyException) {
+            return ResponseResource.Failure(e, false, 0, e.message)
         }
     }
 }

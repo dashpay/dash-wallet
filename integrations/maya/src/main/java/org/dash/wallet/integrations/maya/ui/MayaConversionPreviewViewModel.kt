@@ -36,8 +36,7 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.filters.LockedTransaction
-import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
@@ -49,8 +48,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MayaConversionPreviewViewModel @Inject constructor(
-    private val mayaWebApi: MayaWebApi,
-    private val mayaBlockchainApi: MayaBlockchainApi,
+    private val swapProvider: SwapProvider,
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
     networkState: NetworkStateInt,
@@ -89,7 +87,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
 
         // TODO: this is the action to do the swap
         _showLoading.value = true
-        when (val result = mayaBlockchainApi.commitSwapTransaction(tradeId, swapTradeUIModel)) {
+        when (val result = swapProvider.commitSwapTransaction(tradeId, swapTradeUIModel)) {
             is ResponseResource.Success -> {
                 // Wait for the swap transaction to be IS-locked or confirmed on the network.
                 // This verifies that the transaction was successfully broadcast and seen by peers.
@@ -157,7 +155,7 @@ class MayaConversionPreviewViewModel @Inject constructor(
             targetAddress = swapTradeUIModel.destinationAddress,
             maximum = swapTradeUIModel.maximum
         )
-        when (val result = mayaWebApi.getSwapInfo(tradesRequest)) {
+        when (val result = swapProvider.getSwapInfo(tradesRequest)) {
             is ResponseResource.Success -> {
                 _showLoading.value = false
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {

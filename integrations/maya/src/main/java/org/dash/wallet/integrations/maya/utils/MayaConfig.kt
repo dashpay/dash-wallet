@@ -40,5 +40,11 @@ open class MayaConfig @Inject constructor(
         val EXCHANGE_RATE_LAST_UPDATE = longPreferencesKey("exchange_rate_last_update")
         val EXCHANGE_RATE_VALUE = doublePreferencesKey("exchange_rate_value")
         val EXCHANGE_RATE_CURRENCY_CODE = stringPreferencesKey("exchange_rate_currency_code")
+
+        /**
+         * Stores the [SwapBackend] name. Read once at app start by the Hilt
+         * `SwapProvider` provider; changes take effect on the next launch.
+         */
+        val SWAP_BACKEND = stringPreferencesKey("swap_backend")
     }
 }
