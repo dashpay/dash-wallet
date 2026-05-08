@@ -325,7 +325,10 @@ open class MayaWebApi @Inject constructor(
                     vaultAddress = source.address,
                     destinationAddress = swapRequest.targetAddress,
                     memo = quote.memo,
-                    maximum = swapRequest.maximum
+                    maximum = swapRequest.maximum,
+                    expectedOutputAmount = quote.expectedAmountOut.toBigDecimal()
+                        .setScale(8, RoundingMode.HALF_UP)
+                        .div(BigDecimal(1_0000_0000))
                 )
                 return ResponseResource.Success(result)
             }
