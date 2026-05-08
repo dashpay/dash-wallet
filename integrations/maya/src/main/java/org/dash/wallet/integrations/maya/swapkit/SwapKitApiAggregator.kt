@@ -25,6 +25,9 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Address
+import org.bitcoinj.core.Coin
+import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -170,8 +173,7 @@ class SwapKitApiAggregator @Inject constructor(
                 sellAsset = SwapKitConstants.DASH_ASSET,
                 buyAsset = toAsset,
                 sellAmount = sellAmount,
-                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
-                providers = SwapKitConstants.DASH_SUPPORTED_PROVIDERS
+                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT
             )
         ) ?: return null
         return mapToSwapQuote(response.routes.bestRoute(), toAsset, response.error)
@@ -189,8 +191,7 @@ class SwapKitApiAggregator @Inject constructor(
                 buyAsset = toAsset,
                 sellAmount = sellAmount,
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
-                destinationAddress = destinationAddress,
-                providers = SwapKitConstants.DASH_SUPPORTED_PROVIDERS
+                destinationAddress = destinationAddress
             )
         ) ?: return null
         return mapToSwapQuote(response.routes.bestRoute(), toAsset, response.error)
@@ -201,15 +202,30 @@ class SwapKitApiAggregator @Inject constructor(
         val sourceAddress = walletDataProvider.wallet?.currentReceiveAddress()?.toBase58()
             ?: return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
 
+        val map = hashMapOf<Address, Coin>()
+        walletDataProvider.wallet!!.unspents.forEach { output ->
+            when {
+                ScriptPattern.isP2PKH(output.scriptPubKey) -> ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
+                else -> null
+            }?.let {
+                val address = Address.fromPubKeyHash(walletDataProvider.networkParameters, it)
+                map.computeIfPresent(address) { _, value -> output.value + value }
+                map.computeIfAbsent(address) {
+                    output.value
+                }
+            }
+        }
+        val maxAddressBalance = map.values.maxOf { it }
+        val address = map.entries.find { maxAddressBalance == it.value }?.key
+
         val quote = webApi.getQuote(
             SwapKitQuoteRequest(
                 sellAsset = swapRequest.source_maya_asset,
                 buyAsset = swapRequest.target_maya_asset,
                 sellAmount = sellAmount,
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
-                sourceAddress = sourceAddress,
-                destinationAddress = swapRequest.targetAddress,
-                providers = SwapKitConstants.DASH_SUPPORTED_PROVIDERS
+                // sourceAddress = sourceAddress,
+                destinationAddress = swapRequest.targetAddress
             )
         ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
 
@@ -227,7 +243,7 @@ class SwapKitApiAggregator @Inject constructor(
         val swap = webApi.postSwap(
             SwapKitSwapRequest(
                 routeId = route.routeId,
-                sourceAddress = sourceAddress,
+                sourceAddress = "XpKrCFXtEezuWD4NT2qZajxVPnhJkhdEiE", //address!!.toBase58(),
                 destinationAddress = swapRequest.targetAddress,
                 disableBalanceCheck = true
             )
@@ -240,7 +256,7 @@ class SwapKitApiAggregator @Inject constructor(
         val vault = swap.targetAddress ?: swap.inboundAddress
             ?: return ResponseResource.Failure(MayaException("swapkit returned no vault address"), false, 0, null)
         val memo = swap.memo
-            ?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
+            //?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
 
         val feeAmount = swapRequest.amount.copy().apply {
             // Inbound fee (deducted from DASH side) — best-effort extraction from the
@@ -322,7 +338,7 @@ class SwapKitApiAggregator @Inject constructor(
                 fees = SwapFees("0", toAsset, "0", "0", 0, "0", 0),
                 inboundAddress = "",
                 inboundConfirmationBlocks = 0,
-                inboundConfirmationSeconds = 0,
+                inboundConfirmationSeconds = 0.0,
                 memo = "",
                 notes = "",
                 outboundDelayBlocks = 0,
@@ -353,7 +369,7 @@ class SwapKitApiAggregator @Inject constructor(
             ),
             inboundAddress = "",
             inboundConfirmationBlocks = 0,
-            inboundConfirmationSeconds = route.estimatedTime?.inbound ?: 0,
+            inboundConfirmationSeconds = route.estimatedTime?.inbound ?: 0.0,
             memo = "",
             notes = "",
             outboundDelayBlocks = 0,

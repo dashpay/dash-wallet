@@ -28,7 +28,7 @@ data class SwapQuote(
     val fees: SwapFees,
     @SerializedName("inbound_address") val inboundAddress: String,
     @SerializedName("inbound_confirmation_blocks") val inboundConfirmationBlocks: Int,
-    @SerializedName("inbound_confirmation_seconds") val inboundConfirmationSeconds: Int,
+    @SerializedName("inbound_confirmation_seconds") val inboundConfirmationSeconds: Double,
     val memo: String,
     val notes: String,
     @SerializedName("outbound_delay_blocks") val outboundDelayBlocks: Int,
