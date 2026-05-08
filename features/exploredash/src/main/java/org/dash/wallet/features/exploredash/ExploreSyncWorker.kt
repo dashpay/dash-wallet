@@ -175,7 +175,7 @@ class ExploreSyncWorker @AssistedInject constructor(
         val merchantDao = database.merchantDao()
         val giftCardProviderDao = database.giftCardProviderDao()
 
-        //if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT)
+        // if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT)
         val testMerchantIds = PiggyCardsTestMerchants.ALL.map { it.merchantId }
         val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
         val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
@@ -183,7 +183,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
                 "$deletedProviders provider(s)"
         )
-        //}
+        // }
 
         try {
             if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {

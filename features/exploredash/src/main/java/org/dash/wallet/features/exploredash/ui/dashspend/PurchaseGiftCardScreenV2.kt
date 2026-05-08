@@ -19,7 +19,6 @@ package org.dash.wallet.features.exploredash.ui.dashspend
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +45,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
@@ -111,13 +111,15 @@ fun PurchaseGiftCardScreenV2(
             modifier = Modifier.align(Alignment.TopCenter),
             leadingIcon = MyImages.MenuChevron,
             onLeadingClick = onBack,
-            centralPart = false,
+            centralPart = false
             // trailingIcon = MyImages.NavBarInfo,
             // trailingIconCircle = false,
             // onTrailingClick = onInfo
         )
-        Column(modifier = Modifier.fillMaxSize()
-            .padding(top = 10.dp)) {
+        Column(
+            modifier = Modifier.fillMaxSize()
+                .padding(top = 10.dp)
+        ) {
             Spacer(modifier = Modifier.height(64.dp))
 
             Column(
@@ -135,7 +137,7 @@ fun PurchaseGiftCardScreenV2(
                     toIconUrl = uiState.merchantLogoUrl,
                     toName = uiState.merchantName,
                     fiatBalance = uiState.fiatBalance,
-                    modifier = Modifier,
+                    modifier = Modifier
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -289,7 +291,6 @@ private fun PurchaseLimitsErrorDiscountHint(
     }
 }
 
-
 @Composable
 private fun FlexibleSingleContent(
     uiState: PurchaseGiftCardV2UiState,
@@ -320,7 +321,6 @@ private fun FlexibleSingleContent(
             showPrimaryChevron = false,
             modifier = Modifier.fillMaxWidth()
         )
-
     }
 }
 

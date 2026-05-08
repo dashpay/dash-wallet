@@ -438,7 +438,9 @@ class SearchFragment : Fragment(R.layout.fragment_search) {
     private fun openPurchaseGiftCardFragment() {
         when (selectedProvider) {
             GiftCardProviderType.CTX -> safeNavigate(SearchFragmentDirections.searchToPurchaseGiftCardFragment())
-            GiftCardProviderType.PiggyCards -> safeNavigate(SearchFragmentDirections.searchToPurchaseGiftCardFragmentV2())
+            GiftCardProviderType.PiggyCards -> safeNavigate(
+                SearchFragmentDirections.searchToPurchaseGiftCardFragmentV2()
+            )
         }
         viewModel.logEvent(AnalyticsConstants.Explore.MERCHANT_DETAILS_BUY_GIFT_CARD)
     }

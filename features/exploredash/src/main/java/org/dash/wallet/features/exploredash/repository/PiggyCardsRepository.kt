@@ -314,14 +314,17 @@ class PiggyCardsRepository @Inject constructor(
                         )
                     }
                 }
-                else -> return UpdatedMerchantDetails(
-                    it.id,
-                    listOf(),
-                    "fixed",
-                    0,
-                    redeemType = "",
-                    enabled = false
-                )
+                else -> {
+                    log.warn("PiggyCards merchant ${it.id}: unsupported denomination type $type")
+                    return UpdatedMerchantDetails(
+                        it.id,
+                        listOf(),
+                        "fixed",
+                        0,
+                        redeemType = "",
+                        enabled = false
+                    )
+                }
             }
         }
         return UpdatedMerchantDetails(
@@ -383,13 +386,14 @@ class PiggyCardsRepository @Inject constructor(
                     orderItem.productId = rangeGiftCard.id
                 }
             } else if (optionGiftcard != null) {
-                // there is probably a bug here, but there are no option cards to test
-                thisOrder.first().productId = optionGiftcard.id
+                thisOrder.forEach { orderItem ->
+                    orderItem.productId = optionGiftcard.id
+                }
             } else {
                 thisOrder.forEach { orderItem ->
                     val card = giftCards.find {
                         it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
-                                it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
+                            it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
                     } ?: giftCards.find {
                         it.quantity > 0 && it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
                     }
@@ -517,7 +521,7 @@ class PiggyCardsRepository @Inject constructor(
                 paymentCryptoNetwork = Constants.DASH_CURRENCY,
                 paymentId = data.orderId,
                 percentDiscount = "0.0",
-                rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
+                rate = exchangeRateMap[data.orderId]?.exchangeRate?.toString() ?: "0.0",
                 redeemUrl = giftCard.claimLink,
                 fiatAmount = "0.0",
                 fiatCurrency = Constants.USD_CURRENCY,

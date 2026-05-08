@@ -41,16 +41,18 @@ interface GiftCardDao {
     @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
     suspend fun getCardCountForTransaction(txId: Sha256Hash): Int
 
-    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
     suspend fun getCardForTransaction(txId: Sha256Hash): List<GiftCard>
 
-    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
     fun observeCardForTransaction(txId: Sha256Hash): Flow<List<GiftCard>>
 
-    @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE txId = :txId AND `index` = :index")
+    @Query(
+        "UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE txId = :txId AND `index` = :index"
+    )
     suspend fun updateBarcode(txId: Sha256Hash, index: Int, value: String, barcodeFormat: BarcodeFormat)
 
     @MapInfo(keyColumn = "txId")
-    @Query("SELECT * FROM gift_cards")
+    @Query("SELECT * FROM gift_cards ORDER BY `index` ASC")
     fun observeGiftCards(): Flow<Map<Sha256Hash, List<GiftCard>>>
 }

@@ -93,11 +93,11 @@ data class GiftCardOrderItem(
 }
 
 data class GiftCardShoppingCart constructor(
-    private val items: ArrayList<GiftCardOrderItem>,
+    private val items: ArrayList<GiftCardOrderItem>
 ) {
     constructor(items: List<GiftCardOrderItem>) : this(ArrayList(items))
-    constructor(value: Double, quantity: Int):
-            this(arrayListOf(GiftCardOrderItem(value, quantity)))
+    constructor(value: Double, quantity: Int) :
+        this(arrayListOf(GiftCardOrderItem(value, quantity)))
 
     fun add(item: GiftCardOrderItem) = items.add(item)
     fun copy(): GiftCardShoppingCart {
@@ -187,14 +187,11 @@ class DashSpendViewModel @Inject constructor(
     private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
     val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
 
-    val isFixedDenominationMultiple = MutableStateFlow<Boolean?>(null)
-    // val isFixedDenominationMultiple: StateFlow<Boolean?> = _isFixedDenominationMultiple.asStateFlow()
+    private val _isFixedDenominationMultiple = MutableStateFlow<Boolean?>(null)
+    val isFixedDenominationMultiple: StateFlow<Boolean?> = _isFixedDenominationMultiple.asStateFlow()
 
-    //private val _giftCardOrderInfo = MutableStateFlow<GiftCardOrderItem>(GiftCardOrderItem())
-    //val giftCardOrderInfo: StateFlow<GiftCardOrderItem> = _giftCardOrderInfo.asStateFlow()
-
-    val giftCardOrderInfo = MutableStateFlow<Map<Double, Int>>(emptyMap())
-    // val giftCardOrderInfo: StateFlow<Map<Double, Int>> = _giftCardOrderInfo.asStateFlow()
+    private val _giftCardOrderInfo = MutableStateFlow<Map<Double, Int>>(emptyMap())
+    val giftCardOrderInfo: StateFlow<Map<Double, Int>> = _giftCardOrderInfo.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -349,7 +346,7 @@ class DashSpendViewModel @Inject constructor(
                     if (index == 0 && selectedProvider?.name == "CTX") {
                         giftCardProvider.copy(
                             savingsPercentage = apiResponse.savingsPercentage,
-                            active = apiResponse.enabled,
+                            active = apiResponse.enabled
                         )
                     } else if (index == 0 && selectedProvider?.name == "PiggyCards") {
                         giftCardProvider.copy(
@@ -414,8 +411,8 @@ class DashSpendViewModel @Inject constructor(
             // check for PiggyCards test cards
             if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT && it.provider == GiftCardProviderType.PiggyCards.name) {
                 val sourceId = merchant.sourceId!!
-                //if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
-                PiggyCardsTestMerchants.ALL.find { it.merchantId ==merchant.merchantId }?.let {
+                // if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
+                PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let {
                     return (piggyCardsRepository as PiggyCardsRepository).getMerchant(
                         sourceId,
                         DenominationType.fromString(it.providerDenominationsType)
@@ -456,11 +453,19 @@ class DashSpendViewModel @Inject constructor(
 //                            PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
 //                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, it.denominationType)
 //                            }
-                            PiggyCardsTestMerchants.ALL.find { it.merchantId ==merchant.merchantId }?.let {
+                            PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let { testData ->
                                 (piggyCardsRepository as PiggyCardsRepository).getMerchant(
                                     provider.sourceId,
-                                    DenominationType.fromString(it.providerDenominationsType)
-                                )
+                                    DenominationType.fromString(testData.providerDenominationsType)
+                                )?.let { details ->
+                                    merchantResponseList.add(details)
+                                    providerResponseList.add(
+                                        provider.copy(
+                                            savingsPercentage = details.savingsPercentage,
+                                            active = details.enabled
+                                        )
+                                    )
+                                }
                             }
 //                            when (merchant.merchantId) {
 //                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
@@ -595,19 +600,20 @@ class DashSpendViewModel @Inject constructor(
         _isFixedDenomination.value = isFixed
     }
 
-    fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
-        giftCardOrderInfo.value = mapOf(fiat.toBigDecimal().toDouble() to quantity)
+    fun setIsFixedDenominationMultiple(isMultiple: Boolean?) {
+        _isFixedDenominationMultiple.value = isMultiple
     }
 
-//    fun setGiftCardOrderInfo(coin: Coin, quantity: Int) {
-//        _exchangeRate.value?.let {
-//            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-//            giftCardOrderInfo.value = GiftCardOrderItem(myRate.coinToFiat(coin), quantity)
-//        }
-//    }
+    fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
+        _giftCardOrderInfo.value = mapOf(fiat.toBigDecimal().toDouble() to quantity)
+    }
+
+    fun setGiftCardOrderQuantities(quantities: Map<Double, Int>) {
+        _giftCardOrderInfo.value = quantities
+    }
 
     fun resetSelectedDenomination() {
-        giftCardOrderInfo.value = mapOf<Double, Int>()
+        _giftCardOrderInfo.value = emptyMap()
     }
 
     fun logEvent(eventName: String) {
@@ -752,7 +758,7 @@ class DashSpendViewModel @Inject constructor(
     }
 
     fun getFirstCardValueAsFiat(): Fiat {
-        val firstCardValue =  giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
+        val firstCardValue = giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
         return Fiat.parseFiat(
             Constants.USD_CURRENCY,
             firstCardValue.toBigDecimal().setScale(2, RoundingMode.UP).toString()

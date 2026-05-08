@@ -46,7 +46,6 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
-import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDateTime
@@ -55,7 +54,7 @@ import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 data class GiftCardUIState(
-    val giftCards: MutableList<GiftCard> = mutableListOf(),
+    val giftCards: List<GiftCard> = emptyList(),
     val index: Int = 0,
     val icon: Bitmap? = null,
     val barcodes: List<Barcode?> = listOf(),
@@ -65,8 +64,9 @@ data class GiftCardUIState(
     val status: GiftCardStatus? = null,
     val queries: Int = 0
 ) {
-    val giftCard: GiftCard? get() = giftCards.getOrNull(index)
-    val barcode: Barcode? get() = barcodes.getOrNull(index)
+    private val position: Int get() = giftCards.indexOfFirst { it.index == index }
+    val giftCard: GiftCard? get() = position.takeIf { it >= 0 }?.let { giftCards[it] }
+    val barcode: Barcode? get() = position.takeIf { it >= 0 }?.let { barcodes.getOrNull(it) }
 }
 
 @HiltViewModel
@@ -125,7 +125,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             .onEach { giftCards ->
                 _uiState.update { currentState ->
                     currentState.copy(
-                        giftCards = giftCards.toMutableList(),
+                        giftCards = giftCards,
                         barcodes = giftCards.map {
                             when {
                                 it.barcodeValue != null && it.barcodeFormat != null ->
@@ -159,7 +159,15 @@ class GiftCardDetailsViewModel @Inject constructor(
             if (tickerJob?.isActive != true) {
                 // let's delete the card numbers and other information to force a reload
                 val cards = giftCardDao.getCardForTransaction(transactionId)
-                val newCards = cards.map { it.copy(number = null, pin = null, barcodeValue = null, barcodeFormat = null, merchantUrl = null) }
+                val newCards = cards.map {
+                    it.copy(
+                        number = null,
+                        pin = null,
+                        barcodeValue = null,
+                        barcodeFormat = null,
+                        merchantUrl = null
+                    )
+                }
                 newCards.forEach {
                     giftCardDao.updateGiftCard(it)
                 }
@@ -428,11 +436,16 @@ class GiftCardDetailsViewModel @Inject constructor(
                                 }
                                 if (uiState.value.giftCards.size < giftCards.size) {
                                     // add dummy cards
-                                    val cardToCopy = uiState.value.giftCards.last()
-                                    for (i in 0 until giftCards.size - uiState.value.giftCards.size) {
-                                        val newGiftCard = cardToCopy.copy(index = cardToCopy.index + i + 1)
-                                        giftCardDao.insertGiftCard(newGiftCard)
-                                        uiState.value.giftCards.add(newGiftCard)
+                                    val cardToCopy = uiState.value.giftCards.maxByOrNull { it.index }
+                                    if (cardToCopy != null) {
+                                        val missing = giftCards.size - uiState.value.giftCards.size
+                                        val added = (0 until missing).map { i ->
+                                            cardToCopy.copy(index = cardToCopy.index + i + 1)
+                                        }
+                                        added.forEach { giftCardDao.insertGiftCard(it) }
+                                        _uiState.update { state ->
+                                            state.copy(giftCards = state.giftCards + added)
+                                        }
                                     }
                                 }
                                 giftCards.forEachIndexed { index, giftCard ->
@@ -593,7 +606,7 @@ class GiftCardDetailsViewModel @Inject constructor(
             val url = barcodeUrl.toUri()
             if (url.getQueryParameter("route") == "tool/barcode") {
                 val cardNumber = url.getQueryParameter("text")
-                val format = when(url.getQueryParameter("type")) {
+                val format = when (url.getQueryParameter("type")) {
                     "code-128" -> BarcodeFormat.CODE_128
                     else -> null
                 }
@@ -666,6 +679,4 @@ class GiftCardDetailsViewModel @Inject constructor(
         tickerJob = null
         retries = 0
     }
-
-
 }

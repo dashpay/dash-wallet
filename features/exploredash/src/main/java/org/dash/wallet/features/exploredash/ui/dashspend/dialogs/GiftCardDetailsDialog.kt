@@ -35,9 +35,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -220,7 +218,7 @@ private fun GiftCardDetailsContent(
         if (uiState.error != null && uiState.queries == waitLimitForError) {
             onErrorLogged(
                 uiState.error!!,
-                "${uiState.giftCard?.merchantName} did not deliver the card after 10 tries"
+                "${uiState.giftCard?.merchantName} did not deliver the card after $waitLimitForError tries"
             )
         }
     }
@@ -236,6 +234,7 @@ private fun GiftCardDetailsContent(
         onBalanceCheck = { url -> context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
         onCopyNumber = { number -> number.copy(activity, "card number") },
         onCopyPin = { pin -> pin.copy(activity, "card pin") },
+        onCopyOrder = { order -> order.copy(activity, "order") },
         onRefresh = {
             viewModel.refresh()
         }
@@ -254,6 +253,7 @@ internal fun GiftCardDetailsView(
     onBalanceCheck: (String) -> Unit = {},
     onCopyNumber: (String) -> Unit = {},
     onCopyPin: (String) -> Unit = {},
+    onCopyOrder: (String) -> Unit = {},
     onRefresh: () -> Unit = {}
 ) {
     var showHowToUse by remember { mutableStateOf(false) }
@@ -290,6 +290,7 @@ internal fun GiftCardDetailsView(
                 onBalanceCheck = { uiState.giftCard?.merchantUrl?.let { onBalanceCheck(it) } },
                 onCopyNumber = onCopyNumber,
                 onCopyPin = onCopyPin,
+                onCopyOrder = onCopyOrder,
                 onRefresh = onRefresh
             )
 
@@ -407,6 +408,7 @@ private fun GiftCardItemCard(
     onBalanceCheck: () -> Unit,
     onCopyNumber: (String) -> Unit,
     onCopyPin: (String) -> Unit,
+    onCopyOrder: (String) -> Unit,
     onRefresh: () -> Unit
 ) {
     val currencyFormat = remember {
@@ -513,7 +515,7 @@ private fun GiftCardItemCard(
                             contentDescription = null,
                             modifier = Modifier
                                 .size(14.dp)
-                                .clickable { onCopyPin(order) }
+                                .clickable { onCopyOrder(order) }
                         )
                     },
                     onClick = { onRefresh() }
@@ -758,7 +760,7 @@ private fun previewState(vararg cards: GiftCard) = GiftCardUIState(
         Barcode(it.barcodeValue!!, it.barcodeFormat!!)
     },
     date = LocalDateTime.of(2024, 8, 26, 10, 56),
-    serviceName = ServiceName.CTXSpend,
+    serviceName = ServiceName.CTXSpend
 )
 
 private fun fakeCard(
@@ -786,7 +788,13 @@ private fun fakeCard(
 private fun RenderedBarcodePreview() {
     GiftCardDetailsView(
         uiState = previewState(
-            fakeCard(index = 1, number = "6006491727005748", pin = "1411", barcode = "6006491727005748", barcodeFormat = BarcodeFormat.CODE_128),
+            fakeCard(
+                index = 1,
+                number = "6006491727005748",
+                pin = "1411",
+                barcode = "6006491727005748",
+                barcodeFormat = BarcodeFormat.CODE_128
+            )
         )
     )
 }
@@ -824,7 +832,13 @@ private fun ErrorPreview() {
             date = LocalDateTime.of(2024, 8, 26, 10, 56),
             serviceName = ServiceName.CTXSpend,
             status = GiftCardStatus.REJECTED,
-            error = CTXSpendException("error", ServiceName.CTXSpend, 401, "unknown error", IllegalArgumentException("unknown"))
+            error = CTXSpendException(
+                "error",
+                ServiceName.CTXSpend,
+                401,
+                "unknown error",
+                IllegalArgumentException("unknown")
+            )
         )
     )
 }

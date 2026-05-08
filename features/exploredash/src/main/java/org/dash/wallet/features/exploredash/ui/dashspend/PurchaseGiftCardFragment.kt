@@ -58,7 +58,6 @@ import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants.DEFAULT_DISCOUNT_AS_DOUBLE
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
-import java.math.RoundingMode
 import java.text.NumberFormat
 import java.util.Currency
 
@@ -440,11 +439,12 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 modifier = Modifier.padding(20.dp),
                 denominations = merchant.denominations,
                 currency = Currency.getInstance(Constants.USD_CURRENCY),
-                selectedDenomination = selectedDenomination.value.keys.first().toBigDecimal().toDouble(),
+                selectedDenomination = selectedDenomination.value.keys.firstOrNull()?.toBigDecimal()?.toDouble(),
                 canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
                     val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
-                    viewModel.setGiftCardOrderInfo(fiat, selectedDenomination.value.values.first())
+                    val quantity = selectedDenomination.value.values.firstOrNull() ?: 1
+                    viewModel.setGiftCardOrderInfo(fiat, quantity)
                     binding.fixedDenomText.text = fixedAmountFormat.format(denomination)
                     setDiscountHint()
                 },

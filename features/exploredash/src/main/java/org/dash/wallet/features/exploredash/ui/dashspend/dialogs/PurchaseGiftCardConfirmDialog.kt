@@ -104,16 +104,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     override val backgroundStyle = R.style.PrimaryBackground
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
-        private val currency = Currency.getInstance(Constants.USD_CURRENCY)
+        private val USD_CURRENCY = Currency.getInstance(Constants.USD_CURRENCY)
         private val noCentsFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = PurchaseGiftCardConfirmDialog@currency
+            currency = USD_CURRENCY
             minimumFractionDigits = 0
         }
-        private val currencyFormatNoSymbol = NumberFormat.getInstance().apply {
-            // currency = PurchaseGiftCardConfirmDialog@currency
-        }
+        private val currencyFormatNoSymbol = NumberFormat.getInstance()
         private val currencyFormat = NumberFormat.getCurrencyInstance().apply {
-            currency = PurchaseGiftCardConfirmDialog@currency
+            currency = USD_CURRENCY
         }
     }
 
@@ -149,8 +147,21 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             return
         }
 
-        val orderTotalAmount = viewModel.giftCardOrderInfo.value.entries.sumOf { it.key * it.value }
-        val savingsFraction = viewModel.getGiftCardDiscount(orderTotalAmount.toBigDecimal().toDouble())
+        val orderEntries = viewModel.giftCardOrderInfo.value.entries
+        val orderTotalAmount = orderEntries.sumOf { it.key * it.value }
+        // Compute a weighted savings fraction: sum each (denom * qty * (1 - per-denom discount))
+        // across line items, then derive the overall discount. A single getGiftCardDiscount call
+        // on orderTotalAmount returns 0 for mixed-denomination orders because no card matches the
+        // summed total exactly.
+        val discountedTotal = orderEntries.sumOf { (denom, qty) ->
+            val perDenomDiscount = viewModel.getGiftCardDiscount(denom)
+            denom * qty * (1.0 - perDenomDiscount)
+        }
+        val savingsFraction = if (orderTotalAmount > 0.0) {
+            1.0 - discountedTotal / orderTotalAmount
+        } else {
+            0.0
+        }
 
         val isFixed = viewModel.isFixedDenomination.value
         val isMultiple = viewModel.isFixedDenominationMultiple.value
@@ -178,7 +189,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         val discountedValue = orderTotalAmount - savingsFraction * orderTotalAmount
         val youPayText = currencyFormat.format(
             discountedValue.toBigDecimal()
-                .setScale(currency.defaultFractionDigits, RoundingMode.UP)
+                .setScale(USD_CURRENCY.defaultFractionDigits, RoundingMode.UP)
                 .toDouble()
         )
 
@@ -401,11 +412,25 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 }
             }
 
-            val transactionId = createSendingRequestFromDashUri(data.first().paymentUrls?.get("DASH.DASH")!!)
+            val dashPaymentUrl = data.first().paymentUrls?.get("DASH.DASH")
+            if (dashPaymentUrl == null) {
+                log.error("paymentUrls missing DASH.DASH for gift card ${data.first().id}")
+                hideLoading()
+                if (isAdded) {
+                    AdaptiveDialog.create(
+                        R.drawable.ic_error,
+                        getString(R.string.gift_card_purchase_failed),
+                        getString(R.string.gift_card_error),
+                        getString(R.string.button_close)
+                    ).show(requireActivity())
+                }
+                return@launch
+            }
+            val transactionId = createSendingRequestFromDashUri(dashPaymentUrl)
             transactionId?.let {
                 enterAmountViewModel.clearSavedState()
                 viewModel.saveGiftCardDummy(transactionId, data)
-                showGiftCardDetailsDialog(transactionId, data.first().id)
+                showGiftCardDetailsDialog(transactionId)
             }
         }
     }
@@ -491,7 +516,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private fun showGiftCardDetailsDialog(txId: Sha256Hash, giftCardId: String) {
+    private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
         if (isAdded) {
             if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {

@@ -26,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class GiftCardViewModel @Inject constructor(
     val giftCardsDao: GiftCardDao
-): ViewModel() {
+) : ViewModel() {
     suspend fun getGiftCardCount(txId: Sha256Hash): Int {
         return giftCardsDao.getCardCountForTransaction(txId)
     }

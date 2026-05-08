@@ -1456,7 +1456,7 @@ internal fun FeatureDetailsView(uiState, callbacks)       // Layer 3: pure UI (p
 ```kotlin
 @AndroidEntryPoint
 class GiftCardDetailsDialog : ComposeBottomSheet() {
-    override val backgroundStyle = R.style.PrimaryBackground,
+    override val backgroundStyle = R.style.PrimaryBackground
     override val forceExpand = true
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
