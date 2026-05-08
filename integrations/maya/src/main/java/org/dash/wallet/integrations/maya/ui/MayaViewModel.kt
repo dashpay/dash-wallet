@@ -49,6 +49,7 @@ import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
 import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -90,6 +91,14 @@ class MayaViewModel @Inject constructor(
 
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
+
+    /**
+     * The currently-active swap backend. Resolves through [DispatchingSwapProvider] so
+     * the portal screen can show the correct provider name + logo. Falls back to MAYA
+     * if the swap provider isn't the dispatcher (defensive — shouldn't happen in prod).
+     */
+    val activeSwapBackend: SwapBackend
+        get() = (swapProvider as? DispatchingSwapProvider)?.currentBackend() ?: SwapBackend.MAYA
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())

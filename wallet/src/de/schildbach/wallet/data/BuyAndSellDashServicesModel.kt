@@ -37,10 +37,7 @@ enum class ServiceType(
     UPHOLD(R.string.uphold_account, R.drawable.ic_uphold),
     COINBASE(R.string.coinbase, R.drawable.ic_coinbase),
     MAYA(R.string.maya_service_name, R.drawable.ic_maya_logo),
-    // Reuses the Maya icon as a placeholder; replace with a SwapKit asset when one
-    // becomes available. Both entries flow into the same MayaPortal screens — the
-    // backend is switched via DispatchingSwapProvider.setBackend() before navigation.
-    SWAPKIT(R.string.swapkit_service_name, R.drawable.ic_maya_logo)
+    SWAPKIT(R.string.swapkit_service_name, R.drawable.ic_swapkit_logo)
 }
 
 @Parcelize
