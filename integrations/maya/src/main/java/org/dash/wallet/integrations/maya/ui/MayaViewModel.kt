@@ -23,6 +23,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
@@ -37,11 +38,16 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
+import org.dash.wallet.integrations.maya.api.MayaApi
+import org.dash.wallet.integrations.maya.api.MayaApiAggregator
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -153,6 +159,16 @@ class MayaViewModel @Inject constructor(
             }
             .launchIn(viewModelScope)
 
+        // Re-fetch inbound addresses whenever the pool list transitions to non-empty.
+        // SwapKit's getInboundAddresses() can return an empty set on the very first
+        // call if the pool refresh is still in flight; this catches up once the
+        // pools land. Maya is unaffected (its addresses come from a separate
+        // endpoint and don't depend on pool state).
+        poolList
+            .filter { it.isNotEmpty() && _inboundAddresses.value.isEmpty() }
+            .onEach { refreshInboundAddresses() }
+            .launchIn(viewModelScope)
+
         updateInboundAddresses()
     }
 
@@ -189,7 +205,7 @@ class MayaViewModel @Inject constructor(
     }
 
     suspend fun refreshInboundAddresses() {
-        _inboundAddresses.value = swapProvider.getInboundAddresses()
+        _inboundAddresses.value = withContext(Dispatchers.IO) { swapProvider.getInboundAddresses() }
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {
@@ -197,5 +213,41 @@ class MayaViewModel @Inject constructor(
             val chain = asset.let { it.substring(0, it.indexOf('.')) }
             inboundAddresses.value.find { it.chain == chain }
         } else { null }
+    }
+
+    fun isTradingActive(): Boolean {
+        return when (swapProvider) {
+            is MayaApiAggregator -> {
+                val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
+                if (dashInbound == null) {
+                    false
+                } else {
+                    dashInbound.halted != true
+                }
+            }
+
+            is SwapKitConstants -> {
+                inboundAddresses.value.isNotEmpty()
+            }
+            is DispatchingSwapProvider -> {
+                when (swapProvider.active) {
+                    is MayaApiAggregator -> {
+                        val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
+                        if (dashInbound == null) {
+                            false
+                        } else {
+                            dashInbound.halted != true
+                        }
+                    }
+
+                    is SwapKitApiAggregator -> {
+                        inboundAddresses.value.isNotEmpty()
+                    }
+
+                    else -> false
+                }
+            }
+            else -> false
+        }
     }
 }

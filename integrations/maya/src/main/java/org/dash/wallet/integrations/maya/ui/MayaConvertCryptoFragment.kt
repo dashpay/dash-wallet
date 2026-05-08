@@ -133,7 +133,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             lifecycleScope.launch {
                 val dashInbound = try {
                     mayaViewModel.refreshInboundAddresses()
-                    mayaViewModel.inboundAddresses.value.find { it.chain == "DASH" }
+                    mayaViewModel.isTradingActive()
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
@@ -144,7 +144,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     return@launch
                 }
 
-                if (dashInbound == null || dashInbound.halted) {
+                if (!dashInbound) {
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(R.string.error),
@@ -157,7 +157,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 val paymentIntent = try {
                     viewModel.getUpdatedPaymentIntent(
                         convertViewModel.enteredConvertDashAmount.value!!,
-                        Address.fromBase58(null, dashInbound.address)
+                        Address.fromBase58(null, swapTrade.vaultAddress)
                     )
                 } catch (e: Exception) {
                     AdaptiveDialog.create(

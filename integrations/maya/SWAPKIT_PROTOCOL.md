@@ -159,7 +159,7 @@ Step 1 of the swap flow. Returns ranked routes; **no transaction data**.
       "expectedBuyAmountMaxSlippage": "0.00055",
       "fees": [ /* inbound, network, affiliate, service, outbound, liquidity */ ],
       "estimatedTime": { "inbound": 60, "swap": 10, "outbound": 600, "total": 670 },
-      "totalSlippageBps": 35,
+      "totalSlippageBps": 35.0,
       "legs": [ /* per-step detail */ ],
       "warnings": [],
       "meta": {

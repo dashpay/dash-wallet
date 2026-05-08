@@ -98,7 +98,7 @@ class DispatchingSwapProvider @Inject constructor(
         persistScope.launch { config.set(MayaConfig.SWAP_BACKEND, resolved.name) }
     }
 
-    private val active: SwapProvider
+    internal val active: SwapProvider
         get() = when (activeBackend) {
             SwapBackend.SWAPKIT -> swapKit
             SwapBackend.MAYA -> maya

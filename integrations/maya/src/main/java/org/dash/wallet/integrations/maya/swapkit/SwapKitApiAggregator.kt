@@ -42,6 +42,7 @@ import org.dash.wallet.integrations.maya.model.SwapFees
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitFee
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
@@ -120,18 +121,20 @@ class SwapKitApiAggregator @Inject constructor(
             return
         }
         val prices = webApi.getPrices(reachable)
-            .associateBy({ it.identifier }, { it.priceUsd })
+            .associateBy({ it.identifier.uppercase() }, { it.priceUsd })
 
-        val fiatPerUsd = fiatExchangeRate.toBigDecimal()
+        // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
+        // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
+        // contract Maya uses (raw price in pools, fiat conversion in the ViewModel pipeline).
         val pools = reachable.map { identifier ->
-            val priceUsd = prices[identifier] ?: 0.0
-            val priceFiat = if (priceUsd > 0.0) {
-                BigDecimal(priceUsd).multiply(fiatPerUsd).toFiat(fiatExchangeRate.currencyCode)
+            val priceUsd = prices[identifier.uppercase()] ?: 0.0
+            val priceUsdFiat = if (priceUsd > 0.0) {
+                BigDecimal(priceUsd).toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
             } else {
-                Fiat.valueOf(fiatExchangeRate.currencyCode, 0)
+                Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
             }
             PoolInfo(asset = identifier, status = "Available").also {
-                it.assetPriceFiat = priceFiat
+                it.assetPriceFiat = priceUsdFiat
             }
         }
         poolInfoList.value = pools
@@ -139,11 +142,17 @@ class SwapKitApiAggregator @Inject constructor(
 
     override suspend fun getInboundAddresses(): List<InboundAddress> {
         // SwapKit returns the deposit address inline with /v3/swap, so we don't have
-        // a vault list. Synthesise one entry per chain in the cached pool list with
-        // halted=false — enough for the picker filter and the "any halted?" toast.
-        val chains = poolInfoList.value
-            .map { it.asset.substringBefore('.') }
-            .toSet()
+        // a vault list. Synthesise one entry per chain that DASH can reach via SwapKit,
+        // with halted=false — enough for the picker filter and the "any halted?" toast.
+        // Prefer the cached pool list when populated; otherwise fall back to a direct
+        // `/swapTo` call so the first invocation isn't blocked behind the pool refresh.
+        val cached = poolInfoList.value
+        val identifiers = if (cached.isNotEmpty()) {
+            cached.map { it.asset }
+        } else {
+            webApi.getSwapTo(SwapKitConstants.DASH_ASSET)
+        }
+        val chains = identifiers.map { it.substringBefore('.') }.toSet()
         return chains.map { InboundAddress(chain = it, halted = false) }
     }
 
@@ -212,7 +221,8 @@ class SwapKitApiAggregator @Inject constructor(
             SwapKitSwapRequest(
                 routeId = route.routeId,
                 sourceAddress = sourceAddress,
-                destinationAddress = swapRequest.targetAddress
+                destinationAddress = swapRequest.targetAddress,
+                disableBalanceCheck = true
             )
         ) ?: return ResponseResource.Failure(MayaException("swapkit /v3/swap failed"), false, 0, null)
 
@@ -307,6 +317,9 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val expectedBaseUnits = humanToBuyAssetBaseUnits(route.expectedBuyAmount)
         val outboundBaseUnits = outboundFeeBaseUnits(route)
+        // Maya's SwapQuote/SwapFees expose slippage as Int; SwapKit returns it as
+        // a fractional Double. Round at the boundary.
+        val slippageBpsInt = route.totalSlippageBps.toInt()
         return SwapQuote(
             dustThreshold = "0",
             expectedAmountOut = expectedBaseUnits,
@@ -316,9 +329,9 @@ class SwapKitApiAggregator @Inject constructor(
                 asset = toAsset,
                 liquidity = "0",
                 outbound = outboundBaseUnits,
-                slippageBps = route.totalSlippageBps,
+                slippageBps = slippageBpsInt,
                 total = outboundBaseUnits,
-                totalBps = route.totalSlippageBps
+                totalBps = slippageBpsInt
             ),
             inboundAddress = "",
             inboundConfirmationBlocks = 0,
@@ -328,7 +341,7 @@ class SwapKitApiAggregator @Inject constructor(
             outboundDelayBlocks = 0,
             outboundDelaySeconds = route.estimatedTime?.outbound ?: 0,
             recommendedMinAmountIn = "0",
-            slippageBps = route.totalSlippageBps,
+            slippageBps = slippageBpsInt,
             warning = route.warnings?.joinToString().orEmpty(),
             error = topLevelError
         )
@@ -368,24 +381,6 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
-//        // Liquidity-weighted USD price of CACAO from all available USD-stable pools.
-//        // Sum of asset balances / sum of cacao balances naturally weights by depth.
-//        val stablePools = pools.filter {
-//            (it.currencyCode == "USDT" || it.currencyCode == "USDC") &&
-//                    it.status.equals("available", ignoreCase = true)
-//        }
-//        val sumStableCacao = stablePools.fold(BigDecimal.ZERO) { acc, p ->
-//            acc + (p.balanceCacao.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-//        }
-//        val sumStableAsset = stablePools.fold(BigDecimal.ZERO) { acc, p ->
-//            acc + (p.balanceAsset.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-//        }
-//        if (sumStableCacao.signum() <= 0 || sumStableAsset.signum() <= 0) {
-//            MayaViewModel.Companion.log.warn("no stablecoin pool data; skipping price update")
-//            return
-//        }
-//        MayaViewModel.Companion.log.info("stable pools: {} ({} pools)", stablePools.map { it.asset }, stablePools.size)
-//
 //        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Each pool's
         // USD price is computed via the (balance_cacao * Σstable_asset) /
         // (balance_asset * Σstable_cacao) cross-product (CACAO's decimals cancel,

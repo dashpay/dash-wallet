@@ -71,7 +71,7 @@ data class SwapKitRoute(
     val expectedBuyAmountMaxSlippage: String? = null,
     val fees: List<SwapKitFee> = emptyList(),
     val estimatedTime: SwapKitEstimatedTime? = null,
-    val totalSlippageBps: Int = 0,
+    val totalSlippageBps: Double = 0.0,
     val warnings: List<String>? = null,
     val meta: SwapKitRouteMeta? = null
 )
