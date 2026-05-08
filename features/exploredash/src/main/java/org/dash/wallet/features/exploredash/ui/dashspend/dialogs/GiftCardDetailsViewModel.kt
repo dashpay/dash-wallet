@@ -440,7 +440,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     if (cardToCopy != null) {
                                         val missing = giftCards.size - uiState.value.giftCards.size
                                         val added = (0 until missing).map { i ->
-                                            cardToCopy.copy(index = cardToCopy.index + i + 1)
+                                            cardToCopy.copy(
+                                                index = cardToCopy.index + i + 1,
+                                                number = null,
+                                                pin = null,
+                                                merchantUrl = null,
+                                                barcodeFormat = null,
+                                                barcodeValue = null
+                                            )
                                         }
                                         added.forEach { giftCardDao.insertGiftCard(it) }
                                         _uiState.update { state ->
@@ -540,13 +547,12 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     private suspend fun updateGiftCard(index: Int, number: String, pinCode: String?) {
-        val giftCard = uiState.value.giftCards[index]
+        val giftCard = uiState.value.giftCards.find { it.index == index } ?: return
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
                     number = number,
-                    pin = pinCode,
-                    index = index
+                    pin = pinCode
                 )
             )
         }.join()
@@ -555,13 +561,12 @@ class GiftCardDetailsViewModel @Inject constructor(
     }
 
     private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
-        val giftCard = uiState.value.giftCards[index]
+        val giftCard = uiState.value.giftCards.find { it.index == index } ?: return
 
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
-                    merchantUrl = merchantUrl,
-                    index = index
+                    merchantUrl = merchantUrl
                 )
             )
         }.join()

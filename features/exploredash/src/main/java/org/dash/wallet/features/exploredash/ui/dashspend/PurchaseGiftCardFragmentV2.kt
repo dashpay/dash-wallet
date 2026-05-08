@@ -155,7 +155,11 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     val min = minFiat?.toBigDecimal() ?: BigDecimal.ZERO
                     val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
                     val balanceMax = fiatBalance.toBigDecimal()
-                    amount > BigDecimal.ZERO && amount >= min && amount <= max && amount < balanceMax && !isBlockchainReplaying
+                    amount > BigDecimal.ZERO &&
+                        amount >= min &&
+                        amount <= max &&
+                        amount < balanceMax &&
+                        !isBlockchainReplaying
                 }
                 is GiftCardPurchaseMode.FlexibleMultiple,
                 is GiftCardPurchaseMode.Fixed -> {
@@ -259,6 +263,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     val fiatAmount = try {
                         Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
                     } catch (e: Exception) {
+                        log.debug("Failed to parse fiat amount: $amountText", e)
                         null
                     }
                     fiatAmount?.let { viewModel.setGiftCardOrderInfo(it, 1) }
@@ -284,6 +289,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                             val fiat = try {
                                 Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
                             } catch (e: Exception) {
+                                log.debug("Failed to parse fiat amount: $amountText", e)
                                 return@PurchaseGiftCardScreenV2
                             }
                             viewModel.setGiftCardOrderInfo(fiat, 1)

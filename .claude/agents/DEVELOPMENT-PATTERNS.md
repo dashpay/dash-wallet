@@ -1475,7 +1475,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     // Dialog-scoped Hilt ViewModel (lives and dies with this dialog instance)
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
     // Activity-scoped ViewModel for cross-screen state (use `by activityViewModels()` if needed)
-    private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
+    private val ctxSpendViewModel by activityViewModels<DashSpendViewModel>()
 
     private var originalBrightness: Float = -1f
 

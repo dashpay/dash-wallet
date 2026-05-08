@@ -48,7 +48,10 @@ interface GiftCardDao {
     fun observeCardForTransaction(txId: Sha256Hash): Flow<List<GiftCard>>
 
     @Query(
-        "UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE txId = :txId AND `index` = :index"
+        """
+        UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat 
+        WHERE txId = :txId AND `index` = :index
+    """
     )
     suspend fun updateBarcode(txId: Sha256Hash, index: Int, value: String, barcodeFormat: BarcodeFormat)
 

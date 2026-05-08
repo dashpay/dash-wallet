@@ -63,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.core.os.bundleOf
 import androidx.core.text.HtmlCompat
+import androidx.fragment.app.activityViewModels
 import androidx.fragment.app.viewModels
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -118,7 +119,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     override val forceExpand = true
 
     private val viewModel by viewModels<GiftCardDetailsViewModel>()
-    private val ctxSpendViewModel by viewModels<DashSpendViewModel>()
+    private val ctxSpendViewModel by activityViewModels<DashSpendViewModel>()
     private var originalBrightness: Float = -1f
 
     private val bottomSheetCallback = object : BottomSheetBehavior.BottomSheetCallback() {
