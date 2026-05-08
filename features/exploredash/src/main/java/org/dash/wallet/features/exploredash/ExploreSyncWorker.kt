@@ -101,7 +101,12 @@ class ExploreSyncWorker @AssistedInject constructor(
                         databasePrefs.localDbTimestamp < preloadedDbTimestamp
                     ) {
                         ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
-                        databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        // Re-read prefs after updateDatabase: finalizeUpdate writes the new
+                        // localDbTimestamp asynchronously on configScope, so the snapshot
+                        // captured at the start of doWork() is now stale. Saving the stale
+                        // copy here would clobber finalizeUpdate's concurrent write.
+                        val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
+                        databasePrefs = latestPrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
                         exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
                 }

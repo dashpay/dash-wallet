@@ -84,16 +84,20 @@ abstract class ExploreDatabase : RoomDatabase() {
             exploreConfig: ExploreConfig
         ) {
             log.info("force update explore db")
-            if (instance != null) {
-                instance!!.close()
-            }
+            // Null the field before closing / before calling update so that if either
+            // throws, callers don't get a handle to a closed RoomDatabase. If update
+            // succeeds, instance is reassigned to the fresh DB.
+            val previous = instance
+            instance = null
+            previous?.close()
             instance = update(context, repository, exploreConfig)
         }
 
         @VisibleForTesting
         internal fun resetInstanceForTest() {
-            instance?.close()
+            val previous = instance
             instance = null
+            previous?.close()
         }
 
         private suspend fun open(context: Context, exploreConfig: ExploreConfig): ExploreDatabase {
@@ -138,7 +142,17 @@ abstract class ExploreDatabase : RoomDatabase() {
             }
 
             try {
-                val password = ZipFile(cacheZip).comment.split("#")[1]
+                val password = ZipFile(cacheZip).use { zip ->
+                    val comment = zip.comment
+                    require(!comment.isNullOrBlank()) {
+                        "asset zip is missing comment metadata"
+                    }
+                    val parts = comment.split("#")
+                    require(parts.size >= 2 && parts[1].isNotEmpty()) {
+                        "asset zip comment is malformed: $comment"
+                    }
+                    parts[1]
+                }
                 context.deleteDatabase(EXPLORE_DB_STAGING_NAME)
 
                 val staging = Room.databaseBuilder(
