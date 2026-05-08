@@ -323,6 +323,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
                 transformations(CircleCropTransformation())
             }
+
+        val routeName = this.routeName
+        val routes = this.availableRoutes
+        binding.contentOrderReview.orderInfo.text = """
+            selected: $routeName
+
+            all: $routes
+        """.trimIndent()
     }
 
     private fun setValueWithCurrencyCodeOrSymbol(

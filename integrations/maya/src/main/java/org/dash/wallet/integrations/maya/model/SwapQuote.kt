@@ -32,7 +32,7 @@ data class SwapQuote(
     val memo: String,
     val notes: String,
     @SerializedName("outbound_delay_blocks") val outboundDelayBlocks: Int,
-    @SerializedName("outbound_delay_seconds") val outboundDelaySeconds: Int,
+    @SerializedName("outbound_delay_seconds") val outboundDelaySeconds: Double,
     @SerializedName("recommended_min_amount_in") val recommendedMinAmountIn: String,
     @SerializedName("slippage_bps") val slippageBps: Int,
     val warning: String,

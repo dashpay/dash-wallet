@@ -287,7 +287,6 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         val swapValueErrorType = convertViewModel.checkEnteredAmountValue(checkSendingConditions)
-
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {

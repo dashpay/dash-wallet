@@ -86,8 +86,8 @@ data class SwapKitFee(
 data class SwapKitEstimatedTime(
     val inbound: Int? = null,
     val swap: Int? = null,
-    val outbound: Int? = null,
-    val total: Int? = null
+    val outbound: Double? = null,
+    val total: Double? = null
 )
 
 data class SwapKitRouteMeta(

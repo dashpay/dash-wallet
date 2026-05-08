@@ -120,13 +120,20 @@ class SwapKitApiAggregator @Inject constructor(
             log.info("swapkit /swapTo returned no assets — leaving pool list as is")
             return
         }
-        val prices = webApi.getPrices(reachable)
+        // /swapTo returns reachable buy-assets — i.e. it never includes the source
+        // asset itself. The convert screen looks up DASH's own USD price via
+        // `getPoolInfo("DASH")` to compute the DASH↔fiat ratio, so we add DASH.DASH
+        // explicitly. The picker excludes DASH.DASH separately, so this only
+        // surfaces in price-lookup paths.
+        val identifiers = (reachable + SwapKitConstants.DASH_ASSET).distinct()
+
+        val prices = webApi.getPrices(identifiers)
             .associateBy({ it.identifier.uppercase() }, { it.priceUsd })
 
         // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
         // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
         // contract Maya uses (raw price in pools, fiat conversion in the ViewModel pipeline).
-        val pools = reachable.map { identifier ->
+        val pools = identifiers.map { identifier ->
             val priceUsd = prices[identifier.uppercase()] ?: 0.0
             val priceUsdFiat = if (priceUsd > 0.0) {
                 BigDecimal(priceUsd).toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
@@ -243,14 +250,25 @@ class SwapKitApiAggregator @Inject constructor(
             anchoredType = swapRequest.amount.anchoredType
         }
 
+        // Use the actual quoted output amount, not the estimate the input screen
+        // computed from pool prices. /v3/swap's expectedBuyAmount reflects post-
+        // validation pricing; fall back to the route's value if /v3/swap omits it.
+        val expectedBuyHuman = swap.expectedBuyAmount ?: route.expectedBuyAmount
+        val resultAmount = swapRequest.amount.copy().apply {
+            crypto = runCatching { BigDecimal(expectedBuyHuman) }.getOrDefault(crypto)
+            anchoredType = swapRequest.amount.anchoredType
+        }
+
         val result = SwapTradeUIModel(
-            amount = swapRequest.amount,
+            amount = resultAmount,
             outputAsset = swapRequest.target_maya_asset,
             feeAmount = feeAmount,
             vaultAddress = vault,
             destinationAddress = swapRequest.targetAddress,
             memo = memo,
-            maximum = swapRequest.maximum
+            maximum = swapRequest.maximum,
+            routeName = route.providers.joinToString(","),
+            availableRoutes = quote.routes.map { "${it.providers.joinToString(",")}: ${it.meta?.tags ?: listOf() }" }
         )
         return ResponseResource.Success(result)
     }
@@ -308,7 +326,7 @@ class SwapKitApiAggregator @Inject constructor(
                 memo = "",
                 notes = "",
                 outboundDelayBlocks = 0,
-                outboundDelaySeconds = 0,
+                outboundDelaySeconds = 0.0,
                 recommendedMinAmountIn = "0",
                 slippageBps = 0,
                 warning = "",
@@ -339,7 +357,7 @@ class SwapKitApiAggregator @Inject constructor(
             memo = "",
             notes = "",
             outboundDelayBlocks = 0,
-            outboundDelaySeconds = route.estimatedTime?.outbound ?: 0,
+            outboundDelaySeconds = route.estimatedTime?.outbound ?: 0.0,
             recommendedMinAmountIn = "0",
             slippageBps = slippageBpsInt,
             warning = route.warnings?.joinToString().orEmpty(),
