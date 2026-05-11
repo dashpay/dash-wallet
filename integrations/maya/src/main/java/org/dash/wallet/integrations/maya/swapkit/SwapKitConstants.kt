@@ -24,13 +24,6 @@ object SwapKitConstants {
 
     const val DASH_ASSET = "DASH.DASH"
 
-    /**
-     * Provider that handles DASH-as-source through SwapKit. Maya is the only routing
-     * provider currently supporting DASH; both the streaming and non-streaming variants
-     * are accepted. Listing both lets SwapKit pick the better fit per swap size.
-     */
-    val DASH_SUPPORTED_PROVIDERS = listOf("MAYACHAIN", "MAYACHAIN_STREAMING")
-
     /** Default slippage (percent) for indicative quotes. */
     const val DEFAULT_SLIPPAGE_PERCENT = 3
 

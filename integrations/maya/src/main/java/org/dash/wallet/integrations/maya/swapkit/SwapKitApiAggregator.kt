@@ -240,10 +240,15 @@ class SwapKitApiAggregator @Inject constructor(
                 null
             )
 
+        // Prefer the wallet's max-balance unspent address; fall back to the current
+        // receive address if the wallet has no P2PKH unspents (e.g. brand-new wallet).
+        // SwapKit still validates the address format even with disableBalanceCheck=true,
+        // so the value must be a real DASH address — but it must belong to *this* wallet
+        // so any refund SwapKit issues lands back here.
         val swap = webApi.postSwap(
             SwapKitSwapRequest(
                 routeId = route.routeId,
-                sourceAddress = "XpKrCFXtEezuWD4NT2qZajxVPnhJkhdEiE", //address!!.toBase58(),
+                sourceAddress = address?.toBase58() ?: sourceAddress,
                 destinationAddress = swapRequest.targetAddress,
                 disableBalanceCheck = true
             )
@@ -266,17 +271,15 @@ class SwapKitApiAggregator @Inject constructor(
             anchoredType = swapRequest.amount.anchoredType
         }
 
-        // Use the actual quoted output amount, not the estimate the input screen
-        // computed from pool prices. /v3/swap's expectedBuyAmount reflects post-
-        // validation pricing; fall back to the route's value if /v3/swap omits it.
-        val expectedBuyHuman = swap.expectedBuyAmount ?: route.expectedBuyAmount
-        val resultAmount = swapRequest.amount.copy().apply {
-            crypto = runCatching { BigDecimal(expectedBuyHuman) }.getOrDefault(crypto)
-            anchoredType = swapRequest.amount.anchoredType
-        }
+        // Pass swapRequest.amount through unchanged. Mirrors MayaWebApi (which also
+        // passes `amount = swapRequest.amount` to SwapTradeUIModel). DO NOT set
+        // .crypto from swap.expectedBuyAmount here — Amount.crypto's setter flips
+        // the anchor to Crypto and recomputes _dash from crypto/rate, which silently
+        // destroys the user's actual sell amount. The preview shows the pool-price
+        // crypto estimate; what actually arrives is the on-chain payout.
 
         val result = SwapTradeUIModel(
-            amount = resultAmount,
+            amount = swapRequest.amount,
             outputAsset = swapRequest.target_maya_asset,
             feeAmount = feeAmount,
             vaultAddress = vault,
