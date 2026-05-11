@@ -22,6 +22,7 @@ import android.view.ViewGroup
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
+import androidx.recyclerview.widget.RecyclerView
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.RadiobuttonRowBinding
 import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
@@ -47,9 +48,12 @@ class IconifiedListAdapter(
         holder.bind(item)
 
         holder.binding.root.setOnClickListener {
-            // item may have changed
-            val updatedItem = getItem(position)
-            clickListener.invoke(updatedItem, position)
+            val currentPosition = holder.adapterPosition
+            if (currentPosition == RecyclerView.NO_POSITION || currentPosition >= itemCount) {
+                return@setOnClickListener
+            }
+            val updatedItem = getItem(currentPosition)
+            clickListener.invoke(updatedItem, currentPosition)
         }
     }
 }
