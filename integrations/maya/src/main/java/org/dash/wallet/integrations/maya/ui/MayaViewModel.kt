@@ -87,7 +87,7 @@ class MayaViewModel @Inject constructor(
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
     val inboundAddresses: StateFlow<List<InboundAddress>> = _inboundAddresses.asStateFlow()
-    val _exchangeRates = MutableStateFlow<List<ExchangeRate>>(listOf())
+    private val _exchangeRates = MutableStateFlow<List<ExchangeRate>>(listOf())
     val exchangeRates = _exchangeRates.asStateFlow()
     val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
         addresses.any { it.halted }
@@ -100,30 +100,6 @@ class MayaViewModel @Inject constructor(
             .onEach {
                 _exchangeRates.value = it
             }.launchIn(viewModelScope)
-
-//        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-//            .filterNotNull()
-//            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
-//            .onEach { rate ->
-//                dashExchangeRate = rate?.let {
-//                    org.bitcoinj.utils.ExchangeRate(Coin.COIN, rate.fiat)
-//                }
-//                _uiState.update { it.copy() }
-//            }
-//            .launchIn(viewModelScope)
-
-        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
-            .filterNotNull()
-            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
-            .filterNotNull()
-            .onEach { exchangeRate ->
-                val usdPrice = exchangeRatesProvider.getExchangeRate(Constants.USD_CURRENCY)
-                if (usdPrice != null) {
-                    val rate = exchangeRate.rate!!.toDouble() / usdPrice.rate!!.toDouble()
-                    log.info("exchange rate from CTX: {}", rate)
-                }
-            }
-            .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()

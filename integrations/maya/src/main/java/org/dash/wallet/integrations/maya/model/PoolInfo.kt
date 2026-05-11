@@ -49,9 +49,10 @@ data class PoolInfo(
     @IgnoredOnParcel
     val assetPriceInCacao: BigDecimal
         get() {
-            val asset = balanceAsset.toBigDecimalOrNull() ?: return BigDecimal.ZERO
-            if (asset.signum() == 0) return BigDecimal.ZERO
-            return BigDecimal(balanceCacao).divide(asset, 8, java.math.RoundingMode.HALF_UP)
+            val assetBd = balanceAsset.toBigDecimalOrNull() ?: return BigDecimal.ZERO
+            if (assetBd.signum() == 0) return BigDecimal.ZERO
+            val cacaoBd = balanceCacao.toBigDecimalOrNull() ?: return BigDecimal.ZERO
+            return cacaoBd.divide(assetBd, 8, java.math.RoundingMode.HALF_UP)
         }
 
     fun setAssetPrice(cacaoToFiatRate: Fiat) {
