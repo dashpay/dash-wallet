@@ -430,69 +430,41 @@ class DashSpendViewModel @Inject constructor(
         val merchantResponseList = arrayListOf<UpdatedMerchantDetails>()
         val providerResponseList = arrayListOf<GiftCardProvider>()
         providers.forEach { provider ->
-            when (provider.provider) {
+            val details: UpdatedMerchantDetails? = when (provider.provider) {
                 "CTX" -> {
                     if (ctxSpendRepository.isUserSignedIn()) {
-                        ctxSpendRepository.getMerchant(provider.sourceId)?.let {
-                            merchantResponseList.add(it)
-                            providerResponseList.add(
-                                provider.copy(
-                                    savingsPercentage = it.savingsPercentage,
-                                    active = it.enabled
-                                )
-                            )
-                        }
-                    } else {
-                        providerResponseList.add(provider)
-                    }
+                        ctxSpendRepository.getMerchant(provider.sourceId)
+                    } else null
                 }
 
                 "PiggyCards" -> {
                     if (piggyCardsRepository.isUserSignedIn()) {
                         if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
-//                            PiggyCardsConstants.TEST_CARDS[merchant.merchantId]?.let {
-//                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, it.denominationType)
-//                            }
                             PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let { testData ->
                                 (piggyCardsRepository as PiggyCardsRepository).getMerchant(
                                     provider.sourceId,
                                     DenominationType.fromString(testData.providerDenominationsType)
-                                )?.let { details ->
-                                    merchantResponseList.add(details)
-                                    providerResponseList.add(
-                                        provider.copy(
-                                            savingsPercentage = details.savingsPercentage,
-                                            active = details.enabled
-                                        )
-                                    )
-                                }
-                            }
-//                            when (merchant.merchantId) {
-//                                PiggyCardsConstants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID -> {
-//                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.Fixed)
-//                                }
-//                                PiggyCardsConstants.PIGGY_CARDS_TEST_FLEXIBLE_MERCHANT_ID -> {
-//                                    (piggyCardsRepository as PiggyCardsRepository).getMerchant(provider.sourceId, DenominationType.MinMax)
-//                                }
-//                            }
-                        } else {
-                            piggyCardsRepository.getMerchant(provider.sourceId)?.let {
-                                merchantResponseList.add(it)
-                                providerResponseList.add(
-                                    provider.copy(
-                                        savingsPercentage = it.savingsPercentage,
-                                        active = it.enabled
-                                    )
                                 )
                             }
+                        } else {
+                            piggyCardsRepository.getMerchant(provider.sourceId)
                         }
-                    } else {
-                        providerResponseList.add(provider)
-                    }
+                    } else null
                 }
 
-                else -> {
-                }
+                else -> null
+            }
+
+            if (details != null) {
+                merchantResponseList.add(details)
+                providerResponseList.add(
+                    provider.copy(
+                        savingsPercentage = details.savingsPercentage,
+                        active = details.enabled
+                    )
+                )
+            } else {
+                providerResponseList.add(provider)
             }
         }
         return Pair(merchantResponseList, providerResponseList)

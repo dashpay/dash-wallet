@@ -20,6 +20,7 @@ package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
+import android.view.ViewGroup
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Image
@@ -28,12 +29,16 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.core.view.updateLayoutParams
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -75,11 +80,11 @@ import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.ui.dashspend.DashSpendViewModel
 import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardPurchaseMode
+import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
@@ -96,12 +101,18 @@ data class PurchaseConfirmUIState(
     val discountText: String = "",
     val youPayText: String = "",
     val breakdownText: String? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val useExpandedLayout: Boolean = false
 )
 
 @AndroidEntryPoint
 class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
     override val backgroundStyle = R.style.PrimaryBackground
+
+    private var needsExpand = false
+    override val forceExpand: Boolean
+        get() = needsExpand
+
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
         private val USD_CURRENCY = Currency.getInstance(Constants.USD_CURRENCY)
@@ -193,16 +204,28 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 .toDouble()
         )
 
+        val breakdownLines = breakdown?.lineSequence()?.count() ?: 0
+        needsExpand = breakdownLines >= 2
+        if (needsExpand) {
+            view.updateLayoutParams { height = ViewGroup.LayoutParams.MATCH_PARENT }
+        }
+
         _uiState.value = PurchaseConfirmUIState(
             merchantName = merchant.name ?: "",
             merchantLogoUrl = merchant.logoLocation,
             purchaseValueText = currencyFormatNoSymbol.format(orderTotalAmount.toBigDecimal().toDouble()),
             purchaseValueCurrency = "$",
             giftCardTotalText = noCentsFormat.format(orderTotalAmount.toBigDecimal().toDouble()),
-            discountText = GenericUtils.formatPercent(savingsFraction) ?: "",
+            discountText = SavingsFormatting.format(
+                context = requireContext(),
+                percent = savingsFraction * 100,
+                decimals = 2,
+                discountPrefix = ""
+            ),
             youPayText = youPayText,
             breakdownText = breakdown,
-            isLoading = false
+            isLoading = false,
+            useExpandedLayout = needsExpand
         )
     }
 
@@ -547,6 +570,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             dialog?.setCanceledOnTouchOutside(true)
         }
     }
+
 }
 
 // ─── Layer 2: state-collection bridge ────────────────────────────────────────
@@ -572,9 +596,15 @@ internal fun PurchaseGiftCardConfirmView(
     onConfirm: () -> Unit = {}
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 24.dp)
+        modifier = if (uiState.useExpandedLayout) {
+            Modifier
+                .fillMaxSize()
+                .padding(bottom = 24.dp)
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+        }
     ) {
         NavBarTitle(
             title = stringResource(R.string.purchase_confirm_transaction)
@@ -582,7 +612,15 @@ internal fun PurchaseGiftCardConfirmView(
 
         Column(
             modifier = Modifier
+                .let { if (uiState.useExpandedLayout) it.weight(1f) else it }
                 .fillMaxWidth()
+                .let {
+                    if (uiState.useExpandedLayout) {
+                        it.verticalScroll(rememberScrollState())
+                    } else {
+                        it
+                    }
+                }
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
@@ -798,6 +836,21 @@ private fun PurchaseGiftCardConfirmLoadingPreview() {
             discountText = "5%",
             youPayText = "$23.75",
             isLoading = true
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFFF5F6F7, heightDp = 720)
+@Composable
+private fun PurchaseGiftCardConfirmExpandedPreview() {
+    PurchaseGiftCardConfirmView(
+        uiState = PurchaseConfirmUIState(
+            merchantName = "Target",
+            purchaseValueText = "260.00",
+            giftCardTotalText = "$260",
+            breakdownText = "1 x \$5\n2 x \$10\n3 x \$25\n2 x \$50\n1 x \$80",
+            discountText = "5%",
+            youPayText = "$247.00"
         )
     )
 }
