@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.maya.swapkit
 
+import org.dash.wallet.integrations.maya.BuildConfig
+
 object SwapKitConstants {
     const val BASE_URL = "https://api.swapkit.dev/"
 
@@ -33,10 +35,10 @@ object SwapKitConstants {
     const val DEFAULT_SLIPPAGE_PERCENT = 3
 
     /**
-     * SwapKit API key. Required for every request. Empty by default — must be
-     * supplied via build config / remote config / service.properties before the
-     * SwapKit backend can be used. The Hilt switch falls back to Maya if this
-     * is blank, so the app remains functional without a key.
+     * SwapKit API key, sourced from `service.properties` (SWAPKIT_API_KEY) at build
+     * time via Maya's BuildConfig. Blank when the property is absent — the Hilt
+     * switch falls back to Maya in that case, so the app remains functional without
+     * a key.
      */
-    const val API_KEY: String = ""
+    const val API_KEY: String = BuildConfig.SWAPKIT_API_KEY
 }
