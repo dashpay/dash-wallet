@@ -17,6 +17,8 @@
 
 package org.dash.wallet.integrations.maya.swapkit
 
+import com.google.gson.Gson
+import com.google.gson.JsonSyntaxException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceItem
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceRequest
@@ -60,7 +62,24 @@ open class SwapKitWebApi @Inject constructor(
     suspend fun getQuote(request: SwapKitQuoteRequest): SwapKitQuoteResponse? {
         return safeCall("getQuote(${request.sellAsset}->${request.buyAsset})", null) {
             val response = endpoint.postQuote(request)
-            if (response.isSuccessful) response.body() else null
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                // SwapKit returns errors like {"error":"noRoutesFound","message":"...","data":{...}}
+                // as non-2xx responses, so the body is on errorBody(). Parse it so callers
+                // can react to the error code rather than seeing an opaque null.
+                parseErrorBody(response.errorBody()?.string())
+            }
+        }
+    }
+
+    private fun parseErrorBody(body: String?): SwapKitQuoteResponse? {
+        if (body.isNullOrBlank()) return null
+        return try {
+            Gson().fromJson(body, SwapKitQuoteResponse::class.java)
+        } catch (ex: JsonSyntaxException) {
+            log.warn("swapkit getQuote: could not parse error body: $ex")
+            null
         }
     }
 

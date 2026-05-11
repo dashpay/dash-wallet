@@ -58,6 +58,10 @@ fun getMayaErrorType(error: String): MayaErrorType {
                 else -> MayaErrorType.QUOTE_ERROR
             }
         }
+        // SwapKit returns this when the sell amount is below the route's economic
+        // minimum — no provider can profitably fill the swap. Surface it the same
+        // way Maya's below-minimum error is surfaced.
+        "noRoutesFound" -> MayaErrorType.AMOUNT_TOO_LOW
         else -> MayaErrorType.UNKNOWN_ERROR
     }
 }

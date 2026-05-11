@@ -58,7 +58,8 @@ data class SwapKitQuoteResponse(
     val quoteId: String? = null,
     val routes: List<SwapKitRoute> = emptyList(),
     val providerErrors: List<SwapKitProviderError>? = null,
-    val error: String? = null
+    val error: String? = null,
+    val message: String? = null
 )
 
 data class SwapKitRoute(
