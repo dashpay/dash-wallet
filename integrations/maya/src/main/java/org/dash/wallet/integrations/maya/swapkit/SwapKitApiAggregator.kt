@@ -264,10 +264,11 @@ class SwapKitApiAggregator @Inject constructor(
             //?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
 
         val feeAmount = swapRequest.amount.copy().apply {
-            // Inbound fee (deducted from DASH side) — best-effort extraction from the
-            // /v3/swap fee breakdown. If absent we leave it at zero; the user will pay
-            // network fees via the wallet's fee estimator.
-            dash = inboundFeeInDash(swap.fees ?: route.fees)
+            // Sum the SwapKit fee breakdown, converting each leg to DASH via the
+            // user's market rate. Captures inbound (DASH) + outbound (target) +
+            // anything denominated in either. Routing-asset fees (CACAO/RUNE for
+            // Maya/Thor) are skipped — we don't have a rate to convert them.
+            dash = totalSwapCostInDash(swapRequest, route, swap.fees)
             anchoredType = swapRequest.amount.anchoredType
         }
 
@@ -408,6 +409,54 @@ class SwapKitApiAggregator @Inject constructor(
         }
         val amt = inbound?.amount ?: return BigDecimal.ZERO
         return runCatching { BigDecimal(amt) }.getOrDefault(BigDecimal.ZERO)
+    }
+
+    private fun totalSwapCostInDash(
+        swapRequest: SwapQuoteRequest,
+        route: SwapKitRoute,
+        swapFees: List<SwapKitFee>?
+    ): BigDecimal {
+        val fees = swapFees ?: route.fees
+        if (fees.isEmpty()) return BigDecimal.ZERO
+
+        // cryptoDashExchangeRate is "target per DASH"; 1 target = 1/rate DASH.
+        val targetPerDash = swapRequest.amount.cryptoDashExchangeRate
+        // target_maya_asset is "CHAIN.SYMBOL", e.g. "THOR.RUNE" or "BTC.BTC".
+        val targetChain = swapRequest.target_maya_asset.substringBefore(".").uppercase()
+        val targetAsset = swapRequest.target_maya_asset.uppercase()
+
+        // Sum fees from the SwapKit breakdown, converting non-DASH legs to DASH
+        // via the user's market rate. Using the input/output spread underreports
+        // for streaming routes because streaming nearly eliminates slippage —
+        // the network/liquidity/affiliate fees are still there, they just don't
+        // show up as a spread against market rate.
+        var total = BigDecimal.ZERO
+        fees.forEach { fee ->
+            val amt = runCatching { BigDecimal(fee.amount ?: "0") }
+                .getOrDefault(BigDecimal.ZERO)
+            if (amt.signum() <= 0) return@forEach
+
+            val chain = fee.chain?.uppercase()
+            val asset = fee.asset?.uppercase()
+            val inDash = when {
+                chain == "DASH" || asset?.contains("DASH") == true -> amt
+                targetPerDash.signum() > 0 &&
+                    (chain == targetChain || asset == targetAsset) ->
+                    amt.divide(targetPerDash, 16, RoundingMode.HALF_UP)
+                else -> {
+                    // Routing-asset fees (CACAO for Maya, RUNE for Thor liquidity,
+                    // etc.) need their own DASH rate to convert. Log and skip;
+                    // undercounting is preferable to guessing.
+                    log.info(
+                        "swapkit fee skipped: type={} amount={} asset={} chain={}",
+                        fee.type, fee.amount, fee.asset, fee.chain
+                    )
+                    BigDecimal.ZERO
+                }
+            }
+            total = total.add(inDash)
+        }
+        return total
     }
 
     private fun List<SwapKitRoute>.bestRoute(): SwapKitRoute? {
