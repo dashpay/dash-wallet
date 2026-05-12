@@ -434,7 +434,9 @@ class DashSpendViewModel @Inject constructor(
                 "CTX" -> {
                     if (ctxSpendRepository.isUserSignedIn()) {
                         ctxSpendRepository.getMerchant(provider.sourceId)
-                    } else null
+                    } else {
+                        null
+                    }
                 }
 
                 "PiggyCards" -> {
@@ -449,7 +451,9 @@ class DashSpendViewModel @Inject constructor(
                         } else {
                             piggyCardsRepository.getMerchant(provider.sourceId)
                         }
-                    } else null
+                    } else {
+                        null
+                    }
                 }
 
                 else -> null
