@@ -124,9 +124,9 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
 
             if (userData.toContactRequest == null && userData.fromContactRequest == null) {
                 try {
-                    platformRepo.getLocalUserDataByUsername(username)?.let {
+                    platformRepo.getLocalUserDataByUsername(username)?.let { fresh ->
                         log.info("obtained local user data for $username")
-                        _uiState.update { state -> state.copy(userData = it) }
+                        _uiState.update { state -> state.copy(userData = mergePreservingProfileFields(state.userData, fresh)) }
                     }
                 } catch (ex: Exception) {
                     log.error("failed to obtain local user data for $username", ex)
@@ -134,8 +134,8 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
             }
 
             try {
-                identityRepository.getUser(username).firstOrNull()?.let {
-                    _uiState.update { state -> state.copy(userData = it) }
+                identityRepository.getUser(username).firstOrNull()?.let { fresh ->
+                    _uiState.update { state -> state.copy(userData = mergePreservingProfileFields(state.userData, fresh)) }
                 }
             } catch (ex: Exception) {
                 log.error("Failed to load Profile", ex)
@@ -223,6 +223,29 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
+    /**
+     * Platform sometimes returns a partial DashPayProfile (e.g. with an empty avatarUrl) even
+     * though the local DB and contact-request flow have richer data. Wholesale replacing
+     * `_uiState.userData` with such a partial profile makes the header avatar revert to the
+     * placeholder mid-session. Preserve non-empty fields from the current profile.
+     */
+    private fun mergePreservingProfileFields(
+        current: UsernameSearchResult?,
+        fresh: UsernameSearchResult
+    ): UsernameSearchResult {
+        if (current == null) return fresh
+        val currentProfile = current.dashPayProfile
+        val freshProfile = fresh.dashPayProfile
+        val mergedProfile = freshProfile.copy(
+            displayName = freshProfile.displayName.ifEmpty { currentProfile.displayName },
+            publicMessage = freshProfile.publicMessage.ifEmpty { currentProfile.publicMessage },
+            avatarUrl = freshProfile.avatarUrl.ifEmpty { currentProfile.avatarUrl },
+            avatarHash = freshProfile.avatarHash ?: currentProfile.avatarHash,
+            avatarFingerprint = freshProfile.avatarFingerprint ?: currentProfile.avatarFingerprint
+        )
+        return fresh.copy(dashPayProfile = mergedProfile)
+    }
+
     suspend fun toNotificationItems(userId: String, contactRequests: List<UsernameSearchResult>): List<NotificationItem> {
         return withContext(Dispatchers.IO) {
             val results = arrayListOf<NotificationItem>()
@@ -230,7 +253,12 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
             contactRequests.filter { cr ->
                 cr.dashPayProfile.userId == userId
             }.forEach {
-                if (it.type != _uiState.value.userData?.type) {
+                val current = _uiState.value.userData
+                // Refresh _userData when type changes OR when the profile differs (e.g. the
+                // initial search result had no avatarUrl but the DB now does). Without the
+                // profile-diff check, the header stays on the stale initial profile while
+                // the notification rows render the fresh DB-backed one.
+                if (current == null || it.type != current.type || it.dashPayProfile != current.dashPayProfile) {
                     _uiState.update { state -> state.copy(userData = it) }
                 }
 

@@ -17,6 +17,7 @@
 package de.schildbach.wallet.ui.compose_views
 
 import android.net.Uri
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -36,13 +37,14 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import coil.compose.SubcomposeAsyncImage
+import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import coil.transform.CircleCropTransformation
+import coil.size.Size
 import coil.transform.Transformation
 import org.dash.wallet.common.R
 import org.dash.wallet.common.ui.avatar.ProfilePictureHelper
 import org.dash.wallet.common.ui.avatar.ProfilePictureZoomTransformation
+import androidx.core.net.toUri
 
 /**
  * Compose port of [org.dash.wallet.common.ui.avatar.ProfilePictureDisplay]. Loads via Coil with
@@ -58,36 +60,50 @@ fun ProfileAvatar(
     modifier: Modifier = Modifier
 ) {
     val url = avatarUrl?.takeIf { it.isNotEmpty() }
-    if (url == null) {
-        AvatarPlaceholder(username = username, modifier = modifier)
-        return
-    }
+    Log.d(LOG_TAG, "compose for $username url=${url ?: "<empty>"}")
 
-    val context = LocalContext.current
-    val parsed = remember(url) { Uri.parse(url) }
-    val zoomedRect = remember(url) { ProfilePictureHelper.extractZoomedRect(parsed) }
-    val baseUrl = remember(url) { ProfilePictureHelper.removePicZoomParameter(parsed) }
+    Box(modifier = modifier.clip(CircleShape)) {
+        AvatarPlaceholder(username = username, modifier = Modifier.fillMaxSize())
 
-    val transformations: List<Transformation> = remember(zoomedRect) {
-        buildList {
-            zoomedRect?.let { add(ProfilePictureZoomTransformation(it)) }
-            add(CircleCropTransformation())
+        if (url != null) {
+            val context = LocalContext.current
+            val parsed = remember(url) { url.toUri() }
+            val zoomedRect = remember(url) { ProfilePictureHelper.extractZoomedRect(parsed) }
+            val baseUrl = remember(url) { ProfilePictureHelper.removePicZoomParameter(parsed) }
+
+            val transformations: List<Transformation> = remember(zoomedRect) {
+                buildList {
+                    zoomedRect?.let { add(ProfilePictureZoomTransformation(it)) }
+                }
+            }
+
+            val request = remember(baseUrl, transformations) {
+                ImageRequest.Builder(context)
+                    .data(baseUrl)
+                    .size(Size.ORIGINAL)
+                    .transformations(transformations)
+                    .crossfade(true)
+                    .listener(
+                        onStart = { Log.d(LOG_TAG, "load start: $baseUrl") },
+                        onSuccess = { _, _ -> Log.d(LOG_TAG, "load success: $baseUrl") },
+                        onError = { _, result ->
+                            Log.w(LOG_TAG, "load failed: $baseUrl", result.throwable)
+                        }
+                    )
+                    .build()
+            }
+
+            AsyncImage(
+                model = request,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
         }
     }
-
-    SubcomposeAsyncImage(
-        model = ImageRequest.Builder(context)
-            .data(baseUrl.toString())
-            .transformations(transformations)
-            .crossfade(true)
-            .build(),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier.clip(CircleShape),
-        loading = { AvatarPlaceholder(username = username, modifier = Modifier.fillMaxSize()) },
-        error = { AvatarPlaceholder(username = username, modifier = Modifier.fillMaxSize()) }
-    )
 }
+
+private const val LOG_TAG = "ProfileAvatar"
 
 @Composable
 private fun AvatarPlaceholder(
