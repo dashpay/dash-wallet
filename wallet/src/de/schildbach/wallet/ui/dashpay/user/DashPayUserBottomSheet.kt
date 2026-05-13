@@ -20,7 +20,6 @@ package de.schildbach.wallet.ui.dashpay.user
 import android.os.Bundle
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,12 +35,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -152,7 +155,8 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                     TransactionDetailsDialogFragment.newInstance(item.tx.txId)
                         .show(parentFragmentManager, null)
                 }
-            }
+            },
+            onFilterSelected = viewModel::setFilter
         )
     }
 
@@ -243,7 +247,8 @@ private fun DashPayUserContent(
     onSendOrAcceptClick: () -> Unit,
     onIgnoreClick: () -> Unit,
     onPayClick: () -> Unit,
-    onNotificationClick: (NotificationItem) -> Unit
+    onNotificationClick: (NotificationItem) -> Unit,
+    onFilterSelected: (NotificationFilter) -> Unit = {}
 ) {
     val userData = state.userData
     Column(
@@ -264,9 +269,14 @@ private fun DashPayUserContent(
             )
         }
 
-        if (state.notifications.isNotEmpty()) {
+        // Show the Activity section whenever we have notifications OR a non-default filter is
+        // active — otherwise selecting "Sent" with no sent items would hide the section and
+        // strand the dropdown.
+        if (state.notifications.isNotEmpty() || state.filter != NotificationFilter.ALL) {
             ActivitySection(
                 notifications = state.notifications,
+                activeFilter = state.filter,
+                onFilterSelected = onFilterSelected,
                 onNotificationClick = onNotificationClick
             )
         }
@@ -350,6 +360,8 @@ private fun UserInfoCard(
 @Composable
 private fun ActivitySection(
     notifications: List<NotificationItem>,
+    activeFilter: NotificationFilter,
+    onFilterSelected: (NotificationFilter) -> Unit,
     onNotificationClick: (NotificationItem) -> Unit
 ) {
     Column(
@@ -358,12 +370,21 @@ private fun ActivitySection(
             .padding(horizontal = 20.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Text(
-            text = stringResource(R.string.notifications_profile_activity),
-            style = MyTheme.Typography.LabelLarge,
-            color = MyTheme.Colors.textSecondary,
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.notifications_profile_activity),
+                style = MyTheme.Typography.LabelLarge,
+                color = MyTheme.Colors.textSecondary
+            )
+            FilterButton(
+                activeFilter = activeFilter,
+                onFilterSelected = onFilterSelected
+            )
+        }
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -382,6 +403,80 @@ private fun ActivitySection(
             }
         }
     }
+}
+
+@Composable
+private fun FilterButton(
+    activeFilter: NotificationFilter,
+    onFilterSelected: (NotificationFilter) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(11.dp))
+                .clickable { expanded = true }
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.ic_filter_icon),
+                contentDescription = null,
+                modifier = Modifier.size(13.dp),
+                tint = MyTheme.Colors.textPrimary
+            )
+            Text(
+                text = stringResource(R.string.activity_buy_and_sell_dash_filter),
+                style = MyTheme.CaptionMedium,
+                color = MyTheme.Colors.textPrimary
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(MyTheme.Colors.backgroundSecondary)
+        ) {
+            FilterMenuItem(R.string.all_transactions, NotificationFilter.ALL, activeFilter) {
+                onFilterSelected(it); expanded = false
+            }
+            FilterMenuItem(R.string.received_transactions, NotificationFilter.RECEIVED, activeFilter) {
+                onFilterSelected(it); expanded = false
+            }
+            FilterMenuItem(R.string.sent_transactions, NotificationFilter.SENT, activeFilter) {
+                onFilterSelected(it); expanded = false
+            }
+        }
+    }
+}
+
+@Composable
+private fun FilterMenuItem(
+    labelRes: Int,
+    value: NotificationFilter,
+    active: NotificationFilter,
+    onClick: (NotificationFilter) -> Unit
+) {
+    DropdownMenuItem(
+        text = {
+            Text(
+                text = stringResource(labelRes),
+                style = MyTheme.Typography.BodyMedium,
+                color = if (value == active) MyTheme.Colors.dashBlue else MyTheme.Colors.textPrimary
+            )
+        },
+        trailingIcon = if (value == active) {
+            {
+                Icon(
+                    painter = painterResource(R.drawable.ic_checkmark_blue),
+                    contentDescription = null,
+                    tint = MyTheme.Colors.dashBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        } else null,
+        onClick = { onClick(value) }
+    )
 }
 
 @Composable

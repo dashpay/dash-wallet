@@ -57,10 +57,17 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
+enum class NotificationFilter {
+    ALL,
+    RECEIVED,
+    SENT
+}
+
 data class DashPayUserBottomSheetUIState(
     val userData: UsernameSearchResult? = null,
     val sendContactRequestState: Resource<Pair<String, String>>? = null,
     val notifications: List<NotificationItem> = emptyList(),
+    val filter: NotificationFilter = NotificationFilter.ALL,
     val networkError: Boolean = false,
     val creditCheck: DashPayUserBottomSheetViewModel.CreditCheckResult? = null
 )
@@ -101,6 +108,11 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(DashPayUserBottomSheetUIState())
     val uiState: StateFlow<DashPayUserBottomSheetUIState> = _uiState.asStateFlow()
 
+    // Source-of-truth raw notifications; the displayed `uiState.notifications` is this
+    // list filtered through `uiState.filter`. Stored separately so the filter can
+    // re-apply without re-fetching DB contacts.
+    private val rawNotifications = MutableStateFlow<List<NotificationItem>>(emptyList())
+
     init {
         blockchainStateDao.observeState()
             .onEach { state ->
@@ -109,6 +121,36 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
             }
             .catch { ex -> log.error("error observing blockchain state", ex) }
             .launchIn(viewModelScope)
+
+        combine(rawNotifications, _uiState.map { it.filter }.distinctUntilChanged()) { raw, filter ->
+            applyFilter(raw, filter)
+        }
+            .onEach { filtered -> _uiState.update { it.copy(notifications = filtered) } }
+            .launchIn(viewModelScope)
+    }
+
+    fun setFilter(filter: NotificationFilter) {
+        _uiState.update { it.copy(filter = filter) }
+    }
+
+    private fun applyFilter(items: List<NotificationItem>, filter: NotificationFilter): List<NotificationItem> {
+        if (filter == NotificationFilter.ALL) return items
+        val bag = walletData.transactionBag
+        return items.filter { item ->
+            when (item) {
+                is NotificationItemPayment -> {
+                    val tx = item.tx ?: return@filter false
+                    val sent = tx.getValue(bag).signum() < 0
+                    val isInternal = tx.purpose == org.bitcoinj.core.Transaction.Purpose.KEY_ROTATION
+                    when (filter) {
+                        NotificationFilter.RECEIVED -> !sent && !isInternal
+                        NotificationFilter.SENT -> sent && !isInternal
+                        else -> true
+                    }
+                }
+                else -> true
+            }
+        }
     }
 
     fun initUserData(userData: UsernameSearchResult) {
@@ -214,9 +256,7 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
         ) { contacts, _ ->
             contacts
         }.map { toNotificationItems(dashPayProfile.userId, it) }
-            .onEach { results ->
-                _uiState.update { it.copy(notifications = results) }
-            }
+            .onEach { results -> rawNotifications.value = results }
             .catch { ex ->
                 log.error("error while observing contact requests", ex)
             }
