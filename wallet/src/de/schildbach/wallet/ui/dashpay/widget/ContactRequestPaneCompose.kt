@@ -17,16 +17,13 @@
 package de.schildbach.wallet.ui.dashpay.widget
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,18 +32,11 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Resource
@@ -55,6 +45,10 @@ import de.schildbach.wallet.ui.ContactRelation
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.MyTheme
 
+/**
+ * The action area (button + optional sub-disclaimer) of the DashPay user bottom sheet.
+ * Lives inside the parent's white user-info card; doesn't draw its own background.
+ */
 @Composable
 fun ContactRequestPaneCompose(
     userData: UsernameSearchResult,
@@ -69,271 +63,180 @@ fun ContactRequestPaneCompose(
     val username = userData.username
 
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .background(colorResource(R.color.dash_white))
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         when (relationship) {
             ContactRelation.Relationship.NONE ->
-                MainActionButton(
-                    text = stringResource(R.string.send_contact_request),
-                    iconRes = R.drawable.ic_add_contact_white,
-                    isLoading = false,
+                FilledBlueButton(
+                    text = stringResource(R.string.send_contact_request_short),
+                    iconRes = null,
                     isEnabled = !isNetworkError,
+                    isLoading = false,
                     onClick = onSendOrAcceptClick
                 )
 
             ContactRelation.Relationship.INVITING ->
-                MainActionButton(
-                    text = stringResource(R.string.sending_contact_request),
+                FilledBlueButton(
+                    text = null,
                     iconRes = null,
-                    isLoading = true,
                     isEnabled = false,
+                    isLoading = true,
+                    showDisabledStyle = false,
                     onClick = {}
                 )
 
             ContactRelation.Relationship.INVITED ->
-                MainActionButton(
-                    text = stringResource(R.string.contact_request_pending),
-                    iconRes = R.drawable.ic_pending_contact_request,
-                    isLoading = false,
+                FilledBlueButton(
+                    text = stringResource(R.string.contact_request_sent_short),
+                    iconRes = null,
                     isEnabled = false,
+                    isLoading = false,
+                    showDisabledStyle = true,
                     onClick = {}
                 )
 
             ContactRelation.Relationship.INVITE_RECEIVED -> {
-                PayActionButton(onClick = onPayClick)
-                AcceptIgnoreRow(
-                    username = username,
+                FilledBlueButton(
+                    text = stringResource(R.string.send_button_label),
+                    iconRes = R.drawable.ic_dash_d_white,
+                    isEnabled = true,
+                    isLoading = false,
+                    onClick = onPayClick
+                )
+                AcceptButton(
                     isNetworkError = isNetworkError,
-                    onAcceptClick = onSendOrAcceptClick,
-                    onIgnoreClick = onIgnoreClick
+                    onClick = onSendOrAcceptClick
                 )
             }
 
             ContactRelation.Relationship.ACCEPTING_INVITE ->
-                MainActionButton(
-                    text = stringResource(R.string.accepting_contact_request),
+                FilledBlueButton(
+                    text = null,
                     iconRes = null,
-                    isLoading = true,
                     isEnabled = false,
+                    isLoading = true,
+                    showDisabledStyle = false,
                     onClick = {}
                 )
 
             ContactRelation.Relationship.FRIENDS ->
-                PayActionButton(onClick = onPayClick)
+                FilledBlueButton(
+                    text = stringResource(R.string.send_button_label),
+                    iconRes = R.drawable.ic_dash_d_white,
+                    isEnabled = true,
+                    isLoading = false,
+                    onClick = onPayClick
+                )
         }
 
-        val disclaimerText = disclaimerForRelationship(relationship, username)
-        if (disclaimerText != null) {
-            ContactHistoryDisclaimer(text = disclaimerText)
+        if (relationship.showsPendingDisclaimer()) {
+            DisclaimerText(
+                text = stringResource(R.string.contact_history_disclaimer_pending_plain, username)
+            )
         }
     }
 }
 
+private fun ContactRelation.Relationship.showsPendingDisclaimer(): Boolean = when (this) {
+    ContactRelation.Relationship.NONE,
+    ContactRelation.Relationship.INVITING,
+    ContactRelation.Relationship.INVITED -> true
+    else -> false
+}
+
 @Composable
-private fun MainActionButton(
-    text: String,
+private fun FilledBlueButton(
+    text: String?,
     iconRes: Int?,
-    isLoading: Boolean,
     isEnabled: Boolean,
+    isLoading: Boolean,
+    showDisabledStyle: Boolean = !isEnabled,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isEnabled) MyTheme.Colors.dashBlue else MyTheme.Colors.extraLightGray
-    val contentColor = if (isEnabled) Color.White else MyTheme.Colors.darkGray
+    val backgroundColor = if (showDisabledStyle) MyTheme.Colors.primary5 else MyTheme.Colors.dashBlue
+    val contentColor = if (showDisabledStyle) MyTheme.Colors.primary40 else Color.White
 
     Button(
         onClick = onClick,
-        enabled = isEnabled,
+        enabled = isEnabled && !isLoading,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 9.dp)
-            .height(40.dp),
-        shape = RoundedCornerShape(8.dp),
+            .height(46.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = backgroundColor,
             contentColor = contentColor,
             disabledContainerColor = backgroundColor,
             disabledContentColor = contentColor
         ),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp)
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = contentColor,
-                strokeWidth = 2.dp,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-        } else if (iconRes != null) {
-            Image(
-                painter = painterResource(iconRes),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
+        ) {
+            when {
+                isLoading -> CircularProgressIndicator(
+                    color = contentColor,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(17.dp)
+                )
+                iconRes != null -> {
+                    Image(
+                        painter = painterResource(iconRes),
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    if (text != null) Spacer(modifier = Modifier.width(10.dp))
+                }
+            }
+            if (text != null && !isLoading) {
+                Text(
+                    text = text,
+                    style = MyTheme.Typography.TitleMediumSemibold,
+                    color = contentColor
+                )
+            }
         }
-        Text(
-            text = text,
-            style = MyTheme.Typography.BodyMediumMedium,
-            color = contentColor
-        )
     }
 }
 
 @Composable
-private fun PayActionButton(onClick: () -> Unit) {
+private fun AcceptButton(
+    isNetworkError: Boolean,
+    onClick: () -> Unit
+) {
     Button(
         onClick = onClick,
+        enabled = !isNetworkError,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 30.dp, vertical = 9.dp)
-            .height(40.dp),
-        shape = RoundedCornerShape(8.dp),
+            .height(46.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = MyTheme.Colors.dashBlue,
-            contentColor = Color.White
-        )
+            containerColor = colorResource(R.color.dash_green),
+            contentColor = Color.White,
+            disabledContainerColor = colorResource(R.color.dash_green).copy(alpha = 0.5f),
+            disabledContentColor = Color.White.copy(alpha = 0.7f)
+        ),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Text(
-            text = stringResource(R.string.pay),
-            style = MyTheme.Typography.BodyMediumMedium,
-            color = Color.White
+            text = stringResource(R.string.contact_request_accept),
+            style = MyTheme.Typography.TitleMediumSemibold
         )
     }
 }
 
 @Composable
-private fun AcceptIgnoreRow(
-    username: String,
-    isNetworkError: Boolean,
-    onAcceptClick: () -> Unit,
-    onIgnoreClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 9.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(R.string.contact_request_received_title, username),
-            style = MyTheme.Caption,
-            color = MyTheme.Colors.textPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 34.dp, vertical = 26.dp)
-        )
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.padding(top = 14.dp)
-        ) {
-            Button(
-                onClick = onAcceptClick,
-                enabled = !isNetworkError,
-                modifier = Modifier
-                    .width(120.dp)
-                    .height(39.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = colorResource(R.color.dash_green),
-                    contentColor = Color.White,
-                    disabledContainerColor = colorResource(R.color.dash_green).copy(alpha = 0.5f),
-                    disabledContentColor = Color.White.copy(alpha = 0.7f)
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.contact_request_accept),
-                    style = MyTheme.Typography.BodyMediumMedium
-                )
-            }
-            Button(
-                onClick = onIgnoreClick,
-                modifier = Modifier
-                    .width(120.dp)
-                    .height(39.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MyTheme.Colors.extraLightGray,
-                    contentColor = MyTheme.Colors.textPrimary
-                )
-            ) {
-                Text(
-                    text = stringResource(R.string.contact_request_ignore),
-                    style = MyTheme.Typography.BodyMediumMedium
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ContactHistoryDisclaimer(text: AnnotatedString) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 9.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(
-                width = 1.dp,
-                color = MyTheme.Colors.divider,
-                shape = RoundedCornerShape(8.dp)
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Image(
-            painter = painterResource(R.drawable.ic_add_stranger),
-            contentDescription = null,
-            modifier = Modifier
-                .padding(top = 32.dp)
-                .size(48.dp)
-        )
-        Text(
-            text = text,
-            style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 26.dp, vertical = 24.dp)
-        )
-    }
-}
-
-@Composable
-private fun disclaimerForRelationship(
-    relationship: ContactRelation.Relationship,
-    username: String
-): AnnotatedString? {
-    val resId = when (relationship) {
-        ContactRelation.Relationship.NONE -> R.string.contact_history_disclaimer
-        ContactRelation.Relationship.INVITING,
-        ContactRelation.Relationship.INVITED -> R.string.contact_history_disclaimer_pending
-        else -> return null
-    }
-    val raw = stringResource(resId).replace("%", username)
-    return parseSimpleHtml(raw)
-}
-
-private fun parseSimpleHtml(html: String): AnnotatedString = buildAnnotatedString {
-    val boldRegex = Regex("<b>(.*?)</b>")
-    var cursor = 0
-    boldRegex.findAll(html).forEach { match ->
-        if (match.range.first > cursor) {
-            append(html.substring(cursor, match.range.first))
-        }
-        withBoldStyle { append(match.groupValues[1]) }
-        cursor = match.range.last + 1
-    }
-    if (cursor < html.length) {
-        append(html.substring(cursor))
-    }
-}
-
-private inline fun androidx.compose.ui.text.AnnotatedString.Builder.withBoldStyle(block: () -> Unit) {
-    val start = length
-    block()
-    addStyle(SpanStyle(fontWeight = FontWeight.Bold), start, length)
+private fun DisclaimerText(text: String) {
+    Text(
+        text = text,
+        style = MyTheme.Typography.LabelMedium,
+        color = MyTheme.Colors.textSecondary,
+        modifier = Modifier.fillMaxWidth()
+    )
 }
 
 private fun resolveRelationship(

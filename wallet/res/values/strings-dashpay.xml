@@ -104,6 +104,10 @@
     <string name="search_user_no_results">There are no users that match</string>
     <string name="search_user_loading">Searching for username <b>\"%\"</b> on the Dash Network</string>
     <string name="contact_request_pending">Contact Request Pending</string>
+    <string name="send_contact_request_short">Send request</string>
+    <string name="contact_request_sent_short">Request sent</string>
+    <string name="send_button_label">Send</string>
+    <string name="contact_history_disclaimer_pending_plain">Once %1$s accepts your request you can pay directly to the username</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
     <string name="contact_request_accept">Accept</string>

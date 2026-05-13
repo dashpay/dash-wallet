@@ -20,6 +20,7 @@ package de.schildbach.wallet.ui.dashpay.user
 import android.os.Bundle
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -33,10 +34,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,8 +44,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.setFragmentResult
@@ -58,7 +60,9 @@ import de.schildbach.wallet.data.NotificationItemContact
 import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
+import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.ui.compose_views.ProfileAvatar
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPaneCompose
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -70,6 +74,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 
@@ -105,6 +110,8 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
             }
         }
     }
+
+    override val backgroundStyle: Int = R.style.PrimaryBackground
 
     private fun resolveInitialUserData(args: Bundle?): UsernameSearchResult? {
         if (args == null) return null
@@ -244,25 +251,12 @@ private fun DashPayUserContent(
             .fillMaxWidth()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 8.dp),
-            horizontalArrangement = Arrangement.End
-        ) {
-            IconButton(onClick = onCloseClick) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_close_blue),
-                    contentDescription = stringResource(R.string.button_close),
-                    tint = MyTheme.Colors.dashBlue
-                )
-            }
-        }
+        NavBarClose(onCloseClick = onCloseClick)
 
         if (userData != null) {
-            ProfileHeader(userData.dashPayProfile)
-            Spacer(modifier = Modifier.height(8.dp))
-            ContactRequestPaneSection(
+            UserInfoCard(
+                profile = userData.dashPayProfile,
+                userData = userData,
                 state = state,
                 onSendOrAcceptClick = onSendOrAcceptClick,
                 onIgnoreClick = onIgnoreClick,
@@ -271,17 +265,118 @@ private fun DashPayUserContent(
         }
 
         if (state.notifications.isNotEmpty()) {
-            HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 25.dp, vertical = 8.dp),
-                color = MyTheme.Colors.lightGray
+            ActivitySection(
+                notifications = state.notifications,
+                onNotificationClick = onNotificationClick
             )
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun UserInfoCard(
+    profile: DashPayProfile,
+    userData: UsernameSearchResult,
+    state: DashPayUserBottomSheetUIState,
+    onSendOrAcceptClick: () -> Unit,
+    onIgnoreClick: () -> Unit,
+    onPayClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MyTheme.Colors.backgroundSecondary)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(end = 40.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ProfileAvatar(
+                    avatarUrl = profile.avatarUrl,
+                    username = profile.username,
+                    modifier = Modifier.size(60.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = profile.username,
+                        style = MyTheme.Typography.TitleMediumMedium,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                    if (profile.displayName.isNotEmpty()) {
+                        Text(
+                            text = profile.displayName,
+                            style = MyTheme.Typography.LabelMedium,
+                            color = MyTheme.Colors.textTertiary
+                        )
+                    }
+                }
+            }
+            if (profile.publicMessage.isNotEmpty()) {
+                Text(
+                    text = profile.publicMessage,
+                    style = MyTheme.Typography.TitleSmall,
+                    color = MyTheme.Colors.textPrimary
+                )
+            }
+        }
+
+        ContactRequestPaneCompose(
+            userData = userData,
+            sendContactRequestState = state.sendContactRequestState,
+            isNetworkError = state.networkError,
+            onSendOrAcceptClick = onSendOrAcceptClick,
+            onIgnoreClick = onIgnoreClick,
+            onPayClick = onPayClick,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+@Composable
+private fun ActivitySection(
+    notifications: List<NotificationItem>,
+    onNotificationClick: (NotificationItem) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text(
+            text = stringResource(R.string.notifications_profile_activity),
+            style = MyTheme.Typography.LabelLarge,
+            color = MyTheme.Colors.textSecondary,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MyTheme.Colors.backgroundSecondary)
+                .padding(6.dp)
+        ) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxWidth()
                     .heightIn(max = 500.dp)
-                    .padding(horizontal = 15.dp, vertical = 8.dp)
             ) {
-                items(state.notifications, key = { it.getId() }) { item ->
+                items(notifications, key = { it.getId() }) { item ->
                     NotificationRow(item = item, onClick = { onNotificationClick(item) })
                 }
             }
@@ -290,70 +385,13 @@ private fun DashPayUserContent(
 }
 
 @Composable
-private fun ProfileHeader(profile: DashPayProfile) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundSecondary)
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        ProfileAvatar(
-            avatarUrl = profile.avatarUrl,
-            username = profile.username,
-            modifier = Modifier.size(128.dp)
-        )
-        val displayName = profile.displayName
-        if (displayName.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(17.dp))
-            Text(
-                text = displayName,
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textPrimary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = profile.username,
-                style = MyTheme.Typography.LabelMedium,
-                color = MyTheme.Colors.textSecondary
-            )
-        } else {
-            Spacer(modifier = Modifier.height(17.dp))
-            Text(
-                text = profile.username,
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textPrimary
-            )
-        }
-    }
-}
-
-@Composable
-private fun ContactRequestPaneSection(
-    state: DashPayUserBottomSheetUIState,
-    onSendOrAcceptClick: () -> Unit,
-    onIgnoreClick: () -> Unit,
-    onPayClick: () -> Unit
-) {
-    val userData = state.userData ?: return
-    ContactRequestPaneCompose(
-        userData = userData,
-        sendContactRequestState = state.sendContactRequestState,
-        isNetworkError = state.networkError,
-        onSendOrAcceptClick = onSendOrAcceptClick,
-        onIgnoreClick = onIgnoreClick,
-        onPayClick = onPayClick,
-        modifier = Modifier.fillMaxWidth()
-    )
-}
-
-@Composable
 private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .padding(vertical = 10.dp, horizontal = 8.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         when (item) {
@@ -362,13 +400,12 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                 ProfileAvatar(
                     avatarUrl = profile.avatarUrl,
                     username = profile.username,
-                    modifier = Modifier.size(40.dp)
+                    modifier = Modifier.size(30.dp)
                 )
-                Spacer(modifier = Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = profile.displayName.ifEmpty { profile.username },
-                        style = MyTheme.Typography.BodyMediumMedium,
+                        style = MyTheme.Typography.TitleSmallMedium,
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
@@ -377,7 +414,7 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                             System.currentTimeMillis(),
                             DateUtils.MINUTE_IN_MILLIS
                         ).toString(),
-                        style = MyTheme.Typography.LabelMedium,
+                        style = MyTheme.Typography.BodyMedium,
                         color = MyTheme.Colors.textSecondary
                     )
                 }
@@ -385,14 +422,13 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
             is NotificationItemPayment -> {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(MyTheme.Colors.dashBlue5, shape = RoundedCornerShape(20.dp))
+                        .size(30.dp)
+                        .background(MyTheme.Colors.dashBlue5, shape = CircleShape)
                 )
-                Spacer(modifier = Modifier.size(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.transaction_row_status_sent),
-                        style = MyTheme.Typography.BodyMediumMedium,
+                        style = MyTheme.Typography.TitleSmallMedium,
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
@@ -401,7 +437,7 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                             System.currentTimeMillis(),
                             DateUtils.MINUTE_IN_MILLIS
                         ).toString(),
-                        style = MyTheme.Typography.LabelMedium,
+                        style = MyTheme.Typography.BodyMedium,
                         color = MyTheme.Colors.textSecondary
                     )
                 }
@@ -413,7 +449,7 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                 if (amount.isNotEmpty()) {
                     Text(
                         text = amount,
-                        style = MyTheme.Typography.BodyMediumMedium,
+                        style = MyTheme.Typography.TitleSmallMedium,
                         color = MyTheme.Colors.textPrimary
                     )
                 }
@@ -427,4 +463,139 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
             }
         }
     }
+}
+
+// ── Previews ───────────────────────────────────────────────────────────────
+
+private fun previewProfile() = DashPayProfile(
+    userId = "preview-user-id",
+    username = "johndoe",
+    displayName = "John Doe",
+    publicMessage = "I am a multi-disciplinary maker of useful, curious and beautiful things.",
+    avatarUrl = "",
+    avatarHash = null,
+    avatarFingerprint = null,
+    createdAt = 0L,
+    updatedAt = 0L
+)
+
+private fun previewContactRequest(userId: String, toUserId: String) = DashPayContactRequest(
+    userId = userId,
+    toUserId = toUserId,
+    accountReference = 0,
+    encryptedPublicKey = ByteArray(0),
+    senderKeyIndex = 0,
+    recipientKeyIndex = 0,
+    timestamp = System.currentTimeMillis() - 60_000L,
+    encryptedAccountLabel = null,
+    autoAcceptProof = null
+)
+
+private fun previewUserData(type: UsernameSearchResult.Type): UsernameSearchResult {
+    val profile = previewProfile()
+    val me = "preview-self-id"
+    val them = profile.userId
+    return when (type) {
+        UsernameSearchResult.Type.NO_RELATIONSHIP ->
+            UsernameSearchResult(profile.username, profile, null, null)
+        UsernameSearchResult.Type.REQUEST_SENT ->
+            UsernameSearchResult(profile.username, profile, previewContactRequest(me, them), null)
+        UsernameSearchResult.Type.REQUEST_RECEIVED ->
+            UsernameSearchResult(profile.username, profile, null, previewContactRequest(them, me))
+        UsernameSearchResult.Type.CONTACT_ESTABLISHED ->
+            UsernameSearchResult(
+                profile.username,
+                profile,
+                previewContactRequest(me, them),
+                previewContactRequest(them, me)
+            )
+    }
+}
+
+private fun previewNotifications(profile: DashPayProfile): List<NotificationItem> {
+    val result = UsernameSearchResult(
+        profile.username,
+        profile,
+        previewContactRequest("preview-self-id", profile.userId),
+        null
+    )
+    return listOf(NotificationItemContact(result))
+}
+
+@Composable
+private fun DashPayUserPreviewFrame(state: DashPayUserBottomSheetUIState) {
+    DashPayUserContent(
+        state = state,
+        onCloseClick = {},
+        onSendOrAcceptClick = {},
+        onIgnoreClick = {},
+        onPayClick = {},
+        onNotificationClick = {}
+    )
+}
+
+@Preview(name = "NONE — no relationship", showBackground = true, widthDp = 428, heightDp = 700)
+@Composable
+private fun PreviewNone() {
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.NO_RELATIONSHIP)
+        )
+    )
+}
+
+@Preview(name = "INVITING — send pending", showBackground = true, widthDp = 428, heightDp = 700)
+@Composable
+private fun PreviewInviting() {
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.NO_RELATIONSHIP),
+            sendContactRequestState = Resource.loading()
+        )
+    )
+}
+
+@Preview(name = "INVITED — request sent", showBackground = true, widthDp = 428, heightDp = 800)
+@Composable
+private fun PreviewInvited() {
+    val profile = previewProfile()
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.REQUEST_SENT),
+            notifications = previewNotifications(profile)
+        )
+    )
+}
+
+@Preview(name = "INVITE_RECEIVED", showBackground = true, widthDp = 428, heightDp = 700)
+@Composable
+private fun PreviewInviteReceived() {
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.REQUEST_RECEIVED)
+        )
+    )
+}
+
+@Preview(name = "ACCEPTING_INVITE", showBackground = true, widthDp = 428, heightDp = 700)
+@Composable
+private fun PreviewAcceptingInvite() {
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.REQUEST_RECEIVED),
+            sendContactRequestState = Resource.loading()
+        )
+    )
+}
+
+@Preview(name = "FRIENDS — contact established", showBackground = true, widthDp = 428, heightDp = 800)
+@Composable
+private fun PreviewFriends() {
+    val profile = previewProfile()
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = previewUserData(UsernameSearchResult.Type.CONTACT_ESTABLISHED),
+            notifications = previewNotifications(profile)
+        )
+    )
 }
