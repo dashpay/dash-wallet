@@ -133,6 +133,10 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
         _uiState.update { it.copy(filter = filter) }
     }
 
+    /** True if [tx] sends value out of this wallet. Used by the activity-row icon picker. */
+    fun isSentTransaction(tx: org.bitcoinj.core.Transaction): Boolean =
+        tx.getValue(walletData.transactionBag).signum() < 0
+
     private fun applyFilter(items: List<NotificationItem>, filter: NotificationFilter): List<NotificationItem> {
         if (filter == NotificationFilter.ALL) return items
         val bag = walletData.transactionBag

@@ -156,7 +156,8 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                         .show(parentFragmentManager, null)
                 }
             },
-            onFilterSelected = viewModel::setFilter
+            onFilterSelected = viewModel::setFilter,
+            isSentTransaction = viewModel::isSentTransaction
         )
     }
 
@@ -248,7 +249,8 @@ private fun DashPayUserContent(
     onIgnoreClick: () -> Unit,
     onPayClick: () -> Unit,
     onNotificationClick: (NotificationItem) -> Unit,
-    onFilterSelected: (NotificationFilter) -> Unit = {}
+    onFilterSelected: (NotificationFilter) -> Unit = {},
+    isSentTransaction: (Transaction) -> Boolean = { false }
 ) {
     val userData = state.userData
     Column(
@@ -277,7 +279,8 @@ private fun DashPayUserContent(
                 notifications = state.notifications,
                 activeFilter = state.filter,
                 onFilterSelected = onFilterSelected,
-                onNotificationClick = onNotificationClick
+                onNotificationClick = onNotificationClick,
+                isSentTransaction = isSentTransaction
             )
         }
 
@@ -362,7 +365,8 @@ private fun ActivitySection(
     notifications: List<NotificationItem>,
     activeFilter: NotificationFilter,
     onFilterSelected: (NotificationFilter) -> Unit,
-    onNotificationClick: (NotificationItem) -> Unit
+    onNotificationClick: (NotificationItem) -> Unit,
+    isSentTransaction: (Transaction) -> Boolean
 ) {
     Column(
         modifier = Modifier
@@ -398,7 +402,11 @@ private fun ActivitySection(
                     .heightIn(max = 500.dp)
             ) {
                 items(notifications, key = { it.getId() }) { item ->
-                    NotificationRow(item = item, onClick = { onNotificationClick(item) })
+                    NotificationRow(
+                        item = item,
+                        isSentTransaction = isSentTransaction,
+                        onClick = { onNotificationClick(item) }
+                    )
                 }
             }
         }
@@ -480,7 +488,11 @@ private fun FilterMenuItem(
 }
 
 @Composable
-private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
+private fun NotificationRow(
+    item: NotificationItem,
+    isSentTransaction: (Transaction) -> Boolean,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -492,9 +504,19 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
         when (item) {
             is NotificationItemContact -> {
                 val profile = item.usernameSearchResult.dashPayProfile
-                ProfileAvatar(
-                    avatarUrl = profile.avatarUrl,
-                    username = profile.username,
+                val type = item.usernameSearchResult.type
+                // Blue (sent/outgoing) when we sent the request; green (received/incoming) when
+                // we got it or once it's accepted. CONTACT_ESTABLISHED renders as received because
+                // the surface "X accepted your request" is framed from the viewer's POV.
+                val iconRes = if (type == UsernameSearchResult.Type.REQUEST_SENT) {
+                    R.drawable.ic_notification_contact_sent
+                } else {
+                    R.drawable.ic_notification_contact_received
+                }
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.Unspecified,
                     modifier = Modifier.size(30.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
@@ -515,14 +537,21 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                 }
             }
             is NotificationItemPayment -> {
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .background(MyTheme.Colors.dashBlue5, shape = CircleShape)
+                val tx = item.tx
+                val sent = tx?.let(isSentTransaction) ?: false
+                val iconRes = if (sent) R.drawable.ic_transaction_sent else R.drawable.ic_transaction_received
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.Unspecified,
+                    modifier = Modifier.size(30.dp)
                 )
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = stringResource(R.string.transaction_row_status_sent),
+                        text = stringResource(
+                            if (sent) R.string.transaction_row_status_sent
+                            else R.string.transaction_row_status_received
+                        ),
                         style = MyTheme.Typography.TitleSmallMedium,
                         color = MyTheme.Colors.textPrimary
                     )
@@ -536,9 +565,9 @@ private fun NotificationRow(item: NotificationItem, onClick: () -> Unit) {
                         color = MyTheme.Colors.textSecondary
                     )
                 }
-                val amount = item.tx?.let { tx ->
+                val amount = tx?.let {
                     try {
-                        tx.outputs.firstOrNull()?.value?.toFriendlyString() ?: ""
+                        it.outputs.firstOrNull()?.value?.toFriendlyString() ?: ""
                     } catch (_: Exception) { "" }
                 } ?: ""
                 if (amount.isNotEmpty()) {
