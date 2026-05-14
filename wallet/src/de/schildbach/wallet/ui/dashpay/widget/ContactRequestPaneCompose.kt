@@ -16,26 +16,12 @@
  */
 package de.schildbach.wallet.ui.dashpay.widget
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -43,7 +29,10 @@ import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.ContactRelation
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.Style
 
 /**
  * The action area (button + optional sub-disclaimer) of the DashPay user bottom sheet.
@@ -55,7 +44,6 @@ fun ContactRequestPaneCompose(
     sendContactRequestState: Resource<*>?,
     isNetworkError: Boolean,
     onSendOrAcceptClick: () -> Unit,
-    onIgnoreClick: () -> Unit,
     onPayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -68,64 +56,36 @@ fun ContactRequestPaneCompose(
     ) {
         when (relationship) {
             ContactRelation.Relationship.NONE ->
-                FilledBlueButton(
+                DashButton(
                     text = stringResource(R.string.send_contact_request_short),
-                    iconRes = null,
+                    style = Style.FilledBlue,
                     isEnabled = !isNetworkError,
-                    isLoading = false,
                     onClick = onSendOrAcceptClick
                 )
 
             ContactRelation.Relationship.INVITING ->
-                FilledBlueButton(
+                DashButton(
                     text = null,
-                    iconRes = null,
-                    isEnabled = false,
+                    style = Style.FilledBlue,
                     isLoading = true,
-                    showDisabledStyle = false,
                     onClick = {}
                 )
 
             ContactRelation.Relationship.INVITED ->
-                FilledBlueButton(
+                DashButton(
                     text = stringResource(R.string.contact_request_sent_short),
-                    iconRes = null,
+                    style = Style.FilledBlue,
                     isEnabled = false,
-                    isLoading = false,
-                    showDisabledStyle = true,
                     onClick = {}
                 )
 
-            ContactRelation.Relationship.INVITE_RECEIVED -> {
-                FilledBlueButton(
-                    text = stringResource(R.string.send_button_label),
-                    iconRes = R.drawable.ic_dash_d_white,
-                    isEnabled = true,
-                    isLoading = false,
-                    onClick = onPayClick
-                )
-                AcceptButton(
-                    isNetworkError = isNetworkError,
-                    onClick = onSendOrAcceptClick
-                )
-            }
-
-            ContactRelation.Relationship.ACCEPTING_INVITE ->
-                FilledBlueButton(
-                    text = null,
-                    iconRes = null,
-                    isEnabled = false,
-                    isLoading = true,
-                    showDisabledStyle = false,
-                    onClick = {}
-                )
-
+            ContactRelation.Relationship.INVITE_RECEIVED,
+            ContactRelation.Relationship.ACCEPTING_INVITE,
             ContactRelation.Relationship.FRIENDS ->
-                FilledBlueButton(
+                DashButton(
                     text = stringResource(R.string.send_button_label),
-                    iconRes = R.drawable.ic_dash_d_white,
-                    isEnabled = true,
-                    isLoading = false,
+                    leadingIcon = MyImages.DashDWhite,
+                    style = Style.FilledBlue,
                     onClick = onPayClick
                 )
         }
@@ -143,90 +103,6 @@ private fun ContactRelation.Relationship.showsPendingDisclaimer(): Boolean = whe
     ContactRelation.Relationship.INVITING,
     ContactRelation.Relationship.INVITED -> true
     else -> false
-}
-
-@Composable
-private fun FilledBlueButton(
-    text: String?,
-    iconRes: Int?,
-    isEnabled: Boolean,
-    isLoading: Boolean,
-    showDisabledStyle: Boolean = !isEnabled,
-    onClick: () -> Unit
-) {
-    val backgroundColor = if (showDisabledStyle) MyTheme.Colors.primary5 else MyTheme.Colors.dashBlue
-    val contentColor = if (showDisabledStyle) MyTheme.Colors.primary40 else Color.White
-
-    Button(
-        onClick = onClick,
-        enabled = isEnabled && !isLoading,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = backgroundColor,
-            contentColor = contentColor,
-            disabledContainerColor = backgroundColor,
-            disabledContentColor = contentColor
-        ),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically
-        ) {
-            when {
-                isLoading -> CircularProgressIndicator(
-                    color = contentColor,
-                    strokeWidth = 2.dp,
-                    modifier = Modifier.size(17.dp)
-                )
-                iconRes != null -> {
-                    Image(
-                        painter = painterResource(iconRes),
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    if (text != null) Spacer(modifier = Modifier.width(10.dp))
-                }
-            }
-            if (text != null && !isLoading) {
-                Text(
-                    text = text,
-                    style = MyTheme.Typography.TitleMediumSemibold,
-                    color = contentColor
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun AcceptButton(
-    isNetworkError: Boolean,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        enabled = !isNetworkError,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(46.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = colorResource(R.color.dash_green),
-            contentColor = Color.White,
-            disabledContainerColor = colorResource(R.color.dash_green).copy(alpha = 0.5f),
-            disabledContentColor = Color.White.copy(alpha = 0.7f)
-        ),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        Text(
-            text = stringResource(R.string.contact_request_accept),
-            style = MyTheme.Typography.TitleMediumSemibold
-        )
-    }
 }
 
 @Composable

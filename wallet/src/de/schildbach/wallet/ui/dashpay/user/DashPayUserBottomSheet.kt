@@ -35,6 +35,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -48,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -66,6 +70,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.compose_views.ProfileAvatar
 import de.schildbach.wallet.ui.dashpay.widget.ContactRequestPaneCompose
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -76,8 +81,10 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 
@@ -266,9 +273,18 @@ private fun DashPayUserContent(
                 userData = userData,
                 state = state,
                 onSendOrAcceptClick = onSendOrAcceptClick,
-                onIgnoreClick = onIgnoreClick,
                 onPayClick = onPayClick
             )
+
+            if (userData.type == UsernameSearchResult.Type.REQUEST_RECEIVED) {
+                RequestReceivedCard(
+                    username = userData.dashPayProfile.displayName.ifEmpty { userData.dashPayProfile.username },
+                    isLoading = state.sendContactRequestState?.status == Status.LOADING,
+                    isNetworkError = state.networkError,
+                    onIgnoreClick = onIgnoreClick,
+                    onAcceptClick = onSendOrAcceptClick
+                )
+            }
         }
 
         // Show the Activity section whenever we have notifications OR a non-default filter is
@@ -294,7 +310,6 @@ private fun UserInfoCard(
     userData: UsernameSearchResult,
     state: DashPayUserBottomSheetUIState,
     onSendOrAcceptClick: () -> Unit,
-    onIgnoreClick: () -> Unit,
     onPayClick: () -> Unit
 ) {
     Column(
@@ -353,10 +368,84 @@ private fun UserInfoCard(
             sendContactRequestState = state.sendContactRequestState,
             isNetworkError = state.networkError,
             onSendOrAcceptClick = onSendOrAcceptClick,
-            onIgnoreClick = onIgnoreClick,
             onPayClick = onPayClick,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+@Composable
+private fun RequestReceivedCard(
+    username: String,
+    isLoading: Boolean,
+    isNetworkError: Boolean,
+    onIgnoreClick: () -> Unit,
+    onAcceptClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(MyTheme.Colors.backgroundSecondary)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.contact_request_received_card_title, username),
+                style = MyTheme.Typography.TitleMediumMedium,
+                color = MyTheme.Colors.textPrimary
+            )
+            Text(
+                text = stringResource(R.string.contact_request_received_card_message, username),
+                style = MyTheme.Typography.TitleSmall,
+                color = MyTheme.Colors.textSecondary
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            DashButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.contact_request_ignore),
+                style = Style.TintedGray,
+                isEnabled = !isLoading,
+                onClick = onIgnoreClick
+            )
+            val acceptGreen = Color(0xFF3EB489)
+            Button(
+                onClick = onAcceptClick,
+                enabled = !isLoading && !isNetworkError,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(48.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = acceptGreen,
+                    contentColor = Color.White,
+                    disabledContainerColor = acceptGreen.copy(alpha = 0.5f),
+                    disabledContentColor = Color.White.copy(alpha = 0.7f)
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(17.dp)
+                    )
+                } else {
+                    Text(
+                        text = stringResource(R.string.contact_request_accept),
+                        style = MyTheme.Typography.TitleMediumSemibold
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -516,12 +605,20 @@ private fun NotificationRow(
                 Icon(
                     painter = painterResource(iconRes),
                     contentDescription = null,
-                    tint = androidx.compose.ui.graphics.Color.Unspecified,
+                    tint = Color.Unspecified,
                     modifier = Modifier.size(30.dp)
                 )
+                val title = when (type) {
+                    UsernameSearchResult.Type.REQUEST_RECEIVED -> stringResource(
+                        R.string.contact_request_row_received,
+                        profile.displayName.ifEmpty { profile.username }
+                    )
+                    UsernameSearchResult.Type.REQUEST_SENT -> stringResource(R.string.contact_request_row_sent)
+                    else -> profile.displayName.ifEmpty { profile.username }
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = profile.displayName.ifEmpty { profile.username },
+                        text = title,
                         style = MyTheme.Typography.TitleSmallMedium,
                         color = MyTheme.Colors.textPrimary
                     )
