@@ -56,6 +56,7 @@ fun DashButton(
         style == Style.FilledBlue -> MyTheme.Colors.dashBlue
         style == Style.FilledOrange -> MyTheme.Colors.orange
         style == Style.FilledRed -> MyTheme.Colors.red
+        style == Style.FilledGreen -> Color(0xFF3EB489)
         style == Style.TintedBlue -> MyTheme.Colors.dashBlue5
         style == Style.TintedGray -> Color(0x1AB0B6BC)
         style == Style.TintedRed -> MyTheme.Colors.red5
@@ -71,6 +72,7 @@ fun DashButton(
         style == Style.FilledBlue -> Color.White
         style == Style.FilledOrange -> Color.White
         style == Style.FilledRed -> Color.White
+        style == Style.FilledGreen -> Color.White
         style == Style.TintedBlue -> MyTheme.Colors.dashBlue
         style == Style.PlainBlue -> MyTheme.Colors.dashBlue
         style == Style.PlainBlack -> MyTheme.Colors.textPrimary
@@ -161,6 +163,7 @@ enum class Style {
     Filled,
     FilledBlue,
     FilledOrange,
+    FilledGreen,
     TintedBlue,
     TintedGray,
     PlainBlue,

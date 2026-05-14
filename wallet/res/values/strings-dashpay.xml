@@ -110,10 +110,12 @@
     <string name="contact_history_disclaimer_pending_plain">Once %1$s accepts your request you can pay directly to the username</string>
     <string name="pay">Pay</string>
     <string name="contact_request_received_title">%s has requested to be a friend</string>
-    <string name="contact_request_received_card_title">%s has sent you contact request</string>
+    <string name="contact_request_received_card_title">%s has sent you a contact request</string>
     <string name="contact_request_received_card_message">If you don\'t want %s to be in your contact list you can tap the \"Ignore\" button. They will not be notified about your decision.</string>
-    <string name="contact_request_row_received">%s sent you contact request</string>
+    <string name="contact_request_row_received">%s sent you a contact request</string>
     <string name="contact_request_row_sent">Contact request sent</string>
+    <string name="contact_request_row_established_incoming">You accepted the request from %s</string>
+    <string name="contact_request_row_established_outgoing">%s has accepted your contact request</string>
     <string name="contact_request_accept">Accept</string>
     <string name="contact_request_ignore">Ignore</string>
 

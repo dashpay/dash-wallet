@@ -35,9 +35,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -417,36 +414,25 @@ private fun RequestReceivedCard(
                 isEnabled = !isLoading,
                 onClick = onIgnoreClick
             )
-            val acceptGreen = Color(0xFF3EB489)
-            Button(
-                onClick = onAcceptClick,
-                enabled = !isLoading && !isNetworkError,
-                modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = acceptGreen,
-                    contentColor = Color.White,
-                    disabledContainerColor = acceptGreen.copy(alpha = 0.5f),
-                    disabledContentColor = Color.White.copy(alpha = 0.7f)
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(17.dp)
-                    )
-                } else {
-                    Text(
-                        text = stringResource(R.string.contact_request_accept),
-                        style = MyTheme.Typography.TitleMediumSemibold
-                    )
-                }
-            }
+            DashButton(
+                modifier = Modifier.weight(1f),
+                text = stringResource(R.string.contact_request_accept),
+                style = Style.FilledGreen,
+                isEnabled = !isNetworkError,
+                isLoading = isLoading,
+                onClick = onAcceptClick
+            )
         }
     }
+}
+
+// CONTACT_ESTABLISHED emits two contact rows for the same user (the established record + an
+// "invitationOfEstablished" marker). Both have the same `getId()`, which crashes LazyColumn.
+// Compose the flag in so the keys stay unique without touching the shared `getId()` contract
+// used by NotificationsAdapter.
+private fun NotificationItem.lazyKey(): String = when (this) {
+    is NotificationItemContact -> "contact:${getId()}:${isInvitationOfEstablished}"
+    else -> getId()
 }
 
 @Composable
@@ -490,7 +476,7 @@ private fun ActivitySection(
                     .fillMaxWidth()
                     .heightIn(max = 500.dp)
             ) {
-                items(notifications, key = { it.getId() }) { item ->
+                items(notifications, key = { it.lazyKey() }) { item ->
                     NotificationRow(
                         item = item,
                         isSentTransaction = isSentTransaction,
@@ -597,7 +583,8 @@ private fun NotificationRow(
                 // Blue (sent/outgoing) when we sent the request; green (received/incoming) when
                 // we got it or once it's accepted. CONTACT_ESTABLISHED renders as received because
                 // the surface "X accepted your request" is framed from the viewer's POV.
-                val iconRes = if (type == UsernameSearchResult.Type.REQUEST_SENT) {
+                val iconRes = if (type == UsernameSearchResult.Type.REQUEST_SENT ||
+                    type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
                     R.drawable.ic_notification_contact_sent
                 } else {
                     R.drawable.ic_notification_contact_received
@@ -608,13 +595,25 @@ private fun NotificationRow(
                     tint = Color.Unspecified,
                     modifier = Modifier.size(30.dp)
                 )
+                val name = profile.displayName.ifEmpty { profile.username }
                 val title = when (type) {
-                    UsernameSearchResult.Type.REQUEST_RECEIVED -> stringResource(
-                        R.string.contact_request_row_received,
-                        profile.displayName.ifEmpty { profile.username }
-                    )
-                    UsernameSearchResult.Type.REQUEST_SENT -> stringResource(R.string.contact_request_row_sent)
-                    else -> profile.displayName.ifEmpty { profile.username }
+                    UsernameSearchResult.Type.REQUEST_RECEIVED ->
+                        stringResource(R.string.contact_request_row_received, name)
+                    UsernameSearchResult.Type.REQUEST_SENT ->
+                        stringResource(R.string.contact_request_row_sent)
+                    UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
+                        // Direction follows toNotificationItems(): toContactRequest newer than
+                        // fromContactRequest means we accepted their earlier request.
+                        val result = item.usernameSearchResult
+                        val incoming = (result.toContactRequest?.timestamp ?: 0L) >
+                                       (result.fromContactRequest?.timestamp ?: 0L)
+                        if (incoming) {
+                            stringResource(R.string.contact_request_row_established_incoming, name)
+                        } else {
+                            stringResource(R.string.contact_request_row_established_outgoing, name)
+                        }
+                    }
+                    else -> name
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -700,14 +699,18 @@ private fun previewProfile() = DashPayProfile(
     updatedAt = 0L
 )
 
-private fun previewContactRequest(userId: String, toUserId: String) = DashPayContactRequest(
+private fun previewContactRequest(
+    userId: String,
+    toUserId: String,
+    timestamp: Long = System.currentTimeMillis() - 60_000L
+) = DashPayContactRequest(
     userId = userId,
     toUserId = toUserId,
     accountReference = 0,
     encryptedPublicKey = ByteArray(0),
     senderKeyIndex = 0,
     recipientKeyIndex = 0,
-    timestamp = System.currentTimeMillis() - 60_000L,
+    timestamp = timestamp,
     encryptedAccountLabel = null,
     autoAcceptProof = null
 )
@@ -817,6 +820,77 @@ private fun PreviewFriends() {
         state = DashPayUserBottomSheetUIState(
             userData = previewUserData(UsernameSearchResult.Type.CONTACT_ESTABLISHED),
             notifications = previewNotifications(profile)
+        )
+    )
+}
+
+/**
+ * Builds the realistic `toNotificationItems` output for CONTACT_ESTABLISHED:
+ * the established row plus an `isInvitationOfEstablished = true` marker whose
+ * direction (REQUEST_RECEIVED vs REQUEST_SENT) depends on who sent the request first.
+ */
+private fun previewEstablishedNotifications(
+    profile: DashPayProfile,
+    theirRequestFirst: Boolean
+): List<NotificationItem> {
+    val me = "preview-self-id"
+    val them = profile.userId
+    val now = System.currentTimeMillis()
+    val firstTs = now - 5 * 60_000L
+    val secondTs = now - 60_000L
+
+    val (toReq, fromReq) = if (theirRequestFirst) {
+        // they → me first (fromContactRequest, earlier), then me → them acceptance (toContactRequest, later)
+        previewContactRequest(me, them, secondTs) to previewContactRequest(them, me, firstTs)
+    } else {
+        // me → them first (toContactRequest, earlier), then them → me acceptance (fromContactRequest, later)
+        previewContactRequest(me, them, firstTs) to previewContactRequest(them, me, secondTs)
+    }
+
+    val established = UsernameSearchResult(profile.username, profile, toReq, fromReq)
+    val invitation = if (theirRequestFirst) {
+        established.copy(toContactRequest = null) // → REQUEST_RECEIVED
+    } else {
+        established.copy(fromContactRequest = null) // → REQUEST_SENT
+    }
+    return listOf(
+        NotificationItemContact(established),
+        NotificationItemContact(invitation, isInvitationOfEstablished = true)
+    )
+}
+
+@Preview(
+    name = "FRIENDS — they sent request first, I accepted",
+    showBackground = true,
+    widthDp = 428,
+    heightDp = 800
+)
+@Composable
+private fun PreviewFriendsTheySentFirst() {
+    val profile = previewProfile()
+    val notifications = previewEstablishedNotifications(profile, theirRequestFirst = true)
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = (notifications.first() as NotificationItemContact).usernameSearchResult,
+            notifications = notifications
+        )
+    )
+}
+
+@Preview(
+    name = "FRIENDS — I sent request first, they accepted",
+    showBackground = true,
+    widthDp = 428,
+    heightDp = 800
+)
+@Composable
+private fun PreviewFriendsISentFirst() {
+    val profile = previewProfile()
+    val notifications = previewEstablishedNotifications(profile, theirRequestFirst = false)
+    DashPayUserPreviewFrame(
+        state = DashPayUserBottomSheetUIState(
+            userData = (notifications.first() as NotificationItemContact).usernameSearchResult,
+            notifications = notifications
         )
     )
 }
