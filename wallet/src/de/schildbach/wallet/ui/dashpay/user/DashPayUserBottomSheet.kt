@@ -580,14 +580,22 @@ private fun NotificationRow(
             is NotificationItemContact -> {
                 val profile = item.usernameSearchResult.dashPayProfile
                 val type = item.usernameSearchResult.type
-                // Blue (sent/outgoing) when we sent the request; green (received/incoming) when
-                // we got it or once it's accepted. CONTACT_ESTABLISHED renders as received because
-                // the surface "X accepted your request" is framed from the viewer's POV.
-                val iconRes = if (type == UsernameSearchResult.Type.REQUEST_SENT ||
-                    type == UsernameSearchResult.Type.CONTACT_ESTABLISHED) {
-                    R.drawable.ic_notification_contact_sent
-                } else {
-                    R.drawable.ic_notification_contact_received
+                // Sent (blue) when we initiated the event; received (green) when the counterparty did.
+                // For CONTACT_ESTABLISHED, the newer request reflects who acted last: if our
+                // acceptance is newer we sent it (blue); if their acceptance is newer we received it
+                // (green). The paired invitation-marker row carries the opposite direction, so an
+                // established contact always shows one of each.
+                val iconRes = when (type) {
+                    UsernameSearchResult.Type.REQUEST_SENT -> R.drawable.ic_notification_contact_sent
+                    UsernameSearchResult.Type.REQUEST_RECEIVED -> R.drawable.ic_notification_contact_received
+                    UsernameSearchResult.Type.CONTACT_ESTABLISHED -> {
+                        val result = item.usernameSearchResult
+                        val weAccepted = (result.toContactRequest?.timestamp ?: 0L) >
+                                         (result.fromContactRequest?.timestamp ?: 0L)
+                        if (weAccepted) R.drawable.ic_notification_contact_sent
+                        else R.drawable.ic_notification_contact_received
+                    }
+                    else -> R.drawable.ic_notification_contact_received
                 }
                 Icon(
                     painter = painterResource(iconRes),
