@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.model
 
 import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
+import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.util.toBigDecimal
@@ -28,30 +29,36 @@ import java.math.BigDecimal
 
 @Parcelize
 data class PoolInfo(
-    @SerializedName("annualPercentageRate") val annualPercentageRate: String = "",
+    @SerializedName("balance_cacao") val balanceCacao: String = "",
+    @SerializedName("balance_asset") val balanceAsset: String = "",
     @SerializedName("asset") val asset: String = "",
-    @SerializedName("assetDepth") val assetDepth: String = "",
-    @SerializedName("assetPrice") val assetPrice: String = "",
-    @SerializedName("assetPriceUSD") val assetPriceUSD: String = "",
-    @SerializedName("liquidityUnits") val liquidityUnits: String = "",
-    @SerializedName("poolAPY") val poolAPY: String = "",
-    @SerializedName("runeDepth") val runeDepth: String = "",
+    @SerializedName("LP_units") val lpUnits: String = "",
+    @SerializedName("pool_units") val poolUnits: String = "",
+    /** status must be "Available" */
     @SerializedName("status") val status: String = "",
-    @SerializedName("synthSupply") val synthSupply: String = "",
-    @SerializedName("synthUnits") val synthUnits: String = "",
-    @SerializedName("units") val units: String = "",
-    @SerializedName("volume24h") val volume24h: String = ""
+    @SerializedName("synth_units") val synthUnits: String = "",
+    @SerializedName("synth_supply") val synthSupply: String = "",
+    @SerializedName("pending_inbound_cacao") val pendingInboundCacao: String = "",
+    @SerializedName("pending_inbound_asset") val pendingInboundAsset: String = "",
+    @SerializedName("synth_mint_paused") val synthMintPaused: Boolean = false,
+    @SerializedName("bondable") val bondable: Boolean = false
 ) : Parcelable {
+    @IgnoredOnParcel
     var assetPriceFiat: Fiat = Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
 
-    fun getAssetPriceUSD(): Fiat {
-        return Fiat.parseFiatInexact("USD", assetPriceUSD)
-    }
+    @IgnoredOnParcel
+    val assetPriceInCacao: BigDecimal
+        get() {
+            val assetBd = balanceAsset.toBigDecimalOrNull() ?: return BigDecimal.ZERO
+            if (assetBd.signum() == 0) return BigDecimal.ZERO
+            val cacaoBd = balanceCacao.toBigDecimalOrNull() ?: return BigDecimal.ZERO
+            return cacaoBd.divide(assetBd, 8, java.math.RoundingMode.HALF_UP)
+        }
 
-    fun setAssetPrice(fiatExchangeRate: Fiat) {
-        assetPriceFiat = BigDecimal(assetPriceUSD)
-            .multiply(fiatExchangeRate.toBigDecimal())
-            .toFiat(fiatExchangeRate.currencyCode)
+    fun setAssetPrice(cacaoToFiatRate: Fiat) {
+        assetPriceFiat = assetPriceInCacao
+            .multiply(cacaoToFiatRate.toBigDecimal())
+            .toFiat(cacaoToFiatRate.currencyCode)
     }
 
     val currencyCode: String

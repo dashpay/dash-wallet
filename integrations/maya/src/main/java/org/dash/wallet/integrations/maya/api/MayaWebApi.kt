@@ -72,7 +72,6 @@ interface MayaEndpoint {
 
 open class MayaWebApi @Inject constructor(
     private val endpoint: MayaEndpoint,
-    private val legacyEndpoint: MayaLegacyEndpoint,
     private val analyticsService: AnalyticsService
 ) {
     companion object {
@@ -85,7 +84,7 @@ open class MayaWebApi @Inject constructor(
 
     suspend fun getPoolInfo(): List<PoolInfo> {
         return try {
-            val response = legacyEndpoint.getPoolInfo()
+            val response = endpoint.getPoolInfo()
             log.info("maya: response: {}", response)
 
             return if (response.isSuccessful && response.body()?.isNotEmpty() == true) {
@@ -326,7 +325,10 @@ open class MayaWebApi @Inject constructor(
                     vaultAddress = source.address,
                     destinationAddress = swapRequest.targetAddress,
                     memo = quote.memo,
-                    maximum = swapRequest.maximum
+                    maximum = swapRequest.maximum,
+                    expectedOutputAmount = quote.expectedAmountOut.toBigDecimal()
+                        .setScale(8, RoundingMode.HALF_UP)
+                        .div(BigDecimal(1_0000_0000))
                 )
                 return ResponseResource.Success(result)
             }

@@ -1,13 +1,13 @@
 ---
 name: "update-maya-currencies"
-description: "Fetches pools from the Maya Midgard API and updates MayaCurrencyList with any new coins or tokens. Use this agent whenever you need to sync the app's supported currency list with what is live on Maya."
+description: "Fetches pools from the Maya mayanode API and updates MayaCurrencyList with any new coins or tokens. Use this agent whenever you need to sync the app's supported currency list with what is live on Maya."
 tools: ["*"]
 ---
 
 # Update Maya Currency List
 
 ## Purpose
-Sync `MayaCurrencyList` in `MayaCryptoCurrency.kt` with the live pools from the Maya Midgard API.
+Sync `MayaCurrencyList` in `MayaCryptoCurrency.kt` with the live pools from the Maya mayanode API.
 
 ## Key Files
 - **Currency list**: `integrations/maya/src/main/java/org/dash/wallet/integrations/maya/payments/MayaCryptoCurrency.kt`
@@ -17,11 +17,13 @@ Sync `MayaCurrencyList` in `MayaCryptoCurrency.kt` with the live pools from the 
 ## Steps
 
 ### 1. Fetch current pools
-Use `WebFetch` on `https://midgard.mayachain.info/v2/pools` to get all pool assets.
-Extract the `asset` field from each pool object. Example values:
+Use `WebFetch` on `https://mayanode.mayachain.info/mayachain/pools` to get all pool assets.
+Extract the `asset` field from each pool object. Only consider pools whose `status` is `"Available"` — staged or paused pools should be skipped. Example `asset` values:
 - `BTC.BTC`, `ETH.ETH`, `DASH.DASH` — L1 native coins
 - `ETH.USDT-0XDAC17F958D2EE523A2206206994597C13D831EC7` — EVM tokens (chain.symbol-contractAddress)
 - `ARB.USDC-0XAF88D065E77C8CC2239327C5EDB3A432268E5831` — Arbitrum EVM tokens
+
+> **Note**: The legacy Midgard endpoint (`midgard.mayachain.info/v2/pools`) was previously used here but is no longer the wallet's data source. Use the mayanode endpoint above so this agent stays consistent with `MayaWebApi.getPoolInfo()`.
 
 ### 2. Extract existing assets from MayaCurrencyList
 Read `MayaCryptoCurrency.kt`. Find all `asset` string values inside `MayaCurrencyList.init {}`.

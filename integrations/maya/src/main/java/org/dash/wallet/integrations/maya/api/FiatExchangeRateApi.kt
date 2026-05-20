@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.integrations.maya.utils.MayaConfig
@@ -114,7 +115,7 @@ class FiatExchangeRateAggregatedProvider @Inject constructor(
 
     override fun observeFiatRate(currencyCode: String): Flow<ExchangeRate?> {
         refreshRates(currencyCode)
-        return fiatExchangeRate
+        return fiatExchangeRate.filter { it.currencyCode == currencyCode }
     }
 
     private fun refreshRates(currencyCode: String) {

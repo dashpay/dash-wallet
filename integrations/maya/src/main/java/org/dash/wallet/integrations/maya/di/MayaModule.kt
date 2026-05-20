@@ -33,7 +33,6 @@ import org.dash.wallet.integrations.maya.api.MayaApiAggregator
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApiImpl
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
-import org.dash.wallet.integrations.maya.api.MayaLegacyEndpoint
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import javax.inject.Singleton
@@ -49,15 +48,6 @@ abstract class MayaModule {
         ): MayaEndpoint {
             val baseUrl = MayaConstants.getBaseUrl(walletDataProvider.networkParameters)
             return remoteDataSource.buildApi(MayaEndpoint::class.java, baseUrl)
-        }
-
-        @Provides
-        fun provideMayaLegacyEndpoint(
-            remoteDataSource: RemoteDataSource,
-            walletDataProvider: WalletDataProvider
-        ): MayaLegacyEndpoint {
-            val baseUrl = MayaConstants.getLegacyBaseUrl(walletDataProvider.networkParameters)
-            return remoteDataSource.buildApi(MayaLegacyEndpoint::class.java, baseUrl)
         }
 
         @Provides

@@ -125,7 +125,13 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
 
         combine(viewModel.poolList, viewModel.inboundAddresses) { pools, addresses ->
             pools.filter { pool -> pool.asset != "DASH.DASH" }
-                .filter { pool -> defaultItemMap.containsKey(pool.asset) && pool.status == "available" }
+                .filter { pool ->
+                    defaultItemMap.containsKey(pool.asset) && pool.status.equals(
+                        "available",
+                        ignoreCase = true
+                    )
+                }
+                .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
                 .map { pool ->
                     val chain = pool.asset.substringBefore('.')
                     val inbound = addresses.find { it.chain == chain }
@@ -230,8 +236,5 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 getString(R.string.maya_address_input_hint, pool.currencyCode)
             )
         )
-
-        // AdaptiveDialog.simple("${pool.currencyCode} was chosen", "Close").show(requireActivity()) {
-        // }
     }
 }
