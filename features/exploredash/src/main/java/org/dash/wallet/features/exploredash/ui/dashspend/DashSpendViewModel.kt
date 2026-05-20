@@ -48,6 +48,7 @@ import org.dash.wallet.common.data.entity.GiftCard
 import org.dash.wallet.common.services.*
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderDao
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
@@ -61,16 +62,59 @@ import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.repository.CTXSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepository
 import org.dash.wallet.features.exploredash.repository.DashSpendRepositoryFactory
+import org.dash.wallet.features.exploredash.repository.PiggyCardsRepository
 import org.dash.wallet.features.exploredash.utils.CTXSpendConfig
 import org.dash.wallet.features.exploredash.utils.CTXSpendConstants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 data class DashSpendState(
     val email: String? = null,
     val isLoggedIn: Boolean = false
 )
+
+data class GiftCardOrderItem(
+    val value: Double = 0.00,
+    val quantity: Int = 1,
+    var productId: Int = 0
+) {
+    companion object {
+        val DEFAULT = GiftCardOrderItem()
+    }
+    val valueAsString: String
+        get() = DecimalFormat.getNumberInstance().apply {
+            minimumFractionDigits = 2
+        }.format(value)
+}
+
+data class GiftCardShoppingCart constructor(
+    private val items: ArrayList<GiftCardOrderItem>
+) {
+    constructor(items: List<GiftCardOrderItem>) : this(ArrayList(items))
+    constructor(value: Double, quantity: Int) :
+        this(arrayListOf(GiftCardOrderItem(value, quantity)))
+
+    fun add(item: GiftCardOrderItem) = items.add(item)
+    fun copy(): GiftCardShoppingCart {
+        return GiftCardShoppingCart(
+            items.map { it.copy() }
+        )
+    }
+    fun first() = items.first()
+    fun get(index: Int) = items[index]
+    fun<R> map(transform: (GiftCardOrderItem) -> R): List<R> = items.map(transform)
+    fun<R> mapIndexed(transform: (Int, GiftCardOrderItem) -> R): List<R> = items.mapIndexed(transform)
+
+    fun forEach(function: (GiftCardOrderItem) -> Unit) {
+        items.forEach(function)
+    }
+    fun cardCount(): Int = items.sumOf { it.quantity }
+}
 
 @HiltViewModel
 class DashSpendViewModel @Inject constructor(
@@ -143,8 +187,11 @@ class DashSpendViewModel @Inject constructor(
     private val _isFixedDenomination = MutableStateFlow<Boolean?>(null)
     val isFixedDenomination: StateFlow<Boolean?> = _isFixedDenomination.asStateFlow()
 
-    private val _giftCardPaymentValue = MutableStateFlow<Fiat>(Fiat.valueOf(Constants.USD_CURRENCY, 0))
-    val giftCardPaymentValue: StateFlow<Fiat> = _giftCardPaymentValue.asStateFlow()
+    private val _isFixedDenominationMultiple = MutableStateFlow<Boolean?>(null)
+    val isFixedDenominationMultiple: StateFlow<Boolean?> = _isFixedDenominationMultiple.asStateFlow()
+
+    private val _giftCardOrderInfo = MutableStateFlow<Map<Double, Int>>(emptyMap())
+    val giftCardOrderInfo: StateFlow<Map<Double, Int>> = _giftCardOrderInfo.asStateFlow()
 
     val isNetworkAvailable = networkState.isConnected.asLiveData()
 
@@ -195,18 +242,25 @@ class DashSpendViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    suspend fun purchaseGiftCard(): GiftCardInfo = withContext(Dispatchers.IO) {
+    suspend fun purchaseGiftCard(): List<GiftCardInfo> = withContext(Dispatchers.IO) {
         _giftCardMerchant.value?.merchantId?.let {
             ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, System.currentTimeMillis())
-            val amountValue = _giftCardPaymentValue.value
+            val giftCardOrderShoppingCart = GiftCardShoppingCart(
+                giftCardOrderInfo.value.map {
+                    GiftCardOrderItem(
+                        it.key,
+                        it.value
+                    )
+                }
+            )
             val provider = giftCardProviderDao.getProviderByMerchantId(it, selectedProvider!!.name)
             when (selectedProvider) {
                 GiftCardProviderType.CTX -> {
                     try {
                         ctxSpendRepository.orderGiftcard(
                             merchantId = provider!!.sourceId,
-                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
                             fiatCurrency = Constants.USD_CURRENCY,
+                            order = giftCardOrderShoppingCart,
                             cryptoCurrency = Constants.DASH_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -228,7 +282,7 @@ class DashSpendViewModel @Inject constructor(
                         piggyCardsRepository.orderGiftcard(
                             cryptoCurrency = Constants.DASH_CURRENCY,
                             merchantId = provider!!.sourceId,
-                            fiatAmount = MonetaryFormat.FIAT.noCode().format(amountValue).toString(),
+                            order = giftCardOrderShoppingCart,
                             fiatCurrency = Constants.USD_CURRENCY
                         )
                     } catch (e: CTXSpendException) {
@@ -314,6 +368,7 @@ class DashSpendViewModel @Inject constructor(
                     copy.fixedDenomination = apiResponse.denominationType == DenominationType.Fixed
                     copy.denominations = apiResponse.denominations
                     copy.denominationsType = apiResponse.denominationsType
+                    copy.quantities = apiResponse.quantity
                 }
             }
         } catch (e: Exception) {
@@ -353,7 +408,18 @@ class DashSpendViewModel @Inject constructor(
     private suspend fun getMerchant(merchant: Merchant, provider: String): UpdatedMerchantDetails? {
         val giftCardProvider = giftCardProviderDao.getProviderByMerchantId(merchant.merchantId!!, provider)
         return giftCardProvider?.let {
-            providers[GiftCardProviderType.fromProviderName(giftCardProvider.provider)]?.getMerchant(
+            // check for PiggyCards test cards
+            if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT && it.provider == GiftCardProviderType.PiggyCards.name) {
+                val sourceId = merchant.sourceId!!
+                // if (sourceId == PiggyCardsConstants.PIGGY_CARDS_TEST_BRAND_ID) {
+                PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let {
+                    return (piggyCardsRepository as PiggyCardsRepository).getMerchant(
+                        sourceId,
+                        DenominationType.fromString(it.providerDenominationsType)
+                    )
+                }
+            }
+            providers[GiftCardProviderType.fromProviderName(it.provider)]?.getMerchant(
                 giftCardProvider.sourceId
             )
         }
@@ -364,41 +430,45 @@ class DashSpendViewModel @Inject constructor(
         val merchantResponseList = arrayListOf<UpdatedMerchantDetails>()
         val providerResponseList = arrayListOf<GiftCardProvider>()
         providers.forEach { provider ->
-            when (provider.provider) {
+            val details: UpdatedMerchantDetails? = when (provider.provider) {
                 "CTX" -> {
                     if (ctxSpendRepository.isUserSignedIn()) {
-                        ctxSpendRepository.getMerchant(provider.sourceId)?.let {
-                            merchantResponseList.add(it)
-                            providerResponseList.add(
-                                provider.copy(
-                                    savingsPercentage = it.savingsPercentage,
-                                    active = it.enabled
-                                )
-                            )
-                        }
+                        ctxSpendRepository.getMerchant(provider.sourceId)
                     } else {
-                        providerResponseList.add(provider)
+                        null
                     }
                 }
 
                 "PiggyCards" -> {
                     if (piggyCardsRepository.isUserSignedIn()) {
-                        piggyCardsRepository.getMerchant(provider.sourceId)?.let {
-                            merchantResponseList.add(it)
-                            providerResponseList.add(
-                                provider.copy(
-                                    savingsPercentage = it.savingsPercentage,
-                                    active = it.enabled
+                        if (SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+                            PiggyCardsTestMerchants.ALL.find { it.merchantId == merchant.merchantId }?.let { testData ->
+                                (piggyCardsRepository as PiggyCardsRepository).getMerchant(
+                                    provider.sourceId,
+                                    DenominationType.fromString(testData.providerDenominationsType)
                                 )
-                            )
+                            }
+                        } else {
+                            piggyCardsRepository.getMerchant(provider.sourceId)
                         }
                     } else {
-                        providerResponseList.add(provider)
+                        null
                     }
                 }
 
-                else -> {
-                }
+                else -> null
+            }
+
+            if (details != null) {
+                merchantResponseList.add(details)
+                providerResponseList.add(
+                    provider.copy(
+                        savingsPercentage = details.savingsPercentage,
+                        active = details.enabled
+                    )
+                )
+            } else {
+                providerResponseList.add(provider)
             }
         }
         return Pair(merchantResponseList, providerResponseList)
@@ -475,46 +545,51 @@ class DashSpendViewModel @Inject constructor(
         providers[provider]?.logout()
     }
 
-    fun saveGiftCardDummy(txId: Sha256Hash, giftCardResponse: GiftCardInfo) {
-        val giftCard = GiftCard(
-            txId = txId,
-            merchantName = _giftCardMerchant.value?.name ?: "",
-            price = giftCardResponse.fiatAmount?.toDouble() ?: 0.0,
-            merchantUrl = giftCardResponse.redeemUrl,
-            note = giftCardResponse.id
-        )
+    fun saveGiftCardDummy(txId: Sha256Hash, giftCards: List<GiftCardInfo>) {
+        log.info("saving {} dummy gift cards: {}", giftCards.size, txId)
+        var index = 0
+        val giftCard = giftCards.map {
+            GiftCard(
+                txId = txId,
+                merchantName = _giftCardMerchant.value?.name ?: "",
+                price = it.fiatAmount?.toDouble() ?: 0.0,
+                merchantUrl = it.redeemUrl,
+                note = it.id,
+                index = index++
+            )
+        }
         viewModelScope.launch {
-            giftCardDao.insertGiftCard(giftCard)
+            giftCardDao.insertGiftCards(giftCard)
         }
     }
 
-    fun needsCrowdNodeWarning(dashAmount: String): Boolean {
-        val outputAmount = Coin.parseCoin(dashAmount)
+    fun needsCrowdNodeWarning(dashAmount: Coin): Boolean {
         return try {
-            walletDataProvider.checkSendingConditions(null, outputAmount)
+            walletDataProvider.checkSendingConditions(null, dashAmount)
             false
         } catch (_: LeftoverBalanceException) {
             true
         }
     }
 
-    fun setIsFixedDenomination(isFixed: Boolean) {
+    fun setIsFixedDenomination(isFixed: Boolean?) {
         _isFixedDenomination.value = isFixed
     }
 
-    fun setGiftCardPaymentValue(fiat: Fiat) {
-        _giftCardPaymentValue.value = fiat
+    fun setIsFixedDenominationMultiple(isMultiple: Boolean?) {
+        _isFixedDenominationMultiple.value = isMultiple
     }
 
-    fun setGiftCardPaymentValue(coin: Coin) {
-        _exchangeRate.value?.let {
-            val myRate = org.bitcoinj.utils.ExchangeRate(it.fiat)
-            _giftCardPaymentValue.value = myRate.coinToFiat(coin)
-        }
+    fun setGiftCardOrderInfo(fiat: Fiat, quantity: Int) {
+        _giftCardOrderInfo.value = mapOf(fiat.toBigDecimal().toDouble() to quantity)
+    }
+
+    fun setGiftCardOrderQuantities(quantities: Map<Double, Int>) {
+        _giftCardOrderInfo.value = quantities
     }
 
     fun resetSelectedDenomination() {
-        _giftCardPaymentValue.value = Fiat.valueOf(Constants.USD_CURRENCY, 0)
+        _giftCardOrderInfo.value = emptyMap()
     }
 
     fun logEvent(eventName: String) {
@@ -577,6 +652,7 @@ class DashSpendViewModel @Inject constructor(
                 .append("discount: ").append(merchant.savingsFraction).append("\n")
                 .append("denominations type: ").append(merchant.denominationsType).append("\n")
                 .append("denominations: ").append(merchant.denominations).append("\n")
+                .append("quantities: ").append(merchant.quantities).append("\n")
                 .append("\n")
         } ?: run {
             report.append("No merchant selected").append("\n")
@@ -589,7 +665,9 @@ class DashSpendViewModel @Inject constructor(
 
         report.append("\n")
         report.append("Purchase Details").append("\n")
-        report.append("amount entered: ").append(_giftCardPaymentValue.value.toFriendlyString()).append("\n")
+        report.append("amount(s) entered: ").append(giftCardOrderInfo.value.keys.joinToString(", ")).append("\n")
+        report.append("quantity: ").append(giftCardOrderInfo.value.values.joinToString(", ")).append("\n")
+        report.append("order: ").append(ex?.orderId).append("\n")
         report.append("\n")
         ex?.let { exception ->
             exception.message?.let {
@@ -653,5 +731,17 @@ class DashSpendViewModel @Inject constructor(
 
     fun logError(ctxSpendException: Throwable, message: String) {
         analytics.logError(ctxSpendException, message)
+    }
+
+    fun getFirstCardValueAsFiat(): Fiat {
+        val firstCardValue = giftCardOrderInfo.value.keys.firstOrNull() ?: 0.0
+        return Fiat.parseFiat(
+            Constants.USD_CURRENCY,
+            firstCardValue.toBigDecimal().setScale(2, RoundingMode.UP).toString()
+        )
+    }
+
+    fun getFirstCardQuantity(): Int {
+        return giftCardOrderInfo.value.values.firstOrNull() ?: 1
     }
 }

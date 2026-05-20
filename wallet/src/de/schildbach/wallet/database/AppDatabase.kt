@@ -64,7 +64,7 @@ import org.dash.wallet.features.exploredash.utils.RoomConverters
         TxDisplayCacheEntry::class,
         TxGroupCacheEntry::class
     ],
-    version = 17, // if increasing version, we need migrations to preserve tx/addr metadata,
+    version = 18, // if increasing version, we need migrations to preserve tx/addr metadata,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class, BlockchainStateRoomConverters::class)

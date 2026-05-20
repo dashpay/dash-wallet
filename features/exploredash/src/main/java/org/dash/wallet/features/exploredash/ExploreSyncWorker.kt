@@ -28,10 +28,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID
 import org.slf4j.LoggerFactory
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
@@ -129,6 +135,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                     exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
+                    addPiggyCardsTestMerchantIfNeeded()
                     return@withContext Result.success()
                 }
                 syncStatus.setSyncProgress(10.0)
@@ -143,6 +150,7 @@ class ExploreSyncWorker @AssistedInject constructor(
             log.info("sync explore db finished, took $timeInMillis ms")
 
             syncStatus.setSyncProgress(100.0)
+            addPiggyCardsTestMerchantIfNeeded()
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
             syncStatus.setSyncError(ex)
@@ -164,5 +172,72 @@ class ExploreSyncWorker @AssistedInject constructor(
         databasePrefs = exploreConfig.exploreDatabasePrefs.first()
         exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
+    }
+
+    private suspend fun addPiggyCardsTestMerchantIfNeeded() {
+        val database = ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+        val merchantDao = database.merchantDao()
+        val giftCardProviderDao = database.giftCardProviderDao()
+
+        val testMerchantIds = PiggyCardsTestMerchants.ALL.map { it.merchantId }
+        if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
+            val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
+            val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
+            log.info(
+                "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
+                    "$deletedProviders provider(s)"
+            )
+        }
+
+        if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+            return
+        }
+
+        try {
+            log.info("adding PiggyCards test merchants")
+
+            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+
+            val merchants = PiggyCardsTestMerchants.ALL.map { data ->
+                Merchant(
+                    merchantId = data.merchantId,
+                    paymentMethod = data.paymentMethod,
+                    redeemType = data.redeemType,
+                    savingsPercentage = data.providerSavingsPercentage,
+                    denominationsType = data.providerDenominationsType,
+                    addDate = now,
+                    updateDate = now
+                ).apply {
+                    name = data.name
+                    active = true
+                    source = data.provider
+                    sourceId = data.sourceId
+                    logoLocation = data.logoLocation
+                    type = data.type
+                    territory = data.territory
+                    city = data.city
+                    website = data.website
+                }
+            }
+            merchantDao.save(merchants)
+
+            PiggyCardsTestMerchants.ALL.forEach { data ->
+                giftCardProviderDao.insert(
+                    GiftCardProvider(
+                        merchantId = data.merchantId,
+                        provider = data.provider,
+                        redeemType = data.redeemType,
+                        savingsPercentage = data.providerSavingsPercentage,
+                        active = true,
+                        denominationsType = data.providerDenominationsType,
+                        sourceId = data.sourceId
+                    )
+                )
+            }
+
+            log.info("PiggyCards test merchant added successfully")
+        } catch (ex: Exception) {
+            log.error("error adding PiggyCards test merchant", ex)
+        }
     }
 }
