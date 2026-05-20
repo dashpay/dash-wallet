@@ -1243,7 +1243,7 @@ class PlatformSynchronizationService @Inject constructor(
 
                     val metadataItem = TransactionMetadataCacheItem(
                         metadata,
-                        giftCard.first()
+                        giftCard.firstOrNull()
                     )
                     log.info("publish: item: {}", metadataItem)
                     val diff = metadataItem - saved
