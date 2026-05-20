@@ -33,6 +33,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
 import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID
 import org.slf4j.LoggerFactory
@@ -175,22 +176,21 @@ class ExploreSyncWorker @AssistedInject constructor(
         val merchantDao = database.merchantDao()
         val giftCardProviderDao = database.giftCardProviderDao()
 
-        // if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT)
         val testMerchantIds = PiggyCardsTestMerchants.ALL.map { it.merchantId }
-        val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
-        val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
-        log.info(
-            "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
-                "$deletedProviders provider(s)"
-        )
-        // }
+        if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
+            val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
+            val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
+            log.info(
+                "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
+                    "$deletedProviders provider(s)"
+            )
+        }
+
+        if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+            return
+        }
 
         try {
-            if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
-                log.info("PiggyCards test merchant(s) already exist, skipping")
-                return
-            }
-
             log.info("adding PiggyCards test merchants")
 
             val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
