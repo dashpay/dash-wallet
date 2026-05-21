@@ -75,7 +75,7 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.d
                     config.format.noCode(),
                     contentBinding
                 ) {
-
+                    error("ChangeTaxCategoryExplainer binds with a null profile; openProfile should never fire")
                 }
                 tx?.apply {
                     transactionResultViewBinder.bind(this, null)

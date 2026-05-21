@@ -145,7 +145,6 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
             state = state,
             onCloseClick = { dismiss() },
             onSendOrAcceptClick = {
-                notifyContactChange()
                 lifecycleScope.launch {
                     handleCreditCheckAndSend(viewModel)
                 }
@@ -198,11 +197,13 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                     SendCoinsActivity.startBuyCredits(activity)
                 } else if (!isEmpty) {
                     viewModel.sendContactRequest()
+                    notifyContactChange()
                 }
                 viewModel.resetCreditCheck()
             }
             DashPayUserBottomSheetViewModel.CreditCheckOutcome.Proceed -> {
                 viewModel.sendContactRequest()
+                notifyContactChange()
                 viewModel.resetCreditCheck()
             }
         }
