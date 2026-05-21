@@ -37,6 +37,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentNotificationsBinding
@@ -129,6 +130,15 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
         if (mode == MODE_NOTIFICATIONS) {
             dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_HOME_SCREEN)
+        }
+
+        requireActivity().supportFragmentManager.setFragmentResultListener(
+            DashPayUserBottomSheet.REQUEST_KEY,
+            viewLifecycleOwner
+        ) { _, bundle ->
+            if (bundle.getBoolean(DashPayUserBottomSheet.KEY_CHANGED, false)) {
+                searchNotifications()
+            }
         }
     }
 
@@ -228,7 +238,7 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
             is NotificationItemContact -> {
                 dashPayViewModel.logEvent(AnalyticsConstants.UsersContacts.NOTIFICATIONS_CONTACT_DETAILS)
                 val usernameSearchResult = notificationItem.usernameSearchResult
-                startActivityForResult(DashPayUserActivity.createIntent(requireContext(), usernameSearchResult), DashPayUserActivity.REQUEST_CODE_DEFAULT)
+                DashPayUserBottomSheet.newInstance(usernameSearchResult).show(requireActivity())
             }
             is NotificationItemPayment -> {
                 val tx = notificationItem.tx!!
@@ -295,13 +305,6 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
                     dashPayViewModel.sendContactRequest(usernameSearchResult.fromContactRequest!!.userId)
                 }
             }
-        }
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == DashPayUserActivity.REQUEST_CODE_DEFAULT && resultCode == DashPayUserActivity.RESULT_CODE_CHANGED) {
-            searchNotifications()
         }
     }
 

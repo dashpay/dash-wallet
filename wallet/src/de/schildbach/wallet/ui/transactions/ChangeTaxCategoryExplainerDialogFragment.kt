@@ -74,7 +74,9 @@ class ChangeTaxCategoryExplainerDialogFragment : OffsetDialogFragment(R.layout.d
                     wallet,
                     config.format.noCode(),
                     contentBinding
-                )
+                ) {
+
+                }
                 tx?.apply {
                     transactionResultViewBinder.bind(this, null)
                     transactionResultViewBinder.setTransactionMetadata(

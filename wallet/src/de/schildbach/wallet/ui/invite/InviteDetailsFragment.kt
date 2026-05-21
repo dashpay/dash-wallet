@@ -30,7 +30,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 
 import de.schildbach.wallet.database.entity.Invitation
-import de.schildbach.wallet.ui.DashPayUserActivity
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.dashpay.utils.display
 import de.schildbach.wallet.util.WalletUtils
 import de.schildbach.wallet_test.R
@@ -98,7 +98,8 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 val profile = viewModel.getInvitedUserProfile()
 
                 if (profile != null) {
-                    startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
+                    // startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
+                    DashPayUserBottomSheet.newInstance(profile).show(requireActivity())
                 } else {
                     /* not sure why this is happening */
                     AdaptiveDialog.create(
