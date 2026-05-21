@@ -30,7 +30,6 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import de.schildbach.wallet.ui.CreateUsernameActivity
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
@@ -104,7 +103,6 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
         val clickHandler = { rowView: HistoryRowView, _: Int, isProfileClick: Boolean ->
             if (rowView is TransactionRowView) {
                 if (isProfileClick && rowView.contact != null) {
-                    //requireContext().startActivity(DashPayUserActivity.createIntent(requireContext(), rowView.contact))
                     DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
                 } else {
                     // For rows loaded from the display cache, txWrapper is null.

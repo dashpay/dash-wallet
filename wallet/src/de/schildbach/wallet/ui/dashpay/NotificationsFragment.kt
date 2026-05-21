@@ -16,7 +16,6 @@
  */
 package de.schildbach.wallet.ui.dashpay
 
-import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.view.View
@@ -35,7 +34,6 @@ import de.schildbach.wallet.data.NotificationItemPayment
 import de.schildbach.wallet.data.NotificationItemUserAlert
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.livedata.Status
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.notification.NotificationsViewModel
 import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.send.SendCoinsActivity

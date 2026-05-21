@@ -27,7 +27,6 @@ import androidx.core.os.bundleOf
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -153,7 +152,7 @@ class TransactionResultActivity : LockScreenActivity() {
             contentBinding
         ) {
             DashPayUserBottomSheet.newInstance(it).show(this)
-            finish()
+            binding.root.post { finish() }
         }
 
         viewModel.init(txId)
@@ -290,11 +289,8 @@ class TransactionResultActivity : LockScreenActivity() {
                 finish()
             }
             userData != null -> {
-                finish()
-//                startActivity(
-//                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
-//                    userData!!, userData != null))
                 DashPayUserBottomSheet.newInstance(userData!!).show(this)
+                binding.root.post { finish() }
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                 startActivity(MainActivity.createIntent(this))

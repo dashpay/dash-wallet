@@ -98,7 +98,6 @@ class InviteDetailsFragment : InvitationFragment(R.layout.fragment_invite_detail
                 val profile = viewModel.getInvitedUserProfile()
 
                 if (profile != null) {
-                    // startActivity(DashPayUserActivity.createIntent(requireContext(), profile))
                     DashPayUserBottomSheet.newInstance(profile).show(requireActivity())
                 } else {
                     /* not sure why this is happening */
