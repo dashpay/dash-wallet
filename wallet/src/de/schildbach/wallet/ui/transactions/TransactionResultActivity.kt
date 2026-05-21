@@ -27,7 +27,6 @@ import androidx.core.os.bundleOf
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -36,6 +35,7 @@ import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.viewOnBlockExplorer
@@ -150,7 +150,10 @@ class TransactionResultActivity : LockScreenActivity() {
             walletData.wallet!!,
             configuration.format.noCode(),
             contentBinding
-        )
+        ) {
+            DashPayUserBottomSheet.newInstance(it).show(this)
+            binding.root.post { finish() }
+        }
 
         viewModel.init(txId)
 
@@ -286,10 +289,8 @@ class TransactionResultActivity : LockScreenActivity() {
                 finish()
             }
             userData != null -> {
-                finish()
-                startActivity(
-                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
-                    userData!!, userData != null))
+                DashPayUserBottomSheet.newInstance(userData!!).show(this)
+                binding.root.post { finish() }
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                 startActivity(MainActivity.createIntent(this))

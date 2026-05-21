@@ -96,6 +96,7 @@ dependencies {
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation 'com.github.MikeOrtiz:TouchImageView:3.0.6'
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
 
     // Compose
     implementation(platform("androidx.compose:compose-bom:$composeBom"))
