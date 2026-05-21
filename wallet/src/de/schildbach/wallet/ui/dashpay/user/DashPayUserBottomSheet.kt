@@ -19,13 +19,18 @@ package de.schildbach.wallet.ui.dashpay.user
 
 import android.os.Bundle
 import android.text.format.DateUtils
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
@@ -53,11 +58,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.fragment.app.setFragmentResult
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.NotificationItem
 import de.schildbach.wallet.data.NotificationItemContact
@@ -120,6 +128,12 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
 
     override val backgroundStyle: Int = R.style.PrimaryBackground
 
+    // Auto-expand is a one-shot decision; once we've expanded for content fit, leave the
+    // sheet alone so a user-initiated drag isn't overridden by later state updates. Backed
+    // by Compose state so the content layout can switch to a height-filling, scrollable
+    // activity list when expanded.
+    private var hasAutoExpanded by mutableStateOf(false)
+
     private fun resolveInitialUserData(args: Bundle?): UsernameSearchResult? {
         if (args == null) return null
         @Suppress("DEPRECATION")
@@ -141,8 +155,13 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
             initialUserData?.let { viewModel.initUserData(it) }
         }
 
+        LaunchedEffect(state.userData?.type, state.notifications.size) {
+            applyAutoExpandIfNeeded(state.userData?.type, state.notifications.size)
+        }
+
         DashPayUserContent(
             state = state,
+            isFullScreen = hasAutoExpanded,
             onCloseClick = { dismiss() },
             onSendOrAcceptClick = {
                 lifecycleScope.launch {
@@ -166,6 +185,34 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
 
     private fun notifyContactChange() {
         setFragmentResult(REQUEST_KEY, bundleOf(KEY_CHANGED to true))
+    }
+
+    private fun applyAutoExpandIfNeeded(
+        type: UsernameSearchResult.Type?,
+        notificationCount: Int
+    ) {
+        if (hasAutoExpanded) return
+        val shouldExpand = when (type) {
+            UsernameSearchResult.Type.CONTACT_ESTABLISHED -> notificationCount > 3
+            UsernameSearchResult.Type.REQUEST_RECEIVED -> notificationCount > 2
+            else -> false
+        }
+        if (!shouldExpand) return
+
+        val sheet = (dialog as? BottomSheetDialog)
+            ?.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            ?: return
+        val marginTop = resources.getDimensionPixelSize(R.dimen.offset_dialog_margin_top)
+
+        sheet.layoutParams = (sheet.layoutParams as CoordinatorLayout.LayoutParams).apply {
+            height = ViewGroup.LayoutParams.MATCH_PARENT
+        }
+        BottomSheetBehavior.from(sheet).apply {
+            expandedOffset = marginTop
+            state = BottomSheetBehavior.STATE_EXPANDED
+        }
+        (sheet.parent as? CoordinatorLayout)?.parent?.requestLayout()
+        hasAutoExpanded = true
     }
 
     private suspend fun handleCreditCheckAndSend(viewModel: DashPayUserBottomSheetViewModel) {
@@ -249,6 +296,7 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
 @Composable
 private fun DashPayUserContent(
     state: DashPayUserBottomSheetUIState,
+    isFullScreen: Boolean,
     onCloseClick: () -> Unit,
     onSendOrAcceptClick: () -> Unit,
     onIgnoreClick: () -> Unit,
@@ -261,6 +309,9 @@ private fun DashPayUserContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            // Only fill height when the sheet has been auto-expanded to MATCH_PARENT;
+            // otherwise the wrap_content sheet would balloon to full height for every contact.
+            .then(if (isFullScreen) Modifier.fillMaxHeight() else Modifier)
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
         NavBarClose(onCloseClick = onCloseClick)
@@ -292,13 +343,16 @@ private fun DashPayUserContent(
             ActivitySection(
                 notifications = state.notifications,
                 activeFilter = state.filter,
+                isFullScreen = isFullScreen,
                 onFilterSelected = onFilterSelected,
                 onNotificationClick = onNotificationClick,
                 isSentTransaction = isSentTransaction
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        if (!isFullScreen) {
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 }
 
@@ -437,17 +491,29 @@ private fun NotificationItem.lazyKey(): String = when (this) {
 }
 
 @Composable
-private fun ActivitySection(
+private fun ColumnScope.ActivitySection(
     notifications: List<NotificationItem>,
     activeFilter: NotificationFilter,
+    isFullScreen: Boolean,
     onFilterSelected: (NotificationFilter) -> Unit,
     onNotificationClick: (NotificationItem) -> Unit,
     isSentTransaction: (Transaction) -> Boolean
 ) {
-    Column(
-        modifier = Modifier
+    // In full-screen mode, the section claims all remaining vertical space so the inner
+    // list can scroll inside it. In wrap_content mode, the section measures to its content
+    // and the LazyColumn is capped so it stays scrollable rather than ballooning the sheet.
+    val sectionModifier = if (isFullScreen) {
+        Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
+            .weight(1f, fill = true)
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+    }
+    Column(
+        modifier = sectionModifier,
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
@@ -465,18 +531,28 @@ private fun ActivitySection(
                 onFilterSelected = onFilterSelected
             )
         }
-        Column(
-            modifier = Modifier
+        val containerModifier = if (isFullScreen) {
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(20.dp))
+                .background(MyTheme.Colors.backgroundSecondary)
+                .padding(6.dp)
+        } else {
+            Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(MyTheme.Colors.backgroundSecondary)
                 .padding(6.dp)
-        ) {
-            LazyColumn(
-                modifier = Modifier
+        }
+        Column(modifier = containerModifier) {
+            val listModifier = if (isFullScreen) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier
                     .fillMaxWidth()
                     .heightIn(max = 500.dp)
-            ) {
+            }
+            LazyColumn(modifier = listModifier) {
                 items(notifications, key = { it.lazyKey() }) { item ->
                     NotificationRow(
                         item = item,
@@ -759,6 +835,7 @@ private fun previewNotifications(profile: DashPayProfile): List<NotificationItem
 private fun DashPayUserPreviewFrame(state: DashPayUserBottomSheetUIState) {
     DashPayUserContent(
         state = state,
+        isFullScreen = false,
         onCloseClick = {},
         onSendOrAcceptClick = {},
         onIgnoreClick = {},
