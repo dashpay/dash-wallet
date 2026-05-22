@@ -86,7 +86,31 @@ open class SwapKitWebApi @Inject constructor(
     suspend fun postSwap(request: SwapKitSwapRequest): SwapKitSwapResponse? {
         return safeCall("postSwap(${request.routeId})", null) {
             val response = endpoint.postSwap(request)
-            if (response.isSuccessful) response.body() else null
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                // SwapKit /v3/swap returns errors like {"message":"Cannot build transaction..."}
+                // (and sometimes {"error":"...","message":"..."}) on non-2xx. Parse so the
+                // aggregator surfaces the real message instead of a generic failure string.
+                parseSwapErrorBody(response.errorBody()?.string())
+            }
+        }
+    }
+
+    private fun parseSwapErrorBody(body: String?): SwapKitSwapResponse? {
+        if (body.isNullOrBlank()) return null
+        return try {
+            val parsed = Gson().fromJson(body, SwapKitSwapResponse::class.java) ?: return null
+            // Aggregator checks `swap.error`; fall the message into that slot when the
+            // server only sent `message` so the existing error path picks it up.
+            if (parsed.error == null && !parsed.message.isNullOrBlank()) {
+                parsed.copy(error = parsed.message)
+            } else {
+                parsed
+            }
+        } catch (ex: JsonSyntaxException) {
+            log.warn("swapkit postSwap: could not parse error body: $ex")
+            null
         }
     }
 

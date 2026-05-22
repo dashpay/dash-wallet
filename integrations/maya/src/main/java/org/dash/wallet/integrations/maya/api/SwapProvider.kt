@@ -62,7 +62,7 @@ interface SwapProvider {
     suspend fun getInboundAddresses(): List<InboundAddress>
 
     /** Indicative quote against a chain's example address — used to bootstrap the input screen. */
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 10_0000_0000): SwapQuote?
 
     /** Indicative quote against a user-specified destination address. */
     suspend fun getDefaultSwapQuote(toAsset: String, destinationAddress: String, value: Long = 1_0000_0000): SwapQuote?

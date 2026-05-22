@@ -245,17 +245,32 @@ class SwapKitApiAggregator @Inject constructor(
         // SwapKit still validates the address format even with disableBalanceCheck=true,
         // so the value must be a real DASH address — but it must belong to *this* wallet
         // so any refund SwapKit issues lands back here.
+        //
+        // disableBuildTx=true is required on UTXO chains: per SwapKit docs,
+        // disableBalanceCheck alone is ignored on UTXO chains because the tx-building
+        // step itself fetches per-address balance. We don't need SwapKit to build the
+        // DASH tx (MayaBlockchainApi.buildAndSendSwapTx does it locally from
+        // vaultAddress+memo), so skipping the build also skips the per-address check
+        // that would otherwise fail for HD wallets with balance spread across UTXOs.
         val swap = webApi.postSwap(
             SwapKitSwapRequest(
                 routeId = route.routeId,
                 sourceAddress = address?.toBase58() ?: sourceAddress,
                 destinationAddress = swapRequest.targetAddress,
-                disableBalanceCheck = true
+                disableBalanceCheck = true,
+                disableBuildTx = true
             )
         ) ?: return ResponseResource.Failure(MayaException("swapkit /v3/swap failed"), false, 0, null)
 
         if (swap.error != null) {
-            return ResponseResource.Failure(MayaException(swap.error), false, 0, null)
+            val errorMessage = StringBuilder().apply {
+                append(swap.error)
+                if (swap.message != null) {
+                    append(": ")
+                    append(swap.message)
+                }
+            }
+            return ResponseResource.Failure(MayaException(errorMessage.toString()), false, 0, null)
         }
 
         val vault = swap.targetAddress ?: swap.inboundAddress

@@ -115,6 +115,7 @@ data class SwapKitSwapRequest(
     val sourceAddress: String,
     val destinationAddress: String,
     val disableBalanceCheck: Boolean? = null,
+    val disableBuildTx: Boolean? = null,
     val overrideSlippage: Boolean? = null
 )
 
@@ -131,7 +132,8 @@ data class SwapKitSwapResponse(
     val memo: String? = null,
     val fees: List<SwapKitFee>? = null,
     val txType: String? = null,
-    val error: String? = null
+    val error: String? = null,
+    val message: String? = null
 )
 
 // POST /price
