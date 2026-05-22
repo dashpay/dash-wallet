@@ -189,6 +189,16 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration18to19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // gift_cards gained a nullable `redeemUrlChallenge` column to persist
+                // the CTX redeem-URL challenge alongside each gift card.
+                database.execSQL(
+                    "ALTER TABLE `gift_cards` ADD COLUMN `redeemUrlChallenge` TEXT"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

@@ -23,6 +23,7 @@ data class GiftCardInfo(
     val percentDiscount: String? = "",
     val rate: String? = "",
     val redeemUrl: String? = "",
+    val redeemUrlChallenge: String? = "",
     val fiatAmount: String? = "",
     val fiatCurrency: String? = "",
     val paymentUrls: Map<String, String>? = buildMap { }
