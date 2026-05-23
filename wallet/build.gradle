@@ -347,6 +347,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpay.onelink.me\"")
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -367,6 +368,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -391,6 +393,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
@@ -412,6 +415,7 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
     }
 

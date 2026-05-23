@@ -35,6 +35,7 @@ import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
+import de.schildbach.wallet_test.BuildConfig
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.DumpedPrivateKey
@@ -80,6 +81,7 @@ import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 import kotlin.coroutines.resume
+import androidx.core.net.toUri
 
 /**
  * contains topup related functions that are used by:
@@ -638,10 +640,11 @@ class TopUpRepositoryImpl @Inject constructor(
             linkGenerator.setChannel("invitation")
             linkGenerator.setReferrerUID(UUID.randomUUID().toString())
             linkGenerator.setCampaign("dashpay_invitation")
+            linkGenerator.setBrandDomain(BuildConfig.APPSFLYER_BRAND_DOMAIN)
             val title = walletApplication.getString(R.string.invitation_preview_title)
             val nameLabel = dashPayProfile.nameLabel
             val nameLabelEncoded = URLEncoder.encode(nameLabel, StandardCharsets.UTF_8.displayName())
-            val imageUrl = Uri.parse("https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded")
+            val imageUrl = "https://invitations.dashpay.io/fun/invite-preview?display-name=$nameLabelEncoded&avatar-url=$avatarUrlEncoded".toUri()
             val description = walletApplication.getString(R.string.invitation_preview_message, nameLabel)
 
             linkGenerator.addParameters(
