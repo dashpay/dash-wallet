@@ -1,0 +1,106 @@
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'com.google.devtools.ksp'
+    id 'androidx.navigation.safeargs.kotlin'
+    id 'dagger.hilt.android.plugin'
+    id 'kotlin-parcelize'
+    id 'org.jetbrains.kotlin.plugin.compose'
+    id 'org.jlleitschuh.gradle.ktlint'
+}
+
+android {
+    namespace 'org.dash.wallet.integrations.maya'
+    compileSdk 35
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 35
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles 'proguard-rules.pro'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        viewBinding true
+        compose true
+    }
+    lint {
+        disable "NullSafeMutableLiveData"
+    }
+}
+
+kotlin {
+    jvmToolchain(17)
+}
+
+hilt {
+    enableAggregatingTask = true
+}
+
+dependencies {
+
+    implementation project(path: ':common')
+
+    // Core
+    implementation "androidx.core:core-ktx:$jetpackVersion"
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation "androidx.appcompat:appcompat:$appCompatVersion"
+    implementation "org.dashj:dashj-core:$dashjVersion"
+
+    // Architecture
+    implementation "androidx.navigation:navigation-fragment-ktx:$navigationVersion"
+    implementation "androidx.navigation:navigation-ui-ktx:$navigationVersion"
+    implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
+    implementation "androidx.datastore:datastore-preferences:$datastoreVersion"
+
+    // DI
+    implementation "com.google.dagger:hilt-android:$hiltVersion"
+    implementation "androidx.hilt:hilt-work:$hiltWorkVersion"
+    implementation "androidx.work:work-runtime-ktx:$workRuntimeVersion"
+    implementation 'androidx.lifecycle:lifecycle-runtime-compose-android:2.10.0'
+    ksp "com.google.dagger:hilt-android-compiler:$hiltVersion"
+    ksp "androidx.hilt:hilt-compiler:$hiltCompilerVersion"
+
+    // UI
+    implementation "com.google.android.material:material:$materialVersion"
+    implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:$swipeRefreshLayoutVersion"
+    implementation "io.coil-kt:coil:$coilVersion"
+    implementation "androidx.browser:browser:$browserVersion"
+
+    // Compose
+    implementation(platform("androidx.compose:compose-bom:$composeBom"))
+    implementation("androidx.compose.ui:ui")
+    implementation("androidx.compose.material3:material3")
+    implementation "androidx.lifecycle:lifecycle-runtime-compose-android:2.10.0"
+    implementation "androidx.compose.ui:ui-tooling-preview-android"
+
+    // Tests
+    testImplementation "junit:junit:$junitVersion"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:$mockitoVersion"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$coroutinesVersion"
+    testImplementation "androidx.arch.core:core-testing:$coreTestingVersion"
+    testImplementation 'com.google.guava:guava:28.2-android'
+    androidTestImplementation "androidx.test.ext:junit:$junitExtVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$espressoVersion"
+
+    // Logging
+    implementation "org.slf4j:slf4j-api:$slf4jVersion"
+
+    // Guava
+    implementation 'com.google.guava:guava:29.0-android'
+}

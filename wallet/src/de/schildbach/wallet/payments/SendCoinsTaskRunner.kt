@@ -19,12 +19,12 @@ package de.schildbach.wallet.payments
 import androidx.annotation.VisibleForTesting
 import androidx.core.net.toUri
 import com.google.common.base.Stopwatch
+import de.schildbach.wallet.Constants.NETWORK_PARAMETERS
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig.Companion.IDENTITY_ID
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.CoinJoinMode
@@ -56,6 +56,7 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRe
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
 import org.dash.wallet.common.services.SendPaymentService
@@ -117,6 +118,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private fun updateCoinJoinSend() {
         coinJoinSend = coinJoinMode != CoinJoinMode.NONE && coinJoinMixingState != MixingStatus.FINISHING
     }
+
+    private val paymentIntentParser = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS)
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
@@ -183,9 +186,34 @@ class SendCoinsTaskRunner @Inject constructor(
 
     override suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction =
         withContext(Dispatchers.IO) {
-            val paymentIntent = PaymentIntentParser.parse(dashUri, false)
+            val paymentIntent = paymentIntentParser.parse(dashUri, false)
             createPaymentRequest(paymentIntent, serviceName)
         }
+
+    override suspend fun completeTransaction(sendRequest: SendRequest) {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val securityGuard = SecurityGuard.getInstance()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
+        sendRequest.aesKey = encryptionKey
+        sendRequest.coinSelector = ZeroConfCoinSelector.get() // default coin selector
+        wallet.completeTx(sendRequest)
+        sendRequest.aesKey = null
+    }
+
+    override suspend fun signTransaction(sendRequest: SendRequest) {
+        val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+        val securityGuard = SecurityGuard.getInstance()
+        val password = securityGuard.retrievePassword()
+        val encryptionKey = securityFunctions.deriveKey(wallet, password)
+        sendRequest.aesKey = encryptionKey
+        wallet.signTransaction(sendRequest)
+        sendRequest.aesKey = null
+    }
+
+    override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
+        return sendCoins(sendRequest, txCompleted = true, checkBalanceConditions = false)
+    }
 
     /**
      * Fetches a BIP70/BIP270 payment request from the given URL.
@@ -215,9 +243,9 @@ class SendCoinsTaskRunner @Inject constructor(
             throw IOException("Null response for the payment request: $requestUrl")
         }
 
-        val paymentIntent = PaymentIntentParser.parse(byteStream, contentType)
+        val paymentIntent = paymentIntentParser.parse(byteStream, contentType)
 
-        if (!basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+        if (!basePaymentIntent.isExtendedBy(paymentIntent, true, NETWORK_PARAMETERS)) {
             log.info("BIP72 trust check failed")
             throw IllegalStateException("BIP72 trust check failed: $requestUrl")
         }
@@ -405,7 +433,7 @@ class SendCoinsTaskRunner @Inject constructor(
     ): SendRequest {
         val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
         Context.propagate(wallet.context)
-        val sendRequest = paymentIntent.toSendRequest()
+        val sendRequest = paymentIntent.toSendRequest(NETWORK_PARAMETERS)
         sendRequest.coinSelector = getCoinSelector(useCoinJoinGreedy)
         sendRequest.useInstantSend = false
         sendRequest.feePerKb = Constants.ECONOMIC_FEE

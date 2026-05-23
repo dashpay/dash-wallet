@@ -77,7 +77,7 @@ class CoinbaseConvertCryptoFragment : Fragment(R.layout.fragment_coinbase_conver
         binding.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
         }
-        binding.convertView.isSellSwapEnabled = false
+        binding.convertView.isSellSwapEnabled = true
 
         if (savedInstanceState == null) {
             fragment = ConvertViewFragment.newInstance()

@@ -482,6 +482,14 @@
             app:enterAnim="@anim/slide_in_right"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
+
+        <action
+            android:id="@+id/buySell_to_maya"
+            app:destination="@id/nav_maya"
+            app:enterAnim="@anim/slide_in_bottom"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <fragment
@@ -494,6 +502,15 @@
             android:name="service"
             android:defaultValue="COINBASE"
             app:argType="de.schildbach.wallet.data.ServiceType" />
+
+        <argument
+            android:name="action"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/exchange/coinbase/{action}"/>
+
 
         <action
             android:id="@+id/overview_to_coinbase"
@@ -508,7 +525,16 @@
         android:id="@+id/upholdPortalFragment"
         android:name="org.dash.wallet.integrations.uphold.ui.UpholdPortalFragment"
         android:label="upholdPortalFragment"
-        tools:layout="@layout/fragment_integration_portal" />
+        tools:layout="@layout/fragment_integration_portal" >
+
+        <argument
+            android:name="action"
+            app:argType="string"
+            app:nullable="true"
+            android:defaultValue="@null"/>
+
+        <deepLink app:uri="android-app://hashengineering.darkcoin.wallet/exchange/uphold/{action}"/>
+    </fragment>
 
     <fragment
         android:id="@+id/securityFragment"
@@ -613,7 +639,7 @@
 
     <fragment
         android:id="@+id/addressInputFragment"
-        android:name="de.schildbach.wallet.ui.send.AddressInputFragment"
+        android:name="de.schildbach.wallet.ui.send.DashAddressInputFragment"
         android:label="Address Input"
         tools:layout="@layout/fragment_address_input" />
 
@@ -624,4 +650,5 @@
     <!--include app:graph="@navigation/nav_metadata_settings" /-->
     <include app:graph="@navigation/nav_create_invite" />
     <include app:graph="@navigation/nav_invite_history" />
+    <include app:graph="@navigation/nav_maya" />
 </navigation>

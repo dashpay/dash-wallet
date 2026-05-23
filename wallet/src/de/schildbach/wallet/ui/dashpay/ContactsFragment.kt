@@ -36,7 +36,6 @@ import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.livedata.Status
@@ -51,6 +50,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog

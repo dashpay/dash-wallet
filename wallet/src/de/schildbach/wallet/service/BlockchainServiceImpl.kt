@@ -525,12 +525,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val transactionConfidence = tx.getConfidence(wallet.context)
                 val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
                     transactionConfidence.depthInBlocks = wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
-//                    log.info(
-//                        "tx {}; {} == {}",
-//                        transactionConfidence.transactionHash,
-//                        transactionConfidence.depthInBlocks,
-//                        wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
-//                    )
+                    log.info(
+                        "tx {}; {} == {}",
+                        transactionConfidence.transactionHash,
+                        transactionConfidence.depthInBlocks,
+                        wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+                    )
 
                     val requiredDepth = if (tx.isCoinBase) {
                         wallet.params.spendableCoinbaseDepth

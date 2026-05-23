@@ -30,24 +30,26 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.dashpay.FrequentContactsAdapter
 import de.schildbach.wallet.ui.dashpay.OnContactItemClickListener
 import de.schildbach.wallet.ui.payments.PaymentsFragment.Companion.ARG_SOURCE
-import de.schildbach.wallet.ui.scan.ScanActivity
+import de.schildbach.wallet.Constants
+import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsPayBinding
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
+import org.dash.wallet.common.payments.parsers.PaymentIntentParser
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import javax.inject.Inject
@@ -157,7 +159,7 @@ class PaymentsPayFragment : Fragment(R.layout.fragment_payments_pay), OnContactI
     private fun handleString(input: String) {
         lifecycleScope.launch {
             try {
-                val paymentIntent = PaymentIntentParser.parse(input, true)
+                val paymentIntent = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(input, true)
                 paymentIntent.source = arguments?.getString(ARG_SOURCE) ?: ""
                 SendCoinsActivity.start(requireContext(), paymentIntent)
             } catch (ex: PaymentIntentParserException) {

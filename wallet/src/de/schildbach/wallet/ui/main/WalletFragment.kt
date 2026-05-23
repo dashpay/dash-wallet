@@ -43,7 +43,6 @@ import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.MixingStatus
@@ -58,9 +57,10 @@ import de.schildbach.wallet.ui.main.shortcuts.ShortcutOption
 import de.schildbach.wallet.ui.main.shortcuts.ShortcutsList
 import de.schildbach.wallet.ui.main.shortcuts.ShortcutsPane
 import de.schildbach.wallet.ui.main.shortcuts.ShortcutsViewModel
+import org.dash.wallet.common.data.PaymentIntent
+import de.schildbach.wallet.ui.*
 import de.schildbach.wallet.ui.payments.PaymentsFragment
 import de.schildbach.wallet.ui.payments.SweepWalletActivity
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.staking.StakingActivity
 import de.schildbach.wallet.ui.transactions.TaxCategoryExplainerDialogFragment
@@ -81,6 +81,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
 import org.dash.wallet.common.ui.components.InfoPanel
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.observe

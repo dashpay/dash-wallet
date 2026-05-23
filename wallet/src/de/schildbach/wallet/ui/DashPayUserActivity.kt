@@ -46,6 +46,7 @@ import org.bitcoinj.core.PrefixedChecksummedBytes
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.VerificationException
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay

@@ -41,7 +41,10 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException;
 import org.bitcoinj.protocols.payments.PaymentSession;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.uri.BitcoinURIParseException;
+import org.dash.wallet.common.data.PaymentIntent;
+import org.dash.wallet.common.util.AddressUtil;
 import org.dash.wallet.common.util.Base43;
+import org.dash.wallet.common.util.Io;
 import org.dash.wallet.common.util.Qr;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,11 +60,15 @@ import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.data.PaymentIntent;
+import static org.dash.wallet.common.util.Constants.DASH_SCHEME;
+import static org.dash.wallet.common.util.Constants.ANYPAY_SCHEME;
+import org.dash.wallet.common.util.AddressUtil;
+import org.dash.wallet.common.util.Io;
 import de.schildbach.wallet.ui.send.SendCoinsActivity;
-import de.schildbach.wallet.util.AddressUtil;
-import de.schildbach.wallet.util.Io;
+import org.dash.wallet.common.data.PaymentIntent;
+
 import de.schildbach.wallet_test.R;
 
 /**
@@ -77,8 +84,8 @@ public abstract class InputParser {
             if (supportAnypayUrls) {
                 // replaces Anypay scheme with the Dash one
                 // ie "pay:?r=https://(...)" become "dash:?r=https://(...)"
-                if (input.startsWith(Constants.ANYPAY_SCHEME + ":")) {
-                    this.input = input.replaceFirst(Constants.ANYPAY_SCHEME, Constants.DASH_SCHEME);
+                if (input.startsWith(ANYPAY_SCHEME + ":")) {
+                    this.input = input.replaceFirst(ANYPAY_SCHEME, DASH_SCHEME);
                     return;
                 }
             }
@@ -87,7 +94,7 @@ public abstract class InputParser {
 
         @Override
         public void parse() {
-            if (input.startsWith(Constants.DASH_SCHEME.toUpperCase() + ":-")) {
+            if (input.startsWith(DASH_SCHEME.toUpperCase() + ":-")) {
                 try {
                     final byte[] serializedPaymentRequest = Base43.decode(input.substring(9));
 
@@ -105,10 +112,10 @@ public abstract class InputParser {
 
                     error(x, R.string.input_parser_invalid_paymentrequest, x.getMessage());
                 }
-            } else if (input.startsWith(Constants.DASH_SCHEME + ":")) {
+            } else if (input.startsWith(DASH_SCHEME + ":")) {
                 try {
                     final BitcoinURI bitcoinUri = new BitcoinURI(null, input);
-                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri);
+                    final Address address = AddressUtil.getCorrectAddress(bitcoinUri, Constants.NETWORK_PARAMETERS);
                     if (address != null && !Constants.NETWORK_PARAMETERS.equals(address.getParameters()))
                         throw new BitcoinURIParseException("mismatched network");
 

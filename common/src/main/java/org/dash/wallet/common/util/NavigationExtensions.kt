@@ -56,6 +56,10 @@ sealed class DeepLinkDestination(val deepLink: Uri) {
     data class SendDash(val source: String) : DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/payments/1/$source"))
     data class Transaction(val txId: String) :
         DeepLinkDestination(Uri.parse("${Constants.DEEP_LINK_PREFIX}/transactions/$txId"))
+    data class Exchange(val exchange: String, val action: String) :
+        DeepLinkDestination(
+            Uri.parse("${Constants.DEEP_LINK_PREFIX}/exchange/$exchange/$action")
+        )
 }
 
 fun Fragment.deepLinkNavigate(destination: DeepLinkDestination) {

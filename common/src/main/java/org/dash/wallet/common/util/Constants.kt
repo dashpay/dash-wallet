@@ -17,9 +17,11 @@
 
 package org.dash.wallet.common.util
 
+import com.google.common.io.BaseEncoding
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.BuildConfig
@@ -70,4 +72,12 @@ object Constants {
             HttpLoggingInterceptor { log.info(it) }.setLevel(HttpLoggingInterceptor.Level.BASIC)
         )
         .build()
+    @JvmField
+    val HEX: BaseEncoding = BaseEncoding.base16().lowerCase()
+    @JvmField
+    val NETWORK_PARAMETERS: NetworkParameters = MainNetParams.get()
+    @JvmField
+    val ANYPAY_SCHEME = "pay"
+    @JvmField
+    val DASH_SCHEME = "dash"
 }

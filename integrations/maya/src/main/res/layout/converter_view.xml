@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2024 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context="org.dash.wallet.integrations.maya.ui.convert_currency.ConverterView"
+    tools:parentTag="androidx.constraintlayout.widget.ConstraintLayout">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/root_container"
+        android:background="@drawable/selectable_round_corners"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="15dp"
+        android:paddingVertical="8dp">
+
+        <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
+            android:id="@+id/convert_from_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:paddingBottom="8dp"
+            android:background="@color/background_secondary"
+            app:is_crypto_convert_item_group_visible="true"
+            app:is_crypto_convert_item_amount_visible="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <org.dash.wallet.integrations.maya.ui.convert_currency.CryptoCurrencyItem
+            android:id="@+id/convert_to_btn"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:background="@color/background_secondary"
+            app:crypto_convert_item_icon="@drawable/ic_dash_blue_filled"
+            app:is_crypto_convert_item_group_visible="true"
+            app:is_crypto_convert_item_amount_visible="false"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="@+id/convert_from_btn"
+            app:layout_constraintTop_toBottomOf="@+id/convert_from_btn"
+            tools:crypto_convert_item_service_title="bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0"
+            tools:crypto_convert_item_title="BTC" />
+
+        <FrameLayout
+            android:background="@color/extra_light_gray"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:elevation="0dp"
+            android:layout_marginStart="15dp"
+            app:layout_constraintTop_toBottomOf="@id/convert_from_btn"
+            app:layout_constraintBottom_toBottomOf="@id/convert_from_btn"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/swap_btn"
+            />
+
+        <ImageView
+            android:id="@+id/swap_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/button_nobackground"
+            android:elevation="0dp"
+            app:layout_constraintStart_toStartOf="@id/convert_from_btn"
+            app:layout_constraintEnd_toEndOf="@id/convert_from_btn"
+            app:layout_constraintTop_toBottomOf="@id/convert_from_btn"
+            app:layout_constraintBottom_toBottomOf="@id/convert_from_btn" />
+
+        <FrameLayout
+            android:background="@color/extra_light_gray"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:elevation="0dp"
+            android:layout_marginEnd="15dp"
+            app:layout_constraintTop_toBottomOf="@id/convert_from_btn"
+            app:layout_constraintBottom_toBottomOf="@id/convert_from_btn"
+            app:layout_constraintStart_toEndOf="@id/swap_btn"
+            app:layout_constraintEnd_toEndOf="parent"
+            />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</merge>

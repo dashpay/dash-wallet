@@ -24,6 +24,7 @@ import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.CoinSelector
+import org.bitcoinj.wallet.SendRequest
 import java.util.function.Consumer
 import java.util.function.Predicate
 
@@ -56,4 +57,9 @@ interface SendPaymentService {
 
     suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
     fun isFeeTooHigh(tx: Transaction): Boolean
+
+    /** support manual tx creation */
+    suspend fun completeTransaction(sendRequest: SendRequest)
+    suspend fun signTransaction(sendRequest: SendRequest)
+    suspend fun sendTransaction(sendRequest: SendRequest): Transaction
 }

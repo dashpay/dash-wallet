@@ -38,6 +38,7 @@ import java.util.TimeZone;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.Wallet;
+import org.dash.wallet.common.util.Bluetooth;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

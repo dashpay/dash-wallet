@@ -40,6 +40,7 @@ import org.dash.wallet.integrations.coinbase.viewmodels.toDoubleOrZero
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import java.util.UUID
 import javax.inject.Inject
 
 interface CoinBaseRepositoryInt {
@@ -47,12 +48,14 @@ interface CoinBaseRepositoryInt {
     val isAuthenticated: Boolean
 
     suspend fun getUserAccount(): CoinbaseAccount
+    suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount?
     suspend fun getUserAccounts(exchangeCurrencyCode: String): List<CoinBaseUserAccountDataUIModel>
     suspend fun getFiatAccount(): CoinbaseAccount
     suspend fun getBaseIdForUSDModel(baseCurrency: String): ResponseResource<BaseIdForUSDModel?>
     suspend fun getExchangeRates(currencyCode: String): Map<String, String>
     suspend fun disconnectCoinbaseAccount()
     suspend fun createAddress(): ResponseResource<String>
+    suspend fun createAddress(account: UUID): ResponseResource<String>
     suspend fun getUserAccountAddress(): ResponseResource<String>
     suspend fun getActivePaymentMethods(): List<PaymentMethodsData>
     suspend fun depositToFiatAccount(paymentMethodId: String, amountUSD: String)
@@ -94,6 +97,16 @@ class CoinBaseRepository @Inject constructor(
             .launchIn(configScope)
     }
 
+    private suspend fun saveUserAccountInfo() {
+        val accountMap = hashMapOf<String, String>()
+        userAccountInfo.forEach {
+            if (it.name.contains("Wallet")) {
+                accountMap[it.currency] = it.uuid.toString()
+            }
+        }
+        config.setAccounts(accountMap)
+    }
+
     override suspend fun getUserAccount(): CoinbaseAccount {
         val accountsResponse = servicesApi.getAccounts()
         userAccountInfo = accountsResponse.accounts
@@ -101,8 +114,27 @@ class CoinBaseRepository @Inject constructor(
             it.currency == Constants.DASH_CURRENCY
         } ?: throw IllegalStateException("No DASH account found")
 
+        saveUserAccountInfo()
+
         config.set(CoinbaseConfig.USER_ACCOUNT_ID, userAccountData.uuid.toString())
         config.set(CoinbaseConfig.LAST_BALANCE, userAccountData.coinBalance().value)
+
+        return userAccountData
+    }
+
+    override suspend fun getUserAccount(cryptoCurrency: String): CoinbaseAccount {
+        val account = config.getAccounts()[cryptoCurrency]
+
+        if (account == null || userAccountInfo.isEmpty()) {
+            val accountsResponse = servicesApi.getAccounts()
+            userAccountInfo = accountsResponse.accounts
+            saveUserAccountInfo()
+        }
+
+        // for BTC, exclude "My Vault"
+        val userAccountData = userAccountInfo.firstOrNull {
+            it.currency == cryptoCurrency && it.name.contains("Wallet")
+        } ?: throw IllegalStateException("No $cryptoCurrency account found")
 
         return userAccountData
     }
@@ -266,6 +298,17 @@ class CoinBaseRepository @Inject constructor(
         servicesApi.createAddress(accountId = userAccountId)?.addresses?.address ?: ""
     }
 
+    override suspend fun createAddress(accountId: UUID) = safeApiCall {
+        var lastAddress = config.getAddressMap()[accountId.toString()]
+
+        if (lastAddress == null) {
+            lastAddress = servicesApi.createAddress(accountId = accountId.toString())?.addresses?.address
+            lastAddress?.run { config.setAccountAddress(accountId.toString(), this) }
+        }
+
+        lastAddress ?: ""
+    }
+
     override suspend fun isInputGreaterThanLimit(amountInDash: Coin): Boolean {
         // TODO: disabled until Coinbase changes are clear
         return false
@@ -296,4 +339,3 @@ class CoinBaseRepository @Inject constructor(
         }
     }
 }
-
