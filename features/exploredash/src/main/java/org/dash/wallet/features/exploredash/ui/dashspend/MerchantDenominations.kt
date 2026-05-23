@@ -20,9 +20,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import org.dash.wallet.common.ui.components.ButtonLarge
-import org.dash.wallet.common.ui.components.ButtonStyles
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.features.exploredash.R
 import java.text.NumberFormat
 import java.util.Currency
@@ -97,14 +98,15 @@ fun MerchantDenominations(
             }
         }
 
-        ButtonLarge(
+        DashButton(
             onClick = onContinue,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 20.dp),
-            colors = ButtonStyles.blueWithWhiteText(),
-            textId = R.string.button_continue,
-            enabled = selectedDenomination != null && selectedDenomination != 0.0 && canContinue
+            text = stringResource(R.string.button_continue),
+            style = Style.FilledBlue,
+            size = Size.Large,
+            isEnabled = selectedDenomination != null && selectedDenomination != 0.0 && canContinue
         )
     }
 }

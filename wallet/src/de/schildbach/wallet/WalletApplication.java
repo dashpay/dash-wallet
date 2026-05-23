@@ -1164,6 +1164,7 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         walletBalanceObserver.close();
         walletBalanceObserver = null;

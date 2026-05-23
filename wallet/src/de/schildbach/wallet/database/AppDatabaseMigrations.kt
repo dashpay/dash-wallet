@@ -169,6 +169,26 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration17to18 = object : Migration(17, 18) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // gift_cards changed its primary key from txId alone to (txId, index),
+                // and gained an `index` column. SQLite can't alter primary keys in-place,
+                // so recreate the table and copy existing rows with index defaulting to 0.
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `gift_cards_new` (`txId` BLOB NOT NULL, " +
+                        "`merchantName` TEXT NOT NULL, `price` REAL NOT NULL, `number` TEXT, `pin` TEXT, " +
+                        "`barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `note` TEXT, " +
+                        "`index` INTEGER NOT NULL, PRIMARY KEY(`txId`, `index`))"
+                )
+                database.execSQL(
+                    "INSERT INTO `gift_cards_new` SELECT `txId`, `merchantName`, `price`, `number`, `pin`, " +
+                        "`barcodeValue`, `barcodeFormat`, `merchantUrl`, `note`, 0 FROM `gift_cards`"
+                )
+                database.execSQL("DROP TABLE `gift_cards`")
+                database.execSQL("ALTER TABLE `gift_cards_new` RENAME TO `gift_cards`")
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

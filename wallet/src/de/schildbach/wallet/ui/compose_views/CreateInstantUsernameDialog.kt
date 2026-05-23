@@ -2,6 +2,8 @@ package de.schildbach.wallet.ui.compose_views
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -48,6 +50,7 @@ private fun CreateInstantUsernameContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .background(Color.White)
             .padding(top = 60.dp) // Space for the drag indicator and close button
     ) {

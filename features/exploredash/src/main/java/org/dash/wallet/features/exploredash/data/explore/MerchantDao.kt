@@ -525,6 +525,9 @@ interface MerchantDao : BaseDao<Merchant> {
     @Query("DELETE FROM merchant")
     override suspend fun deleteAll(): Int
 
+    @Query("DELETE FROM merchant WHERE merchantId IN (:merchantIds)")
+    suspend fun deleteByMerchantIds(merchantIds: List<String>): Int
+
     @Query("SELECT count(*) FROM merchant")
     suspend fun getCount(): Int
 
