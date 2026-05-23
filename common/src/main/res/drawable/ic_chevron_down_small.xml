@@ -1,5 +1,5 @@
-<?xml version="1.0" encoding="utf-8"?><!--
-  ~ Copyright 2023 Dash Core Group.
+<!--
+  ~ Copyright 2026 Dash Core Group.
   ~
   ~ This program is free software: you can redistribute it and/or modify
   ~ it under the terms of the GNU General Public License as published by
@@ -14,18 +14,16 @@
   ~ You should have received a copy of the GNU General Public License
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
-
-    <androidx.compose.ui.platform.ComposeView
-        android:id="@+id/compose_container"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-    <ImageButton
-        android:id="@+id/collapse_button"
-        style="@style/DialogCloseButton"
-        android:layout_gravity="top|end"
-        android:layout_marginTop="18dp" />
-</FrameLayout>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="10dp"
+    android:height="6dp"
+    android:viewportWidth="10"
+    android:viewportHeight="6">
+  <path
+      android:pathData="M1,1L5,5L9,1"
+      android:strokeLineJoin="round"
+      android:strokeWidth="1.5"
+      android:fillColor="#00000000"
+      android:strokeColor="#191C1F"
+      android:strokeLineCap="round"/>
+</vector>

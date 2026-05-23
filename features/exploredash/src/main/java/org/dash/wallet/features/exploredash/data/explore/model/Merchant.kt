@@ -56,7 +56,8 @@ data class Merchant(
     @Ignore var physicalAmount: Int = 0,
     @Ignore var fixedDenomination: Boolean = false,
     @Ignore var denominations: List<Double> = listOf(),
-    @Ignore var giftCardProviders: List<GiftCardProvider> = listOf()
+    @Ignore var giftCardProviders: List<GiftCardProvider> = listOf(),
+    @Ignore var quantities: Map<Double, Int> = mapOf()
 ) : SearchResult() {
 
     // 1% discount is 0.01
@@ -76,7 +77,8 @@ data class Merchant(
             denominations == other.denominations &&
             fixedDenomination == other.fixedDenomination &&
             savingsPercentage == other.savingsPercentage &&
-            giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active }
+            giftCardProviders.map { it.active } == other.giftCardProviders.map { it.active } &&
+            quantities == other.quantities
     }
 
     override fun hashCode(): Int {

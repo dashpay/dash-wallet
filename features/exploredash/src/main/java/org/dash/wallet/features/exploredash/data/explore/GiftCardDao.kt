@@ -32,19 +32,30 @@ interface GiftCardDao {
     @Insert
     suspend fun insertGiftCard(giftCard: GiftCard)
 
+    @Insert
+    suspend fun insertGiftCards(giftCards: List<GiftCard>)
+
     @Update(entity = GiftCard::class)
-    suspend fun updateGiftCard(giftCard: GiftCard)
+    suspend fun updateGiftCard(giftCard: GiftCard): Int
 
-    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
-    suspend fun getCardForTransaction(txId: Sha256Hash): GiftCard?
+    @Query("SELECT COUNT(*) FROM gift_cards WHERE txId = :txId")
+    suspend fun getCardCountForTransaction(txId: Sha256Hash): Int
 
-    @Query("SELECT * FROM gift_cards WHERE txId = :txId")
-    fun observeCardForTransaction(txId: Sha256Hash): Flow<GiftCard?>
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
+    suspend fun getCardForTransaction(txId: Sha256Hash): List<GiftCard>
 
-    @Query("UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat WHERE txId = :txId")
-    suspend fun updateBarcode(txId: Sha256Hash, value: String, barcodeFormat: BarcodeFormat)
+    @Query("SELECT * FROM gift_cards WHERE txId = :txId ORDER BY `index` ASC")
+    fun observeCardForTransaction(txId: Sha256Hash): Flow<List<GiftCard>>
+
+    @Query(
+        """
+        UPDATE gift_cards SET barcodeValue = :value, barcodeFormat = :barcodeFormat 
+        WHERE txId = :txId AND `index` = :index
+    """
+    )
+    suspend fun updateBarcode(txId: Sha256Hash, index: Int, value: String, barcodeFormat: BarcodeFormat)
 
     @MapInfo(keyColumn = "txId")
-    @Query("SELECT * FROM gift_cards")
-    fun observeGiftCards(): Flow<Map<Sha256Hash, GiftCard>>
+    @Query("SELECT * FROM gift_cards ORDER BY `index` ASC")
+    fun observeGiftCards(): Flow<Map<Sha256Hash, List<GiftCard>>>
 }

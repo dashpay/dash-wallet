@@ -24,6 +24,7 @@ import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.util.Constants
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardInfo
 import org.dash.wallet.features.exploredash.data.dashspend.model.GiftCardStatus
 import org.dash.wallet.features.exploredash.data.dashspend.model.UpdatedMerchantDetails
@@ -40,6 +41,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.User
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.UserMetadata
 import org.dash.wallet.features.exploredash.data.dashspend.piggycards.model.VerifyOtpRequest
 import org.dash.wallet.features.exploredash.network.service.piggycards.PiggyCardsApi
+import org.dash.wallet.features.exploredash.ui.dashspend.GiftCardShoppingCart
 import org.dash.wallet.features.exploredash.utils.PiggyCardsConfig
 import org.slf4j.LoggerFactory
 import java.text.NumberFormat
@@ -243,6 +245,98 @@ class PiggyCardsRepository @Inject constructor(
         )
     }
 
+    suspend fun getMerchant(merchantId: String, type: DenominationType): UpdatedMerchantDetails? {
+        val brandList = api.getBrands(DEFAULT_COUNTRY)
+        val brandWithMerchantId = brandList.find { it.id == merchantId }
+        brandWithMerchantId?.let { it ->
+            val allGiftCards = api.getGiftCards(DEFAULT_COUNTRY, it.id)
+            val disabledGiftCardsForMerchant = disabledGiftCards[brandWithMerchantId.id.toInt()].orEmpty()
+            val giftcards = if (disabledGiftCardsForMerchant.isEmpty()) {
+                allGiftCards?.data
+            } else {
+                allGiftCards?.data?.filter { giftCard ->
+                    !disabledGiftCardsForMerchant.any { name -> giftCard.name.contains(name) }
+                }
+            }
+            when (type) {
+                is DenominationType.Fixed -> {
+                    val immediateDeliveryCards = giftcards?.filter { giftCard ->
+                        giftCard.name.lowercase().contains(INSTANT_DELIVERY) && giftCard.quantity > 0
+                    } ?: listOf()
+
+                    val nonImmediateDeliveryFixedCards = giftcards?.filter { giftCard ->
+                        !giftCard.name.lowercase()
+                            .contains(INSTANT_DELIVERY) && giftCard.quantity > 0 && giftCard.isFixed
+                    } ?: listOf()
+
+                    val allFixedCards = immediateDeliveryCards.plus(nonImmediateDeliveryFixedCards)
+
+                    if (allFixedCards.isNotEmpty()) {
+                        return updatedMerchantDetails(allFixedCards, brandWithMerchantId)
+                    }
+
+                    // is this an option card, if not fixed
+                    val optionCard = giftcards?.find { it.isOption }
+                    if (optionCard != null) {
+                        val denominations = optionCard.denomination.split(",").map { it.toDouble() }
+                        val denominationsType = "fixed"
+                        val discountPercentage = (optionCard.discountPercentage * 100).toInt() - SERVICE_FEE
+                        giftCardMap[it.id] = listOf(optionCard)
+                        return UpdatedMerchantDetails(
+                            optionCard.brandId.toString(),
+                            denominations,
+                            denominationsType,
+                            discountPercentage,
+                            redeemType = "barcode",
+                            enabled = optionCard.quantity > 0 && !disabledMerchants.contains(optionCard.name),
+                            productId = optionCard.id.toString()
+                        )
+                    }
+                }
+                is DenominationType.MinMax -> {
+                    // do we have a range card
+                    giftcards?.find { !it.isFixed }?.let { rangeGiftCard ->
+                        val denominations = listOf(
+                            rangeGiftCard.minDenomination,
+                            rangeGiftCard.maxDenomination
+                        )
+                        val denominationsType = "min-max"
+                        val discountPercentage = (rangeGiftCard.discountPercentage * 100).toInt() - SERVICE_FEE
+                        giftCardMap[it.id] = listOf(rangeGiftCard)
+                        return UpdatedMerchantDetails(
+                            rangeGiftCard.brandId.toString(),
+                            denominations,
+                            denominationsType,
+                            discountPercentage,
+                            redeemType = "barcode",
+                            enabled = rangeGiftCard.quantity > 0 && !disabledMerchants.contains(rangeGiftCard.name),
+                            productId = rangeGiftCard.id.toString()
+                        )
+                    }
+                }
+                else -> {
+                    log.warn("PiggyCards merchant ${it.id}: unsupported denomination type $type")
+                    return UpdatedMerchantDetails(
+                        it.id,
+                        listOf(),
+                        "fixed",
+                        0,
+                        redeemType = "",
+                        enabled = false
+                    )
+                }
+            }
+        }
+        return UpdatedMerchantDetails(
+            merchantId,
+            listOf(0.0),
+            "fixed",
+            0,
+            redeemType = "",
+            enabled = false
+        )
+    }
+
     private fun updatedMerchantDetails(
         data: List<Giftcard>,
         it: Brand
@@ -250,16 +344,19 @@ class PiggyCardsRepository @Inject constructor(
         val denominations = arrayListOf<Double>()
         var discountPercentage = -100.0 // very low number for max
         val activeGiftCards = arrayListOf<Giftcard>()
+        val quantities = hashMapOf<Double, Int>()
         data.forEach { card ->
             if (card.quantity > 0) {
-                denominations.add(card.denomination.toDouble())
+                val denomination = card.denomination.toDouble()
+                denominations.add(denomination)
                 discountPercentage = max(card.discountPercentage, discountPercentage)
                 activeGiftCards.add(card)
+                quantities[denomination] = card.quantity
             }
         }
         val denominationsType = "fixed"
         giftCardMap[it.id] = activeGiftCards
-        // val format = DecimalFormat("0.##")
+
         return UpdatedMerchantDetails(
             it.id,
             denominations.sorted(),
@@ -268,45 +365,54 @@ class PiggyCardsRepository @Inject constructor(
             redeemType = "barcode",
             enabled = denominations.isNotEmpty() && !disabledMerchants.contains(
                 activeGiftCards.firstOrNull()?.name ?: ""
-            )
+            ),
+            quantity = quantities
         )
     }
 
     private suspend fun purchaseGiftCard(
         merchantId: String,
-        fiatAmount: String,
+        order: GiftCardShoppingCart,
         fiatCurrency: String
     ): OrderResponse {
         val userEmail = userEmail.first()!!
         val giftCards = giftCardMap[merchantId]
+        val thisOrder = order.copy()
         if (!giftCards.isNullOrEmpty()) {
             val optionGiftcard = giftCards.find { it.isOption }
             val rangeGiftCard = giftCards.find { it.isRange }
-            val productId = if (rangeGiftCard != null) {
-                rangeGiftCard.id
-            } else if (optionGiftcard != null) {
-                optionGiftcard.id
-            } else {
-                val card = giftCards.find {
-                    it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
-                        it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
-                } ?: giftCards.find {
-                    it.quantity > 0 && it.denomination.toBigDecimal().compareTo(fiatAmount.toBigDecimal()) == 0
+            if (rangeGiftCard != null) {
+                thisOrder.forEach { orderItem ->
+                    orderItem.productId = rangeGiftCard.id
                 }
-                card?.id ?: throw IllegalStateException(
-                    "cannot find the selected fixed card $fiatAmount for brand $merchantId"
-                )
+            } else if (optionGiftcard != null) {
+                thisOrder.forEach { orderItem ->
+                    orderItem.productId = optionGiftcard.id
+                }
+            } else {
+                thisOrder.forEach { orderItem ->
+                    val card = giftCards.find {
+                        it.quantity > 0 && it.name.contains(INSTANT_DELIVERY) &&
+                            it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
+                    } ?: giftCards.find {
+                        it.quantity > 0 && it.denomination.toBigDecimal().compareTo(orderItem.value.toBigDecimal()) == 0
+                    }
+                    card?.id ?: throw IllegalStateException(
+                        "cannot find the selected fixed card ${orderItem.value} for brand $merchantId"
+                    )
+                    orderItem.productId = card.id
+                }
             }
             return api.createOrder(
                 OrderRequest(
-                    listOf(
+                    thisOrder.map { orderItem ->
                         Order(
-                            productId = productId,
-                            quantity = 1,
-                            denomination = fiatAmount.toDouble(),
+                            productId = orderItem.productId,
+                            quantity = orderItem.quantity,
+                            denomination = orderItem.value,
                             currency = fiatCurrency
                         )
-                    ),
+                    },
                     recipientEmail = userEmail,
                     user = User(
                         name = "none",
@@ -327,30 +433,43 @@ class PiggyCardsRepository @Inject constructor(
     override suspend fun orderGiftcard(
         cryptoCurrency: String,
         fiatCurrency: String,
-        fiatAmount: String,
+        order: GiftCardShoppingCart,
         merchantId: String
-    ): GiftCardInfo {
-        val orderResponse = purchaseGiftCard(merchantId, fiatAmount, fiatCurrency)
+    ): List<GiftCardInfo> {
+        val orderResponse = purchaseGiftCard(merchantId, order, fiatCurrency)
         val rate = api.getExchangeRate(fiatCurrency)
         exchangeRateMap[orderResponse.id] = rate
         delay(250)
-        val response = getGiftCard(orderResponse.id) ?: throw Exception("invalid order number ${orderResponse.id}")
+        val response = getGiftCard(orderResponse.id)
+        if (response.isEmpty()) {
+            throw Exception("invalid order number ${orderResponse.id}")
+        }
 
         return try {
             val uri = BitcoinURI(orderResponse.payTo)
-            // return value
-            GiftCardInfo(
-                id = orderResponse.id,
-                merchantName = response.merchantName,
-                status = response.status,
-                cryptoAmount = uri.amount.toPlainString(),
-                cryptoCurrency = Constants.DASH_CURRENCY, // need a constant
-                paymentCryptoNetwork = Constants.DASH_CURRENCY,
-                rate = rate.exchangeRate.toString(),
-                fiatAmount = fiatAmount,
-                fiatCurrency = Constants.USD_CURRENCY,
-                paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
-            )
+            // the first query may return only one item, rather than all, so
+            // let us fill out a mock of what the cards should be
+            val giftCard = response.first()
+            val cardsOrdered = arrayListOf<GiftCardInfo>()
+            order.forEach { orderItem ->
+                for (i in 0 until orderItem.quantity) {
+                    cardsOrdered.add(
+                        GiftCardInfo(
+                            id = orderResponse.id,
+                            merchantName = giftCard.merchantName,
+                            status = giftCard.status,
+                            cryptoAmount = uri.amount.toPlainString(),
+                            cryptoCurrency = Constants.DASH_CURRENCY,
+                            paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                            rate = rate.exchangeRate.toString(),
+                            fiatAmount = orderItem.value.toString(),
+                            fiatCurrency = Constants.USD_CURRENCY,
+                            paymentUrls = hashMapOf(DASH_DASH_KEY to orderResponse.payTo)
+                        )
+                    )
+                }
+            }
+            cardsOrdered
         } catch (e: BitcoinURIParseException) {
             if (e.message?.contains("Unsupported URI scheme") == true || orderResponse.payTo.isEmpty()) {
                 throw CTXSpendException(
@@ -371,42 +490,44 @@ class PiggyCardsRepository @Inject constructor(
         }
     }
 
-    override suspend fun getGiftCard(giftCardId: String): GiftCardInfo? {
+    override suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo> {
         val orderStatus = api.getOrderStatus(giftCardId)
 
         if (orderStatus.code != 200) {
             log.error("order status not retrieved: $giftCardId: ${orderStatus.message}")
-            return null
+            return listOf()
         }
 
         val data = orderStatus.data
-        val giftCard = orderStatus.data.cards.first()
+        val cards = orderStatus.data.cards
 
-        return GiftCardInfo(
-            id = data.orderId,
-            merchantName = giftCard.name,
-            status = when (data.status) {
-                "Payment pending" -> GiftCardStatus.UNPAID
-                "Paid" -> GiftCardStatus.PAID
-                "Processing" -> GiftCardStatus.PAID
-                "Complete" -> GiftCardStatus.FULFILLED
-                "Cancelled" -> GiftCardStatus.REJECTED
-                else -> GiftCardStatus.UNPAID
-            },
-            barcodeUrl = giftCard.barcodeLink,
-            cardNumber = giftCard.claimCode,
-            cardPin = giftCard.claimPin,
-            cryptoAmount = "0.0",
-            cryptoCurrency = Constants.DASH_CURRENCY,
-            paymentCryptoNetwork = Constants.DASH_CURRENCY,
-            paymentId = data.orderId,
-            percentDiscount = "0.0",
-            rate = exchangeRateMap[data.orderId]?.exchangeRate.toString() ?: "0.0",
-            redeemUrl = giftCard.claimLink,
-            fiatAmount = "0.0",
-            fiatCurrency = Constants.USD_CURRENCY,
-            paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
-        )
+        return cards.map { giftCard ->
+            GiftCardInfo(
+                id = data.orderId,
+                merchantName = giftCard.name,
+                status = when (data.status) {
+                    "Payment pending" -> GiftCardStatus.UNPAID
+                    "Paid" -> GiftCardStatus.PAID
+                    "Processing" -> GiftCardStatus.PAID
+                    "Complete" -> GiftCardStatus.FULFILLED
+                    "Cancelled" -> GiftCardStatus.REJECTED
+                    else -> GiftCardStatus.UNPAID
+                },
+                barcodeUrl = giftCard.barcodeLink,
+                cardNumber = giftCard.claimCode,
+                cardPin = giftCard.claimPin,
+                cryptoAmount = "0.0",
+                cryptoCurrency = Constants.DASH_CURRENCY,
+                paymentCryptoNetwork = Constants.DASH_CURRENCY,
+                paymentId = data.orderId,
+                percentDiscount = "0.0",
+                rate = exchangeRateMap[data.orderId]?.exchangeRate?.toString() ?: "0.0",
+                redeemUrl = giftCard.claimLink,
+                fiatAmount = "0.0",
+                fiatCurrency = Constants.USD_CURRENCY,
+                paymentUrls = hashMapOf(DASH_DASH_KEY to data.payTo)
+            )
+        }
     }
 
     suspend fun getAccountEmail(): String? {
@@ -419,7 +540,7 @@ class PiggyCardsRepository @Inject constructor(
 
     override fun getGiftCardDiscount(merchantId: String, denomination: Double): Double {
         return giftCardMap[merchantId]?.find {
-            it.isFixed && it.denomination == numberFormat.format(denomination)
+            it.isFixed && it.denomination == numberFormat.format(denomination) || !it.isFixed
         }?.discountPercentage?.let {
             (it - SERVICE_FEE_PERCENT) / 100.0
         } ?: 0.0
