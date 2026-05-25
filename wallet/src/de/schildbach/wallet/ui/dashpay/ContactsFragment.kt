@@ -84,16 +84,24 @@ class ContactsFragment : Fragment(),
     private var searchEventSent = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        if (!mainViewModel.hasIdentity) {
-            safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
-            return null
-        }
-
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // blockchainIdentity LiveData is populated asynchronously from DataStore.
+        // Reading hasIdentity synchronously can return false before the first
+        // emission, misrouting users who have a username to the EvoUpgrade screen.
+        binding.container.isVisible = false
+        mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
+            if (identityData == null) return@observe
+            if (!identityData.hasUsername) {
+                safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
+            } else {
+                binding.container.isVisible = true
+            }
+        }
 
         enterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener {
