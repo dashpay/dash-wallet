@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Šifruje sa...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifruje sa…</string>
     <string name="encrypt_keys_dialog_state_done">Hotovo</string>
-    <string name="scan_camera_problem_dialog_title">Ospravedlňujeme sa</string>
-    <string name="scan_camera_problem_dialog_message">Problém s fotoaparátom. Pravdepodobne je potrebný reštart zariadenia.</string>
-    <string name="scan_camera_permission_dialog_title">Povolenia fotoaparátu</string>
-    <string name="scan_camera_permission_dialog_message">Pre skenovanie QR kódu musíte povoliť používanie fotoaparátu.</string>
-    <string name="input_parser_io_error">Nepodarilo sa prečítať:\n%s</string>
-    <string name="input_parser_cannot_classify">Nepodarilo sa rozpoznať vstup:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Neplatná Dash adresa!\n(Zamenené Mainnet/Testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Požiadavka na platbu sa nedá overiť:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Neplatná žiadosť o platbu:\n%s</string>
-    <string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
     <string name="preferences_activity_title">Nastavenia</string>
     <string name="preferences_category_diagnostics">Diagnostika</string>
     <string name="preferences_category_labs">Experimentálne</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">Ukázať xpub</string>
     <string name="preferences_extended_public_key_summary">Zobraziť rozšírený verejný kľúč vašej peňaženky, za účelom importovania do iných aplikácií a služieb. Buďte opatrní: odhalíte tým vaše finančné informácie s danou aplikáciou.</string>
     <string name="bitmap_fragment_share">Zdieľať...</string>
-    <string name="extended_public_key_fragment_title">Rozšírený verejný kľúč</string>
+    <string name="extended_public_key_fragment_title">Rozšírený verejný kľúč (BIP44)</string>
     <string name="extended_public_key_fragment_share">Zdieľať xpub...</string>
+    <string name="extended_public_key_share_key">Zdieľať kľúč</string>
     <string name="report_issue_dialog_title_issue">Nahlásiť problém</string>
     <string name="report_issue_dialog_title_crash">Zistené predchádzajúce zlyhanie aplikácie</string>
     <string name="report_issue_dialog_title_transaction">Nahlásiť problém s vybranou platbou</string>
@@ -318,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">stopy v pozadí</string>
     <string name="report_issue_dialog_status_stack_trace">stopy v zásobníku</string>
     <string name="report_issue_dialog_status_finishing">dokončovanie</string>
-    <string name="report_transaction_history_export">Exportovať</string>
+    <string name="report_transaction_history_export">Exportovať transakcie</string>
     <string name="report_transaction_history_title">Export CSV</string>
+    <string name="report_transaction_history_dialog_title">Celá história transakcií bude exportovaná ako súbor CSV</string>
     <string name="report_transaction_history_not_synced_title">Export CSV</string>
     <string name="report_transaction_history_not_synced_message">Pred exportovaním histórie transakcií počkajte, kým sa peňaženka úplne zosynchronizuje.</string>
     <string name="report_transaction_history_message">Exportuje sa úplná história transakcií.\n\nVšetky platby sa budú považovať za výdavok a všetky prichádzajúce transakcie budú príjmom. Vlastník tejto peňaženky je zodpovedný za vykonanie akýchkoľvek úprav základu nákladov vo zvolenom systéme daňového výkazníctva.</string>
+    <string name="report_transaction_history_body_1">Všetky platby budú považované za výdavok a všetky prichádzajúce transakcie budú príjmom.</string>
+    <string name="report_transaction_history_body_2">Vlastník tejto peňaženky je zodpovedný za vykonanie akýchkoľvek úprav nákladového základu vo zvolenom systéme daňového výkazníctva.</string>
     <string name="report_transaction_history_mail_intent_chooser">Odoslať históriu transakcií pomocou…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Odoslanie histórie transakcií zlyhalo.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Export histórie transakcií zlyhal.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -421,10 +415,7 @@
     <string name="reason">Dôvod</string>
     <string name="link_account">Pripojiť váš účet</string>
     <string name="buy_no_account_needed">Kúpiť Dash · Nie je potrebný žiadny účet</string>
-
     <string name="recipient_address">Adresa príjemcu</string>
-    <string name="show_clipboard">Zobraziť obsah v schránke</string>
-    <string name="tap_to_paste">Klepnutím na adresu zo schránky ju použijete</string>
     <string name="not_dash_address">Neplatná Dash adresa alebo URL žiadosť</string>
     <string name="send_to_address">Poslať na adresu</string>
 

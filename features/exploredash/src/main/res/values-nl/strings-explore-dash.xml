@@ -180,12 +180,12 @@
     <string name="purchase_gift_card_at">ter hoogte van</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="gift_card_buy_title">koop cadeaukaart</string>
     <string name="purchase_gift_card_discount_hint">Je koopt een %s cadeaukaart voor %s (%s korting)</string>
     <string name="button_next">Volgende</string>
     <string name="purchase_gift_card_from">Van</string>
     <string name="purchase_gift_card_to">Naar</string>
     <string name="purchase_confirm_transaction">Bevestig</string>
-    <string name="purchase_gift_card_total_label">Cadeaukaart totaal</string>
     <string name="purchase_gift_card_discount">Korting</string>
     <string name="purchase_gift_card_you_pay">Je betaalt</string>
     <string name="purchase_gift_card_confirm">Bevestig</string>
@@ -210,7 +210,7 @@
     <string name="gift_card_tx_title">Cadeaukaart · %s</string>
     <string name="select_amount">selecteer bedrag</string>
     <string name="select_fixed_amount"> Deze winkelier verkoopt cadeaubonnen tegen vaste prijzen</string>
-
+    <string name="purchase_gift_card_reset">Reset</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Voer verificatiecode in</string>
     <string name="verification_check_email">Controleer je e-mail en voer de verificatiecode in</string>

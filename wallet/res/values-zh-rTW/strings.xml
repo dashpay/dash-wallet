@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">正在加密…</string>
     <string name="encrypt_keys_dialog_state_decrypting">正在解密…</string>
     <string name="encrypt_keys_dialog_state_done">完成</string>
-    <string name="scan_camera_problem_dialog_title">抱歉</string>
-    <string name="scan_camera_problem_dialog_message">照相機有問題，你可能需要重新啟動裝置</string>
-    <string name="scan_camera_permission_dialog_title">相機權限</string>
-    <string name="scan_camera_permission_dialog_message">為了掃描QR碼，您需要授予使用相機的權限。</string>
-    <string name="input_parser_io_error">無法讀取資料:\n%s</string>
-    <string name="input_parser_cannot_classify">無法辨識輸入:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">達世幣 URI 無效:\\n%s</string>
-    <string name="input_parser_invalid_address">取得無效達世幣地址!\\n(是否 Mainnet/Testnet 混用?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">無法驗證付款請求:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">無效付款請求:\n%s</string>
-    <string name="input_parser_invalid_transaction">無效交易:\n%s</string>
     <string name="preferences_activity_title">設定</string>
     <string name="preferences_category_diagnostics">診斷</string>
     <string name="preferences_category_labs">實驗室功能</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">顯示 xpub</string>
     <string name="preferences_extended_public_key_summary">查看你的錢包的擴展公鑰，這樣就可以將其導入其他程式或服務中。請注意：這樣做會泄露您的財務私隱給該程式。</string>
     <string name="bitmap_fragment_share">分享…</string>
-    <string name="extended_public_key_fragment_title">擴展的公鑰</string>
+    <string name="extended_public_key_fragment_title">擴展公鑰（BIP44）</string>
     <string name="extended_public_key_fragment_share">分享 xpub...</string>
     <string name="extended_public_key_share_key">共享金鑰</string>
     <string name="report_issue_dialog_title_issue">問題報告</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">背景追蹤</string>
     <string name="report_issue_dialog_status_stack_trace">堆疊追蹤</string>
     <string name="report_issue_dialog_status_finishing">正在完成</string>
-    <string name="report_transaction_history_export">導出</string>
-    <string name="report_transaction_history_title">導出到CSV檔案</string>
-    <string name="report_transaction_history_not_synced_title">導出到CSV檔案</string>
+    <string name="report_transaction_history_export">滙出交易</string>
+    <string name="report_transaction_history_title">CSV 匯出</string>
+    <string name="report_transaction_history_dialog_title">完整的交易歷史記錄將會匯出為 CSV 文件</string>
+    <string name="report_transaction_history_not_synced_title">CSV 匯出</string>
     <string name="report_transaction_history_not_synced_message">請等到錢包完全同步後再導出您的交易記錄。</string>
     <string name="report_transaction_history_message">將導出完整的交易歷史記錄。\n\n所有付款都將被視為支出，所有滙入交易都將成為收入。此錢包的所有者負責在他們選擇的稅務報告系統中進行任何成本的基礎調整。</string>
+    <string name="report_transaction_history_body_1">所有付款將被視為費用，所有傳入的交易將被視為收入。</string>
+    <string name="report_transaction_history_body_2">該錢包的所有者負責在其選擇的稅務報告系統中進行任何成本基礎調整。</string>
     <string name="report_transaction_history_mail_intent_chooser">使用…發送交易歷史</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">發送交易記錄失敗。</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">匯出交易記錄失敗。</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,7 @@
     <string name="reason">理由</string>
     <string name="link_account">連結您的帳戶</string>
     <string name="buy_no_account_needed">購買達世幣 · 無需賬戶</string>
-
     <string name="recipient_address">收款者位址</string>
-    <string name="show_clipboard">顯示剪貼板中的內容</string>
-    <string name="tap_to_paste">點擊剪貼板中的地址進行粘貼</string>
     <string name="not_dash_address">不是有效的達世幣位址或 URL 請求</string>
     <string name="send_to_address">發送到位址</string>
 

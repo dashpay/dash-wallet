@@ -52,6 +52,8 @@
     <string name="button_continue">Doorgaan</string>
     <string name="get_quote">Offerte aanvragen</string>
     <string name="button_close">Sluit</string>
+    <string name="button_cancel">Annuleer</string>
+    <string name="button_confirm">Bevestig</string>
     <string name="button_retry">Probeer opnieuw</string>
     <string name="button_send_report">Verstuur rapport</string>
     <string name="button_info">info</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash portemonnee</string>
     <string name="from">van</string>
     <string name="to">naar</string>
+    <string name="from_title">Van</string>
+    <string name="to_title">Naar</string>
     <string name="select_currency">Selecteer valuta</string>
     <string name="send_coins_error_dusty_send">bedrag is te klein om te versturen</string>
     <string name="send_coins_error_insufficient_money">Ontoereikende fondsen</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">De blockchain wordt gesynchroniseerd...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Stuur rapport met...</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Sorry</string>
+    <string name="scan_camera_problem_dialog_message">Er is een probleem met de camera. Waarschijnlijk moet je het apparaat herstarten.</string>
+    <string name="scan_camera_permission_dialog_title">Toegang tot de camera</string>
+    <string name="scan_camera_permission_dialog_message">Om QR-codes te scannen moet u toestemming geven om de camera te gebruiken.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Dash versturen</string>
+    <string name="show_clipboard">Toon inhoud op het klembord</string>
+    <string name="tap_to_paste">Tik op het adres van het klembord om het te plakken</string>
+    <string name="recipient_address">Adres van ontvanger</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Kan gegevens niet lezen:\n%s</string>
+    <string name="input_parser_cannot_classify">Invoer niet herkend:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Ongeldige Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Ongeldig Dashadres ontvangen!\n(Haal je mainnet/testnet door elkaar?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Je betalingsverzoek:\n%s kan niet geverifieerd worden</string>
+    <string name="input_parser_invalid_paymentrequest">Ongeldig betalingsverzoek:\n%s</string>
+    <string name="input_parser_invalid_transaction">Ongeldige transactie:\n%s</string>
+    <string name="input_connect">Verbind</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Bevestig (%ss)</string>
+    <string name="cancel_transaction">Transactie annuleren?</string>
+    <string name="yes_cancel">Ja, annuleer</string>
+    <string name="no_keep_it">Nee, hou het</string>
+    <string name="insufficient_money_title">Onvoldoende munten</string>
+    <string name="send_coins_error_msg">Er is een probleem opgetreden bij het versturen van munten!</string>
+    <string name="from_dash_wallet_on_this_device">Van Dash portemonnee op dit apparaat</string>
+    <string name="preposition_at">ter hoogte van</string>
+</resources>

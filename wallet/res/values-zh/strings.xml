@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">正在加密…</string>
     <string name="encrypt_keys_dialog_state_decrypting">正在解密…</string>
     <string name="encrypt_keys_dialog_state_done">完成</string>
-    <string name="scan_camera_problem_dialog_title">抱歉</string>
-    <string name="scan_camera_problem_dialog_message">相机出现了问题. 您可能需要重启设备.</string>
-    <string name="scan_camera_permission_dialog_title">相机授权</string>
-    <string name="scan_camera_permission_dialog_message">为了扫描QR码, 您需要授权相机功能.</string>
-    <string name="input_parser_io_error">无法读取数据:\n%s</string>
-    <string name="input_parser_cannot_classify">如法识别输入:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">无效的Dash链接:\\n%s</string>
-    <string name="input_parser_invalid_address">出现了无效的Dash地址!\n(混淆了mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">无法核实付款请求:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">无效的付款请求:\n%s</string>
-    <string name="input_parser_invalid_transaction">无效的交易:\n%s</string>
     <string name="preferences_activity_title">设置</string>
     <string name="preferences_category_diagnostics">诊断</string>
     <string name="preferences_category_labs">实验</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">显示xpub</string>
     <string name="preferences_extended_public_key_summary">浏览您钱包的公钥, 这样可以将其导入其他程序或服务中. 请注意: 如此做会对其他程序暴露您的财政隐私.</string>
     <string name="bitmap_fragment_share">分享...</string>
-    <string name="extended_public_key_fragment_title">扩展的公钥</string>
+    <string name="extended_public_key_fragment_title">扩展公钥 (BIP44)</string>
     <string name="extended_public_key_fragment_share">分享xpub...</string>
+    <string name="extended_public_key_share_key">分享密钥</string>
     <string name="report_issue_dialog_title_issue">报告问题</string>
     <string name="report_issue_dialog_title_crash">检测到了之前的一次奔溃</string>
     <string name="report_issue_dialog_title_transaction">对选定的支付提交问题报告</string>
@@ -318,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">背景追踪</string>
     <string name="report_issue_dialog_status_stack_trace">堆栈跟踪</string>
     <string name="report_issue_dialog_status_finishing">正在完成</string>
-    <string name="report_transaction_history_export">导出</string>
-    <string name="report_transaction_history_title">导出CSV文件</string>
-    <string name="report_transaction_history_not_synced_title">导出CSV文件</string>
+    <string name="report_transaction_history_export">导出交易</string>
+    <string name="report_transaction_history_title">导出 CSV 文件</string>
+    <string name="report_transaction_history_dialog_title">完整的交易历史记录将导出为 CSV 文件</string>
+    <string name="report_transaction_history_not_synced_title">导出 CSV 文件</string>
     <string name="report_transaction_history_not_synced_message">请等钱包完全同步后再导出您的交易记录.</string>
     <string name="report_transaction_history_message">完整交易记录将被导出.\n\n所有付款将被视为支出, 所有汇入交易都将标为收入. 此钱包的所有者对其在所选报税系统做出的任何成本基础调整负责.</string>
+    <string name="report_transaction_history_body_1">所有付款将被视为支出, 所有汇入都将标为收入.</string>
+    <string name="report_transaction_history_body_2"> 此钱包的所有者对其在所选报税系统做出的任何成本基础调整负责.</string>
     <string name="report_transaction_history_mail_intent_chooser">发送交易记录使用...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">发送交易记录失败.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">导出交易历史失败.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -421,10 +415,7 @@
     <string name="reason">理由</string>
     <string name="link_account">关联您的账户</string>
     <string name="buy_no_account_needed">购买Dash · 无需账户</string>
-
     <string name="recipient_address">收款人地址</string>
-    <string name="show_clipboard">显示剪切板中的内容</string>
-    <string name="tap_to_paste">点击剪切板中的地址进行粘贴</string>
     <string name="not_dash_address">不是有效的Dash地址或 URL 请求</string>
     <string name="send_to_address">发送至地址</string>
 

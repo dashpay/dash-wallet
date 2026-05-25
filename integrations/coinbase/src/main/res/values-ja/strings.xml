@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">DashウォレットとCoinbaseアカウント間</string>
     <string name="coinbase_dash_wallet_error_title">お客様のCoinbaseアカウントに、Dashウォレットは見つかりませんでした。</string>
     <string name="coinbase_dash_wallet_error_message">CoinbaseでDashウォレットを作成し、手続きを進めてください。</string>
+    <string name="coinbase_usd_wallet_error_message">お客様のCoinbaseアカウントでは、米ドルはご利用いただけません。</string>
     <string name="create_dash_account">Dashアカウントの作成</string>
     <string name="close">閉じる</string>
     <string name="retry">リトライ</string>

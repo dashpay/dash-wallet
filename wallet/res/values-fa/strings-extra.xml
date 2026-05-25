@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">تائید</string>
     <string name="dialog_confirm_pay_to">ارسال به</string>
     <string name="dialog_confirm_secured_by">تامین امنیت توسط</string>
+    <string name="dialog_confirm_connected_to_unsecured">متصل شده (غیر امن)</string>
     <string name="dialog_confirm_fee">کارمزد شبکه</string>
     <string name="dialog_confirm_total">مجموع</string>
     <string name="dialog_confirm_accept_contact_request">پذیرش درخواست ارتباط</string>
@@ -70,6 +71,11 @@
 
     <string name="pay_title">ارسال</string>
     <string name="history_title">سابقه</string>
+    <string name="wallet_transactions_building_cache">تعیین سابقه تراکنش‌ها...</string>
+    <string name="history_refresh_dialog_title">به‌روزرسانی فهست تراکنش‌ها</string>
+    <string name="history_refresh_dialog_message">با این اقدام، کش نمایش تراکنش‌ها پاک شده و از ابتدا دوباره ایجاد خواهد شد. تا زمان ایجاد دوباره، این لیست در دسترس نخواهد بود. </string>
+    <string name="history_refresh_dialog_confirm">به‌روزرسانی</string>
+    <string name="history_refresh_complete">فهرست تراکنش‌ها به‌روز شد</string>
     <string name="more_title">بیشتر</string>
     <string name="settings_title">تنظیمات</string>
     <string name="security_title">امنیت</string>
@@ -283,15 +289,17 @@
     <string name="menu_explore_title">کاوش</string>
     <string name="menu_explore_subtitle">فروشنده‌ای بیابید که دش می‌پذیرد</string>
 
-    <string name="tools_address_book">دفترچه نشانی‌ها</string>
+    <string name="tools_address_book">فهرست نشانی‌های منتخب</string>
     <string name="tools_import_private_key">وارد کردن کلید خصوصی</string>
-    <string name="tools_network_monitor">پایش شبکه</string>
-    <string name="tools_show_xpub">کلید عمومی جامع</string>
+    <string name="import_private_key_description">با این اقدام، همه سکه‌های شما از کیف پول کاغذی‌ به اپلیکیشن دش‌پی روی این دستگاه منتقل می‌شود. </string>
+    <string name="tools_network_monitor">بررسی وضعیت شبکه</string>
+    <string name="tools_show_xpub">کلید عمومی جامع (بی‌ای‌پی۴۴)</string>
 
     <string name="about_help_us_improve">به ما برای بهبود تجربه‌تان کمک کنید</string>
     <string name="about_review_and_rate">امتیاز‌دهی و نوشتن نقدونظر برای این اپلیکیشن</string>
     <string name="about_contact_support">تماس با پشتیبانی</string>
     <string name="about_fork_disclaimer">این یک اپلیکیشن متن‌ باز است که از بیت کوین والت انشعاب گرفته است</string>
+    <string name="about_copyright">کپی‌رایت ۲۰۲۶  © دش کر گروپ</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">دش‌پی والت %s</string>
     <string name="about_last_explore_device_sync">آخرین کاوش همگام‌سازی دستگاه </string>
@@ -435,6 +443,11 @@
     <string name="reclassify_transactions_linked_accounts_message">به صورت پیشفرض، همه تراکنش‌‌ها به یا از حساب‌های متصل (صرافی‌ها، استیکینگ و ...) به عنوان تراکنش در نظر گرفته می‌شوند. </string>
     <string name="reclassify_transactions_change_explanation">هر تراکنشی که خواستید را از صفحه اصلی انتخاب کنید و دسته‌بندی آن را در صفحه جزئیات تغییر دهید. </string>
 
+    <string name="masternode_keys_title">کلیدهای مسترنود</string>
+    <string name="masternode_key_type_owner">کلیدهای مالک</string>
+    <string name="masternode_key_type_voting">کلیدهای رأی‌دهی</string>
+    <string name="masternode_key_type_operator">کلیدهای اپراتور</string>
+    <string name="masternode_key_type_platform">کلیدهای اپراتور اچ‌پی‌ام‌ان</string>
     <string name="masternode_key_type_total">%dعدد کلید</string>
     <string name="masternode_key_type_used">%dعدد استفاده شده</string>
     <string name="masternode_key_pair_index">%dعدد جفت‌کلید</string>

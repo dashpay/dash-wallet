@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Sin cajeros automáticos</string>
     <string name="distance_miles">%s millas</string>
     <string name="distance_kilometers">%s kilómetros</string>
+    <string name="explore_fee">Comisión %s %%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d comercio</item>
         <item quantity="many">%d comercios</item>
@@ -184,14 +186,24 @@
     <string name="purchase_gift_card_at">en</string>
     <string name="purchase_gift_card_min">Mínimo: %s</string>
     <string name="purchase_gift_card_max">Máximo: %s</string>
+    <string name="gift_card_tab_single">Suelto</string>
+    <string name="gift_card_tab_multiple">Múltiple</string>
+    <string name="gift_card_buy_title">Compra un certificado de regalo</string>
     <string name="purchase_gift_card_discount_hint">Estas comprando una %s tarjeta de regalo para %s (%s descuento)</string>
     <string name="button_next">Siguiente</string>
     <string name="purchase_gift_card_from">desde</string>
     <string name="purchase_gift_card_to">para</string>
     <string name="purchase_confirm_transaction">Confirmar</string>
-    <string name="purchase_gift_card_total_label">Total de la tarjeta de regalo</string>
+    <string name="purchase_gift_card_total_label">Valor de la tarjeta de regalo</string>
     <string name="purchase_gift_card_discount">Descuento</string>
     <string name="purchase_gift_card_you_pay">Tu pagas</string>
+    <string name="purchase_gift_card_quantity_label">Cantidad</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%dtarjetas</item>
+        <item quantity="many">%d tarjetas</item>
+        <item quantity="other">%d tarjetas</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Valor de la tarjeta</string>
     <string name="purchase_gift_card_confirm">Confirmar</string>
     <string name="purchase_gift_card_details">Detalles de la tarjeta de regalo</string>
     <string name="purchase_original_purchase">Compra original</string>
@@ -207,6 +219,9 @@
     <string name="purchase_tell_the_cashier">Dile al cajero que estás pagando con una tarjeta de regalo digital. Cajero: escribe el monto total en el campo tarjeta bancaria, luego escribe el número de la tarjeta de regalo en el campo Cuenta y presiona Entrar.</string>
     <string name="purchase_in_the_payment_section">En la sección de pago, ingresa el número de tu tarjeta de regalo digital en el campo de la tarjeta de regalo.</string>
     <string name="purchase_powered_by">Energizado por</string>
+    <string name="purchase_cashier_instructions">Instrucciones para el cajero</string>
+    <string name="purchase_cashier_instructions_body">Acepta la tarjeta de regalo física o electrónica al finalizar la compra y procésala como método de pago.</string>
+    <string name="purchase_gift_card_date_format">%1$s en %2$s</string>
     <string name="insufficient_money_title">No hay suficientes Dash</string>
     <string name="insufficient_money_msg">Fondos insuficientes</string>
     <string name="send_coins_error_msg">¡Problema enviando monedas!</string>
@@ -214,7 +229,12 @@
     <string name="gift_card_tx_title">Tarjeta de regalo · %s</string>
     <string name="select_amount">Selecciona el monto</string>
     <string name="select_fixed_amount">Este comerciante vende tarjetas de regalo a precios fijos</string>
-
+    <string name="purchase_gift_card_max_multiple_error">Puede comprar hasta %s en tarjetas de regalo por orden</string>
+    <string name="purchase_gift_card_insufficient_money_error">No hay suficiente Dash para comprar estas tarjetas de regalo</string>
+    <string name="purchase_gift_card_insufficient_inventory">Inventario insuficiente para %s comprar %d x %s tarjetas</string>
+    <string name="purchase_gift_card_inventory_toast">El comerciante solo tiene %d tarjetas disponibles</string>
+    <string name="purchase_gift_card_single_card_only_toast">Solo puedes elegir un importe de tarjeta.</string>
+    <string name="purchase_gift_card_reset">Reiniciar</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Ingresar código de verificación</string>
     <string name="verification_check_email">Revisa tu correo electrónico e ingresa el código de verificación</string>
@@ -248,6 +268,7 @@
     <string name="accept_to_proceed">Para crear una cuenta en DashSpend debes aceptar los términos y condiciones de DashSpend.</string>
     <string name="view_terms_conditions">Términos y condiciones</string>
     <string name="barcode_placeholder">Por favor, espere a la entrega de los detalles de su tarjeta de regalo.</string>
+    <string name="purchase_order_number">Número de orden</string>
     <string name="gift_card_contact_ctx">Contacte al soporte de CTX para mayor información.</string>
     <string name="gift_card_contact_piggycards">Contacte al soporte de Piggy Cards</string>
     <string name="gift_card_contact_support">Contactar Soporte</string>

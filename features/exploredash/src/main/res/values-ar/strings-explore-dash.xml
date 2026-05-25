@@ -180,6 +180,7 @@
     <string name="insufficient_money_title">لا يوجد عملات كافية</string>
     <string name="insufficient_money_msg">رصيد غير كاف</string>
     <string name="send_coins_error_msg">مشكلة في إرسال العملات!</string>
+    <string name="purchase_gift_card_reset">إعادة تعيين</string>
     <string name="password">كلمة المرور</string>
     <string name="something_wrong_title">هناك خطأ ما</string>
     <string name="retry">إعادة المحاولة</string>

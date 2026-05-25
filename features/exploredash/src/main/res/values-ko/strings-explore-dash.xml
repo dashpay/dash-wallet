@@ -176,12 +176,12 @@
     <string name="purchase_gift_card_at">이곳에서</string>
     <string name="purchase_gift_card_min">최소: %s</string>
     <string name="purchase_gift_card_max">최대: %s</string>
+    <string name="gift_card_buy_title">기프트 카드 구매하기</string>
     <string name="purchase_gift_card_discount_hint">%s 기프트 카드를 %s에 구매합니다 (%s 할인)</string>
     <string name="button_next">다음</string>
     <string name="purchase_gift_card_from">다음으로부터</string>
     <string name="purchase_gift_card_to">다음으로</string>
     <string name="purchase_confirm_transaction">승인</string>
-    <string name="purchase_gift_card_total_label">총 기프트 카드</string>
     <string name="purchase_gift_card_discount">할인</string>
     <string name="purchase_gift_card_you_pay">금액</string>
     <string name="purchase_gift_card_confirm">승인</string>
@@ -206,7 +206,7 @@
     <string name="gift_card_tx_title">기프트 카드 · %s</string>
     <string name="select_amount">금액 선택하기</string>
     <string name="select_fixed_amount">이 판매자는 고정된 가격에 기프트 카드를 판매합니다</string>
-
+    <string name="purchase_gift_card_reset">리셋</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">인증 코드 입력</string>
     <string name="verification_check_email">이메일을 확인하셔서 인증 코드를 입력하세요</string>

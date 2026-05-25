@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">승인</string>
     <string name="dialog_confirm_pay_to">다음으로 전송합니다</string>
     <string name="dialog_confirm_secured_by">다음이 보증합니다</string>
+    <string name="dialog_confirm_connected_to_unsecured">연결되었습니다 (보안되지 않음)</string>
     <string name="dialog_confirm_fee">네트워크 비용</string>
     <string name="dialog_confirm_total">총계</string>
     <string name="dialog_confirm_accept_contact_request">연락처 요청 수락</string>
@@ -280,13 +281,15 @@
 
     <string name="tools_address_book">주소록</string>
     <string name="tools_import_private_key">프라이빗 키 가져오기</string>
+    <string name="import_private_key_description">계속 진행하면 모든 코인을 대시 페이퍼 지갑에서 이 기기의 대시페이 앱으로 옮기게 됩니다.</string>
     <string name="tools_network_monitor">블럭체인 모니터링</string>
-    <string name="tools_show_xpub">확장된 공개 키</string>
+    <string name="tools_show_xpub">확장된 공개 키 (BIP44)</string>
 
     <string name="about_help_us_improve">우리가 당신의 경험을 향상할 수 있도록 도와주세요</string>
     <string name="about_review_and_rate">어플 리뷰 및 평점</string>
     <string name="about_contact_support">고객 지원부에 문의하기</string>
     <string name="about_fork_disclaimer">이 어플은 비트코인 지갑에서 포크한 오픈 소스 어플입니다.</string>
+    <string name="about_copyright">Copyright © 2026 대시 코어 그룹</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">대시페이 지갑 %s</string>
     <string name="about_last_explore_device_sync">마지막 익스플로어 기기 동기화</string>
@@ -430,6 +433,11 @@
     <string name="reclassify_transactions_linked_accounts_message">귀하의 연결된 계정 (거래소, 스테이킹 외 기타) 으로 받거나 보내는 모든 거래는 기본값으로써 송금으로 표시됩니다.</string>
     <string name="reclassify_transactions_change_explanation">홈페이지에서 거래를 선택하여 거래 세부 내역 페이지의 카테고리를 변경하세요.</string>
 
+    <string name="masternode_keys_title">마스터노드 키</string>
+    <string name="masternode_key_type_owner">소유자 키</string>
+    <string name="masternode_key_type_voting">투표 키</string>
+    <string name="masternode_key_type_operator">운영자 키</string>
+    <string name="masternode_key_type_platform">HPMN 운영자 키</string>
     <string name="masternode_key_type_total">%d 키</string>
     <string name="masternode_key_type_used">%d 사용됨</string>
     <string name="masternode_key_pair_index">키페어 %d</string>

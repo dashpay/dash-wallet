@@ -176,12 +176,12 @@
     <string name="purchase_gift_card_at">pada</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="gift_card_buy_title">Beli kartu hadiah</string>
     <string name="purchase_gift_card_discount_hint">Anda membeli %s kartu hadiah untuk %s (%s diskon)</string>
     <string name="button_next">Lanjut</string>
     <string name="purchase_gift_card_from">Dari</string>
     <string name="purchase_gift_card_to">Ke</string>
     <string name="purchase_confirm_transaction">Memastikan</string>
-    <string name="purchase_gift_card_total_label">Total kartu hadiah</string>
     <string name="purchase_gift_card_discount">Diskon</string>
     <string name="purchase_gift_card_you_pay">Anda membayar</string>
     <string name="purchase_gift_card_confirm">Memastikan</string>
@@ -206,7 +206,7 @@
     <string name="gift_card_tx_title">Kartu hadiah · %s</string>
     <string name="select_amount">Pilih jumlah</string>
     <string name="select_fixed_amount">Pedagang ini menjual kartu hadiah dengan harga tetap</string>
-
+    <string name="purchase_gift_card_reset">Atur-ulang</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Masukkan Kode verifikasi</string>
     <string name="verification_check_email">Periksa email anda dan masukkan kode verifikasi</string>

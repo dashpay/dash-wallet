@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">Maya</string>
+    <string name="maya_portal_convert_title">Dash omzetten</string>
+    <string name="maya_portal_convert_to_title">Dash omzetten naar</string>
+    <string name="maya_portal_convert_subtitle">Van Dash Portemonnee naar elke crypto</string>
+    <string name="maya_portal_subtitle">Zet Dash om vanuit je portemonnee naar elke crypto die wordt ondersteund op Maya en stuur dat naar welke portemonnee dan ook.</string>
+    <string name="maya_address_input_hint">%s adres</string>
+    <string name="maya_address_input_title">Zet DASH om naar %s</string>
+    <string name="maya_crypto_convert_title">Dash omzetten</string>
+    <string name="maya_crypto_convert_order_preview_title">Voorbeeld bestelling</string>
+
+    <string name="cryptocurrency_any_network">% Netwerk</string>
+    <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
+    <string name="cryptocurrency_dash_network">Dash</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <string name="maya_error">Maya fout</string>
+    <string name="maya_error_not_available">De Maya service is niet beschikbaar. Probeer het later opnieuw.</string>
+    <string name="maya_error_report_issue">Meld dit probleem aan het Dash Portemonnee ondersteuningsteam via \"Contact opnemen met ondersteuning\" in het hoofdmenu.</string>
+    <string name="maya_error_address_not_valid">Adres is niet geldig</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">Het minimale transactiebedrag is</string>
+    <string name="entered_amount_is_too_high">Het maximale transactiebedrag is</string>
+    <string name="we_didnt_find_any_assets">We hebben geen activa gevonden op je Coinbase account.</string>
+    <string name="something_wrong_title">Er is iets verkeerd gegaan</string>
+    <string name="dont_have_any_dash">Je hebt geen Dash in je Dash portemonnee</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Je ontvangt ~ %s Dash in je Dash portemonnee op dit apparaat. Houd er rekening mee dat het 2 à 3 minuten kan duren om een overdracht te voltooien.</string>
+    <string name="you_dont_have_enough_balance">Je hebt niet genoeg saldo</string>
+    <string name="you_dont_own_any_crypto">Je bezit geen crypto valuta. Koop wat crypto om te beginnen..</string>
+    <string name="buy_crypto_on_coinbase">Koop crypto op Coinbase</string>
+    <string name="purchase_failed">Aankoop mislukt</string>
+    <string name="transfer_failed">Overdracht mislukt</string>
+    <string name="transfer_failed_msg">Dash is succesvol gestort op je Coinbase account, maar er was een probleem bij het overzetten hiervan naar de Dash portemonnee op dit apparaat.</string>
+    <string name="send_to_wallet_error">Kan dit bedrag niet verzenden zonder de aanvraaglimiet te overschrijden</string>
+    <string name="purchase_successful">Aankoop succesvol</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">Het kan tot 2 à 3 minuten duren voordat de Dash is verzonden naar je Dash portemonnee op dit apparaat.</string>
+    <string name="maya_it_could_take_up_to_5_minutes">Het kan tot 2 minuten duren om %s om te zetten %s en het naar het opgegeven adres te sturen.</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">Het kan tot 5 minuten duren om Dash van je Dash portemonnee naar %s op je Coinbase account te converteren.</string>
+    <string name="conversion_failed">Conversie mislukt</string>
+    <string name="transfer_dash_successful">Overdracht succesvol</string>
+    <string name="maya_it_could_take_up_to_10_minutes">Het kan tot 10 minuten duren om Dash over te zetten van Coinbase naar de Dash portemonnee op dit apparaat.</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">Het kan tot 10 minuten duren om Dash van je Dash portemonnee naar Coinbase over te zetten.</string>
+    <string name="conversion_successful">Conversie geslaagd</string>
+    <string name="transfer_dash_failed_msg">Er is een probleem opgetreden bij het overzetten naar de Dash portemonnee op dit apparaat.</string>
+    <string name="auth_limit_description">Je hebt de autorisatielimiet op Coinbase overschreden.</string>
+    <string name="you_will_receive">Te ontvangen bedrag</string>
+    <string name="contact_maya_support">Contact opnemen met Maya ondersteuning</string>
+    <string name="maya_fees_in_crypto_purchase">Maya cryptoconversie kosten</string>
+    <string name="maya_fee_info_msg_content">Er zijn verschillende inkomende, uitgaande en liquiditeitskosten verbonden aan Maya transacties. Het bedrag dat je hebt ingevoerd is het bedrag dat wordt ontvangen.</string>
+    <string name="learn_more">Lees verder</string>
+    <string name="debit_money">Geld van uw rekening afschrijven</string>
+    <string name="change_limit">Wijzig dit limiet</string>
+    <string name="set_auth_limit">Zorg ervoor dat je de juiste autorisatielimiet instelt op Coinbase</string>
+    <string name="change_withdrawal_limit">Je kunt het op elk moment wijzigen door uit te loggen bij je Coinbase account in je Dash portemonnee en vervolgens weer in te loggen.</string>
+    <string name="got_it">Begrepen</string>
+    <string name="conversion_preview">Conversie voorbeeld</string>
+    <string name="you_send">je verstuurd</string>
+    <string name="from_your_coinbase_account">Van je Coinbase account</string>
+    <string name="you_receive">je ontvangt</string>
+    <string name="to_dash_wallet_on_this_device">van de Dash portemonnee op dit apparaat</string>
+    <string name="purchase">Aanschaffen</string>
+    <string name="maya_fee">Maya kosten</string>
+    <string name="total">Totaal</string>
+    <string name="to_external_address">naar %s</string>
+
+    <string name="maya_error_information">%s%nCryptovaluta: %s</string>
+    <string name="maya_error_invalid_destination_address">Ongeldig bestemmingsadres</string>
+    <string name="maya_error_below_recommended_minimum">Het ingevoerde bedrag is lager dan het aanbevolen minimum</string>
+    <string name="maya_error_trading_halted">De handel is gestopt op %s.</string>
+    <string name="maya_halted_label">Gestopt</string>
+    <string name="maya_halted_coins_toast">Sommige crypto zijn tijdelijk gestopt en niet beschikbaar voor handel</string>
+
+
+</resources>

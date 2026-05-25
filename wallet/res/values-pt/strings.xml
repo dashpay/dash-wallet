@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Encriptando…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Desencriptando…</string>
     <string name="encrypt_keys_dialog_state_done">Feito</string>
-    <string name="scan_camera_problem_dialog_title">Desculpe</string>
-    <string name="scan_camera_problem_dialog_message">Ocorreu um problema com a câmera. Você provavelmente precisará reiniciar o dispositivo.</string>
-    <string name="scan_camera_permission_dialog_title">Permitir camera</string>
-    <string name="scan_camera_permission_dialog_message">Para escanear códigos QR, é necessário conceder permissão para usar a câmera.</string>
-    <string name="input_parser_io_error">Não é possível ler dados:\n%s</string>
-    <string name="input_parser_cannot_classify">Impossível reconhecer entrada:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Endereços Dash inválidos:\n%s</string>
-    <string name="input_parser_invalid_address">Endereço inválido de Dash!\n(Misturando Mainnet/Testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Não foi possível verificar cobrança:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Cobrança inválida:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transação inválida:\n%s</string>
     <string name="preferences_activity_title">Configurações</string>
     <string name="preferences_category_diagnostics">Diagnósticos</string>
     <string name="preferences_category_labs">Labs</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">Mostrar xpub</string>
     <string name="preferences_extended_public_key_summary">Ver a chave pública estendida de sua carteira, para que possa ser importada para outros aplicativos e serviços. Tenha cuidado: isso irá divulgar a sua privacidade monetária para o app.</string>
     <string name="bitmap_fragment_share">Compartilhar…</string>
-    <string name="extended_public_key_fragment_title">Chave Pública Estendida</string>
+    <string name="extended_public_key_fragment_title">Chave pública estendida (BIP44)</string>
     <string name="extended_public_key_fragment_share">Compartilhar xpub…</string>
     <string name="extended_public_key_share_key">Compartilhar chave</string>
     <string name="report_issue_dialog_title_issue">Informar problema</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">finalizando</string>
-    <string name="report_transaction_history_export">Exportar</string>
+    <string name="report_transaction_history_export">Exportar transações</string>
     <string name="report_transaction_history_title">Exportar CSV</string>
+    <string name="report_transaction_history_dialog_title">O histórico completo de transações será exportado como um arquivo CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportar CSV</string>
     <string name="report_transaction_history_not_synced_message">Por favor, aguarde até que a carteira esteja totalmente sincronizada antes de exportar seu histórico de transações.</string>
     <string name="report_transaction_history_message">O histórico completo de transações será exportado.\n\nTodos os pagamentos serão considerados como despesa e todas as transações recebidas serão receitas. O proprietário desta carteira é responsável por fazer quaisquer ajustes de base de custo no sistema de relatórios fiscais escolhido.</string>
+    <string name="report_transaction_history_body_1">Todos os pagamentos serão considerados como despesas e todas as transações recebidas serão receitas.</string>
+    <string name="report_transaction_history_body_2">O proprietário desta carteira é responsável por fazer quaisquer ajustes de custo base no sistema de declaração fiscal de sua escolha.</string>
     <string name="report_transaction_history_mail_intent_chooser">Enviar histórico de transações usando…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Falha no envio do histórico de transações.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Falha ao exportar o histórico de transações.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,7 @@
     <string name="reason">Razão</string>
     <string name="link_account">Conectar sua conta</string>
     <string name="buy_no_account_needed">Compre Dash · Não é necessário ter uma conta</string>
-
     <string name="recipient_address">Endereço do Destinatário</string>
-    <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
-    <string name="tap_to_paste">Toque no endereço da área de transferência para colá-lo</string>
     <string name="not_dash_address">Endereço Dash inválido ou solicitação de URL inválida</string>
     <string name="send_to_address">Enviar para Endereço</string>
 

@@ -69,6 +69,11 @@
 
     <string name="pay_title">付款</string>
     <string name="history_title">歷史</string>
+    <string name="wallet_transactions_building_cache">確定交易歷史記錄...</string>
+    <string name="history_refresh_dialog_title">刷新交易列表</string>
+    <string name="history_refresh_dialog_message">這將清除事務顯示快取並從頭開始重建。該列表在重建時將暫時無法使用。</string>
+    <string name="history_refresh_dialog_confirm">重新整理</string>
+    <string name="history_refresh_complete">交易清單已刷新</string>
     <string name="more_title">更多</string>
     <string name="settings_title">設定</string>
     <string name="security_title">安全性</string>
@@ -283,7 +288,7 @@
     <string name="tools_import_private_key">導入私鑰</string>
     <string name="import_private_key_description">此操作會將所有代幣從達世幣紙錢包轉移到該裝置上的 DashPay 應用程式。</string>
     <string name="tools_network_monitor">網路監視器</string>
-    <string name="tools_show_xpub">擴展的公鑰</string>
+    <string name="tools_show_xpub">擴展公鑰（BIP44）</string>
 
     <string name="about_help_us_improve">幫助我們改善您的體驗</string>
     <string name="about_review_and_rate">對應用程式進行評價和評分</string>
