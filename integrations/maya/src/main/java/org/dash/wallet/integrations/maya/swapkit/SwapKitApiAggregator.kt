@@ -95,11 +95,17 @@ class SwapKitApiAggregator @Inject constructor(
     )
     private var poolListLastUpdated: Long = 0L
 
+    // Asset → USD price, captured at refresh time. applyPoolPrices re-seeds from
+    // this cache so it stays idempotent across re-emissions AND handles
+    // selected-currency switches without re-fetching from SwapKit.
+    private val usdPriceCache = mutableMapOf<String, BigDecimal>()
+
     override suspend fun reset() {
         log.info("swapkit reset")
         poolInfoList.value = emptyList()
         apiError.value = null
         poolListLastUpdated = 0L
+        usdPriceCache.clear()
     }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
@@ -136,10 +142,15 @@ class SwapKitApiAggregator @Inject constructor(
         // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
         // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
         // contract Maya uses (raw price in pools, fiat conversion in the ViewModel pipeline).
+        // Also seed usdPriceCache so applyPoolPrices can re-seed on subsequent
+        // invocations (currency switch, repeat emissions) without re-fetching.
+        usdPriceCache.clear()
         val pools = identifiers.map { identifier ->
             val priceUsd = prices[identifier.uppercase()] ?: 0.0
             val priceUsdFiat = if (priceUsd > 0.0) {
-                BigDecimal(priceUsd).toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                val priceBd = BigDecimal(priceUsd)
+                usdPriceCache[identifier] = priceBd
+                priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
             } else {
                 Fiat.valueOf(MayaConstants.DEFAULT_EXCHANGE_CURRENCY, 0)
             }
@@ -482,16 +493,19 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
-//        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Each pool's
-        // USD price is computed via the (balance_cacao * Σstable_asset) /
-        // (balance_asset * Σstable_cacao) cross-product (CACAO's decimals cancel,
-        // and pool assets share 8 decimals so the result is USD per whole asset).
-        // Multiply by usdToFiat to land in the selected fiat.
+        // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya
+        // (which recomputes USD from balance_cacao/balance_asset each pass), the
+        // SwapKit aggregator caches USD prices in usdPriceCache at refresh time
+        // and re-seeds from there on every call. This keeps the function
+        // idempotent across re-emissions (the original bug: 45.53 USD → 124.97
+        // BYN → 346.06 → 949.92 → ... compounding every cycle) AND lets a
+        // selected-currency switch convert from the cached USD baseline without
+        // a network refetch.
         val fiatPerUsd = usdToFiat.toBigDecimal()
 
         pools.forEach { pool ->
-            val priceUsd = pool.assetPriceFiat.toBigDecimal()
-            if (priceUsd.signum() <= 0) {
+            val priceUsd = usdPriceCache[pool.asset]
+            if (priceUsd == null || priceUsd.signum() <= 0) {
                 log.info("no USD price for {}", pool.asset)
                 return@forEach
             }
