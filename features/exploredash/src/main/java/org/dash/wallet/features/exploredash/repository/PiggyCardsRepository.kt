@@ -530,6 +530,10 @@ class PiggyCardsRepository @Inject constructor(
         }
     }
 
+    override suspend fun getGiftCardByTxId(txId: String): List<GiftCardInfo> {
+        TODO("PiggyCards requires an orderId, not a txId")
+    }
+
     suspend fun getAccountEmail(): String? {
         return config.getSecuredData(PiggyCardsConfig.PREFS_KEY_EMAIL)
     }

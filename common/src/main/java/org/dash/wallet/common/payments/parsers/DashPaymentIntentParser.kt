@@ -54,6 +54,9 @@ class DashPaymentIntentParser(params: NetworkParameters) : PaymentIntentParser("
     private val log = LoggerFactory.getLogger(DashPaymentIntentParser::class.java)
     private val addressParser = AddressParser.getDashAddressParser(params)
 
+    init {
+        log.info("network parameters = {}", params.id)
+    }
     override suspend fun parse(input: String): PaymentIntent {
         return parse(input, true)
     }

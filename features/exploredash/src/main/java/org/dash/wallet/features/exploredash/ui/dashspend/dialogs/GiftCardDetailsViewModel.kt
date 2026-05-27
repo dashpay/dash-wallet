@@ -197,7 +197,12 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val giftCards = ctxSpendRepository.getGiftCard(txid.toStringBase58())
+                    val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+                    val giftCards = if (orderId != null) {
+                        ctxSpendRepository.getGiftCard(orderId)
+                    } else {
+                        ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
+                    }
                     val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
                     val newState = if (giftCard != null) {

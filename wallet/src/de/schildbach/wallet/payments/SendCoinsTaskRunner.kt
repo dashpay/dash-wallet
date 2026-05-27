@@ -119,7 +119,7 @@ class SendCoinsTaskRunner @Inject constructor(
         coinJoinSend = coinJoinMode != CoinJoinMode.NONE && coinJoinMixingState != MixingStatus.FINISHING
     }
 
-    private val paymentIntentParser = DashPaymentIntentParser(Constants.NETWORK_PARAMETERS)
+    private val paymentIntentParser = DashPaymentIntentParser(NETWORK_PARAMETERS)
 
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
