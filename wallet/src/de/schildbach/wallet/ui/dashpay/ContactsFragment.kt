@@ -82,6 +82,8 @@ class ContactsFragment : Fragment(),
     private val args by navArgs<ContactsFragmentArgs>()
     private var initialSearch = true
     private var searchEventSent = false
+    private var identityResolved = false
+    private var viewsInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
@@ -93,15 +95,29 @@ class ContactsFragment : Fragment(),
         // blockchainIdentity LiveData is populated asynchronously from DataStore.
         // Reading hasIdentity synchronously can return false before the first
         // emission, misrouting users who have a username to the EvoUpgrade screen.
+        // The observer can fire repeatedly (BlockchainIdentityData is not deduped
+        // by distinctUntilChanged, and DataStore emits on any preference change),
+        // so identityResolved makes the routing decision one-shot.
         binding.container.isVisible = false
         mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
-            if (identityData == null) return@observe
+            if (identityData == null || identityResolved) return@observe
+
+            identityResolved = true
             if (!identityData.hasUsername) {
+                // No username: don't initialize the contacts UI or trigger any
+                // platform queries (PlatformRepo/blockchainIdentity are not set up
+                // without a username); just route to the upgrade screen.
                 safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
             } else {
                 binding.container.isVisible = true
+                setupContactsViews()
             }
         }
+    }
+
+    private fun setupContactsViews() {
+        if (viewsInitialized) return
+        viewsInitialized = true
 
         enterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener {
@@ -205,22 +221,25 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.searchContactsLiveData.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             if (Status.SUCCESS == it.status) {
-                if (initialSearch && query.isEmpty() && (args.mode != ContactsScreenMode.VIEW_REQUESTS)) {
-                    if (it.data == null || it.data.isEmpty() || it.data.find { u -> u.requestReceived } == null) {
-                        binding.contactList.apply {
-                            emptyStatePane.root.isVisible = true
-                            search.isVisible = false
-                            icon.isVisible = false
-                        }
-                    } else {
-                        binding.contactList.apply {
-                            search.isVisible = true
-                            icon.isVisible = true
-                            emptyStatePane.root.isVisible = false
-                        }
+                // Re-evaluate the empty-state on every emission, not just the first.
+                // Platform sync can deliver an incomplete contact list first (e.g. a
+                // mutual contact whose incoming request hasn't synced yet, so it looks
+                // like a one-way REQUEST_SENT) and fill in the rest moments later.
+                // Gating this on the one-shot initialSearch flag left the empty-state
+                // pane stuck on top of contacts that arrived after the first emission.
+                if (query.isEmpty() && (args.mode != ContactsScreenMode.VIEW_REQUESTS)) {
+                    // Mirror what processResults() actually displays: pending requests
+                    // and established (mutual) contacts.
+                    val hasContactsToShow = it.data?.any { u ->
+                        u.isPendingRequest || (u.requestSent && u.requestReceived)
+                    } ?: false
+                    binding.contactList.apply {
+                        emptyStatePane.root.isVisible = !hasContactsToShow
+                        search.isVisible = hasContactsToShow
+                        icon.isVisible = hasContactsToShow
                     }
-                    initialSearch = false
                 }
+                initialSearch = false
                 if (it.data != null) {
                     processResults(it.data)
                 }
