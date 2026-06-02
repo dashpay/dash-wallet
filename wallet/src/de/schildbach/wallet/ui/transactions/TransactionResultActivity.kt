@@ -24,6 +24,8 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
@@ -151,8 +153,10 @@ class TransactionResultActivity : LockScreenActivity() {
             configuration.format.noCode(),
             contentBinding
         ) {
+            // The sheet is hosted by this activity's FragmentManager, so don't finish() here —
+            // that would tear the sheet down along with the activity. Dismissing the sheet
+            // returns the user to this transaction result screen.
             DashPayUserBottomSheet.newInstance(it).show(this)
-            binding.root.post { finish() }
         }
 
         viewModel.init(txId)
@@ -289,8 +293,21 @@ class TransactionResultActivity : LockScreenActivity() {
                 finish()
             }
             userData != null -> {
+                // The sheet is hosted by this activity, so finishing right away would destroy
+                // it too. Defer finish() until the sheet is dismissed, mirroring the old
+                // finish() + DashPayUserActivity flow.
+                supportFragmentManager.registerFragmentLifecycleCallbacks(
+                    object : FragmentManager.FragmentLifecycleCallbacks() {
+                        override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
+                            if (fragment is DashPayUserBottomSheet) {
+                                fm.unregisterFragmentLifecycleCallbacks(this)
+                                finish()
+                            }
+                        }
+                    },
+                    false
+                )
                 DashPayUserBottomSheet.newInstance(userData!!).show(this)
-                binding.root.post { finish() }
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                 startActivity(MainActivity.createIntent(this))
