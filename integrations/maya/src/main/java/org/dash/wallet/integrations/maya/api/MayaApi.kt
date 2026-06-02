@@ -45,7 +45,6 @@ import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.ui.MayaViewModel
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -74,7 +73,7 @@ interface MayaApi {
     // Default lives on [SwapProvider.getDefaultSwapQuote] — Kotlin refuses defaults
     // declared on more than one super interface, so [MayaApiAggregator] gets the
     // default solely from [SwapProvider].
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
 }
 
 class MayaApiAggregator @Inject constructor(

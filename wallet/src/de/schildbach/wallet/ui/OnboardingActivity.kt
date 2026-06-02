@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import androidx.viewpager2.widget.ViewPager2
@@ -54,9 +55,9 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.OnboardingState
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.components.ButtonLarge
-import org.dash.wallet.common.ui.components.ButtonStyles
-import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.util.getMainTask
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -219,27 +220,27 @@ class OnboardingActivity : RestoreFromFileActivity() {
                     .padding(20.dp, 10.dp, 20.dp, 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                ButtonLarge(
+                DashButton(
                     onClick = { createNewWallet() },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = ButtonStyles.whiteWithBlueText(),
-                    R.string.onboarding_create_wallet
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.onboarding_create_wallet),
+                    style = Style.FilledWhiteBlue,
+                    size = Size.Large
                 )
-                ButtonLarge(
+                DashButton(
                     onClick = { recoverWalletFromSeedPhrase() },
-                    modifier = Modifier
-                        .fillMaxWidth(),
-                    colors = ButtonStyles.white10WithWhiteText(),
-                    R.string.onboarding_recover_wallet
+                    modifier = Modifier.fillMaxWidth(),
+                    text = stringResource(R.string.onboarding_recover_wallet),
+                    style = Style.TintedWhite,
+                    size = Size.Large
                 )
                 if (BuildConfig.DEBUG) {
-                    ButtonLarge(
+                    DashButton(
                         onClick = { restoreWallet() },
-                        modifier = Modifier
-                            .fillMaxWidth(),
-                        colors = ButtonStyles.white10WithWhiteText(),
-                        R.string.onboarding_restore_wallet
+                        modifier = Modifier.fillMaxWidth(),
+                        text = stringResource(R.string.onboarding_restore_wallet),
+                        style = Style.TintedWhite,
+                        size = Size.Large
                     )
                 }
             }

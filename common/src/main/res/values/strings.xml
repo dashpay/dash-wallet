@@ -155,4 +155,5 @@
     <string name="insufficient_money_msg">The amount of coins in the wallet is too small for this transaction.</string>
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
+    <string name="preposition_at">at</string>
 </resources>

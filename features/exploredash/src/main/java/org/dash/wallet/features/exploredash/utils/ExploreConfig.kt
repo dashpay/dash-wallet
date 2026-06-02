@@ -72,7 +72,7 @@ open class ExploreConfig @Inject constructor(
         val EXPLORE_DATABASE_NAME = stringPreferencesKey("explore_database_name")
     }
 
-    val exploreDatabasePrefs: Flow<ExploreDatabasePrefs> = data
+    open val exploreDatabasePrefs: Flow<ExploreDatabasePrefs> = data
         .map { prefs ->
             ExploreDatabasePrefs(
                 localDbTimestamp = prefs[LOCAL_DB_TIMESTAMP] ?: 0,
@@ -83,7 +83,7 @@ open class ExploreConfig @Inject constructor(
             )
         }
 
-    suspend fun saveExploreDatabasePrefs(databasePrefs: ExploreDatabasePrefs) {
+    open suspend fun saveExploreDatabasePrefs(databasePrefs: ExploreDatabasePrefs) {
         context.dataStore.edit { prefs ->
             prefs[LOCAL_DB_TIMESTAMP] = databasePrefs.localDbTimestamp
             prefs[LAST_SYNC_TIMESTAMP] = databasePrefs.lastSyncTimestamp

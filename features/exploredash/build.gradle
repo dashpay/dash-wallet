@@ -21,6 +21,11 @@ android {
                 arguments += ["room.schemaLocation": "$projectDir/schemas".toString()]
             }
         }
+
+        // Seed PiggyCards test merchants in any build except the production
+        // release pipeline (fastlane sets BUILD_PROD=1).
+        def supportPiggyCardsTestMerchant = System.getenv("BUILD_PROD") != "1"
+        buildConfigField "boolean", "PIGGY_CARDS_TEST_MERCHANT", supportPiggyCardsTestMerchant.toString()
     }
     
     ksp {

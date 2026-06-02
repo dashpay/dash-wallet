@@ -43,6 +43,13 @@
             app:popExitAnim="@anim/slide_out_left" />
 
         <action
+            android:id="@+id/search_to_purchaseGiftCardFragmentV2"
+            app:destination="@id/purchaseGiftCardFragmentV2"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
+        <action
             android:id="@+id/search_to_ctxSpendUserAuthFragment"
             app:destination="@id/ctxSpendUserAuthFragment"
             app:enterAnim="@anim/slide_in_right"
@@ -72,6 +79,14 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <action
+            android:id="@+id/auth_to_purchaseGiftCardFragmentV2"
+            app:popUpTo="@id/searchFragment"
+            app:destination="@id/purchaseGiftCardFragmentV2"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
         <argument
             android:name="authType"
             app:argType="org.dash.wallet.features.exploredash.ui.dashspend.DashSpendUserAuthFragment$AuthType" />
@@ -86,6 +101,11 @@
         android:name="org.dash.wallet.features.exploredash.ui.dashspend.PurchaseGiftCardFragment"
         android:label="fragment_purchase_ctxspend_gift_card"
         tools:layout="@layout/fragment_purchase_ctxspend_gift_card"/>
+
+    <fragment
+        android:id="@+id/purchaseGiftCardFragmentV2"
+        android:name="org.dash.wallet.features.exploredash.ui.dashspend.PurchaseGiftCardFragmentV2"
+        android:label="fragment_purchase_gift_card_v2"/>
 
     <dialog
         android:id="@+id/filtersDialog"

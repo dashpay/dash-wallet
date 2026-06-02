@@ -224,16 +224,11 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             this.amount.cryptoCode
         )
 
-//        if (this.inputCurrency == Constants.DASH_CURRENCY) {
         binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
         binding.contentOrderReview.outputAccountHintLabel.text = getString(
             R.string.to_external_address,
             this.destinationAddress
         )
-//        } else {
-//            binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_your_coinbase_account)
-//            binding.contentOrderReview.outputAccountHintLabel.setText(R.string.to_dash_wallet_on_this_device)
-//        }
 
         val isCurrencyCodeFirst = GenericUtils.isCurrencySymbolFirst()
         val inputCurrencySymbol = GenericUtils.currencySymbol(this.inputCurrency)
@@ -248,7 +243,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             false
         )
 
-        val outputAmount = this.amount.crypto.setScale(8, RoundingMode.HALF_UP)
+        val outputAmount = this.expectedOutputAmount.setScale(8, RoundingMode.HALF_UP)
         val outputCurrency = this.amount.cryptoCode
 
         setValueWithCurrencyCodeOrSymbol(

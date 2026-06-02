@@ -21,6 +21,7 @@ import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 import org.bitcoinj.core.Sha256Hash
+import java.math.BigDecimal
 
 @Parcelize
 data class SwapTradeResponse(
@@ -79,6 +80,7 @@ data class SwapTradeUIModel(
     var outputCurrencyName: String = "",
     var memo: String? = null,
     var txid: Sha256Hash = Sha256Hash.ZERO_HASH,
+    var expectedOutputAmount: BigDecimal = BigDecimal.ZERO
     val routeName: String? = "maya-default",
     val availableRoutes: List<String> = listOf()
 ) : Parcelable {
