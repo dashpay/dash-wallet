@@ -22,7 +22,6 @@ import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.data.CoinJoinConfig
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.service.CoinJoinMode
@@ -31,6 +30,7 @@ import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.security.SecurityGuard
+import de.schildbach.wallet.service.platform.IdentityRepository
 import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
@@ -50,6 +50,7 @@ import org.bitcoinj.wallet.SendRequest
 import org.bitcoinj.wallet.Wallet
 import org.bitcoinj.wallet.WalletProtobufSerializer
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
@@ -88,6 +89,7 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var identityConfig: BlockchainIdentityConfig
     private lateinit var coinJoinConfig: CoinJoinConfig
     private lateinit var coinJoinService: CoinJoinService
+    private lateinit var identityRepo: IdentityRepository
     private lateinit var platformRepo: PlatformRepo
     private lateinit var metadataProvider: TransactionMetadataProvider
     private lateinit var wallet: Wallet
@@ -143,6 +145,7 @@ class SendCoinsTaskRunnerBIP70Test {
                 identityConfig,
                 coinJoinConfig,
                 coinJoinService,
+                identityRepo,
                 platformRepo,
                 metadataProvider
             )
