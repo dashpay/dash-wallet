@@ -92,6 +92,7 @@ import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -1409,7 +1410,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 } != null
 
                 if (!lockAcquired) {
-                    log.error("CRITICAL: Cleanup did not complete within 60 seconds")
+                    log.error("CRITICAL: Cleanup did not complete within 120 seconds")
                     log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
                     log.error("Stopping service to prevent resource conflicts and file lock exceptions")
 
@@ -2006,11 +2007,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 2: About to call peerGroup.stop()")
-                    //peerGroup!!.forceStop(7_000)
+                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop()")
                     val peerGroupStopWatch = Stopwatch.createStarted()
-                    peerGroup!!.stop()
-                    log.info("CLEANUP STEP 2: peerGroup.stop() completed: {}", peerGroupStopWatch)
+                    // peerGroup.stop() awaits executor termination without a bound and has been
+                    // observed to hang forever when the PeerGroup thread is starved of the
+                    // SPVBlockStore lock by islock processing on the NioClientManager thread
+                    // (InstantSendManager.processInstantSendLock -> SPVBlockStore.get ring scan).
+                    // Use the bounded stop so a wedged peer group cannot hold lifecycleMutex
+                    // forever, which would block the next instance's startup and even a
+                    // blockchain reset.
+                    peerGroup!!.forceStop(30_000)
+                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed: {}", peerGroupStopWatch)
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
                     dashSystemService.system.close()
@@ -2032,13 +2039,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.info("CLEANUP STEP 6: delayHandler callbacks cleared")
                 try {
                     log.info("closing blockchain stores")
-                    blockStore?.close()
-                    headerStore?.close()
-                    if (activeBlockStore === blockStore) {
-                        activeBlockStore = null
-                    }
-                    if (activeHeaderStore === headerStore) {
-                        activeHeaderStore = null
+                    // SPVBlockStore.close() takes the store's internal lock, which can be held
+                    // for a long time by islock processing on the NioClientManager thread.
+                    // Bound the close so a busy store cannot hold lifecycleMutex forever; on
+                    // timeout the stores stay registered and the next instance releases them
+                    // via releaseOrphanedResources().
+                    val closed = withTimeoutOrNull(15_000) {
+                        runInterruptible {
+                            blockStore?.close()
+                            headerStore?.close()
+                        }
+                        true
+                    } != null
+                    if (closed) {
+                        if (activeBlockStore === blockStore) {
+                            activeBlockStore = null
+                        }
+                        if (activeHeaderStore === headerStore) {
+                            activeHeaderStore = null
+                        }
+                    } else {
+                        log.error(
+                            "closing blockchain stores timed out (store lock busy?); " +
+                                "leaving them registered for recovery by the next instance"
+                        )
                     }
                     blockchainStateDataProvider.setBlockChain(null)
                 } catch (x: BlockStoreException) {
@@ -2096,7 +2120,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * in flight, so any resources still registered in the companion object are
      * orphaned and safe to release.
      */
-    private fun openBlockStoreWithRecovery(file: File): SPVBlockStore {
+    private suspend fun openBlockStoreWithRecovery(file: File): SPVBlockStore {
         return try {
             SPVBlockStore(Constants.NETWORK_PARAMETERS, file)
         } catch (x: BlockStoreException) {
@@ -2119,7 +2143,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
      * service instance that never completed its cleanup, releasing the block store
      * file locks. Returns false if there was nothing to release.
      */
-    private fun releaseOrphanedResources(): Boolean {
+    private suspend fun releaseOrphanedResources(): Boolean {
         val orphanPeerGroup = activePeerGroup
         val orphanBlockStore = activeBlockStore
         val orphanHeaderStore = activeHeaderStore
@@ -2133,19 +2157,34 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             orphanHeaderStore != null
         )
         try {
-            orphanPeerGroup?.stop()
+            // bounded stop: the orphan's PeerGroup thread may be wedged (that can be
+            // why it was orphaned in the first place)
+            orphanPeerGroup?.forceStop(30_000)
         } catch (e: Exception) {
             log.error("error stopping orphaned peergroup", e)
         }
-        try {
-            orphanBlockStore?.close()
-        } catch (e: Exception) {
-            log.error("error closing orphaned blockstore", e)
-        }
-        try {
-            orphanHeaderStore?.close()
-        } catch (e: Exception) {
-            log.error("error closing orphaned header store", e)
+        // bounded close: the store's internal lock may be held by a thread of the
+        // orphaned instance that is still grinding (e.g. islock processing); if the
+        // close does not finish, fail this attempt instead of hanging the new
+        // instance's startup while it holds lifecycleMutex
+        val closed = withTimeoutOrNull(15_000) {
+            runInterruptible {
+                try {
+                    orphanBlockStore?.close()
+                } catch (e: Exception) {
+                    log.error("error closing orphaned blockstore", e)
+                }
+                try {
+                    orphanHeaderStore?.close()
+                } catch (e: Exception) {
+                    log.error("error closing orphaned header store", e)
+                }
+            }
+            true
+        } != null
+        if (!closed) {
+            log.error("closing orphaned blockstores timed out; recovery failed, will be retried by the next instance")
+            return false
         }
         activePeerGroup = null
         activeBlockStore = null
