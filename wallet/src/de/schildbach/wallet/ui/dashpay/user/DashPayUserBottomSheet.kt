@@ -738,7 +738,7 @@ private fun NotificationRow(
                     )
                     Text(
                         text = DateUtils.getRelativeTimeSpanString(
-                            item.getDate() / 1000,
+                            item.getDate(),
                             System.currentTimeMillis(),
                             DateUtils.MINUTE_IN_MILLIS
                         ).toString(),

@@ -34,14 +34,16 @@ class ProfilePictureZoomTransformation(private val zoomedRect: RectF) : Transfor
             "${zoomedRect.right},${zoomedRect.bottom})"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
+        val x = Math.round(zoomedRect.left * input.width).coerceIn(0, input.width - 1)
+        val y = Math.round(zoomedRect.top * input.height).coerceIn(0, input.height - 1)
         val cropWidth = Math.round(input.width * (zoomedRect.right - zoomedRect.left))
+            .coerceIn(1, input.width - x)
         val cropHeight = Math.round(input.height * (zoomedRect.bottom - zoomedRect.top))
+            .coerceIn(1, input.height - y)
         if (cropWidth <= 0 || cropHeight <= 0) return input
         val zoomX = TARGET / cropWidth
         val zoomY = TARGET / cropHeight
         val matrix = Matrix().apply { setScale(zoomX, zoomY) }
-        val x = Math.round(zoomedRect.left * input.width)
-        val y = Math.round(zoomedRect.top * input.height)
         return Bitmap.createBitmap(input, x, y, cropWidth, cropHeight, matrix, true)
     }
 
