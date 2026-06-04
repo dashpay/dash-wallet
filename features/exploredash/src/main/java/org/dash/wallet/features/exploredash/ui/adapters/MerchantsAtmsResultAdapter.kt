@@ -33,6 +33,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.databinding.AtmRowBinding
 import org.dash.wallet.features.exploredash.databinding.MerchantRowBinding
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
+import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import org.slf4j.LoggerFactory
 import java.util.*
 
@@ -118,15 +119,14 @@ class MerchantViewHolder(val binding: MerchantRowBinding) : ExploreViewHolder(bi
         binding.subtitle.text = getDistanceText(resources, merchant)
         binding.subtitle.isVisible = merchant?.type != MerchantType.ONLINE && binding.subtitle.text.isNotEmpty()
         if (merchant != null) {
-            if (merchant.savingsFraction != 0.00) {
-                binding.discountValue.isVisible = true
-                binding.discountValue.text = binding.root.context.getString(
-                    R.string.explore_discount,
-                    merchant.savingsPercentageAsDouble
-                )
-            } else {
-                binding.discountValue.isVisible = false
-            }
+            val text = SavingsFormatting.format(
+                context = binding.root.context,
+                percent = merchant.savingsPercentageAsDouble,
+                decimals = 0,
+                discountPrefix = "~"
+            )
+            binding.discountValue.isVisible = text.isNotEmpty()
+            binding.discountValue.text = text
         }
 
         binding.logoImg.load(merchant?.logoLocation) {

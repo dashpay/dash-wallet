@@ -23,10 +23,10 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import de.schildbach.wallet.ui.AbstractBindServiceActivity
-import de.schildbach.wallet.ui.scan.ScanActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.ActivitySweepWalletBinding
 import org.bitcoinj.core.PrefixedChecksummedBytes
+import org.dash.wallet.common.ui.scan.ScanActivity
 
 class SweepWalletActivity: AbstractBindServiceActivity() {
     companion object {

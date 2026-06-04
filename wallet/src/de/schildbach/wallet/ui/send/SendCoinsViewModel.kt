@@ -22,8 +22,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.data.CoinJoinConfig
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.database.dao.BlockchainStateDao
 import de.schildbach.wallet.database.dao.DashPayContactRequestDao
@@ -512,7 +512,7 @@ class SendCoinsViewModel @Inject constructor(
 
         if (isDashUserOrNotMe && paymentIntent.isIdentityPaymentRequest) {
             if (paymentIntent.payeeUsername != null) {
-                val searchResult = loadUserDataByUsername(paymentIntent.payeeUsername)
+                val searchResult = loadUserDataByUsername(paymentIntent.payeeUsername!!)
 
                 if (searchResult != null) {
                     return handleDashIdentity(searchResult, paymentIntent)
@@ -521,7 +521,7 @@ class SendCoinsViewModel @Inject constructor(
                     throw SendException("error loading identity for username ${paymentIntent.payeeUsername}")
                 }
             } else if (paymentIntent.payeeUserId != null) {
-                val searchResult = loadUserDataByUserId(paymentIntent.payeeUserId)
+                val searchResult = loadUserDataByUserId(paymentIntent.payeeUserId!!)
 
                 if (searchResult != null) {
                     return handleDashIdentity(searchResult, paymentIntent)

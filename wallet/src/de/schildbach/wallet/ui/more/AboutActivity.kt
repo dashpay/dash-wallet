@@ -38,6 +38,7 @@ import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
+import androidx.core.net.toUri
 
 
 @AndroidEntryPoint
@@ -69,7 +70,7 @@ class AboutActivity : LockScreenActivity() {
         )
         binding.githubLink.setOnClickListener {
             val i = Intent(ACTION_VIEW)
-            i.data = Uri.parse(binding.githubLink.text.toString())
+            i.data = binding.githubLink.text.toString().toUri()
             startActivity(i)
         }
         binding.reviewAndRate.setOnClickListener { viewModel.reviewApp() }

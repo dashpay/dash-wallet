@@ -3,21 +3,22 @@ package org.dash.wallet.common.ui.components
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -37,88 +38,227 @@ enum class ToastImageResource(@DrawableRes val resourceId: Int) {
     Warning(R.drawable.ic_toast_info_warning),
     Copy(R.drawable.ic_toast_copy),
     Error(R.drawable.ic_toast_error),
+    Success(R.drawable.ic_toast_success),
+    Loading(R.drawable.ic_toast_loading),
     NoInternet(R.drawable.ic_toast_no_wifi)
 }
 
 @Composable
 fun Toast(
     text: String,
-    actionText: String,
+    actionText: String? = null,
     modifier: Modifier = Modifier,
     imageResource: Int? = null,
+    showDismissButton: Boolean = false,
+    onDismiss: (() -> Unit)? = null,
     onActionClick: () -> Unit
 ) {
     Box(
-        modifier =
-            modifier.fillMaxWidth()
-                .padding(horizontal = 5.dp, vertical = 5.dp)
-                .background(
-                    color = MyTheme.ToastBackground,
-                    shape = RoundedCornerShape(size = 10.dp)
-                )
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 5.dp, vertical = 5.dp)
+            .background(
+                color = MyTheme.ToastBackground,
+                shape = RoundedCornerShape(size = 20.dp)
+            )
     ) {
         Row(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .wrapContentSize(Alignment.BottomCenter)
-                    .padding(start = 16.dp, top = 8.dp, end = 16.dp, bottom = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 12.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // LeadingWrap: icon + message
             Row(
-                modifier =
-                    Modifier
-                        .weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.Top
             ) {
                 if (imageResource != null) {
-                    Image(
-                        painter = painterResource(id = imageResource),
-                        contentDescription = null,
-                        modifier =
-                            Modifier
-                                .size(15.dp)
-                    )
+                    Box(
+                        modifier = Modifier.size(24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = imageResource),
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
                 }
                 Text(
                     text = text,
                     style = MyTheme.Body2Regular,
                     color = Color.White,
+                    modifier = Modifier.padding(vertical = 2.dp),
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(start = 8.dp, end = 8.dp)
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            TextButton(
-                onClick = onActionClick,
-                modifier =
-                    Modifier
-                        .padding(start = 0.dp)
-                        .wrapContentSize()
-                        .padding(horizontal = 0.dp, vertical = 0.dp),
-                contentPadding = PaddingValues(0.dp)
-            ) {
-                Text(
-                    text = actionText,
-                    style = MyTheme.OverlineSemibold,
-                    color = Color.White,
-                    textAlign = TextAlign.Center
-                )
+
+            // Action button — plain Box to avoid Material3's 40dp minimum height
+            if (actionText != null) {
+                Box(
+                    modifier = Modifier
+                        .width(54.dp)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clickable { onActionClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = actionText,
+                        style = MyTheme.OverlineSemibold,
+                        color = Color.White,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+
+            // Dismiss button
+            if (showDismissButton) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.1f))
+                        .clickable { onDismiss?.invoke() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_x),
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(7.dp)
+                    )
+                }
             }
         }
     }
 }
 
-@Preview
+@Preview(name = "Toast with action")
 @Composable
 private fun ToastPreview() {
-    Box(Modifier.width(400.dp).height(100.dp).background(Color.White)) {
+    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
         Toast(
             text = "The exchange rates are out of date, please do something about it right away",
             actionText = "OK",
-            Modifier,
-            R.drawable.ic_image_placeholder
-        ) {
-        }
+            imageResource = R.drawable.ic_image_placeholder
+        ) {}
+    }
+}
+
+@Preview(name = "Toast with action and dismiss")
+@Composable
+private fun ToastWithDismissPreview() {
+    Box(Modifier.width(400.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Some coins are currently halted",
+            actionText = "Action",
+            imageResource = R.drawable.ic_image_placeholder,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Warning")
+@Composable
+private fun ToastWarningPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Warning",
+            actionText = "Action",
+            imageResource = ToastImageResource.Warning.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Info")
+@Composable
+private fun ToastInfoPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Info",
+            actionText = "Action",
+            imageResource = ToastImageResource.Information.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Error")
+@Composable
+private fun ToastErrorPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Error",
+            actionText = "Action",
+            imageResource = ToastImageResource.Error.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Success")
+@Composable
+private fun ToastSuccessPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Success",
+            actionText = "Action",
+            imageResource = ToastImageResource.Success.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Copied")
+@Composable
+private fun ToastCopiedPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Copied",
+            actionText = "Action",
+            imageResource = ToastImageResource.Copy.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – Loading")
+@Composable
+private fun ToastLoadingPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "Loading",
+            actionText = "Action",
+            imageResource = ToastImageResource.Loading.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
+    }
+}
+
+@Preview(name = "Toast – No internet connection")
+@Composable
+private fun ToastNoInternetPreview() {
+    Box(Modifier.width(375.dp).background(Color.White).padding(vertical = 4.dp)) {
+        Toast(
+            text = "No internet connection",
+            actionText = "Action",
+            imageResource = ToastImageResource.NoInternet.resourceId,
+            showDismissButton = true,
+            onDismiss = {}
+        ) {}
     }
 }

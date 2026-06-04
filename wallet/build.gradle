@@ -28,6 +28,7 @@ dependencies {
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
     implementation project(path: ":integrations:crowdnode")
+    implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
@@ -94,7 +95,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
-    implementation 'com.github.MikeOrtiz:TouchImageView:3.0.6'
+    implementation 'com.github.MikeOrtiz:TouchImageView:3.6'
     implementation "io.coil-kt:coil:$coilVersion"
     implementation "io.coil-kt:coil-compose:$coilVersion"
 
@@ -225,8 +226,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11070101
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.7.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11070202
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.7.2-quantity"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -469,6 +470,7 @@ android {
     lint {
         abortOnError false
         disable 'MissingTranslation'
+        disable 'NullSafeMutableLiveData'
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {

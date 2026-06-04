@@ -80,6 +80,7 @@ import org.dash.wallet.common.Configuration;
 import org.dash.wallet.common.InteractionAwareActivity;
 import org.dash.wallet.common.WalletDataProvider;
 import org.dash.wallet.common.data.WalletUIConfig;
+import org.dash.wallet.common.integrations.ExchangeIntegrationProvider;
 import org.dash.wallet.common.services.LeftoverBalanceException;
 import org.dash.wallet.common.services.TransactionMetadataProvider;
 import org.dash.wallet.common.services.analytics.AnalyticsService;
@@ -107,6 +108,7 @@ import org.dash.wallet.integrations.uphold.api.UpholdClient;
 import org.dash.wallet.integrations.uphold.data.UpholdConstants;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConfig;
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeBalanceCondition;
+import org.dash.wallet.integrations.uphold.utils.UpholdConfig;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -225,6 +227,8 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     PackageInfoProvider packageInfoProvider;
     @Inject
+    UpholdConfig upholdConfig;
+    @Inject
     WalletFactory walletFactory;
     @Inject
     DashSystemService dashSystemService;
@@ -236,6 +240,8 @@ public class WalletApplication extends MultiDexApplication
     TxDisplayCacheService txDisplayCacheService;
     private WalletBalanceObserver walletBalanceObserver;
     private CoinJoinService coinJoinService;
+    @Inject
+    public ExchangeIntegrationProvider exchangeIntegrationProvider;
 
     @Override
     protected void attachBaseContext(Context base) {
@@ -546,6 +552,7 @@ public class WalletApplication extends MultiDexApplication
         initUphold();
         initCoinbase();
         initDashSpend();
+        WalletApplicationExt.INSTANCE.clearCachedAddresses(this);
         log.info("STARTUP finalizeInit: integrations done in {}ms", System.currentTimeMillis() - _t);
     }
 
@@ -558,7 +565,7 @@ public class WalletApplication extends MultiDexApplication
         UpholdConstants.CLIENT_ID = BuildConfig.UPHOLD_CLIENT_ID;
         UpholdConstants.CLIENT_SECRET = BuildConfig.UPHOLD_CLIENT_SECRET;
         UpholdConstants.INSTANCE.initialize(Constants.NETWORK_PARAMETERS.getId().contains("test"));
-        UpholdClient.init(getApplicationContext(), authenticationHash);
+        UpholdClient.init(getApplicationContext(), authenticationHash, upholdConfig);
         LiquidClient.Companion.init(getApplicationContext(), authenticationHash);
     }
 
@@ -1157,6 +1164,7 @@ public class WalletApplication extends MultiDexApplication
         // wallet must be null for the OnboardingActivity flow
         log.info("removing wallet from memory during wipe");
         wallet = null;
+        walletStateFlow.setValue(null);
         authenticationGroupExtension = null;
         walletBalanceObserver.close();
         walletBalanceObserver = null;

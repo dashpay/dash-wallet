@@ -53,6 +53,7 @@ dependencies {
     // Core
     implementation 'androidx.appcompat:appcompat:1.2.0'
     implementation "org.dashj:dashj-core:$dashjVersion"
+    implementation 'com.google.protobuf:protobuf-javalite:3.17.3'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$coroutinesVersion"
 
@@ -89,6 +90,7 @@ dependencies {
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
     implementation "io.coil-kt:coil:$coilVersion"
+    implementation "io.coil-kt:coil-compose:$coilVersion"
     implementation "com.google.android.material:material:$materialVersion"
     implementation "androidx.browser:browser:$browserVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"

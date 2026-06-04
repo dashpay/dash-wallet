@@ -35,7 +35,7 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.schildbach.wallet.Constants;
-import de.schildbach.wallet.util.Bluetooth;
+import org.dash.wallet.common.util.Bluetooth;
 
 /**
  * @author Shahar Livne

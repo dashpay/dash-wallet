@@ -20,7 +20,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import de.schildbach.wallet.data.PaymentIntent
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.WalletApplication
+import org.dash.wallet.common.data.PaymentIntent
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
 import kotlinx.coroutines.Dispatchers
@@ -127,7 +129,7 @@ class PaymentProtocolViewModel @Inject constructor(
             try {
                 val paymentIntent = sendCoinsTaskRunner.fetchPaymentRequest(basePaymentIntent)
 
-                if (basePaymentIntent.isExtendedBy(paymentIntent, true)) {
+                if (basePaymentIntent.isExtendedBy(paymentIntent, true, Constants.NETWORK_PARAMETERS)) {
                     finalPaymentIntent = paymentIntent
                     createBaseSendRequest(paymentIntent)
                 } else {

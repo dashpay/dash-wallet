@@ -23,6 +23,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
+import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.SendPaymentService
 import java.util.function.Consumer
@@ -79,4 +80,15 @@ class FakeDashSpendService @Inject constructor(
     }
 
     override fun isFeeTooHigh(tx: Transaction): Boolean = false
+    override suspend fun completeTransaction(sendRequest: SendRequest) {
+        return realService.completeTransaction(sendRequest)
+    }
+
+    override suspend fun signTransaction(sendRequest: SendRequest) {
+        return realService.signTransaction(sendRequest)
+    }
+
+    override suspend fun sendTransaction(sendRequest: SendRequest): Transaction {
+        return realService.sendTransaction(sendRequest)
+    }
 }

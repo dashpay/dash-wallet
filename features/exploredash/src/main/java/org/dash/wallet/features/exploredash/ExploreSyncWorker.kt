@@ -28,10 +28,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProvider
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
 import org.dash.wallet.features.exploredash.repository.ExploreDataSyncStatus
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants.PIGGY_CARDS_TEST_FIXED_MERCHANT_ID
 import org.slf4j.LoggerFactory
+import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
 import kotlin.system.measureTimeMillis
@@ -92,18 +98,21 @@ class ExploreSyncWorker @AssistedInject constructor(
                     preloadedDbTimestamp = exploreRepository.getTimestamp(updateFile)
                     log.info("preloaded data timestamp: $preloadedDbTimestamp (${Date(preloadedDbTimestamp)})")
 
-                    val forceLoad = (
-                        databasePrefs.localDbTimestamp != remoteDataTimestamp &&
-                            databasePrefs.localDbTimestamp != preloadedDbTimestamp
-                        )
+                    // Only take the asset path when the asset can actually improve on
+                    // local state: fresh install (local == 0) or asset is newer. The
+                    // "local doesn't match remote" case is what the server download
+                    // below is for — loading a stale asset over a newer local DB just
+                    // forces migrations on an old user_version and risks crashing.
                     if (databasePrefs.localDbTimestamp == 0L ||
-                        databasePrefs.localDbTimestamp < preloadedDbTimestamp ||
-                        forceLoad
+                        databasePrefs.localDbTimestamp < preloadedDbTimestamp
                     ) {
-                        // force data preloading for fresh installs
-                        // and a newer preloaded DB
-                        ExploreDatabase.updateDatabase(appContext, exploreRepository)
-                        databasePrefs = databasePrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
+                        ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
+                        // Re-read prefs after updateDatabase: finalizeUpdate writes the new
+                        // localDbTimestamp asynchronously on configScope, so the snapshot
+                        // captured at the start of doWork() is now stale. Saving the stale
+                        // copy here would clobber finalizeUpdate's concurrent write.
+                        val latestPrefs = exploreConfig.exploreDatabasePrefs.first()
+                        databasePrefs = latestPrefs.copy(preloadedOnTimestamp = preloadedDbTimestamp)
                         exploreConfig.saveExploreDatabasePrefs(databasePrefs)
                     }
                 }
@@ -126,6 +135,7 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                     exploreConfig.saveExploreDatabasePrefs(databasePrefs)
 
+                    addPiggyCardsTestMerchantIfNeeded()
                     return@withContext Result.success()
                 }
                 syncStatus.setSyncProgress(10.0)
@@ -134,12 +144,13 @@ class ExploreSyncWorker @AssistedInject constructor(
 
                 syncStatus.setSyncProgress(80.0)
 
-                ExploreDatabase.updateDatabase(appContext, exploreRepository)
+                ExploreDatabase.updateDatabase(appContext, exploreRepository, exploreConfig)
             }
 
             log.info("sync explore db finished, took $timeInMillis ms")
 
             syncStatus.setSyncProgress(100.0)
+            addPiggyCardsTestMerchantIfNeeded()
         } catch (ex: FirebaseNetworkException) {
             log.warn("sync explore no network", ex)
             syncStatus.setSyncError(ex)
@@ -161,5 +172,72 @@ class ExploreSyncWorker @AssistedInject constructor(
         databasePrefs = exploreConfig.exploreDatabasePrefs.first()
         exploreConfig.saveExploreDatabasePrefs(databasePrefs.copy(failedSyncAttempts = 0))
         return@withContext Result.success()
+    }
+
+    private suspend fun addPiggyCardsTestMerchantIfNeeded() {
+        val database = ExploreDatabase.getAppDatabase(appContext, exploreConfig)
+        val merchantDao = database.merchantDao()
+        val giftCardProviderDao = database.giftCardProviderDao()
+
+        val testMerchantIds = PiggyCardsTestMerchants.ALL.map { it.merchantId }
+        if (merchantDao.getMerchantById(PIGGY_CARDS_TEST_FIXED_MERCHANT_ID) != null) {
+            val deletedProviders = giftCardProviderDao.deleteByMerchantIds(testMerchantIds)
+            val deletedMerchants = merchantDao.deleteByMerchantIds(testMerchantIds)
+            log.info(
+                "removed existing PiggyCards test data: $deletedMerchants merchant(s), " +
+                    "$deletedProviders provider(s)"
+            )
+        }
+
+        if (!SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+            return
+        }
+
+        try {
+            log.info("adding PiggyCards test merchants")
+
+            val now = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(Date())
+
+            val merchants = PiggyCardsTestMerchants.ALL.map { data ->
+                Merchant(
+                    merchantId = data.merchantId,
+                    paymentMethod = data.paymentMethod,
+                    redeemType = data.redeemType,
+                    savingsPercentage = data.providerSavingsPercentage,
+                    denominationsType = data.providerDenominationsType,
+                    addDate = now,
+                    updateDate = now
+                ).apply {
+                    name = data.name
+                    active = true
+                    source = data.provider
+                    sourceId = data.sourceId
+                    logoLocation = data.logoLocation
+                    type = data.type
+                    territory = data.territory
+                    city = data.city
+                    website = data.website
+                }
+            }
+            merchantDao.save(merchants)
+
+            PiggyCardsTestMerchants.ALL.forEach { data ->
+                giftCardProviderDao.insert(
+                    GiftCardProvider(
+                        merchantId = data.merchantId,
+                        provider = data.provider,
+                        redeemType = data.redeemType,
+                        savingsPercentage = data.providerSavingsPercentage,
+                        active = true,
+                        denominationsType = data.providerDenominationsType,
+                        sourceId = data.sourceId
+                    )
+                )
+            }
+
+            log.info("PiggyCards test merchant added successfully")
+        } catch (ex: Exception) {
+            log.error("error adding PiggyCards test merchant", ex)
+        }
     }
 }

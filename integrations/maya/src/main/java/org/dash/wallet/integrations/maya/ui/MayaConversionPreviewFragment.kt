@@ -1,0 +1,474 @@
+/*
+ * Copyright 2024 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+package org.dash.wallet.integrations.maya.ui
+
+import android.os.Build
+import android.os.Bundle
+import android.os.CountDownTimer
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.ImageSpan
+import android.view.View
+import android.widget.TextView
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.addCallback
+import androidx.annotation.ColorRes
+import androidx.annotation.StyleRes
+import androidx.core.content.ContextCompat
+import androidx.core.view.isGone
+import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
+import coil.load
+import coil.size.Scale
+import coil.transform.CircleCropTransformation
+import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
+import org.dash.wallet.common.ui.enter_amount.CenteredImageSpan
+import org.dash.wallet.common.ui.setRoundedBackground
+import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.observe
+import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.R
+import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
+import org.dash.wallet.integrations.maya.model.CurrencyInputType
+import org.dash.wallet.integrations.maya.model.MayaResultType
+import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.TransactionType
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
+import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
+import java.math.BigDecimal
+import java.math.RoundingMode
+
+@AndroidEntryPoint
+class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion_preview) {
+    private val binding by viewBinding(FragmentMayaConversionPreviewBinding::bind)
+    private val viewModel by viewModels<MayaConversionPreviewViewModel>()
+    private val mayaViewModel by mayaViewModels<MayaViewModel>()
+    private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
+    private var isRetrying = false
+    private var transactionStateDialog: MayaResultDialog? = null
+    private var newSwapOrderId: String? = null
+    private var onBackPressedCallback: OnBackPressedCallback? = null
+    private var networkStatusView: View? = null
+
+    private val countDownTimer by lazy {
+        object : CountDownTimer(10000, 1000) {
+
+            override fun onTick(millisUntilFinished: Long) {
+                binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                binding.confirmProgress.isGone = true
+                binding.retryIcon.visibility = View.GONE
+                setConfirmBtnStyle(
+                    org.dash.wallet.common.R.style.PrimaryButtonTheme_Large_Blue,
+                    org.dash.wallet.common.R.color.dash_white
+                )
+            }
+
+            override fun onFinish() {
+                setRetryStatus()
+            }
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupBackNavigation()
+        mayaCurrencyMapper = MayaCurrencyMapper(requireContext())
+
+        viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
+            setNetworkState(hasInternet)
+        }
+
+        binding.cancelBtn.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL)
+            val dialog = AdaptiveDialog.simple(
+                getString(R.string.cancel_transaction),
+                getString(R.string.no_keep_it),
+                getString(R.string.yes_cancel)
+            )
+            dialog.isCancelable = false
+            dialog.show(requireActivity()) { result ->
+                if (result == true) {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL_YES)
+                    findNavController().popBackStack()
+                } else {
+                    viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CANCEL_NO)
+                }
+            }
+        }
+
+        arguments?.let {
+            MayaConversionPreviewFragmentArgs.fromBundle(it).swapModel.apply {
+                updateConversionPreviewUI()
+                viewModel.swapTradeUIModel = this
+            }
+        }
+
+        binding.confirmBtnContainer.setOnClickListener {
+            countDownTimer.cancel()
+            if (isRetrying) {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    R.color.dash_blue
+                )
+                getNewCommitOrder()
+                isRetrying = false
+            } else {
+                binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
+                    requireContext(),
+                    org.dash.wallet.common.R.color.dash_white
+                )
+                newSwapOrderId?.let { orderId ->
+                    viewModel.swapTradeUIModel.let {
+                        viewModel.commitSwapTrade(orderId)
+                    }
+                }
+            }
+        }
+
+        viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
+            binding.cancelBtn.isEnabled = !showLoading
+            binding.confirmProgress.isGone = !showLoading
+            binding.retryIcon.isGone = showLoading || !isRetrying
+            binding.confirmBtnContainer.isEnabled = !showLoading
+            binding.confirmBtnContainer.alpha = if (showLoading) 0.6f else 1.0f
+        }
+
+        viewModel.commitSwapTradeFailureState.observe(viewLifecycleOwner) {
+            showBuyOrderDialog(MayaResultType.CONVERSION_ERROR, it)
+        }
+
+        viewModel.sellSwapSuccessState.observe(viewLifecycleOwner) {
+            showBuyOrderDialog(MayaResultType.CONVERSION_SUCCESS)
+        }
+
+        binding.contentOrderReview.mayaFeeInfoContainer.setOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_FEE_INFO)
+            safeNavigate(MayaConversionPreviewFragmentDirections.mayaOrderReviewToFeeInfo())
+        }
+
+        viewModel.swapTradeFailureState.observe(viewLifecycleOwner) {
+            showBuyOrderDialog(MayaResultType.SWAP_ERROR, it)
+        }
+
+        viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
+            newSwapOrderId = it.swapTradeId
+            countDownTimer.start()
+        }
+
+        viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
+            val walletName = if (viewModel.swapTradeUIModel.inputCurrency == Constants.DASH_CURRENCY) {
+                mayaCurrencyMapper.getCurrencyName(viewModel.swapTradeUIModel.inputCurrency)
+            } else {
+                viewModel.swapTradeUIModel.outputCurrencyName
+            }
+            safeNavigate(
+                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
+                    MayaTransactionParams(params, TransactionType.SellSwap, walletName)
+                )
+            )
+        }
+        observeNavigationCallBack()
+
+        viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
+            AdaptiveDialog.create(
+                R.drawable.ic_error,
+                getString(R.string.insufficient_money_title),
+                getString(R.string.insufficient_money_msg),
+                getString(R.string.button_close)
+            ).show(requireActivity())
+        }
+    }
+
+    private fun setNetworkState(hasInternet: Boolean) {
+        if (!hasInternet) {
+            if (networkStatusView == null) {
+                networkStatusView = binding.previewNetworkStatusStub.inflate()
+            }
+            networkStatusView?.isVisible = true
+        } else {
+            networkStatusView?.isVisible = false
+        }
+        binding.previewOfflineGroup.isVisible = hasInternet
+    }
+
+    private fun SwapTradeUIModel.updateConversionPreviewUI() {
+        newSwapOrderId = this.swapTradeId
+
+        binding.contentOrderReview.inputAccountTitle.text = this.amount.dashCode
+        binding.contentOrderReview.convertOutputTitle.text = this.amount.cryptoCode
+
+        binding.contentOrderReview.inputAccountSubtitle.text = mayaCurrencyMapper.getCurrencyName(this.amount.dashCode)
+        binding.contentOrderReview.convertOutputSubtitle.text = mayaCurrencyMapper.getCurrencyName(
+            this.amount.cryptoCode
+        )
+
+        binding.contentOrderReview.inputAccountHintLabel.setText(R.string.from_dash_wallet_on_this_device)
+        binding.contentOrderReview.outputAccountHintLabel.text = getString(
+            R.string.to_external_address,
+            this.destinationAddress
+        )
+
+        val isCurrencyCodeFirst = GenericUtils.isCurrencySymbolFirst()
+        val inputCurrencySymbol = GenericUtils.currencySymbol(this.inputCurrency)
+        val inputAmount = this.amount.dash.setScale(8, RoundingMode.HALF_UP)
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.inputAccount,
+            inputAmount,
+            inputCurrencySymbol,
+            isCurrencyCodeFirst,
+            true,
+            false
+        )
+
+        val outputAmount = this.expectedOutputAmount.setScale(8, RoundingMode.HALF_UP)
+        val outputCurrency = this.amount.cryptoCode
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.outputAccount,
+            outputAmount,
+            outputCurrency,
+            isCurrencyCodeFirst,
+            false,
+            false
+        )
+
+        val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
+        val digits = if (this.feeAmount.anchoredType == CurrencyInputType.Fiat) {
+            GenericUtils.getCurrencyDigits()
+        } else {
+            8
+        }
+        val purchaseAmount = if (this.maximum) {
+            (this.amount.anchoredValue - this.feeAmount.anchoredValue)
+        } else {
+            this.amount.anchoredValue
+        }.setScale(digits, RoundingMode.HALF_UP)
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.purchaseAmount,
+            purchaseAmount,
+            currencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
+        )
+
+        val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
+        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.mayaFeeAmount,
+            feeAmount,
+            feeCurrencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
+        )
+
+        val totalAmount = if (this.maximum) {
+            this.amount.anchoredValue
+        } else {
+            (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
+                digits,
+                RoundingMode.HALF_UP
+            )
+        }
+
+        setValueWithCurrencyCodeOrSymbol(
+            binding.contentOrderReview.totalAmount,
+            totalAmount,
+            feeCurrencySymbol,
+            isCurrencyCodeFirst,
+            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
+            amount.anchoredType == CurrencyInputType.Fiat
+        )
+        binding.contentOrderReview.inputAccountIcon
+            .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase())) {
+                crossfade(true)
+                scale(Scale.FILL)
+                placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
+                transformations(CircleCropTransformation())
+            }
+
+        binding.contentOrderReview.convertOutputIcon
+            .load(GenericUtils.getCoinIcon(this.outputCurrency.lowercase())) {
+                crossfade(true)
+                scale(Scale.FILL)
+                placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
+                transformations(CircleCropTransformation())
+            }
+    }
+
+    private fun setValueWithCurrencyCodeOrSymbol(
+        textView: TextView,
+        value: BigDecimal,
+        currencyCode: String,
+        isCurrencySymbolFirst: Boolean,
+        isDash: Boolean,
+        isFiat: Boolean,
+        iconSize: Int = 12
+    ) {
+        val context = textView.context
+        val scale = resources.displayMetrics.scaledDensity
+        val valueString = GenericUtils.toLocalizedString(value, isDash || !isFiat, currencyCode)
+        var spannableString = SpannableString(valueString) // Space for the icon
+
+        // show Dash Icon if DASH is the primary currency
+        if (isDash) {
+            // TODO: adjust for dark mode
+            val drawable =
+                ContextCompat.getDrawable(context, org.dash.wallet.common.R.drawable.ic_dash_d_black)?.apply {
+                    setBounds(0, 0, (iconSize * scale).toInt(), (iconSize * scale).toInt())
+                }
+            val imageSpan = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                drawable?.let { ImageSpan(it, ImageSpan.ALIGN_CENTER) }
+            } else {
+                drawable?.let { CenteredImageSpan(it, textView.context) }
+            }
+            imageSpan?.let {
+                if (GenericUtils.isCurrencySymbolFirst()) {
+                    spannableString = SpannableString("  $valueString")
+                    spannableString.setSpan(it, 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                } else {
+                    spannableString = SpannableString("$valueString  ")
+                    val len = spannableString.length
+                    spannableString.setSpan(it, len - 1, len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                }
+            }
+        } else {
+            spannableString = SpannableString(
+                getString(
+                    R.string.fiat_balance_with_currency,
+                    if (isCurrencySymbolFirst) currencyCode else valueString,
+                    if (isCurrencySymbolFirst) valueString else currencyCode
+                )
+            )
+        }
+        textView.text = spannableString
+    }
+
+    private fun showBuyOrderDialog(type: MayaResultType, responseMessage: String? = null) {
+        if (transactionStateDialog?.dialog?.isShowing == true) {
+            transactionStateDialog?.dismissAllowingStateLoss()
+        }
+
+        transactionStateDialog = MayaResultDialog.newInstance(
+            type,
+            responseMessage,
+            viewModel.swapTradeUIModel.inputCurrency,
+            destinationCurrency = viewModel.swapTradeUIModel.outputCurrency
+        ).apply {
+            this.onMayaResultDialogButtonsClickListener =
+                object : MayaResultDialog.MayaBaseResultDialogButtonsClickListener {
+                    override fun onPositiveButtonClick(type: MayaResultType) {
+                        when (type) {
+                            MayaResultType.CONVERSION_ERROR -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
+                                dismiss()
+                                findNavController().popBackStack()
+                            }
+                            MayaResultType.SWAP_ERROR -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_ERROR_RETRY)
+                                dismiss()
+                                findNavController().popBackStack()
+                                findNavController().popBackStack()
+                            }
+                            MayaResultType.CONVERSION_SUCCESS -> {
+                                // viewModel.logEvent(AnalyticsConstants.Maya.CONVERT_SUCCESS_CLOSE)
+                                dismiss()
+                                val navController = findNavController()
+                                val home = navController.graph.startDestinationId
+                                navController.popBackStack(home, false)
+                            }
+                            else -> {}
+                        }
+                    }
+
+                    override fun onNegativeButtonClick(type: MayaResultType) {
+                        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_ERROR_CLOSE)
+                    }
+                }
+        }
+        transactionStateDialog?.showNow(parentFragmentManager, "MayaResultDialog")
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (viewModel.isFirstTime) {
+            viewModel.isFirstTime = false
+            countDownTimer.start()
+        } else {
+            setRetryStatus()
+        }
+    }
+
+    override fun onPause() {
+        countDownTimer.cancel()
+        super.onPause()
+    }
+
+    private fun observeNavigationCallBack() {
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>("resume_review")
+            ?.observe(viewLifecycleOwner) { isConversionReviewResumed ->
+                if (isConversionReviewResumed) {
+                    getNewCommitOrder()
+                }
+            }
+    }
+
+    private fun getNewCommitOrder() {
+        viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_RETRY)
+        viewModel.swapTrade(viewModel.swapTradeUIModel)
+    }
+
+    private fun setRetryStatus() {
+        binding.confirmBtn.text = getString(R.string.button_retry)
+        binding.confirmProgress.isGone = true
+        binding.retryIcon.visibility = View.VISIBLE
+        isRetrying = true
+        setConfirmBtnStyle(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
+    }
+
+    private fun setConfirmBtnStyle(@StyleRes buttonStyle: Int, @ColorRes colorRes: Int) {
+        binding.confirmBtnContainer.setRoundedBackground(buttonStyle)
+        binding.confirmBtn.setTextColor(resources.getColor(colorRes))
+    }
+
+    private fun setupBackNavigation() {
+        binding.toolbar.setNavigationOnClickListener {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_TOP_BACK)
+            findNavController().popBackStack()
+        }
+
+        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
+            viewModel.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_ANDROID_BACK)
+            findNavController().popBackStack()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        onBackPressedCallback?.remove()
+    }
+}
