@@ -52,6 +52,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
+import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
@@ -197,6 +198,14 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
 
     fun sendContactRequest() {
         val userData = _uiState.value.userData ?: throw IllegalStateException("No user data")
+        // Mirror the legacy DashPayUserActivity / fragment analytics: accepting an inbound
+        // request and sending a brand-new one are distinct user actions.
+        val event = if (userData.type == UsernameSearchResult.Type.REQUEST_RECEIVED) {
+            AnalyticsConstants.UsersContacts.ACCEPT_REQUEST
+        } else {
+            AnalyticsConstants.UsersContacts.SEND_REQUEST
+        }
+        analytics.logEvent(event, mapOf())
         SendContactRequestOperation(context)
             .create(userData.dashPayProfile.userId)
             .enqueue()
@@ -301,9 +310,12 @@ class DashPayUserBottomSheetViewModel @Inject constructor(
                 // Refresh _userData when type changes OR when the profile differs (e.g. the
                 // initial search result had no avatarUrl but the DB now does). Without the
                 // profile-diff check, the header stays on the stale initial profile while
-                // the notification rows render the fresh DB-backed one.
+                // the notification rows render the fresh DB-backed one. Merge rather than
+                // replace so a partial DB profile (e.g. empty avatarUrl) can't revert the
+                // header avatar that initUserData already resolved — same guarantee as the
+                // platform/identity refreshes above.
                 if (current == null || it.type != current.type || it.dashPayProfile != current.dashPayProfile) {
-                    _uiState.update { state -> state.copy(userData = it) }
+                    _uiState.update { state -> state.copy(userData = mergePreservingProfileFields(state.userData, it)) }
                 }
 
                 if (it.type == UsernameSearchResult.Type.REQUEST_RECEIVED) {

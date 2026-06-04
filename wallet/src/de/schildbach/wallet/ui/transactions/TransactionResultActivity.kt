@@ -296,17 +296,7 @@ class TransactionResultActivity : LockScreenActivity() {
                 // The sheet is hosted by this activity, so finishing right away would destroy
                 // it too. Defer finish() until the sheet is dismissed, mirroring the old
                 // finish() + DashPayUserActivity flow.
-                supportFragmentManager.registerFragmentLifecycleCallbacks(
-                    object : FragmentManager.FragmentLifecycleCallbacks() {
-                        override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
-                            if (fragment is DashPayUserBottomSheet) {
-                                fm.unregisterFragmentLifecycleCallbacks(this)
-                                finish()
-                            }
-                        }
-                    },
-                    false
-                )
+                finishWhenUserSheetDismissed()
                 DashPayUserBottomSheet.newInstance(userData!!).show(this)
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
@@ -316,6 +306,26 @@ class TransactionResultActivity : LockScreenActivity() {
                 startActivity(MainActivity.createIntent(this))
             }
         }
+    }
+
+    /**
+     * Finish this host activity once the [DashPayUserBottomSheet] is genuinely dismissed.
+     * [onFragmentDestroyed] also fires on configuration changes (e.g. rotation), when the sheet
+     * is immediately recreated — finishing then would tear down the screen out from under the
+     * user, so we skip that case via [isChangingConfigurations].
+     */
+    private fun finishWhenUserSheetDismissed() {
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
+                    if (fragment is DashPayUserBottomSheet && !isChangingConfigurations) {
+                        fm.unregisterFragmentLifecycleCallbacks(this)
+                        finish()
+                    }
+                }
+            },
+            false
+        )
     }
 
     override fun onDestroy() {
