@@ -172,6 +172,8 @@ import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import java.nio.channels.OverlappingFileLockException
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
@@ -215,8 +217,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         private val TX_EXCHANGE_RATE_TIME_THRESHOLD_MS = TimeUnit.MINUTES.toMillis(180)
         private val log = LoggerFactory.getLogger(BlockchainServiceImpl::class.java)
         const val START_AS_FOREGROUND_EXTRA = "start_as_foreground"
-        var cleanupDeferred: CompletableDeferred<Unit>? = null
-        private val isCleaningUp = AtomicBoolean(false)
+
+        // Serializes lifecycle transitions across service instances: a new instance's
+        // resource creation (block stores, peer group) must not run while a previous
+        // instance's cleanup is still closing them, and cleanups must not run
+        // concurrently with each other. Cleanup is never skipped: each instance closes
+        // the resources it owns, in turn.
+        private val lifecycleMutex = Mutex()
+
+        // The resources currently holding the block store file locks and network
+        // connections. Set when an instance opens them, cleared by whichever cleanup
+        // closes them. If an instance is destroyed without completing its cleanup
+        // (e.g. process churn, a wedged shutdown), the next instance uses these
+        // references to release the orphaned resources instead of failing forever
+        // with OverlappingFileLockException and running with peerGroup == null.
+        private var activeBlockStore: BlockStore? = null
+        private var activeHeaderStore: BlockStore? = null
+        private var activePeerGroup: PeerGroup? = null
+
+        // Transactions whose broadcast was requested while no peer group was
+        // available. Drained when the peer group starts. Static so the queue survives
+        // service instance churn within the process.
+        private val pendingBroadcasts = ConcurrentLinkedQueue<Sha256Hash>()
 
         // TEST ONLY: Reduce timeout for testing onTimeout callback
         // Set to 0 to disable test timeout (use Android's default 6-hour limit)
@@ -1010,6 +1032,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 dashSystemService.system.initDashSync(getDir("masternode", MODE_PRIVATE).absolutePath)
                 log.info("starting peergroup")
                 peerGroup = PeerGroup(Constants.NETWORK_PARAMETERS, blockChain, headerChain)
+                activePeerGroup = peerGroup
                 if (Constants.SUPPORTS_PLATFORM) {
                     platformRepo.platform.setMasternodeListManager(dashSystemService.system.masternodeListManager)
                     platformSyncService.resume()
@@ -1192,6 +1215,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerGroup!!.startAsync()
                 peerGroup!!.startBlockChainDownload(blockchainDownloadListener)
                 platformSyncService.addPreBlockProgressListener(blockchainDownloadListener)
+                // send out anything that was waiting for a peergroup, plus any of our
+                // own pending transactions the network has never seen
+                broadcastPendingTransactions()
             } else if (impediments.isNotEmpty() && peerGroup != null) {
                 blockchainStateDataProvider.setNetworkStatus(NetworkStatus.NOT_AVAILABLE)
                 log.info("stopping peergroup")
@@ -1216,6 +1242,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     riskAnalyzer?.shutdown()
                 } catch (e: Exception) {
                     log.error("Error shutting down risk analyzer", e)
+                }
+                if (activePeerGroup === peerGroup) {
+                    activePeerGroup = null
                 }
                 peerGroup = null
                 log.debug("releasing wakelock")
@@ -1366,16 +1395,21 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
             }
         }
         serviceScope.launch {
+            var lifecycleLockHeld = false
             try {
-                log.info("onCreate() serviceScope waiting for cleanup {}", cleanupDeferred?.isActive)
+                log.info("onCreate() serviceScope waiting for cleanup, lifecycleMutex locked: {}", lifecycleMutex.isLocked)
 
-                val cleanupCompleted = withTimeoutOrNull(15_000) {
-                    cleanupDeferred?.await()
+                // Wait for any previous instance's cleanup to finish closing its
+                // block stores and peer group before we create ours. The mutex is
+                // held through the whole initialization so a concurrent cleanup
+                // cannot run in the middle of it.
+                val lockAcquired = withTimeoutOrNull(60_000) {
+                    lifecycleMutex.lock()
                     true
                 } != null
 
-                if (!cleanupCompleted) {
-                    log.error("CRITICAL: Cleanup did not complete within 15 seconds")
+                if (!lockAcquired) {
+                    log.error("CRITICAL: Cleanup did not complete within 60 seconds")
                     log.error("This indicates a deadlock in onDestroy - cannot proceed with onCreate")
                     log.error("Stopping service to prevent resource conflicts and file lock exceptions")
 
@@ -1390,6 +1424,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                     return@launch
                 }
+                lifecycleLockHeld = true
 
                 propagateContext()
                 val wallet = application.wallet
@@ -1413,9 +1448,11 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNListsOnPeerGroupStart = true
                 }
                 try {
-                    blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                    blockStore = openBlockStoreWithRecovery(blockChainFile!!)
+                    activeBlockStore = blockStore
                     blockStore?.chainHead // detect corruptions as early as possible
-                    headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                    headerStore = openBlockStoreWithRecovery(headerChainFile!!)
+                    activeHeaderStore = headerStore
                     headerStore?.chainHead // detect corruptions as early as possible
                     wallet.isNotifyTxOnNextBlock = false
                     val blockchainStoreMemoryError = serviceConfig.get(BLOCKCHAIN_STORE_MEMORY_FAILURE) ?: false
@@ -1502,8 +1539,10 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
                                 log.info("completed file replacement, now reloading the block stores")
                                 blockStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, blockChainFile)
+                                activeBlockStore = blockStore
                                 blockStore?.chainHead // detect corruptions as early as possible
                                 headerStore = SPVBlockStore(Constants.NETWORK_PARAMETERS, headerChainFile)
+                                activeHeaderStore = headerStore
                                 headerStore?.chainHead // detect corruptions as early as possible
                                 log.info("block stores reloaded successfully")
 
@@ -1661,12 +1700,18 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 log.info(".onCreate() finished")
             } catch (t: Throwable) {
                 log.error("Service initialization failed in background coroutine, stopping service", t)
+                // close anything this instance managed to open so it isn't orphaned
+                releaseResourcesAfterFailedInit()
                 if (onCreateCompleted.isActive) {
                     onCreateCompleted.complete(Unit)
                 }
                 // Service is in a broken state - stop it gracefully
                 handler.post {
                     stopSelf()
+                }
+            } finally {
+                if (lifecycleLockHeld) {
+                    lifecycleMutex.unlock()
                 }
             }
         }
@@ -1762,8 +1807,15 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 peerGroup!!.broadcastTransaction(tx, minimum, true)
                                 log.info("transaction {} broadcast initiated", tx.txId)
                             } else {
-                                log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
-                                tx.confidence.setPeerInfo(0, 1)
+                                // Don't drop the transaction: for BIP21 payments the P2P broadcast
+                                // is the only delivery path. Queue it and send it when the
+                                // peergroup starts (see broadcastPendingTransactions).
+                                log.warn(
+                                    "peergroup not available, queueing transaction {} for broadcast " +
+                                        "when the peergroup starts",
+                                    tx.txId
+                                )
+                                pendingBroadcasts.add(tx.txId)
                             }
                         } else {
                             log.error("transaction {} not found in wallet", hash)
@@ -1876,25 +1928,30 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         }
 
         serviceScope.launch {
+            var lifecycleLockHeld = false
             try {
                 log.info("The onCreateCompleted is active: {}", onCreateCompleted.isActive)
                 onCreateCompleted.await() // wait until onCreate is finished
                 log.info("The check() mutex is locked: {}", checkMutex.isLocked)
-                // Prevent multiple cleanup operations using atomic flag
-                if (!isCleaningUp.compareAndSet(false, true)) {
-                    log.info("Another onDestroy() is already running cleanup, skipping duplicate cleanup")
+
+                // Serialize this cleanup against any other instance's init or cleanup.
+                // Cleanup is never skipped: this instance is the only owner of its
+                // peerGroup and block stores, and nobody else will close them. (An
+                // earlier "skip duplicate cleanup" optimization here orphaned the
+                // block store file lock and left a zombie peer group running whenever
+                // service instances overlapped, which silently disabled transaction
+                // broadcasts in the replacement instance.)
+                log.info("cleanup waiting for lifecycleMutex, locked: {}", lifecycleMutex.isLocked)
+                val lockAcquired = withTimeoutOrNull(120_000) {
+                    lifecycleMutex.lock()
+                    true
+                } != null
+                if (!lockAcquired) {
+                    log.error("CRITICAL: cleanup could not acquire lifecycleMutex within 120 seconds")
+                    log.error("Leaving resources registered; the next instance will release them on startup")
                     return@launch
                 }
-
-                // Create cleanup coordination only if none exists or existing one is already completed
-                val existingCleanup = cleanupDeferred
-                if (existingCleanup == null || existingCleanup.isCompleted) {
-                    cleanupDeferred = CompletableDeferred()
-                    log.info("Created new cleanupDeferred for coordination (previous was {})",
-                        if (existingCleanup == null) "null" else "completed")
-                } else {
-                    log.info("Using existing active cleanupDeferred for coordination")
-                }
+                lifecycleLockHeld = true
 
                 // Try to acquire mutex with timeout
                 val mutexAcquired = withTimeoutOrNull(5_000) {
@@ -1964,6 +2021,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("CLEANUP STEP 4: About to shutdown riskAnalyzer")
                     riskAnalyzer!!.shutdown()
                     log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
+                    if (activePeerGroup === peerGroup) {
+                        activePeerGroup = null
+                    }
                 }
                 log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
                 peerConnectivityListener?.stop()
@@ -1974,6 +2034,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("closing blockchain stores")
                     blockStore?.close()
                     headerStore?.close()
+                    if (activeBlockStore === blockStore) {
+                        activeBlockStore = null
+                    }
+                    if (activeHeaderStore === headerStore) {
+                        activeHeaderStore = null
+                    }
                     blockchainStateDataProvider.setBlockChain(null)
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
@@ -2009,8 +2075,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (checkMutex.isLocked) {
                     checkMutex.unlock()
                 }
-                isCleaningUp.set(false)
-                cleanupDeferred?.complete(Unit)
+                if (lifecycleLockHeld) {
+                    lifecycleMutex.unlock()
+                }
                 // Cancel the cleanup monitor since cleanup is done
                 cleanupMonitorJob.cancel()
             }
@@ -2020,6 +2087,132 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
 
     private fun resetBlockchainState() {
         syncPercentage = 0
+    }
+
+    /**
+     * Opens an [SPVBlockStore], recovering from a file lock conflict left behind by a
+     * previous service instance that was destroyed without completing its cleanup.
+     * Must be called while holding [lifecycleMutex]: with the mutex held no cleanup is
+     * in flight, so any resources still registered in the companion object are
+     * orphaned and safe to release.
+     */
+    private fun openBlockStoreWithRecovery(file: File): SPVBlockStore {
+        return try {
+            SPVBlockStore(Constants.NETWORK_PARAMETERS, file)
+        } catch (x: BlockStoreException) {
+            if (isFileLockConflict(x) && releaseOrphanedResources()) {
+                log.warn("blockstore {} was locked by an orphaned service instance - lock released, retrying", file.name)
+                SPVBlockStore(Constants.NETWORK_PARAMETERS, file)
+            } else {
+                throw x
+            }
+        }
+    }
+
+    private fun isFileLockConflict(x: Throwable): Boolean {
+        return generateSequence(x) { it.cause }.any { it is OverlappingFileLockException } ||
+            x.message?.contains("FileLock") == true
+    }
+
+    /**
+     * Stops the peer group and closes the block stores left behind by a previous
+     * service instance that never completed its cleanup, releasing the block store
+     * file locks. Returns false if there was nothing to release.
+     */
+    private fun releaseOrphanedResources(): Boolean {
+        val orphanPeerGroup = activePeerGroup
+        val orphanBlockStore = activeBlockStore
+        val orphanHeaderStore = activeHeaderStore
+        if (orphanPeerGroup == null && orphanBlockStore == null && orphanHeaderStore == null) {
+            return false
+        }
+        log.warn(
+            "releasing orphaned resources of a previous service instance: peerGroup={}, blockStore={}, headerStore={}",
+            orphanPeerGroup != null,
+            orphanBlockStore != null,
+            orphanHeaderStore != null
+        )
+        try {
+            orphanPeerGroup?.stop()
+        } catch (e: Exception) {
+            log.error("error stopping orphaned peergroup", e)
+        }
+        try {
+            orphanBlockStore?.close()
+        } catch (e: Exception) {
+            log.error("error closing orphaned blockstore", e)
+        }
+        try {
+            orphanHeaderStore?.close()
+        } catch (e: Exception) {
+            log.error("error closing orphaned header store", e)
+        }
+        activePeerGroup = null
+        activeBlockStore = null
+        activeHeaderStore = null
+        return true
+    }
+
+    /**
+     * Closes whatever this instance managed to open before its initialization failed,
+     * so the block store file locks aren't orphaned.
+     */
+    private fun releaseResourcesAfterFailedInit() {
+        try {
+            blockStore?.close()
+        } catch (e: Exception) {
+            log.warn("error closing blockstore after failed init", e)
+        }
+        try {
+            headerStore?.close()
+        } catch (e: Exception) {
+            log.warn("error closing header store after failed init", e)
+        }
+        if (activeBlockStore === blockStore) {
+            activeBlockStore = null
+        }
+        if (activeHeaderStore === headerStore) {
+            activeHeaderStore = null
+        }
+        blockStore = null
+        headerStore = null
+    }
+
+    /**
+     * Broadcasts transactions whose broadcast was requested while no peer group was
+     * available, plus any of our own pending transactions that no peer has ever seen
+     * (e.g. a payment committed while the wallet was offline). Called when the peer
+     * group starts; [PeerGroup.broadcastTransaction] waits internally until enough
+     * peers are connected.
+     */
+    private fun broadcastPendingTransactions() {
+        val wallet = application.wallet ?: return
+        val peerGroup = this.peerGroup ?: return
+
+        val toBroadcast = LinkedHashSet<Sha256Hash>()
+        while (true) {
+            val txId = pendingBroadcasts.poll() ?: break
+            toBroadcast.add(txId)
+        }
+        wallet.pendingTransactions.forEach { tx ->
+            val confidence = tx.confidence
+            if (confidence.source == TransactionConfidence.Source.SELF &&
+                confidence.numBroadcastPeers() == 0 &&
+                !confidence.isTransactionLocked
+            ) {
+                toBroadcast.add(tx.txId)
+            }
+        }
+
+        toBroadcast.forEach { txId ->
+            val tx = wallet.getTransaction(txId)
+            if (tx != null && tx.confidence.confidenceType == TransactionConfidence.ConfidenceType.PENDING) {
+                log.info("broadcasting pending transaction {}", txId)
+                peerGroup.broadcastTransaction(tx, peerGroup.minBroadcastConnections, true)
+            } else {
+                log.info("skipping queued broadcast of {}: {}", txId, tx?.confidence?.confidenceType ?: "not in wallet")
+            }
+        }
     }
 
     override fun onTrimMemory(level: Int) {
