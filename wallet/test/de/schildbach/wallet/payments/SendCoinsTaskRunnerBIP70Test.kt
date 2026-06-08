@@ -36,6 +36,7 @@ import io.mockk.every
 import io.mockk.mockk
 import io.mockk.mockkStatic
 import io.mockk.spyk
+import io.mockk.unmockkStatic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import okhttp3.mockwebserver.MockResponse
@@ -111,9 +112,14 @@ class SendCoinsTaskRunnerBIP70Test {
         identityConfig = mockk(relaxed = true)
         coinJoinConfig = mockk(relaxed = true)
         coinJoinService = mockk(relaxed = true)
+        identityRepo = mockk(relaxed = true)
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
         // wallet = mockk(relaxed = true)
+
+        // dashj requires a Context to be constructed before reading a wallet
+        org.bitcoinj.core.Context.propagate(org.bitcoinj.core.Context.getOrCreate(networkParams))
+
         javaClass.getResourceAsStream("coinjoin.wallet").use {
             wallet = WalletProtobufSerializer().readWallet(it)
         }
@@ -158,6 +164,7 @@ class SendCoinsTaskRunnerBIP70Test {
     @After
     fun tearDown() {
         mockWebServer.shutdown()
+        unmockkStatic(SecurityGuard::class)
     }
 
     /**
