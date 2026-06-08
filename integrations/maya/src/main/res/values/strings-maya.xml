@@ -16,7 +16,7 @@
   -->
 <resources>
     <string name="maya_service_name">Maya</string>
-    <string name="swapkit_service_name" translatable="false">SwapKit</string>
+    <string name="swapkit_service_name" translatable="false">Dash DEX</string>
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
