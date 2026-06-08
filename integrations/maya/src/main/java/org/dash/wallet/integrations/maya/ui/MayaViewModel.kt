@@ -37,6 +37,7 @@ import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
@@ -57,6 +58,31 @@ import javax.inject.Inject
 
 data class MayaPortalUIState(
     val errorCode: Int? = null
+)
+
+/**
+ * Row model for the "Select coin" picker. Context-free: name/code are kept as
+ * string resource IDs ([nameId]/[codeId]) and resolved with stringResource in the
+ * row composable so the ViewModel stays free of Android Context.
+ */
+data class CoinPickerItem(
+    val asset: String,
+    val currencyCode: String,
+    @androidx.annotation.StringRes val nameId: Int,
+    @androidx.annotation.StringRes val codeId: Int,
+    val iconUrl: String,
+    val price: String?,
+    // Route-provider label: maya / near string res, or null when both providers can
+    // route the asset (or it is unclassified) — no label shown in that case.
+    @androidx.annotation.StringRes val routeLabelId: Int?,
+    val isHalted: Boolean,
+    val isEnabled: Boolean
+)
+
+data class CurrencyPickerUIState(
+    val coins: List<CoinPickerItem> = emptyList(),
+    val searchQuery: String = "",
+    val isLoading: Boolean = true
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -111,6 +137,77 @@ class MayaViewModel @Inject constructor(
         addresses.any { it.halted } || pools.any { it.mayaHalted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val paymentParsers = MayaCurrencyList.getPaymentProcessors()
+
+    private val _searchQuery = MutableStateFlow("")
+
+    // Membership map: which assets are part of the curated MayaCurrencyList, with
+    // their translatable name/code resource IDs. Replaces the old defaultItemMap.
+    private val currencyResIds: Map<String, Pair<Int, Int>> =
+        MayaCurrencyList.all.associateBy({ it.asset }, { it.nameId to it.codeId })
+
+    /**
+     * Single UIState for the "Select coin" picker. Builds the row list from the
+     * pool list + inbound addresses (same rules as the legacy fragment), then
+     * applies the search filter. Context-free — name/code stay as resource IDs.
+     */
+    val currencyPickerUIState: StateFlow<CurrencyPickerUIState> =
+        combine(poolList, inboundAddresses, _searchQuery) { pools, addresses, query ->
+            val coins = pools.filter { pool -> pool.asset != "DASH.DASH" }
+                .filter { pool ->
+                    currencyResIds.containsKey(pool.asset) &&
+                        pool.status.equals("available", ignoreCase = true)
+                }
+                .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
+                .map { pool ->
+                    val chain = pool.asset.substringBefore('.')
+                    val inbound = addresses.find { it.chain == chain }
+                    // Maya-only assets carry halt status per-asset (pool.mayaHalted),
+                    // OR-ed with the per-chain inbound halt used by the native Maya backend.
+                    val isHalted = inbound?.halted == true || pool.mayaHalted
+                    val isEnabled = inbound != null && !isHalted
+                    val price = if (isEnabled) {
+                        GenericUtils.formatFiatWithoutComma(formatFiat(pool.assetPriceFiat))
+                    } else {
+                        null
+                    }
+                    val resIds = currencyResIds[pool.asset]
+                    // Show the provider only when the asset is routable through a
+                    // single provider. When both Maya and NEAR can route it (neither
+                    // *-only flag set), show no label.
+                    val routeLabelId = when {
+                        pool.mayaOnly -> R.string.maya_route_label_maya
+                        pool.nearOnly -> R.string.maya_route_label_near
+                        else -> null
+                    }
+                    CoinPickerItem(
+                        asset = pool.asset,
+                        currencyCode = pool.currencyCode,
+                        nameId = resIds?.first ?: 0,
+                        codeId = resIds?.second ?: 0,
+                        iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
+                        price = price,
+                        routeLabelId = routeLabelId,
+                        isHalted = isHalted,
+                        isEnabled = isEnabled
+                    )
+                }
+                .sortedBy { it.currencyCode }
+
+            // The list is emitted unfiltered; the search filter is applied in the
+            // composable layer so it can match the localized coin name (resolved via
+            // stringResource from nameId), preserving the legacy fragment's behavior
+            // of matching both code and translated name. The ViewModel stays
+            // Context-free and cannot resolve those localized strings here.
+            CurrencyPickerUIState(
+                coins = coins,
+                searchQuery = query,
+                isLoading = pools.isEmpty()
+            )
+        }.stateIn(viewModelScope, SharingStarted.Eagerly, CurrencyPickerUIState())
+
+    fun onSearchQuery(text: String) {
+        _searchQuery.value = text
+    }
 
     init {
         // TODO: is this really needed? we don't support DASH swaps

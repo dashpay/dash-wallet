@@ -115,6 +115,11 @@ class SwapKitApiAggregator @Inject constructor(
     // fallback). Refreshed alongside the pool list. Empty until first refresh.
     private var mayaOnlyAssets: Set<String> = emptySet()
 
+    // Upper-cased identifiers routable from DASH only via NEAR (no MAYACHAIN
+    // fallback) — the mirror of [mayaOnlyAssets]. Assets in neither set are routable
+    // via both providers. Refreshed alongside the pool list.
+    private var nearOnlyAssets: Set<String> = emptySet()
+
     // Maya chain → halted (chain halted OR global trading paused). Captured at
     // refresh time from mayanode /inbound_addresses; used to stamp pool.mayaHalted.
     private var mayaHaltedChains: Set<String> = emptySet()
@@ -127,6 +132,7 @@ class SwapKitApiAggregator @Inject constructor(
         poolListLastUpdated = 0L
         usdPriceCache.clear()
         mayaOnlyAssets = emptySet()
+        nearOnlyAssets = emptySet()
         mayaHaltedChains = emptySet()
         mayaGlobalHalt = false
     }
@@ -191,11 +197,13 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     /**
-     * Refresh [mayaOnlyAssets]: identifiers routable from DASH only via MAYACHAIN.
-     * Method per SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets": an asset is
-     * Maya-only when it is in MAYACHAIN's token list but NOT in NEAR's. Compared
-     * case-insensitively on the canonical `identifier`. On failure (either list
-     * empty) the previous classification is kept rather than wrongly clearing it.
+     * Refresh [mayaOnlyAssets] and [nearOnlyAssets]: which provider(s) can route each
+     * identifier from DASH. Method per SWAPKIT_PROTOCOL.md → "Detecting Maya-only
+     * Assets": an asset is Maya-only when it is in MAYACHAIN's token list but NOT
+     * NEAR's; NEAR-only is the mirror. Assets in both lists are routable via either
+     * provider and end up in neither set. Compared case-insensitively on the canonical
+     * `identifier`. On failure (either list empty) the previous classification is kept
+     * rather than wrongly clearing it.
      */
     private suspend fun refreshMayaOnlyClassification() {
         val mayaIds = webApi.getTokens(SwapKitConstants.MAYACHAIN_PROVIDER)
@@ -206,14 +214,20 @@ class SwapKitApiAggregator @Inject constructor(
             .toSet()
         if (mayaIds.isEmpty() || nearIds.isEmpty()) {
             log.info(
-                "swapkit maya-only: token list unavailable (maya={}, near={}); keeping previous set",
+                "swapkit route classification: token list unavailable (maya={}, near={}); keeping previous sets",
                 mayaIds.size,
                 nearIds.size
             )
             return
         }
         mayaOnlyAssets = mayaIds - nearIds
-        log.info("swapkit maya-only assets ({}): {}", mayaOnlyAssets.size, mayaOnlyAssets)
+        nearOnlyAssets = nearIds - mayaIds
+        log.info(
+            "swapkit route classification: maya-only={} {}, near-only={}",
+            mayaOnlyAssets.size,
+            mayaOnlyAssets,
+            nearOnlyAssets.size
+        )
     }
 
     /**
@@ -243,6 +257,7 @@ class SwapKitApiAggregator @Inject constructor(
     private fun markMayaInfo(pool: PoolInfo) {
         val isMayaOnly = mayaOnlyAssets.contains(pool.asset.uppercase())
         pool.mayaOnly = isMayaOnly
+        pool.nearOnly = nearOnlyAssets.contains(pool.asset.uppercase())
         val chainHalted = mayaGlobalHalt ||
             mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
         // TEMP TEST: force Maya-only assets to halted in debug builds — see

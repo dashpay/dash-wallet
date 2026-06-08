@@ -59,6 +59,16 @@ data class PoolInfo(
     var mayaOnly: Boolean = false
 
     /**
+     * SwapKit only: true when this asset is routable from DASH **exclusively via
+     * NEAR** (in NEAR's token list but NOT MAYACHAIN's) — the mirror of [mayaOnly].
+     * When BOTH [mayaOnly] and [nearOnly] are false the asset is routable via both
+     * providers (or via neither, for an unclassified reachable asset), and the
+     * picker shows no route-provider label. Always false for the native Maya backend.
+     */
+    @IgnoredOnParcel
+    var nearOnly: Boolean = false
+
+    /**
      * SwapKit only: true when [mayaOnly] and Maya currently reports this asset's
      * chain as halted / trading-paused (or global trading paused). For non-Maya-only
      * assets this stays false because a NEAR route keeps them tradable even during a
