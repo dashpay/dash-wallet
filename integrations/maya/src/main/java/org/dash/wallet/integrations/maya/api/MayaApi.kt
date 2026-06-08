@@ -73,7 +73,7 @@ interface MayaApi {
     // Default lives on [SwapProvider.getDefaultSwapQuote] — Kotlin refuses defaults
     // declared on more than one super interface, so [MayaApiAggregator] gets the
     // default solely from [SwapProvider].
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote?
 }
 
 class MayaApiAggregator @Inject constructor(
