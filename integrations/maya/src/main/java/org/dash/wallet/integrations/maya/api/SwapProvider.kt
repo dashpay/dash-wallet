@@ -22,15 +22,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import java.math.BigDecimal
 
 /**
  * Backend-agnostic surface for cross-chain swaps.

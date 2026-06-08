@@ -19,11 +19,9 @@ package org.dash.wallet.integrations.maya.swapkit
 
 import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -33,11 +31,13 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
+import org.dash.wallet.integrations.maya.api.MayaWebApi
 import org.dash.wallet.integrations.maya.api.SwapProvider
-import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Account
+import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -45,12 +45,11 @@ import org.dash.wallet.integrations.maya.model.SwapFees
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitFee
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
-import org.dash.wallet.integrations.maya.ui.MayaViewModel
+import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
@@ -77,12 +76,24 @@ import javax.inject.Inject
 class SwapKitApiAggregator @Inject constructor(
     private val webApi: SwapKitWebApi,
     private val blockchainApi: MayaBlockchainApi,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    // Source of truth for Maya halt status (mayanode /inbound_addresses). Used only
+    // to enrich Maya-only assets — see markMayaInfo(). The coupling to Maya is
+    // acceptable because these assets settle exclusively via Maya on SwapKit
+    // (SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets").
+    private val mayaWebApi: MayaWebApi
 ) : SwapProvider {
     companion object {
         private val log = LoggerFactory.getLogger(SwapKitApiAggregator::class.java)
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
         private val DASH_BASE_UNITS = BigDecimal("100000000") // 1e8
+
+        // TEMP TEST FLAG — when true (debug builds only), every Maya-only asset is
+        // rendered as halted so the "Halted" chip / disabled state / toast can be
+        // verified without waiting for a real Maya halt on a listed Maya-only coin
+        // (the only live Maya halts—XRD/ZEC—are not Maya-only here). Set back to
+        // false or delete the forcedHalt branch in markMayaInfo() before merging.
+        private const val DEBUG_FORCE_MAYA_ONLY_HALT = false
     }
 
     override val poolInfoList = MutableStateFlow<List<PoolInfo>>(emptyList())
@@ -100,12 +111,24 @@ class SwapKitApiAggregator @Inject constructor(
     // selected-currency switches without re-fetching from SwapKit.
     private val usdPriceCache = mutableMapOf<String, BigDecimal>()
 
+    // Upper-cased identifiers routable from DASH only via MAYACHAIN (no NEAR
+    // fallback). Refreshed alongside the pool list. Empty until first refresh.
+    private var mayaOnlyAssets: Set<String> = emptySet()
+
+    // Maya chain → halted (chain halted OR global trading paused). Captured at
+    // refresh time from mayanode /inbound_addresses; used to stamp pool.mayaHalted.
+    private var mayaHaltedChains: Set<String> = emptySet()
+    private var mayaGlobalHalt: Boolean = false
+
     override suspend fun reset() {
         log.info("swapkit reset")
         poolInfoList.value = emptyList()
         apiError.value = null
         poolListLastUpdated = 0L
         usdPriceCache.clear()
+        mayaOnlyAssets = emptySet()
+        mayaHaltedChains = emptySet()
+        mayaGlobalHalt = false
     }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
@@ -139,6 +162,11 @@ class SwapKitApiAggregator @Inject constructor(
         val prices = webApi.getPrices(identifiers)
             .associateBy({ it.identifier.uppercase() }, { it.priceUsd })
 
+        // Refresh the Maya-only classification and Maya halt status before building
+        // the pools so each PoolInfo can be stamped in a single pass.
+        refreshMayaOnlyClassification()
+        refreshMayaHaltStatus()
+
         // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
         // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
         // contract Maya uses (raw price in pools, fiat conversion in the ViewModel pipeline).
@@ -156,9 +184,71 @@ class SwapKitApiAggregator @Inject constructor(
             }
             PoolInfo(asset = identifier, status = "Available").also {
                 it.assetPriceFiat = priceUsdFiat
+                markMayaInfo(it)
             }
         }
         poolInfoList.value = pools
+    }
+
+    /**
+     * Refresh [mayaOnlyAssets]: identifiers routable from DASH only via MAYACHAIN.
+     * Method per SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets": an asset is
+     * Maya-only when it is in MAYACHAIN's token list but NOT in NEAR's. Compared
+     * case-insensitively on the canonical `identifier`. On failure (either list
+     * empty) the previous classification is kept rather than wrongly clearing it.
+     */
+    private suspend fun refreshMayaOnlyClassification() {
+        val mayaIds = webApi.getTokens(SwapKitConstants.MAYACHAIN_PROVIDER)
+            .map { it.identifier.uppercase() }
+            .toSet()
+        val nearIds = webApi.getTokens(SwapKitConstants.NEAR_PROVIDER)
+            .map { it.identifier.uppercase() }
+            .toSet()
+        if (mayaIds.isEmpty() || nearIds.isEmpty()) {
+            log.info(
+                "swapkit maya-only: token list unavailable (maya={}, near={}); keeping previous set",
+                mayaIds.size,
+                nearIds.size
+            )
+            return
+        }
+        mayaOnlyAssets = mayaIds - nearIds
+        log.info("swapkit maya-only assets ({}): {}", mayaOnlyAssets.size, mayaOnlyAssets)
+    }
+
+    /**
+     * Refresh Maya halt status from mayanode /inbound_addresses. Captures per-chain
+     * `halted`/`chainTradingPaused` and the global `globalTradingPaused` flag, which
+     * together drive [PoolInfo.mayaHalted] for Maya-only assets.
+     */
+    private suspend fun refreshMayaHaltStatus() {
+        val inbound = mayaWebApi.getInboundAddresses()
+        if (inbound.isEmpty()) {
+            log.info("swapkit maya halt: no inbound addresses; keeping previous halt status")
+            return
+        }
+        mayaGlobalHalt = inbound.any { it.globalTradingPaused }
+        mayaHaltedChains = inbound
+            .filter { it.halted || it.chainTradingPaused || it.globalTradingPaused }
+            .map { it.chain.uppercase() }
+            .toSet()
+        log.info("swapkit maya halt: global={} chains={}", mayaGlobalHalt, mayaHaltedChains)
+    }
+
+    /**
+     * Stamp [PoolInfo.mayaOnly] and [PoolInfo.mayaHalted] from the cached
+     * classification + halt status. `mayaHalted` is only meaningful for Maya-only
+     * assets — others have a NEAR route and stay tradable through a Maya halt.
+     */
+    private fun markMayaInfo(pool: PoolInfo) {
+        val isMayaOnly = mayaOnlyAssets.contains(pool.asset.uppercase())
+        pool.mayaOnly = isMayaOnly
+        val chainHalted = mayaGlobalHalt ||
+            mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
+        // TEMP TEST: force Maya-only assets to halted in debug builds — see
+        // DEBUG_FORCE_MAYA_ONLY_HALT. Remove this branch before merging.
+        val forcedHalt = BuildConfig.DEBUG && DEBUG_FORCE_MAYA_ONLY_HALT
+        pool.mayaHalted = isMayaOnly && (forcedHalt || chainHalted)
     }
 
     override suspend fun getInboundAddresses(): List<InboundAddress> {
@@ -287,7 +377,7 @@ class SwapKitApiAggregator @Inject constructor(
         val vault = swap.targetAddress ?: swap.inboundAddress
             ?: return ResponseResource.Failure(MayaException("swapkit returned no vault address"), false, 0, null)
         val memo = swap.memo
-            //?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
+        // ?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
 
         val feeAmount = swapRequest.amount.copy().apply {
             // Sum the SwapKit fee breakdown, converting each leg to DASH via the
@@ -475,7 +565,10 @@ class SwapKitApiAggregator @Inject constructor(
                     // undercounting is preferable to guessing.
                     log.info(
                         "swapkit fee skipped: type={} amount={} asset={} chain={}",
-                        fee.type, fee.amount, fee.asset, fee.chain
+                        fee.type,
+                        fee.amount,
+                        fee.asset,
+                        fee.chain
                     )
                     BigDecimal.ZERO
                 }

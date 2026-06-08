@@ -24,7 +24,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -40,7 +39,6 @@ import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
-import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.InboundAddress
@@ -83,7 +81,7 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    //private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    // private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
@@ -105,8 +103,12 @@ class MayaViewModel @Inject constructor(
     val inboundAddresses: StateFlow<List<InboundAddress>> = _inboundAddresses.asStateFlow()
     private val _exchangeRates = MutableStateFlow<List<ExchangeRate>>(listOf())
     val exchangeRates = _exchangeRates.asStateFlow()
-    val hasHaltedCoins: StateFlow<Boolean> = inboundAddresses.map { addresses ->
-        addresses.any { it.halted }
+
+    // Halted when either the per-chain inbound list reports a halt (native Maya
+    // backend) OR any Maya-only pool is flagged halted (SwapKit backend, where the
+    // signal is carried per-asset on PoolInfo — see SwapKitApiAggregator.markMayaInfo).
+    val hasHaltedCoins: StateFlow<Boolean> = combine(inboundAddresses, poolList) { addresses, pools ->
+        addresses.any { it.halted } || pools.any { it.mayaHalted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
     val paymentParsers = MayaCurrencyList.getPaymentProcessors()
 
@@ -129,7 +131,6 @@ class MayaViewModel @Inject constructor(
                 }
             }
             .launchIn(viewModelScope)
-
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()

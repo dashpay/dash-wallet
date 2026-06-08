@@ -94,7 +94,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
             fiatCurrency = swapTradeInfo.fiatCurrencyCode,
             targetAddress = swapTradeInfo.destinationAddress,
-            maximum = swapTradeInfo.maximum,
+            maximum = swapTradeInfo.maximum
         )
 
         when (val result = swapProvider.getSwapInfo(swapRequest)) {

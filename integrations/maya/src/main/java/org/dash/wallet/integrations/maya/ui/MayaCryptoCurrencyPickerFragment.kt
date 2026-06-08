@@ -84,8 +84,10 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 it.asset == item.id
             }?.let {
                 val inboundAddress = viewModel.getInboundAddress(it.asset)
-                // if trading is halted, then don't perform an action
-                if (inboundAddress != null && !inboundAddress.halted) {
+                // if trading is halted, then don't perform an action. Maya-only
+                // assets carry their halt status per-asset (it.mayaHalted) since a
+                // shared chain may mix halted Maya-only and tradable NEAR-routed assets.
+                if (inboundAddress != null && !inboundAddress.halted && !it.mayaHalted) {
                     clickListener(it)
                 }
             }
@@ -135,7 +137,10 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                 .map { pool ->
                     val chain = pool.asset.substringBefore('.')
                     val inbound = addresses.find { it.chain == chain }
-                    val isEnabled = inbound != null && !inbound.halted
+                    // Maya-only assets carry halt status per-asset (pool.mayaHalted),
+                    // OR-ed with the per-chain inbound halt used by the native Maya backend.
+                    val isHalted = inbound?.halted == true || pool.mayaHalted
+                    val isEnabled = inbound != null && !isHalted
                     val price = if (isEnabled) {
                         GenericUtils.formatFiatWithoutComma(
                             viewModel.formatFiat(pool.assetPriceFiat)
@@ -143,15 +148,19 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                     } else {
                         null
                     }
-                    val haltedLabel = if (inbound?.halted == true) getString(R.string.maya_halted_label) else null
+                    // Halted assets show the "Halted" chip and hide the price; all other
+                    // assets (including non-halted Maya-only ones) show the price as normal.
+                    val actionLabel = if (isHalted) getString(R.string.maya_halted_label) else null
+                    val actionBg = if (actionLabel != null) R.color.gray_100 else null
+                    val actionFg = if (actionLabel != null) R.color.content_secondary else null
                     if (defaultItemMap.containsKey(pool.asset)) {
                         defaultItemMap[pool.asset]!!.copy(
                             iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
-                            actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
+                            actionText = actionLabel,
+                            actionBackgroundColor = actionBg,
+                            actionTextColor = actionFg,
                             isEnabled = isEnabled,
                             id = pool.asset
                         )
@@ -162,9 +171,9 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
                             iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                             iconSelectMode = IconSelectMode.None,
                             additionalInfo = price,
-                            actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
+                            actionText = actionLabel,
+                            actionBackgroundColor = actionBg,
+                            actionTextColor = actionFg,
                             isEnabled = isEnabled,
                             id = pool.asset
                         )
