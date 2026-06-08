@@ -66,6 +66,8 @@ public final class Constants {
     public static boolean SUPPORTS_INVITES;
     // TODO: remove all references to this when transaction metadata is saved on platform
     public static final boolean SUPPORTS_TXMETADATA;
+    public static final boolean SUPPORTS_MAYA_NATIVE = false;
+    public static final boolean SUPPORTS_SWAPKIT = true;
 
     public static final EnumSet<MasternodeSync.SYNC_FLAGS> SYNC_FLAGS = MasternodeSync.SYNC_DEFAULT_SPV;
     public static final EnumSet<MasternodeSync.VERIFY_FLAGS> VERIFY_FLAGS = MasternodeSync.VERIFY_DEFAULT_SPV;
