@@ -225,8 +225,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11070202
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.7.2-quantity"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11080010
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.8.0"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -470,6 +470,9 @@ android {
     testOptions {
         unitTests.includeAndroidResources  = true
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            maxHeapSize = "2g"
+        }
     }
     lint {
         abortOnError false
