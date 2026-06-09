@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.swapkit
 
 import android.content.Intent
+import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -50,6 +51,7 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitFee
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
+import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -82,12 +84,24 @@ class SwapKitApiAggregator @Inject constructor(
     // to enrich Maya-only assets — see markMayaInfo(). The coupling to Maya is
     // acceptable because these assets settle exclusively via Maya on SwapKit
     // (SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets").
-    private val mayaWebApi: MayaWebApi
+    private val mayaWebApi: MayaWebApi,
+    // Persists the coin-list snapshot for instant cold-start rendering (SWR).
+    private val mayaConfig: MayaConfig
 ) : SwapProvider {
     companion object {
         private val log = LoggerFactory.getLogger(SwapKitApiAggregator::class.java)
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
         private val DASH_BASE_UNITS = BigDecimal("100000000") // 1e8
+
+        // The Maya/NEAR token-list classification (/tokens) reflects provider
+        // capability, which changes very rarely — cache it far longer than the 30s
+        // pool refresh so we don't hit /tokens twice every cycle.
+        private val CLASSIFICATION_TTL_MS = TimeUnit.HOURS.toMillis(6)
+
+        // A both-provider asset's recommended network ($50 quote) is stable, so cache
+        // each resolution and only re-query once it ages past this — instead of
+        // re-quoting every both-asset on every 30s pool refresh.
+        private val PREFERRED_ROUTE_TTL_MS = TimeUnit.MINUTES.toMillis(10)
 
         // Indicative quote size used to pick the recommended network for assets
         // routable via BOTH Maya and NEAR — $50 worth of DASH.
@@ -110,7 +124,15 @@ class SwapKitApiAggregator @Inject constructor(
     private val responseScope = CoroutineScope(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
+    private val gson = Gson()
     private var poolListLastUpdated: Long = 0L
+
+    // When the Maya/NEAR classification was last fetched from /tokens; gates the
+    // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch).
+    private var classificationLastUpdated: Long = 0L
+
+    // asset → when its preferred network was last resolved; gates PREFERRED_ROUTE_TTL_MS.
+    private val preferredRouteResolvedAt = mutableMapOf<String, Long>()
 
     // Asset → USD price, captured at refresh time. applyPoolPrices re-seeds from
     // this cache so it stays idempotent across re-emissions AND handles
@@ -131,6 +153,13 @@ class SwapKitApiAggregator @Inject constructor(
     private var mayaHaltedChains: Set<String> = emptySet()
     private var mayaGlobalHalt: Boolean = false
 
+    init {
+        // Hydrate from the persisted snapshot so the picker renders instantly on cold
+        // start; observePoolList still triggers a background refresh (poolListLastUpdated
+        // stays 0), so this is stale-while-revalidate.
+        responseScope.launch { hydrateFromSnapshot() }
+    }
+
     override suspend fun reset() {
         log.info("swapkit reset")
         poolInfoList.value = emptyList()
@@ -139,9 +168,12 @@ class SwapKitApiAggregator @Inject constructor(
         usdPriceCache.clear()
         mayaOnlyAssets = emptySet()
         nearOnlyAssets = emptySet()
+        classificationLastUpdated = 0L
         mayaHaltedChains = emptySet()
         mayaGlobalHalt = false
         preferredRouteProviders.value = emptyMap()
+        preferredRouteResolvedAt.clear()
+        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, "") }
     }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
@@ -202,6 +234,9 @@ class SwapKitApiAggregator @Inject constructor(
         }
         poolInfoList.value = pools
 
+        // Snapshot the fresh list + classification for instant cold-start rendering.
+        persistSnapshot()
+
         // Resolve the recommended network for both-provider assets in the background
         // so the picker can replace "Multiple networks" with the actual provider.
         // Launched separately so it never delays publishing the pool list above.
@@ -214,6 +249,10 @@ class SwapKitApiAggregator @Inject constructor(
      * SwapKit-recommended route's provider. Emits incrementally so the picker updates
      * each row as it resolves. Maya-only / NEAR-only assets are skipped (their label is
      * already known statically); Maya-halted assets are skipped per product spec.
+     *
+     * Each resolution is cached for [PREFERRED_ROUTE_TTL_MS], so a 30s pool refresh only
+     * re-quotes assets that are new or whose recommendation has aged out — not the whole
+     * both-provider set every cycle.
      */
     private suspend fun resolvePreferredRouteProviders(pools: List<PoolInfo>) {
         val dashUsd = usdPriceCache[SwapKitConstants.DASH_ASSET]
@@ -225,25 +264,37 @@ class SwapKitApiAggregator @Inject constructor(
             .divide(dashUsd, 8, RoundingMode.HALF_UP)
             .toPlainString()
 
+        val now = System.currentTimeMillis()
         val candidates = pools.filter { pool ->
             pool.asset != SwapKitConstants.DASH_ASSET &&
                 !pool.mayaOnly &&
                 !pool.nearOnly &&
                 !mayaGlobalHalt &&
-                !mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
+                !mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase()) &&
+                isPreferredRouteStale(pool.asset, now)
         }
         if (candidates.isEmpty()) return
         log.info("swapkit preferred-route: resolving {} both-provider assets", candidates.size)
 
         val resolved = preferredRouteProviders.value.toMutableMap()
+        var changed = false
         for (pool in candidates) {
             val provider = recommendedProviderFor(pool.asset, sellAmount) ?: continue
             resolved[pool.asset] = provider
+            preferredRouteResolvedAt[pool.asset] = System.currentTimeMillis()
+            changed = true
             // Emit a fresh map per asset so the StateFlow re-emits and the picker
             // updates this row from "Multiple networks" to the resolved provider.
             preferredRouteProviders.value = resolved.toMap()
         }
         log.info("swapkit preferred-route: resolved {}", preferredRouteProviders.value)
+        // Persist the enriched snapshot (now with preferred routes) once, not per asset.
+        if (changed) persistSnapshot()
+    }
+
+    private fun isPreferredRouteStale(asset: String, now: Long): Boolean {
+        val resolvedAt = preferredRouteResolvedAt[asset] ?: return true
+        return now - resolvedAt > PREFERRED_ROUTE_TTL_MS
     }
 
     /**
@@ -268,6 +319,76 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     /**
+     * Restore the last persisted coin-list snapshot into memory so the picker can
+     * render immediately on cold start. Only applies while no fresh data is present;
+     * deliberately leaves [poolListLastUpdated] at 0 so [observePoolList] still triggers
+     * a background refresh (stale-while-revalidate). Best-effort: any failure is ignored.
+     */
+    private suspend fun hydrateFromSnapshot() {
+        if (poolInfoList.value.isNotEmpty()) return
+        val raw = runCatching { mayaConfig.get(MayaConfig.SWAPKIT_POOL_SNAPSHOT) }.getOrNull()
+        if (raw.isNullOrBlank()) return
+        val snapshot = runCatching { gson.fromJson(raw, SwapKitSnapshot::class.java) }.getOrNull()
+        if (snapshot == null || snapshot.pools.isEmpty()) return
+        // Don't clobber data that landed while we were reading from disk.
+        if (poolInfoList.value.isNotEmpty()) return
+
+        usdPriceCache.clear()
+        mayaOnlyAssets = snapshot.mayaOnly.toSet()
+        nearOnlyAssets = snapshot.nearOnly.toSet()
+        classificationLastUpdated = snapshot.classificationAtMs
+
+        val pools = snapshot.pools.map { p ->
+            PoolInfo(asset = p.asset, status = "Available").also { pool ->
+                if (p.priceUsd > 0.0) {
+                    val priceBd = BigDecimal(p.priceUsd)
+                    usdPriceCache[p.asset] = priceBd
+                    pool.assetPriceFiat = priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                }
+                pool.mayaOnly = p.mayaOnly
+                pool.nearOnly = p.nearOnly
+                pool.mayaHalted = p.mayaHalted
+            }
+        }
+        preferredRouteProviders.value = snapshot.preferredRoutes
+            .mapNotNull { (asset, name) ->
+                runCatching { asset to RouteProvider.valueOf(name) }.getOrNull()
+            }
+            .toMap()
+        // Seed resolution timestamps so the TTL spans cold start — the background
+        // refresh only re-quotes preferred routes once they age past the TTL.
+        preferredRouteProviders.value.keys.forEach { asset ->
+            preferredRouteResolvedAt[asset] = snapshot.savedAtMs
+        }
+        poolInfoList.value = pools
+        log.info("swapkit: hydrated {} pools from snapshot", pools.size)
+    }
+
+    /** Persist the current in-memory list + classification + preferred routes. */
+    private suspend fun persistSnapshot() {
+        val pools = poolInfoList.value
+        if (pools.isEmpty()) return
+        val snapshot = SwapKitSnapshot(
+            savedAtMs = System.currentTimeMillis(),
+            classificationAtMs = classificationLastUpdated,
+            pools = pools.map { pool ->
+                SwapKitPoolSnapshot(
+                    asset = pool.asset,
+                    priceUsd = (usdPriceCache[pool.asset] ?: BigDecimal.ZERO).toDouble(),
+                    mayaOnly = pool.mayaOnly,
+                    nearOnly = pool.nearOnly,
+                    mayaHalted = pool.mayaHalted
+                )
+            },
+            mayaOnly = mayaOnlyAssets.toList(),
+            nearOnly = nearOnlyAssets.toList(),
+            preferredRoutes = preferredRouteProviders.value.mapValues { it.value.name }
+        )
+        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, gson.toJson(snapshot)) }
+            .onFailure { log.info("swapkit: failed to persist snapshot: {}", it.message) }
+    }
+
+    /**
      * Refresh [mayaOnlyAssets] and [nearOnlyAssets]: which provider(s) can route each
      * identifier from DASH. Method per SWAPKIT_PROTOCOL.md → "Detecting Maya-only
      * Assets": an asset is Maya-only when it is in MAYACHAIN's token list but NOT
@@ -277,6 +398,13 @@ class SwapKitApiAggregator @Inject constructor(
      * rather than wrongly clearing it.
      */
     private suspend fun refreshMayaOnlyClassification() {
+        // Provider capability changes rarely; reuse the cached classification within
+        // CLASSIFICATION_TTL_MS instead of hitting /tokens (×2) on every 30s refresh.
+        val now = System.currentTimeMillis()
+        val fresh = classificationLastUpdated != 0L && now - classificationLastUpdated < CLASSIFICATION_TTL_MS
+        if (fresh && (mayaOnlyAssets.isNotEmpty() || nearOnlyAssets.isNotEmpty())) {
+            return
+        }
         val mayaIds = webApi.getTokens(SwapKitConstants.MAYACHAIN_PROVIDER)
             .map { it.identifier.uppercase() }
             .toSet()
@@ -293,6 +421,7 @@ class SwapKitApiAggregator @Inject constructor(
         }
         mayaOnlyAssets = mayaIds - nearIds
         nearOnlyAssets = nearIds - mayaIds
+        classificationLastUpdated = now
         log.info(
             "swapkit route classification: maya-only={} {}, near-only={}",
             mayaOnlyAssets.size,
@@ -693,3 +822,26 @@ class SwapKitApiAggregator @Inject constructor(
         }
     }
 }
+
+/**
+ * Persisted coin-list snapshot for stale-while-revalidate cold-start rendering. Stored
+ * as JSON under [MayaConfig.SWAPKIT_POOL_SNAPSHOT]. Only the fields the picker needs to
+ * render and re-seed the in-memory caches are kept; prices/halt are deliberately stale
+ * until the background refresh lands. [RouteProvider] is stored by name.
+ */
+private data class SwapKitSnapshot(
+    val savedAtMs: Long = 0L,
+    val classificationAtMs: Long = 0L,
+    val pools: List<SwapKitPoolSnapshot> = emptyList(),
+    val mayaOnly: List<String> = emptyList(),
+    val nearOnly: List<String> = emptyList(),
+    val preferredRoutes: Map<String, String> = emptyMap()
+)
+
+private data class SwapKitPoolSnapshot(
+    val asset: String = "",
+    val priceUsd: Double = 0.0,
+    val mayaOnly: Boolean = false,
+    val nearOnly: Boolean = false,
+    val mayaHalted: Boolean = false
+)

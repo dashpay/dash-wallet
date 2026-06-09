@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +28,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,6 +47,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -54,7 +57,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import org.dash.wallet.common.ui.components.DashList
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
@@ -62,6 +64,14 @@ import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
+
+// Mirrors the common DashList card styling (its shape/shadow tokens are private).
+// Replicated here so the coin list can be a lazy LazyColumn while keeping the look.
+private val CardShape = RoundedCornerShape(20.dp)
+private val CardShadowColor = Color(0xFFB8C1CC).copy(alpha = 0.10f)
+
+// Figma colors/gray/gray400/gray400alpha10 — the search field background.
+private val SearchFieldBackground = Color(0x1A75808A)
 
 @Composable
 fun MayaCryptoCurrencyPickerScreen(
@@ -139,12 +149,12 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                 modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-            ) {
-                if (isLoading) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                ) {
                     CircularProgressIndicator(
                         color = MyTheme.Colors.dashBlue,
                         strokeWidth = 3.dp,
@@ -152,18 +162,33 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                             .align(Alignment.Center)
                             .size(36.dp)
                     )
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 80.dp)
-                    ) {
-                        item {
-                            DashList {
-                                displayItems.forEach { coin ->
-                                    CoinRow(item = coin, onCoinClick = onCoinClick)
-                                }
-                            }
-                        }
+                }
+            } else {
+                // Lazy list inside the rounded white "DashList" card. Each coin is its
+                // own LazyColumn item (rather than one item wrapping a forEach) so only
+                // visible rows compose on the first frame — this is what lets the screen
+                // appear immediately instead of stalling on the full list. fill = false
+                // makes the card wrap its content for short/filtered lists and cap at the
+                // available height (scrolling) when long.
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f, fill = false)
+                        .padding(horizontal = 20.dp)
+                        .shadow(
+                            elevation = 5.dp,
+                            shape = CardShape,
+                            ambientColor = CardShadowColor,
+                            spotColor = CardShadowColor
+                        )
+                        .clip(CardShape)
+                        .background(MyTheme.Colors.backgroundSecondary)
+                        .padding(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    contentPadding = PaddingValues(bottom = 4.dp)
+                ) {
+                    items(displayItems, key = { it.asset }) { coin ->
+                        CoinRow(item = coin, onCoinClick = onCoinClick)
                     }
                 }
             }
@@ -216,9 +241,9 @@ private fun SearchField(
         textStyle = MyTheme.Body2Regular,
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
         colors = TextFieldDefaults.colors(
-            focusedContainerColor = MyTheme.Colors.backgroundSecondary,
-            unfocusedContainerColor = MyTheme.Colors.backgroundSecondary,
-            disabledContainerColor = MyTheme.Colors.backgroundSecondary,
+            focusedContainerColor = SearchFieldBackground,
+            unfocusedContainerColor = SearchFieldBackground,
+            disabledContainerColor = SearchFieldBackground,
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
