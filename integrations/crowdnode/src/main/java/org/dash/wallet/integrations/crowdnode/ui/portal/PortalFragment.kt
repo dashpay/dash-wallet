@@ -134,10 +134,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
         binding.walletBalanceDash.setApplyMarkup(true)
         binding.walletBalanceDash.setAmount(Coin.ZERO)
 
-        binding.depositBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.PORTAL_DEPOSIT)
-            safeNavigate(PortalFragmentDirections.portalToTransfer(false))
-        }
+        // CrowdNode functionality is limited: deposits aren't supported. Only withdrawals are allowed.
+        binding.depositBtn.isVisible = false
+        // hidden unless the online account is fully set up - see setOnlineAccountStatus
+        binding.onlineAccountBtn.isVisible = false
 
         binding.withdrawBtn.setOnClickListener {
             continueWithdraw()
@@ -259,6 +259,9 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setOnlineAccountStatus(status: OnlineAccountStatus) {
+        // CrowdNode functionality is limited: creating an online account isn't
+        // supported. The button is only shown for fully set up online accounts.
+        binding.onlineAccountBtn.isVisible = status == OnlineAccountStatus.Done
         binding.onlineAccountBtn.isClickable = !isLinkingInProgress
         binding.onlineNavIcon.isVisible = !isLinkingInProgress
 
