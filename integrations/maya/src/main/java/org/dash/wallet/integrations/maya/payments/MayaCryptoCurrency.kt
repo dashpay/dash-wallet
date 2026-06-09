@@ -465,7 +465,7 @@ open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val name: String = "Starknet"
     override val asset: String = "STRK.STRK"
     override val exampleAddress: String =
-        "0x05dcaeae5fde9a4cdb44ea21cba29ad9e6e0c1e9ae7e7e2b6b2f0f6e2e3e4e5e6"
+        "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
     override val paymentIntentParser: PaymentIntentParser = StarknetPaymentIntentParser()
     override val addressParser: AddressParser = StarknetAddressParser()
     override val codeId: Int = R.string.cryptocurrency_strk_code
@@ -1119,7 +1119,7 @@ object MayaCurrencyList {
 
             // ----- SOL chain tokens -----
             MayaSolanaTokenCryptoCurrency(
-                "WIF",
+                "\$WIF",
                 "dogwifhat",
                 "SOL.\$WIF-EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
                 "SOL.WIF-zcjm",
