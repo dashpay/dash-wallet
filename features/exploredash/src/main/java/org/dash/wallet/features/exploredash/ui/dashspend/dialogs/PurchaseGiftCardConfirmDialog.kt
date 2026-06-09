@@ -611,15 +611,12 @@ internal fun PurchaseGiftCardConfirmView(
 
         Column(
             modifier = Modifier
-                .let { if (uiState.useExpandedLayout) it.weight(1f) else it }
+                // Always allow the body to scroll so the pinned buttons below stay
+                // visible on short screens. fill = false keeps the sheet wrapping its
+                // content when it fits, and only caps/scrolls the body when it doesn't.
+                .weight(1f, fill = uiState.useExpandedLayout)
                 .fillMaxWidth()
-                .let {
-                    if (uiState.useExpandedLayout) {
-                        it.verticalScroll(rememberScrollState())
-                    } else {
-                        it
-                    }
-                }
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
