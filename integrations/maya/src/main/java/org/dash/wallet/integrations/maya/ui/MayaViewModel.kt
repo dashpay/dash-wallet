@@ -41,6 +41,7 @@ import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
+import org.dash.wallet.integrations.maya.api.RouteProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -72,9 +73,14 @@ data class CoinPickerItem(
     @androidx.annotation.StringRes val codeId: Int,
     val iconUrl: String,
     val price: String?,
-    // Route-provider label: maya / near string res, or null when both providers can
-    // route the asset (or it is unclassified) — no label shown in that case.
+    // Route-provider label string res: maya / near (single provider), or
+    // "Multiple networks" while a both-provider asset's preferred network is still
+    // being resolved.
     @androidx.annotation.StringRes val routeLabelId: Int?,
+    // True when [routeLabelId] is the asynchronously-calculated preferred network for
+    // a both-provider asset (rendered with a trailing "*"); false for statically-known
+    // single-provider labels and the "Multiple networks" placeholder.
+    val routeCalculated: Boolean,
     val isHalted: Boolean,
     val isEnabled: Boolean
 )
@@ -151,7 +157,12 @@ class MayaViewModel @Inject constructor(
      * applies the search filter. Context-free — name/code stay as resource IDs.
      */
     val currencyPickerUIState: StateFlow<CurrencyPickerUIState> =
-        combine(poolList, inboundAddresses, _searchQuery) { pools, addresses, query ->
+        combine(
+            poolList,
+            inboundAddresses,
+            _searchQuery,
+            swapProvider.preferredRouteProviders
+        ) { pools, addresses, query, preferredRoutes ->
             val coins = pools.filter { pool -> pool.asset != "DASH.DASH" }
                 .filter { pool ->
                     currencyResIds.containsKey(pool.asset) &&
@@ -171,13 +182,34 @@ class MayaViewModel @Inject constructor(
                         null
                     }
                     val resIds = currencyResIds[pool.asset]
-                    // Show the provider only when the asset is routable through a
-                    // single provider. When both Maya and NEAR can route it (neither
-                    // *-only flag set), show no label.
-                    val routeLabelId = when {
-                        pool.mayaOnly -> R.string.maya_route_label_maya
-                        pool.nearOnly -> R.string.maya_route_label_near
-                        else -> null
+                    // Single-provider assets are labelled statically from the token-list
+                    // classification. Both-provider assets show "Multiple networks" until
+                    // the background quote resolves a preferred network, then show it with
+                    // a trailing "*" (routeCalculated) to flag it as calculated.
+                    val preferred = preferredRoutes[pool.asset]
+                    val routeLabelId: Int
+                    val routeCalculated: Boolean
+                    when {
+                        pool.mayaOnly -> {
+                            routeLabelId = R.string.maya_route_label_maya
+                            routeCalculated = false
+                        }
+                        pool.nearOnly -> {
+                            routeLabelId = R.string.maya_route_label_near
+                            routeCalculated = false
+                        }
+                        preferred == RouteProvider.MAYA -> {
+                            routeLabelId = R.string.maya_route_label_maya
+                            routeCalculated = true
+                        }
+                        preferred == RouteProvider.NEAR -> {
+                            routeLabelId = R.string.maya_route_label_near
+                            routeCalculated = true
+                        }
+                        else -> {
+                            routeLabelId = R.string.maya_route_label_multiple
+                            routeCalculated = false
+                        }
                     }
                     CoinPickerItem(
                         asset = pool.asset,
@@ -187,6 +219,7 @@ class MayaViewModel @Inject constructor(
                         iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
                         price = price,
                         routeLabelId = routeLabelId,
+                        routeCalculated = routeCalculated,
                         isHalted = isHalted,
                         isEnabled = isEnabled
                     )

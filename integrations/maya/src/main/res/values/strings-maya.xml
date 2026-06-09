@@ -339,6 +339,7 @@
     <string name="maya_select_coin_title">Select coin</string>
     <string name="maya_route_label_maya" translatable="false">Maya</string>
     <string name="maya_route_label_near" translatable="false">NEAR</string>
+    <string name="maya_route_label_multiple">Multiple networks</string>
 
 
 </resources>

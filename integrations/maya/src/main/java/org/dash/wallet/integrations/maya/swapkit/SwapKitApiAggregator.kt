@@ -35,6 +35,7 @@ import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.RouteProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
@@ -88,6 +89,10 @@ class SwapKitApiAggregator @Inject constructor(
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
         private val DASH_BASE_UNITS = BigDecimal("100000000") // 1e8
 
+        // Indicative quote size used to pick the recommended network for assets
+        // routable via BOTH Maya and NEAR — $50 worth of DASH.
+        private val PREFERRED_QUOTE_USD = BigDecimal("50")
+
         // TEMP TEST FLAG — when true (debug builds only), every Maya-only asset is
         // rendered as halted so the "Halted" chip / disabled state / toast can be
         // verified without waiting for a real Maya halt on a listed Maya-only coin
@@ -98,6 +103,7 @@ class SwapKitApiAggregator @Inject constructor(
 
     override val poolInfoList = MutableStateFlow<List<PoolInfo>>(emptyList())
     override val apiError = MutableStateFlow<Exception?>(null)
+    override val preferredRouteProviders = MutableStateFlow<Map<String, RouteProvider>>(emptyMap())
     override var notificationIntent: Intent? = null
     override var showNotificationOnResult: Boolean = false
 
@@ -135,6 +141,7 @@ class SwapKitApiAggregator @Inject constructor(
         nearOnlyAssets = emptySet()
         mayaHaltedChains = emptySet()
         mayaGlobalHalt = false
+        preferredRouteProviders.value = emptyMap()
     }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
@@ -194,6 +201,70 @@ class SwapKitApiAggregator @Inject constructor(
             }
         }
         poolInfoList.value = pools
+
+        // Resolve the recommended network for both-provider assets in the background
+        // so the picker can replace "Multiple networks" with the actual provider.
+        // Launched separately so it never delays publishing the pool list above.
+        responseScope.launch { resolvePreferredRouteProviders(pools) }
+    }
+
+    /**
+     * For assets routable via BOTH Maya and NEAR (and not Maya-halted), fetch an
+     * indicative DASH→asset quote worth [PREFERRED_QUOTE_USD] and record the
+     * SwapKit-recommended route's provider. Emits incrementally so the picker updates
+     * each row as it resolves. Maya-only / NEAR-only assets are skipped (their label is
+     * already known statically); Maya-halted assets are skipped per product spec.
+     */
+    private suspend fun resolvePreferredRouteProviders(pools: List<PoolInfo>) {
+        val dashUsd = usdPriceCache[SwapKitConstants.DASH_ASSET]
+        if (dashUsd == null || dashUsd.signum() <= 0) {
+            log.info("swapkit preferred-route: no DASH price yet; skipping resolution")
+            return
+        }
+        val sellAmount = PREFERRED_QUOTE_USD
+            .divide(dashUsd, 8, RoundingMode.HALF_UP)
+            .toPlainString()
+
+        val candidates = pools.filter { pool ->
+            pool.asset != SwapKitConstants.DASH_ASSET &&
+                !pool.mayaOnly &&
+                !pool.nearOnly &&
+                !mayaGlobalHalt &&
+                !mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
+        }
+        if (candidates.isEmpty()) return
+        log.info("swapkit preferred-route: resolving {} both-provider assets", candidates.size)
+
+        val resolved = preferredRouteProviders.value.toMutableMap()
+        for (pool in candidates) {
+            val provider = recommendedProviderFor(pool.asset, sellAmount) ?: continue
+            resolved[pool.asset] = provider
+            // Emit a fresh map per asset so the StateFlow re-emits and the picker
+            // updates this row from "Multiple networks" to the resolved provider.
+            preferredRouteProviders.value = resolved.toMap()
+        }
+        log.info("swapkit preferred-route: resolved {}", preferredRouteProviders.value)
+    }
+
+    /**
+     * One indicative quote with no provider filter → SwapKit returns routes for every
+     * provider; the recommended route's [SwapKitRoute.providers] identifies the network.
+     */
+    private suspend fun recommendedProviderFor(asset: String, sellAmount: String): RouteProvider? {
+        val response = webApi.getQuote(
+            SwapKitQuoteRequest(
+                sellAsset = SwapKitConstants.DASH_ASSET,
+                buyAsset = asset,
+                sellAmount = sellAmount,
+                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT
+            )
+        ) ?: return null
+        val providers = response.routes.bestRoute()?.providers ?: return null
+        return when {
+            providers.any { it.uppercase().contains("MAYA") } -> RouteProvider.MAYA
+            providers.any { it.uppercase().contains("NEAR") } -> RouteProvider.NEAR
+            else -> null
+        }
     }
 
     /**

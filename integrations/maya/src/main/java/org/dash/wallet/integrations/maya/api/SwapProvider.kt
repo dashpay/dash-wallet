@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
@@ -40,11 +41,25 @@ import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
  * are reused as the common DTO shape. SwapKit responses are mapped onto these on the
  * provider side; only the fields the wallet UI consumes need to be populated.
  */
+/** Shared empty default for backends that don't resolve per-asset route providers. */
+private val EMPTY_PREFERRED_ROUTE_PROVIDERS: StateFlow<Map<String, RouteProvider>> =
+    MutableStateFlow(emptyMap())
+
 interface SwapProvider {
     val poolInfoList: StateFlow<List<PoolInfo>>
     val apiError: StateFlow<Exception?>
     var notificationIntent: Intent?
     var showNotificationOnResult: Boolean
+
+    /**
+     * SwapKit only: asset identifier → the recommended [RouteProvider] for assets
+     * routable via BOTH Maya and NEAR, resolved asynchronously by an indicative quote
+     * after the pool list is published. Assets absent from the map (single-provider,
+     * not-yet-resolved, or Maya-halted) have no calculated preference. Empty for the
+     * native Maya backend.
+     */
+    val preferredRouteProviders: StateFlow<Map<String, RouteProvider>>
+        get() = EMPTY_PREFERRED_ROUTE_PROVIDERS
 
     suspend fun reset()
 

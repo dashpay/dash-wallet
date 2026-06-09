@@ -110,6 +110,9 @@ class DispatchingSwapProvider @Inject constructor(
     override val apiError: StateFlow<Exception?>
         get() = active.apiError
 
+    override val preferredRouteProviders: StateFlow<Map<String, RouteProvider>>
+        get() = active.preferredRouteProviders
+
     override var notificationIntent: Intent?
         get() = active.notificationIntent
         set(value) { active.notificationIntent = value }

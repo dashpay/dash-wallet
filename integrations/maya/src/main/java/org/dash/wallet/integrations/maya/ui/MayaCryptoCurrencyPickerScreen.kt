@@ -264,10 +264,14 @@ private fun CoinRow(
                         style = MyTheme.Body2Regular,
                         color = MyTheme.Colors.textPrimary
                     )
-                    // No provider label when both Maya and NEAR can route the asset.
+                    // Single-provider assets show the network statically; both-provider
+                    // assets show "Multiple networks" until the background quote resolves
+                    // a preferred network, then show it with a trailing "*" to mark it as
+                    // calculated.
                     item.routeLabelId?.let { labelId ->
+                        val label = stringResource(labelId) + if (item.routeCalculated) "*" else ""
                         Text(
-                            text = stringResource(labelId),
+                            text = label,
                             style = MyTheme.Typography.BodySmall,
                             color = MyTheme.Colors.textTertiary
                         )
@@ -296,7 +300,9 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             codeId = 0,
             iconUrl = "",
             price = "$64,000.00",
+            // Single-provider (Maya-only) → static label, no asterisk.
             routeLabelId = R.string.maya_route_label_maya,
+            routeCalculated = false,
             isHalted = false,
             isEnabled = true
         ),
@@ -308,6 +314,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             iconUrl = "",
             price = "$5.20",
             routeLabelId = R.string.maya_route_label_near,
+            routeCalculated = false,
             isHalted = false,
             isEnabled = true
         ),
@@ -318,8 +325,22 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             codeId = 0,
             iconUrl = "",
             price = "$3,100.00",
-            // Routable via both providers → no route label.
-            routeLabelId = null,
+            // Both providers, preferred network resolved by quote → "Maya*".
+            routeLabelId = R.string.maya_route_label_maya,
+            routeCalculated = true,
+            isHalted = false,
+            isEnabled = true
+        ),
+        CoinPickerItem(
+            asset = "UNI.UNI",
+            currencyCode = "UNI",
+            nameId = 0,
+            codeId = 0,
+            iconUrl = "",
+            price = "$8.40",
+            // Both providers, still resolving → "Multiple networks".
+            routeLabelId = R.string.maya_route_label_multiple,
+            routeCalculated = false,
             isHalted = false,
             isEnabled = true
         ),
@@ -331,6 +352,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             iconUrl = "",
             price = null,
             routeLabelId = R.string.maya_route_label_maya,
+            routeCalculated = false,
             isHalted = true,
             isEnabled = false
         )
