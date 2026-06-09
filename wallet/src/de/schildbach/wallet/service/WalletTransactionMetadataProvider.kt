@@ -581,14 +581,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         taxCategory: TaxCategory,
         service: String
     ) {
-        // check to see if this address has been used before
-        // if it has been used before, that means the same address was used more than once
-        // possibly for two different services or actions.
-        // This may not matter as the default tax category is probably the same for each.
-        if (addressMetadataDao.exists(address, isInput)) {
+        // The same address may be used more than once (possibly for two different services or
+        // actions); this may not matter as the default tax category is probably the same for each.
+        // markAddress uses INSERT OR IGNORE, so a duplicate (address, isInput) is dropped atomically
+        // rather than crashing on a UNIQUE constraint failure when callers race on the same key.
+        if (addressMetadataDao.markAddress(address, isInput, taxCategory, service) == -1L) {
             log.info("address $address/$isInput was already added")
-        } else {
-            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
         }
     }
 
@@ -598,12 +596,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
         taxCategory: TaxCategory,
         service: String
     ): Boolean {
-        return if (!addressMetadataDao.exists(address, isInput)) {
-            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
-            true
-        } else {
-            false
-        }
+        // -1L means the row already existed and the insert was ignored (see markAddress).
+        return addressMetadataDao.markAddress(address, isInput, taxCategory, service) != -1L
     }
 
     override fun markAddressAsync(
