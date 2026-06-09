@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_crypto_convert_order_preview_title">Pratinjau Pesanan</string>
+
+    <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
+    <string name="cryptocurrency_dash_network">Dash</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">Jumlah minimum transaksi adalah</string>
+    <string name="entered_amount_is_too_high">Jumlah transaksi maksimum adalah</string>
+    <string name="we_didnt_find_any_assets">Kami tidak menemukan aset apapun di akun Coinbase anda.</string>
+    <string name="something_wrong_title">Ada yang salah!</string>
+    <string name="dont_have_any_dash">Anda tidak memiliki Dash di Dompet Dash Anda.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Anda akan menerima ~ %s Dash di dompet anda pada perangkat ini. Catat, ini mungkin memerlukan sampai 2-3 menit untuk menyelesaikan transfer.</string>
+    <string name="you_dont_have_enough_balance">Anda tidak memiliki cukup saldo</string>
+    <string name="you_dont_own_any_crypto">Anda tidak mempunyai crypto apapun. Beli beberapa crypto untuk memulai.</string>
+    <string name="buy_crypto_on_coinbase">Beli kripto di Coinbase</string>
+    <string name="purchase_failed">Pembelian gagal</string>
+    <string name="transfer_failed">Transfer Gagal</string>
+    <string name="transfer_failed_msg">Dash berhasil disetorkan ke akun Coinbase Anda. Namun ada masalah saat mentransfernya ke Dash Wallet di perangkat ini.</string>
+    <string name="send_to_wallet_error">Tidak dapat mengirim jumlah ini tanpa melampaui batas aplikasi</string>
+    <string name="purchase_successful">Pembelian berhasil</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">Diperlukan waktu hingga 2–3 menit agar Dash ditransfer ke Dash Wallet Anda di perangkat ini.</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">Diperlukan waktu hingga 5 menit untuk mengonversi Dash dari Dash Wallet di perangkat ini menjadi %s di akun Coinbase anda.</string>
+    <string name="conversion_failed">Konversi Gagal</string>
+    <string name="transfer_dash_successful">Transfer berhasil</string>
+    <string name="maya_it_could_take_up_to_10_minutes">Diperlukan waktu hingga 10 menit untuk mentransfer Dash dari Coinbase ke dompet Dash perangkat ini.</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">Diperlukan waktu hingga 10 menit untuk mentransfer Dash dari Dash Wallet di perangkat ini ke akun Coinbase Anda.</string>
+    <string name="conversion_successful">Konversi berhasil</string>
+    <string name="transfer_dash_failed_msg">Ada masalah saat mentransfernya ke Dash Wallet di perangkat ini.</string>
+    <string name="auth_limit_description">Anda melampaui batas otorisasi di Coinbase.</string>
+    <string name="learn_more">Pelajari lebih lanjut</string>
+    <string name="debit_money">Debit uang dari akun Anda</string>
+    <string name="change_limit">Ubah batas ini</string>
+    <string name="set_auth_limit">Pastikan Anda mengatur batas otorisasi yang tepat di Coinbase</string>
+    <string name="change_withdrawal_limit">Anda dapat mengubahnya kapan saja dengan keluar dari akun Coinbase Anda di Dash Wallet dan masuk kembali.</string>
+    <string name="got_it">saya tahu</string>
+    <string name="conversion_preview">Pratinjau Konversi</string>
+    <string name="you_send">Anda mengirim</string>
+    <string name="from_your_coinbase_account">Dari akun Coinbase Anda</string>
+    <string name="you_receive">Anda menerima</string>
+    <string name="purchase">Beli</string>
+    <string name="total">Total</string>
+    </resources>

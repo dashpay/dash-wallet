@@ -1763,7 +1763,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 log.info("transaction {} broadcast initiated", tx.txId)
                             } else {
                                 log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
-                                tx.confidence.setPeerInfo(0, 1)
+                                // tx.confidence.setPeerInfo(0, 1)
                             }
                         } else {
                             log.error("transaction {} not found in wallet", hash)
@@ -1949,11 +1949,9 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
-                    log.info("CLEANUP STEP 2: About to call peerGroup.stop()")
-                    //peerGroup!!.forceStop(7_000)
-                    val peerGroupStopWatch = Stopwatch.createStarted()
-                    peerGroup!!.stop()
-                    log.info("CLEANUP STEP 2: peerGroup.stop() completed: {}", peerGroupStopWatch)
+                    log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
+                    peerGroup!!.forceStop(7_000)
+                    log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
                     dashSystemService.system.close()
