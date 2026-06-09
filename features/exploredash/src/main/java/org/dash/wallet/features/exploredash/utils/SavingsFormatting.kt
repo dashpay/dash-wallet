@@ -38,7 +38,6 @@ object SavingsFormatting {
         decimals: Int = 2,
         discountPrefix: String = ""
     ): String {
-        if (percent == 0.0) return ""
         val numberFormat = DecimalFormat().apply {
             maximumFractionDigits = decimals
             minimumFractionDigits = 0

@@ -223,17 +223,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Šifruji…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifruji…</string>
     <string name="encrypt_keys_dialog_state_done">Hotovo</string>
-    <string name="scan_camera_problem_dialog_title">Promiňte</string>
-    <string name="scan_camera_problem_dialog_message">Problém s kamerou. Pravděpodobně je potřeba aby jste restartoval zařízení.</string>
-    <string name="scan_camera_permission_dialog_title">Práva pro používání fotoaparátu</string>
-    <string name="scan_camera_permission_dialog_message">Pro oskenování QR kódu musíte povolit používání fotoaparátu.</string>
-    <string name="input_parser_io_error">Nelze přečíst data:\n%s</string>
-    <string name="input_parser_cannot_classify">Nelze rozpoznat vstup:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Obdržena neplatná Dash adresa!\n(Nepletete si mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nelze ověřit požadavek na platbu:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Neplatný požadavek na platbu:\n%s</string>
-    <string name="input_parser_invalid_transaction">Neplatná transakce:\n%s</string>
     <string name="preferences_activity_title">Nastavení</string>
     <string name="preferences_category_diagnostics">Diagnostika</string>
     <string name="preferences_category_labs">Laboratoř</string>
@@ -272,7 +261,6 @@
     <string name="preferences_extended_public_key_title">Zobrazit xpub</string>
     <string name="preferences_extended_public_key_summary">Zobrazit rozšířený veřejný klíč vaší peněženky za účelem importování do jiných aplikací a služeb. Buďte opatrní: tímto sdílíte Vaše peněžní soukromí s danou aplikaci.</string>
     <string name="bitmap_fragment_share">Sdílet…</string>
-    <string name="extended_public_key_fragment_title">Rozšířený veřejný klíč</string>
     <string name="extended_public_key_fragment_share">Sdílet xpub…</string>
     <string name="report_issue_dialog_title_issue">Nahlásit problém</string>
     <string name="report_issue_dialog_title_crash">Detekován předchozí pád aplikace</string>
@@ -286,14 +274,10 @@
     <string name="report_issue_dialog_collect_application_log">Připojit log aplikace</string>
     <string name="report_issue_dialog_collect_wallet_dump">Připojit dump peněženky</string>
     <string name="report_issue_dialog_mail_intent_failed">Odeslání hlášení selhalo.</string>
-    <string name="report_transaction_history_export">Exportovat</string>
-    <string name="report_transaction_history_title">Expertovat jako CSV</string>
-    <string name="report_transaction_history_not_synced_title">Expertovat jako CSV</string>
     <string name="report_transaction_history_not_synced_message">Pro exportování historie vyčkejte, než bude peněženka plně synchronizována.</string>
     <string name="report_transaction_history_message">Bude exportována celá transakční historie.\n\nVšechny platby budou považovány za výdaj a všechny přijaté transakce za příjem. Držitel této peněženky je zodpovědný za jakékoliv nutné úpravy daňového základu během plnění daňových povinností.</string>
     <string name="report_transaction_history_mail_intent_chooser">Poslat transakční historii pomocí...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Odeslání transakční historie selhalo.</string>
-
     <string name="about_title">O aplikaci</string>
     <string name="about_version_title">Verze</string>
     <string name="about_copyright_title">Copyright</string>

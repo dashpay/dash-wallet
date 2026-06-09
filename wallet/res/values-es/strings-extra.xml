@@ -69,6 +69,11 @@
 
     <string name="pay_title">Enviar</string>
     <string name="history_title">Historial</string>
+    <string name="wallet_transactions_building_cache">Determinando del historial de transacciones…</string>
+    <string name="history_refresh_dialog_title">Actualizar lista de transacciones</string>
+    <string name="history_refresh_dialog_message">Esto borrará la caché de visualización de transacciones y la reconstruirá desde cero. La lista no estará disponible temporalmente mientras se reconstruye.</string>
+    <string name="history_refresh_dialog_confirm">Actualizar</string>
+    <string name="history_refresh_complete">Lista de transacciones actualizada</string>
     <string name="more_title">Más</string>
     <string name="settings_title">Ajustes</string>
     <string name="security_title">Seguridad</string>
@@ -286,10 +291,10 @@
     <string name="menu_explore_subtitle">Encuentra comerciantes que acepten DASH</string>
 
     <string name="tools_address_book">Libreta de direcciones</string>
-    <string name="tools_import_private_key">Barrer billetera de papel</string>
+    <string name="tools_import_private_key">Importar clave privada</string>
     <string name="import_private_key_description">Esta acción moverá todas las monedas de la billetera de papel Dash a su aplicación DashPay en este dispositivo.</string>
-    <string name="tools_network_monitor">Monitor de Red</string>
-    <string name="tools_show_xpub">Extender llave publica</string>
+    <string name="tools_network_monitor">Monitor de red</string>
+    <string name="tools_show_xpub">Llave pública extendida (BIP44)</string>
 
     <string name="about_help_us_improve">Ayúdanos a mejorar tu experiencia</string>
     <string name="about_review_and_rate">Critica o evalúa la aplicación</string>

@@ -69,6 +69,11 @@
 
     <string name="pay_title">送金</string>
     <string name="history_title">履歴</string>
+    <string name="wallet_transactions_building_cache">取引履歴を確認中…</string>
+    <string name="history_refresh_dialog_title">取引リストを更新</string>
+    <string name="history_refresh_dialog_message">これにより、取引表示のキャッシュがクリーンアップされ、全く新しく再構築されます。再構築中は、リストを一時的にご利用いただけなくなります。</string>
+    <string name="history_refresh_dialog_confirm">更新</string>
+    <string name="history_refresh_complete">取引リストを更新しました</string>
     <string name="more_title">追加</string>
     <string name="settings_title">設定</string>
     <string name="security_title">セキュリティ</string>
@@ -281,11 +286,11 @@
     <string name="menu_explore_title">探求する</string>
     <string name="menu_explore_subtitle">DASHが使える加盟店を探す</string>
 
-    <string name="tools_address_book">アドレスブック</string>
+    <string name="tools_address_book">アドレス帳</string>
     <string name="tools_import_private_key">秘密鍵をインポート</string>
     <string name="import_private_key_description">この操作により、Dashのペーパーウォレット内の全てのコインがこの端末のDashPayアプリに移動されます。</string>
     <string name="tools_network_monitor">ネットワークモニター</string>
-    <string name="tools_show_xpub">拡張したパブリックキー</string>
+    <string name="tools_show_xpub">拡張したパブリックキー(BIP44)</string>
 
     <string name="about_help_us_improve">品質を向上させるためにご協力ください</string>
     <string name="about_review_and_rate">アプリのレビューを書いて評価する</string>

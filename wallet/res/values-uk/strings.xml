@@ -243,17 +243,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Шифрування…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Дешифрування…</string>
     <string name="encrypt_keys_dialog_state_done">Готово</string>
-    <string name="scan_camera_problem_dialog_title">Вибачте</string>
-    <string name="scan_camera_problem_dialog_message">Проблема з камерою. Можливо, вам потрібо перезавантажити пристрій.</string>
-    <string name="scan_camera_permission_dialog_title">Дозвіл на доступ до камери</string>
-    <string name="scan_camera_permission_dialog_message">Щоб сканувати QR-коди, вам потрібно надати дозвіл на використання камери.</string>
-    <string name="input_parser_io_error">Не вдається прочитати дані:\n%s</string>
-    <string name="input_parser_cannot_classify">Не вдається розпізнати вхід:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Некоректна Dash-адреса:\n%s</string>
-    <string name="input_parser_invalid_address">Отримано некоректну Dash адесу!\n(Переплутані mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Не вдається перевірити запит на оплату:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Недопустимий запит на оплату:\n%s</string>
-    <string name="input_parser_invalid_transaction">Помилкова транзакція:\n%s</string>
     <string name="preferences_activity_title">Налаштування</string>
     <string name="preferences_category_diagnostics">Діагностика</string>
     <string name="preferences_category_labs">Лабораторія</string>
@@ -298,8 +287,9 @@
     <string name="preferences_extended_public_key_title">Показати xpub</string>
     <string name="preferences_extended_public_key_summary">Перегляньте розширений відкритий ключ свого гаманця, щоб його можна було імпортувати в інші програми та служби. Будьте обережні: це призведе до розкриття вашої грошової конфіденційності цій програмі.</string>
     <string name="bitmap_fragment_share">Поділитися...</string>
-    <string name="extended_public_key_fragment_title">Розширений публічний ключ</string>
+    <string name="extended_public_key_fragment_title">Розширений відкритий ключ (BIP44)</string>
     <string name="extended_public_key_fragment_share">Поділитися xpub…</string>
+    <string name="extended_public_key_share_key">Ключ спільного доступу</string>
     <string name="report_issue_dialog_title_issue">Повідомити про проблему</string>
     <string name="report_issue_dialog_title_crash">Виявлено аварійне завершення</string>
     <string name="report_issue_dialog_title_transaction">Повідомити про проблему з вибраним платежем</string>
@@ -322,13 +312,17 @@
     <string name="report_issue_dialog_status_background_traces">фонові трасування</string>
     <string name="report_issue_dialog_status_stack_trace">трасування стеку</string>
     <string name="report_issue_dialog_status_finishing">завершується</string>
-    <string name="report_transaction_history_export">Експорт</string>
-    <string name="report_transaction_history_title">Експорт CSV</string>
-    <string name="report_transaction_history_not_synced_title">Експорт CSV</string>
+    <string name="report_transaction_history_export">Експортні операції</string>
+    <string name="report_transaction_history_title">Експорт CSV-файлу</string>
+    <string name="report_transaction_history_dialog_title">Повна історія транзакцій буде експортована у форматі CSV</string>
+    <string name="report_transaction_history_not_synced_title">Експорт CSV-файлу</string>
     <string name="report_transaction_history_not_synced_message">Перш ніж експортувати історію транзакцій, зачекайте, доки гаманець повністю синхронізується.</string>
     <string name="report_transaction_history_message">Буде експортована повна історія транзакцій.\n\nВсі платежі будуть вважатися витратами, а всі вхідні транзакції - доходами. Відповідальність за коригування даних про балансову вартість несе власник гаманця відповідно до обраної ним системи податкової звітності.</string>
+    <string name="report_transaction_history_body_1">Усі платежі вважатимуться витратами, а всі вхідні транзакції – доходами.</string>
+    <string name="report_transaction_history_body_2">Власник цього гаманця несе відповідальність за внесення будь-яких коригувань вартості в обрану ним систему податкової звітності.</string>
     <string name="report_transaction_history_mail_intent_chooser">Надіслати історію транзакцій за допомогою…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Не вдалося надіслати історію транзакцій.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Не вдалося експортувати історію транзакцій.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -425,10 +419,7 @@
     <string name="reason">Причина</string>
     <string name="link_account">Прив\'язати ваш акаунт</string>
     <string name="buy_no_account_needed">Купити Dash · Обліковий запис не потрібен</string>
-
     <string name="recipient_address">Адреса отримувача</string>
-    <string name="show_clipboard">Показати вміст у буфері обміну</string>
-    <string name="tap_to_paste">Натисніть на адресу з буфера обміну, щоб вставити її</string>
     <string name="not_dash_address">Некоректна адреса Dash або URL запит</string>
     <string name="send_to_address">Відправити на адресу</string>
 

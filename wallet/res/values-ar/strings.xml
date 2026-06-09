@@ -224,17 +224,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">تشفير ...</string>
     <string name="encrypt_keys_dialog_state_decrypting">فك تشفير ...</string>
     <string name="encrypt_keys_dialog_state_done">تم</string>
-    <string name="scan_camera_problem_dialog_title">عذرا</string>
-    <string name="scan_camera_problem_dialog_message">هناك مشكلة في الكاميرا. ربما تحتاج إلى إعادة تشغيل الجهاز.</string>
-    <string name="scan_camera_permission_dialog_title">إذن الكاميرا</string>
-    <string name="scan_camera_permission_dialog_message">من أجل مسح رموز QR، تحتاج إلى منح إذن لاستخدام الكاميرا.</string>
-    <string name="input_parser_io_error">تعذر قراءة البيانات:\n%s</string>
-    <string name="input_parser_cannot_classify">تعذر تصنيف المدخل:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">عنوان داش غير صالح:\n%s</string>
-    <string name="input_parser_invalid_address">هل حصلت على عنوان Dash غير صالح! \ n (هل تريد خلط mainnet / testnet؟)</string>
-    <string name="input_parser_unverifyable_paymentrequest">تعذر التحقق من طلب الدفع:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">طلب دفع غير صالح:\n%s</string>
-    <string name="input_parser_invalid_transaction">معاملة غير صالحة:\n%s</string>
     <string name="preferences_activity_title">الإعدادات</string>
     <string name="preferences_category_diagnostics">التشخيصات</string>
     <string name="preferences_category_labs">المختبرات</string>
@@ -274,7 +263,6 @@
     <string name="preferences_extended_public_key_title">عرض xpub</string>
     <string name="preferences_extended_public_key_summary">عرض المفتاح العام الموسع لمحفظتك ، بحيث يمكن استيراده إلى تطبيقات وخدمات أخرى. كن حذرًا: سيؤدي ذلك إلى الكشف عن خصوصيتك المالية لهذا التطبيق.</string>
     <string name="bitmap_fragment_share">شارك…</string>
-    <string name="extended_public_key_fragment_title">مفتاح عام ممتد</string>
     <string name="extended_public_key_fragment_share">نشر xpub ...</string>
     <string name="report_issue_dialog_title_issue">إبلاغ عن مشكلة</string>
     <string name="report_issue_dialog_title_crash">تم اكتشاف تعطل سابق</string>
@@ -288,14 +276,10 @@
     <string name="report_issue_dialog_collect_application_log">إرفاق سجل البرنامج</string>
     <string name="report_issue_dialog_collect_wallet_dump">إرفاق مهملات المحفظة</string>
     <string name="report_issue_dialog_mail_intent_failed">فشل إرسال التقرير.</string>
-    <string name="report_transaction_history_export">تصدير</string>
-    <string name="report_transaction_history_title">تصدير CSV</string>
-    <string name="report_transaction_history_not_synced_title">تصدير CSV</string>
     <string name="report_transaction_history_not_synced_message">يرجى الانتظار حتى تتم مزامنة المحفظة بالكامل قبل تصدير سجل معاملاتك.</string>
     <string name="report_transaction_history_message">سيتم تصدير محفوظات المعاملة الكاملة.\n\nسيتم اعتبار كافة المدفوعات كمصروفات وستكون كافة المعاملات الواردة دخلًا. مالك هذه المحفظة مسؤول عن إجراء أي تعديلات على أساس التكلفة في نظام إعداد التقارير الضريبية الذي يختاره.</string>
     <string name="report_transaction_history_mail_intent_chooser">إرسال سجل المعاملات باستخدام ...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">فشل إرسال محفوظات المعاملة.</string>
-
     <string name="about_title">تعليمات</string>
     <string name="about_version_title">الإصدار</string>
     <string name="about_copyright_title">حقوق النشر</string>
@@ -376,10 +360,7 @@
     <string name="reason">سبب</string>
     <string name="link_account">قم بايصال حسابك</string>
     <string name="buy_no_account_needed">قم بشراء داش - لا حساب لازم</string>
-
     <string name="recipient_address">عنوان المستلم</string>
-    <string name="show_clipboard">اظهر المحتوى في لوحة الملاحظات </string>
-    <string name="tap_to_paste">اضغط على العنوان من لوحة الملاحظات للصقه</string>
     <string name="not_dash_address">ليس عنوان داش صالح او الاتصال عبر الرابط غير صالح</string>
     <string name="send_to_address">إرسال إلى عنوان</string>
 

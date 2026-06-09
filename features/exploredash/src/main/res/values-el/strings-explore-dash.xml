@@ -180,12 +180,12 @@
     <string name="purchase_gift_card_at">σε</string>
     <string name="purchase_gift_card_min">Ελάχιστο: %s</string>
     <string name="purchase_gift_card_max">Μέγιστο: %s</string>
+    <string name="gift_card_buy_title">Αγορά δωροκάρτας</string>
     <string name="purchase_gift_card_discount_hint">Αγοράζετε μια %s δωροκάρτα για %s (έκπτωση %s)</string>
     <string name="button_next">Επόμενο</string>
     <string name="purchase_gift_card_from">Από</string>
     <string name="purchase_gift_card_to">Σε</string>
     <string name="purchase_confirm_transaction">Επιβεβαίωση</string>
-    <string name="purchase_gift_card_total_label">Σύνολο δωροκάρτας</string>
     <string name="purchase_gift_card_discount">Έκπτωση</string>
     <string name="purchase_gift_card_you_pay">Πληρώνετε</string>
     <string name="purchase_gift_card_confirm">Επιβεβαίωση</string>
@@ -210,7 +210,7 @@
     <string name="gift_card_tx_title">Δωροκάρτα · %s</string>
     <string name="select_amount">επιλεξτε ποσό</string>
     <string name="select_fixed_amount">Αυτός ο έμπορος πωλεί δωροκάρτες σε σταθερές τιμές</string>
-
+    <string name="purchase_gift_card_reset">Επαναφορά</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Πληκτρολογήστε τον κωδικό επαλήθευσης</string>
     <string name="verification_check_email">Ελέγξτε το email σας και πληκτρολογήστε τον κωδικό επαλήθευσης</string>

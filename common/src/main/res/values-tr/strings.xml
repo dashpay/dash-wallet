@@ -49,6 +49,8 @@
     <string name="button_continue">Devam</string>
     <string name="get_quote">Teklif Al</string>
     <string name="button_close">Kapat</string>
+    <string name="button_cancel">İptal et</string>
+    <string name="button_confirm">Onayla</string>
     <string name="button_retry">Tekrar dene</string>
     <string name="button_send_report">Rapor Gönder</string>
     <string name="button_info">bilgi</string>
@@ -76,6 +78,8 @@
     <string name="dash_wallet_name">Dash Cüzdanı</string>
     <string name="from">gelen</string>
     <string name="to">giden</string>
+    <string name="from_title">Gönderen</string>
+    <string name="to_title">Alıcı</string>
     <string name="select_currency">Para Birimini Seçin</string>
     <string name="send_coins_error_dusty_send">Bu miktar göndermek için çok düşüktür</string>
     <string name="send_coins_error_insufficient_money">Yetersiz bakiye</string>
@@ -106,4 +110,35 @@
     <string name="chain_syncing">Zincir senkronize ediliyor…</string>
     <string name="report_issue_dialog_mail_intent_chooser">Raporu şununla gönder…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Üzgünüz</string>
+    <string name="scan_camera_problem_dialog_message">Kamerada bir problem var. Cihazınızı yeniden başlatmanız gerekiyor olabilir.</string>
+    <string name="scan_camera_permission_dialog_title">Kamera izni</string>
+    <string name="scan_camera_permission_dialog_message">QR kodunu taranabilmesi için, kamera kullanım izin vermeniz gerekiyor.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Dash Gönder</string>
+    <string name="show_clipboard">İçeriği panoda göster</string>
+    <string name="tap_to_paste">Yapıştırmak için panodaki adresi seçin</string>
+    <string name="recipient_address">Alıcı adresi</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Veri okunamadı:\n%s</string>
+    <string name="input_parser_cannot_classify">Girdi tanınmadı:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Geçersiz Dash URI\'si:\n%s</string>
+    <string name="input_parser_invalid_address">Geçersiz Dash adresi alındı!\n(Mainnet/testnet karışıklığı?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Ödeme talebi doğrulanamadı:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Geçersiz ödeme talebi:\n%s</string>
+    <string name="input_parser_invalid_transaction">Geçersiz işlem:\n%s</string>
+    <string name="input_connect">Bağlan</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Onaylayın (%ss)</string>
+    <string name="cancel_transaction">İşlemi iptal et?</string>
+    <string name="yes_cancel">Evet, iptal et</string>
+    <string name="no_keep_it">Hayır, sakla</string>
+    <string name="insufficient_money_title">Bakiye yetersiz</string>
+    <string name="send_coins_error_msg">Dash gönderim problemi!</string>
+    <string name="from_dash_wallet_on_this_device">Bu cihazdaki Dash Cüzdanınızdan</string>
+    <string name="preposition_at">de</string>
+</resources>

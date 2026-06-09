@@ -240,17 +240,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Verschlüsselung…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Entschlüsselung…</string>
     <string name="encrypt_keys_dialog_state_done">Fertig</string>
-    <string name="scan_camera_problem_dialog_title">Sorry</string>
-    <string name="scan_camera_problem_dialog_message">Die Kamera scheint ein Problem zu haben. Bitte starte Dein Gerät neu.</string>
-    <string name="scan_camera_permission_dialog_title">Kamera genehmigen</string>
-    <string name="scan_camera_permission_dialog_message">Damit QR-Codes gescannt werden können, musst Du das Verwenden der Kamera erlauben.</string>
-    <string name="input_parser_io_error">Kann Daten nicht lesen:\n%s</string>
-    <string name="input_parser_cannot_classify">Eingabe nicht erkannt:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Ungültige Dash-URI:\n%s</string>
-    <string name="input_parser_invalid_address">Ungültige Dash-Adresse eingegeben!\n(Eventuell wurden Mainnet-/Testnet-Adressen vertauscht)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Kann Zahlungsanforderung nicht verifizieren:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Ungültige Zahlungsanforderung:\n%s</string>
-    <string name="input_parser_invalid_transaction">Ungültige Transaktion:\n%s</string>
     <string name="preferences_activity_title">Einstellungen</string>
     <string name="preferences_category_diagnostics">Diagnose</string>
     <string name="preferences_category_labs">Labor</string>
@@ -295,7 +284,7 @@
     <string name="preferences_extended_public_key_title">Xpub anzeigen</string>
     <string name="preferences_extended_public_key_summary">Zeigt den Extended Public Key Ihrer Wallet an, sodass er in andere Apps oder Dienste importiert werden kann. Sei dabei jedoch bitte vorsichtig, da dies Deine finanzielle Situation gegenüber jener anderen App offenlegen könnte.</string>
     <string name="bitmap_fragment_share">Teilen…</string>
-    <string name="extended_public_key_fragment_title">Extended Public Key</string>
+    <string name="extended_public_key_fragment_title">Extended Public Key (BIP44)</string>
     <string name="extended_public_key_fragment_share">Xpub teilen…</string>
     <string name="extended_public_key_share_key">Key teilen</string>
     <string name="report_issue_dialog_title_issue">Problem melden</string>
@@ -320,13 +309,17 @@
     <string name="report_issue_dialog_status_background_traces">Background Traces</string>
     <string name="report_issue_dialog_status_stack_trace">Stack Traces</string>
     <string name="report_issue_dialog_status_finishing">abschließen</string>
-    <string name="report_transaction_history_export">Export</string>
-    <string name="report_transaction_history_title">CSV Export</string>
-    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_export">Transaktionen exportieren</string>
+    <string name="report_transaction_history_title">CSV-Export</string>
+    <string name="report_transaction_history_dialog_title">Die gesamte Transaktionshistorie wird als CSV-Datei exportiert</string>
+    <string name="report_transaction_history_not_synced_title">CSV-Export</string>
     <string name="report_transaction_history_not_synced_message">Bitte warte, bis die Wallet vollständig synchronisiert ist, bevor du deinen Transaktionsverlauf exportierst.</string>
     <string name="report_transaction_history_message">Der vollständige Transaktionsverlauf wird exportiert.\n\nAlle ausgehenden Transaktionen werden als Aufwand und alle eingehenden Transaktionen als Ertrag betrachtet. Der Eigentümer dieser Wallet ist dafür verantwortlich, alle Anpassungen der Kostenbasis in dem von ihm gewählten Steuermeldesystem vorzunehmen.</string>
+    <string name="report_transaction_history_body_1">Alle Auszahlungen gelten als Ausgaben, alle Zahlungseingänge als Einnahmen.</string>
+    <string name="report_transaction_history_body_2">Der Inhaber dieser Wallet ist dafür verantwortlich, etwaige Anpassungen der Anschaffungskosten in dem von ihm gewählten Steuererklärungssystem vorzunehmen.</string>
     <string name="report_transaction_history_mail_intent_chooser">Transaktionsverlauf senden mit...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Das Senden der Transaktionshistorie ist fehlgeschlagen.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Der Export der Transaktionshistorie ist fehlgeschlagen.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -423,10 +416,7 @@
     <string name="reason">Ursache</string>
     <string name="link_account">Konto verknüpfen</string>
     <string name="buy_no_account_needed">Dash kaufen. Es wird kein Konto benötigt.</string>
-
     <string name="recipient_address">Adresse des Empfängers</string>
-    <string name="show_clipboard">Inhalt der Zwischenablage anzeigen</string>
-    <string name="tap_to_paste">Tippe auf die Adresse in der Zwischenablage, um sie einzufügen.</string>
     <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
     <string name="send_to_address">An Adresse senden</string>
 

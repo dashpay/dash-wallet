@@ -69,6 +69,11 @@
 
     <string name="pay_title">Verzenden</string>
     <string name="history_title">Geschiedenis</string>
+    <string name="wallet_transactions_building_cache">Transactiegeschiedenis bepalen…</string>
+    <string name="history_refresh_dialog_title">Transactielijst vernieuwen</string>
+    <string name="history_refresh_dialog_message">Dit wist de weergavecache van transacties en bouwt deze opnieuw op vanaf nul. De lijst is tijdelijk niet beschikbaar terwijl deze opnieuw wordt opgebouwd.</string>
+    <string name="history_refresh_dialog_confirm">Vernieuwen</string>
+    <string name="history_refresh_complete">Transactielijst vernieuwd</string>
     <string name="more_title">Meer</string>
     <string name="settings_title">Instellingen</string>
     <string name="security_title">Beveiliging</string>
@@ -283,10 +288,10 @@
     <string name="menu_explore_subtitle">Vind winkeliers die Dash accepteren</string>
 
     <string name="tools_address_book">Adresboek</string>
-    <string name="tools_import_private_key">Importeer persoonlijke sleutel</string>
+    <string name="tools_import_private_key">importeer persoonlijke sleutel</string>
     <string name="import_private_key_description">Met deze actie worden het saldo van de papieren portemonnee overgezet naar je DashPay app op dit apparaat.</string>
-    <string name="tools_network_monitor">Netwerk monitor</string>
-    <string name="tools_show_xpub">Uitgebreide publieke sleutel</string>
+    <string name="tools_network_monitor">Netwerkmonitor</string>
+    <string name="tools_show_xpub">Uitgebreide publieke sleutels (BIP44)</string>
 
     <string name="about_help_us_improve">Help ons je ervaring te verbeteren</string>
     <string name="about_review_and_rate">Schrijf een recensie en beoordeel de app</string>

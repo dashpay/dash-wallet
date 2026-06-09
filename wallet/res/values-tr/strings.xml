@@ -223,17 +223,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Şifreleniyor…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Şifre Çözülüyor…</string>
     <string name="encrypt_keys_dialog_state_done">Bitti</string>
-    <string name="scan_camera_problem_dialog_title">Üzgünüz</string>
-    <string name="scan_camera_problem_dialog_message">Kamerada bir problem var. Cihazınızı yeniden başlatmanız gerekiyor olabilir.</string>
-    <string name="scan_camera_permission_dialog_title">Kamera izni</string>
-    <string name="scan_camera_permission_dialog_message">QR kodunu taranabilmesi için, kamera kullanım izin vermeniz gerekiyor.</string>
-    <string name="input_parser_io_error">Veri okunamadı:\n%s</string>
-    <string name="input_parser_cannot_classify">Girdi tanınmadı:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Geçersiz Dash URI\'si:\n%s</string>
-    <string name="input_parser_invalid_address">Geçersiz Dash adresi alındı!\n(Mainnet/testnet karışıklığı?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Ödeme talebi doğrulanamadı:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Geçersiz ödeme talebi:\n%s</string>
-    <string name="input_parser_invalid_transaction">Geçersiz işlem:\n%s</string>
     <string name="preferences_activity_title">Ayarlar</string>
     <string name="preferences_category_diagnostics">Teşhisler</string>
     <string name="preferences_category_labs">Laboratuvarlar</string>
@@ -274,7 +263,6 @@
     <string name="preferences_extended_public_key_title">xpub\'ı göster</string>
     <string name="preferences_extended_public_key_summary">Başka uygulama ve servislere iç aktarım yapılabilmesi için cüzdanınızın genişletilmiş genel anahtarını gösterir. Dikkatli olun: bunu yapmanız parasal gizliliğinizi o uygulamaya ifşa edecektir.</string>
     <string name="bitmap_fragment_share">Paylaş…</string>
-    <string name="extended_public_key_fragment_title">Genişletilmiş Genel Anahtar</string>
     <string name="extended_public_key_fragment_share">xpub\'ı Paylaş…</string>
     <string name="report_issue_dialog_title_issue">Sorun rapor et</string>
     <string name="report_issue_dialog_title_crash">Önceki çöküş tespit edildi</string>
@@ -288,14 +276,10 @@
     <string name="report_issue_dialog_collect_application_log">Uygulama günlüğünü ilave et</string>
     <string name="report_issue_dialog_collect_wallet_dump">Cüzdan dökümünü ilave et</string>
     <string name="report_issue_dialog_mail_intent_failed">Rapor gönderimi başarısız.</string>
-    <string name="report_transaction_history_export">Dışa Aktar</string>
-    <string name="report_transaction_history_title">CSV Dışa Aktarma</string>
-    <string name="report_transaction_history_not_synced_title">CSV Dışa Aktarma</string>
     <string name="report_transaction_history_not_synced_message">İşlem geçmişinizi dışa aktarmadan önce lütfen cüzdanın tamamen senkronize edilmesini bekleyin.</string>
     <string name="report_transaction_history_message">Tam işlem geçmişi dışa aktarılacaktır.\n\nTüm ödemeler gider olarak kabul edilecek ve gelen tüm işlemler gelir olacaktır. Bu cüzdanın sahibi, seçtikleri vergi raporlama sisteminde herhangi bir maliyet esaslı ayarlama yapmaktan sorumludur.</string>
     <string name="report_transaction_history_mail_intent_chooser">Şunu kullanarak işlem geçmişini gönder…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">İşlem geçmişi gönderilemedi.</string>
-
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
     <string name="zenledger_export_subtitle">Kripto vergilerinizi basitleştirin</string>
@@ -386,10 +370,7 @@
     <string name="reason">Sebep</string>
     <string name="link_account">Hesabınızı bağlayın</string>
     <string name="buy_no_account_needed">Dash Satın Al · Hesap gerekmez</string>
-
     <string name="recipient_address">Alıcı adresi</string>
-    <string name="show_clipboard">İçeriği panoda göster</string>
-    <string name="tap_to_paste">Yapıştırmak için panodaki adresi seçin</string>
     <string name="not_dash_address">Geçerli bir Dash Adresi veya URL isteği değil</string>
     <string name="send_to_address">Adrese Gönder</string>
 

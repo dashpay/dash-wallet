@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Nage-encrypt...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Nagde-decrypt...</string>
     <string name="encrypt_keys_dialog_state_done">Tapos</string>
-    <string name="scan_camera_problem_dialog_title">Paumanhin</string>
-    <string name="scan_camera_problem_dialog_message">Ang camera ay may problema. Marahil kailangan mong i-restart ang device.</string>
-    <string name="scan_camera_permission_dialog_title">Pahintulutan ang  camera</string>
-    <string name="scan_camera_permission_dialog_message">Para ma-scan ang QR codes, kailangan mong pahintulutan na magamit ang camera.</string>
-    <string name="input_parser_io_error">Hindi mabasa ang data:\n%s</string>
-    <string name="input_parser_cannot_classify">Hindi makilala ang input:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Invalid ang Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Nakakuha ng invalid na Dash address!\n(Mixing up mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Hindi ma-beripika ang hiniling na bayad:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Invalid ang hiniling na bayad:\n%s</string>
-    <string name="input_parser_invalid_transaction">Invalid ang transaksyon:\n%s</string>
     <string name="preferences_activity_title">Settings</string>
     <string name="preferences_category_diagnostics">Diagnostics</string>
     <string name="preferences_category_labs">Labs</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">Ipakita ang xpub</string>
     <string name="preferences_extended_public_key_summary">Tingnan ang extended public key ng iyong wallet, para ito ay ma-import sa ibang apps at serbisyo. Mag-ingat: kapag ginawa ito ay maibubunyag ang privacy ng salapi sa app na iyon.</string>
     <string name="bitmap_fragment_share">Ipamahagi...</string>
-    <string name="extended_public_key_fragment_title">Pinalawak na Public Key</string>
+    <string name="extended_public_key_fragment_title">Extended public key (BIP44)</string>
     <string name="extended_public_key_fragment_share">Ibahagi ang xpub...</string>
+    <string name="extended_public_key_share_key">Ibahagi ang susi</string>
     <string name="report_issue_dialog_title_issue">I-report ang isyu</string>
     <string name="report_issue_dialog_title_crash">Naka-detect ng previous crash</string>
     <string name="report_issue_dialog_title_transaction">I-report ang issue kalakip ang napiling bayad</string>
@@ -318,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">mga bakas sa background</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">pagtatapos</string>
-    <string name="report_transaction_history_export">Export</string>
-    <string name="report_transaction_history_title">CSV Export</string>
-    <string name="report_transaction_history_not_synced_title">CSV Export</string>
+    <string name="report_transaction_history_export">I-export ang mga transaksyon</string>
+    <string name="report_transaction_history_title">Pag-export ng CSV</string>
+    <string name="report_transaction_history_dialog_title">Ang buong kasaysayan ng transaksyon ay ie-export bilang isang CSV file</string>
+    <string name="report_transaction_history_not_synced_title">Pag-export ng CSV</string>
     <string name="report_transaction_history_not_synced_message">Mangyaring maghintay hanggang ang wallet ay ganap na ma-sync bago i-export ang iyong kasaysayan ng transaksyon.</string>
     <string name="report_transaction_history_message">Ie-export ang buong history ng transaksyon.\n\nAng lahat ng pagbabayad ay ituturing na gastos at lahat ng papasok na transaksyon ay magiging kita. Ang may-ari ng wallet na ito ay may pananagutan sa paggawa ng anumang mga pagsasaayos sa batayan ng gastos sa kanilang napiling sistema ng pag-uulat ng buwis.</string>
+    <string name="report_transaction_history_body_1">Ang lahat ng mga pagbabayad ay ituturing bilang isang gastos at lahat ng mga papasok na transaksyon ay magiging kita.</string>
+    <string name="report_transaction_history_body_2">Ang may-ari ng wallet na ito ay may pananagutan sa paggawa ng anumang mga pagsasaayos sa batayan ng gastos sa kanilang napiling sistema ng pag-uulat ng buwis.</string>
     <string name="report_transaction_history_mail_intent_chooser">Magpadala ng history ng transaksyon gamit ang…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Nabigo ang pagpapadala ng history ng transaksyon.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Nabigo ang pag-export ng kasaysayan ng transaksyon.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -421,10 +415,7 @@
     <string name="reason">Dahilan</string>
     <string name="link_account">I-link ang iyong account</string>
     <string name="buy_no_account_needed">Bumili ng Dash · Walang kinakailangang account</string>
-
     <string name="recipient_address">Address ng Tatanggap</string>
-    <string name="show_clipboard">Ipakita ang nilalaman sa clipboard</string>
-    <string name="tap_to_paste">I-tap ang address mula sa clipboard para i-paste ito</string>
     <string name="not_dash_address">Hindi wastong Dash Address o kahilingan sa URL</string>
     <string name="send_to_address">Ipadala sa address</string>
 

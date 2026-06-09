@@ -344,18 +344,40 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
-        if (giftCardDao.updateGiftCard(giftCard) == 0) {
-            giftCardDao.insertGiftCard(giftCard)
+        // Room's @Update rewrites every column, so a caller passing a partially-populated
+        // GiftCard would otherwise null out fields it didn't set (number/pin/note/...).
+        // Merge against the stored row so we only ever fill in values, never erase them.
+        val existing = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index }
+        val merged = if (existing == null) {
+            giftCard
+        } else {
+            existing.copy(
+                merchantName = giftCard.merchantName.ifEmpty { existing.merchantName },
+                price = giftCard.price.takeIf { it != 0.0 } ?: existing.price,
+                number = giftCard.number ?: existing.number,
+                pin = giftCard.pin ?: existing.pin,
+                barcodeValue = giftCard.barcodeValue ?: existing.barcodeValue,
+                barcodeFormat = giftCard.barcodeFormat ?: existing.barcodeFormat,
+                merchantUrl = giftCard.merchantUrl ?: existing.merchantUrl,
+                note = giftCard.note ?: existing.note
+            )
         }
+
+        if (existing == null) {
+            giftCardDao.insertGiftCard(merged)
+        } else {
+            giftCardDao.updateGiftCard(merged)
+        }
+
         // for now, only save the first card
-        if (giftCard.index == 0) {
+        if (merged.index == 0) {
             transactionMetadataChangeCacheDao.insertGiftCardData(
-                giftCard.txId,
-                giftCard.number,
-                giftCard.pin,
-                giftCard.merchantName,
-                giftCard.price,
-                giftCard.merchantUrl
+                merged.txId,
+                merged.number,
+                merged.pin,
+                merged.merchantName,
+                merged.price,
+                merged.merchantUrl
             )
         }
     }

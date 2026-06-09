@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Potvrdiť</string>
     <string name="dialog_confirm_pay_to">Poslať ku</string>
     <string name="dialog_confirm_secured_by">Zabezpečené s</string>
+    <string name="dialog_confirm_connected_to_unsecured">Pripojené k (nezabezpečené)</string>
     <string name="dialog_confirm_fee">Sieťový poplatok </string>
     <string name="dialog_confirm_total">Celkovo</string>
     <string name="dialog_confirm_accept_contact_request">Prijať žiadosť o kontakt</string>
@@ -68,6 +69,11 @@
 
     <string name="pay_title">Poslať</string>
     <string name="history_title">História</string>
+    <string name="wallet_transactions_building_cache">Určovanie histórie transakcie…</string>
+    <string name="history_refresh_dialog_title">Obnoviť zoznam transakcií</string>
+    <string name="history_refresh_dialog_message">Týmto sa vymaže vyrovnávacia pamäť zobrazenia transakcií a zoznam sa znova od začiatku vytvorí. Zoznam bude počas obnovy dočasne nedostupný.</string>
+    <string name="history_refresh_dialog_confirm">Obnoviť</string>
+    <string name="history_refresh_complete">Zoznam transakcií obnovený</string>
     <string name="more_title">Viac</string>
     <string name="settings_title">Nastavenia</string>
     <string name="security_title">Bezpečnosť</string>
@@ -288,14 +294,16 @@
     <string name="menu_explore_subtitle">Nájdite obchodníkov, ktorí akceptujú DASH</string>
 
     <string name="tools_address_book">Adresár</string>
-    <string name="tools_import_private_key">Importovať privátny Kľúč</string>
+    <string name="tools_import_private_key">Importovať privátny kľúč</string>
+    <string name="import_private_key_description">Táto akcia presunie všetky mince z papierovej peňaženky Dash do vašej aplikácie DashPay na tomto zariadení.</string>
     <string name="tools_network_monitor">Stav siete</string>
-    <string name="tools_show_xpub">Rozšírený verejný kľúč</string>
+    <string name="tools_show_xpub">Rozšírený verejný kľúč (BIP44)</string>
 
     <string name="about_help_us_improve">Pomôžte nám vylepšiť váš zážitok</string>
     <string name="about_review_and_rate">Pridať recenziu alebo ohodnotiť applikáciu</string>
     <string name="about_contact_support">Kontaktovať podporu</string>
     <string name="about_fork_disclaimer">Toto je aplikácia s otvoreným zdrojovým kódom vytvorená z bitcoin peňaženky</string>
+    <string name="about_copyright">Autorské práva © 2026 Dash Core Group</string>
     <string name="about_license">Všeobecná verejná licencia GNU v3.0</string>
     <string name="about_version_name">Peňaženka DashPay %s</string>
     <string name="about_last_explore_device_sync">Posledná synchronizácia preskúmania zariadenia</string>
@@ -439,6 +447,11 @@
     <string name="reclassify_transactions_linked_accounts_message">v predvolenom nastavení budú všetky transakcie do alebo z vašich prepojených účtov (výmeny, vkladanie atď.) označené ako prevody.</string>
     <string name="reclassify_transactions_change_explanation">Na domovskej stránke vyberte ľubovoľnú transakciu a zmeňte kategóriu na stránke podrobností transakcie.</string>
 
+    <string name="masternode_keys_title">Kľúče Masternode</string>
+    <string name="masternode_key_type_owner">Kľúče vlastníka</string>
+    <string name="masternode_key_type_voting">Hlasovacie kľúče</string>
+    <string name="masternode_key_type_operator">Kľúče operátora</string>
+    <string name="masternode_key_type_platform">Kľúče operátora HPMN</string>
     <string name="masternode_key_type_total">%d kľúče</string>
     <string name="masternode_key_type_used">%d použité</string>
     <string name="masternode_key_pair_index">Kľúčový pár %d</string>

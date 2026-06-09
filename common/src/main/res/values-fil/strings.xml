@@ -52,6 +52,8 @@
     <string name="button_continue">Ipagpatuloy</string>
     <string name="get_quote">Kumuha ng Quote</string>
     <string name="button_close">Sarado</string>
+    <string name="button_cancel">Kanselahin</string>
+    <string name="button_confirm">Kumpirmahin</string>
     <string name="button_retry">Subukang muli</string>
     <string name="button_send_report">Magpadala ng ulat</string>
     <string name="button_info">impormasyon</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">mula kay:</string>
     <string name="to">para kay:</string>
+    <string name="from_title">mula sa</string>
+    <string name="to_title">Sa</string>
     <string name="select_currency">Piliin ang Pera</string>
     <string name="send_coins_error_dusty_send">Ang halaga ay sobrang liit para maipadala</string>
     <string name="send_coins_error_insufficient_money">Hindi sapat na pondo</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">Nagsi-sync ang chain…</string>
     <string name="report_issue_dialog_mail_intent_chooser">Magpadala ng report gamit ang...</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Paumanhin</string>
+    <string name="scan_camera_problem_dialog_message">Ang camera ay may problema. Marahil kailangan mong i-restart ang device.</string>
+    <string name="scan_camera_permission_dialog_title">Pahintulutan ang  camera</string>
+    <string name="scan_camera_permission_dialog_message">Para ma-scan ang QR codes, kailangan mong pahintulutan na magamit ang camera.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Ipadala ang Dash</string>
+    <string name="show_clipboard">Ipakita ang nilalaman sa clipboard</string>
+    <string name="tap_to_paste">I-tap ang address mula sa clipboard para i-paste ito</string>
+    <string name="recipient_address">Address ng Tatanggap</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Hindi mabasa ang data:\n%s</string>
+    <string name="input_parser_cannot_classify">Hindi makilala ang input:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Invalid ang Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Nakakuha ng invalid na Dash address!\n(Mixing up mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Hindi ma-beripika ang hiniling na bayad:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Invalid ang hiniling na bayad:\n%s</string>
+    <string name="input_parser_invalid_transaction">Invalid ang transaksyon:\n%s</string>
+    <string name="input_connect">kumonekta</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Kumpirmahin ang (%ss)</string>
+    <string name="cancel_transaction">Kanselahin ang transaksyon?</string>
+    <string name="yes_cancel">Oo, kanselahin</string>
+    <string name="no_keep_it">Hindi, panatilihin ito</string>
+    <string name="insufficient_money_title">Hindi sapat ang barya</string>
+    <string name="send_coins_error_msg">Nagkaproblema sa pagpapadala ng barya!</string>
+    <string name="from_dash_wallet_on_this_device">Mula sa Dash wallet sa device na ito</string>
+    <string name="preposition_at">sa</string>
+</resources>
