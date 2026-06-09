@@ -71,7 +71,8 @@ data class CoinPickerItem(
     val currencyCode: String,
     @androidx.annotation.StringRes val nameId: Int,
     @androidx.annotation.StringRes val codeId: Int,
-    val iconUrl: String,
+    // Ordered icon URLs to try in sequence until one loads (see GenericUtils.getCoinIconUrls).
+    val iconUrls: List<String>,
     val price: String?,
     // Route-provider label string res: maya / near (single provider), or
     // "Multiple networks" while a both-provider asset's preferred network is still
@@ -216,7 +217,7 @@ class MayaViewModel @Inject constructor(
                         currencyCode = pool.currencyCode,
                         nameId = resIds?.first ?: 0,
                         codeId = resIds?.second ?: 0,
-                        iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
+                        iconUrls = GenericUtils.getCoinIconUrls(pool.currencyCode),
                         price = price,
                         routeLabelId = routeLabelId,
                         routeCalculated = routeCalculated,

@@ -261,13 +261,7 @@ private fun CoinRow(
     ListItem(
         modifier = Modifier.alpha(if (item.isEnabled) 1f else 0.5f),
         leadingContent = {
-            AsyncImage(
-                model = item.iconUrl,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-            )
+            CoinIcon(item.iconUrls)
         },
         title = if (item.nameId != 0) stringResource(item.nameId) else item.currencyCode,
         subtitle = if (item.codeId != 0) stringResource(item.codeId) else item.asset,
@@ -312,6 +306,32 @@ private fun CoinRow(
     )
 }
 
+/**
+ * Coin icon that tries each candidate URL in [iconUrls] in order, advancing to the
+ * next source whenever one fails to load. The neutral coin placeholder is shown while
+ * loading and as the final fallback once every source has failed (or when there are
+ * no candidates).
+ */
+@Composable
+private fun CoinIcon(iconUrls: List<String>) {
+    var index by remember(iconUrls) { mutableStateOf(0) }
+    val placeholder = painterResource(R.drawable.ic_coin_placeholder)
+    val isLast = index >= iconUrls.lastIndex
+    AsyncImage(
+        model = iconUrls.getOrNull(index),
+        contentDescription = null,
+        placeholder = placeholder,
+        // Only surface the placeholder on error once the last source has failed;
+        // intermediate failures advance to the next URL instead.
+        error = if (isLast) placeholder else null,
+        fallback = placeholder,
+        onError = { if (!isLast) index++ },
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+    )
+}
+
 // ── Previews ────────────────────────────────────────────────────────────────────
 
 @Preview(showBackground = true, widthDp = 393, heightDp = 760)
@@ -323,7 +343,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             currencyCode = "BTC",
             nameId = 0,
             codeId = 0,
-            iconUrl = "",
+            iconUrls = emptyList(),
             price = "$64,000.00",
             // Single-provider (Maya-only) → static label, no asterisk.
             routeLabelId = R.string.maya_route_label_maya,
@@ -336,7 +356,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             currencyCode = "NEAR",
             nameId = 0,
             codeId = 0,
-            iconUrl = "",
+            iconUrls = emptyList(),
             price = "$5.20",
             routeLabelId = R.string.maya_route_label_near,
             routeCalculated = false,
@@ -348,7 +368,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             currencyCode = "ETH",
             nameId = 0,
             codeId = 0,
-            iconUrl = "",
+            iconUrls = emptyList(),
             price = "$3,100.00",
             // Both providers, preferred network resolved by quote → "Maya*".
             routeLabelId = R.string.maya_route_label_maya,
@@ -361,7 +381,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             currencyCode = "UNI",
             nameId = 0,
             codeId = 0,
-            iconUrl = "",
+            iconUrls = emptyList(),
             price = "$8.40",
             // Both providers, still resolving → "Multiple networks".
             routeLabelId = R.string.maya_route_label_multiple,
@@ -374,7 +394,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
             currencyCode = "USDT",
             nameId = 0,
             codeId = 0,
-            iconUrl = "",
+            iconUrls = emptyList(),
             price = null,
             routeLabelId = R.string.maya_route_label_maya,
             routeCalculated = false,

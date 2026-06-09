@@ -104,9 +104,26 @@ object GenericUtils {
         return currency.getSymbol(getDeviceLocale())
     }
 
+    /**
+     * Ordered list of candidate icon URLs for a coin ticker, to be tried in sequence
+     * until one loads. CoinCap is tried first (broader coverage, includes Solana
+     * memecoins like WIF that the older jsupa repo lacks), then the jsupa repo as a
+     * secondary source.
+     *
+     * Some assets (e.g. Solana tokens like $WIF) carry a leading '$' or other
+     * non-alphanumeric characters in their symbol; icon hosts key off the plain
+     * ticker (wif), so strip anything that isn't alphanumeric.
+     */
+    fun getCoinIconUrls(code: String): List<String> {
+        val sanitized = code.lowercase(Locale.getDefault()).filter { it.isLetterOrDigit() }
+        return listOf(
+            "https://assets.coincap.io/assets/icons/$sanitized@2x.png",
+            "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/$sanitized.png"
+        )
+    }
+
     fun getCoinIcon(code: String): String {
-        return "https://raw.githubusercontent.com/jsupa/crypto-icons/main/icons/" +
-            code.lowercase(Locale.getDefault()) + ".png"
+        return getCoinIconUrls(code).first()
     }
 
     /**
