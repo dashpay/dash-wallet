@@ -81,4 +81,9 @@ allprojects {
             url 'https://central.sonatype.com/repository/maven-snapshots/'
         }
     }
+    configurations.all {
+        resolutionStrategy {
+            force 'com.google.android.recaptcha:recaptcha:18.4.0'
+        }
+    }
 }

@@ -4,10 +4,12 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.NetworkParameters
@@ -17,6 +19,7 @@ import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -40,6 +43,12 @@ class ExploreEntryViewModel @Inject constructor(
     val isBlockchainSynced: LiveData<Boolean>
         get() = _isBlockchainSynced
 
+    // CrowdNode functionality is limited: the staking entry point is only shown
+    // if the active wallet is already associated with a CrowdNode account
+    val hasCrowdNodeAccount: LiveData<Boolean> = crowdNodeApi.signUpStatus
+        .map { it != SignUpStatus.NotStarted }
+        .asLiveData()
+
     init {
         blockchainStateProvider.observeState()
             .filterNotNull()
@@ -47,6 +56,10 @@ class ExploreEntryViewModel @Inject constructor(
                 updateSyncStatus(state)
             }
             .launchIn(viewModelScope)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            crowdNodeApi.restoreStatus()
+        }
     }
 
     fun getLastStakingAPY() {
@@ -79,6 +92,8 @@ class ExploreEntryViewModel @Inject constructor(
             _isBlockchainSynced.value = state.isSynced()
 
             if (state.isSynced()) {
+                // the sign up status might be restorable from the blockchain now
+                crowdNodeApi.restoreStatus()
                 val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
                 _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
             }
