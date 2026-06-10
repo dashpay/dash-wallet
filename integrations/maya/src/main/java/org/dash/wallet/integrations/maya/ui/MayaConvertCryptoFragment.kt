@@ -127,6 +127,12 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             proceedWithSwap(request)
         }
 
+        // While the quote is being fetched, block all amount input on the enter-amount
+        // screen so a late key press can't alter the value carried to the preview.
+        viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
+            fragment.setProcessing(loading == true)
+        }
+
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
             AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
