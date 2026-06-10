@@ -136,7 +136,7 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
 
         // CrowdNode functionality is limited: deposits aren't supported. Only withdrawals are allowed.
         binding.depositBtn.isVisible = false
-        // hidden unless the online account is fully set up - see setOnlineAccountStatus
+        // online account isn't supported - the button is kept hidden in all states, see setOnlineAccountStatus
         binding.onlineAccountBtn.isVisible = false
 
         binding.withdrawBtn.setOnClickListener {
@@ -259,9 +259,10 @@ class PortalFragment : Fragment(R.layout.fragment_portal) {
     }
 
     private fun setOnlineAccountStatus(status: OnlineAccountStatus) {
-        // CrowdNode functionality is limited: creating an online account isn't
-        // supported. The button is only shown for fully set up online accounts.
-        binding.onlineAccountBtn.isVisible = status == OnlineAccountStatus.Done
+        // CrowdNode functionality is limited: only withdrawals are supported. The online
+        // account button is hidden in all states, including fully set up online accounts where
+        // status == OnlineAccountStatus.Done
+        binding.onlineAccountBtn.isVisible = false
         binding.onlineAccountBtn.isClickable = !isLinkingInProgress
         binding.onlineNavIcon.isVisible = !isLinkingInProgress
 

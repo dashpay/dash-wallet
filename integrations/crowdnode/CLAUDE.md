@@ -136,9 +136,9 @@ transitions.
 ## Temporarily Disabled Functionality (withdrawals only)
 
 CrowdNode has been intentionally **restricted to withdrawals only**. Deposits, linking an existing
-account, and creating an online account are hidden in the UI so that users can still get their funds
-**out**, but cannot put new funds **in** or set up new account linkages. Withdrawals are deliberately
-left fully working.
+account, and the online account (including opening an already fully linked one) are hidden in the UI
+so that users can still get their funds **out**, but cannot put new funds **in** or set up/use account
+linkages. Withdrawals are deliberately left fully working.
 
 This was done purely at the **UI layer** (hiding buttons), not by removing any API/blockchain logic —
 so the disabled flows can be restored by reverting two files. Introduced in commit
@@ -159,16 +159,21 @@ so the disabled flows can be restored by reverting two files. Introduced in comm
    ```kotlin
    // CrowdNode functionality is limited: deposits aren't supported. Only withdrawals are allowed.
    binding.depositBtn.isVisible = false
-   // hidden unless the online account is fully set up - see setOnlineAccountStatus
+   // online account isn't supported - the button is kept hidden in all states, see setOnlineAccountStatus
    binding.onlineAccountBtn.isVisible = false
    ```
-   And in `setOnlineAccountStatus(...)` the online-account button is only shown once an online
-   account is fully set up (`OnlineAccountStatus.Done`), instead of during linking/creation:
+   And in `setOnlineAccountStatus(...)` the online-account button is kept hidden in **all** states,
+   including a fully set up online account (`OnlineAccountStatus.Done`):
    ```kotlin
-   // CrowdNode functionality is limited: creating an online account isn't
-   // supported. The button is only shown for fully set up online accounts.
-   binding.onlineAccountBtn.isVisible = status == OnlineAccountStatus.Done
+   // CrowdNode functionality is limited: only withdrawals are supported. The online
+   // account button is hidden in all states, including fully set up online accounts.
+   binding.onlineAccountBtn.isVisible = false
    ```
+   > Earlier (v11.8/v11.8.1) this line was `isVisible = status == OnlineAccountStatus.Done`, which
+   > re-showed the button for fully linked online accounts. Tapping it called
+   > `CrowdNodeViewModel.getAccountUrl()`, which does `primaryDashAddress!!` — null for accounts
+   > linked before the primary address was persisted — causing a `NullPointerException` crash.
+   > Hiding the button unconditionally removes both the unsupported flow and that crash path.
 
 3. The **Withdraw** button (`withdrawBtn` → `continueWithdraw()`) was **not** modified — withdrawals
    remain fully enabled.
@@ -206,8 +211,10 @@ To re-enable manually instead, reverse each change above:
   }
   ```
 - **PortalFragment.kt (`setOnlineAccountStatus`)** — delete the added
-  `binding.onlineAccountBtn.isVisible = status == OnlineAccountStatus.Done` line so the button's
-  visibility is governed only by the original linking-progress logic.
+  `binding.onlineAccountBtn.isVisible = false` line so the button's visibility is governed only by
+  the original linking-progress logic. (Do **not** restore the intermediate
+  `isVisible = status == OnlineAccountStatus.Done` form — that variant crashed on a null
+  `primaryDashAddress`; see the note in *What was changed* above.)
 
 > Note: deposit/withdraw share the same `TransferFragment` (`portalToTransfer(isWithdraw)`), and all
 > the underlying API/blockchain logic for deposits and account linking is still present and untouched.
