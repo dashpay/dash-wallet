@@ -24,19 +24,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,7 +47,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -60,6 +54,7 @@ import coil.compose.AsyncImage
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
+import org.dash.wallet.common.ui.components.SearchField
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.integrations.maya.R
@@ -69,9 +64,6 @@ import org.dash.wallet.common.R as CommonR
 // Replicated here so the coin list can be a lazy LazyColumn while keeping the look.
 private val CardShape = RoundedCornerShape(20.dp)
 private val CardShadowColor = Color(0xFFB8C1CC).copy(alpha = 0.10f)
-
-// Figma colors/gray/gray400/gray400alpha10 — the search field background.
-private val SearchFieldBackground = Color(0x1A75808A)
 
 @Composable
 fun MayaCryptoCurrencyPickerScreen(
@@ -207,50 +199,6 @@ private fun MayaCryptoCurrencyPickerScreenContent(
             }
         }
     }
-}
-
-@Composable
-private fun SearchField(
-    query: String,
-    onQueryChange: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    TextField(
-        value = query,
-        onValueChange = onQueryChange,
-        modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .clip(RoundedCornerShape(12.dp)),
-        placeholder = {
-            Text(
-                text = stringResource(CommonR.string.search_hint),
-                style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textTertiary
-            )
-        },
-        leadingIcon = {
-            Icon(
-                painter = painterResource(CommonR.drawable.ic_search),
-                contentDescription = null,
-                tint = MyTheme.Colors.textTertiary,
-                modifier = Modifier.size(20.dp)
-            )
-        },
-        singleLine = true,
-        textStyle = MyTheme.Body2Regular,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        colors = TextFieldDefaults.colors(
-            focusedContainerColor = SearchFieldBackground,
-            unfocusedContainerColor = SearchFieldBackground,
-            disabledContainerColor = SearchFieldBackground,
-            focusedIndicatorColor = Color.Transparent,
-            unfocusedIndicatorColor = Color.Transparent,
-            disabledIndicatorColor = Color.Transparent,
-            focusedTextColor = MyTheme.Colors.textPrimary,
-            unfocusedTextColor = MyTheme.Colors.textPrimary
-        )
-    )
 }
 
 @Composable
