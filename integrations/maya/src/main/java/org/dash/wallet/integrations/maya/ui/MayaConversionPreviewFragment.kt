@@ -48,6 +48,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -342,13 +343,19 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
         binding.contentOrderReview.networkValue.text = prettyRouteName(this.routeName)
 
-        val routeName = this.routeName
-        val routes = this.availableRoutes
-        binding.contentOrderReview.orderInfo.text = """
-            selected: $routeName
+        // Route diagnostics are dev-only; hidden in release builds.
+        if (BuildConfig.DEBUG) {
+            val routeName = this.routeName
+            val routes = this.availableRoutes
+            binding.contentOrderReview.orderInfo.isVisible = true
+            binding.contentOrderReview.orderInfo.text = """
+                selected: $routeName
 
-            all: $routes
-        """.trimIndent()
+                all: $routes
+            """.trimIndent()
+        } else {
+            binding.contentOrderReview.orderInfo.isVisible = false
+        }
     }
 
     private fun setValueWithCurrencyCodeOrSymbol(

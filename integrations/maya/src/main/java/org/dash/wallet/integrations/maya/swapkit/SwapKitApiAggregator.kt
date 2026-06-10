@@ -610,6 +610,12 @@ class SwapKitApiAggregator @Inject constructor(
         // destroys the user's actual sell amount. The preview shows the pool-price
         // crypto estimate; what actually arrives is the on-chain payout.
 
+        // SwapKit reports the buy amount as a human-unit decimal string (e.g.
+        // "0.081361035"), unlike legacy Maya whose expectedAmountOut was in base
+        // units — so no 1e8 division here. Drives the "To" row on the order preview.
+        val expectedOutputAmount = (swap.expectedBuyAmount ?: route.expectedBuyAmount)
+            .toBigDecimalOrNull() ?: BigDecimal.ZERO
+
         val result = SwapTradeUIModel(
             amount = swapRequest.amount,
             outputAsset = swapRequest.target_maya_asset,
@@ -618,6 +624,7 @@ class SwapKitApiAggregator @Inject constructor(
             destinationAddress = swapRequest.targetAddress,
             memo = memo,
             maximum = swapRequest.maximum,
+            expectedOutputAmount = expectedOutputAmount,
             routeName = route.providers.joinToString(","),
             availableRoutes = quote.routes.map { "${it.providers.joinToString(",")}: ${it.meta?.tags ?: listOf() }" }
         )

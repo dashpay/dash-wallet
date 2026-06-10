@@ -304,6 +304,7 @@
         android:id="@+id/order_info"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:visibility="gone"
         style="@style/Body2.Medium"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
