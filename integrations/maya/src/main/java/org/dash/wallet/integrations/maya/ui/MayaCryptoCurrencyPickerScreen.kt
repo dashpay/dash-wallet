@@ -40,25 +40,23 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import org.dash.wallet.common.ui.components.ListItem
+import org.dash.wallet.common.ui.components.CoinSelect
+import org.dash.wallet.common.ui.components.CoinSelectState
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.SearchField
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.common.R as CommonR
 
 // Mirrors the common DashList card styling (its shape/shadow tokens are private).
 // Replicated here so the coin list can be a lazy LazyColumn while keeping the look.
@@ -254,51 +252,27 @@ private fun CoinRow(
     item: CoinPickerItem,
     onCoinClick: (String) -> Unit
 ) {
-    ListItem(
-        modifier = Modifier.alpha(if (item.isEnabled) 1f else 0.5f),
-        leadingContent = {
-            CoinIcon(item.iconUrls)
-        },
-        title = if (item.nameId != 0) stringResource(item.nameId) else item.currencyCode,
-        subtitle = if (item.codeId != 0) stringResource(item.codeId) else item.asset,
-        trailingContent = {
-            if (item.isHalted) {
-                Text(
-                    text = stringResource(R.string.maya_halted_label),
-                    style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textSecondary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(colorResource(CommonR.color.gray_100))
-                        .padding(horizontal = 6.dp, vertical = 4.dp)
-                )
-            } else {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = item.price ?: "",
-                        style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary
-                    )
-                    // Single-provider assets show the network statically; both-provider
-                    // assets show "Multiple networks" until the background quote resolves
-                    // a preferred network, then show it with a trailing "*" to mark it as
-                    // calculated.
-                    item.routeLabelId?.let { labelId ->
-                        val label = stringResource(labelId) + if (item.routeCalculated) "*" else ""
-                        Text(
-                            text = label,
-                            style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textTertiary
-                        )
-                    }
-                }
-            }
-        },
-        onClick = if (item.isEnabled) {
-            { onCoinClick(item.asset) }
-        } else {
-            null
-        }
+    val state = when {
+        item.isHalted -> CoinSelectState.HaltedChain
+        !item.isEnabled -> CoinSelectState.Disabled
+        else -> CoinSelectState.Active
+    }
+    // Single-provider assets show the network statically; both-provider assets show
+    // "Multiple networks" until the background quote resolves a preferred network, then
+    // show it with a trailing "*" to mark it as calculated.
+    val network = item.routeLabelId?.let { labelId ->
+        stringResource(labelId) + if (item.routeCalculated) "*" else ""
+    }
+
+    CoinSelect(
+        name = if (item.nameId != 0) stringResource(item.nameId) else item.currencyCode,
+        symbol = if (item.codeId != 0) stringResource(item.codeId) else item.asset,
+        coinIcon = { CoinIcon(item.iconUrls) },
+        state = state,
+        price = item.price,
+        network = network,
+        haltedLabel = stringResource(R.string.maya_halted_label),
+        onClick = { onCoinClick(item.asset) }
     )
 }
 
@@ -323,7 +297,7 @@ private fun CoinIcon(iconUrls: List<String>) {
         fallback = placeholder,
         onError = { if (!isLast) index++ },
         modifier = Modifier
-            .size(34.dp)
+            .size(30.dp)
             .clip(CircleShape)
     )
 }

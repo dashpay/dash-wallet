@@ -36,7 +36,7 @@
     <string name="cryptocurrency_ethereum_code" translatable="false">ETH</string>
     <string name="cryptocurrency_usdcoin_code" translatable="false">USDC</string>
     <string name="cryptocurrency_tether_code" translatable="false">USDT</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
@@ -45,7 +45,7 @@
     <string name="cryptocurrency_usk_code" translatable="false">USK</string>
     <string name="cryptocurrency_usk_network">USK</string>
     <string name="cryptocurrency_wsteth_code" translatable="false">WSTETH</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_code" translatable="false">ARB</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_code" translatable="false">DAI</string>
