@@ -31,6 +31,7 @@ import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -89,7 +90,11 @@ data class CoinPickerItem(
 data class CurrencyPickerUIState(
     val coins: List<CoinPickerItem> = emptyList(),
     val searchQuery: String = "",
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    // False when the device has no internet. The picker still renders the cached coin
+    // list (if any) with every row disabled and a "no connection" graphic; with no cache
+    // it shows the full-screen graphic and hides the search bar.
+    val isOnline: Boolean = true
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -101,7 +106,8 @@ class MayaViewModel @Inject constructor(
     private val fiatExchangeRateProvider: FiatExchangeRateProvider,
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
-    walletUIConfig: WalletUIConfig
+    walletUIConfig: WalletUIConfig,
+    networkState: NetworkStateInt
 ) : ViewModel() {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaViewModel::class.java)
@@ -162,70 +168,78 @@ class MayaViewModel @Inject constructor(
             poolList,
             inboundAddresses,
             _searchQuery,
-            swapProvider.preferredRouteProviders
-        ) { pools, addresses, query, preferredRoutes ->
-            val coins = pools.filter { pool -> pool.asset != "DASH.DASH" }
-                .filter { pool ->
-                    currencyResIds.containsKey(pool.asset) &&
-                        pool.status.equals("available", ignoreCase = true)
-                }
-                .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
-                .map { pool ->
-                    val chain = pool.asset.substringBefore('.')
-                    val inbound = addresses.find { it.chain == chain }
-                    // Maya-only assets carry halt status per-asset (pool.mayaHalted),
-                    // OR-ed with the per-chain inbound halt used by the native Maya backend.
-                    val isHalted = inbound?.halted == true || pool.mayaHalted
-                    val isEnabled = inbound != null && !isHalted
-                    val price = if (isEnabled) {
-                        GenericUtils.formatFiatWithoutComma(formatFiat(pool.assetPriceFiat))
-                    } else {
-                        null
+            swapProvider.preferredRouteProviders,
+            networkState.isConnected
+        ) { pools, addresses, query, preferredRoutes, isOnline ->
+            // Offline: show no coins at all (the screen renders the "No available coins"
+            // empty state + the no-connection toast). We don't surface the cached pool
+            // list, since it can't be traded without a live connection.
+            val coins = if (!isOnline) {
+                emptyList()
+            } else {
+                pools.filter { pool -> pool.asset != "DASH.DASH" }
+                    .filter { pool ->
+                        currencyResIds.containsKey(pool.asset) &&
+                            pool.status.equals("available", ignoreCase = true)
                     }
-                    val resIds = currencyResIds[pool.asset]
-                    // Single-provider assets are labelled statically from the token-list
-                    // classification. Both-provider assets show "Multiple networks" until
-                    // the background quote resolves a preferred network, then show it with
-                    // a trailing "*" (routeCalculated) to flag it as calculated.
-                    val preferred = preferredRoutes[pool.asset]
-                    val routeLabelId: Int
-                    val routeCalculated: Boolean
-                    when {
-                        pool.mayaOnly -> {
-                            routeLabelId = R.string.maya_route_label_maya
-                            routeCalculated = false
+                    .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
+                    .map { pool ->
+                        val chain = pool.asset.substringBefore('.')
+                        val inbound = addresses.find { it.chain == chain }
+                        // Maya-only assets carry halt status per-asset (pool.mayaHalted),
+                        // OR-ed with the per-chain inbound halt used by the native Maya backend.
+                        val isHalted = inbound?.halted == true || pool.mayaHalted
+                        val isEnabled = inbound != null && !isHalted
+                        val price = if (isEnabled) {
+                            GenericUtils.formatFiatWithoutComma(formatFiat(pool.assetPriceFiat))
+                        } else {
+                            null
                         }
-                        pool.nearOnly -> {
-                            routeLabelId = R.string.maya_route_label_near
-                            routeCalculated = false
+                        val resIds = currencyResIds[pool.asset]
+                        // Single-provider assets are labelled statically from the token-list
+                        // classification. Both-provider assets show "Multiple networks" until
+                        // the background quote resolves a preferred network, then show it with
+                        // a trailing "*" (routeCalculated) to flag it as calculated.
+                        val preferred = preferredRoutes[pool.asset]
+                        val routeLabelId: Int
+                        val routeCalculated: Boolean
+                        when {
+                            pool.mayaOnly -> {
+                                routeLabelId = R.string.maya_route_label_maya
+                                routeCalculated = false
+                            }
+                            pool.nearOnly -> {
+                                routeLabelId = R.string.maya_route_label_near
+                                routeCalculated = false
+                            }
+                            preferred == RouteProvider.MAYA -> {
+                                routeLabelId = R.string.maya_route_label_maya
+                                routeCalculated = true
+                            }
+                            preferred == RouteProvider.NEAR -> {
+                                routeLabelId = R.string.maya_route_label_near
+                                routeCalculated = true
+                            }
+                            else -> {
+                                routeLabelId = R.string.maya_route_label_multiple
+                                routeCalculated = false
+                            }
                         }
-                        preferred == RouteProvider.MAYA -> {
-                            routeLabelId = R.string.maya_route_label_maya
-                            routeCalculated = true
-                        }
-                        preferred == RouteProvider.NEAR -> {
-                            routeLabelId = R.string.maya_route_label_near
-                            routeCalculated = true
-                        }
-                        else -> {
-                            routeLabelId = R.string.maya_route_label_multiple
-                            routeCalculated = false
-                        }
+                        CoinPickerItem(
+                            asset = pool.asset,
+                            currencyCode = pool.currencyCode,
+                            nameId = resIds?.first ?: 0,
+                            codeId = resIds?.second ?: 0,
+                            iconUrls = GenericUtils.getCoinIconUrls(pool.currencyCode),
+                            price = price,
+                            routeLabelId = routeLabelId,
+                            routeCalculated = routeCalculated,
+                            isHalted = isHalted,
+                            isEnabled = isEnabled
+                        )
                     }
-                    CoinPickerItem(
-                        asset = pool.asset,
-                        currencyCode = pool.currencyCode,
-                        nameId = resIds?.first ?: 0,
-                        codeId = resIds?.second ?: 0,
-                        iconUrls = GenericUtils.getCoinIconUrls(pool.currencyCode),
-                        price = price,
-                        routeLabelId = routeLabelId,
-                        routeCalculated = routeCalculated,
-                        isHalted = isHalted,
-                        isEnabled = isEnabled
-                    )
-                }
-                .sortedBy { it.currencyCode }
+                    .sortedBy { it.currencyCode }
+            }
 
             // The list is emitted unfiltered; the search filter is applied in the
             // composable layer so it can match the localized coin name (resolved via
@@ -235,7 +249,10 @@ class MayaViewModel @Inject constructor(
             CurrencyPickerUIState(
                 coins = coins,
                 searchQuery = query,
-                isLoading = pools.isEmpty()
+                // Only spin while we're online and still waiting for the first pool list.
+                // Offline shows the "No available coins" empty state instead of spinning forever.
+                isLoading = pools.isEmpty() && isOnline,
+                isOnline = isOnline
             )
         }.stateIn(viewModelScope, SharingStarted.Eagerly, CurrencyPickerUIState())
 

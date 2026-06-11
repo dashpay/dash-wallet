@@ -72,6 +72,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
     private var hasInternet: Boolean = true
+
     // While a swap quote is being fetched we block all amount input so the value
     // shown on the preview screen can't drift from what was submitted.
     private var isProcessing: Boolean = false

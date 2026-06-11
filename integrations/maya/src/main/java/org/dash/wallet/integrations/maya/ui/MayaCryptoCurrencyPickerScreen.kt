@@ -83,6 +83,7 @@ fun MayaCryptoCurrencyPickerScreen(
     MayaCryptoCurrencyPickerScreenContent(
         items = uiState.coins,
         isLoading = uiState.isLoading,
+        isOnline = uiState.isOnline,
         hasHaltedCoins = hasHaltedCoins,
         searchQuery = uiState.searchQuery,
         onSearchChange = viewModel::onSearchQuery,
@@ -95,13 +96,20 @@ fun MayaCryptoCurrencyPickerScreen(
 private fun MayaCryptoCurrencyPickerScreenContent(
     items: List<CoinPickerItem>,
     isLoading: Boolean,
+    isOnline: Boolean,
     hasHaltedCoins: Boolean,
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     onCoinClick: (String) -> Unit,
     onBackClick: () -> Unit
 ) {
-    var dismissed by remember { mutableStateOf(false) }
+    var haltedDismissed by remember { mutableStateOf(false) }
+    var networkDismissed by remember { mutableStateOf(false) }
+
+    // Offline: hide the search bar and show the "no connection" Toast at the bottom
+    // (per design). With no cached coins the list area shows a centered "No available
+    // coins" message; with a cache it shows the list with every row disabled.
+    val showSearch = isOnline
 
     // Filter here (not in the ViewModel) so we can match the localized coin name in
     // addition to the code/asset, matching the legacy fragment. stringResource is only
@@ -135,58 +143,98 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                 onBackClick = onBackClick
             )
 
-            SearchField(
-                query = searchQuery,
-                onQueryChange = onSearchChange,
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
-            )
+            if (showSearch) {
+                SearchField(
+                    query = searchQuery,
+                    onQueryChange = onSearchChange,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
+                )
+            }
 
-            if (isLoading) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                ) {
-                    CircularProgressIndicator(
-                        color = MyTheme.Colors.dashBlue,
-                        strokeWidth = 3.dp,
+            when {
+                isLoading -> {
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(36.dp)
-                    )
-                }
-            } else {
-                // Lazy list inside the rounded white "DashList" card. Each coin is its
-                // own LazyColumn item (rather than one item wrapping a forEach) so only
-                // visible rows compose on the first frame — this is what lets the screen
-                // appear immediately instead of stalling on the full list. fill = false
-                // makes the card wrap its content for short/filtered lists and cap at the
-                // available height (scrolling) when long.
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f, fill = false)
-                        .padding(horizontal = 20.dp)
-                        .shadow(
-                            elevation = 5.dp,
-                            shape = CardShape,
-                            ambientColor = CardShadowColor,
-                            spotColor = CardShadowColor
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        CircularProgressIndicator(
+                            color = MyTheme.Colors.dashBlue,
+                            strokeWidth = 3.dp,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .size(36.dp)
                         )
-                        .clip(CardShape)
-                        .background(MyTheme.Colors.backgroundSecondary)
-                        .padding(6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                    contentPadding = PaddingValues(bottom = 4.dp)
-                ) {
-                    items(displayItems, key = { it.asset }) { coin ->
-                        CoinRow(item = coin, onCoinClick = onCoinClick)
+                    }
+                }
+
+                items.isEmpty() -> {
+                    // Empty list area (offline with no cache, or a genuinely empty list):
+                    // a centered "No available coins" message, per design.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.maya_no_available_coins),
+                            style = MyTheme.Typography.TitleSmall,
+                            color = MyTheme.Colors.textSecondary,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
+                    }
+                }
+
+                else -> {
+                    // Lazy list inside the rounded white "DashList" card. Each coin is its
+                    // own LazyColumn item (rather than one item wrapping a forEach) so only
+                    // visible rows compose on the first frame — this is what lets the screen
+                    // appear immediately instead of stalling on the full list. fill = false
+                    // makes the card wrap its content for short/filtered lists and cap at the
+                    // available height (scrolling) when long.
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f, fill = false)
+                            .padding(horizontal = 20.dp)
+                            .shadow(
+                                elevation = 5.dp,
+                                shape = CardShape,
+                                ambientColor = CardShadowColor,
+                                spotColor = CardShadowColor
+                            )
+                            .clip(CardShape)
+                            .background(MyTheme.Colors.backgroundSecondary)
+                            .padding(6.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        contentPadding = PaddingValues(bottom = 4.dp)
+                    ) {
+                        items(displayItems, key = { it.asset }) { coin ->
+                            CoinRow(item = coin, onCoinClick = onCoinClick)
+                        }
                     }
                 }
             }
         }
 
-        if (hasHaltedCoins && !dismissed) {
+        // No-connection toast, pinned at the bottom (per design): no-wifi icon, message,
+        // and a dismiss button. Shown whenever offline, over both the empty and list states.
+        if (!isOnline && !networkDismissed) {
+            Toast(
+                text = stringResource(R.string.maya_no_connection_toast),
+                imageResource = ToastImageResource.NoInternet.resourceId,
+                showDismissButton = true,
+                onDismiss = { networkDismissed = true },
+                onActionClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 25.dp, vertical = 8.dp)
+            )
+        }
+
+        // The halted-coins toast is about per-asset trading halts, not connectivity;
+        // suppress it while offline so it doesn't compete with the network toast.
+        if (hasHaltedCoins && !haltedDismissed && isOnline) {
             Toast(
                 text = stringResource(R.string.maya_halted_coins_toast),
                 actionText = stringResource(android.R.string.ok),
@@ -195,7 +243,7 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 5.dp, vertical = 8.dp)
             ) {
-                dismissed = true
+                haltedDismissed = true
             }
         }
     }
@@ -353,6 +401,7 @@ private fun MayaCryptoCurrencyPickerScreenPreview() {
     MayaCryptoCurrencyPickerScreenContent(
         items = sample,
         isLoading = false,
+        isOnline = true,
         hasHaltedCoins = true,
         searchQuery = "",
         onSearchChange = {},
@@ -367,6 +416,23 @@ private fun MayaCryptoCurrencyPickerScreenLoadingPreview() {
     MayaCryptoCurrencyPickerScreenContent(
         items = emptyList(),
         isLoading = true,
+        isOnline = true,
+        hasHaltedCoins = false,
+        searchQuery = "",
+        onSearchChange = {},
+        onCoinClick = {},
+        onBackClick = {}
+    )
+}
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun MayaCryptoCurrencyPickerScreenOfflinePreview() {
+    // Offline: no search bar, "No available coins" empty state, and the no-connection toast.
+    MayaCryptoCurrencyPickerScreenContent(
+        items = emptyList(),
+        isLoading = false,
+        isOnline = false,
         hasHaltedCoins = false,
         searchQuery = "",
         onSearchChange = {},
