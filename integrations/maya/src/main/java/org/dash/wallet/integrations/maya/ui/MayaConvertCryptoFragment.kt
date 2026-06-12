@@ -258,6 +258,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.dashInput = amount
         }
 
@@ -265,12 +266,14 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.fiatInput = amount
         }
 
         convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
             binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
             binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
+            updateReceiveNetwork(amount.second.isNotEmpty())
 
             if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
@@ -294,6 +297,21 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         convertViewModel.setSelectedAsset(args.asset)
+    }
+
+    /**
+     * Shows the route-provider line ("using <Maya/NEAR> network") under the receive amount.
+     * Hidden when there's no amount, or when the selected asset's route isn't a single known
+     * provider (mirrors the currency picker's route label).
+     */
+    private fun updateReceiveNetwork(visible: Boolean) {
+        val routeResId = mayaViewModel.getRouteLabelResId(args.asset)
+        if (visible && routeResId != null) {
+            binding.usingNetwork.text = getString(R.string.maya_receive_using_network, getString(routeResId))
+            binding.usingNetwork.isVisible = true
+        } else {
+            binding.usingNetwork.isVisible = false
+        }
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {

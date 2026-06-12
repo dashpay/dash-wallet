@@ -393,6 +393,25 @@ class MayaViewModel @Inject constructor(
         return null
     }
 
+    /**
+     * Route-provider label string res for [asset] (`maya` / `near`) when it routes through
+     * a single, known provider, or null when undetermined or routable via both. Mirrors the
+     * currency picker's classification (pool [PoolInfo.mayaOnly]/[PoolInfo.nearOnly] + the
+     * asynchronously-resolved [SwapProvider.preferredRouteProviders]).
+     */
+    @androidx.annotation.StringRes
+    fun getRouteLabelResId(asset: String): Int? {
+        val pool = poolList.value.find { it.asset == asset }
+        val preferred = swapProvider.preferredRouteProviders.value[asset]
+        return when {
+            pool?.mayaOnly == true -> R.string.maya_route_label_maya
+            pool?.nearOnly == true -> R.string.maya_route_label_near
+            preferred == RouteProvider.MAYA -> R.string.maya_route_label_maya
+            preferred == RouteProvider.NEAR -> R.string.maya_route_label_near
+            else -> null
+        }
+    }
+
     private fun updateInboundAddresses() {
         viewModelScope.launch(Dispatchers.IO) {
             refreshInboundAddresses()
