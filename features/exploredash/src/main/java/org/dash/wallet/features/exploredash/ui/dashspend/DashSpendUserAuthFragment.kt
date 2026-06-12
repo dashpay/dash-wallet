@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
+import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
@@ -255,8 +256,10 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                         )
                     }
                 } else {
+                    // A non-exception failure means the code was accepted but the backend returned
+                    // no usable tokens - a server anomaly, not a wrong code.
                     viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
-                    showVerifyError(getString(R.string.invaild_code))
+                    showVerifyError(getString(R.string.loading_error))
                 }
             } catch (e: Exception) {
                 log.error(
@@ -264,7 +267,10 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                     e
                 )
                 viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
-                showVerifyError(getString(R.string.invaild_code))
+                // Only a genuine rejection of the entered code (HTTP 400) is the user's fault;
+                // transient/server/transport errors get a generic message instead of "wrong code".
+                val isInvalidCode = e is CTXSpendException && e.errorCode == 400
+                showVerifyError(getString(if (isInvalidCode) R.string.invaild_code else R.string.loading_error))
             }
             hideLoading()
         }
