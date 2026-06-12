@@ -43,6 +43,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doAnswer
+import org.mockito.kotlin.doReturn
 import org.mockito.kotlin.mock
 import org.robolectric.RobolectricTestRunner
 import retrofit2.HttpException
@@ -135,6 +136,24 @@ class CTXSpendRepositoryTokenTest {
 
         assertEquals("fresh-access", result)
         assertEquals("fresh-refresh", config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN))
+    }
+
+    @Test
+    fun verifyEmailReturnsFalseWhenServerOmitsTokens() = runTest {
+        config.setSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL, "user@example.com")
+        // A 2xx response with no tokens must not crash (no !!) and must not persist a session.
+        val api = mock<CTXSpendApi> {
+            onBlocking { verifyEmail(any()) } doReturn RefreshTokenResponse(refreshToken = null, accessToken = null)
+        }
+        val repository = CTXSpendRepository(
+            api,
+            config,
+            TokenAuthenticator(FailingTokenApi(IOException("must not be called")), config)
+        )
+
+        assertFalse(repository.verifyEmail("123456"))
+        assertTrue(config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN).isNullOrEmpty())
+        assertTrue(config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN).isNullOrEmpty())
     }
 
     private fun createRepository(tokenApi: CTXSpendTokenApi): CTXSpendRepository {

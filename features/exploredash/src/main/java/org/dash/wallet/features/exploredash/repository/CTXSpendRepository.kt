@@ -122,7 +122,14 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun verifyEmail(code: String): Boolean {
         val email = config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
         val response = api.verifyEmail(VerifyEmailRequest(email = email!!, code = code))
-        config.saveTokenState(response?.accessToken!!, response.refreshToken!!)
+        val accessToken = response?.accessToken
+        val refreshToken = response?.refreshToken
+
+        if (accessToken.isNullOrBlank() || refreshToken.isNullOrBlank()) {
+            return false
+        }
+
+        config.saveTokenState(accessToken, refreshToken)
         return config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
