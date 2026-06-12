@@ -20,41 +20,40 @@ package de.schildbach.wallet.ui.more
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
-import android.net.Uri
 import android.os.Bundle
 import android.text.format.DateUtils
-import androidx.activity.viewModels
+import android.view.View
 import androidx.core.view.isVisible
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.ActivityAboutBinding
+import de.schildbach.wallet_test.databinding.FragmentAboutBinding
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.VersionMessage
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
 import androidx.core.net.toUri
 
-
 @AndroidEntryPoint
-class AboutActivity : LockScreenActivity() {
+class AboutFragment : Fragment(R.layout.fragment_about) {
     companion object {
-        private val log = LoggerFactory.getLogger(AboutActivity::class.java)
+        private val log = LoggerFactory.getLogger(AboutFragment::class.java)
     }
 
     private val viewModel by viewModels<AboutViewModel>()
-    private lateinit var binding: ActivityAboutBinding
+    private val binding by viewBinding(FragmentAboutBinding::bind)
 
     @SuppressLint("SetTextI18n")
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        binding = ActivityAboutBinding.inflate(layoutInflater)
-        binding.appBar.setNavigationOnClickListener { finish() }
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        binding.appBar.setNavigationOnClickListener { findNavController().popBackStack() }
 
         val appName = getString(R.string.app_name_short)
         binding.title.text = "${getString(R.string.about_title)} $appName"
@@ -83,7 +82,7 @@ class AboutActivity : LockScreenActivity() {
         binding.forceSyncBtn.isVisible = !isMainNet
         binding.forceSyncBtn.setOnClickListener {
             try {
-                ExploreSyncWorker.run(applicationContext, isMainNet)
+                ExploreSyncWorker.run(requireContext().applicationContext, isMainNet)
             } catch (ex: Exception) {
                 log.error(ex.message, ex)
             }
@@ -91,17 +90,15 @@ class AboutActivity : LockScreenActivity() {
 
         showExploreDashSyncStatus()
         showFirebaseIds()
-
-        setContentView(binding.root)
     }
 
     private fun showFirebaseIds() {
-        viewModel.firebaseInstallationId.observe(this) {
+        viewModel.firebaseInstallationId.observe(viewLifecycleOwner) {
             binding.firebaseInstallationId.text = it
         }
         binding.firebaseInstallationIdItem.setOnClickListener { viewModel.copyFirebaseInstallationId() }
 
-        viewModel.firebaseCloudMessagingToken.observe(this) {
+        viewModel.firebaseCloudMessagingToken.observe(viewLifecycleOwner) {
             binding.fcmToken.text = it
         }
         binding.fcmTokenItem.setOnClickListener { viewModel.copyFCMToken() }
@@ -110,20 +107,20 @@ class AboutActivity : LockScreenActivity() {
     private fun showExploreDashSyncStatus() {
         val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
 
-        viewModel.exploreRemoteTimestamp.observe(this) { timestamp ->
+        viewModel.exploreRemoteTimestamp.observe(viewLifecycleOwner) { timestamp ->
             binding.lastExploreUpdateLoadingIndicator.isVisible = false
             binding.exploreDashLastServerUpdate.isVisible = true
 
             val formattedUpdateTime = if (timestamp <= 0L) {
                 getString(R.string.about_last_explore_dash_update_error)
             } else {
-                DateUtils.formatDateTime(applicationContext, timestamp, formatFlags)
+                DateUtils.formatDateTime(requireContext().applicationContext, timestamp, formatFlags)
             }
 
             binding.exploreDashLastServerUpdate.text = formattedUpdateTime
         }
 
-        viewModel.exploreIsSyncing.observe(this) { isSyncing ->
+        viewModel.exploreIsSyncing.observe(viewLifecycleOwner) { isSyncing ->
             lifecycleScope.launch {
                 val dbPrefs = viewModel.databasePrefs
                 binding.exploreDashLastDeviceSync.text = if (isSyncing) {
@@ -131,32 +128,27 @@ class AboutActivity : LockScreenActivity() {
                 } else if (dbPrefs.failedSyncAttempts > 0) {
                     getString(
                         R.string.about_explore_failed_sync,
-                        DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                        DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
                     )
                 } else if (dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp) {
                     val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
                     prefix + getString(
                         R.string.about_explore_preloaded_on,
-                        DateUtils.formatDateTime(applicationContext, dbPrefs.preloadedOnTimestamp, formatFlags)
+                        DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.preloadedOnTimestamp, formatFlags)
                     )
                 } else {
-                    DateUtils.formatDateTime(applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                    DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
                 }
             }
         }
     }
 
-    override fun finish() {
-        super.finish()
-        overridePendingTransition(R.anim.activity_stay, R.anim.slide_out_left)
-    }
-
     private fun handleReportIssue() {
-        if (!isFinishing) {
+        if (!requireActivity().isFinishing) {
             ContactSupportDialogFragment.newInstance(
                 getString(R.string.report_issue_dialog_title_issue),
                 getString(R.string.report_issue_dialog_message_issue),
-            ).show(this)
+            ).show(requireActivity())
         }
     }
 }

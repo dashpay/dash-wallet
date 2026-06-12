@@ -6,7 +6,7 @@
     android:layout_height="match_parent"
     android:background="@color/background_primary"
     android:orientation="vertical"
-    tools:context="de.schildbach.wallet.ui.more.AboutActivity">
+    tools:context="de.schildbach.wallet.ui.more.AboutFragment">
 
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/app_bar"

@@ -379,7 +379,20 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <action
+            android:id="@+id/settings_to_about"
+            app:destination="@id/aboutFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
     </fragment>
+
+    <fragment
+        android:id="@+id/aboutFragment"
+        android:name="de.schildbach.wallet.ui.more.AboutFragment"
+        android:label="About"
+        tools:layout="@layout/fragment_about" />
 
     <fragment
         android:id="@+id/transaction_metadata_settings_fragment"
