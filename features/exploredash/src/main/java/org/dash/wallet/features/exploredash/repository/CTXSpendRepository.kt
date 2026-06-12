@@ -122,11 +122,7 @@ class CTXSpendRepository @Inject constructor(
     override suspend fun verifyEmail(code: String): Boolean {
         val email = config.getSecuredData(CTXSpendConfig.PREFS_KEY_CTX_PAY_EMAIL)
         val response = api.verifyEmail(VerifyEmailRequest(email = email!!, code = code))
-        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, response?.accessToken!!)
-        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, response.refreshToken!!)
-        val time = System.currentTimeMillis()
-        config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, time)
-        config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, time)
+        config.saveTokenState(response?.accessToken!!, response.refreshToken!!)
         return config.getSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN)?.isNotEmpty() ?: false
     }
 
@@ -138,10 +134,7 @@ class CTXSpendRepository @Inject constructor(
     }
 
     suspend fun reset() {
-        config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
-        config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
-        config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
-        config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
+        config.clearTokenState()
     }
 
     override suspend fun purchaseGiftCard(
@@ -237,10 +230,17 @@ class CTXSpendRepository @Inject constructor(
 
     suspend fun checkToken(): Boolean {
         val refreshTokenTime = config.get(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME)
-        return if (refreshTokenTime == null) {
+        val refreshToken = config.getSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN)
+
+        return if (refreshToken.isNullOrBlank()) {
+            reset()
             false
+        } else if (refreshTokenTime == null) {
+            refreshToken()
+        } else if ((System.currentTimeMillis() - refreshTokenTime) < REFRESH_TOKEN_EXPIRATION) {
+            true
         } else {
-            (System.currentTimeMillis() - refreshTokenTime) < REFRESH_TOKEN_EXPIRATION
+            refreshToken()
         }
     }
 
@@ -252,21 +252,10 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override suspend fun refreshToken(): Boolean {
-        return try {
-            val tokenResponse = tokenAuthenticator.getUpdatedToken()
-            tokenResponse?.let {
-                config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, it.accessToken ?: "")
-                config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, it.refreshToken ?: "")
-                config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, System.currentTimeMillis())
-                true
-            } ?: false
-        } catch (e: Exception) {
-            config.setSecuredData(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN, "")
-            config.setSecuredData(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN, "")
-            config.set(CTXSpendConfig.PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
-            config.set(CTXSpendConfig.PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
-            false
-        }
+        // Delegate to the authenticator so this shares the same process-wide lock and token
+        // persistence as the OkHttp retry path, avoiding overlapping refreshes that could
+        // clear a token another caller just rotated.
+        return tokenAuthenticator.refreshAccessToken() != null
     }
 
     suspend fun getCTXSpendEmail(): String? {
