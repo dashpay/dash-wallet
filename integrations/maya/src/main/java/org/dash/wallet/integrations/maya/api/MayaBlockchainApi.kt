@@ -228,6 +228,9 @@ class MayaBlockchainApiImpl @Inject constructor(
             return ResponseResource.Success(swapTradeUIModel)
         } catch (e: InsufficientMoneyException) {
             return ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: Exception) {
+            log.error("failed to build/send maya swap transaction", e)
+            return ResponseResource.Failure(e, false, 0, e.message)
         }
     }
 }

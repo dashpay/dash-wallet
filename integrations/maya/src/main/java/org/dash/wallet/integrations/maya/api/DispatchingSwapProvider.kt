@@ -24,7 +24,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
@@ -65,15 +64,20 @@ class DispatchingSwapProvider @Inject constructor(
     }
 
     @Volatile
-    private var activeBackend: SwapBackend = readPersistedBlocking()
+    private var activeBackend: SwapBackend = SwapBackend.MAYA
 
     private val persistScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
-    private fun readPersistedBlocking(): SwapBackend {
-        val configured = runBlocking { config.get(MayaConfig.SWAP_BACKEND) }
-            ?.let { runCatching { SwapBackend.valueOf(it) }.getOrNull() }
-            ?: SwapBackend.MAYA
-        return effective(configured)
+    init {
+        // Load the persisted backend off the main thread to avoid blocking the
+        // constructing thread (Hilt may build this singleton on the main thread).
+        persistScope.launch {
+            val configured = runCatching { config.get(MayaConfig.SWAP_BACKEND) }
+                .getOrNull()
+                ?.let { runCatching { SwapBackend.valueOf(it) }.getOrNull() }
+                ?: SwapBackend.MAYA
+            activeBackend = effective(configured)
+        }
     }
 
     private fun effective(requested: SwapBackend): SwapBackend {

@@ -58,6 +58,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
+    val networkParameters get() = walletDataProvider.networkParameters
+
     var paymentIntent: PaymentIntent? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>

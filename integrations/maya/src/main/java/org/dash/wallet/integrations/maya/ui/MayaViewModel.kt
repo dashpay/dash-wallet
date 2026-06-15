@@ -48,7 +48,6 @@ import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
-import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
@@ -440,7 +439,7 @@ class MayaViewModel @Inject constructor(
                 }
             }
 
-            is SwapKitConstants -> {
+            is SwapKitApiAggregator -> {
                 inboundAddresses.value.isNotEmpty()
             }
             is DispatchingSwapProvider -> {

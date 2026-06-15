@@ -165,7 +165,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 val paymentIntent = try {
                     viewModel.getUpdatedPaymentIntent(
                         convertViewModel.enteredConvertDashAmount.value!!,
-                        Address.fromBase58(null, swapTrade.vaultAddress)
+                        Address.fromBase58(viewModel.networkParameters, swapTrade.vaultAddress)
                     )
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
