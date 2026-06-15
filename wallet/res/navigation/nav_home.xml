@@ -347,8 +347,7 @@
     <fragment
         android:id="@+id/toolsFragment"
         android:name="de.schildbach.wallet.ui.more.ToolsFragment"
-        android:label="Tools"
-        tools:layout="@layout/fragment_more">
+        android:label="Tools">
 
         <action
             android:id="@+id/tools_to_masternode_keys"
@@ -391,8 +390,7 @@
     <fragment
         android:id="@+id/aboutFragment"
         android:name="de.schildbach.wallet.ui.more.AboutFragment"
-        android:label="About"
-        tools:layout="@layout/fragment_about" />
+        android:label="About" />
 
     <fragment
         android:id="@+id/transaction_metadata_settings_fragment"
@@ -445,8 +443,7 @@
     <fragment
         android:id="@+id/masternodeKeyTypeFragment"
         android:name="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeysFragment"
-        android:label="Masternode Keys"
-        tools:layout="@layout/fragment_masternode_key_types">
+        android:label="Masternode Keys">
 
         <action
             android:id="@+id/masternode_key_type_to_masternode_keychain"
@@ -466,8 +463,7 @@
     <fragment
         android:id="@+id/masternodeKeyChainFragment"
         android:name="de.schildbach.wallet.ui.more.masternode_keys.MasternodeKeyChainFragment"
-        android:label="Masternode KeyChain"
-        tools:layout="@layout/fragment_masternode_key_chain"/>
+        android:label="Masternode KeyChain" />
 
     <fragment
         android:id="@+id/buySellFragment"

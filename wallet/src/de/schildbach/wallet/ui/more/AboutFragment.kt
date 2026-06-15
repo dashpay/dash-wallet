@@ -17,130 +17,137 @@
 
 package de.schildbach.wallet.ui.more
 
-import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.os.Bundle
 import android.text.format.DateUtils
+import android.view.LayoutInflater
 import android.view.View
-import androidx.core.view.isVisible
+import android.view.ViewGroup
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.res.stringResource
+import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
-import de.schildbach.wallet_test.databinding.FragmentAboutBinding
-import kotlinx.coroutines.launch
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
-import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
-import androidx.core.net.toUri
 
 @AndroidEntryPoint
-class AboutFragment : Fragment(R.layout.fragment_about) {
+class AboutFragment : Fragment() {
     companion object {
         private val log = LoggerFactory.getLogger(AboutFragment::class.java)
+        private val FORMAT_FLAGS =
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
     }
 
     private val viewModel by viewModels<AboutViewModel>()
-    private val binding by viewBinding(FragmentAboutBinding::bind)
 
-    @SuppressLint("SetTextI18n")
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        binding.appBar.setNavigationOnClickListener { findNavController().popBackStack() }
+    private val isMainNet = Constants.NETWORK_PARAMETERS == MainNetParams.get()
 
-        val appName = getString(R.string.app_name_short)
-        binding.title.text = "${getString(R.string.about_title)} $appName"
-        binding.appVersionName.text = getString(R.string.about_version_name, BuildConfig.VERSION_NAME)
-        binding.buildNumber.text = getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
-        binding.libraryVersionName.text = getString(
-            R.string.about_credits_bitcoinj_title,
-            BuildConfig.DASHJ_VERSION
-        )
-        binding.platformVersionName.text = getString(
-            R.string.about_credits_platform_title,
-            BuildConfig.DPP_VERSION
-        )
-        binding.githubLink.setOnClickListener {
-            val i = Intent(ACTION_VIEW)
-            i.data = binding.githubLink.text.toString().toUri()
-            startActivity(i)
-        }
-        binding.reviewAndRate.setOnClickListener { viewModel.reviewApp() }
-        binding.contactSupport.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
-            handleReportIssue()
-        }
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                val isSyncing by viewModel.exploreIsSyncing.collectAsState()
+                val remoteTimestamp by viewModel.exploreRemoteTimestamp.collectAsState()
+                val firebaseInstallationId by viewModel.firebaseInstallationId.collectAsState()
+                val fcmToken by viewModel.firebaseCloudMessagingToken.collectAsState()
 
-        val isMainNet = Constants.NETWORK_PARAMETERS == MainNetParams.get()
-        binding.forceSyncBtn.isVisible = !isMainNet
-        binding.forceSyncBtn.setOnClickListener {
-            try {
-                ExploreSyncWorker.run(requireContext().applicationContext, isMainNet)
-            } catch (ex: Exception) {
-                log.error(ex.message, ex)
-            }
-        }
+                val title = "${stringResource(R.string.about_title)} ${stringResource(R.string.app_name_short)}"
+                val versionName = stringResource(R.string.about_version_name, BuildConfig.VERSION_NAME)
+                val buildNumber = stringResource(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
+                val dashjVersion = stringResource(R.string.about_credits_bitcoinj_title, BuildConfig.DASHJ_VERSION)
+                val platformVersion = stringResource(R.string.about_credits_platform_title, BuildConfig.DPP_VERSION)
 
-        showExploreDashSyncStatus()
-        showFirebaseIds()
-    }
-
-    private fun showFirebaseIds() {
-        viewModel.firebaseInstallationId.observe(viewLifecycleOwner) {
-            binding.firebaseInstallationId.text = it
-        }
-        binding.firebaseInstallationIdItem.setOnClickListener { viewModel.copyFirebaseInstallationId() }
-
-        viewModel.firebaseCloudMessagingToken.observe(viewLifecycleOwner) {
-            binding.fcmToken.text = it
-        }
-        binding.fcmTokenItem.setOnClickListener { viewModel.copyFCMToken() }
-    }
-
-    private fun showExploreDashSyncStatus() {
-        val formatFlags = DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or DateUtils.FORMAT_SHOW_TIME
-
-        viewModel.exploreRemoteTimestamp.observe(viewLifecycleOwner) { timestamp ->
-            binding.lastExploreUpdateLoadingIndicator.isVisible = false
-            binding.exploreDashLastServerUpdate.isVisible = true
-
-            val formattedUpdateTime = if (timestamp <= 0L) {
-                getString(R.string.about_last_explore_dash_update_error)
-            } else {
-                DateUtils.formatDateTime(requireContext().applicationContext, timestamp, formatFlags)
-            }
-
-            binding.exploreDashLastServerUpdate.text = formattedUpdateTime
-        }
-
-        viewModel.exploreIsSyncing.observe(viewLifecycleOwner) { isSyncing ->
-            lifecycleScope.launch {
-                val dbPrefs = viewModel.databasePrefs
-                binding.exploreDashLastDeviceSync.text = if (isSyncing) {
-                    "${getString(R.string.syncing)}…"
-                } else if (dbPrefs.failedSyncAttempts > 0) {
-                    getString(
-                        R.string.about_explore_failed_sync,
-                        DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
-                    )
-                } else if (dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp) {
-                    val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
-                    prefix + getString(
-                        R.string.about_explore_preloaded_on,
-                        DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.preloadedOnTimestamp, formatFlags)
-                    )
-                } else {
-                    DateUtils.formatDateTime(requireContext().applicationContext, dbPrefs.lastSyncTimestamp, formatFlags)
+                val deviceSyncStatus = remember(isSyncing, viewModel.databasePrefs) {
+                    formatDeviceSyncStatus(isSyncing)
                 }
+                val serverUpdateStatus = remoteTimestamp?.let { formatServerUpdate(it) }
+
+                AboutScreen(
+                    uiState = AboutUIState(
+                        title = title,
+                        versionName = versionName,
+                        buildNumber = buildNumber,
+                        dashjVersion = dashjVersion,
+                        platformVersion = platformVersion,
+                        deviceSyncStatus = deviceSyncStatus,
+                        serverUpdateStatus = serverUpdateStatus,
+                        firebaseInstallationId = firebaseInstallationId,
+                        fcmToken = fcmToken,
+                        showForceSyncButton = !isMainNet
+                    ),
+                    onBackClick = { findNavController().popBackStack() },
+                    onForceSyncClick = { forceSync() },
+                    onFirebaseInstallationIdClick = { viewModel.copyFirebaseInstallationId() },
+                    onFcmTokenClick = { viewModel.copyFCMToken() },
+                    onGithubLinkClick = { openGithubLink() },
+                    onReviewAndRateClick = { viewModel.reviewApp() },
+                    onContactSupportClick = {
+                        viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
+                        handleReportIssue()
+                    }
+                )
             }
         }
+    }
+
+    private fun formatDeviceSyncStatus(isSyncing: Boolean): String {
+        val context = requireContext().applicationContext
+        val dbPrefs = viewModel.databasePrefs
+
+        return when {
+            isSyncing -> "${getString(R.string.syncing)}…"
+            dbPrefs.failedSyncAttempts > 0 -> getString(
+                R.string.about_explore_failed_sync,
+                DateUtils.formatDateTime(context, dbPrefs.lastSyncTimestamp, FORMAT_FLAGS)
+            )
+            dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp -> {
+                val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
+                prefix + getString(
+                    R.string.about_explore_preloaded_on,
+                    DateUtils.formatDateTime(context, dbPrefs.preloadedOnTimestamp, FORMAT_FLAGS)
+                )
+            }
+            else -> DateUtils.formatDateTime(context, dbPrefs.lastSyncTimestamp, FORMAT_FLAGS)
+        }
+    }
+
+    private fun formatServerUpdate(timestamp: Long): String {
+        return if (timestamp <= 0L) {
+            getString(R.string.about_last_explore_dash_update_error)
+        } else {
+            DateUtils.formatDateTime(requireContext().applicationContext, timestamp, FORMAT_FLAGS)
+        }
+    }
+
+    private fun forceSync() {
+        try {
+            ExploreSyncWorker.run(requireContext().applicationContext, isMainNet)
+        } catch (ex: Exception) {
+            log.error(ex.message, ex)
+        }
+    }
+
+    private fun openGithubLink() {
+        val intent = Intent(ACTION_VIEW)
+        intent.data = getString(R.string.about_github_link).toUri()
+        startActivity(intent)
     }
 
     private fun handleReportIssue() {

@@ -237,7 +237,8 @@ Row { [leadingContent]  [left]  [trailing]   }
 | `label` | `String?` | Tertiary gray "key" text — left side of **key-value** rows |
 | `showInfoIcon` | `Boolean` | ℹ icon after `label` or `title` (List10) |
 | `helpTextAbove` | `String?` | Small gray text above `title` (List13/14/22) |
-| `title` | `String?` | Primary bold text — **content-block** mode |
+| `title` | `String?` | Primary value text (Body M Regular) — **content-block** mode |
+| `titleColor` | `Color?` | Override colour for `title` (default text/primary; e.g. blue for a link — List10) |
 | `subtitle` | `String?` | Small gray text below `title` |
 | `bottomHelpText` | `String?` | Small gray text at the bottom of the left column (List13) |
 | `trailingText` | `String?` | Primary value text on the right |
@@ -259,7 +260,8 @@ Row { [leadingContent]  [left]  [trailing]   }
 
 **Content-block mode** — set `title` (and optionally surrounding texts):
 - The column expands to fill available width (`weight=1f`)
-- Stack order: `helpTextAbove` (BodySmall/gray) → `title` (Body2Medium/primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Body2Regular, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- The `helpTextAbove` + `title` pair is the Figma **List10** stacked block (secondary label over primary value); set `titleColor` for a coloured value such as a blue link.
 
 ### Variant quick-reference
 
@@ -273,7 +275,7 @@ Row { [leadingContent]  [left]  [trailing]   }
 | List6 | `label`, `trailingTextLines` |
 | List7 | `label`, `trailingLabel` |
 | List8, List9 | `title` only |
-| List10 | `label`, `showInfoIcon = true`, `trailingText` |
+| List10 | `helpTextAbove` (secondary label), `title` (primary value), optional `titleColor` for a blue link |
 | List12 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingText` |
 | List13 | `helpTextAbove`, `title`, `subtitle`, `bottomHelpText`, `trailingTrailingIcon { }` |
 | List14, List22 | `helpTextAbove`, `title` |
@@ -317,8 +319,14 @@ ListItem(label = "Status", trailingLabel = "Active")
 // List8 — standalone title
 ListItem(title = "Section header")
 
-// List10 — label with ℹ info icon
-ListItem(label = "Public key", showInfoIcon = true, trailingText = "XpubABCD…")
+// List10 — stacked secondary label / primary value (optionally a blue link)
+ListItem(helpTextAbove = "Firebase installation ID", title = "fxUBdkvxQhO-ICxXXXN5mAI")
+ListItem(
+    helpTextAbove = "This is an open sourced app forked from Bitcoin Wallet",
+    title = "https://github.com/dashevo/dash-wallet",
+    titleColor = MyTheme.Colors.dashBlue,
+    onClick = { /* open link */ }
+)
 
 // List13 — full multi-line left block with trailing icon
 ListItem(

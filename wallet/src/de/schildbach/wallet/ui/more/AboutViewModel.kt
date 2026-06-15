@@ -17,11 +17,15 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.lifecycle.*
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.firebase.installations.FirebaseInstallations
 import com.google.firebase.messaging.FirebaseMessaging
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.WalletApplication
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -45,21 +49,21 @@ class AboutViewModel @Inject constructor(
     private val systemActionsService: SystemActionsService
 ): ViewModel() {
 
-    private val _exploreRemoteTimestamp = MutableLiveData<Long>()
-    val exploreRemoteTimestamp: LiveData<Long>
-        get() = _exploreRemoteTimestamp
+    private val _exploreRemoteTimestamp = MutableStateFlow<Long?>(null)
+    val exploreRemoteTimestamp: StateFlow<Long?>
+        get() = _exploreRemoteTimestamp.asStateFlow()
 
-    private val _exploreIsSyncing = MutableLiveData<Boolean>()
-    val exploreIsSyncing: LiveData<Boolean>
-        get() = _exploreIsSyncing
+    private val _exploreIsSyncing = MutableStateFlow(false)
+    val exploreIsSyncing: StateFlow<Boolean>
+        get() = _exploreIsSyncing.asStateFlow()
 
-    private val _firebaseInstallationId = MutableLiveData<String>()
-    val firebaseInstallationId: LiveData<String>
-        get() = _firebaseInstallationId
+    private val _firebaseInstallationId = MutableStateFlow("")
+    val firebaseInstallationId: StateFlow<String>
+        get() = _firebaseInstallationId.asStateFlow()
 
-    private val _firebaseCloudMessagingToken = MutableLiveData<String>()
-    val firebaseCloudMessagingToken: LiveData<String>
-        get() = _firebaseCloudMessagingToken
+    private val _firebaseCloudMessagingToken = MutableStateFlow("")
+    val firebaseCloudMessagingToken: StateFlow<String>
+        get() = _firebaseCloudMessagingToken.asStateFlow()
 
     var databasePrefs: ExploreDatabasePrefs = ExploreDatabasePrefs()
         private set
@@ -87,11 +91,11 @@ class AboutViewModel @Inject constructor(
 
     private fun loadFirebaseIds() {
         FirebaseInstallations.getInstance().id.addOnCompleteListener { task ->
-            _firebaseInstallationId.value = if (task.isSuccessful) task.result else ""
+            _firebaseInstallationId.value = if (task.isSuccessful) task.result ?: "" else ""
         }
 
         FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            _firebaseCloudMessagingToken.value = if (task.isSuccessful) task.result else ""
+            _firebaseCloudMessagingToken.value = if (task.isSuccessful) task.result ?: "" else ""
         }
     }
 
