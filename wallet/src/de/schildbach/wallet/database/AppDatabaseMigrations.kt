@@ -199,6 +199,28 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration19to20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Persist the PiggyCards order ID (`order`) and the CTX redeem-URL
+                // challenge (`giftCardChallenge`) in the transaction metadata backup so
+                // they survive a wallet restore from the Dash Platform metadata backup.
+                // Both tables gain the same two nullable columns. `order` is a SQL
+                // keyword, so it must be quoted.
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `order` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `giftCardChallenge` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `order` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `giftCardChallenge` TEXT"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

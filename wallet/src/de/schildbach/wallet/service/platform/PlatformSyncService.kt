@@ -1089,6 +1089,30 @@ class PlatformSynchronizationService @Inject constructor(
                                 giftCard.merchantUrl = url
                             }
                         }
+                        metadata.order?.let { order ->
+                            metadataDocumentRecord.order = order
+                            log.info("processing TxMetadata: order change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                        it.order != null && it.order != order
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: order change: changing order")
+                                giftCard.note = order
+                            }
+                        }
+                        metadata.giftCardChallenge?.let { challenge ->
+                            metadataDocumentRecord.giftCardChallenge = challenge
+                            log.info("processing TxMetadata: gift card challenge change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                        it.giftCardChallenge != null && it.giftCardChallenge != challenge
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: gift card challenge change: changing challenge")
+                                giftCard.redeemUrlChallenge = challenge
+                            }
+                        }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
                         transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, giftCard, iconUrl)
@@ -1134,7 +1158,10 @@ class PlatformSynchronizationService @Inject constructor(
                 it.originalPrice,
                 it.barcodeValue,
                 it.barcodeFormat,
-                it.merchantUrl
+                it.merchantUrl,
+                null,
+                it.order,
+                it.giftCardChallenge
             )
         }
         progressListener?.invoke(10)
@@ -1171,6 +1198,8 @@ class PlatformSynchronizationService @Inject constructor(
             barcodeValue = docs.lastOrNull { it.barcodeValue != null }?.barcodeValue,
             barcodeFormat = docs.lastOrNull { it.barcodeFormat != null }?.barcodeFormat,
             merchantUrl = docs.lastOrNull { it.merchantUrl != null }?.merchantUrl,
+            order = docs.lastOrNull { it.order != null }?.order,
+            giftCardChallenge = docs.lastOrNull { it.giftCardChallenge != null}?.giftCardChallenge
         )
     }
 
@@ -1331,6 +1360,12 @@ class PlatformSynchronizationService @Inject constructor(
                     }
                     changedItem.merchantUrl?.let { merchantUrl ->
                         item.merchantUrl = merchantUrl
+                    }
+                    changedItem.order?.let { order ->
+                        item.order = order
+                    }
+                    changedItem.giftCardChallenge?.let { giftCardChallenge ->
+                        item.giftCardChallenge = giftCardChallenge
                     }
                 }
             } else {

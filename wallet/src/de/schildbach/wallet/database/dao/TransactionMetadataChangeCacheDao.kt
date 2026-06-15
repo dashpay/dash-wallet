@@ -111,8 +111,8 @@ interface TransactionMetadataChangeCacheDao {
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl)
-           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl, `order`, giftCardChallenge)
+           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl, :order, :giftCardChallenge)"""
     )
     suspend fun insertGiftCardData(
         txId: Sha256Hash,
@@ -121,6 +121,8 @@ interface TransactionMetadataChangeCacheDao {
         merchantName: String?,
         originalPrice: Double?,
         merchantUrl: String?,
+        order: String?,
+        giftCardChallenge: String?,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
