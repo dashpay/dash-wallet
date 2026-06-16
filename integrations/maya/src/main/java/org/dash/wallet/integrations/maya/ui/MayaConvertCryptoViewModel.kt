@@ -38,7 +38,7 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
@@ -50,7 +50,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MayaConvertCryptoViewModel @Inject constructor(
-    private val coinBaseRepository: MayaWebApi,
+    private val swapProvider: SwapProvider,
     private val config: MayaConfig,
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
@@ -94,10 +94,10 @@ class MayaConvertCryptoViewModel @Inject constructor(
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
             fiatCurrency = swapTradeInfo.fiatCurrencyCode,
             targetAddress = swapTradeInfo.destinationAddress,
-            maximum = swapTradeInfo.maximum
+            maximum = swapTradeInfo.maximum,
         )
 
-        when (val result = coinBaseRepository.getSwapInfo(swapRequest)) {
+        when (val result = swapProvider.getSwapInfo(swapRequest)) {
             is ResponseResource.Success -> {
                 if (result.value == SwapTradeResponse.EMPTY_SWAP_TRADE) {
                     _showLoading.value = false
@@ -142,7 +142,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_SELECT_COIN, mapOf())
 
         return try {
-            coinBaseRepository.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
+            swapProvider.getUserAccounts(walletUIConfig.getExchangeCurrencyCode())
         } catch (ex: Exception) {
             listOf()
         }.filter {

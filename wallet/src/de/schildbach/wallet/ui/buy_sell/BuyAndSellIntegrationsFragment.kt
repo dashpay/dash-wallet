@@ -34,6 +34,7 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -86,6 +87,11 @@ class BuyAndSellIntegrationsFragment : Fragment() {
                         }
                     },
                     onMayaClick = {
+                        viewModel.setSwapBackend(SwapBackend.MAYA)
+                        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
+                    },
+                    onSwapKitClick = {
+                        viewModel.setSwapBackend(SwapBackend.SWAPKIT)
                         safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
                     }
                 )

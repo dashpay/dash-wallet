@@ -27,8 +27,11 @@ import android.view.ViewGroup
 import android.view.Window
 import android.widget.Toast
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
+import androidx.core.view.updatePadding
 import androidx.fragment.app.DialogFragment
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
@@ -60,6 +63,17 @@ class MayaResultDialog : DialogFragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        // Android 15 (targetSdk 35) forces edge-to-edge, and dialog windows often skip
+        // the layout's fitsSystemWindows handling — apply system-bar insets as padding
+        // here so the bottom close button clears the nav bar on every device.
+        ViewCompat.setOnApplyWindowInsetsListener(view) { v, insets ->
+            val bars = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout()
+            )
+            v.updatePadding(top = bars.top, bottom = bars.bottom)
+            insets
+        }
 
         val type = arguments?.getInt("Type")
         val sourceCurrency = arguments?.getString(ARG_SOURCE) ?: Constants.DASH_CURRENCY

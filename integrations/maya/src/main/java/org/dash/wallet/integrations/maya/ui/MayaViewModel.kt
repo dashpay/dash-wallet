@@ -23,6 +23,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
@@ -31,16 +33,23 @@ import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
+import org.dash.wallet.integrations.maya.api.MayaApiAggregator
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -57,7 +66,7 @@ data class MayaPortalUIState(
 class MayaViewModel @Inject constructor(
     private val globalConfig: Configuration,
     private val config: MayaConfig,
-    private val mayaApi: MayaApi,
+    private val swapProvider: SwapProvider,
     private val fiatExchangeRateProvider: FiatExchangeRateProvider,
     exchangeRatesProvider: ExchangeRatesProvider,
     val analytics: AnalyticsService,
@@ -74,7 +83,7 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    // private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    //private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
@@ -82,6 +91,14 @@ class MayaViewModel @Inject constructor(
 
     val dashFormat: MonetaryFormat
         get() = globalConfig.format.noCode()
+
+    /**
+     * The currently-active swap backend. Resolves through [DispatchingSwapProvider] so
+     * the portal screen can show the correct provider name + logo. Falls back to MAYA
+     * if the swap provider isn't the dispatcher (defensive — shouldn't happen in prod).
+     */
+    val activeSwapBackend: SwapBackend
+        get() = (swapProvider as? DispatchingSwapProvider)?.currentBackend() ?: SwapBackend.MAYA
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
@@ -102,6 +119,20 @@ class MayaViewModel @Inject constructor(
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
             .filterNotNull()
+            .flatMapLatest(exchangeRatesProvider::observeExchangeRate)
+            .filterNotNull()
+            .onEach { exchangeRate ->
+                val usdPrice = exchangeRatesProvider.getExchangeRate(Constants.USD_CURRENCY)
+                if (usdPrice != null) {
+                    val rate = exchangeRate.rate!!.toDouble() / usdPrice.rate!!.toDouble()
+                    log.info("exchange rate from CTX: {}", rate)
+                }
+            }
+            .launchIn(viewModelScope)
+
+
+        walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
+            .filterNotNull()
             .onEach { log.info("exchange rate selected currency: {}", it) }
             .flatMapLatest(fiatExchangeRateProvider::observeFiatRate)
             .filterNotNull()
@@ -111,18 +142,28 @@ class MayaViewModel @Inject constructor(
                 log.info("exchange rate: {}", fiatRate)
             }
             .flatMapLatest { fiatRate ->
-                mayaApi.observePoolList(fiatRate.fiat).mapLatest { pools ->
+                swapProvider.observePoolList(fiatRate.fiat).mapLatest { pools ->
                     pools to fiatRate.fiat
                 }
             }
             .onEach { (newPoolList, usdToFiat) ->
-                applyPoolPrices(newPoolList, usdToFiat)
+                swapProvider.applyPoolPrices(newPoolList, usdToFiat)
                 log.info(
                     "exchange rate Pool List: {}",
                     newPoolList.map { pool -> "${pool.asset}=${pool.assetPriceFiat.toFriendlyString()}" }
                 )
                 poolList.value = newPoolList
             }
+            .launchIn(viewModelScope)
+
+        // Re-fetch inbound addresses whenever the pool list transitions to non-empty.
+        // SwapKit's getInboundAddresses() can return an empty set on the very first
+        // call if the pool refresh is still in flight; this catches up once the
+        // pools land. Maya is unaffected (its addresses come from a separate
+        // endpoint and don't depend on pool state).
+        poolList
+            .filter { it.isNotEmpty() && _inboundAddresses.value.isEmpty() }
+            .onEach { refreshInboundAddresses() }
             .launchIn(viewModelScope)
 
         updateInboundAddresses()
@@ -210,7 +251,7 @@ class MayaViewModel @Inject constructor(
     }
 
     suspend fun refreshInboundAddresses() {
-        _inboundAddresses.value = mayaApi.getInboundAddresses()
+        _inboundAddresses.value = withContext(Dispatchers.IO) { swapProvider.getInboundAddresses() }
     }
 
     fun getInboundAddress(asset: String): InboundAddress? {
@@ -218,5 +259,41 @@ class MayaViewModel @Inject constructor(
             val chain = asset.let { it.substring(0, it.indexOf('.')) }
             inboundAddresses.value.find { it.chain == chain }
         } else { null }
+    }
+
+    fun isTradingActive(): Boolean {
+        return when (swapProvider) {
+            is MayaApiAggregator -> {
+                val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
+                if (dashInbound == null) {
+                    false
+                } else {
+                    dashInbound.halted != true
+                }
+            }
+
+            is SwapKitConstants -> {
+                inboundAddresses.value.isNotEmpty()
+            }
+            is DispatchingSwapProvider -> {
+                when (swapProvider.active) {
+                    is MayaApiAggregator -> {
+                        val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
+                        if (dashInbound == null) {
+                            false
+                        } else {
+                            dashInbound.halted != true
+                        }
+                    }
+
+                    is SwapKitApiAggregator -> {
+                        inboundAddresses.value.isNotEmpty()
+                    }
+
+                    else -> false
+                }
+            }
+            else -> false
+        }
     }
 }

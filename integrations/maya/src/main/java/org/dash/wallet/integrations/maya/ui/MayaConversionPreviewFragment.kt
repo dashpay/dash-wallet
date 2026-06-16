@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import android.annotation.SuppressLint
 import android.os.Build
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -211,6 +212,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         binding.previewOfflineGroup.isVisible = hasInternet
     }
 
+    @SuppressLint("SetTextI18n")
     private fun SwapTradeUIModel.updateConversionPreviewUI() {
         newSwapOrderId = this.swapTradeId
 
@@ -318,6 +320,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
                 transformations(CircleCropTransformation())
             }
+
+        val routeName = this.routeName
+        val routes = this.availableRoutes
+        binding.contentOrderReview.orderInfo.text = """
+            selected: $routeName
+
+            all: $routes
+        """.trimIndent()
     }
 
     private fun setValueWithCurrencyCodeOrSymbol(

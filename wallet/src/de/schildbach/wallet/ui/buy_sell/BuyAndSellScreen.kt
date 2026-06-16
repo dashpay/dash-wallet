@@ -68,7 +68,8 @@ fun BuyAndSellScreen(
     onTopperClick: () -> Unit = {},
     onUpholdClick: () -> Unit = {},
     onCoinbaseClick: () -> Unit = {},
-    onMayaClick: () -> Unit = {}
+    onMayaClick: () -> Unit = {},
+    onSwapKitClick: () -> Unit = {}
 ) {
     val viewModel: BuyAndSellViewModel = hiltViewModel()
 
@@ -78,7 +79,8 @@ fun BuyAndSellScreen(
         onTopperClick = onTopperClick,
         onUpholdClick = onUpholdClick,
         onCoinbaseClick = onCoinbaseClick,
-        onMayaClick = onMayaClick
+        onMayaClick = onMayaClick,
+        onSwapKitClick = onSwapKitClick
     )
 }
 
@@ -89,7 +91,8 @@ fun BuyAndSellScreen(
     onTopperClick: () -> Unit = {},
     onUpholdClick: () -> Unit = {},
     onCoinbaseClick: () -> Unit = {},
-    onMayaClick: () -> Unit = {}
+    onMayaClick: () -> Unit = {},
+    onSwapKitClick: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -102,7 +105,8 @@ fun BuyAndSellScreen(
         onTopperClick = onTopperClick,
         onUpholdClick = onUpholdClick,
         onCoinbaseClick = onCoinbaseClick,
-        onMayaClick = onMayaClick
+        onMayaClick = onMayaClick,
+        onSwapKitClick = onSwapKitClick
     )
 }
 
@@ -116,7 +120,8 @@ private fun BuyAndSellScreenContent(
     onTopperClick: () -> Unit = {},
     onUpholdClick: () -> Unit = {},
     onCoinbaseClick: () -> Unit = {},
-    onMayaClick: () -> Unit = {}
+    onMayaClick: () -> Unit = {},
+    onSwapKitClick: () -> Unit = {}
 ) {
     fun serviceOf(type: ServiceType) = services.find { it.serviceType == type }
 
@@ -186,6 +191,18 @@ private fun BuyAndSellScreenContent(
                     }
                 }
 
+                // Card 4: SwapKit — same destination as Maya, the backend is
+                // switched in the click handler.
+                Menu {
+                    serviceOf(ServiceType.SWAPKIT)?.let { service ->
+                        ServiceItem(
+                            service = service,
+                            balanceFormat = balanceFormat,
+                            onClick = if (service.isAvailable()) onSwapKitClick else null
+                        )
+                    }
+                }
+
                 if (!hasValidCredentials) {
                     Text(
                         text = stringResource(R.string.services_portal_subtitle_error),
@@ -231,7 +248,7 @@ private fun ServiceItem(
     val subtitle = when (service.serviceStatus) {
         ServiceStatus.IDLE, ServiceStatus.IDLE_DISCONNECTED -> when (service.serviceType) {
             ServiceType.TOPPER -> stringResource(R.string.buy_no_account_needed)
-            ServiceType.MAYA -> stringResource(R.string.convert_no_account_needed)
+            ServiceType.MAYA, ServiceType.SWAPKIT -> stringResource(R.string.convert_no_account_needed)
             else -> stringResource(R.string.link_account)
         }
         ServiceStatus.CONNECTED -> stringResource(R.string.connected)

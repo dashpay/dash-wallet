@@ -9,6 +9,12 @@ plugins {
     id 'org.jlleitschuh.gradle.ktlint'
 }
 
+def serviceProps = new Properties()
+def servicePropsFile = rootProject.file('service.properties')
+if (servicePropsFile.exists()) {
+    servicePropsFile.withInputStream { serviceProps.load(it) }
+}
+
 android {
     namespace 'org.dash.wallet.integrations.maya'
     compileSdk 35
@@ -19,6 +25,9 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles 'proguard-rules.pro'
+
+        def swapKitApiKey = serviceProps.getProperty("SWAPKIT_API_KEY", "\"\"")
+        buildConfigField("String", "SWAPKIT_API_KEY", swapKitApiKey)
     }
 
     buildTypes {
@@ -37,6 +46,7 @@ android {
     buildFeatures {
         viewBinding true
         compose true
+        buildConfig true
     }
     lint {
         disable "NullSafeMutableLiveData"

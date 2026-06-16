@@ -1,0 +1,32 @@
+<!--
+  ~ Copyright 2026 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<!-- Source: https://swapkit.dev/wp-content/uploads/2024/12/SwapKit-Emblem-White.svg
+     Fill recoloured to #000000 so the emblem is visible on the light menu background
+     used in the Buy & Sell screen. The Maya portal screen uses a light wrapper for
+     this icon (see SwapKitLogoBackground in MayaPortalScreen). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="74dp"
+    android:height="87dp"
+    android:viewportWidth="74.333534"
+    android:viewportHeight="86.526718">
+    <path
+        android:fillColor="#000000"
+        android:pathData="M24.679855,0C11.071241,0,0,11.071241,0,24.679855h12.388517c0,-6.7773392,5.5139981,-12.2913373,12.2913373,-12.2913373h49.6536791V0H24.679855Z" />
+    <path
+        android:fillColor="#000000"
+        android:pathData="M12.389003,37.069344h49.555527v12.389975H12.388517V37.070827H0v24.777035h61.94453c-0.000243,6.776550,-5.514180,12.290365,-12.290851,12.290365H0v12.388517h49.653679c13.608127,0,24.679369,-11.071241,24.679369,-24.679369h-12.388517V49.458830h12.388517V24.679852H12.389003V37.069344Z" />
+</vector>

@@ -16,6 +16,7 @@
   -->
 <resources>
     <string name="maya_service_name">Maya</string>
+    <string name="swapkit_service_name" translatable="false">SwapKit</string>
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
@@ -79,6 +80,201 @@
     <string name="cryptocurrency_xrd_network">Radix</string>
     <string name="cryptocurrency_maya_code" translatable="false">MAYA</string>
     <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+    <string name="cryptocurrency_cacao_code" translatable="false">CACAO</string>
+    <string name="cryptocurrency_cacao_network">Maya Protocol (Maya)</string>
+
+    <!-- ===== SwapKit-discovered chains and tokens ===== -->
+
+    <!-- L1 native coins -->
+    <string name="cryptocurrency_ada_code" translatable="false">ADA</string>
+    <string name="cryptocurrency_ada_network">Cardano</string>
+    <string name="cryptocurrency_avax_code" translatable="false">AVAX</string>
+    <string name="cryptocurrency_avax_network">Avalanche</string>
+    <string name="cryptocurrency_bch_code" translatable="false">BCH</string>
+    <string name="cryptocurrency_bch_network">Bitcoin Cash</string>
+    <string name="cryptocurrency_bera_code" translatable="false">BERA</string>
+    <string name="cryptocurrency_bera_network">Berachain</string>
+    <string name="cryptocurrency_bnb_code" translatable="false">BNB</string>
+    <string name="cryptocurrency_bnb_network">BNB (BSC)</string>
+    <string name="cryptocurrency_doge_code" translatable="false">DOGE</string>
+    <string name="cryptocurrency_doge_network">Dogecoin</string>
+    <string name="cryptocurrency_ltc_code" translatable="false">LTC</string>
+    <string name="cryptocurrency_ltc_network">Litecoin</string>
+    <string name="cryptocurrency_mon_code" translatable="false">MON</string>
+    <string name="cryptocurrency_mon_network">Monad</string>
+    <string name="cryptocurrency_near_code" translatable="false">NEAR</string>
+    <string name="cryptocurrency_near_network">NEAR Protocol</string>
+    <string name="cryptocurrency_okb_code" translatable="false">OKB</string>
+    <string name="cryptocurrency_okb_network">OKB (X Layer)</string>
+    <string name="cryptocurrency_pol_code" translatable="false">POL</string>
+    <string name="cryptocurrency_pol_network">POL (Polygon)</string>
+    <string name="cryptocurrency_sol_code" translatable="false">SOL</string>
+    <string name="cryptocurrency_sol_network">Solana</string>
+    <string name="cryptocurrency_strk_code" translatable="false">STRK</string>
+    <string name="cryptocurrency_strk_network">Starknet</string>
+    <string name="cryptocurrency_sui_code" translatable="false">SUI</string>
+    <string name="cryptocurrency_sui_network">Sui</string>
+    <string name="cryptocurrency_ton_code" translatable="false">TON</string>
+    <string name="cryptocurrency_ton_network">Toncoin</string>
+    <string name="cryptocurrency_trx_code" translatable="false">TRX</string>
+    <string name="cryptocurrency_trx_network">TRON</string>
+    <string name="cryptocurrency_xdai_code" translatable="false">XDAI</string>
+    <string name="cryptocurrency_xdai_network">xDAI (Gnosis)</string>
+    <string name="cryptocurrency_xrp_code" translatable="false">XRP</string>
+    <string name="cryptocurrency_xrp_network">XRP</string>
+
+    <!-- ETH-on-other-chain network names -->
+    <string name="cryptocurrency_ethereum_base_network">Ethereum (Base)</string>
+    <string name="cryptocurrency_ethereum_optimism_network">Ethereum (Optimism)</string>
+    <string name="cryptocurrency_ethereum_near_network">Ethereum (NEAR)</string>
+
+    <!-- ETH chain new tokens -->
+    <string name="cryptocurrency_adi_code" translatable="false">ADI</string>
+    <string name="cryptocurrency_adi_ethereum_network">ADI (Ethereum)</string>
+    <string name="cryptocurrency_aurora_code" translatable="false">AURORA</string>
+    <string name="cryptocurrency_aurora_ethereum_network">Aurora (Ethereum)</string>
+    <string name="cryptocurrency_aurora_near_network">Aurora (NEAR)</string>
+    <string name="cryptocurrency_cbbtc_code" translatable="false">cbBTC</string>
+    <string name="cryptocurrency_cbbtc_ethereum_network">Coinbase Wrapped BTC (Ethereum)</string>
+    <string name="cryptocurrency_cbbtc_base_network">Coinbase Wrapped BTC (Base)</string>
+    <string name="cryptocurrency_dai_ethereum_network">Dai (Ethereum)</string>
+    <string name="cryptocurrency_mog_code" translatable="false">MOG</string>
+    <string name="cryptocurrency_mog_ethereum_network">Mog Coin (Ethereum)</string>
+    <string name="cryptocurrency_safe_code" translatable="false">SAFE</string>
+    <string name="cryptocurrency_safe_ethereum_network">Safe (Ethereum)</string>
+    <string name="cryptocurrency_safe_gnosis_network">Safe (Gnosis)</string>
+    <string name="cryptocurrency_shib_code" translatable="false">SHIB</string>
+    <string name="cryptocurrency_shib_ethereum_network">Shiba Inu (Ethereum)</string>
+    <string name="cryptocurrency_turbo_code" translatable="false">TURBO</string>
+    <string name="cryptocurrency_turbo_ethereum_network">Turbo (Ethereum)</string>
+    <string name="cryptocurrency_turbo_solana_network">Turbo (Solana)</string>
+    <string name="cryptocurrency_turbo_near_network">TURBO (NEAR)</string>
+    <string name="cryptocurrency_usd1_code" translatable="false">USD1</string>
+    <string name="cryptocurrency_usd1_ethereum_network">USD1 (Ethereum)</string>
+    <string name="cryptocurrency_usdf_code" translatable="false">USDf</string>
+    <string name="cryptocurrency_usdf_ethereum_network">Falcon USD (Ethereum)</string>
+    <string name="cryptocurrency_wbtc_ethereum_network">Wrapped Bitcoin (Ethereum)</string>
+    <string name="cryptocurrency_wbtc_near_network">wBTC (NEAR)</string>
+    <string name="cryptocurrency_weth_code" translatable="false">WETH</string>
+    <string name="cryptocurrency_weth_ethereum_network">WETH (Ethereum)</string>
+    <string name="cryptocurrency_weth_arbitrum_network">WETH (Arbitrum)</string>
+    <string name="cryptocurrency_weth_base_network">WETH (Base)</string>
+    <string name="cryptocurrency_weth_optimism_network">WETH (Optimism)</string>
+    <string name="cryptocurrency_weth_polygon_network">WETH (Polygon)</string>
+    <string name="cryptocurrency_weth_gnosis_network">WETH (Gnosis)</string>
+
+    <!-- ARB chain new tokens -->
+    <string name="cryptocurrency_usdt0_code" translatable="false">USDT0</string>
+    <string name="cryptocurrency_usdt0_arbitrum_network">USDT0 (Arbitrum)</string>
+    <string name="cryptocurrency_usdt0_bera_network">USDT0 (Berachain)</string>
+    <string name="cryptocurrency_usdt0_monad_network">USDT0 (Monad)</string>
+    <string name="cryptocurrency_usdt0_xlayer_network">USDT0 (X Layer)</string>
+
+    <!-- BASE chain tokens -->
+    <string name="cryptocurrency_cfi_code" translatable="false">CFI</string>
+    <string name="cryptocurrency_cfi_base_network">ConsumerFi Protocol (Base)</string>
+    <string name="cryptocurrency_cfi_near_network">CFI (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_base_network">USD Coin (Base)</string>
+
+    <!-- OP chain tokens -->
+    <string name="cryptocurrency_op_code" translatable="false">OP</string>
+    <string name="cryptocurrency_op_optimism_network">OP (Optimism)</string>
+    <string name="cryptocurrency_usdcoin_optimism_network">USD Coin (Optimism)</string>
+    <string name="cryptocurrency_tether_optimism_network">Tether (Optimism)</string>
+
+    <!-- AVAX chain tokens -->
+    <string name="cryptocurrency_usdcoin_avalanche_network">USD Coin (Avalanche)</string>
+    <string name="cryptocurrency_tether_avalanche_network">Tether (Avalanche)</string>
+
+    <!-- BSC chain tokens -->
+    <string name="cryptocurrency_aster_code" translatable="false">ASTER</string>
+    <string name="cryptocurrency_aster_bsc_network">Aster (BSC)</string>
+    <string name="cryptocurrency_near_bsc_network">NEAR (BSC)</string>
+    <string name="cryptocurrency_rhea_code" translatable="false">RHEA</string>
+    <string name="cryptocurrency_rhea_bsc_network">RHEA (BSC)</string>
+    <string name="cryptocurrency_rhea_near_network">RHEA (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_bsc_network">USD Coin (BSC)</string>
+    <string name="cryptocurrency_tether_bsc_network">Tether (BSC)</string>
+
+    <!-- POL chain tokens -->
+    <string name="cryptocurrency_usdcoin_polygon_network">USD Coin (Polygon)</string>
+    <string name="cryptocurrency_tether_polygon_network">Tether (Polygon)</string>
+
+    <!-- MONAD chain tokens -->
+    <string name="cryptocurrency_usdcoin_monad_network">USD Coin (Monad)</string>
+
+    <!-- XLAYER chain tokens -->
+    <string name="cryptocurrency_usdcoin_xlayer_network">USD Coin (X Layer)</string>
+
+    <!-- GNO chain tokens -->
+    <string name="cryptocurrency_cow_code" translatable="false">COW</string>
+    <string name="cryptocurrency_cow_gnosis_network">CoW Protocol (Gnosis)</string>
+    <string name="cryptocurrency_eure_code" translatable="false">EURe</string>
+    <string name="cryptocurrency_eure_gnosis_network">EURe (Gnosis)</string>
+    <string name="cryptocurrency_gno_code" translatable="false">GNO</string>
+    <string name="cryptocurrency_gno_gnosis_network">Gnosis Token (Gnosis)</string>
+    <string name="cryptocurrency_usdcoin_gnosis_network">USD Coin (Gnosis)</string>
+    <string name="cryptocurrency_tether_gnosis_network">Tether (Gnosis)</string>
+
+    <!-- SOL chain tokens -->
+    <string name="cryptocurrency_wif_code" translatable="false">WIF</string>
+    <string name="cryptocurrency_wif_solana_network">dogwifhat (Solana)</string>
+    <string name="cryptocurrency_pengu_code" translatable="false">PENGU</string>
+    <string name="cryptocurrency_pengu_solana_network">Pudgy Penguins (Solana)</string>
+    <string name="cryptocurrency_spx_code" translatable="false">SPX</string>
+    <string name="cryptocurrency_spx_solana_network">SPX6900 (Solana)</string>
+    <string name="cryptocurrency_trump_code" translatable="false">TRUMP</string>
+    <string name="cryptocurrency_trump_solana_network">Official Trump (Solana)</string>
+    <string name="cryptocurrency_usdcoin_solana_network">USD Coin (Solana)</string>
+    <string name="cryptocurrency_tether_solana_network">Tether (Solana)</string>
+    <string name="cryptocurrency_zec_solana_network">Zcash (Solana)</string>
+    <string name="cryptocurrency_xbtc_code" translatable="false">xBTC</string>
+    <string name="cryptocurrency_xbtc_solana_network">OKX Wrapped BTC (Solana)</string>
+
+    <!-- NEAR chain tokens -->
+    <string name="cryptocurrency_bitcoin_near_network">Bitcoin (NEAR)</string>
+    <string name="cryptocurrency_frax_code" translatable="false">FRAX</string>
+    <string name="cryptocurrency_frax_near_network">FRAX (NEAR)</string>
+    <string name="cryptocurrency_itlx_code" translatable="false">ITLX</string>
+    <string name="cryptocurrency_itlx_near_network">Intellex (NEAR)</string>
+    <string name="cryptocurrency_jambo_code" translatable="false">JAMBO</string>
+    <string name="cryptocurrency_jambo_near_network">JAMBO (NEAR)</string>
+    <string name="cryptocurrency_noear_code" translatable="false">NOEAR</string>
+    <string name="cryptocurrency_noear_near_network">NOEAR (NEAR)</string>
+    <string name="cryptocurrency_npro_code" translatable="false">NPRO</string>
+    <string name="cryptocurrency_npro_near_network">NPRO (NEAR)</string>
+    <string name="cryptocurrency_nearkat_code" translatable="false">NearKat</string>
+    <string name="cryptocurrency_nearkat_near_network">NearKat (NEAR)</string>
+    <string name="cryptocurrency_public_code" translatable="false">PUBLIC</string>
+    <string name="cryptocurrency_public_near_network">PublicAI (NEAR)</string>
+    <string name="cryptocurrency_purge_code" translatable="false">PURGE</string>
+    <string name="cryptocurrency_purge_near_network">PURGE (NEAR)</string>
+    <string name="cryptocurrency_shitzu_code" translatable="false">SHITZU</string>
+    <string name="cryptocurrency_shitzu_near_network">Shitzu (NEAR)</string>
+    <string name="cryptocurrency_stjack_code" translatable="false">STJACK</string>
+    <string name="cryptocurrency_stjack_near_network">STJACK (NEAR)</string>
+    <string name="cryptocurrency_sweat_code" translatable="false">SWEAT</string>
+    <string name="cryptocurrency_sweat_near_network">SWEAT (NEAR)</string>
+    <string name="cryptocurrency_usdcoin_near_network">USD Coin (NEAR)</string>
+    <string name="cryptocurrency_tether_near_network">Tether (NEAR)</string>
+    <string name="cryptocurrency_zec_near_network">Zcash (NEAR)</string>
+    <string name="cryptocurrency_mpdao_code" translatable="false">mpDAO</string>
+    <string name="cryptocurrency_mpdao_near_network">Meta Pool DAO (NEAR)</string>
+    <string name="cryptocurrency_nrusdt_code" translatable="false">nrUsdt</string>
+    <string name="cryptocurrency_nrusdt_near_network">nrUsdt (NEAR)</string>
+    <string name="cryptocurrency_stnear_code" translatable="false">stNEAR</string>
+    <string name="cryptocurrency_stnear_near_network">Staked NEAR (NEAR)</string>
+    <string name="cryptocurrency_wnear_code" translatable="false">wNEAR</string>
+    <string name="cryptocurrency_wnear_near_network">Wrapped NEAR (NEAR)</string>
+
+    <!-- TON chain tokens -->
+    <string name="cryptocurrency_tether_ton_network">Tether (Toncoin)</string>
+
+    <!-- TRON chain tokens -->
+    <string name="cryptocurrency_tether_tron_network">Tether (TRON)</string>
+
+    <!-- SUI chain tokens -->
+    <string name="cryptocurrency_usdcoin_sui_network">USD Coin (Sui)</string>
 
     <string name="maya_error">Maya Error</string>
     <string name="maya_error_not_available">The Maya service is not available.  Please try again later.</string>

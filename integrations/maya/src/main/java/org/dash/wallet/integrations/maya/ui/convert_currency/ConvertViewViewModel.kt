@@ -41,7 +41,7 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toCoin
-import org.dash.wallet.integrations.maya.api.MayaWebApi
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -63,7 +63,7 @@ class ConvertViewViewModel @Inject constructor(
     private val walletUIConfig: WalletUIConfig,
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
-    private val mayaWebApi: MayaWebApi,
+    private val swapProvider: SwapProvider,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
@@ -166,7 +166,7 @@ class ConvertViewViewModel @Inject constructor(
 
     fun setSelectedAsset(asset: String) {
         viewModelScope.launch {
-            val quote = mayaWebApi.getDefaultSwapQuote(asset)
+            val quote = swapProvider.getDefaultSwapQuote(asset)
             val minAmount = amount.copy()
             if (quote != null && quote.error == null) {
                 minAmount.dash = quote.recommendedMinAmountIn.toBigDecimal()
