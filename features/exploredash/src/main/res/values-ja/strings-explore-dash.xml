@@ -176,12 +176,12 @@
     <string name="purchase_gift_card_at">で</string>
     <string name="purchase_gift_card_min">最低金額: %s</string>
     <string name="purchase_gift_card_max">最高金額: %s</string>
+    <string name="gift_card_buy_title">ギフトカードを購入する</string>
     <string name="purchase_gift_card_discount_hint">%sのギフトカードを%sで購入します (%s割引)</string>
     <string name="button_next">次へ</string>
     <string name="purchase_gift_card_from">から</string>
     <string name="purchase_gift_card_to">へ</string>
     <string name="purchase_confirm_transaction">確認する</string>
-    <string name="purchase_gift_card_total_label">ギフトカードの合計</string>
     <string name="purchase_gift_card_discount">割引</string>
     <string name="purchase_gift_card_you_pay">お客様の支払額</string>
     <string name="purchase_gift_card_confirm">確認する</string>
@@ -206,7 +206,7 @@
     <string name="gift_card_tx_title">ギフトカード · %s</string>
     <string name="select_amount">金額を選択する</string>
     <string name="select_fixed_amount">この加盟店はギフトカードを固定価格で販売しています</string>
-
+    <string name="purchase_gift_card_reset">リセット</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">認証コードを入力</string>
     <string name="verification_check_email">メールを確認して認証コードを入力する</string>

@@ -69,6 +69,11 @@
 
     <string name="pay_title">Senden</string>
     <string name="history_title">Verlauf</string>
+    <string name="wallet_transactions_building_cache">Transaktionshistorie bestimmen...</string>
+    <string name="history_refresh_dialog_title">Transaktionsliste aktualisieren</string>
+    <string name="history_refresh_dialog_message">Dadurch wird der Cache für die Transaktionsanzeige geleert und von Grund auf neu aufgebaut. Während des Neuaufbaus ist die Liste vorübergehend nicht verfügbar.</string>
+    <string name="history_refresh_dialog_confirm">Aktualisieren</string>
+    <string name="history_refresh_complete">Transaktionsliste aktualisiert</string>
     <string name="more_title">Mehr</string>
     <string name="settings_title">Einstellungen</string>
     <string name="security_title">Sicherheit</string>
@@ -286,7 +291,7 @@
     <string name="tools_import_private_key">Privaten Schlüssel importieren</string>
     <string name="import_private_key_description">Diese Aktion bewegt alle Coins von deiner Dash Paper-Wallet in deine DashPay-App auf diesem Gerät</string>
     <string name="tools_network_monitor">Netzwerk-Monitor</string>
-    <string name="tools_show_xpub">Extended Public Key</string>
+    <string name="tools_show_xpub">Extended Public Key (BIP44)</string>
 
     <string name="about_help_us_improve">Hilf uns, deine Erfahrung zu verbessern</string>
     <string name="about_review_and_rate">Bewerte und beurteile die App</string>

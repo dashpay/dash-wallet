@@ -435,13 +435,16 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     ctxSpendConfig.set(CTXSpendConfig.PREFS_LAST_PURCHASE_START, -1L)
                                 }
                                 if (uiState.value.giftCards.size < giftCards.size) {
-                                    // add dummy cards
+                                    // add dummy cards so every server card has a local row.
+                                    // index is the row's primary-key component; keep it
+                                    // contiguous from the current max so positions line up.
                                     val cardToCopy = uiState.value.giftCards.maxByOrNull { it.index }
                                     if (cardToCopy != null) {
+                                        val nextIndex = cardToCopy.index + 1
                                         val missing = giftCards.size - uiState.value.giftCards.size
                                         val added = (0 until missing).map { i ->
                                             cardToCopy.copy(
-                                                index = cardToCopy.index + i + 1,
+                                                index = nextIndex + i,
                                                 number = null,
                                                 pin = null,
                                                 merchantUrl = null,
@@ -453,19 +456,36 @@ class GiftCardDetailsViewModel @Inject constructor(
                                         _uiState.update { state ->
                                             state.copy(giftCards = state.giftCards + added)
                                         }
+                                    } else {
+                                        log.error(
+                                            "no local gift card rows to map ${giftCards.size} server cards for $txid"
+                                        )
                                     }
                                 }
-                                giftCards.forEachIndexed { index, giftCard ->
+                                // Cards in an order share the same order id (note), so the
+                                // server list and the local rows can only be matched by
+                                // position. Map each server position to the actual local
+                                // row index rather than assuming indices are 0..n-1.
+                                val localCards = uiState.value.giftCards.sortedBy { it.index }
+                                giftCards.forEachIndexed { position, giftCard ->
+                                    val cardIndex = localCards.getOrNull(position)?.index
+                                    if (cardIndex == null) {
+                                        log.error(
+                                            "no local row for server card position $position " +
+                                                "(${localCards.size} local, ${giftCards.size} server) for $txid"
+                                        )
+                                        return@forEachIndexed
+                                    }
                                     if (!giftCard.cardNumber.isNullOrEmpty()) {
-                                        updateGiftCard(index, giftCard.cardNumber, giftCard.cardPin)
+                                        updateGiftCard(cardIndex, giftCard.cardNumber, giftCard.cardPin)
                                         log.info("PiggyCards: saving barcode for: ${giftCard.barcodeUrl}")
                                         giftCard.barcodeUrl?.let {
-                                            if (!saveBarcodeUrl(it, index)) {
-                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, index)
+                                            if (!saveBarcodeUrl(it, cardIndex)) {
+                                                saveBarcode(giftCard.cardNumber, BarcodeFormat.CODE_128, cardIndex)
                                             }
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                        updateGiftCard(index, giftCard.redeemUrl)
+                                        updateGiftCard(cardIndex, giftCard.redeemUrl)
                                     }
                                 }
                                 cancelTicker()

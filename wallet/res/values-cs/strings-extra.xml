@@ -251,10 +251,8 @@
     <string name="menu_contact_support_subtitle">Nahlásit problém</string>
     <string name="menu_explore_title">Prozkoumat</string>
     <string name="tools_address_book">Adresář</string>
-    <string name="tools_import_private_key">Importovat Privátní Klíč</string>
-    <string name="tools_network_monitor">Monitor Sítě</string>
-    <string name="tools_show_xpub">Rozšířený veřejný klíč</string>
-
+    <string name="tools_import_private_key">Importovat privátní klíč</string>
+    <string name="tools_network_monitor">Monitor sítě</string>
     <string name="about_help_us_improve">Pomoztne nám aplikaci vylepšit</string>
     <string name="about_contact_support">Podpora</string>
     <string name="about_fork_disclaimer">Toto je aplikace s otevřeným zdrojovým kódem vycházející z bitcoinové peněženky.</string>

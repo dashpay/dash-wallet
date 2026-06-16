@@ -189,17 +189,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Dešifrovanje...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifrovanje...</string>
     <string name="encrypt_keys_dialog_state_done">Gotovo</string>
-    <string name="scan_camera_problem_dialog_title">Izvinite</string>
-    <string name="scan_camera_problem_dialog_message">Postoji problem sa kamerom. Verovatno treba da restartujete uređaj.</string>
-    <string name="scan_camera_permission_dialog_title">Dozvola za kameru</string>
-    <string name="scan_camera_permission_dialog_message">Kako biste mogli da skenirate QR kodove potrebno je da date dozvolu za korišćenje kamere.</string>
-    <string name="input_parser_io_error">Podaci ne mogu da se pročitaju:\n%s</string>
-    <string name="input_parser_cannot_classify">Unos nije prepoznat:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Neispravan Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Dobijena je neispravna Dash adresa!\n(Možda je pomešan mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Ne može da se verifikuje zahtev za uplatu:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Neispravan zahtev za uplatu:\n%s</string>
-    <string name="input_parser_invalid_transaction">Neispravna transakcija:\n%s</string>
     <string name="preferences_activity_title">Podešavanja</string>
     <string name="preferences_category_diagnostics">Dijagnoza</string>
     <string name="preferences_category_labs">Laboratorije</string>
@@ -233,7 +222,6 @@
     <string name="preferences_extended_public_key_title">Prikaži xpub</string>
     <string name="preferences_extended_public_key_summary">Prikažite prošireni javni ključ vašeg novčanika kako biste ga uvezli u druge aplikacije i servise. Budite pažljivi: ovim ćete aplikaciji otkriti vašu monetarnu privatnost.</string>
     <string name="bitmap_fragment_share">Podeli...</string>
-    <string name="extended_public_key_fragment_title">Prošireni Javni Ključ</string>
     <string name="extended_public_key_fragment_share">Podeli xpub...</string>
     <string name="report_issue_dialog_title_issue">Prijavi problem</string>
     <string name="report_issue_dialog_title_crash">Prethodni krah detektovan</string>

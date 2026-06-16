@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">Maya</string>
+    <string name="maya_portal_convert_title">兌換達世幣</string>
+    <string name="maya_portal_convert_to_title">把達世幣兌換成</string>
+    <string name="maya_portal_convert_subtitle">從達世幣錢包到任何加密貨幣</string>
+    <string name="maya_portal_subtitle">將達世幣從達世幣錢包轉換為 Maya 支援的任何加密貨幣並將其發送到任何錢包</string>
+    <string name="maya_address_input_hint">%s 位址</string>
+    <string name="maya_address_input_title">兌換達世幣成為 %s</string>
+    <string name="maya_crypto_convert_title">兌換達世幣</string>
+    <string name="maya_crypto_convert_order_preview_title">訂單預覽</string>
+
+    <string name="cryptocurrency_any_network">% 網路</string>
+    <string name="cryptocurrency_bitcoin_network">比特幣</string>
+    <string name="cryptocurrency_dash_network">達世幣</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">以太坊 (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">以太坊 (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <string name="maya_error">Maya 錯誤</string>
+    <string name="maya_error_not_available">Maya 服務不可用。請稍後重試。</string>
+    <string name="maya_error_report_issue">請使用主選單中的「聯絡支援」向達世幣錢包支援團隊回報此問題。</string>
+    <string name="maya_error_address_not_valid">位址無效</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">最低交易金額為</string>
+    <string name="entered_amount_is_too_high">最高交易金額為</string>
+    <string name="we_didnt_find_any_assets">我們沒有在您的 Coinbase 帳戶中找到任何資產。</string>
+    <string name="something_wrong_title">出了些問題!</string>
+    <string name="dont_have_any_dash">您的達世幣錢包中沒有任何 Dash。</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您將在此設備上的達世錢包中收到~ %s Dash。請注意，完成轉帳最多可能需要 2-3 分鐘。</string>
+    <string name="you_dont_have_enough_balance">你沒有足夠的餘額</string>
+    <string name="you_dont_own_any_crypto">你未擁有任何加密貨幣。購買一些加密貨幣來開始。</string>
+    <string name="buy_crypto_on_coinbase">在 Coinbase 上購買加密貨幣</string>
+    <string name="purchase_failed">購買失敗</string>
+    <string name="transfer_failed">轉帳失敗</string>
+    <string name="transfer_failed_msg">達世幣已成功存入您的 Coinbase 帳戶。但是把達世幣轉賬到此設備上的達世幣錢包時出現問題。</string>
+    <string name="send_to_wallet_error">您所設定的金額超過軟件的限制，因此無法發送此金額</string>
+    <string name="purchase_successful">購買成功</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">最多可能需要 2-3 分鐘才能將 Dash 轉帳到您在此設備上的達世幣錢包。</string>
+    <string name="maya_it_could_take_up_to_5_minutes">從達世幣錢包兌換 %s 並將 %s 發送到提供的位址可能需要最多 2 分鐘的時間。</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">最多可能需要 5 分鐘才能將達世幣從這設備上的達世幣錢包轉換為您在 Coinbase 帳戶中的 %s 。</string>
+    <string name="conversion_failed">兌換失敗</string>
+    <string name="transfer_dash_successful">轉賬成功</string>
+    <string name="maya_it_could_take_up_to_10_minutes">將達世幣從 Coinbase 轉賬到此設備的達世幣錢包最多可能需要 10 分鐘。</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">將達世幣從此設備上的達世幣錢包轉移到您的 Coinbase 帳戶的話最多可能需要 10 分鐘。</string>
+    <string name="conversion_successful">兌換成功</string>
+    <string name="transfer_dash_failed_msg">將資金轉賬到此設備上的達世幣錢包時出現問題。</string>
+    <string name="auth_limit_description">你超出了 Coinbase 的授權限制。</string>
+    <string name="you_will_receive">收到的金額</string>
+    <string name="contact_maya_support">聯絡 Maya 支援</string>
+    <string name="maya_fees_in_crypto_purchase">Maya 加密貨幣兌換費用</string>
+    <string name="maya_fee_info_msg_content">與 Maya 交易會涉及的各種入站、出站和流動性費用。您輸入的金額就是會收到的金額。</string>
+    <string name="learn_more">了解更多</string>
+    <string name="debit_money">從您的帳戶中扣款</string>
+    <string name="change_limit">更改此限制</string>
+    <string name="set_auth_limit">確保在 Coinbase 上設置正確的授權限制</string>
+    <string name="change_withdrawal_limit">您可以隨時通過在達世幣錢包中登出您的 Coinbase 帳戶並重新登錄來更改它。</string>
+    <string name="got_it">明白了</string>
+    <string name="conversion_preview">兌換預覽</string>
+    <string name="you_send">你發送</string>
+    <string name="from_your_coinbase_account">從你的 Coinbase 賬戶</string>
+    <string name="you_receive">你會收到</string>
+    <string name="to_dash_wallet_on_this_device">來自此裝置上的達世幣錢包</string>
+    <string name="purchase">購買</string>
+    <string name="maya_fee">Maya 費用</string>
+    <string name="total">總共</string>
+    <string name="to_external_address">到 %s</string>
+
+    <string name="maya_error_information">%s%n加密貨幣: %s</string>
+    <string name="maya_error_invalid_destination_address">目標位址無效</string>
+    <string name="maya_error_below_recommended_minimum">輸入的金額低於建議的最低金額</string>
+    <string name="maya_error_trading_halted">%s的交易已暫停</string>
+    <string name="maya_halted_label">暫停</string>
+    <string name="maya_halted_coins_toast">部分幣種暫時停止交易</string>
+
+
+</resources>

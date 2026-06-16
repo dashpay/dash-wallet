@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Нет банкоматов</string>
     <string name="distance_miles">%s миль</string>
     <string name="distance_kilometers">%s километров</string>
+    <string name="explore_fee">комиссия %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d продавец</item>
         <item quantity="few">%d продавца</item>
@@ -188,14 +190,25 @@
     <string name="purchase_gift_card_at">в</string>
     <string name="purchase_gift_card_min">Мин.: %s</string>
     <string name="purchase_gift_card_max">Макс.: %s</string>
+    <string name="gift_card_tab_single">Один</string>
+    <string name="gift_card_tab_multiple">Несколько</string>
+    <string name="gift_card_buy_title">Купить подарочную карту</string>
     <string name="purchase_gift_card_discount_hint">Вы приобретаете подарочную карту на %s за %s (скидка %s)</string>
     <string name="button_next">Далее</string>
     <string name="purchase_gift_card_from">От кого</string>
     <string name="purchase_gift_card_to">Кому</string>
     <string name="purchase_confirm_transaction">Подтвердить</string>
-    <string name="purchase_gift_card_total_label">Всего за подарочную карту</string>
+    <string name="purchase_gift_card_total_label">Номинал подарочной карты</string>
     <string name="purchase_gift_card_discount">Скидка</string>
     <string name="purchase_gift_card_you_pay">Вы оплачиваете</string>
+    <string name="purchase_gift_card_quantity_label">Количество</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%dкарта</item>
+        <item quantity="few">%dкарты</item>
+        <item quantity="many">%dкарт</item>
+        <item quantity="other">%d карт</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Номинал карты</string>
     <string name="purchase_gift_card_confirm">Подтвердить</string>
     <string name="purchase_gift_card_details">Подробная информация о подарочной карте</string>
     <string name="purchase_original_purchase">Первоначальная покупка</string>
@@ -211,6 +224,9 @@
     <string name="purchase_tell_the_cashier">Скажите кассиру, что вы расплатитесь цифровой подарочной картой. Кассир: введите сумму покупки в поле Банковская карта, затем введите номер подарочной карты в поле Аккаунт и нажмите Ввод.</string>
     <string name="purchase_in_the_payment_section">В разделе оплаты введите номер цифровой подарочной карты в поле для подарочных карт. </string>
     <string name="purchase_powered_by">Работает с помощью</string>
+    <string name="purchase_cashier_instructions">Инструкции для кассира</string>
+    <string name="purchase_cashier_instructions_body">Примите подарочную карту или электронную подарочную карту при оформлении заказа и используйте её в качестве оплаты.</string>
+    <string name="purchase_gift_card_date_format">%1$s у %2$s</string>
     <string name="insufficient_money_title">Недостаточно монет</string>
     <string name="insufficient_money_msg">Недостаточно средств</string>
     <string name="send_coins_error_msg">Проблема с отправкой средств!</string>
@@ -218,7 +234,12 @@
     <string name="gift_card_tx_title">Подарочная карта · %s</string>
     <string name="select_amount">Выбрать сумму</string>
     <string name="select_fixed_amount">В этой точке подарочные карты продаются по фиксированным ценам</string>
-
+    <string name="purchase_gift_card_max_multiple_error">За один заказ можно приобрести до %s подарочных карт</string>
+    <string name="purchase_gift_card_insufficient_money_error">Недостаточно Dash для покупки этих подарочных карт</string>
+    <string name="purchase_gift_card_insufficient_inventory">Недостаточное количество товара для %s для покупки %d x %s карт</string>
+    <string name="purchase_gift_card_inventory_toast">У продавца доступно только %d карт</string>
+    <string name="purchase_gift_card_single_card_only_toast">Вы можете выбрать только одну сумму карты</string>
+    <string name="purchase_gift_card_reset">Сброс</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Введите код подтверждения</string>
     <string name="verification_check_email">Проверьте почту и введите код подтверждения</string>
@@ -252,6 +273,7 @@
     <string name="accept_to_proceed">Чтобы создать аккаунт DashSpend, необходимо принять условия и положения DashSpend</string>
     <string name="view_terms_conditions">Условия использования</string>
     <string name="barcode_placeholder">Пожалуйста, дождитесь подробной информации по подарочной карте.</string>
+    <string name="purchase_order_number">Порядковый номер</string>
     <string name="gift_card_contact_ctx">Связаться с поддержкой CTX</string>
     <string name="gift_card_contact_piggycards">Связаться с поддержкой PiggyCards</string>
     <string name="gift_card_contact_support">Связаться с поддержкой</string>

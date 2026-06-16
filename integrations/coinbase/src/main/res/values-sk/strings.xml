@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Medzi Dash peňaženkou a vaším účtom na Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Na vašom účte Coinbase sme nenašli Dash peňaženku.</string>
     <string name="coinbase_dash_wallet_error_message">Ak chcete pokračovať, vytvorte si Dash peňaženku na Coinbase.</string>
+    <string name="coinbase_usd_wallet_error_message">Váš Coinbase účet nepodporuje USD.</string>
     <string name="create_dash_account">Vytvoriť Dash účet</string>
     <string name="close">Zatvoriť</string>
     <string name="retry">Znovu</string>

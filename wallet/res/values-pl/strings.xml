@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Szyfruje...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Odszyfrowywuje...</string>
     <string name="encrypt_keys_dialog_state_done">Zrobione</string>
-    <string name="scan_camera_problem_dialog_title">Przepraszam</string>
-    <string name="scan_camera_problem_dialog_message">Nastąpił problem z aparatem fotograficznym. Prawdopodobnie musisz zrestartować urządzenie.</string>
-    <string name="scan_camera_permission_dialog_title">Pozwolenie na użycie kamery</string>
-    <string name="scan_camera_permission_dialog_message">Aby skanować kody QR, wymagane jest udzielenie pozwolenia na użycie kamery.</string>
-    <string name="input_parser_io_error">Nie mogę czytać danych:\\n%s</string>
-    <string name="input_parser_cannot_classify">Nie udało się sklasyfikować danych wejściowych:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Niepoprawny URI Dash:\n%s</string>
-    <string name="input_parser_invalid_address">Otrzymano niepoprawny adres Dash!\n(Pomylono Testnet z Prodnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nie mogę zweryfikować rzadanie płatności:\\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Niewłaściwe rzadanie płatności:\\n%s</string>
-    <string name="input_parser_invalid_transaction">Transakcja nie powiodła się:\n%s</string>
     <string name="preferences_activity_title">Ustawienia</string>
     <string name="preferences_category_diagnostics">Diagnostyka</string>
     <string name="preferences_category_labs">Eksperymentalne</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">Pokaż xpub</string>
     <string name="preferences_extended_public_key_summary">Sprawdź rozszerzony klucz publiczny twojego portfela, tak aby mógł być zaimportowany do innych aplikacji i usług. Bądź ostrożny: ta operacja ujawni poufne dane twojego portfela.</string>
     <string name="bitmap_fragment_share">Udostępnij…</string>
-    <string name="extended_public_key_fragment_title">Wydłużony Klucz Publiczny</string>
+    <string name="extended_public_key_fragment_title">Wydłużone klucze publiczne (BIP44)</string>
     <string name="extended_public_key_fragment_share">Udostępnij xpub</string>
     <string name="extended_public_key_share_key">Udostępnij klucz</string>
     <string name="report_issue_dialog_title_issue">Zgłoś problem</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">Awarie w tle</string>
     <string name="report_issue_dialog_status_stack_trace">Informacje o awarii</string>
     <string name="report_issue_dialog_status_finishing">kończę</string>
-    <string name="report_transaction_history_export">Eksportuj</string>
+    <string name="report_transaction_history_export">Eksportuj transakcje</string>
     <string name="report_transaction_history_title">Eksportuj CSV</string>
+    <string name="report_transaction_history_dialog_title">Pełna historia transakcji będzie wyeksportowana do pliku CSV</string>
     <string name="report_transaction_history_not_synced_title">Eksportuj CSV</string>
     <string name="report_transaction_history_not_synced_message">Poczekaj, aż portfel będzie w pełni zsynchronizowany przed eksportem historii transakcji.</string>
     <string name="report_transaction_history_message">Pełna historia transakcji zostanie wyeksportowana. Płatności będą uważane za koszt, a wszystkie nadchodzące transakcje będą dochodami. Właściciel tego portfela jest odpowiedzialny za dokonywanie wszelkich korekt w wybranym systemie raportowania podatków.</string>
+    <string name="report_transaction_history_body_1">Wszystkie płatności będą traktowane jako wydatki, a wszystkie transakcje przychodzące będą przychodem.</string>
+    <string name="report_transaction_history_body_2">Właściciel tego portfela jest odpowiedzialny za dokonywanie wszelkich korekt podstawy kosztowej w wybranym przez siebie systemie raportowania podatkowego.</string>
     <string name="report_transaction_history_mail_intent_chooser">Wyślij historię transakcji za pomocą…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Wysyłanie historii transakcji nie powiodło się.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Eksportowanie historii transakcji nie powiodło się.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,9 @@
     <string name="reason">Powód</string>
     <string name="link_account">Połącz swoje konto</string>
     <string name="buy_no_account_needed">Kup Dash · Konto nie jest potrzebne</string>
+    <string name="convert_no_account_needed">Zamień Dash · Nie potrzeba konta</string>
 
     <string name="recipient_address">Adres odbiorcy</string>
-    <string name="show_clipboard">Pokaz zawartość schowka</string>
-    <string name="tap_to_paste">Naciśnij, adres ze schowka, aby go wkleić</string>
     <string name="not_dash_address">Nieprawidłowy adres Dash lub żądanie adresu URL</string>
     <string name="send_to_address">Zapłać na Adres</string>
 

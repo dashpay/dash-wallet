@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">مایا</string>
+    <string name="maya_portal_convert_title">تبدیل دش</string>
+    <string name="maya_portal_convert_to_title">تبدیل دش به</string>
+    <string name="maya_portal_convert_subtitle">از کیف پول به هر نوع کریپتو</string>
+    <string name="maya_portal_subtitle">موجودی دش در دش والت را به هر نوع رمزارزی که در مایا پشتیبانی می‌شود تبدیل کنید و آن را به هر کیف‌پولی که می‌خواهید بفرستید</string>
+    <string name="maya_address_input_hint">%sنشانی</string>
+    <string name="maya_address_input_title">تبدیل دش به %s</string>
+    <string name="maya_crypto_convert_title">تبدیل دش</string>
+    <string name="maya_crypto_convert_order_preview_title">پیش‌نمایش سفارش</string>
+
+    <string name="cryptocurrency_any_network">درصد شبکه</string>
+    <string name="cryptocurrency_bitcoin_network">بیت‌کوین</string>
+    <string name="cryptocurrency_dash_network">دش</string>
+    <string name="cryptocurrency_rune_network">ثورچین</string>
+    <string name="cryptocurrency_ethereum_network">اتریوم (اتریوم)</string>
+    <string name="cryptocurrency_usdcoin_network">یو‌اس‌دی کوین (اتریوم)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">یواس‌دی کوین (آبریتروم) </string>
+    <string name="cryptocurrency_tether_network">تتر (اتریوم)</string>
+    <string name="cryptocurrency_kuji_network">کوجیرا</string>
+    <string name="cryptocurrency_usk_network">یو‌اس‌کی</string>
+    <string name="cryptocurrency_wsteth_network">رپد اس‌تی‌اتریوم (اتریوم)</string>
+    <string name="cryptocurrency_arbitrum_network">آربیتروم (آربیتروم)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">دای (آربیتروم)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">اتریوم (آربیتروم)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">گولداریو (آربیتروم)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">یونوس سد لئو (آربیتروم) </string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">په‌په  (آربیتروم) </string>
+    <string name="cryptocurrency_pepe_ethereum_network">په‌په (اتریوم)</string>
+    <string name="cryptocurrency_link_arbitrum_network">چینلینک  (آربیتروم) </string>
+    <string name="cryptocurrency_tgt_arbitrum_network">ثوروالت  (آربیتروم) </string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">رپد بیت‌کوین  (آربیتروم) </string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">رپد اس‌تی‌اتریوم  (آربیتروم) </string>
+
+    <string name="cryptocurrency_lld_ethereum_network">ال‌ال‌دی  (آربیتروم) </string>
+    <string name="cryptocurrency_moca_ethereum_network">موکاورس (اتریوم)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">یووای‌ام  (آربیتروم) </string>
+    <string name="cryptocurrency_tether_arbitrum_network">تتر  (آربیتروم) </string>
+    <string name="cryptocurrency_zec_network">زی‌کش</string>
+    <string name="cryptocurrency_xrd_network">رادیکس</string>
+    <string name="cryptocurrency_maya_network">مایا (مایا)</string>
+
+    <string name="maya_error">مایا ارور</string>
+    <string name="maya_error_not_available">سرویس مایا در دسترس نیست. لطفا دوباره تماس بگیرید. </string>
+    <string name="maya_error_report_issue">لطفا این مشکل را از طریق گزینه «تماس با پشتیبانی» در منو به اطلاع تیم پشتیانی دش والت برسانید. </string>
+    <string name="maya_error_address_not_valid">نشانی نامعتبر است</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">حداقل مبلغ برای تراکنش برابر است با </string>
+    <string name="entered_amount_is_too_high">حداکثر مبلغ برای تراکنش برابر است با </string>
+    <string name="we_didnt_find_any_assets">هیچ دارایی در حساب کوین‌بیس شما یافت نشد. </string>
+    <string name="something_wrong_title">مشکلی به وجود آمد! </string>
+    <string name="dont_have_any_dash">هیچ دشی در دش والت‌تان ندارید. </string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">شما %sدش در دش والت‌تان روی همین دستگاه دریافت خواهید کرد. لطفا توجه داشته باشید که تکمیل عملیات انتقال این مبلغ می‌تواند بین ۲ تا ۳ دقیقه زمان ببرد. </string>
+    <string name="you_dont_have_enough_balance">موجودی کافی ندارید</string>
+    <string name="you_dont_own_any_crypto">هیچ رمزارزی ندارید. برای شروع مقداری رمزارز بخرید</string>
+    <string name="buy_crypto_on_coinbase">خرید رمزارز در کوین‌بیس</string>
+    <string name="purchase_failed">عملیات خرید ناموفق بود</string>
+    <string name="transfer_failed">عملیات انتقال ناموفق بود</string>
+    <string name="transfer_failed_msg">دش با موفقیت به حساب کوین‌بیس شما انتقال یافت. اما انتقال دش به دش والت روی این دستگاه موفق نبود. </string>
+    <string name="send_to_wallet_error">امکان ارسال این مبلغ بدون فراتر رفتن از محدوده تعریف‌شده وجود ندارد. </string>
+    <string name="purchase_successful">خرید موفق</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">عملیات انتقال دش به این دش والت روی این دستگاه ممکن است ۲ تا ۳ دقیقه زمان ببرد. </string>
+    <string name="maya_it_could_take_up_to_5_minutes">تبدیل %s از داش والت به %s و ارسال آن به نشانی مورد نظرتان می‌تواند تا ۲ دقیقه زمان ببرد. </string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">تا حداکثر ۵ دقیقه زمان لازم است تا دش از دش والت روی این دستگاه به %sدر حساب کوین‌بیس شما تبدیل شود.  </string>
+    <string name="conversion_failed">عملیات تبدیل انجام نشد</string>
+    <string name="transfer_dash_successful">تراکنش موفق</string>
+    <string name="maya_it_could_take_up_to_10_minutes">انتقال دش از کوین‌بیس به کیف پول دش روی این دستگاه شاید تا ۱۰ دقیقه زمان ببرد. </string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">تا حداکثر ۱۰ دقیقه زمان لازم است تا دش والت شما روی این دستگاه به حساب‌تان در کوین‌بیس انتقال یابد. </string>
+    <string name="conversion_successful">تبدیل موفق </string>
+    <string name="transfer_dash_failed_msg"> انتقال دش از دش والت به این دستگاه با مشکل روبرو شد. </string>
+    <string name="auth_limit_description">از حد تعریف‌شده در کوین‌بیس فراتر رفتید.</string>
+    <string name="you_will_receive">دریافت مقدار</string>
+    <string name="contact_maya_support">تماس با پشتیبانی مایا</string>
+    <string name="maya_fees_in_crypto_purchase">کارمزد مایا در تبدیل‌های رمزارزی</string>
+    <string name="maya_fee_info_msg_content">کارمزدهای مختلف ورودی، خروجی و نقدینگی در تراکنش‌های مایا وجود دارد. مقداری که وارد می‌کنید، مقداری است که دریافت خواهید کرد. </string>
+    <string name="learn_more">اطلاعات بیشتر</string>
+    <string name="debit_money">واریز از حساب‌تان</string>
+    <string name="change_limit">تغییر این محدوده</string>
+    <string name="set_auth_limit">دقت داشته باشید که یک محدوده مجاز مناسب را برای کوین‌بیس تعریف کنید</string>
+    <string name="change_withdrawal_limit"> با خروج از حساب کوین‌بیس در دش والت و ورود دوباره به آن می‌توانید آن را تغییر دهید. </string>
+    <string name="got_it">متوجه شدم</string>
+    <string name="conversion_preview">پیش‌نمایس تبدیل</string>
+    <string name="you_send">شما ارسال می‌کنید</string>
+    <string name="from_your_coinbase_account">از حساب کوین‌بیس‌تان</string>
+    <string name="you_receive">شما دریافت می‌کنید</string>
+    <string name="to_dash_wallet_on_this_device">از دش والت به این دستگاه</string>
+    <string name="purchase">خرید</string>
+    <string name="maya_fee">کارمزد مایا</string>
+    <string name="total">مجموع</string>
+    <string name="to_external_address">به %s</string>
+
+    <string name="maya_error_information">%s%nرمزارز: %s</string>
+    <string name="maya_error_invalid_destination_address">نشانی نامعتبر مقصد</string>
+    <string name="maya_error_below_recommended_minimum">مقداری که وارد کردید کمتر از حداقل پیشنهادی است</string>
+    <string name="maya_error_trading_halted">تبدل روی %sمتوقف شد.</string>
+    <string name="maya_halted_label">متوقف شد</string>
+    <string name="maya_halted_coins_toast">برخی از کوین‌ها به صورت موقت متوقف شده و امکان تبادل وجود ندارد</string>
+
+
+</resources>

@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">암호화중...</string>
     <string name="encrypt_keys_dialog_state_decrypting">복호화중...</string>
     <string name="encrypt_keys_dialog_state_done">완료</string>
-    <string name="scan_camera_problem_dialog_title">죄송합니다</string>
-    <string name="scan_camera_problem_dialog_message">카메라에 문제가 있습니다. 이 기기를 재시작하십시오.</string>
-    <string name="scan_camera_permission_dialog_title">카메라 접근 권한</string>
-    <string name="scan_camera_permission_dialog_message">QR 코드를 스캔하기 위해서는 카메라 접근 권한을 허용해야 합니다.</string>
-    <string name="input_parser_io_error">데이터를 읽을 수 없습니다. :\n%s</string>
-    <string name="input_parser_cannot_classify">입력값을 인식할 수 없습니다:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">유효하지 않은 대시 URI:\n%s</string>
-    <string name="input_parser_invalid_address">유효하지 않은 대시 주소입니다!\n(메인넷/테스트넷을 혼동하셨나요?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">결제 요청을 검증할 수 없습니다:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">유효하지 않은 결제 요청:\n%s</string>
-    <string name="input_parser_invalid_transaction">유효하지 않은 거래:\n%s</string>
     <string name="preferences_activity_title">설정</string>
     <string name="preferences_category_diagnostics">오류 진단</string>
     <string name="preferences_category_labs">실험실</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">xpub 보이기</string>
     <string name="preferences_extended_public_key_summary">지갑의 확장된 공개 키를 확인합니다. 이로써 다른 어플이나 서비스에 내보낼 수 있습니다. 주의하십시오: 이 경우 당신의 금융 프라이버시가 해당 어플에 공개됩니다.</string>
     <string name="bitmap_fragment_share">공유하기...</string>
-    <string name="extended_public_key_fragment_title">확장된 공개 키</string>
+    <string name="extended_public_key_fragment_title">확장된 공개 키 (BIP44)</string>
     <string name="extended_public_key_fragment_share">xpub 공유하기...</string>
+    <string name="extended_public_key_share_key">키 공유하기</string>
     <string name="report_issue_dialog_title_issue">오류 보고하기</string>
     <string name="report_issue_dialog_title_crash">이전 충돌이 감지됨</string>
     <string name="report_issue_dialog_title_transaction">선택된 거래에 대한 이슈 보고</string>
@@ -318,14 +308,11 @@
     <string name="report_issue_dialog_status_background_traces">백그라운드 추적</string>
     <string name="report_issue_dialog_status_stack_trace">스택 추적</string>
     <string name="report_issue_dialog_status_finishing">마치는 중</string>
-    <string name="report_transaction_history_export">내보내기</string>
-    <string name="report_transaction_history_title">CSV 내보내기</string>
-    <string name="report_transaction_history_not_synced_title">CSV 내보내기</string>
+    <string name="report_transaction_history_dialog_title">전체 거래 히스토리가 CSV 파일로 출력됩니다</string>
     <string name="report_transaction_history_not_synced_message">귀하의 거래 내역을 내보내기 전 지갑이 완전히 동기화 될 때까지 기다려주십시오.</string>
     <string name="report_transaction_history_message">전체 거래 내역을 내보냅니다.\n\n모든 지불 내역이 비용으로, 모든 들어온 거래가 수입으로 간주됩니다. 필요한 세금 보고 시스템에서의 비용 계산에 대한 모든 책임은 지갑의 소유주에 있습니다.</string>
     <string name="report_transaction_history_mail_intent_chooser">거래 내역을 다음을 사용해 보냅니다...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">거래 내역 전송 실패.</string>
-
     <!-- ZenLedger -->
     <string name="zenledger_export_title">Zenledger</string>
     <string name="zenledger_export_subtitle">당신의 암호화폐 세금을 간소화하세요</string>
@@ -421,10 +408,7 @@
     <string name="reason">이유</string>
     <string name="link_account">당신의 계정을 연결하세요</string>
     <string name="buy_no_account_needed">대시 구매하기 · 계정이 필요하지 않습니다</string>
-
     <string name="recipient_address">수신자 주소</string>
-    <string name="show_clipboard">클립보드 내용 보이기</string>
-    <string name="tap_to_paste">클립보드의 주소를 탭하여 붙여넣기</string>
     <string name="not_dash_address">대시 주소 혹은 URL 요청이 유효하지 않습니다</string>
     <string name="send_to_address">주소로 전송합니다</string>
 

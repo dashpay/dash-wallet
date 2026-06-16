@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">暗号化中…</string>
     <string name="encrypt_keys_dialog_state_decrypting">復号中…</string>
     <string name="encrypt_keys_dialog_state_done">完了</string>
-    <string name="scan_camera_problem_dialog_title">申し訳ありません</string>
-    <string name="scan_camera_problem_dialog_message">カメラに問題があります。デバイスを再起動する必要がある可能性があります。</string>
-    <string name="scan_camera_permission_dialog_title">カメラの利用権限</string>
-    <string name="scan_camera_permission_dialog_message">QRコードをスキャンするには、カメラを利用する権限を許可する必要があります。</string>
-    <string name="input_parser_io_error">データを読込めませんでした:\n%s</string>
-    <string name="input_parser_cannot_classify">入力を認識できません:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">無効なDash URI:\n%s</string>
-    <string name="input_parser_invalid_address">無効なDashアドレスです！\n（メインネット／テストネットの混同？）</string>
-    <string name="input_parser_unverifyable_paymentrequest">支払いリクエストの検証が出来ません:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">無効な支払のリクエスト:\n%s</string>
-    <string name="input_parser_invalid_transaction">無効なトランザクション:\n%s</string>
     <string name="preferences_activity_title">設定</string>
     <string name="preferences_category_diagnostics">診断</string>
     <string name="preferences_category_labs">ラボ</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">xpubを表示</string>
     <string name="preferences_extended_public_key_summary">他のアプリやサービスにインポートできるように、ウォレットの拡張公開鍵を表示します。注意：その場合アプリに金銭的なプライバシー情報を公開することになります。</string>
     <string name="bitmap_fragment_share">共有…</string>
-    <string name="extended_public_key_fragment_title">拡張公開鍵</string>
+    <string name="extended_public_key_fragment_title">拡張したパブリックキー(BIP44)</string>
     <string name="extended_public_key_fragment_share">xpubを共有…</string>
     <string name="extended_public_key_share_key">シェアキー</string>
     <string name="report_issue_dialog_title_issue">問題を報告</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">バックグラウンドの追跡調査</string>
     <string name="report_issue_dialog_status_stack_trace">スタッキングの追跡調査</string>
     <string name="report_issue_dialog_status_finishing">完了中</string>
-    <string name="report_transaction_history_export">エクスポート</string>
+    <string name="report_transaction_history_export">取引をエクスポートする</string>
     <string name="report_transaction_history_title">CSVのエクスポート</string>
+    <string name="report_transaction_history_dialog_title">全ての取引履歴をCSVファイル形式でエクスポートします</string>
     <string name="report_transaction_history_not_synced_title">CSVのエクスポート</string>
     <string name="report_transaction_history_not_synced_message">取引履歴をエクスポートする前に、ウォレットが完全に同期されるまでお待ちください。</string>
     <string name="report_transaction_history_message">全ての取引履歴がエクスポートされます。\n\n全ての決済は費用とみなされ、全ての入金取引は収入とみなされます。このウォレットの所有者は、選択した税務報告システムでコストベースの調整を行う責任を負います。</string>
+    <string name="report_transaction_history_body_1">全ての決済取引は支出とし、全ての入金取引は収入と扱います。</string>
+    <string name="report_transaction_history_body_2">このウォレットの所有者は、ご自身が選択した税務申告システム上で取得価額の調整を行う責任を負います。</string>
     <string name="report_transaction_history_mail_intent_chooser">取引履歴の送信中…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">取引履歴の送信に失敗しました。</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">取引履歴のエクスポートに失敗しました。</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,7 @@
     <string name="reason">理由</string>
     <string name="link_account">お客様のアカウントをリンク</string>
     <string name="buy_no_account_needed">Dashを購入 · アカウント不要</string>
-
     <string name="recipient_address">受取人のアドレス</string>
-    <string name="show_clipboard">クリップボードのコンテンツを表示する</string>
-    <string name="tap_to_paste">クリップボードからアドレスをタップしてペーストする</string>
     <string name="not_dash_address">無効なDashアドレスやURLリクエスト</string>
     <string name="send_to_address">アドレスに送金する</string>
 

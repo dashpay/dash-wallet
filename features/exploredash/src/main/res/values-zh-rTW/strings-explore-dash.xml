@@ -176,12 +176,12 @@
     <string name="purchase_gift_card_at">在</string>
     <string name="purchase_gift_card_min">最少: %s</string>
     <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="gift_card_buy_title">購買禮品卡</string>
     <string name="purchase_gift_card_discount_hint">您正在以 %s 購買 %s 禮品卡(%s 折扣)</string>
     <string name="button_next">下一個</string>
     <string name="purchase_gift_card_from">由</string>
     <string name="purchase_gift_card_to">到</string>
     <string name="purchase_confirm_transaction">確認:</string>
-    <string name="purchase_gift_card_total_label">禮品卡總計</string>
     <string name="purchase_gift_card_discount">折扣</string>
     <string name="purchase_gift_card_you_pay">你支付</string>
     <string name="purchase_gift_card_confirm">確認:</string>
@@ -206,7 +206,7 @@
     <string name="gift_card_tx_title">禮物卡 · %s</string>
     <string name="select_amount">選擇金額</string>
     <string name="select_fixed_amount">這個商戶以固定價格出售禮品卡</string>
-
+    <string name="purchase_gift_card_reset">重設</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">輸入驗證碼</string>
     <string name="verification_check_email">檢查您的電子郵件並輸入驗證碼</string>

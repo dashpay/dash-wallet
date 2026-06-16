@@ -37,8 +37,11 @@ interface AddressMetadataDao {
     @Query("SELECT * FROM address_metadata WHERE address = :address AND isInput = 1")
     suspend fun loadSender(address: String): AddressMetadata?
 
-    @Query("INSERT into address_metadata (address, isInput, taxCategory, service) VALUES (:address, :isInput, :taxCategory, :service)")
-    suspend fun markAddress(address: String, isInput: Boolean, taxCategory: TaxCategory, service: String)
+    // INSERT OR IGNORE makes this atomic and idempotent: concurrent callers racing on the same
+    // (address, isInput) primary key no longer crash with a UNIQUE constraint failure; the duplicate
+    // insert is silently dropped. Returns the new rowId, or -1 if the row already existed.
+    @Query("INSERT OR IGNORE into address_metadata (address, isInput, taxCategory, service) VALUES (:address, :isInput, :taxCategory, :service)")
+    suspend fun markAddress(address: String, isInput: Boolean, taxCategory: TaxCategory, service: String): Long
 
     @Query("SELECT * FROM address_metadata WHERE address = :address")
     fun observe(address: Sha256Hash): Flow<AddressMetadata?>

@@ -181,17 +181,6 @@
     <string name="encrypt_keys_dialog_show">Prikaži PIN številko</string>
     <string name="encrypt_keys_dialog_state_encrypting">Šifriram...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Dešifriram...</string>
-    <string name="scan_camera_problem_dialog_title">Oprostite</string>
-    <string name="scan_camera_problem_dialog_message">Težava s kamero. Najbrž boste morali ponovno zagnati napravo.</string>
-    <string name="scan_camera_permission_dialog_title">Dovoljenje za kamero</string>
-    <string name="scan_camera_permission_dialog_message">V kolikor želite prebrati QR kodo, morate dovoliti branje vaše kamere.</string>
-    <string name="input_parser_io_error">Branje podatkov spodletelo:\n%s</string>
-    <string name="input_parser_cannot_classify">Neznana vrsta vhoda:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Neveljaven Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Neveljaven Dash naslov!\n(Zamenjava testnega in pravega omrežja?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Ne morem preveriti zahtevka za plačilo:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Neveljavna prošnja za plačilo:\n%s</string>
-    <string name="input_parser_invalid_transaction">Neveljavno nakazilo:\n%s</string>
     <string name="preferences_activity_title">Nastavitve</string>
     <string name="preferences_category_diagnostics">Diagnostika</string>
     <string name="preferences_category_labs">V razvoju</string>
@@ -224,7 +213,6 @@
     <string name="preferences_extended_public_key_title">Prikaži razširjen javni ključ</string>
     <string name="preferences_extended_public_key_summary">Prikaži razširjen javni ključ denarnice, da ga boste lahko uporabili v drugih aplikacijah in servisih. Opozorilo: razširjen privatni ključ bo razkril stanje vaše denarnice drugim aplikacijam. </string>
     <string name="bitmap_fragment_share">Deli...</string>
-    <string name="extended_public_key_fragment_title">Razširjen javni ključ</string>
     <string name="extended_public_key_fragment_share">Deli razširjen javni ključ...</string>
     <string name="report_issue_dialog_title_issue">Prijavi težavo</string>
     <string name="report_issue_dialog_title_crash">Zaznano sesutje v preteklosti</string>

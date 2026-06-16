@@ -188,12 +188,12 @@
     <string name="purchase_gift_card_at">в</string>
     <string name="purchase_gift_card_min">Мін: %s</string>
     <string name="purchase_gift_card_max">Макс:%s</string>
+    <string name="gift_card_buy_title">Купити подарункову карту</string>
     <string name="purchase_gift_card_discount_hint">Ви купуєте %sподарункову картку за %s(%sзнижка)</string>
     <string name="button_next">Далі</string>
     <string name="purchase_gift_card_from">З</string>
     <string name="purchase_gift_card_to">До</string>
     <string name="purchase_confirm_transaction">Підтвердити</string>
-    <string name="purchase_gift_card_total_label">Загальна сума подарункової картки</string>
     <string name="purchase_gift_card_discount">Знижка</string>
     <string name="purchase_gift_card_you_pay">Ви платите</string>
     <string name="purchase_gift_card_confirm">Підтвердити</string>
@@ -218,7 +218,7 @@
     <string name="gift_card_tx_title">Подарункова картка · %s</string>
     <string name="select_amount">Виберіть суму</string>
     <string name="select_fixed_amount">Цей торговець продає подарункові картки за фіксованими цінами</string>
-
+    <string name="purchase_gift_card_reset">Скидання</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Введіть код підтвердження</string>
     <string name="verification_check_email">Перевірте свою електронну пошту та введіть код підтвердження</string>

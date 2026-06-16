@@ -165,6 +165,7 @@
     <string name="insufficient_money_title">เหรียญไม่เพียงพอ</string>
     <string name="insufficient_money_msg">ยอดเงินไม่เพียงพอ</string>
     <string name="send_coins_error_msg">การส่งเหรียญมีปัญหา!</string>
+    <string name="purchase_gift_card_reset">ตั้งค่า</string>
     <string name="password">รหัสผ่าน</string>
     <string name="something_wrong_title">บางอย่างผิดพลาด!</string>
     <string name="retry">ลองอีกครั้ง</string>

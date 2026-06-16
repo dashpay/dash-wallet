@@ -69,6 +69,11 @@
 
     <string name="pay_title">Отправить</string>
     <string name="history_title">История</string>
+    <string name="wallet_transactions_building_cache">Определение истории транзакций…</string>
+    <string name="history_refresh_dialog_title">Обновить список транзакций</string>
+    <string name="history_refresh_dialog_message">Это действие очистит кэш-память экрана транзакций, а затем восстановит список с нуля. Пока идёт восстановление, список транзакций будет временно недоступен. </string>
+    <string name="history_refresh_dialog_confirm">Обновить</string>
+    <string name="history_refresh_complete">Список транзакций обновлён</string>
     <string name="more_title">Больше</string>
     <string name="settings_title">Настройки</string>
     <string name="security_title">Безопасность</string>
@@ -292,7 +297,7 @@
     <string name="tools_import_private_key">Импортировать приватный ключ</string>
     <string name="import_private_key_description">Все средства перейдут из бумажного кошелька Dash на Ваш кошелёк DashPay на этом устройстве.</string>
     <string name="tools_network_monitor">Сетевой монитор</string>
-    <string name="tools_show_xpub">Расширенный  публичный ключ</string>
+    <string name="tools_show_xpub">Расширенный публичный ключ (BIP44)</string>
 
     <string name="about_help_us_improve">Помогите нам стать лучше</string>
     <string name="about_review_and_rate">Напишите отзыв и оцените приложение</string>

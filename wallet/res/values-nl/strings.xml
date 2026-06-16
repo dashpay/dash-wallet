@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Versleutelen...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Versleuteling opheffen...</string>
     <string name="encrypt_keys_dialog_state_done">Klaar</string>
-    <string name="scan_camera_problem_dialog_title">Sorry</string>
-    <string name="scan_camera_problem_dialog_message">Er is een probleem met de camera. Waarschijnlijk moet je het apparaat herstarten.</string>
-    <string name="scan_camera_permission_dialog_title">Toegang tot de camera</string>
-    <string name="scan_camera_permission_dialog_message">Om QR-codes te scannen moet u toestemming geven om de camera te gebruiken.</string>
-    <string name="input_parser_io_error">Kan gegevens niet lezen:\n%s</string>
-    <string name="input_parser_cannot_classify">Invoer niet herkend:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Ongeldige Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Ongeldig Dashadres ontvangen!\n(Haal je mainnet/testnet door elkaar?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Je betalingsverzoek:\n%s kan niet geverifieerd worden</string>
-    <string name="input_parser_invalid_paymentrequest">Ongeldig betalingsverzoek:\n%s</string>
-    <string name="input_parser_invalid_transaction">Ongeldige transactie:\n%s</string>
     <string name="preferences_activity_title">Instellingen</string>
     <string name="preferences_category_diagnostics">Diagnostiek</string>
     <string name="preferences_category_labs">Labs</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">Toon xpub</string>
     <string name="preferences_extended_public_key_summary">Weergeef de uitgebreide publieke sleutel van je portemonnee zodat deze geïmporteerd kan worden in andere apps en diensten. Let op: door deze actie zal je je privacy vrijgeven aan de app in kwestie.</string>
     <string name="bitmap_fragment_share">Deel...</string>
-    <string name="extended_public_key_fragment_title">Uitgebreide publieke sleutel</string>
+    <string name="extended_public_key_fragment_title">Uitgebreide publieke sleutels (BIP44)</string>
     <string name="extended_public_key_fragment_share">Deel xpub...</string>
     <string name="extended_public_key_share_key">Deel sleutel</string>
     <string name="report_issue_dialog_title_issue">Meld probleem</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">achtergrond traceringen</string>
     <string name="report_issue_dialog_status_stack_trace">stack traceringen</string>
     <string name="report_issue_dialog_status_finishing">bezig met afronden</string>
-    <string name="report_transaction_history_export">Exporteer</string>
-    <string name="report_transaction_history_title">CSV exporteren</string>
-    <string name="report_transaction_history_not_synced_title">CSV exporteren</string>
+    <string name="report_transaction_history_export">Transacties exporteren</string>
+    <string name="report_transaction_history_title">CSV-export</string>
+    <string name="report_transaction_history_dialog_title">De volledige transactiegeschiedenis wordt geëxporteerd als een CSV-bestand</string>
+    <string name="report_transaction_history_not_synced_title">CSV-export</string>
     <string name="report_transaction_history_not_synced_message">Wacht tot de portemonnee volledig is gesynchroniseerd alvorens je transactiegeschiedenis je exporteren.</string>
     <string name="report_transaction_history_message">De volledige transactiegeschiedenis wordt geëxporteerd.\n\nAlle betalingen worden beschouwd als uitgaven en alle inkomende transacties als inkomsten. De eigenaar van deze portemonnee is verantwoordelijk voor het doorvoeren van eventuele aanpassingen in het geval van belastingaangifte.</string>
+    <string name="report_transaction_history_body_1">Alle betalingen worden beschouwd als een uitgave en alle inkomende transacties als inkomsten.</string>
+    <string name="report_transaction_history_body_2">De eigenaar van deze portemonnee is verantwoordelijk voor het doorvoeren van eventuele kostenbasisaanpassingen in het door hem/haar gekozen belastingrapportagesysteem.</string>
     <string name="report_transaction_history_mail_intent_chooser">Transactiegeschiedenis verzenden door gebruikmaking van …</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Transactiegeschiedenis verzenden is mislukt.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Exporteren van transactiegeschiedenis mislukt.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,7 @@
     <string name="reason">Reden</string>
     <string name="link_account">Koppel je rekening</string>
     <string name="buy_no_account_needed">Koop Dash · Geen rekening nodig</string>
-
     <string name="recipient_address">Adres van ontvanger</string>
-    <string name="show_clipboard">Toon inhoud op het klembord</string>
-    <string name="tap_to_paste">Tik op het adres van het klembord om het te plakken</string>
     <string name="not_dash_address">Geen geldig Dash adres of URL verzoek</string>
     <string name="send_to_address">Versturen naar adres</string>
 

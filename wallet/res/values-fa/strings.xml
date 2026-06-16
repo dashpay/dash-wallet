@@ -241,17 +241,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">در حال رمزگذاری...</string>
     <string name="encrypt_keys_dialog_state_decrypting">رمزگشایی...</string>
     <string name="encrypt_keys_dialog_state_done">انجام شد</string>
-    <string name="scan_camera_problem_dialog_title">متاسفیم!</string>
-    <string name="scan_camera_problem_dialog_message">دوربین مشکل دارد. احتمالا باید دستگاه‌تان را خاموش و دوباره روشن کنید.</string>
-    <string name="scan_camera_permission_dialog_title">مجوز استفاده از دوربین</string>
-    <string name="scan_camera_permission_dialog_message">برای اسکن کیوآر کد، باید مجوز استفاده از دوربین را داشته باشید.</string>
-    <string name="input_parser_io_error">داده قابل خواندن نیست :n\%s</string>
-    <string name="input_parser_cannot_classify">نمی‌تواند ورودی را تشخیص دهد :n\%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">نشانی نامعتبر دش :n\%s</string>
-    <string name="input_parser_invalid_address">نشانی دش دریافتی نامعتبر است!n\ (مشکل در شبکه اصلی/شبکه تست؟)</string>
-    <string name="input_parser_unverifyable_paymentrequest">درخواست پرداخت قابل تایید نیست:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">درخواست نامعتبر پرداخت:n\%s</string>
-    <string name="input_parser_invalid_transaction">تراکنش نامعتبر:n\%s</string>
     <string name="preferences_activity_title">تنظیمات</string>
     <string name="preferences_category_diagnostics">شناسایی مشکل</string>
     <string name="preferences_category_labs">آزمایشگاه</string>
@@ -296,8 +285,9 @@
     <string name="preferences_extended_public_key_title">نمایش کلید عمومی جامع</string>
     <string name="preferences_extended_public_key_summary">مشاهده کلید عمومی گسترده برای کیف پول‌‌تان: این کلید عمومی را می‌توان به سایر اپلیکیشن‌ها و خدمات نیز ارائه کرد. مراقب باشید: این کار سبب می‌شود حریم خصوصی مالی شما برای آن اپلیکیشن خارجی آشکار شود. </string>
     <string name="bitmap_fragment_share">در حال به اشتراک‌ گذاری...</string>
-    <string name="extended_public_key_fragment_title">کلید عمومی جامع</string>
+    <string name="extended_public_key_fragment_title">کلید عمومی جامع (بی‌ای‌پی‌۴۴)</string>
     <string name="extended_public_key_fragment_share">در حال به‌ اشتراک‌گذاری کلید عمومی جامع...</string>
+    <string name="extended_public_key_share_key">به اشتراک‌گذاری کلید</string>
     <string name="report_issue_dialog_title_issue">گزارش مشکل</string>
     <string name="report_issue_dialog_title_crash">مشکل قبلی شناسایی شده</string>
     <string name="report_issue_dialog_title_transaction">گزارش مشکل درباره یک پرداخت مشخص</string>
@@ -320,13 +310,17 @@
     <string name="report_issue_dialog_status_background_traces">دنباله‌های پس‌زمینه</string>
     <string name="report_issue_dialog_status_stack_trace">دنباله‌های استک</string>
     <string name="report_issue_dialog_status_finishing">در حال پایان</string>
-    <string name="report_transaction_history_export">بیرون دادن</string>
-    <string name="report_transaction_history_title">بیرون دادن فرمت CSV</string>
-    <string name="report_transaction_history_not_synced_title">بیرون دادن فرمت CSV</string>
+    <string name="report_transaction_history_export">خروجی گرفتن از تراکنش‌ها </string>
+    <string name="report_transaction_history_title">خروجی در فرمت سی‌اس‌وی</string>
+    <string name="report_transaction_history_dialog_title">کل سابقه تراکنش‌ها در قالب یک فایل سی‌اس‌وی به صورت خروجی داده می‌شود</string>
+    <string name="report_transaction_history_not_synced_title">خروجی در فرمت سی‌اس‌وی</string>
     <string name="report_transaction_history_not_synced_message">لطفا پیش از بیرون دادن سابقه تراکنش‌ها، منتظر بمانید تا کیف پول‌تان کاملا همزمان‌سازی شود. </string>
     <string name="report_transaction_history_message">همه سوابق تراکنش‌ها به بیرون ارسال می‌شود. \n\n همه پرداخت‌ها به عنوان هزینه و همه دریافت‌ها به عنوان درآمد در نظر گرفته می‌شود. صاحب این کیف پول مسئول مشخص‌ کردن جزئیات مربوط به هزینه‌ها در نظام گزارش‌دهی مالیاتی خود خواهد بود. </string>
+    <string name="report_transaction_history_body_1">همه پرداخت‌ها به عنوان هزینه و همه دریافت‌ها به عنوان درآمد در نظر گرفته خواهند شد.</string>
+    <string name="report_transaction_history_body_2">مالک این کیف پول مسئول هر نوع هزینه‌ای بر اساس سیستم گزارش‌دهی مالیاتی انتخابی‌اش خواهد بود. </string>
     <string name="report_transaction_history_mail_intent_chooser">ارسال سابقه تراکنش‌ها با استفاده از ...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">ارسال سابقه تراکنش‌ها موفقیت‌آمیز نبود. </string>
+    <string name="report_transaction_history_dialog_export_csv_failed">ارائه خروجی از سابقه تراکنش‌ها ناموفق بود. </string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ذن‌لجر</string>
@@ -423,10 +417,7 @@
     <string name="reason">دلیل</string>
     <string name="link_account">به حساب‌تان متصل کنید</string>
     <string name="buy_no_account_needed">دش بخرید - بدون نیاز به حساب</string>
-
     <string name="recipient_address">نشانی دریافت‌کننده</string>
-    <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
-    <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
     <string name="not_dash_address">نشانی دش و یا نشانی وب درخواستی معتبر نیست</string>
     <string name="send_to_address">ارسال به نشانی</string>
 

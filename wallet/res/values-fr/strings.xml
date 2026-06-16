@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Chiffrement…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Déchiffrement…</string>
     <string name="encrypt_keys_dialog_state_done">Terminé</string>
-    <string name="scan_camera_problem_dialog_title">Désolé</string>
-    <string name="scan_camera_problem_dialog_message">L\'appareil photo-vidéo a un problème. Vous devez probablement redémarrer votre appareil.</string>
-    <string name="scan_camera_permission_dialog_title">Autorisation de l\'appareil photo-vidéo</string>
-    <string name="scan_camera_permission_dialog_message">Pour scanner des QR-codes, vous devez autoriser l\'utilisation de l\'appareil photo-vidéo.</string>
-    <string name="input_parser_io_error">Impossible de lire les données :\n%s</string>
-    <string name="input_parser_cannot_classify">Impossible de reconnaître l\'entrée :\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">URI Dash invalide :\n%s</string>
-    <string name="input_parser_invalid_address">Réception d\'une adresse Dash invalide !\n(Confusion mainnet/testnet ?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Impossible de vérifier la demande de paiement :\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Demande de paiement invalide :\n%s</string>
-    <string name="input_parser_invalid_transaction">Transaction invalide :\n%s</string>
     <string name="preferences_activity_title">Paramètres</string>
     <string name="preferences_category_diagnostics">Diagnostics</string>
     <string name="preferences_category_labs">Labo</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">Afficher la xpub</string>
     <string name="preferences_extended_public_key_summary">Visualisez la clé privée étendue de votre portefeuille afin qu\'elle puisse être importée dans d\'autres applications et services. Attention : ceci divulguera vos informations monétaires à cette application.</string>
     <string name="bitmap_fragment_share">Partager…</string>
-    <string name="extended_public_key_fragment_title">Clé privée étendue</string>
+    <string name="extended_public_key_fragment_title">Clé publique étendue (BIP44)</string>
     <string name="extended_public_key_fragment_share">Partager la xpub…</string>
     <string name="extended_public_key_share_key">Partager la clé</string>
     <string name="report_issue_dialog_title_issue">Signaler un problème</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">traces d\'arrière-plan</string>
     <string name="report_issue_dialog_status_stack_trace">traces de pile</string>
     <string name="report_issue_dialog_status_finishing">achèvement</string>
-    <string name="report_transaction_history_export">Exportation</string>
+    <string name="report_transaction_history_export">Exporter les transactions</string>
     <string name="report_transaction_history_title">Exportation CSV</string>
+    <string name="report_transaction_history_dialog_title">L\'historique complet des transactions sera exporté sous forme de fichier CSV</string>
     <string name="report_transaction_history_not_synced_title">Exportation CSV</string>
     <string name="report_transaction_history_not_synced_message">Veuillez attendre que le portefeuille soit entièrement synchronisé avant d\'exporter votre historique de transactions.</string>
     <string name="report_transaction_history_message">L\'historique complet de transactions sera exporté.\n\nTous les paiements seront considérés comme une dépense et toutes les transactions entrantes comme un revenu. Le propriétaire de ce portefeuille est responsable pour faire tous les ajustements de coûts dans leur système fiscal déclaratif.</string>
+    <string name="report_transaction_history_body_1">Chaque paiement sera considéré comme une dépense et chaque transaction entrante comme un revenu.</string>
+    <string name="report_transaction_history_body_2">Le propriétaire de ce portefeuille est responsable d\'effectuer tout ajustement de base de coût dans son système de déclaration fiscale.</string>
     <string name="report_transaction_history_mail_intent_chooser">Envoyer l\'historique de transactions avec…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">L\'envoi de l\'historique de transactions a échoué.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">L\'exportation de l\'historique des transactions a échoué.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,9 @@
     <string name="reason">Raison</string>
     <string name="link_account">Relier votre compte</string>
     <string name="buy_no_account_needed">Achetez des dashs · Aucun compte requis</string>
+    <string name="convert_no_account_needed">Échangez des dashs - Aucun compte requis</string>
 
     <string name="recipient_address">Adresse du destinataire</string>
-    <string name="show_clipboard">Voir le contenu du presse-papiers</string>
-    <string name="tap_to_paste">Touchez l\'adresse du presse-papiers pour la coller</string>
     <string name="not_dash_address">Adresse Dash ou requête URL non valides</string>
     <string name="send_to_address">Envoyer à l\'adresse</string>
 

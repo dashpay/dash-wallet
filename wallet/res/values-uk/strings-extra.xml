@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Підтверджую</string>
     <string name="dialog_confirm_pay_to">Відправити</string>
     <string name="dialog_confirm_secured_by">Захищено</string>
+    <string name="dialog_confirm_connected_to_unsecured">Підключено до (не захищено)</string>
     <string name="dialog_confirm_fee">Комісія мережі</string>
     <string name="dialog_confirm_total">Всього</string>
     <string name="dialog_confirm_accept_contact_request">Прийняти запит на додавання до контактів</string>
@@ -68,6 +69,11 @@
 
     <string name="pay_title">Відправити</string>
     <string name="history_title">Історія</string>
+    <string name="wallet_transactions_building_cache">Визначення історії транзакцій…</string>
+    <string name="history_refresh_dialog_title">Оновити список транзакцій</string>
+    <string name="history_refresh_dialog_message">Це очистить кеш відображення транзакцій та відновить його з нуля. Список буде тимчасово недоступний під час відновлення.</string>
+    <string name="history_refresh_dialog_confirm">Оновити</string>
+    <string name="history_refresh_complete">Список транзакцій оновлено</string>
     <string name="more_title">Більше</string>
     <string name="settings_title">Налаштування</string>
     <string name="security_title">Безпека</string>
@@ -289,13 +295,15 @@
 
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Імпорт приватного ключа</string>
+    <string name="import_private_key_description">Ця дія перемістить усі монети з паперового гаманця Dash до вашого застосунку DashPay на цьому пристрої.</string>
     <string name="tools_network_monitor">Мережевий монітор</string>
-    <string name="tools_show_xpub">Розширений публічний ключ</string>
+    <string name="tools_show_xpub">Розширений відкритий ключ (BIP44)</string>
 
     <string name="about_help_us_improve">Допоможіть нам стати кращими</string>
     <string name="about_review_and_rate">Напишіть відгук і оцініть додаток</string>
     <string name="about_contact_support">Служба підтримки</string>
     <string name="about_fork_disclaimer">Це додаток з відкритим кодом, заснований на Bitcoin Wallet</string>
+    <string name="about_copyright">Авторське право © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Гаманець Dash %s</string>
     <string name="about_last_explore_device_sync">Останнє дослідження синхронізації пристрою</string>
@@ -439,6 +447,11 @@
     <string name="reclassify_transactions_linked_accounts_message">за замовчуванням усі транзакції до ваших пов’язаних облікових записів або з них (обміни, ставки тощо) позначатимуться як перекази.</string>
     <string name="reclassify_transactions_change_explanation">Виберіть будь-яку транзакцію на головній сторінці та змініть категорію на сторінці з деталями транзакції.</string>
 
+    <string name="masternode_keys_title">Ключі мастернод</string>
+    <string name="masternode_key_type_owner">Ключі власника</string>
+    <string name="masternode_key_type_voting">Ключі для голосування</string>
+    <string name="masternode_key_type_operator">Ключі оператора</string>
+    <string name="masternode_key_type_platform">Ключі оператора HPMN</string>
     <string name="masternode_key_type_total">%d ключів</string>
     <string name="masternode_key_type_used">%dвикористано</string>
     <string name="masternode_key_pair_index">Ключі %d</string>

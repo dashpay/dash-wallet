@@ -180,12 +180,12 @@
     <string name="purchase_gift_card_at">bei</string>
     <string name="purchase_gift_card_min">Minimum: %s</string>
     <string name="purchase_gift_card_max">Maximum: %s</string>
+    <string name="gift_card_buy_title">Geschenkkarte kaufen</string>
     <string name="purchase_gift_card_discount_hint">Du kaufst eine %s Geschenkkarte für %s (%s Rabatt).</string>
     <string name="button_next">Nächste</string>
     <string name="purchase_gift_card_from">Von</string>
     <string name="purchase_gift_card_to">Bis</string>
     <string name="purchase_confirm_transaction">Bestätigen</string>
-    <string name="purchase_gift_card_total_label">Preis der Geschenkkarte</string>
     <string name="purchase_gift_card_discount">Rabatt</string>
     <string name="purchase_gift_card_you_pay">Du bezahlst</string>
     <string name="purchase_gift_card_confirm">Bestätigen</string>
@@ -210,7 +210,7 @@
     <string name="gift_card_tx_title">Geschenkkarte · %s</string>
     <string name="select_amount">Betrag auswählen</string>
     <string name="select_fixed_amount">Dieser Händler verkauft seine Geschenkkarten zu festen Preisen.</string>
-
+    <string name="purchase_gift_card_reset">Zurücksetzen</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Verifizierungscode eingeben</string>
     <string name="verification_check_email">Kontrolliere deine E-Mail und deinen Verifizierungscode</string>

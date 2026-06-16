@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Κρυπτογράφηση…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Αποκρυπτογράφηση…</string>
     <string name="encrypt_keys_dialog_state_done">Έγινε</string>
-    <string name="scan_camera_problem_dialog_title">Λυπούμαστε</string>
-    <string name="scan_camera_problem_dialog_message">Η κάμερα αντιμετωπίζει κάποιο πρόβλημα. Πιθανόν να χρειάζεται επανεκκίνηση.</string>
-    <string name="scan_camera_permission_dialog_title">Άδεια κάμερας</string>
-    <string name="scan_camera_permission_dialog_message">Για να μπορέσετε να σκανάρετε QR code, πρέπει να δώσετε δικαίωμα ώστε να χρησιμοποιηθεί η κάμερα σας.</string>
-    <string name="input_parser_io_error">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
-    <string name="input_parser_cannot_classify">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Μη έγκυρο Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Μη έγκυρη διεύθυνση Dash!n(Mixing up mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Δεν είναι δυνατή η επαλήθευση της αίτησης πληρωμής:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Μη έγκυρο αίτημα πληρωμής:\n%s</string>
-    <string name="input_parser_invalid_transaction">Μη έγκυρη συναλλαγή:\n%s</string>
     <string name="preferences_activity_title">Ρυθμίσεις</string>
     <string name="preferences_category_diagnostics">Διαγνωστικά</string>
     <string name="preferences_category_labs">Εργαστήρια</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">Δείξε xpub</string>
     <string name="preferences_extended_public_key_summary">Δείτε το εκτετεμένο δημόσιο κλειδί από το πορτοφόλι σας, έτσι ώστε να μπορέσετε να το εισάγετε σε άλλες εφαρμογές και υπηρεσίες. Να είστε προσεκτικοί: με αυτό τον τρόπο θα αποκαλύψετε τη νομισματική προστασία της ιδιωτικής σας ζωής σε αυτή την εφαρμογή.</string>
     <string name="bitmap_fragment_share">Μοιραστείτε...</string>
-    <string name="extended_public_key_fragment_title">Εκτεταμένο Δημόσιο Κλειδί</string>
+    <string name="extended_public_key_fragment_title">Extended public key (BIP44)</string>
     <string name="extended_public_key_fragment_share">Μοιραστείτε xpub...</string>
+    <string name="extended_public_key_share_key">Μοιράστε το κλειδί</string>
     <string name="report_issue_dialog_title_issue">Αναφέρετε το πρόβλημα</string>
     <string name="report_issue_dialog_title_crash">Ανιχνεύθηκε προηγηθείσα κατάρρευση</string>
     <string name="report_issue_dialog_title_transaction">Δηλώστε πρόβλημα με την επιλεγμένη πληρωμή</string>
@@ -318,13 +308,19 @@
     <string name="report_issue_dialog_status_background_traces">ίχνη στο παρασκήνιο</string>
     <string name="report_issue_dialog_status_stack_trace">ίχνη στοίβας</string>
     <string name="report_issue_dialog_status_finishing">ολοκλήρωση</string>
-    <string name="report_transaction_history_export">Εξαγωγή</string>
+    <string name="report_transaction_history_export">Εξαγωγή συναλλαγών</string>
     <string name="report_transaction_history_title">Εξαγωγή CSV</string>
+    <string name="report_transaction_history_dialog_title">Το πλήρες ιστορικό συναλλαγών θα εξαχθεί ως αρχείο CSV
+
+</string>
     <string name="report_transaction_history_not_synced_title">Εξαγωγή CSV</string>
     <string name="report_transaction_history_not_synced_message">Περιμένετε μέχρι να συγχρονιστεί πλήρως το πορτοφόλι πριν εξάγετε το ιστορικό των συναλλαγών σας.</string>
     <string name="report_transaction_history_message">Το πλήρες ιστορικό των συναλλαγών θα εξαχθεί.\n\nΌλες οι πληρωμές θα θεωρηθούν ως έξοδα και όλες οι εισερχόμενες συναλλαγές θα είναι έσοδα. Ο κάτοχος αυτού του πορτοφολιού είναι υπεύθυνος για την πραγματοποίηση τυχόν προσαρμογών της βάσης κόστους στο σύστημα φορολογικής αναφοράς που έχει επιλέξει.</string>
+    <string name="report_transaction_history_body_1">Όλες οι πληρωμές θα θεωρούνται έξοδα και όλες οι εισερχόμενες συναλλαγές θα θεωρούνται έσοδα.</string>
+    <string name="report_transaction_history_body_2">Ο κάτοχος αυτού του πορτοφολιού είναι υπεύθυνος για την πραγματοποίηση τυχόν προσαρμογών της βάσης κοστολόγησης στο φορολογικό σύστημα που έχει επιλέξει.</string>
     <string name="report_transaction_history_mail_intent_chooser">Αποστολή ιστορικού συναλλαγών χρησιμοποιώντας...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Η αποστολή του ιστορικού συναλλαγών απέτυχε.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Η εξαγωγή του ιστορικού συναλλαγών απέτυχε.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -421,10 +417,7 @@
     <string name="reason">Λόγος</string>
     <string name="link_account">Σύνδεση του λογαριασμού σας</string>
     <string name="buy_no_account_needed">Αγοράστε Dash - Δεν απαιτείται λογαριασμός</string>
-
     <string name="recipient_address">Διεύθυνση παραλήπτη</string>
-    <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
-    <string name="tap_to_paste">Πατήστε τη διεύθυνση από το πρόχειρο για να την επικολλήσετε</string>
     <string name="not_dash_address">Δεν είναι μια έγκυρη διεύθυνση Dash ή URL</string>
     <string name="send_to_address">Αποστολή στη διεύθυνση</string>
 

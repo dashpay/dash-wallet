@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">Maya</string>
+    <string name="maya_portal_convert_title">转换 Dash</string>
+    <string name="maya_portal_convert_to_title">将 Dash 转换为</string>
+    <string name="maya_portal_convert_subtitle">从 Dash 钱包到任何加密数字货币</string>
+    <string name="maya_portal_subtitle">从 Dash 钱包将 Dash 转换成 Maya 支持的任何加密数字货币并发送到任意钱包</string>
+    <string name="maya_address_input_hint">%s 地址</string>
+    <string name="maya_address_input_title">将 DASH 转换为 %s</string>
+    <string name="maya_crypto_convert_title">转换 Dash</string>
+    <string name="maya_crypto_convert_order_preview_title">订单预览</string>
+
+    <string name="cryptocurrency_any_network">% 网络</string>
+    <string name="cryptocurrency_bitcoin_network">比特币</string>
+    <string name="cryptocurrency_dash_network">Dash</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USDC (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USDC (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <string name="maya_error">Maya 错误</string>
+    <string name="maya_error_not_available">Maya 服务不可用. 请稍后再试.</string>
+    <string name="maya_error_report_issue">请使用主目录的 \"联系客服\" , 将此问题发送给Dash Wallet客服团队.</string>
+    <string name="maya_error_address_not_valid">地址是无效的</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">最小交易金额为</string>
+    <string name="entered_amount_is_too_high">最大交易金额为</string>
+    <string name="we_didnt_find_any_assets">我们没有在您的 Coinbase账户中找到任何资产.</string>
+    <string name="something_wrong_title">出错了!</string>
+    <string name="dont_have_any_dash">您的 Dash钱包中没有任何 Dash.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">您将会在此设备的钱包中收到 ~ %sDash. 请注意, 完成转账最多可能需要2–3分钟.</string>
+    <string name="you_dont_have_enough_balance">您没有足够的余额</string>
+    <string name="you_dont_own_any_crypto">您未拥有任何加密货币. 购买一些加密货币以开始.</string>
+    <string name="buy_crypto_on_coinbase">在 Coinbase上购买加密货币</string>
+    <string name="purchase_failed">购买失败</string>
+    <string name="transfer_failed">转账失败</string>
+    <string name="transfer_failed_msg">Dash已成功存入您的 Coinbase账户. 但是把 Dash转账到此设备上的 Dash钱包时出错.</string>
+    <string name="send_to_wallet_error">您所设置的金额超过软件的限制, 因此无法发送此金额</string>
+    <string name="purchase_successful">购买成功</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">最多可能需要2–3分钟才能把 Dash转账到此设备的 Dash钱包.</string>
+    <string name="maya_it_could_take_up_to_5_minutes">最多可能需要 2 分钟才能将 %s 从 Dash 钱包转化为 %s 并发送给提供的地址.</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">最多可能需要 5 分钟才能将 Dash从此设备上的 Dash钱包转换为您在 Coinbase账户中的 %s.</string>
+    <string name="conversion_failed">兑换失败</string>
+    <string name="transfer_dash_successful">转账成功</string>
+    <string name="maya_it_could_take_up_to_10_minutes">将 Dash从 Coinbase转账到此设备的 Dash钱包最多可能需要10分钟.</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">将 Dash从此设备上的 Dash钱包转移到您的 Coinbase账户的话最多可能需要 10分钟.</string>
+    <string name="conversion_successful">兑换成功</string>
+    <string name="transfer_dash_failed_msg">将资金转账到此设备的 Dash钱包时出错.</string>
+    <string name="auth_limit_description">您超出了 Coinbase的授权限制.</string>
+    <string name="you_will_receive">接收金额</string>
+    <string name="contact_maya_support">联系 Maya 客服</string>
+    <string name="maya_fees_in_crypto_purchase">加密数字货币转换的 Maya 手续费</string>
+    <string name="maya_fee_info_msg_content">Maya 交易会产生多种入账, 出账以及流动性费用. 您输入的金额即为最终接收的金额.</string>
+    <string name="learn_more">了解更多</string>
+    <string name="debit_money">从您的账户中借记</string>
+    <string name="change_limit">更改此限制</string>
+    <string name="set_auth_limit">确保在 Coinbase上设置正确的授权限制</string>
+    <string name="change_withdrawal_limit">您可以随时通过在 Dash钱包中登出您的 Coinbase账户并重新登录来更改它.</string>
+    <string name="got_it">明白了</string>
+    <string name="conversion_preview">兑换预览</string>
+    <string name="you_send">您发送</string>
+    <string name="from_your_coinbase_account">从您的 Coinbase账户</string>
+    <string name="you_receive">您收到</string>
+    <string name="to_dash_wallet_on_this_device">从此设备的 Dash 钱包</string>
+    <string name="purchase">购买</string>
+    <string name="maya_fee">Maya 手续费</string>
+    <string name="total">总计</string>
+    <string name="to_external_address">到 %s</string>
+
+    <string name="maya_error_information">%s%n加密数字货币: %s</string>
+    <string name="maya_error_invalid_destination_address">无效的目标地址</string>
+    <string name="maya_error_below_recommended_minimum">输入的金额小于推荐的最小金额</string>
+    <string name="maya_error_trading_halted">%s上的交易已经被停止.</string>
+    <string name="maya_halted_label">已停止</string>
+    <string name="maya_halted_coins_toast">这些代币已经被暂时停止并无法进行交易</string>
+
+
+</resources>
