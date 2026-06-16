@@ -90,7 +90,8 @@ class AboutFragment : Fragment() {
                         serverUpdateStatus = serverUpdateStatus,
                         firebaseInstallationId = firebaseInstallationId,
                         fcmToken = fcmToken,
-                        showForceSyncButton = !isMainNet
+                        showForceSyncButton = !isMainNet,
+                        copyrightYear = BuildConfig.COMMIT_YEAR
                     ),
                     onBackClick = { findNavController().popBackStack() },
                     onForceSyncClick = { forceSync() },

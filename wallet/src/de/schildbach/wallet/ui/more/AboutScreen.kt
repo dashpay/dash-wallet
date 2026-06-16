@@ -62,7 +62,8 @@ data class AboutUIState(
     val serverUpdateStatus: String? = null,
     val firebaseInstallationId: String = "",
     val fcmToken: String = "",
-    val showForceSyncButton: Boolean = false
+    val showForceSyncButton: Boolean = false,
+    val copyrightYear: Int = 0
 )
 
 @Composable
@@ -155,7 +156,7 @@ fun AboutScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = stringResource(R.string.about_copyright),
+                    text = stringResource(R.string.about_copyright, uiState.copyrightYear),
                     style = MyTheme.Body2Regular,
                     color = MyTheme.Colors.textSecondary,
                     textAlign = TextAlign.Center,
@@ -258,7 +259,8 @@ private fun AboutScreenPreview() {
             serverUpdateStatus = "Apr 10, 6:30 PM",
             firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
             fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = true
+            showForceSyncButton = true,
+            copyrightYear = 2026
         )
     )
 }
@@ -277,7 +279,8 @@ private fun AboutScreenLoadingPreview() {
             serverUpdateStatus = null,
             firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
             fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = false
+            showForceSyncButton = false,
+            copyrightYear = 2026
         )
     )
 }
