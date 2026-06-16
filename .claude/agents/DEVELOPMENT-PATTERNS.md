@@ -770,7 +770,7 @@ A horizontal **amount-input bar** from the design system. Renders, left to right
 **Figma file:** Design system - Android — node `4414:23352`
 
 The component lives in:
-```
+```text
 common/src/main/java/org/dash/wallet/common/ui/components/EnterAmount.kt
 ```
 

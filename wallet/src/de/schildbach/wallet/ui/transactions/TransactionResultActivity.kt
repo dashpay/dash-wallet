@@ -24,10 +24,11 @@ import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentManager
 import de.schildbach.wallet.ui.main.MainActivity
 
 import de.schildbach.wallet.data.UsernameSearchResult
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.dashpay.transactions.PrivateMemoDialog
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -36,6 +37,7 @@ import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.TransactionResultViewModel
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.more.ContactSupportDialogFragment
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet.ui.util.viewOnBlockExplorer
@@ -150,7 +152,12 @@ class TransactionResultActivity : LockScreenActivity() {
             walletData.wallet!!,
             configuration.format.noCode(),
             contentBinding
-        )
+        ) {
+            // The sheet is hosted by this activity's FragmentManager, so don't finish() here —
+            // that would tear the sheet down along with the activity. Dismissing the sheet
+            // returns the user to this transaction result screen.
+            DashPayUserBottomSheet.newInstance(it).show(this)
+        }
 
         viewModel.init(txId)
 
@@ -286,10 +293,11 @@ class TransactionResultActivity : LockScreenActivity() {
                 finish()
             }
             userData != null -> {
-                finish()
-                startActivity(
-                    DashPayUserActivity.createIntent(this@TransactionResultActivity,
-                    userData!!, userData != null))
+                // The sheet is hosted by this activity, so finishing right away would destroy
+                // it too. Defer finish() until the sheet is dismissed, mirroring the old
+                // finish() + DashPayUserActivity flow.
+                finishWhenUserSheetDismissed()
+                DashPayUserBottomSheet.newInstance(userData!!).show(this)
             }
             intent.getBooleanExtra(EXTRA_USER_AUTHORIZED_RESULT_EXTRA, false) -> {
                 startActivity(MainActivity.createIntent(this))
@@ -298,6 +306,26 @@ class TransactionResultActivity : LockScreenActivity() {
                 startActivity(MainActivity.createIntent(this))
             }
         }
+    }
+
+    /**
+     * Finish this host activity once the [DashPayUserBottomSheet] is genuinely dismissed.
+     * [onFragmentDestroyed] also fires on configuration changes (e.g. rotation), when the sheet
+     * is immediately recreated — finishing then would tear down the screen out from under the
+     * user, so we skip that case via [isChangingConfigurations].
+     */
+    private fun finishWhenUserSheetDismissed() {
+        supportFragmentManager.registerFragmentLifecycleCallbacks(
+            object : FragmentManager.FragmentLifecycleCallbacks() {
+                override fun onFragmentDestroyed(fm: FragmentManager, fragment: Fragment) {
+                    if (fragment is DashPayUserBottomSheet && !isChangingConfigurations) {
+                        fm.unregisterFragmentLifecycleCallbacks(this)
+                        finish()
+                    }
+                }
+            },
+            false
+        )
     }
 
     override fun onDestroy() {
