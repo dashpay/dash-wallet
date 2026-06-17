@@ -29,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.res.stringResource
 import androidx.core.net.toUri
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -68,24 +67,19 @@ class AboutFragment : Fragment() {
                 val firebaseInstallationId by viewModel.firebaseInstallationId.collectAsState()
                 val fcmToken by viewModel.firebaseCloudMessagingToken.collectAsState()
 
-                val title = "${stringResource(R.string.about_title)} ${stringResource(R.string.app_name_short)}"
-                val versionName = stringResource(R.string.about_version_name, BuildConfig.VERSION_NAME)
-                val buildNumber = stringResource(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
-                val dashjVersion = stringResource(R.string.about_credits_bitcoinj_title, BuildConfig.DASHJ_VERSION)
-                val platformVersion = stringResource(R.string.about_credits_platform_title, BuildConfig.DPP_VERSION)
-
                 val deviceSyncStatus = remember(isSyncing, viewModel.databasePrefs) {
                     formatDeviceSyncStatus(isSyncing)
                 }
                 val serverUpdateStatus = remoteTimestamp?.let { formatServerUpdate(it) }
 
+                val appVersion = "${BuildConfig.VERSION_NAME} " +
+                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
+
                 AboutScreen(
                     uiState = AboutUIState(
-                        title = title,
-                        versionName = versionName,
-                        buildNumber = buildNumber,
-                        dashjVersion = dashjVersion,
-                        platformVersion = platformVersion,
+                        versionName = appVersion,
+                        dashjVersion = BuildConfig.DASHJ_VERSION,
+                        platformVersion = BuildConfig.DPP_VERSION,
                         deviceSyncStatus = deviceSyncStatus,
                         serverUpdateStatus = serverUpdateStatus,
                         firebaseInstallationId = firebaseInstallationId,

@@ -17,13 +17,18 @@
 
 package de.schildbach.wallet.ui.more
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -34,28 +39,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
-import org.dash.wallet.common.ui.components.TopIntro
 
 /**
  * Immutable view state for the About screen. The fragment builds this from the
- * existing ViewModel LiveData (and pre-formats date / sync strings that need a
+ * existing ViewModel StateFlows (and pre-formats date / sync strings that need a
  * Context) so the composable stays pure and previewable.
  */
 data class AboutUIState(
-    val title: String = "",
     val versionName: String = "",
-    val buildNumber: String = "",
     val dashjVersion: String = "",
     val platformVersion: String = "",
     val deviceSyncStatus: String = "",
@@ -82,11 +87,9 @@ fun AboutScreen(
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        // Top navigation — back chevron only
+        // Fixed top navigation — back chevron only
         NavBarBack(onBackClick = onBackClick)
 
-        // Heading + version block (TopIntro pattern, multi-line)
-        AboutHeader(uiState = uiState)
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -94,44 +97,65 @@ fun AboutScreen(
                 .padding(bottom = 80.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            // Centered Dash wordmark
+            DashLogoHeader()
 
-
-            // Diagnostics card — Figma List10 stacked rows (secondary label / primary value)
+            // Info card: versions + Firebase ids + source link
             Menu {
+                AboutInfoRow(
+                    label = stringResource(R.string.about_app_version_label),
+                    value = uiState.versionName
+                )
+                AboutInfoRow(
+                    label = stringResource(R.string.about_dashj_label),
+                    value = uiState.dashjVersion
+                )
+                AboutInfoRow(
+                    label = stringResource(R.string.about_platform_label),
+                    value = uiState.platformVersion
+                )
+                AboutStackedRow(
+                    topText = stringResource(R.string.about_firebase_installation_id),
+                    bottomText = uiState.firebaseInstallationId,
+                    onClick = onFirebaseInstallationIdClick
+                )
+                val fcmTokenText = uiState.fcmToken.ifBlank {
+                    stringResource(R.string.about_value_not_available)
+                }
+                AboutStackedRow(
+                    topText = stringResource(R.string.about_fcm_token),
+                    bottomText = fcmTokenText,
+                    bottomMaxLines = 2,
+                    onClick = onFcmTokenClick
+                )
+                AboutStackedRow(
+                    topText = stringResource(R.string.about_fork_disclaimer),
+                    bottomText = stringResource(R.string.about_github_link),
+                    topStyle = MyTheme.Body2Regular,
+                    topColor = MyTheme.Colors.textPrimary,
+                    bottomColor = MyTheme.Colors.dashBlue,
+                    onClick = onGithubLinkClick
+                )
+            }
+
+            // Explore Dash card: sync diagnostics
+            Menu {
+                AboutSectionTitle(stringResource(R.string.about_explore_section))
+
                 val forceSyncTrailing: (@Composable () -> Unit)? =
                     if (uiState.showForceSyncButton) {
                         { ForceSyncButton(onClick = onForceSyncClick) }
                     } else {
                         null
                     }
-                ListItem(
-                    helpTextAbove = stringResource(R.string.about_last_explore_device_sync),
-                    title = uiState.deviceSyncStatus,
-                    trailingContent = forceSyncTrailing
+                AboutInfoRow(
+                    label = stringResource(R.string.about_last_device_sync),
+                    value = uiState.deviceSyncStatus,
+                    trailing = forceSyncTrailing
                 )
-
-                ListItem(
-                    helpTextAbove = stringResource(R.string.about_last_explore_server_update),
-                    title = uiState.serverUpdateStatus ?: ""
-                )
-
-                ListItem(
-                    helpTextAbove = stringResource(R.string.about_firebase_installation_id),
-                    title = uiState.firebaseInstallationId,
-                    onClick = onFirebaseInstallationIdClick
-                )
-
-                ListItem(
-                    helpTextAbove = stringResource(R.string.about_fcm_token),
-                    title = uiState.fcmToken,
-                    onClick = onFcmTokenClick
-                )
-
-                ListItem(
-                    helpTextAbove = stringResource(R.string.about_fork_disclaimer),
-                    title = stringResource(R.string.about_github_link),
-                    titleColor = MyTheme.Colors.dashBlue,
-                    onClick = onGithubLinkClick
+                AboutInfoRow(
+                    label = stringResource(R.string.about_last_server_update),
+                    value = uiState.serverUpdateStatus ?: ""
                 )
             }
 
@@ -174,58 +198,126 @@ fun AboutScreen(
     }
 }
 
+/** Centered blue Dash wordmark (tints the shared white logo). */
+@Composable
+private fun DashLogoHeader() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 20.dp, bottom = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(R.drawable.ic_dash_logo_white),
+            contentDescription = null,
+            colorFilter = ColorFilter.tint(MyTheme.Colors.dashBlue),
+            modifier = Modifier
+                .height(28.dp)
+                .aspectRatio(128f / 36f)
+        )
+    }
+}
+
 /**
- * Heading + version description block matching the Figma TopIntro variant
- * (heading, main description in primary text, secondary description in
- * secondary text). The shared [org.dash.wallet.common.ui.components.TopIntro]
- * only supports a single description line, so this block is built inline.
+ * Figma "List1" — horizontal key/value row: label (Body M Medium, tertiary,
+ * single line) on the left and value (Body M Regular, primary) right-aligned.
+ * Optional [trailing] content (e.g. the testnet force-sync button).
  */
 @Composable
-private fun AboutHeader(uiState: AboutUIState) {
-    // Main description: app version + build number
-    val mainDescription = if (uiState.buildNumber.isNotEmpty()) {
-        "${uiState.versionName} ${uiState.buildNumber}"
-    } else {
-        uiState.versionName
+private fun AboutInfoRow(
+    label: String,
+    value: String,
+    onClick: (() -> Unit)? = null,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .heightIn(min = 46.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MyTheme.Body2Medium,
+            color = MyTheme.Colors.textTertiary,
+            maxLines = 1
+        )
+        Text(
+            text = value,
+            style = MyTheme.Body2Regular,
+            color = MyTheme.Colors.textPrimary,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1f)
+        )
+        trailing?.invoke()
     }
-    TopIntro(
-        heading = uiState.title,
-        text = mainDescription,
-        textTwo = uiState.dashjVersion,
-        textThree = uiState.platformVersion
-    )
-//    Column(
-//        modifier = Modifier
-//            .fillMaxWidth()
-//            .padding(top = 10.dp, bottom = 10.dp)
-//            .padding(horizontal = 20.dp),
-//        verticalArrangement = Arrangement.spacedBy(4.dp),
-//        horizontalAlignment = Alignment.Start
-//    ) {
-//        // Secondary description: dashj version
-//        Text(
-//            text = uiState.dashjVersion,
-//            style = MyTheme.Body2Regular,
-//            color = MyTheme.Colors.textSecondary,
-//            modifier = Modifier.fillMaxWidth()
-//        )
-//
-//        // Secondary description: platform version
-//        if (uiState.platformVersion.isNotEmpty()) {
-//            Text(
-//                text = uiState.platformVersion,
-//                style = MyTheme.Body2Regular,
-//                color = MyTheme.Colors.textSecondary,
-//                modifier = Modifier.fillMaxWidth()
-//            )
-//        }
-//    }
+}
+
+/**
+ * Figma "List11" / "List10" — stacked row: a top line over a bottom value line
+ * (gap 2dp). Defaults render the List11 variant (Body M Medium tertiary label
+ * over Body M Regular primary value); override [topStyle]/[topColor]/[bottomColor]
+ * for the List10 source-link variant (regular primary text over a blue link).
+ */
+@Composable
+private fun AboutStackedRow(
+    topText: String,
+    bottomText: String,
+    topStyle: TextStyle = MyTheme.Body2Medium,
+    topColor: Color = MyTheme.Colors.textTertiary,
+    bottomColor: Color = MyTheme.Colors.textPrimary,
+    bottomMaxLines: Int = Int.MAX_VALUE,
+    onClick: (() -> Unit)? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Text(
+            text = topText,
+            style = topStyle,
+            color = topColor,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            text = bottomText,
+            style = MyTheme.Body2Regular,
+            color = bottomColor,
+            maxLines = bottomMaxLines,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
+
+/** Card section heading (Body M Medium, tertiary), e.g. "Explore Dash". */
+@Composable
+private fun AboutSectionTitle(text: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 46.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Text(
+            text = text,
+            style = MyTheme.Body2Medium,
+            color = MyTheme.Colors.textTertiary
+        )
+    }
 }
 
 /**
  * Testnet-only force-sync affordance shown as the trailing content of the
- * "Last Explore device sync" row. Not part of the Figma design — it is a debug
- * tool retained from the original screen and gated to non-mainnet builds.
+ * "Last device sync" row. Not part of the Figma design — it is a debug tool
+ * retained from the original screen and gated to non-mainnet builds.
  */
 @Composable
 private fun ForceSyncButton(onClick: () -> Unit) {
@@ -250,13 +342,11 @@ private fun ForceSyncButton(onClick: () -> Unit) {
 private fun AboutScreenPreview() {
     AboutScreen(
         uiState = AboutUIState(
-            title = "About Dash",
-            versionName = "Dash Wallet 7.4.7",
-            buildNumber = "(10)",
-            dashjVersion = "dashj 23.11, a Dash protocol implementation",
-            platformVersion = "Platform 4.0.0",
-            deviceSyncStatus = "Apr 24, 4:59 PM",
-            serverUpdateStatus = "Apr 10, 6:30 PM",
+            versionName = "11.8.2 (10)",
+            dashjVersion = "22.0.3",
+            platformVersion = "4.0.0",
+            deviceSyncStatus = "01 Jan 2026 at 20:00",
+            serverUpdateStatus = "01 Jan 2026",
             firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
             fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
             showForceSyncButton = true,
@@ -270,11 +360,9 @@ private fun AboutScreenPreview() {
 private fun AboutScreenLoadingPreview() {
     AboutScreen(
         uiState = AboutUIState(
-            title = "About Dash",
-            versionName = "Dash Wallet 7.4.7",
-            buildNumber = "(10)",
-            dashjVersion = "dashj 0.17.11-SNAPSHOT, a Dash protocol implementation",
-            platformVersion = "Platform 1.5.1",
+            versionName = "7.4.7 (10)",
+            dashjVersion = "22.0.3",
+            platformVersion = "4.0.0",
             deviceSyncStatus = "Syncing…",
             serverUpdateStatus = null,
             firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",

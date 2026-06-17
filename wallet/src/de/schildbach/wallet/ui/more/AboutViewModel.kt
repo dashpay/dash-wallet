@@ -102,7 +102,7 @@ class AboutViewModel @Inject constructor(
     fun copyFCMToken() {
         val fcmToken = _firebaseCloudMessagingToken.value
 
-        if (!fcmToken.isNullOrEmpty()) {
+        if (fcmToken.isNotEmpty()) {
             systemActionsService.copyText(fcmToken, "FCM token")
         }
     }
@@ -110,7 +110,7 @@ class AboutViewModel @Inject constructor(
     fun copyFirebaseInstallationId() {
         val firebaseId = _firebaseInstallationId.value
 
-        if (!firebaseId.isNullOrEmpty()) {
+        if (firebaseId.isNotEmpty()) {
             systemActionsService.copyText(firebaseId, "Firebase Installation Id")
         }
     }
