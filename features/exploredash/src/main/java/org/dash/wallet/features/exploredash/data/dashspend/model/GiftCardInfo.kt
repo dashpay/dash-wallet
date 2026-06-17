@@ -37,6 +37,7 @@ data class GiftCardInfo(
             "paymentUrls=$paymentUrls, barcodeUrl=${if (barcodeUrl != null) "[REDACTED]" else null}, " +
             "cardNumber=${if (cardNumber != null) "[REDACTED]" else null}, " +
             "cardPin=${if (cardPin != null) "[REDACTED]" else null}, " +
-            "redeemUrl=${if (redeemUrl != null) "[REDACTED]" else null})"
+            "redeemUrl=${if (redeemUrl != null) "[REDACTED]" else null}, " +
+            "redeemUrlChallenge=${if (redeemUrlChallenge != null) "[REDACTED]" else null})"
     }
 }
