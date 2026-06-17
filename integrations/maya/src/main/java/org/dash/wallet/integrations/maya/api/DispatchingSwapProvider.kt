@@ -24,6 +24,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
@@ -74,8 +75,8 @@ class DispatchingSwapProvider @Inject constructor(
         persistScope.launch {
             val configured = runCatching { config.get(MayaConfig.SWAP_BACKEND) }
                 .getOrNull()
-                ?.let { runCatching { SwapBackend.valueOf(it) }.getOrNull() }
-                ?: SwapBackend.MAYA
+            ?.let { runCatching { SwapBackend.valueOf(it) }.getOrNull() }
+            ?: SwapBackend.MAYA
             activeBackend = effective(configured)
         }
     }
