@@ -430,7 +430,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val accountData = it.coinbaseAccount
             val currency = accountData.currency.lowercase()
             val iconUrl = if (accountData.currency.isNotEmpty()) {
-                GenericUtils.getCoinIcon(currency)
+                GenericUtils.getCoinIcon(currency, accountData.asset)
             } else {
                 null
             }

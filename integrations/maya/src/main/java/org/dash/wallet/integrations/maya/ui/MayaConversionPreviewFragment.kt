@@ -55,6 +55,7 @@ import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TransactionType
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 import java.math.BigDecimal
@@ -326,7 +327,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             amount.anchoredType == CurrencyInputType.Fiat
         )
         binding.contentOrderReview.inputAccountIcon
-            .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase())) {
+            .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase(), SwapKitConstants.DASH_ASSET)) {
                 crossfade(true)
                 scale(Scale.FILL)
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
@@ -334,7 +335,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             }
 
         binding.contentOrderReview.convertOutputIcon
-            .load(GenericUtils.getCoinIcon(this.outputCurrency.lowercase())) {
+            .load(GenericUtils.getCoinIcon(this.outputCurrency.lowercase(), this.outputAsset)) {
                 crossfade(true)
                 scale(Scale.FILL)
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)

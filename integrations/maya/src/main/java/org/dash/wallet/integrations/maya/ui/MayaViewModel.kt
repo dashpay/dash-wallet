@@ -229,7 +229,7 @@ class MayaViewModel @Inject constructor(
                             currencyCode = pool.currencyCode,
                             nameId = resIds?.first ?: 0,
                             codeId = resIds?.second ?: 0,
-                            iconUrls = GenericUtils.getCoinIconUrls(pool.currencyCode),
+                            iconUrls = GenericUtils.getCoinIconUrls(pool.currencyCode, pool.asset),
                             price = price,
                             routeLabelId = routeLabelId,
                             routeCalculated = routeCalculated,
