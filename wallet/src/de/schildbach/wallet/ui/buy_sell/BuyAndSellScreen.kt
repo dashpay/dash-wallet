@@ -208,18 +208,6 @@ private fun BuyAndSellScreenContent(
                     }
                 }
 
-                // Card 4: SwapKit — same destination as Maya, the backend is
-                // switched in the click handler.
-                Menu {
-                    serviceOf(ServiceType.SWAPKIT)?.let { service ->
-                        ServiceItem(
-                            service = service,
-                            balanceFormat = balanceFormat,
-                            onClick = if (service.isAvailable()) onSwapKitClick else null
-                        )
-                    }
-                }
-
                 if (!hasValidCredentials) {
                     Text(
                         text = stringResource(R.string.services_portal_subtitle_error),

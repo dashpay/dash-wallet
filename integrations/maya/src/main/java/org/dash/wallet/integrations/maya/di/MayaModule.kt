@@ -128,14 +128,3 @@ abstract class MayaModule {
     @Singleton
     abstract fun bindSwapProvider(impl: DispatchingSwapProvider): SwapProvider
 }
-
-    /**
-     * Single dispatch point for the cross-chain swap surface. The same singleton
-     * instance is also injectable as [DispatchingSwapProvider] for callers that
-     * need to switch the active backend at runtime (e.g.
-     * `BuyAndSellViewModel.setSwapBackend`).
-     */
-    @Binds
-    @Singleton
-    abstract fun bindSwapProvider(impl: DispatchingSwapProvider): SwapProvider
-}

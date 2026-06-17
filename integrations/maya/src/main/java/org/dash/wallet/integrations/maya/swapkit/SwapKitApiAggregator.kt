@@ -20,11 +20,9 @@ package org.dash.wallet.integrations.maya.swapkit
 import android.content.Intent
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
@@ -42,7 +40,6 @@ import org.dash.wallet.integrations.maya.api.RouteProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
-import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
@@ -50,7 +47,6 @@ import org.dash.wallet.integrations.maya.model.SwapFees
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
-import org.dash.wallet.integrations.maya.utils.MayaConstants
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitFee
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
@@ -263,7 +259,7 @@ class SwapKitApiAggregator @Inject constructor(
         if (dashUsd == null || dashUsd.signum() <= 0) {
             log.info("swapkit preferred-route: no DASH price yet; skipping resolution")
             return
-            }
+        }
         val sellAmount = PREFERRED_QUOTE_USD
             .divide(dashUsd, 8, RoundingMode.HALF_UP)
             .toPlainString()
@@ -596,7 +592,7 @@ class SwapKitApiAggregator @Inject constructor(
         val vault = swap.targetAddress ?: swap.inboundAddress
             ?: return ResponseResource.Failure(MayaException("swapkit returned no vault address"), false, 0, null)
         val memo = swap.memo
-            //?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
+        // ?: return ResponseResource.Failure(MayaException("swapkit returned no memo"), false, 0, null)
 
         val feeAmount = swapRequest.amount.copy().apply {
             // Sum the SwapKit fee breakdown, converting each leg to DASH via the

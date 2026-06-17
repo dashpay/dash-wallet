@@ -119,7 +119,7 @@ class MayaViewModel @Inject constructor(
 
     val networkError = SingleLiveEvent<Unit>()
 
-    //private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
+    // private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
     private var fiatExchangeRate: Fiat? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
@@ -302,16 +302,6 @@ class MayaViewModel @Inject constructor(
                 )
                 poolList.value = newPoolList
             }
-            .launchIn(viewModelScope)
-
-        // Re-fetch inbound addresses whenever the pool list transitions to non-empty.
-        // SwapKit's getInboundAddresses() can return an empty set on the very first
-        // call if the pool refresh is still in flight; this catches up once the
-        // pools land. Maya is unaffected (its addresses come from a separate
-        // endpoint and don't depend on pool state).
-        poolList
-            .filter { it.isNotEmpty() && _inboundAddresses.value.isEmpty() }
-            .onEach { refreshInboundAddresses() }
             .launchIn(viewModelScope)
 
         // Re-fetch inbound addresses whenever the pool list transitions to non-empty.
