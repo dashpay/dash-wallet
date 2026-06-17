@@ -23,7 +23,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,16 +38,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.ListItem1
+import org.dash.wallet.common.ui.components.ListItem10
+import org.dash.wallet.common.ui.components.ListItem11
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -102,38 +101,37 @@ fun AboutScreen(
 
             // Info card: versions + Firebase ids + source link
             Menu {
-                AboutInfoRow(
+                ListItem1(
                     label = stringResource(R.string.about_app_version_label),
                     value = uiState.versionName
                 )
-                AboutInfoRow(
+                ListItem1(
                     label = stringResource(R.string.about_dashj_label),
                     value = uiState.dashjVersion
                 )
-                AboutInfoRow(
+                ListItem1(
                     label = stringResource(R.string.about_platform_label),
                     value = uiState.platformVersion
                 )
-                AboutStackedRow(
-                    topText = stringResource(R.string.about_firebase_installation_id),
-                    bottomText = uiState.firebaseInstallationId,
+                ListItem11(
+                    label = stringResource(R.string.about_firebase_installation_id),
+                    primaryText = uiState.firebaseInstallationId,
                     onClick = onFirebaseInstallationIdClick
                 )
                 val fcmTokenText = uiState.fcmToken.ifBlank {
                     stringResource(R.string.about_value_not_available)
                 }
-                AboutStackedRow(
-                    topText = stringResource(R.string.about_fcm_token),
-                    bottomText = fcmTokenText,
-                    bottomMaxLines = 2,
+                ListItem11(
+                    label = stringResource(R.string.about_fcm_token),
+                    primaryText = fcmTokenText,
+                    primaryMaxLines = 2,
                     onClick = onFcmTokenClick
                 )
-                AboutStackedRow(
-                    topText = stringResource(R.string.about_fork_disclaimer),
-                    bottomText = stringResource(R.string.about_github_link),
-                    topStyle = MyTheme.Body2Regular,
-                    topColor = MyTheme.Colors.textPrimary,
-                    bottomColor = MyTheme.Colors.dashBlue,
+                // List10 source link — blue, clickable value (primaryColor).
+                ListItem10(
+                    secondaryText = stringResource(R.string.about_fork_disclaimer),
+                    primaryText = stringResource(R.string.about_github_link),
+                    primaryColor = MyTheme.Colors.dashBlue,
                     onClick = onGithubLinkClick
                 )
             }
@@ -148,12 +146,12 @@ fun AboutScreen(
                     } else {
                         null
                     }
-                AboutInfoRow(
+                ListItem1(
                     label = stringResource(R.string.about_last_device_sync),
                     value = uiState.deviceSyncStatus,
                     trailing = forceSyncTrailing
                 )
-                AboutInfoRow(
+                ListItem1(
                     label = stringResource(R.string.about_last_server_update),
                     value = uiState.serverUpdateStatus ?: ""
                 )
@@ -214,84 +212,6 @@ private fun DashLogoHeader() {
             modifier = Modifier
                 .height(28.dp)
                 .aspectRatio(128f / 36f)
-        )
-    }
-}
-
-/**
- * Figma "List1" — horizontal key/value row: label (Body M Medium, tertiary,
- * single line) on the left and value (Body M Regular, primary) right-aligned.
- * Optional [trailing] content (e.g. the testnet force-sync button).
- */
-@Composable
-private fun AboutInfoRow(
-    label: String,
-    value: String,
-    onClick: (() -> Unit)? = null,
-    trailing: (@Composable () -> Unit)? = null
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .heightIn(min = 46.dp)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MyTheme.Body2Medium,
-            color = MyTheme.Colors.textTertiary,
-            maxLines = 1
-        )
-        Text(
-            text = value,
-            style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textPrimary,
-            textAlign = TextAlign.End,
-            modifier = Modifier.weight(1f)
-        )
-        trailing?.invoke()
-    }
-}
-
-/**
- * Figma "List11" / "List10" — stacked row: a top line over a bottom value line
- * (gap 2dp). Defaults render the List11 variant (Body M Medium tertiary label
- * over Body M Regular primary value); override [topStyle]/[topColor]/[bottomColor]
- * for the List10 source-link variant (regular primary text over a blue link).
- */
-@Composable
-private fun AboutStackedRow(
-    topText: String,
-    bottomText: String,
-    topStyle: TextStyle = MyTheme.Body2Medium,
-    topColor: Color = MyTheme.Colors.textTertiary,
-    bottomColor: Color = MyTheme.Colors.textPrimary,
-    bottomMaxLines: Int = Int.MAX_VALUE,
-    onClick: (() -> Unit)? = null
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(
-            text = topText,
-            style = topStyle,
-            color = topColor,
-            modifier = Modifier.fillMaxWidth()
-        )
-        Text(
-            text = bottomText,
-            style = MyTheme.Body2Regular,
-            color = bottomColor,
-            maxLines = bottomMaxLines,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth()
         )
     }
 }

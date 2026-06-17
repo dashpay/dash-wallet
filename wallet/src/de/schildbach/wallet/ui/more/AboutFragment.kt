@@ -37,6 +37,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
+import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
@@ -71,9 +72,14 @@ class AboutFragment : Fragment() {
                     formatDeviceSyncStatus(isSyncing)
                 }
                 val serverUpdateStatus = remoteTimestamp?.let { formatServerUpdate(it) }
-
+                val network = when (Constants.NETWORK_PARAMETERS.id) {
+                    NetworkParameters.ID_MAINNET -> ""
+                    NetworkParameters.ID_TESTNET -> " - testnet"
+                    NetworkParameters.ID_REGTEST -> " - regtest"
+                    else -> " - ${Constants.NETWORK_PARAMETERS.devNetName}"
+                }
                 val appVersion = "${BuildConfig.VERSION_NAME} " +
-                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100)
+                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network
 
                 AboutScreen(
                     uiState = AboutUIState(
