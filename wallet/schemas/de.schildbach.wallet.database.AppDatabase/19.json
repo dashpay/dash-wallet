@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 19,
-    "identityHash": "37d0d678c5a25041983b612b1d9eba0f",
+    "identityHash": "384655556eee4a9efd557d8f84d88495",
     "entities": [
       {
         "tableName": "exchange_rates",
@@ -576,7 +576,7 @@
       },
       {
         "tableName": "transaction_metadata_cache",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`cacheTimestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` TEXT, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `order` TEXT, `giftCardChallenge` TEXT, `index` INTEGER, `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL)",
         "fields": [
           {
             "fieldPath": "cacheTimestamp",
@@ -675,6 +675,24 @@
             "notNull": false
           },
           {
+            "fieldPath": "order",
+            "columnName": "order",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "giftCardChallenge",
+            "columnName": "giftCardChallenge",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "index",
+            "columnName": "index",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
             "fieldPath": "id",
             "columnName": "id",
             "affinity": "INTEGER",
@@ -692,7 +710,7 @@
       },
       {
         "tableName": "transaction_metadata_platform",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, PRIMARY KEY(`id`, `txId`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, `txId` BLOB NOT NULL, `sentTimestamp` INTEGER, `taxCategory` TEXT, `currencyCode` TEXT, `rate` REAL, `memo` TEXT, `service` TEXT, `customIconUrl` TEXT, `giftCardNumber` TEXT, `giftCardPin` TEXT, `merchantName` TEXT, `originalPrice` REAL, `barcodeValue` TEXT, `barcodeFormat` TEXT, `merchantUrl` TEXT, `order` TEXT, `giftCardChallenge` TEXT, `index` INTEGER, PRIMARY KEY(`id`, `txId`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -794,6 +812,24 @@
             "fieldPath": "merchantUrl",
             "columnName": "merchantUrl",
             "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "order",
+            "columnName": "order",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "giftCardChallenge",
+            "columnName": "giftCardChallenge",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "index",
+            "columnName": "index",
+            "affinity": "INTEGER",
             "notNull": false
           }
         ],
@@ -1182,7 +1218,7 @@
     "views": [],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '37d0d678c5a25041983b612b1d9eba0f')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '384655556eee4a9efd557d8f84d88495')"
     ]
   }
 }
