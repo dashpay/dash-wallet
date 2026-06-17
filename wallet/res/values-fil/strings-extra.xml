@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Kumpirmahin</string>
     <string name="dialog_confirm_pay_to">Pinadala kay</string>
     <string name="dialog_confirm_secured_by">Siniguro ni</string>
+    <string name="dialog_confirm_connected_to_unsecured">Nakakonekta sa (hindi secured)</string>
     <string name="dialog_confirm_fee">Network fee</string>
     <string name="dialog_confirm_total">Kabuuan</string>
     <string name="dialog_confirm_accept_contact_request">Tanggapin ang kahilingan sa pakikipag-ugnayan</string>
@@ -68,6 +69,11 @@
 
     <string name="pay_title">Ipadala</string>
     <string name="history_title">Kasaysayan</string>
+    <string name="wallet_transactions_building_cache">Pagtukoy sa kasaysayan ng transaksyon...</string>
+    <string name="history_refresh_dialog_title">I-refresh ang Listahan ng Transaksyon</string>
+    <string name="history_refresh_dialog_message">Iki-clear nito ang cache ng display ng transaksyon at muling itatayo ito mula sa simula. Pansamantalang hindi magagamit ang listahan habang ito ay muling binubuo.</string>
+    <string name="history_refresh_dialog_confirm">I-refresh</string>
+    <string name="history_refresh_complete">Na-refresh ang listahan ng transaksyon</string>
     <string name="more_title">Marami</string>
     <string name="settings_title">Settings</string>
     <string name="security_title">Seguridad</string>
@@ -283,13 +289,15 @@
 
     <string name="tools_address_book">Adresbuk</string>
     <string name="tools_import_private_key">I-import ang private key</string>
+    <string name="import_private_key_description">Ililipat ng pagkilos na ito ang lahat ng coin mula sa Dash paper wallet papunta sa iyong DashPay app sa device na ito.</string>
     <string name="tools_network_monitor">Network monitor</string>
-    <string name="tools_show_xpub">Pinalawak na Public Key</string>
+    <string name="tools_show_xpub">Extended public key (BIP44)</string>
 
     <string name="about_help_us_improve">Tulungan kaming mapabuti ang iyong karanasan</string>
     <string name="about_review_and_rate">Suriin at i-rate ang app</string>
     <string name="about_contact_support">Contact Support</string>
     <string name="about_fork_disclaimer">Ito ay open source app forked mula sa Bitcoin Wallet</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">DashPay Wallet %s</string>
     <string name="about_last_explore_device_sync">Pag-sync ng device sa huling Explore</string>
@@ -433,6 +441,11 @@
     <string name="reclassify_transactions_linked_accounts_message">bilang default lahat ng mga transaksyon papunta o mula sa iyong mga naka-link na account (palitan, staking, atbp) ay mamarkahan bilang mga paglilipat.</string>
     <string name="reclassify_transactions_change_explanation">Pumili ng anumang transaksyon mula sa homepage at baguhin ang kategorya sa pahina ng mga detalye ng transaksyon.</string>
 
+    <string name="masternode_keys_title">Mga Masternode Key</string>
+    <string name="masternode_key_type_owner">Mga susi ng may-ari</string>
+    <string name="masternode_key_type_voting">Mga susi ng pagboto</string>
+    <string name="masternode_key_type_operator">Mga susi ng operator</string>
+    <string name="masternode_key_type_platform">Mga Susi ng Operator ng HPMN</string>
     <string name="masternode_key_type_total">%d mga susi</string>
     <string name="masternode_key_type_used">%d ginamit</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

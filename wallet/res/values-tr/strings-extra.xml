@@ -269,11 +269,9 @@
     <string name="menu_explore_title">Keşfet</string>
     <string name="menu_explore_subtitle">DASH\'i kabul eden satıcıları bulun</string>
 
-    <string name="tools_address_book">Adres Rehberi</string>
+    <string name="tools_address_book">Adres rehberi</string>
     <string name="tools_import_private_key">Özel anahtar içeri al</string>
     <string name="tools_network_monitor">Ağ monitörü</string>
-    <string name="tools_show_xpub">Genişletilmiş Genel Anahtar</string>
-
     <string name="about_help_us_improve">Deneyiminizi geliştirmemize yardımcı olun</string>
     <string name="about_review_and_rate">Uygulamamızı değerlendirip puanlayın</string>
     <string name="about_contact_support">Destekle İletişime Geçin</string>

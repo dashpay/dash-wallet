@@ -52,6 +52,8 @@
     <string name="button_continue">继续</string>
     <string name="get_quote">获得报价</string>
     <string name="button_close">关闭</string>
+    <string name="button_cancel">取消</string>
+    <string name="button_confirm">确认</string>
     <string name="button_retry">重试</string>
     <string name="button_send_report">发送报告</string>
     <string name="button_info">资讯</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash 钱包</string>
     <string name="from">来自</string>
     <string name="to">到</string>
+    <string name="from_title">来自</string>
+    <string name="to_title">到</string>
     <string name="select_currency">选择货币</string>
     <string name="send_coins_error_dusty_send">该金额太小, 无法支付</string>
     <string name="send_coins_error_insufficient_money">资金不足</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">区块链正在同步...</string>
     <string name="report_issue_dialog_mail_intent_chooser">发送报告使用…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">抱歉</string>
+    <string name="scan_camera_problem_dialog_message">相机出现了问题. 您可能需要重启设备.</string>
+    <string name="scan_camera_permission_dialog_title">相机授权</string>
+    <string name="scan_camera_permission_dialog_message">为了扫描QR码, 您需要授权相机功能.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">发送Dash</string>
+    <string name="show_clipboard">显示剪切板中的内容</string>
+    <string name="tap_to_paste">点击剪切板中的地址进行粘贴</string>
+    <string name="recipient_address">收款人地址</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">无法读取数据:\n%s</string>
+    <string name="input_parser_cannot_classify">如法识别输入:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">无效的Dash链接:\\n%s</string>
+    <string name="input_parser_invalid_address">出现了无效的Dash地址!\n(混淆了mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">无法核实付款请求:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">无效的付款请求:\n%s</string>
+    <string name="input_parser_invalid_transaction">无效的交易:\n%s</string>
+    <string name="input_connect">连接</string>
+
+    <!-- others -->
+    <string name="confirm_sec">确认 (%ss)</string>
+    <string name="cancel_transaction">取消交易?</string>
+    <string name="yes_cancel">是的, 取消</string>
+    <string name="no_keep_it">不, 保留</string>
+    <string name="insufficient_money_title">Dash不足</string>
+    <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
+    <string name="from_dash_wallet_on_this_device">从此设备的 Dash钱包</string>
+    <string name="preposition_at">在</string>
+</resources>

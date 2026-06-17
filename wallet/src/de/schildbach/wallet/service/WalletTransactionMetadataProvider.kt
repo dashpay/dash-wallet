@@ -345,11 +345,33 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun updateGiftCardMetadata(giftCard: GiftCard) {
-        if (giftCardDao.updateGiftCard(giftCard) == 0) {
-            giftCardDao.insertGiftCard(giftCard)
+        // Room's @Update rewrites every column, so a caller passing a partially-populated
+        // GiftCard would otherwise null out fields it didn't set (number/pin/note/...).
+        // Merge against the stored row so we only ever fill in values, never erase them.
+        val existing = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index }
+        val merged = if (existing == null) {
+            giftCard
+        } else {
+            existing.copy(
+                merchantName = giftCard.merchantName.ifEmpty { existing.merchantName },
+                price = giftCard.price.takeIf { it != 0.0 } ?: existing.price,
+                number = giftCard.number ?: existing.number,
+                pin = giftCard.pin ?: existing.pin,
+                barcodeValue = giftCard.barcodeValue ?: existing.barcodeValue,
+                barcodeFormat = giftCard.barcodeFormat ?: existing.barcodeFormat,
+                merchantUrl = giftCard.merchantUrl ?: existing.merchantUrl,
+                note = giftCard.note ?: existing.note
+            )
         }
+
+        if (existing == null) {
+            giftCardDao.insertGiftCard(merged)
+        } else {
+            giftCardDao.updateGiftCard(merged)
+        }
+
         // for now, only save the first card
-        if (giftCard.index == 0) {
+        if (merged.index == 0) {
             transactionMetadataChangeCacheDao.insertGiftCardData(
                 giftCard.txId,
                 giftCard.number,
@@ -563,14 +585,12 @@ class WalletTransactionMetadataProvider @Inject constructor(
         taxCategory: TaxCategory,
         service: String
     ) {
-        // check to see if this address has been used before
-        // if it has been used before, that means the same address was used more than once
-        // possibly for two different services or actions.
-        // This may not matter as the default tax category is probably the same for each.
-        if (addressMetadataDao.exists(address, isInput)) {
+        // The same address may be used more than once (possibly for two different services or
+        // actions); this may not matter as the default tax category is probably the same for each.
+        // markAddress uses INSERT OR IGNORE, so a duplicate (address, isInput) is dropped atomically
+        // rather than crashing on a UNIQUE constraint failure when callers race on the same key.
+        if (addressMetadataDao.markAddress(address, isInput, taxCategory, service) == -1L) {
             log.info("address $address/$isInput was already added")
-        } else {
-            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
         }
     }
 
@@ -580,12 +600,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
         taxCategory: TaxCategory,
         service: String
     ): Boolean {
-        return if (!addressMetadataDao.exists(address, isInput)) {
-            addressMetadataDao.markAddress(address, isInput, taxCategory, service)
-            true
-        } else {
-            false
-        }
+        // -1L means the row already existed and the insert was ignored (see markAddress).
+        return addressMetadataDao.markAddress(address, isInput, taxCategory, service) != -1L
     }
 
     override fun markAddressAsync(

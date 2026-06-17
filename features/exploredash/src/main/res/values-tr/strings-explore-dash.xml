@@ -174,7 +174,6 @@
     <string name="purchase_gift_card_from">Gönderen</string>
     <string name="purchase_gift_card_to">Alıcı</string>
     <string name="purchase_confirm_transaction">Onayla</string>
-    <string name="purchase_gift_card_total_label">Hediye kartı toplamı</string>
     <string name="purchase_gift_card_discount">İndirim</string>
     <string name="purchase_gift_card_you_pay">Ödeyeceğiniz</string>
     <string name="purchase_gift_card_confirm">Onayla</string>
@@ -196,6 +195,7 @@
     <string name="send_coins_error_msg">Dash gönderim problemi!</string>
     <string name="gift_card_barcode_failed">Barkod yüklenemedi</string>
     <string name="gift_card_tx_title">Hediye Kartı · %s</string>
+    <string name="purchase_gift_card_reset">Yeniden Başlat</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">dogrulama kodunu giriniz</string>
     <string name="verification_check_email">E-postanızı kontrol edin ve doğrulama kodunu girin</string>

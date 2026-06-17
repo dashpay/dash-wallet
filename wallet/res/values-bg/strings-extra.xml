@@ -213,9 +213,7 @@
     <string name="menu_contact_support_title">Връзка с поддръжката</string>
     <string name="tools_address_book">Адресна книга</string>
     <string name="tools_import_private_key">Импортиране на частен ключ.</string>
-    <string name="tools_network_monitor">Наблюдение на мрежата</string>
-    <string name="tools_show_xpub">Разширен публичен ключ</string>
-
+    <string name="tools_network_monitor">Мрежово наблюдение</string>
     <string name="about_help_us_improve">Помогнете ни да подобрим вашето преживяване</string>
     <string name="about_contact_support">Връзка с поддръжката</string>
     <string name="about_fork_disclaimer">Това е приложение с отворен код, разклонено от Bitcoin Wallet</string>

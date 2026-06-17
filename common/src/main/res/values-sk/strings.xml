@@ -52,6 +52,8 @@
     <string name="button_continue">Pokračovať</string>
     <string name="get_quote">Získajte ponuku</string>
     <string name="button_close">Zatvoriť</string>
+    <string name="button_cancel">Zrušiť</string>
+    <string name="button_confirm">Potvrdiť</string>
     <string name="button_retry">Znovu</string>
     <string name="button_send_report">Poslať správu</string>
     <string name="button_info">Informácie</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Peňaženka Dash</string>
     <string name="from">od</string>
     <string name="to">pre</string>
+    <string name="from_title">Od</string>
+    <string name="to_title">Komu</string>
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">Reťazec sa synchronizuje...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Odoslať správu použitím…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Ospravedlňujeme sa</string>
+    <string name="scan_camera_problem_dialog_message">Problém s fotoaparátom. Pravdepodobne je potrebný reštart zariadenia.</string>
+    <string name="scan_camera_permission_dialog_title">Povolenia fotoaparátu</string>
+    <string name="scan_camera_permission_dialog_message">Pre skenovanie QR kódu musíte povoliť používanie fotoaparátu.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Poslať Dash</string>
+    <string name="show_clipboard">Zobraziť obsah v schránke</string>
+    <string name="tap_to_paste">Klepnutím na adresu zo schránky ju použijete</string>
+    <string name="recipient_address">Adresa príjemcu</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Nepodarilo sa prečítať:\n%s</string>
+    <string name="input_parser_cannot_classify">Nepodarilo sa rozpoznať vstup:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Neplatná Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Neplatná Dash adresa!\n(Zamenené Mainnet/Testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Požiadavka na platbu sa nedá overiť:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Neplatná žiadosť o platbu:\n%s</string>
+    <string name="input_parser_invalid_transaction">Neplatná transakcia:\n%s</string>
+    <string name="input_connect">Pripojiť</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Potvrďte (%ss)</string>
+    <string name="cancel_transaction">Zrušiť transakciu?</string>
+    <string name="yes_cancel">Áno, zrušiť</string>
+    <string name="no_keep_it">Nie, zachovať</string>
+    <string name="insufficient_money_title">Nedostatok mincí</string>
+    <string name="send_coins_error_msg">Problém pri odosielaní!</string>
+    <string name="from_dash_wallet_on_this_device">Z peňaženky Dash na tomto zariadení</string>
+    <string name="preposition_at">v</string>
+</resources>

@@ -69,6 +69,11 @@
 
     <string name="pay_title">Invia</string>
     <string name="history_title">Storia</string>
+    <string name="wallet_transactions_building_cache">Determinazione della cronologia delle transazioni…</string>
+    <string name="history_refresh_dialog_title">Aggiorna l\'Elenco delle Transazioni</string>
+    <string name="history_refresh_dialog_message">Questa operazione cancellerà la cache di visualizzazione delle transazioni e la ricostruirà da zero. L\'elenco non sarà temporaneamente disponibile durante la ricostruzione.</string>
+    <string name="history_refresh_dialog_confirm">Aggiorna</string>
+    <string name="history_refresh_complete">Elenco delle transazioni aggiornato</string>
     <string name="more_title">Di Più</string>
     <string name="settings_title">Impostazioni</string>
     <string name="security_title">Sicurezza</string>
@@ -285,11 +290,11 @@
     <string name="menu_explore_title">Esplora</string>
     <string name="menu_explore_subtitle">Trova commercianti che accettano DASH</string>
 
-    <string name="tools_address_book">Rubrica degli indirizzi</string>
+    <string name="tools_address_book">Rubrica degli indirizzi </string>
     <string name="tools_import_private_key">Importa chiave privata</string>
     <string name="import_private_key_description">Questa operazione trasferirà tutte le monete dal portafoglio cartaceo Dash all\'app DashPay su questo dispositivo.</string>
     <string name="tools_network_monitor">Controllo della rete</string>
-    <string name="tools_show_xpub">Chiave pubblica estesa</string>
+    <string name="tools_show_xpub">Chiavi pubbliche estese (BIP44)</string>
 
     <string name="about_help_us_improve">Aiutaci a migliorare raccontaci tua esperienza</string>
     <string name="about_review_and_rate">Recensisci e valuta l\'app</string>

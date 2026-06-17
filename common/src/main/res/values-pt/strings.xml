@@ -52,6 +52,8 @@
     <string name="button_continue">Continuar</string>
     <string name="get_quote">Obter cotação</string>
     <string name="button_close">Fechar</string>
+    <string name="button_cancel">Cancelar</string>
+    <string name="button_confirm">Confirmar</string>
     <string name="button_retry">Tentar novamente</string>
     <string name="button_send_report">Enviar Relatório</string>
     <string name="button_info">informação</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Carteira Dash</string>
     <string name="from">de</string>
     <string name="to">para</string>
+    <string name="from_title">De</string>
+    <string name="to_title">Para</string>
     <string name="select_currency">Selecione a moeda</string>
     <string name="send_coins_error_dusty_send">O valor é muito baixo para ser enviado</string>
     <string name="send_coins_error_insufficient_money">Fundos insuficientes</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">A cadeia está sendo sincronizada…</string>
     <string name="report_issue_dialog_mail_intent_chooser">Enviar relatório usando…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Desculpe</string>
+    <string name="scan_camera_problem_dialog_message">Ocorreu um problema com a câmera. Você provavelmente precisará reiniciar o dispositivo.</string>
+    <string name="scan_camera_permission_dialog_title">Permitir camera</string>
+    <string name="scan_camera_permission_dialog_message">Para escanear códigos QR, é necessário conceder permissão para usar a câmera.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Enviar Dash</string>
+    <string name="show_clipboard">Exibir conteúdo na área de transferência </string>
+    <string name="tap_to_paste">Toque no endereço da área de transferência para colá-lo</string>
+    <string name="recipient_address">Endereço do Destinatário</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Não é possível ler dados:\n%s</string>
+    <string name="input_parser_cannot_classify">Impossível reconhecer entrada:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Endereços Dash inválidos:\n%s</string>
+    <string name="input_parser_invalid_address">Endereço inválido de Dash!\n(Misturando Mainnet/Testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Não foi possível verificar cobrança:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Cobrança inválida:\n%s</string>
+    <string name="input_parser_invalid_transaction">Transação inválida:\n%s</string>
+    <string name="input_connect">Conectar</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Confirmar (%ss)</string>
+    <string name="cancel_transaction">Cancelar transação?</string>
+    <string name="yes_cancel">Sim, cancelar</string>
+    <string name="no_keep_it">Não, manter</string>
+    <string name="insufficient_money_title">Moedas insuficientes</string>
+    <string name="send_coins_error_msg">Erro ao enviar Dash!</string>
+    <string name="from_dash_wallet_on_this_device">Da sua Carteira Dash neste dispositivo</string>
+    <string name="preposition_at">em</string>
+</resources>

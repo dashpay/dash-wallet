@@ -75,6 +75,13 @@ class ExploreFragment : Fragment(R.layout.fragment_explore) {
             safeNavigate(ExploreFragmentDirections.exploreToSearch(ExploreTopic.ATMs))
         }
 
+        // CrowdNode functionality is limited: hide the staking entry point
+        // unless the active wallet is associated with a CrowdNode account
+        binding.stakingBtn.isVisible = false
+        viewModel.hasCrowdNodeAccount.observe(viewLifecycleOwner) { hasAccount ->
+            binding.stakingBtn.isVisible = hasAccount
+        }
+
         binding.stakingBtn.setOnClickListener {
             viewModel.logEvent(AnalyticsConstants.CrowdNode.STAKING_ENTRY)
             handleStakingNavigation()

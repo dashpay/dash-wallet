@@ -52,6 +52,8 @@
     <string name="button_continue">Συνέχεια</string>
     <string name="get_quote">Αποκτήστε προσφορά</string>
     <string name="button_close">κλείσιμο</string>
+    <string name="button_cancel">Ακύρωση</string>
+    <string name="button_confirm">Επιβεβαίωση</string>
     <string name="button_retry">Επανάληψη</string>
     <string name="button_send_report">Αποστολή αναφοράς</string>
     <string name="button_info">πληροφορίες</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash Πορτοφόλι</string>
     <string name="from">από</string>
     <string name="to">στο</string>
+    <string name="from_title">Από</string>
+    <string name="to_title">Σε</string>
     <string name="select_currency">Επιλέξτε Νόμισμα</string>
     <string name="send_coins_error_dusty_send">Το ποσό είναι πολύ μικρό για να σταλθεί</string>
     <string name="send_coins_error_insufficient_money">Ανεπαρκή χρήματα</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">Το blockchain συγχρονίζεται...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Αποστολή αναφοράς χρησιμοποιώντας…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Λυπούμαστε</string>
+    <string name="scan_camera_problem_dialog_message">Η κάμερα αντιμετωπίζει κάποιο πρόβλημα. Πιθανόν να χρειάζεται επανεκκίνηση.</string>
+    <string name="scan_camera_permission_dialog_title">Άδεια κάμερας</string>
+    <string name="scan_camera_permission_dialog_message">Για να μπορέσετε να σκανάρετε QR code, πρέπει να δώσετε δικαίωμα ώστε να χρησιμοποιηθεί η κάμερα σας.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Αποστολή Dash</string>
+    <string name="show_clipboard">Εμφάνιση περιεχομένου στο πρόχειρο</string>
+    <string name="tap_to_paste">Πατήστε τη διεύθυνση από το πρόχειρο για να την επικολλήσετε</string>
+    <string name="recipient_address">Διεύθυνση παραλήπτη</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
+    <string name="input_parser_cannot_classify">Δεν είναι δυνατή η ανάγνωση δεδομένων:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Μη έγκυρο Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Μη έγκυρη διεύθυνση Dash!n(Mixing up mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Δεν είναι δυνατή η επαλήθευση της αίτησης πληρωμής:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Μη έγκυρο αίτημα πληρωμής:\n%s</string>
+    <string name="input_parser_invalid_transaction">Μη έγκυρη συναλλαγή:\n%s</string>
+    <string name="input_connect">Σύνδεση</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Επιβεβαίωση(%ss)</string>
+    <string name="cancel_transaction">Ακύρωση συναλλαγής;</string>
+    <string name="yes_cancel">Ναι, ακύρωση</string>
+    <string name="no_keep_it">Όχι, κρατήστε το</string>
+    <string name="insufficient_money_title">Ανεπαρκή διαθέσιμα νομίσματα</string>
+    <string name="send_coins_error_msg">Πρόβλημα στην αποστολή νομισμάτων!</string>
+    <string name="from_dash_wallet_on_this_device">Στο πορτοφόλι Dash σε αυτή τη συσκευή</string>
+    <string name="preposition_at">σε</string>
+</resources>

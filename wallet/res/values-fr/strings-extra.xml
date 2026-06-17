@@ -69,6 +69,11 @@
 
     <string name="pay_title">Envoyer</string>
     <string name="history_title">Historique</string>
+    <string name="wallet_transactions_building_cache">Détermination de l\'historique des transactions…</string>
+    <string name="history_refresh_dialog_title">Actualiser la liste des transactions</string>
+    <string name="history_refresh_dialog_message">Cette opération videra puis reconstruira le cache d\'affichage des transactions. La liste sera temporairement indisponible pendant la reconstruction.</string>
+    <string name="history_refresh_dialog_confirm">Actualiser</string>
+    <string name="history_refresh_complete">Liste des transactions remise à jour</string>
     <string name="more_title">Plus</string>
     <string name="settings_title">Réglages</string>
     <string name="security_title">Sécurité</string>
@@ -289,7 +294,7 @@
     <string name="tools_import_private_key">Importer une clé privée</string>
     <string name="import_private_key_description">Cette action déplacera tous les fonds du portefeuille papier Dash vers votre application DashPay sur cet appareil.</string>
     <string name="tools_network_monitor">Surveillance du réseau</string>
-    <string name="tools_show_xpub">Clé privée étendue</string>
+    <string name="tools_show_xpub">Clé publique étendue (BIP44)</string>
 
     <string name="about_help_us_improve">Aidez-nous à améliorer votre expérience</string>
     <string name="about_review_and_rate">Commentez et notez l\'application</string>

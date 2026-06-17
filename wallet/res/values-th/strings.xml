@@ -223,17 +223,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">เข้ารหัส...</string>
     <string name="encrypt_keys_dialog_state_decrypting">ถอดรหัส...</string>
     <string name="encrypt_keys_dialog_state_done">เสร็จแล้ว</string>
-    <string name="scan_camera_problem_dialog_title">เสียใจ</string>
-    <string name="scan_camera_problem_dialog_message">กล้องถ่ายรูปมีปัญหา คุณอาจจะต้องรีสตาร์ทอุปกรณ์อีกครั้ง</string>
-    <string name="scan_camera_permission_dialog_title">อนุญาตเข้าถึงกล้องถ่ายรูป</string>
-    <string name="scan_camera_permission_dialog_message">ในการสแกนโค้ด  QR  คุณต้องให้สิทธิ์ในการใช้กล้องถ่ายรูป</string>
-    <string name="input_parser_io_error">ไม่สามารถอ่านข้อมูลได้ :\n %s</string>
-    <string name="input_parser_cannot_classify">ไม่สามารถจำข้อมูล :\n %s</string>
-    <string name="input_parser_invalid_bitcoin_uri">URl Dash ไม่ถูกต้อง:\n %s</string>
-    <string name="input_parser_invalid_address">ที่อยู่ Dash ไม่ถูกต้อง !\n (สับสนระหว่าง mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">ไม่สามารถยืนยันคำขอชำระเงินได้ :\n %s</string>
-    <string name="input_parser_invalid_paymentrequest">คำขอการชำระเงินไม่ถูกต้อง :\n%s</string>
-    <string name="input_parser_invalid_transaction">ธุรกรรมไม่ถูกต้อง :\n %s</string>
     <string name="preferences_activity_title">ตั้งค่า</string>
     <string name="preferences_category_diagnostics">การวินิจฉัย</string>
     <string name="preferences_category_labs">ห้องปฏิบัติการ</string>
@@ -274,7 +263,6 @@
     <string name="preferences_extended_public_key_title">แสดง xpub</string>
     <string name="preferences_extended_public_key_summary">ดูส่วนขยาย public key  wallet ของคุณ  มันสามารถนำเข้าไปยังแอพพลิเคชั่นและบริการอื่น ๆ ได้   โปรดระวัง: การทำเช่นนี้จะเป็นการเปิดเผยข้อมูลทางการเงินส่วนบุคคลของคุณไปยังแอพพลิเคชั่นนั้น</string>
     <string name="bitmap_fragment_share">แบ่งปัน...</string>
-    <string name="extended_public_key_fragment_title">ขยาย Public key</string>
     <string name="extended_public_key_fragment_share">แบ่งปัน xpub</string>
     <string name="report_issue_dialog_title_issue">รายงานปัญหา</string>
     <string name="report_issue_dialog_title_crash">ตรวจสอบความผิดพลาดก่อนหน้านี้</string>
@@ -288,14 +276,10 @@
     <string name="report_issue_dialog_collect_application_log">ผนวกแอพพลิเคชั่นล็อค</string>
     <string name="report_issue_dialog_collect_wallet_dump">ผนวกการถ่ายโอนข้อมูล wallet </string>
     <string name="report_issue_dialog_mail_intent_failed">การส่งรายงานล้มเหลว</string>
-    <string name="report_transaction_history_export">ส่งออก</string>
-    <string name="report_transaction_history_title">ส่งออก CSV </string>
-    <string name="report_transaction_history_not_synced_title">ส่งออก CSV </string>
     <string name="report_transaction_history_not_synced_message">โปรดรอจนกว่ากระเป๋าเงินจะถูกซิงค์ก่อนที่จะส่งออกประวัติการทำธุรกรรมของคุณ</string>
     <string name="report_transaction_history_message">ประวัติการทำธุรกรรมเต็มรูปแบบจะถูกส่งออก.\n\n การชำระเงินจะได้รับการพิจารณาว่าเป็นค่าใช้จ่ายและการทำธุรกรรมที่เข้ามาทั้งหมดจะเป็นรายได้ เจ้าของกระเป๋าเงินนี้มีหน้าที่ในการปรับค่าใช้จ่ายพื้นฐานใด ๆ ในระบบการรายงานภาษีที่เลือก</string>
     <string name="report_transaction_history_mail_intent_chooser">ส่งประวัติการทำธุรกรรมโดยใช้ ...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">การส่งประวัติธุรกรรมล้มเหลว</string>
-
     <string name="about_title">เกี่ยวกับ</string>
     <string name="about_version_title">เวอร์ชั่น</string>
     <string name="about_copyright_title">ลิขสิทธิ์</string>
@@ -376,10 +360,7 @@
     <string name="reason">เหตุผล</string>
     <string name="link_account">เชื่อมโยงบัญชีของคุณ</string>
     <string name="buy_no_account_needed">ซื้อ Dash · ไม่ต้องใช้บัญชี</string>
-
     <string name="recipient_address">ที่อยู่ผู้รับ</string>
-    <string name="show_clipboard">แสดงเนื้อหาในคลิปบอร์ด</string>
-    <string name="tap_to_paste">แตะที่อยู่จากคลิปบอร์ดเพื่อวาง</string>
     <string name="not_dash_address">ไม่ใช่ที่อยู่ Dash หรือคำขอ URL ที่ถูกต้อง</string>
     <string name="send_to_address">ส่งไปยังที่อยู่</string>
 

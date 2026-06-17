@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">Maya</string>
+    <string name="maya_portal_convert_title">Dash umtauschen</string>
+    <string name="maya_portal_convert_to_title">Dash umtauschen in</string>
+    <string name="maya_portal_convert_subtitle">Von der Dash-Wallet in jede andere Kryptowährung</string>
+    <string name="maya_portal_subtitle">Tausche Dash aus der Dash-Wallet in eine beliebige Kryptowährung, die von Maya unterstützt wird. Du kannst diese dann in eine Wallet deiner Wahl senden.</string>
+    <string name="maya_address_input_hint">%s Adresse</string>
+    <string name="maya_address_input_title">DASH umtauschen in %s</string>
+    <string name="maya_crypto_convert_title">Dash umtauschen</string>
+    <string name="maya_crypto_convert_order_preview_title">Vorschau bestellen</string>
+
+    <string name="cryptocurrency_any_network">% Netzwerk</string>
+    <string name="cryptocurrency_bitcoin_network">Bitcoin</string>
+    <string name="cryptocurrency_dash_network">Dash</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">Kujira</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">Ethereum (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">Chainlink (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">Wrapped Bitcoin (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">Mocaverse (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">Tether (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <string name="maya_error">Maya Error</string>
+    <string name="maya_error_not_available">Der Maya-Dienst ist nicht verfügbar. Bitte versuche es später erneut.</string>
+    <string name="maya_error_report_issue">Bitte melde das Problem an das Dash-Wallet-Support-Team über \"Support kontaktieren\" im Hauptmenü.</string>
+    <string name="maya_error_address_not_valid">Adresse ist nicht gültig</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">Der Mindestbetrag für eine Transaktion beträgt</string>
+    <string name="entered_amount_is_too_high">Der maximale Transaktionsbetrag beträgt</string>
+    <string name="we_didnt_find_any_assets">Wir konnten kein Guthaben auf deinem Coinbase Konto entdecken.</string>
+    <string name="something_wrong_title">Etwas ist schiefgelaufen!</string>
+    <string name="dont_have_any_dash">Du besitzt keine Dash in deiner Dash Wallet.</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">Du wirst ~ %s Dash auf der Dash Wallet auf diesem Gerät erhalten. Bitte beachte, dass es 2-3 Minuten dauern kann, bis der Transfer abgeschlossen ist.</string>
+    <string name="you_dont_have_enough_balance">Du hast nicht genug Guthaben</string>
+    <string name="you_dont_own_any_crypto">Du besitzt keine Kryptowährung. Leg los und kaufe welche.</string>
+    <string name="buy_crypto_on_coinbase">Kauf Kryptowährung auf Coinbase</string>
+    <string name="purchase_failed">Kauf fehlgeschlagen</string>
+    <string name="transfer_failed">Übertragung fehlgeschlagen</string>
+    <string name="transfer_failed_msg">Die Dash wurden erfolgreich in dein Coinbase Konto eingezahlt. Aber es entstand ein Problem diese auf die Dash Wallet auf diesem Gerät zu transferieren.</string>
+    <string name="send_to_wallet_error">Dieser Betrag kann nicht gesendet werden, da er das Anwendungslimit überschreitet</string>
+    <string name="purchase_successful">Kauf erfolgreich</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">Es kann 2-3 Minuten dauern, bis die Dash auf die Dash Wallet dieses Gerätes transferiert werden.</string>
+    <string name="maya_it_could_take_up_to_5_minutes">Es kann bis zu 2 Minuten dauern, um %s von deiner Dash-Wallet in %s zu tauschen und diese an die angegebene Adresse zu senden.</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">Es kann bis zu 5 Minuten dauern, damit die Dash von der Dash Wallet auf diesem Gerät zu %s auf dein Coinbase Konto übertragen sind.</string>
+    <string name="conversion_failed">Konvertierung fehlgeschlagen</string>
+    <string name="transfer_dash_successful">Transfer erfolgreich</string>
+    <string name="maya_it_could_take_up_to_10_minutes">Es kann bis zu 10 Minuten dauern bis Dash von Coinbase auf die Dash Wallet  dieses Gerätes übertragen werden.</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">Es kann bis zu 10 Minuten dauern bis Dash von der Dash Wallet dieses Gerätes  auf Coinbase übertragen werden.</string>
+    <string name="conversion_successful">Konvertierung erfolgreich</string>
+    <string name="transfer_dash_failed_msg">Es entstand ein Problem bei dem Überweisen auf die Dash Wallet dieses Gerätes.</string>
+    <string name="auth_limit_description">Du hast den Berechtigungsrahmen von Coinbase überschritten.</string>
+    <string name="you_will_receive">Empfangsbetrag</string>
+    <string name="contact_maya_support">Maya-Support kontaktieren</string>
+    <string name="maya_fees_in_crypto_purchase">Maya-Gebühren bei der Umwandlung von Kryptowährungen</string>
+    <string name="maya_fee_info_msg_content">Mit Maya-Transaktionen sind verschiedene Inbound-, Outbound- und Liquiditätsgebühren verbunden. Der von dir eingegebene Betrag ist der Betrag, der bei der Empfangsadresse eingeht.</string>
+    <string name="learn_more">Mehr erfahren</string>
+    <string name="debit_money">Geld von deinem Konto abbuchen</string>
+    <string name="change_limit">Ändere dieses Limit</string>
+    <string name="set_auth_limit">Stelle sicher, dass du den richtigen Berechtigungsrahmen für Coinbase auswählst.</string>
+    <string name="change_withdrawal_limit">Du kannst dies jederzeit ändern indem du dich in der Dash Wallet bei Coinbase ab- und wieder anmeldest.</string>
+    <string name="got_it">Verstanden</string>
+    <string name="conversion_preview">Konvertierungsvorschau</string>
+    <string name="you_send">du sendest</string>
+    <string name="from_your_coinbase_account">Von deinem Coinbase Konto</string>
+    <string name="you_receive">du erhältst</string>
+    <string name="to_dash_wallet_on_this_device">von der Dash-Wallet auf diesem Gerät</string>
+    <string name="purchase">Kaufen</string>
+    <string name="maya_fee">Maya-Gebühr</string>
+    <string name="total">Gesamt</string>
+    <string name="to_external_address">zu %s</string>
+
+    <string name="maya_error_information">%s%nKryptowährung: %s</string>
+    <string name="maya_error_invalid_destination_address">Ungültige Zieladresse</string>
+    <string name="maya_error_below_recommended_minimum">Eingegebene Betrag ist niedriger als das empfohlene Minimum</string>
+    <string name="maya_error_trading_halted">Trading für %swurde gestoppt.</string>
+    <string name="maya_halted_label">Ausgesetzt</string>
+    <string name="maya_halted_coins_toast">Das Trading einiger Coins ist derzeit ausgesetzt.</string>
+
+
+</resources>

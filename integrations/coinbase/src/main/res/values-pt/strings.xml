@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Entre Carteira Dash e sua conta Coinbase</string>
     <string name="coinbase_dash_wallet_error_title">Nós não encontramos uma Carteira Dash na sua conta Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Por favor, crie uma Carteira Dash na Coinbase para continuar.</string>
+    <string name="coinbase_usd_wallet_error_message">Sua conta na Coinbase não suporta dólares americanos - USD.</string>
     <string name="create_dash_account">Criar conta Dash</string>
     <string name="close">Fechar</string>
     <string name="retry">Tentar novamente</string>

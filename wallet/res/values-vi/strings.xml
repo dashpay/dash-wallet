@@ -220,17 +220,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Đang mã hoá...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Đang giải mã...</string>
     <string name="encrypt_keys_dialog_state_done">Xong</string>
-    <string name="scan_camera_problem_dialog_title">Rất tiếc</string>
-    <string name="scan_camera_problem_dialog_message">Phần camera gặp vấn đề. Bạn nên khởi động lại thiết bị này.</string>
-    <string name="scan_camera_permission_dialog_title">Quyền truy cập máy ảnh</string>
-    <string name="scan_camera_permission_dialog_message">Để có thể quét mã QR, bạn cần cấp quyền sử dụng máy ảnh cho ứng dụng.</string>
-    <string name="input_parser_io_error">Không thể đọc dữ liệu: \\n%s</string>
-    <string name="input_parser_cannot_classify">Không thể nhận ra đầu vào:\\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Dash URI không hợp lệ:\n%s</string>
-    <string name="input_parser_invalid_address">Đã nhận được địa chỉ Dash không hợp lệ!\n(Nhầm lẫn giữa Mainnet/Testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Không thể kiểm tra yêu cầu thanh toán:\\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Yêu cầu thanh toán không hợp lệ:\\n%s</string>
-    <string name="input_parser_invalid_transaction">Giao dịch không hợp lệ:\\n%s</string>
     <string name="preferences_activity_title">Thiết lập</string>
     <string name="preferences_category_diagnostics">Chẩn đoán</string>
     <string name="preferences_category_labs">Thí nghiệm</string>
@@ -268,7 +257,6 @@
     <string name="preferences_extended_public_key_title">Hiển thị xpub</string>
     <string name="preferences_extended_public_key_summary">Xem khoá công khai mở rộng trong ví của bạn, nó có thể được nhập vào  qua các ứng dụng và dịch vụ khác. Cẩn thận: thực hiện điều này có thể làm lộ thông tin riêng tư về số tiền của bạn cho các ứng dụng đó.</string>
     <string name="bitmap_fragment_share">Chia sẻ...</string>
-    <string name="extended_public_key_fragment_title">Mã công khai mở rộng</string>
     <string name="extended_public_key_fragment_share">Chia sẻ xpub...</string>
     <string name="report_issue_dialog_title_issue">Báo cáo về lỗi</string>
     <string name="report_issue_dialog_title_crash">Nhận dạng được lần tự động tắt trước đó</string>

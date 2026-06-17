@@ -269,8 +269,6 @@
     <string name="tools_address_book">สมุดที่อยู่</string>
     <string name="tools_import_private_key">นำเข้าคีย์ส่วนตัว</string>
     <string name="tools_network_monitor">จอภาพเครือข่าย</string>
-    <string name="tools_show_xpub">ขยาย Public key</string>
-
     <string name="about_help_us_improve">ช่วยเราเพื่อพัฒนาประการณ์ของคุณ</string>
     <string name="about_review_and_rate">ตรวจสอบและให้คะแนนแอพ</string>
     <string name="about_contact_support">ติดต่อฝ่ายสนับสนุน</string>

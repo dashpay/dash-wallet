@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Επιβεβαίωση</string>
     <string name="dialog_confirm_pay_to">Αποστολή στο</string>
     <string name="dialog_confirm_secured_by">Ασφαλισμένo από</string>
+    <string name="dialog_confirm_connected_to_unsecured">Συνδεδεμένος με (χωρίς κρυπτογράφηση)</string>
     <string name="dialog_confirm_fee">Τέλος δικτύου</string>
     <string name="dialog_confirm_total">Σύνολο</string>
     <string name="dialog_confirm_accept_contact_request">Αποδοχή αιτήματος επαφής</string>
@@ -68,6 +69,11 @@
 
     <string name="pay_title">Αποστολή</string>
     <string name="history_title">Ιστορικό</string>
+    <string name="wallet_transactions_building_cache">Προσδιορισμός ιστορικού συναλλαγών…</string>
+    <string name="history_refresh_dialog_title">Ανανέωση λίστας συναλλαγών</string>
+    <string name="history_refresh_dialog_message">Αυτό θα εκκαθαρίσει την προσωρινή μνήμη της λίστας συναλλαγών και θα την αναδημιουργήσει από την αρχή. Η λίστα θα είναι προσωρινά μη διαθέσιμη κατά τη διάρκεια της αναδημιουργίας.</string>
+    <string name="history_refresh_dialog_confirm">Ανανέωση</string>
+    <string name="history_refresh_complete">Η λίστα συναλλαγών ανανεώθηκε</string>
     <string name="more_title">Περισσότερα</string>
     <string name="settings_title">Ρυθμίσεις</string>
     <string name="security_title">Ασφάλεια</string>
@@ -281,15 +287,17 @@
     <string name="menu_explore_title">Εξερευνήστε</string>
     <string name="menu_explore_subtitle">Βρείτε εμπόρους που δέχονται DASH</string>
 
-    <string name="tools_address_book">Βιβλίο Διευθύνσεων</string>
+    <string name="tools_address_book">Βιβλίο διευθύνσεων</string>
     <string name="tools_import_private_key">Εισάγετε το ιδιωτικό κλειδί</string>
-    <string name="tools_network_monitor">Παρακολούθηση Δικτύου</string>
-    <string name="tools_show_xpub">Εκτεταμένο Δημόσιο Κλειδί</string>
+    <string name="import_private_key_description">Με αυτή την ενέργεια, όλα τα νομίσματα θα μεταφερθούν από το paper wallet του Dash στην εφαρμογή DashPay που έχετε εγκαταστήσει σε αυτή τη συσκευή.</string>
+    <string name="tools_network_monitor">Παρακολούθηση δικτύου</string>
+    <string name="tools_show_xpub">Extended public key (BIP44)</string>
 
     <string name="about_help_us_improve">Βοηθήστε μας να βελτιώσουμε την εμπειρία σας</string>
     <string name="about_review_and_rate">Κρίνετε και βαθμολογήστε την εφαρμογή</string>
     <string name="about_contact_support">Επικοινωνήστε με την υποστήριξη</string>
     <string name="about_fork_disclaimer">Πρόκειται για μια εφαρμογή ανοιχτού κώδικα που διαχωρίστηκε από το Bitcoin πορτοφόλι</string>
+    <string name="about_copyright">Copyright © 2026 Dash Core Group</string>
     <string name="about_license">Γενική Άδεια Δημόσιας Χρήσης GNU v3.0</string>
     <string name="about_version_name">Dash Πορτοφόλι %s</string>
     <string name="about_last_explore_device_sync">Τελευταίος συγχρονισμός συσκευής εξερεύνησης</string>
@@ -433,6 +441,11 @@
     <string name="reclassify_transactions_linked_accounts_message">από προεπιλογή, όλες οι συναλλαγές προς ή από τους συνδεδεμένους λογαριασμούς σας (ανταλλαγές, staking, κ.λπ.) θα επισημαίνονται ως μεταφορές.</string>
     <string name="reclassify_transactions_change_explanation">Επιλέξτε οποιαδήποτε συναλλαγή από την αρχική σελίδα και αλλάξτε την κατηγορία στη σελίδα λεπτομερειών της συναλλαγής.</string>
 
+    <string name="masternode_keys_title">Κλειδιά Masternode</string>
+    <string name="masternode_key_type_owner">Κλειδιά ιδιοκτήτη</string>
+    <string name="masternode_key_type_voting">Κλειδιά ψηφοφορίας</string>
+    <string name="masternode_key_type_operator">Κλειδιά χειριστή</string>
+    <string name="masternode_key_type_platform">Κλειδιά χειριστή HPMN</string>
     <string name="masternode_key_type_total">%d κλειδιά</string>
     <string name="masternode_key_type_used">%d χρησιμοποιείται</string>
     <string name="masternode_key_pair_index">Ζεύγος κλειδιών %d</string>
