@@ -1113,6 +1113,18 @@ class PlatformSynchronizationService @Inject constructor(
                                 giftCard.redeemUrlChallenge = challenge
                             }
                         }
+                        metadata.index?.let { index ->
+                            metadataDocumentRecord.index = index
+                            log.info("processing TxMetadata: gift card index change")
+                            if (cachedItems.find {
+                                    it.txId == txIdAsHash && it.cacheTimestamp > doc.updatedAt!! &&
+                                        it.index != null && it.index != index
+                                } == null
+                            ) {
+                                log.info("processing TxMetadata: gift card index change: changing index")
+                                giftCard.index = index
+                            }
+                        }
 
                         log.info("syncing metadata with platform updates: $updatedMetadata")
                         transactionMetadataProvider.syncPlatformMetadata(txIdAsHash, updatedMetadata, giftCard, iconUrl)
@@ -1161,7 +1173,8 @@ class PlatformSynchronizationService @Inject constructor(
                 it.merchantUrl,
                 null,
                 it.order,
-                it.giftCardChallenge
+                it.giftCardChallenge,
+                it.index
             )
         }
         progressListener?.invoke(10)
@@ -1199,7 +1212,8 @@ class PlatformSynchronizationService @Inject constructor(
             barcodeFormat = docs.lastOrNull { it.barcodeFormat != null }?.barcodeFormat,
             merchantUrl = docs.lastOrNull { it.merchantUrl != null }?.merchantUrl,
             order = docs.lastOrNull { it.order != null }?.order,
-            giftCardChallenge = docs.lastOrNull { it.giftCardChallenge != null}?.giftCardChallenge
+            giftCardChallenge = docs.lastOrNull { it.giftCardChallenge != null}?.giftCardChallenge,
+            index = docs.lastOrNull { it.index != null }?.index
         )
     }
 

@@ -330,7 +330,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 txId,
                 service,
                 TaxCategory.Expense,
-                iconUrl
+                iconUrl,
+                0
             )
         }
 
@@ -357,7 +358,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 giftCard.price,
                 giftCard.merchantUrl,
                 giftCard.note,
-                giftCard.redeemUrlChallenge
+                giftCard.redeemUrlChallenge,
+                giftCard.index
             )
         }
     }
@@ -365,7 +367,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
         giftCardDao.updateBarcode(txId, index, barcodeValue, barcodeFormat)
         if (index == 0) {
-            transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
+            transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString(), index)
         }
     }
 

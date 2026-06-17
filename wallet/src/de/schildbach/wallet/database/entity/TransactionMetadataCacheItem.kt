@@ -43,7 +43,8 @@ data class TransactionMetadataCacheItem(
     var barcodeFormat: String? = null,
     var merchantUrl: String? = null,
     var order: String? = null,
-    var giftCardChallenge: String? = null
+    var giftCardChallenge: String? = null,
+    var index: Int? = null
 ) {
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0
@@ -70,7 +71,8 @@ data class TransactionMetadataCacheItem(
         giftCard?.barcodeFormat?.toString(),
         giftCard?.merchantUrl,
         giftCard?.note,
-        giftCard?.redeemUrlChallenge
+        giftCard?.redeemUrlChallenge,
+        giftCard?.index
     )
 
     fun isNotEmpty(): Boolean {
@@ -78,7 +80,7 @@ data class TransactionMetadataCacheItem(
             currencyCode != null || rate != null || service != null || customIconUrl != null ||
             giftCardNumber != null || giftCardPin != null || merchantName != null || originalPrice != null ||
             barcodeValue != null || barcodeFormat != null || merchantUrl != null ||
-            order != null || giftCardChallenge != null
+            order != null || giftCardChallenge != null || index != null
     }
 
     fun isEmpty(): Boolean = !isNotEmpty()
@@ -106,7 +108,8 @@ data class TransactionMetadataCacheItem(
             barcodeFormat = if (barcodeFormat == other.barcodeFormat) null else barcodeFormat,
             merchantUrl = if (merchantUrl == other.merchantUrl) null else merchantUrl,
             order = if (order == other.order) null else order,
-            giftCardChallenge = if (giftCardChallenge == other.giftCardChallenge) null else giftCardChallenge
+            giftCardChallenge = if (giftCardChallenge == other.giftCardChallenge) null else giftCardChallenge,
+            index = if (index == other.index) null else index
         )
     }
 
@@ -126,7 +129,8 @@ data class TransactionMetadataCacheItem(
                     this.merchantUrl == giftCard.merchantUrl &&
                     this.originalPrice == giftCard.price &&
                     this.order == giftCard.note &&
-                    this.giftCardChallenge == giftCard.redeemUrlChallenge
+                    this.giftCardChallenge == giftCard.redeemUrlChallenge &&
+                    this.index == giftCard.index
         }
         return txData && (giftCard == null || giftCardEquals == true)
     }

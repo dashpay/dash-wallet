@@ -40,5 +40,6 @@ data class TransactionMetadataDocument(
     var barcodeFormat: String? = null,
     var merchantUrl: String? = null,
     var order: String? = null,
-    var giftCardChallenge: String? = null
+    var giftCardChallenge: String? = null,
+    var index: Int? = null
 )

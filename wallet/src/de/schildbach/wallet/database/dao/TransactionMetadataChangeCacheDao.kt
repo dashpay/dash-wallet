@@ -99,20 +99,21 @@ interface TransactionMetadataChangeCacheDao {
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl) 
-           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, service, taxCategory, customIconUrl, `index`)
+           VALUES (:txId, :cacheTimestamp, :service, :taxCategory, :customIconUrl, :index)"""
     )
     suspend fun markGiftCardTx(
         txId: Sha256Hash,
         service: String,
         taxCategory: TaxCategory,
         customIconUrl: String?,
+        index: Int,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl, `order`, giftCardChallenge)
-           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl, :order, :giftCardChallenge)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, giftCardNumber, giftCardPin, merchantName, originalPrice, merchantUrl, `order`, giftCardChallenge, `index`)
+           VALUES (:txId, :cacheTimestamp, :giftCardNumber, :giftCardPin, :merchantName, :originalPrice, :merchantUrl, :order, :giftCardChallenge, :index)"""
     )
     suspend fun insertGiftCardData(
         txId: Sha256Hash,
@@ -123,17 +124,19 @@ interface TransactionMetadataChangeCacheDao {
         merchantUrl: String?,
         order: String?,
         giftCardChallenge: String?,
+        index: Int,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 
     @Query(
-        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, barcodeValue, barcodeFormat) 
-           VALUES (:txId, :cacheTimestamp, :barcodeValue, :barcodeFormat)"""
+        """INSERT INTO transaction_metadata_cache (txId, cacheTimestamp, barcodeValue, barcodeFormat, `index`)
+           VALUES (:txId, :cacheTimestamp, :barcodeValue, :barcodeFormat, :index)"""
     )
     suspend fun insertBarcode(
         txId: Sha256Hash,
         barcodeValue: String?,
         barcodeFormat: String?,
+        index: Int,
         cacheTimestamp: Long = System.currentTimeMillis()
     )
 

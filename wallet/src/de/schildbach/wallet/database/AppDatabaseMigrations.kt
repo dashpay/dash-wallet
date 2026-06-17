@@ -221,6 +221,21 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration20to21 = object : Migration(20, 21) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Persist the TxMetadataItem `index` (which gift card the metadata refers
+                // to when a single transaction has multiple gift cards) in the transaction
+                // metadata backup so it survives a wallet restore from the Dash Platform
+                // metadata backup. Both tables gain the same nullable column.
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `index` INTEGER"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `index` INTEGER"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this
