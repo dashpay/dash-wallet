@@ -115,6 +115,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
+
         // Baseline screen height (in dp, at the default font scale) needed to fit the amount,
         // detail card and action buttons in the wrap-content sheet. The actual threshold is
         // this value multiplied by the current fontScale: bigger fonts inflate the content, so

@@ -97,6 +97,6 @@ abstract class ExploreDashModule {
     @Binds
     abstract fun bindDataSyncService(exploreDatabase: ExploreDataSyncStatus): DataSyncStatusService
 
-    //@Binds
-    //abstract fun provideCTXSpendRepository(ctxSpendRepository: CTXSpendRepository): CTXSpendRepositoryInt
+    // @Binds
+    // abstract fun provideCTXSpendRepository(ctxSpendRepository: CTXSpendRepository): CTXSpendRepositoryInt
 }
