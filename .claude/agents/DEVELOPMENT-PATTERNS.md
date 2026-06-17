@@ -74,7 +74,7 @@ component to our component:
 - feature.list - FeatureList
 - feature.single.item - FeatureSingleItem
 - Sheet/Buttons group - SheetButtonGroup
-- ListX - ListItem (X is number 1 to 20)
+- ListX - ListItemX (numbered design-system variant, e.g. List1 → `ListItem1`); the general-purpose `ListItem` still covers ad-hoc combinations
 - ListEmptyState - ListEmptyState
 - tablelist-masternodekeys - TableListMasternodeKeyRow
 - EnterAmount (input bar) - EnterAmount
@@ -209,13 +209,48 @@ DashButton(
 )
 ```
 
-## ListItem / ListEmptyState (Figma: List1–List23, ListEmptyState)
+## ListItem variants (Figma: List1–List11, ListEmptyState)
 
-The `ListItem` composable covers all numbered Figma list variants (`List1` … `List23`) in a **single component**. `ListEmptyState` handles the empty-list placeholder. Both live in:
+There are two layers:
 
+1. **Numbered variants `ListItem1` … `ListItem11`** — strongly-typed wrappers, one per Figma `ListX` symbol in the updated **List** playground (Figma node `7968:2076`). Prefer these when a row matches a design symbol exactly. They live in:
+   ```
+   common/src/main/java/org/dash/wallet/common/ui/components/ListItemVariants.kt
+   ```
+2. **General-purpose `ListItem`** — a single flexible composable for ad-hoc combinations not covered by a numbered symbol. `ListEmptyState` handles the empty-list placeholder. Both live in:
+   ```
+   common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
+   ```
+
+All variants share the same row scaffold (14 dp horizontal / 12 dp vertical padding, 20 dp gap, vertically centred) and are transparent — wrap one or more in `Menu` for the standard rounded white card.
+
+### Numbered variant quick-reference (node `7968:2076`)
+
+| Variant | Shape | Signature |
+|---|---|---|
+| `ListItem1` | label \| value | `(label, value, trailing = null)` — optional `trailing` slot after the value |
+| `ListItem2` | label \| multi-line value | `(label, valueLines)` |
+| `ListItem3` | label \| icon + value | `(label, value, leadingIcon = ic_dash_blue_filled)` |
+| `ListItem4` | title \| gray value › | `(label, value)` |
+| `ListItem5` | action › | `(action)` |
+| `ListItem6` | title / help \| value › | `(title, helpText, value)` |
+| `ListItem7` | help / value \| copy icon | `(helpText, value, trailingIcon = ic_copy, onTrailingIconClick)` |
+| `ListItem8` | label \| amount + Dash symbol | `(label, amount, amountIcon = ic_dash_d_black)` |
+| `ListItem9` | version block \| status block | `(title, subtitle1, subtitle2, trailingTitle, trailingHelpText, trailingHelpIcon = ic_left_right_arrows)` |
+| `ListItem10` | secondary text / primary text | `(secondaryText, primaryText, primaryColor = null)` — colour the value, e.g. a blue link |
+| `ListItem11` | label / primary text | `(label, primaryText, primaryMaxLines = ∞)` — cap + ellipsise the value |
+
+Every variant also takes `modifier` and an optional `onClick`. Example:
+
+```kotlin
+Menu {
+    ListItem1(label = "Network", value = "Mainnet")
+    ListItem4(label = "Backup wallet", value = "Recommended", onClick = { /* navigate */ })
+    ListItem5(action = "Recover from seed", onClick = { /* navigate */ })
+}
 ```
-common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
-```
+
+### General-purpose `ListItem`
 
 **Figma section node ID:** `2760:14713`
 
@@ -260,7 +295,7 @@ Row { [leadingContent]  [left]  [trailing]   }
 
 **Content-block mode** — set `title` (and optionally surrounding texts):
 - The column expands to fill available width (`weight=1f`)
-- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Body2Regular, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Typography.BodyMedium, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
 - The `helpTextAbove` + `title` pair is the Figma **List10** stacked block (secondary label over primary value); set `titleColor` for a coloured value such as a blue link.
 
 ### Variant quick-reference
