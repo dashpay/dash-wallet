@@ -26,6 +26,8 @@ import androidx.work.workDataOf
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.Transaction
@@ -120,6 +122,10 @@ class CrowdNodeApiAggregator @Inject constructor(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
     private var isOnlineStatusRestored: Boolean = false
+    // Serializes restoreStatus() so concurrent callers (e.g. the init call and the
+    // blockchain-sync observer) don't both scan the whole wallet and contend on the
+    // wallet keychain lock at the same time.
+    private val restoreStatusMutex = Mutex()
 
     override val signUpStatus = MutableStateFlow(SignUpStatus.NotStarted)
     override val onlineAccountStatus = MutableStateFlow(OnlineAccountStatus.None)
@@ -162,12 +168,12 @@ class CrowdNodeApiAggregator @Inject constructor(
             .launchIn(configScope)
     }
 
-    override suspend fun restoreStatus() {
+    override suspend fun restoreStatus() = restoreStatusMutex.withLock {
         if (signUpStatus.value == SignUpStatus.NotStarted) {
             log.info("restoring CrowdNode status")
 
             if (isError()) {
-                return
+                return@withLock
             }
 
             if (tryRestoreSignUp()) {
@@ -175,7 +181,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
                 restoreCreatedOnlineAccount(accountAddress!!)
                 refreshWithdrawalLimits()
-                return
+                return@withLock
             }
 
             val onlineStatusOrdinal = config.get(CrowdNodeConfig.ONLINE_ACCOUNT_STATUS)

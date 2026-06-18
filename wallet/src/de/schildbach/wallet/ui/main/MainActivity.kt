@@ -48,6 +48,8 @@ import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.*
 import de.schildbach.wallet.ui.invite.InviteHandler
 import de.schildbach.wallet.ui.invite.InviteSendContactRequestDialog
+import de.schildbach.wallet.ui.staking.StakingActivity
+import de.schildbach.wallet.ui.staking.createCrowdNodeWithdrawalReminderDialog
 import de.schildbach.wallet.ui.main.MainActivityExt.checkLowStorageAlert
 import de.schildbach.wallet.ui.main.MainActivityExt.checkTimeSkew
 import de.schildbach.wallet.ui.main.MainActivityExt.handleFirebaseAction
@@ -125,6 +127,7 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
     private var isRestoringBackup = false
     private var showBackupWalletDialog = false
     private var retryCreationIfInProgress = true
+    private var pendingCrowdNodeWithdrawalReminder = false
     var composeHostFrameLayout: ComposeHostFrameLayout? = null
 
     val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { _ ->
@@ -228,6 +231,15 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
                 }
             }
         }
+        viewModel.showCrowdNodeWithdrawalReminder.observe(this) {
+            if (lockScreenDisplayed) {
+                // Don't surface the reminder over the lock screen; defer until it's dismissed.
+                pendingCrowdNodeWithdrawalReminder = true
+            } else {
+                presentCrowdNodeWithdrawalReminder()
+            }
+        }
+
         viewModel.sendContactRequestState.observe(this) { workInfoMap ->
             config.inviter?.also { initInvitationUserId ->
                 if (!config.inviterContactRequestSentInfoShown) {
@@ -533,6 +545,17 @@ class MainActivity : AbstractBindServiceActivity(), ActivityCompat.OnRequestPerm
             explainPushNotifications()
         }
         showStaleRatesToast()
+
+        if (pendingCrowdNodeWithdrawalReminder) {
+            pendingCrowdNodeWithdrawalReminder = false
+            presentCrowdNodeWithdrawalReminder()
+        }
+    }
+
+    private fun presentCrowdNodeWithdrawalReminder() {
+        createCrowdNodeWithdrawalReminderDialog {
+            startActivity(StakingActivity.createIntent(this, goToWithdraw = true))
+        }.show(this)
     }
 
     override fun onLockScreenActivated() {
