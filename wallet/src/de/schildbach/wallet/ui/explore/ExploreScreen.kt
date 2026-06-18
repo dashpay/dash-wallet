@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025 Dash Core Group
+ * Copyright (c) 2026 Dash Core Group
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,69 +81,69 @@ fun ExploreScreen(
                 .padding(bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-        // Title + subtitle (TopIntro pattern, no extra horizontal padding since we already padded)
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(end = 40.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.explore_dash),
-                style = MyTheme.Typography.HeadlineSmallBold,
-                color = MyTheme.Colors.textPrimary,
-                modifier = Modifier.fillMaxWidth()
-            )
-            Text(
-                text = stringResource(R.string.explore_subtitle),
-                style = MyTheme.Body2Regular,
-                color = MyTheme.Colors.textSecondary,
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        // Menu card with the list of destinations
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
-                .padding(6.dp)
-        ) {
+            // Title + subtitle (TopIntro pattern, no extra horizontal padding since we already padded)
             Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 40.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                if (state.showFaucet) {
+                Text(
+                    text = stringResource(R.string.explore_dash),
+                    style = MyTheme.Typography.HeadlineSmallBold,
+                    color = MyTheme.Colors.textPrimary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = stringResource(R.string.explore_subtitle),
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.textSecondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            // Menu card with the list of destinations
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                    .padding(6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    if (state.showFaucet) {
+                        MenuItem(
+                            title = stringResource(R.string.explore_get_test_dash),
+                            subtitle = stringResource(R.string.explore_test_dash_text_1),
+                            icon = R.drawable.ic_faucet,
+                            action = onFaucetClick
+                        )
+                    }
+
                     MenuItem(
-                        title = stringResource(R.string.explore_get_test_dash),
-                        subtitle = stringResource(R.string.explore_test_dash_text_1),
-                        icon = R.drawable.ic_faucet,
-                        action = onFaucetClick
+                        title = stringResource(R.string.explore_merchants_title),
+                        subtitle = stringResource(R.string.explore_merchants_subtitle),
+                        icon = R.drawable.ic_map,
+                        action = onWhereToSpendClick
                     )
-                }
 
-                MenuItem(
-                    title = stringResource(R.string.explore_merchants_title),
-                    subtitle = stringResource(R.string.explore_merchants_subtitle),
-                    icon = R.drawable.ic_map,
-                    action = onWhereToSpendClick
-                )
-
-                MenuItem(
-                    title = stringResource(R.string.explore_atms_title),
-                    subtitle = stringResource(R.string.explore_atms_subtitle),
-                    icon = R.drawable.ic_atm,
-                    action = onAtmsClick
-                )
-
-                if (state.showStaking) {
-                    StakingMenuItem(
-                        apy = state.apy,
-                        onClick = onStakingClick
+                    MenuItem(
+                        title = stringResource(R.string.explore_atms_title),
+                        subtitle = stringResource(R.string.explore_atms_subtitle),
+                        icon = R.drawable.ic_atm,
+                        action = onAtmsClick
                     )
+
+                    if (state.showStaking) {
+                        StakingMenuItem(
+                            apy = state.apy,
+                            onClick = onStakingClick
+                        )
+                    }
                 }
             }
-        }
 
             // CrowdNode withdrawal banner (below the card)
             if (state.showWithdrawalBanner) {

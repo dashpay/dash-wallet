@@ -122,6 +122,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
     private var isOnlineStatusRestored: Boolean = false
+
     // Serializes restoreStatus() so concurrent callers (e.g. the init call and the
     // blockchain-sync observer) don't both scan the whole wallet and contend on the
     // wallet keychain lock at the same time.
