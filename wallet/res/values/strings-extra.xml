@@ -311,6 +311,7 @@
     <string name="about_dashj_label" translatable="false">DashJ</string>
     <string name="about_platform_label">Platform</string>
     <string name="about_explore_section">Explore Dash</string>
+    <string name="about_explore_update">Update</string>
     <string name="about_last_device_sync">Last device sync</string>
     <string name="about_last_server_update">Last server update</string>
     <string name="about_value_not_available">Not available</string>

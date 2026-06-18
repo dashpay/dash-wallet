@@ -91,6 +91,7 @@ class AboutFragment : Fragment() {
                         firebaseInstallationId = firebaseInstallationId,
                         fcmToken = fcmToken,
                         showForceSyncButton = !isMainNet,
+                        isMainNet = isMainNet,
                         copyrightYear = BuildConfig.COMMIT_YEAR
                     ),
                     onBackClick = { findNavController().popBackStack() },

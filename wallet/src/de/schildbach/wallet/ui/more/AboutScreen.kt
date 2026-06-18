@@ -19,7 +19,6 @@ package de.schildbach.wallet.ui.more
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,23 +27,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.ListItem10
 import org.dash.wallet.common.ui.components.ListItem11
@@ -52,6 +54,8 @@ import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
 
 /**
  * Immutable view state for the About screen. The fragment builds this from the
@@ -67,8 +71,17 @@ data class AboutUIState(
     val firebaseInstallationId: String = "",
     val fcmToken: String = "",
     val showForceSyncButton: Boolean = false,
+    val isMainNet: Boolean = true,
     val copyrightYear: Int = 0
 )
+
+/**
+ * Middle-truncates a long opaque id (keeping [head] leading and [tail] trailing
+ * characters) so both ends stay visible on one line, e.g. "cWbflOodTkmhtbsN…UF2PB".
+ * Short strings are returned unchanged.
+ */
+private fun String.middleEllipsize(head: Int = 16, tail: Int = 16): String =
+    if (length <= head + tail + 1) this else "${take(head)}…${takeLast(tail)}"
 
 @Composable
 fun AboutScreen(
@@ -97,7 +110,7 @@ fun AboutScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
             // Centered Dash wordmark
-            DashLogoHeader()
+            DashLogoHeader(isMainNet = uiState.isMainNet)
 
             // Info card: versions + Firebase ids + source link
             Menu {
@@ -122,9 +135,10 @@ fun AboutScreen(
                     stringResource(R.string.about_value_not_available)
                 }
                 ListItem11(
+                    // Show a middle-truncated token so both ends stay visible; the
+                    // row's onClick still copies the full token from the ViewModel.
                     label = stringResource(R.string.about_fcm_token),
-                    primaryText = fcmTokenText,
-                    primaryMaxLines = 2,
+                    primaryText = fcmTokenText.middleEllipsize(),
                     onClick = onFcmTokenClick
                 )
                 // List10 source link — blue, clickable value (primaryColor).
@@ -138,18 +152,18 @@ fun AboutScreen(
 
             // Explore Dash card: sync diagnostics
             Menu {
-                AboutSectionTitle(stringResource(R.string.about_explore_section))
-
-                val forceSyncTrailing: (@Composable () -> Unit)? =
-                    if (uiState.showForceSyncButton) {
+                AboutSectionTitle(
+                    text = stringResource(R.string.about_explore_section),
+                    trailing = if (uiState.showForceSyncButton) {
                         { ForceSyncButton(onClick = onForceSyncClick) }
                     } else {
                         null
                     }
+                )
+
                 ListItem1(
                     label = stringResource(R.string.about_last_device_sync),
-                    value = uiState.deviceSyncStatus,
-                    trailing = forceSyncTrailing
+                    value = uiState.deviceSyncStatus
                 )
                 ListItem1(
                     label = stringResource(R.string.about_last_server_update),
@@ -196,9 +210,12 @@ fun AboutScreen(
     }
 }
 
-/** Centered blue Dash wordmark (tints the shared white logo). */
+/**
+ * Centered Dash wordmark (tints the shared white logo). Blue on production
+ * (mainnet) builds, orange on non-production builds so they are visually distinct.
+ */
 @Composable
-private fun DashLogoHeader() {
+private fun DashLogoHeader(isMainNet: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -208,7 +225,9 @@ private fun DashLogoHeader() {
         Image(
             painter = painterResource(R.drawable.ic_dash_logo_white),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(MyTheme.Colors.dashBlue),
+            colorFilter = ColorFilter.tint(
+                if (isMainNet) MyTheme.Colors.dashBlue else MyTheme.Colors.orange
+            ),
             modifier = Modifier
                 .height(28.dp)
                 .aspectRatio(128f / 36f)
@@ -216,45 +235,54 @@ private fun DashLogoHeader() {
     }
 }
 
-/** Card section heading (Body M Medium, tertiary), e.g. "Explore Dash". */
+/**
+ * Card section heading (Body M Medium, tertiary), e.g. "Explore Dash", with an
+ * optional [trailing] slot rendered at the end of the row (e.g. the Update button).
+ */
 @Composable
-private fun AboutSectionTitle(text: String) {
-    Box(
+private fun AboutSectionTitle(
+    text: String,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
+            // heightIn (not vertical padding) governs the height so the 36dp Update
+            // button fits inside the 46dp header instead of stacking onto the padding.
             .heightIn(min = 46.dp)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        contentAlignment = Alignment.CenterStart
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = text,
             style = MyTheme.Body2Medium,
             color = MyTheme.Colors.textTertiary
         )
+        if (trailing != null) {
+            Spacer(Modifier.weight(1f))
+            trailing()
+        }
     }
 }
 
 /**
- * Testnet-only force-sync affordance shown as the trailing content of the
- * "Last device sync" row. Not part of the Figma design — it is a debug tool
- * retained from the original screen and gated to non-mainnet builds.
+ * Testnet-only force-sync affordance. Shown as a blue "Update" button in the
+ * "Explore Dash" section header. Not part of the production Figma design — it is a
+ * debug tool retained from the original screen and gated to non-mainnet builds.
  */
 @Composable
 private fun ForceSyncButton(onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(34.dp)
-            .clickable { onClick() }
-            .background(MyTheme.Colors.primary5, RoundedCornerShape(10.dp)),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_refresh_white_24dp),
-            contentDescription = null,
-            tint = MyTheme.Colors.textTertiary,
-            modifier = Modifier.size(20.dp)
-        )
-    }
+    DashButton(
+        // DashButton (Small) has 12dp internal horizontal padding; offset it so the
+        // button's trailing edge lines up with the value column in the rows below.
+        modifier = Modifier.offset(x = Size.Small.paddingHorizontal),
+        text = stringResource(R.string.about_explore_update),
+        leadingIcon = ImageVector.vectorResource(R.drawable.ic_refresh_blue),
+        style = Style.PlainBlue,
+        size = Size.Small,
+        stretch = false,
+        onClick = onClick
+    )
 }
 
 @Composable
@@ -268,8 +296,28 @@ private fun AboutScreenPreview() {
             deviceSyncStatus = "01 Jan 2026 at 20:00",
             serverUpdateStatus = "01 Jan 2026",
             firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
+            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
             showForceSyncButton = true,
+            isMainNet = true,
+            copyrightYear = 2026
+        )
+    )
+}
+
+@Composable
+@Preview(showBackground = true, widthDp = 393)
+private fun AboutScreenTestNetPreview() {
+    AboutScreen(
+        uiState = AboutUIState(
+            versionName = "11.8.2 (10)",
+            dashjVersion = "22.0.3",
+            platformVersion = "4.0.0",
+            deviceSyncStatus = "01 Jan 2026 at 20:00",
+            serverUpdateStatus = "01 Jan 2026",
+            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
+            showForceSyncButton = true,
+            isMainNet = false,
             copyrightYear = 2026
         )
     )
