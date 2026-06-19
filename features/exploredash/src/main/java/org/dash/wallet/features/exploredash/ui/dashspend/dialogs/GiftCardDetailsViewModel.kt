@@ -480,7 +480,7 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             }
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                        updateGiftCard(cardIndex, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
+                                        updateGiftCardWithURL(cardIndex, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
                                     }
                                 }
                                 cancelTicker()
