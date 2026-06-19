@@ -30,7 +30,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
@@ -54,6 +53,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -92,6 +92,11 @@ import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @AndroidEntryPoint
 class DashPayUserBottomSheet : ComposeBottomSheet() {
@@ -481,15 +486,6 @@ private fun RequestReceivedCard(
     }
 }
 
-// CONTACT_ESTABLISHED emits two contact rows for the same user (the established record + an
-// "invitationOfEstablished" marker). Both have the same `getId()`, which crashes LazyColumn.
-// Compose the flag in so the keys stay unique without touching the shared `getId()` contract
-// used by NotificationsAdapter.
-private fun NotificationItem.lazyKey(): String = when (this) {
-    is NotificationItemContact -> "contact:${getId()}:${isInvitationOfEstablished}"
-    else -> getId()
-}
-
 @Composable
 private fun ColumnScope.ActivitySection(
     notifications: List<NotificationItem>,
@@ -531,36 +527,103 @@ private fun ColumnScope.ActivitySection(
                 onFilterSelected = onFilterSelected
             )
         }
-        val containerModifier = if (isFullScreen) {
+        // Group the (already date-sorted) notifications by calendar day; each day renders as its
+        // own rounded card with a header (date label on the left, weekday on the right).
+        val groups = remember(notifications) { groupNotificationsByDay(notifications) }
+        val listModifier = if (isFullScreen) {
             Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(20.dp))
-                .background(MyTheme.Colors.backgroundSecondary)
-                .padding(6.dp)
+                .fillMaxWidth()
+                .weight(1f, fill = true)
         } else {
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(MyTheme.Colors.backgroundSecondary)
-                .padding(6.dp)
+                .heightIn(max = 500.dp)
         }
-        Column(modifier = containerModifier) {
-            val listModifier = if (isFullScreen) {
-                Modifier.fillMaxSize()
-            } else {
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(max = 500.dp)
+        LazyColumn(
+            modifier = listModifier,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            items(groups, key = { it.date.toString() }) { group ->
+                DayGroupCard(
+                    group = group,
+                    isSentTransaction = isSentTransaction,
+                    onNotificationClick = onNotificationClick
+                )
             }
-            LazyColumn(modifier = listModifier) {
-                items(notifications, key = { it.lazyKey() }) { item ->
-                    NotificationRow(
-                        item = item,
-                        isSentTransaction = isSentTransaction,
-                        onClick = { onNotificationClick(item) }
-                    )
-                }
-            }
+        }
+    }
+}
+
+// A day's worth of activity items, used to render grouped, date-headed cards.
+private data class NotificationDayGroup(
+    val date: LocalDate,
+    val items: List<NotificationItem>
+)
+
+// groupBy preserves the encounter order of both keys and values, so an input that is already
+// sorted newest-first stays newest-first; the trailing sort is a defensive no-op.
+private fun groupNotificationsByDay(items: List<NotificationItem>): List<NotificationDayGroup> {
+    val zone = ZoneId.systemDefault()
+    return items
+        .groupBy { Instant.ofEpochMilli(it.getDate()).atZone(zone).toLocalDate() }
+        .map { (date, dayItems) -> NotificationDayGroup(date, dayItems) }
+        .sortedByDescending { it.date }
+}
+
+/** "Today", "Yesterday", or a locale-ordered date ("2 May" / "May 2"), with the year when not current. */
+@Composable
+private fun dayLabel(date: LocalDate): String {
+    val now = LocalDate.now()
+    return when {
+        date == now -> stringResource(R.string.today)
+        date == now.minusDays(1) -> stringResource(R.string.yesterday)
+        else -> {
+            val locale = Locale.getDefault()
+            val skeleton = if (date.year == now.year) "MMMMd" else "yMMMMd"
+            val pattern = android.text.format.DateFormat.getBestDateTimePattern(locale, skeleton)
+            DateTimeFormatter.ofPattern(pattern, locale).format(date)
+        }
+    }
+}
+
+@Composable
+private fun DayGroupCard(
+    group: NotificationDayGroup,
+    isSentTransaction: (Transaction) -> Boolean,
+    onNotificationClick: (NotificationItem) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(MyTheme.Colors.backgroundSecondary)
+            .padding(6.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = dayLabel(group.date),
+                style = MyTheme.CaptionMedium,
+                color = MyTheme.Colors.textPrimary
+            )
+            Text(
+                text = DateTimeFormatter.ofPattern("EEEE", Locale.getDefault()).format(group.date),
+                style = MyTheme.Caption,
+                color = MyTheme.Colors.textSecondary
+            )
+        }
+        group.items.forEach { item ->
+            NotificationRow(
+                item = item,
+                isSentTransaction = isSentTransaction,
+                onClick = { onNotificationClick(item) }
+            )
         }
     }
 }
@@ -645,6 +708,10 @@ private fun NotificationRow(
     isSentTransaction: (Transaction) -> Boolean,
     onClick: () -> Unit
 ) {
+    // The day is conveyed by the group header; rows show only the time of day (e.g. "9:40 AM"),
+    // localized and honoring the system 12/24-hour setting.
+    val context = LocalContext.current
+    val timeText = DateUtils.formatDateTime(context, item.getDate(), DateUtils.FORMAT_SHOW_TIME)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -707,11 +774,7 @@ private fun NotificationRow(
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
-                        text = DateUtils.getRelativeTimeSpanString(
-                            item.getDate(),
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                        ).toString(),
+                        text = timeText,
                         style = MyTheme.Typography.BodyMedium,
                         color = MyTheme.Colors.textSecondary
                     )
@@ -737,11 +800,7 @@ private fun NotificationRow(
                         color = MyTheme.Colors.textPrimary
                     )
                     Text(
-                        text = DateUtils.getRelativeTimeSpanString(
-                            item.getDate(),
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS
-                        ).toString(),
+                        text = timeText,
                         style = MyTheme.Typography.BodyMedium,
                         color = MyTheme.Colors.textSecondary
                     )
@@ -822,13 +881,21 @@ private fun previewUserData(type: UsernameSearchResult.Type): UsernameSearchResu
 }
 
 private fun previewNotifications(profile: DashPayProfile): List<NotificationItem> {
-    val result = UsernameSearchResult(
-        profile.username,
-        profile,
-        previewContactRequest("preview-self-id", profile.userId),
-        null
-    )
-    return listOf(NotificationItemContact(result))
+    val me = "preview-self-id"
+    val them = profile.userId
+    val dayMillis = 24L * 60 * 60 * 1000
+    val now = System.currentTimeMillis()
+    // Three sent requests spread across today, yesterday and a few days back so the
+    // day-grouping (Today / Yesterday / dated) is exercised by the preview.
+    return listOf(
+        now - 60_000L,
+        now - dayMillis,
+        now - 5 * dayMillis
+    ).map { ts ->
+        NotificationItemContact(
+            UsernameSearchResult(profile.username, profile, previewContactRequest(me, them, ts), null)
+        )
+    }
 }
 
 @Composable
