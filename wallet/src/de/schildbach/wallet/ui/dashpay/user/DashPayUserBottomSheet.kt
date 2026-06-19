@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -45,6 +46,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -184,12 +186,24 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
                 }
             },
             onFilterSelected = viewModel::setFilter,
-            isSentTransaction = viewModel::isSentTransaction
+            isSentTransaction = viewModel::isSentTransaction,
+            onSheetDraggableChanged = ::setSheetDraggable
         )
     }
 
     private fun notifyContactChange() {
         setFragmentResult(REQUEST_KEY, bundleOf(KEY_CHANGED to true))
+    }
+
+    // The activity list is a Compose LazyColumn nested inside a Material BottomSheetDialog.
+    // BottomSheetBehavior's drag and the list's scroll both want vertical gestures, so we let the
+    // list own them while it has content above (drag locked) and only re-enable the sheet drag
+    // (so a downward swipe collapses/dismisses) once the list is scrolled to its very top.
+    private fun setSheetDraggable(draggable: Boolean) {
+        val sheet = (dialog as? BottomSheetDialog)
+            ?.findViewById<FrameLayout>(com.google.android.material.R.id.design_bottom_sheet)
+            ?: return
+        BottomSheetBehavior.from(sheet).isDraggable = draggable
     }
 
     private fun applyAutoExpandIfNeeded(
@@ -308,7 +322,8 @@ private fun DashPayUserContent(
     onPayClick: () -> Unit,
     onNotificationClick: (NotificationItem) -> Unit,
     onFilterSelected: (NotificationFilter) -> Unit = {},
-    isSentTransaction: (Transaction) -> Boolean = { false }
+    isSentTransaction: (Transaction) -> Boolean = { false },
+    onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
     val userData = state.userData
     Column(
@@ -351,7 +366,8 @@ private fun DashPayUserContent(
                 isFullScreen = isFullScreen,
                 onFilterSelected = onFilterSelected,
                 onNotificationClick = onNotificationClick,
-                isSentTransaction = isSentTransaction
+                isSentTransaction = isSentTransaction,
+                onSheetDraggableChanged = onSheetDraggableChanged
             )
         }
 
@@ -493,7 +509,8 @@ private fun ColumnScope.ActivitySection(
     isFullScreen: Boolean,
     onFilterSelected: (NotificationFilter) -> Unit,
     onNotificationClick: (NotificationItem) -> Unit,
-    isSentTransaction: (Transaction) -> Boolean
+    isSentTransaction: (Transaction) -> Boolean,
+    onSheetDraggableChanged: (Boolean) -> Unit = {}
 ) {
     // In full-screen mode, the section claims all remaining vertical space so the inner
     // list can scroll inside it. In wrap_content mode, the section measures to its content
@@ -539,7 +556,20 @@ private fun ColumnScope.ActivitySection(
                 .fillMaxWidth()
                 .heightIn(max = 500.dp)
         }
+        // Let the list own vertical gestures while it has content scrolled above the top, and only
+        // hand the sheet back its drag (so a downward swipe can collapse/dismiss) once the list is
+        // resting at its very top. This avoids the sheet and the LazyColumn fighting over the drag.
+        val listState = rememberLazyListState()
+        val listAtTop by remember {
+            derivedStateOf {
+                listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+            }
+        }
+        LaunchedEffect(listAtTop) {
+            onSheetDraggableChanged(listAtTop)
+        }
         LazyColumn(
+            state = listState,
             modifier = listModifier,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
