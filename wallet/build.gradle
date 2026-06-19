@@ -12,6 +12,15 @@ plugins {
 
 ext {
     archivesBaseName = 'dash-wallet'
+
+    // dashj-platform SDK version per product flavor.
+    // prod uses the stable release; all other flavors use the latest snapshot.
+    dppVersions = [
+        prod      : dppVersion,
+        _testNet3 : "4.0.0-RC2-SNAPSHOT",
+        staging   : "4.0.0-RC2-SNAPSHOT",
+        devnet    : "4.0.0-RC2-SNAPSHOT",
+    ]
 }
 repositories {
     mavenLocal()
@@ -56,9 +65,9 @@ dependencies {
 
     implementation 'org.bouncycastle:bcprov-jdk15to18:1.74'
     implementation "org.dashj:dashj-core:$dashjVersion"
-    implementation "org.dashj.platform:dash-sdk-java:$dppVersion"
-    implementation "org.dashj.platform:dash-sdk-kotlin:$dppVersion"
-    implementation "org.dashj.platform:dash-sdk-android:$dppVersion"
+    // dashj-platform SDK is declared per-flavor in a dependencies block after the
+    // android {} block, since the flavor-scoped configurations (e.g. prodImplementation)
+    // only exist once productFlavors have been registered.
     implementation 'io.grpc:grpc-stub:1.54.0' // CURRENT_GRPC_VERSION
     implementation "org.dashj.android:dashj-bls-android:1.0.1"
     implementation "org.dashj.android:dashj-x11-android:1.0.0"
@@ -247,7 +256,6 @@ android {
         } else if(System.getenv("SUPPORT_EMAIL") != null) {
             buildConfigField("String", "SUPPORT_EMAIL", "\"${System.getenv("SUPPORT_EMAIL")}\"")
         }
-        buildConfigField("String", "DPP_VERSION", "\"$dppVersion\"")
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
     }
 
@@ -316,6 +324,7 @@ android {
     flavorDimensions "default"
     productFlavors {
         all {
+            buildConfigField("String", "DPP_VERSION", "\"${dppVersions[name]}\"")
             def coinbaseClientId = props.getProperty("COINBASE_CLIENT_ID", "\"COINBASE_CLIENT_ID\"")
             def coinbaseClientSecret = props.getProperty("COINBASE_CLIENT_SECRET", "\"COINBASE_CLIENT_SECRET\"")
             buildConfigField("String", "COINBASE_CLIENT_ID", coinbaseClientId)
@@ -482,6 +491,17 @@ android {
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {
             freeCompilerArgs += "-opt-in=kotlin.RequiresOptIn"
+        }
+    }
+}
+
+// Declared after the android {} block so the flavor-scoped configurations
+// (prodImplementation, _testNet3Implementation, ...) exist. Each flavor pulls the
+// dashj-platform SDK version mapped in ext.dppVersions above.
+dependencies {
+    dppVersions.each { flavor, ver ->
+        ["java", "kotlin", "android"].each { artifact ->
+            "${flavor}Implementation"("org.dashj.platform:dash-sdk-$artifact:$ver")
         }
     }
 }
