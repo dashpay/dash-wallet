@@ -40,11 +40,15 @@ class MayaPortalFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 MayaPortalScreen(
-                    activeBackend = mayaViewModel.activeSwapBackend,
+                    showBuy = mayaViewModel.activeSwapBackend.supportsBuy,
                     onBackClick = {
                         findNavController().popBackStack()
                     },
-                    onConvertClick = {
+                    onBuyClick = {
+                        // TODO: pass the buy direction (from any crypto to Dash Wallet) into the swap flow
+                        safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                    },
+                    onSellClick = {
                         safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
                     }
                 )

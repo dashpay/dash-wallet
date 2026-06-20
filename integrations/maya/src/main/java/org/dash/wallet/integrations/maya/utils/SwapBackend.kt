@@ -25,5 +25,13 @@ package org.dash.wallet.integrations.maya.utils
  */
 enum class SwapBackend {
     MAYA,
-    SWAPKIT
+    SWAPKIT;
+
+    /**
+     * Whether this backend can buy Dash (from any crypto into the Dash Wallet).
+     * Maya only supports selling Dash (Dash Wallet -> any crypto); SwapKit supports
+     * both directions.
+     */
+    val supportsBuy: Boolean
+        get() = this == SWAPKIT
 }
