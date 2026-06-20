@@ -39,6 +39,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import de.schildbach.wallet.ui.compose_views.Shadows.softShadow
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MenuItem
@@ -46,6 +47,7 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import java.util.Locale
 
 data class ExploreScreenState(
     val showFaucet: Boolean, // testnet only
@@ -85,12 +87,13 @@ fun ExploreScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = 40.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                    .padding(end = 40.dp)
+                    .padding(bottom = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
                     text = stringResource(R.string.explore_dash),
-                    style = MyTheme.Typography.HeadlineSmallBold,
+                    style = MyTheme.Typography.HeadlineMediumBold,
                     color = MyTheme.Colors.textPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -106,7 +109,8 @@ fun ExploreScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                    .softShadow(16.dp)
+                    .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
                     .padding(6.dp)
             ) {
                 Column(
@@ -200,35 +204,18 @@ private fun StakingMenuItem(
                     color = MyTheme.Colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
                 )
-                ApyBadge(apy = apy)
+                // APY shown as plain blue inline text (per design)
+                Text(
+                    text = stringResource(
+                        R.string.explore_staking_current_apy,
+                        String.format(Locale.getDefault(), "%.1f", apy)
+                    ),
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.dashBlue,
+                    modifier = Modifier.padding(top = 2.dp)
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun ApyBadge(apy: Double) {
-    Row(
-        modifier = Modifier
-            .padding(top = 2.dp)
-            .background(MyTheme.Colors.green.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.ic_circle_green_percent),
-            contentDescription = null,
-            modifier = Modifier.size(16.dp)
-        )
-        Text(
-            text = stringResource(
-                R.string.explore_staking_current_apy,
-                String.format("%.1f", apy)
-            ),
-            style = MyTheme.Typography.LabelMedium,
-            color = MyTheme.Colors.green
-        )
     }
 }
 
@@ -255,13 +242,13 @@ private fun CrowdNodeWithdrawalBanner(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(top = 5.dp, end = 20.dp),
+                    .padding(top = 2.dp, end = 20.dp),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = stringResource(R.string.crowdnode_withdrawal_reminder_title),
-                        style = MyTheme.Body2Medium,
+                        style = MyTheme.Typography.TitleMediumMedium,
                         color = MyTheme.Colors.textPrimary,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -273,13 +260,15 @@ private fun CrowdNodeWithdrawalBanner(
                     )
                 }
 
-                DashButton(
-                    text = stringResource(R.string.crowdnode_withdraw_funds),
-                    style = Style.FilledBlue,
-                    size = Size.Small,
-                    stretch = false,
-                    onClick = onWithdrawClick
-                )
+                Box(modifier = Modifier.padding(bottom = 14.dp)) {
+                    DashButton(
+                        text = stringResource(R.string.crowdnode_withdraw_funds),
+                        style = Style.FilledBlue,
+                        size = Size.Small,
+                        stretch = false,
+                        onClick = onWithdrawClick
+                    )
+                }
             }
         }
     }

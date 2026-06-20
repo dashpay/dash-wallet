@@ -22,7 +22,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -95,19 +94,20 @@ private fun CrowdNodeWithdrawalReminderContent(
                     modifier = Modifier.size(44.dp)
                 )
             }
+            // Warning badge sits flush in the bottom-right corner of the 90dp circle (Figma 36053:17544)
             Image(
                 painter = painterResource(R.drawable.ic_warning_triangle),
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .offset(x = (-12).dp, y = (-8).dp)
-                    .size(22.dp)
+                    .size(34.dp)
             )
         }
 
         FeatureTopText(
             heading = stringResource(R.string.crowdnode_withdrawal_reminder_title),
             text = stringResource(R.string.crowdnode_withdrawal_reminder_message),
+            textStyle = MyTheme.Typography.HeadlineMediumBold,
             showText = true,
             showButton = false,
             modifier = Modifier.padding(top = 20.dp, bottom = 32.dp)
@@ -125,6 +125,7 @@ private fun CrowdNodeWithdrawalReminderContent(
                 onClick = onClose
             ),
             orientation = ButtonGroupOrientation.Vertical,
+            horizontalPadding = 60.dp,
             spacing = 16.dp
         )
     }
