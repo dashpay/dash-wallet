@@ -39,7 +39,6 @@ import org.dash.wallet.features.exploredash.repository.DataSyncStatusService
 import org.dash.wallet.features.exploredash.repository.ExploreRepository
 import org.dash.wallet.features.exploredash.utils.ExploreConfig
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
-import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.util.isMainNet
 import javax.inject.Inject
 
@@ -53,7 +52,8 @@ data class AboutViewState(
     val exploreIsSyncing: Boolean = false,
     val firebaseInstallationId: String = "",
     val firebaseCloudMessagingToken: String = "",
-    val isMainNet: Boolean = true
+    val isMainNet: Boolean = true,
+    val databasePrefs: ExploreDatabasePrefs = ExploreDatabasePrefs()
 )
 
 @HiltViewModel
@@ -71,9 +71,6 @@ class AboutViewModel @Inject constructor(
     )
     val uiState: StateFlow<AboutViewState> = _uiState.asStateFlow()
 
-    var databasePrefs: ExploreDatabasePrefs = ExploreDatabasePrefs()
-        private set
-
     init {
         loadFirebaseIds()
 
@@ -90,7 +87,7 @@ class AboutViewModel @Inject constructor(
 
         exploreConfig.exploreDatabasePrefs
             .distinctUntilChanged()
-            .onEach { databasePrefs = it }
+            .onEach { prefs -> _uiState.update { it.copy(databasePrefs = prefs) } }
             .launchIn(viewModelScope)
     }
 

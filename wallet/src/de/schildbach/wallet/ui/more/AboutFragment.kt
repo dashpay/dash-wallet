@@ -40,6 +40,7 @@ import de.schildbach.wallet_test.R
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
+import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -62,8 +63,8 @@ class AboutFragment : Fragment() {
             setContent {
                 val state by viewModel.uiState.collectAsState()
 
-                val deviceSyncStatus = remember(state.exploreIsSyncing, viewModel.databasePrefs) {
-                    formatDeviceSyncStatus(state.exploreIsSyncing)
+                val deviceSyncStatus = remember(state.exploreIsSyncing, state.databasePrefs) {
+                    formatDeviceSyncStatus(state.exploreIsSyncing, state.databasePrefs)
                 }
                 val serverUpdateStatus = state.exploreRemoteTimestamp?.let { formatServerUpdate(it) }
                 val network = when (Constants.NETWORK_PARAMETERS.id) {
@@ -103,9 +104,7 @@ class AboutFragment : Fragment() {
         }
     }
 
-    private fun formatDeviceSyncStatus(isSyncing: Boolean): String {
-        val dbPrefs = viewModel.databasePrefs
-
+    private fun formatDeviceSyncStatus(isSyncing: Boolean, dbPrefs: ExploreDatabasePrefs): String {
         return when {
             isSyncing -> "${getString(R.string.syncing)}…"
             dbPrefs.failedSyncAttempts > 0 -> getString(
