@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -145,7 +146,7 @@ fun MenuItem(
                     if (showInfo) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_menu_info),
-                            contentDescription = "Info",
+                            contentDescription = stringResource(id = R.string.info),
                             tint = Color.Unspecified,
                             modifier = Modifier
                                 .size(15.dp)

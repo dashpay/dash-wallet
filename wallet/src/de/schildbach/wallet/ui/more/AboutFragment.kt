@@ -38,7 +38,6 @@ import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.NetworkParameters
-import org.bitcoinj.params.MainNetParams
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.slf4j.LoggerFactory
@@ -53,8 +52,6 @@ class AboutFragment : Fragment() {
 
     private val viewModel by viewModels<AboutViewModel>()
 
-    private val isMainNet = Constants.NETWORK_PARAMETERS == MainNetParams.get()
-
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -63,15 +60,12 @@ class AboutFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                val isSyncing by viewModel.exploreIsSyncing.collectAsState()
-                val remoteTimestamp by viewModel.exploreRemoteTimestamp.collectAsState()
-                val firebaseInstallationId by viewModel.firebaseInstallationId.collectAsState()
-                val fcmToken by viewModel.firebaseCloudMessagingToken.collectAsState()
+                val state by viewModel.uiState.collectAsState()
 
-                val deviceSyncStatus = remember(isSyncing, viewModel.databasePrefs) {
-                    formatDeviceSyncStatus(isSyncing)
+                val deviceSyncStatus = remember(state.exploreIsSyncing, viewModel.databasePrefs) {
+                    formatDeviceSyncStatus(state.exploreIsSyncing)
                 }
-                val serverUpdateStatus = remoteTimestamp?.let { formatServerUpdate(it) }
+                val serverUpdateStatus = state.exploreRemoteTimestamp?.let { formatServerUpdate(it) }
                 val network = when (Constants.NETWORK_PARAMETERS.id) {
                     NetworkParameters.ID_MAINNET -> ""
                     NetworkParameters.ID_TESTNET -> " - testnet"
@@ -88,10 +82,10 @@ class AboutFragment : Fragment() {
                         platformVersion = BuildConfig.DPP_VERSION,
                         deviceSyncStatus = deviceSyncStatus,
                         serverUpdateStatus = serverUpdateStatus,
-                        firebaseInstallationId = firebaseInstallationId,
-                        fcmToken = fcmToken,
-                        showForceSyncButton = !isMainNet,
-                        isMainNet = isMainNet,
+                        firebaseInstallationId = state.firebaseInstallationId,
+                        fcmToken = state.firebaseCloudMessagingToken,
+                        showForceSyncButton = !state.isMainNet,
+                        isMainNet = state.isMainNet,
                         copyrightYear = BuildConfig.COMMIT_YEAR
                     ),
                     onBackClick = { findNavController().popBackStack() },
@@ -110,25 +104,32 @@ class AboutFragment : Fragment() {
     }
 
     private fun formatDeviceSyncStatus(isSyncing: Boolean): String {
-        val context = requireContext().applicationContext
         val dbPrefs = viewModel.databasePrefs
 
         return when {
             isSyncing -> "${getString(R.string.syncing)}…"
             dbPrefs.failedSyncAttempts > 0 -> getString(
                 R.string.about_explore_failed_sync,
-                DateUtils.formatDateTime(context, dbPrefs.lastSyncTimestamp, FORMAT_FLAGS)
+                formatTimestampOrNever(dbPrefs.lastSyncTimestamp)
             )
             dbPrefs.preloadedOnTimestamp >= dbPrefs.lastSyncTimestamp -> {
                 val prefix = if (dbPrefs.preloadedTestDb) "Testnet DB " else ""
                 prefix + getString(
                     R.string.about_explore_preloaded_on,
-                    DateUtils.formatDateTime(context, dbPrefs.preloadedOnTimestamp, FORMAT_FLAGS)
+                    formatTimestampOrNever(dbPrefs.preloadedOnTimestamp)
                 )
             }
-            else -> DateUtils.formatDateTime(context, dbPrefs.lastSyncTimestamp, FORMAT_FLAGS)
+            else -> formatTimestampOrNever(dbPrefs.lastSyncTimestamp)
         }
     }
+
+    /** Formats [timestamp] as a date/time, or "never" when it is unset (≤ 0). */
+    private fun formatTimestampOrNever(timestamp: Long): String =
+        if (timestamp > 0L) {
+            DateUtils.formatDateTime(requireContext().applicationContext, timestamp, FORMAT_FLAGS)
+        } else {
+            getString(R.string.about_last_explore_dash_sync_never)
+        }
 
     private fun formatServerUpdate(timestamp: Long): String {
         return if (timestamp <= 0L) {
@@ -140,7 +141,7 @@ class AboutFragment : Fragment() {
 
     private fun forceSync() {
         try {
-            ExploreSyncWorker.run(requireContext().applicationContext, isMainNet)
+            ExploreSyncWorker.run(requireContext().applicationContext, viewModel.uiState.value.isMainNet)
         } catch (ex: Exception) {
             log.error(ex.message, ex)
         }
@@ -149,7 +150,10 @@ class AboutFragment : Fragment() {
     private fun openGithubLink() {
         val intent = Intent(ACTION_VIEW)
         intent.data = getString(R.string.about_github_link).toUri()
-        startActivity(intent)
+        val packageManager = requireContext().packageManager
+        if (intent.resolveActivity(packageManager) != null) {
+            startActivity(intent)
+        }
     }
 
     private fun handleReportIssue() {

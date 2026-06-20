@@ -156,4 +156,5 @@
     <string name="send_coins_error_msg">Problem sending coins!</string>
     <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
     <string name="preposition_at">at</string>
+    <string name="info">Info</string>
 </resources>

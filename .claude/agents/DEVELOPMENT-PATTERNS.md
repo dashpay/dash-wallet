@@ -272,7 +272,7 @@ Row { [leadingContent]  [left]  [trailing]   }
 | `label` | `String?` | Tertiary gray "key" text — left side of **key-value** rows |
 | `showInfoIcon` | `Boolean` | ℹ icon after `label` or `title` (List10) |
 | `helpTextAbove` | `String?` | Small gray text above `title` (List13/14/22) |
-| `title` | `String?` | Primary value text (Body M Regular) — **content-block** mode |
+| `title` | `String?` | Primary value text (LabelLarge) — **content-block** mode |
 | `titleColor` | `Color?` | Override colour for `title` (default text/primary; e.g. blue for a link — List10) |
 | `subtitle` | `String?` | Small gray text below `title` |
 | `bottomHelpText` | `String?` | Small gray text at the bottom of the left column (List13) |
@@ -295,7 +295,7 @@ Row { [leadingContent]  [left]  [trailing]   }
 
 **Content-block mode** — set `title` (and optionally surrounding texts):
 - The column expands to fill available width (`weight=1f`)
-- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Typography.BodyMedium, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Typography.LabelLarge, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
 - The `helpTextAbove` + `title` pair is the Figma **List10** stacked block (secondary label over primary value); set `titleColor` for a coloured value such as a blue link.
 
 ### Variant quick-reference

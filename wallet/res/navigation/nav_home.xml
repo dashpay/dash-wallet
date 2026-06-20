@@ -390,7 +390,7 @@
     <fragment
         android:id="@+id/aboutFragment"
         android:name="de.schildbach.wallet.ui.more.AboutFragment"
-        android:label="About" />
+        android:label="@string/about_dash_title" />
 
     <fragment
         android:id="@+id/transaction_metadata_settings_fragment"

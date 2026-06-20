@@ -250,7 +250,7 @@ fun ListItem7(
 ) {
     ListItemRow(modifier, onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textTertiary)
+            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textSecondary)
             Text(text = value, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
         }
         Spacer(Modifier.weight(1f))
@@ -351,7 +351,7 @@ fun ListItem10(
 ) {
     ListItemRow(modifier, onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = secondaryText, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
+            Text(text = secondaryText, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textSecondary)
             Text(text = primaryText, style = MyTheme.Typography.BodyMedium, color = primaryColor ?: MyTheme.Colors.textPrimary)
         }
     }
