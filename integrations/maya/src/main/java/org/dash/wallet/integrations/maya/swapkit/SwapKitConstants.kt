@@ -25,7 +25,7 @@ object SwapKitConstants {
     const val DASH_ASSET = "DASH.DASH"
 
     /** Default slippage (percent) for indicative quotes. */
-    const val DEFAULT_SLIPPAGE_PERCENT = 3
+    const val DEFAULT_SLIPPAGE_PERCENT = 2
 
     /**
      * The only two providers that route DASH (verified from `/providers`:

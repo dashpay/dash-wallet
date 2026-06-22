@@ -25,9 +25,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
@@ -522,24 +520,17 @@ class SwapKitApiAggregator @Inject constructor(
 
     override suspend fun getSwapInfo(swapRequest: SwapQuoteRequest): ResponseResource<SwapTradeUIModel> {
         val sellAmount = swapRequest.amount.dash.setScale(8, RoundingMode.HALF_UP).toPlainString()
-        val sourceAddress = walletDataProvider.wallet?.currentReceiveAddress()?.toBase58()
-            ?: return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
-
-        val map = hashMapOf<Address, Coin>()
-        walletDataProvider.wallet!!.unspents.forEach { output ->
-            when {
-                ScriptPattern.isP2PKH(output.scriptPubKey) -> ScriptPattern.extractHashFromP2PKH(output.scriptPubKey)
-                else -> null
-            }?.let {
-                val address = Address.fromPubKeyHash(walletDataProvider.networkParameters, it)
-                map.computeIfPresent(address) { _, value -> output.value + value }
-                map.computeIfAbsent(address) {
-                    output.value
-                }
-            }
+        if (walletDataProvider.wallet == null) {
+            return ResponseResource.Failure(MayaException("wallet not loaded"), false, 0, null)
         }
-        val maxAddressBalance = map.values.maxOf { it }
-        val address = map.entries.find { maxAddressBalance == it.value }?.key
+        // Refund / source address reported to SwapKit. Use the current receive address
+        // rather than the wallet's largest-balance UTXO: SwapKit logs this value, and for
+        // NEAR routes it is where refunds land, so sending the richest address would link
+        // the swap to the user's main holdings. The current receive address is unused
+        // until funded and still wallet-owned, so any NEAR refund is recoverable. Safe now
+        // that disableBuildTx=true skips SwapKit's per-address balance check — the only
+        // reason the max-balance address was originally required.
+        val sourceAddress = walletDataProvider.currentReceiveAddress().toBase58()
 
         val quote = webApi.getQuote(
             SwapKitQuoteRequest(
@@ -578,7 +569,7 @@ class SwapKitApiAggregator @Inject constructor(
         val swap = webApi.postSwap(
             SwapKitSwapRequest(
                 routeId = route.routeId,
-                sourceAddress = address?.toBase58() ?: sourceAddress,
+                sourceAddress = sourceAddress,
                 destinationAddress = swapRequest.targetAddress,
                 disableBalanceCheck = true,
                 disableBuildTx = true
@@ -692,11 +683,16 @@ class SwapKitApiAggregator @Inject constructor(
         return try {
             val params = walletDataProvider.networkParameters
             val depositAddress = Address.fromBase58(params, swapTradeUIModel.vaultAddress)
-            // The deposit amount equals the quote's sellAmount (= amount.dash); the DASH
-            // mining fee is funded separately by the wallet's coin selection.
-            val amount = swapTradeUIModel.amount.dash
-                .setScale(8, RoundingMode.HALF_UP)
-                .toCoin()
+            // Deposit amount = sellAmount + swap fee, matching the total shown in the
+            // preview (amount + feeAmount) and the Maya vault path
+            // (MayaBlockchainApi.buildAndSendSwapTx). The DASH mining fee is funded
+            // separately by the wallet's coin selection. emptyWallet (maximum) ignores
+            // this value and sweeps the balance instead.
+            val amount = if (!swapTradeUIModel.maximum) {
+                swapTradeUIModel.amount.dash + swapTradeUIModel.feeAmount.dash
+            } else {
+                swapTradeUIModel.amount.dash
+            }.setScale(8, RoundingMode.HALF_UP).toCoin()
 
             // NEAR Intents UTXO deposits carry no memo. Warn if SwapKit unexpectedly
             // returned one so we notice if a provider ever starts requiring it.
