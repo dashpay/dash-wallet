@@ -70,7 +70,11 @@
 
         <action
             android:id="@+id/mayaConvertCryptoFragmentToMayaConversionPreviewFragment"
-            app:destination="@id/mayaConversionPreviewFragment" />
+            app:destination="@id/mayaConversionPreviewFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
     </fragment>
 
     <dialog
@@ -89,7 +93,11 @@
             android:id="@+id/mayaOrderReviewToFeeInfo"
             app:destination="@id/mayaFeeInfoDialog" />
         <action android:id="@+id/mayaOrderPreviewToOrderExecution"
-            app:destination="@+id/mayaConvertResultFragment" />
+            app:destination="@+id/mayaConvertResultFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
         <argument
             android:name="swapModel"
             app:argType="org.dash.wallet.integrations.maya.model.SwapTradeUIModel" />

@@ -486,7 +486,7 @@
         <action
             android:id="@+id/buySell_to_maya"
             app:destination="@id/nav_maya"
-            app:enterAnim="@anim/slide_in_bottom"
+            app:enterAnim="@anim/slide_in_right"
             app:popEnterAnim="@anim/activity_stay"
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
