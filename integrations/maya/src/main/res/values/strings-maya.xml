@@ -21,7 +21,7 @@
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_portal_subtitle">Convert Dash from Dash Wallet to any crypto that is supported on Maya and send it to any wallet</string>
-    <string name="dash_dex_title" translatable="false">DashDEX</string>
+    <string name="dash_dex_title" translatable="false">Dash DEX</string>
     <string name="dash_dex_subtitle">Convert Dash to or from Dash Wallet with any crypto that is on the supported networks</string>
     <string name="dash_dex_buy_title">Buy Dash</string>
     <string name="dash_dex_buy_subtitle">From any crypto to Dash Wallet</string>

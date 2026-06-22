@@ -26,10 +26,12 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.ModalDialog
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.PoolInfo
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
@@ -87,13 +89,23 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
 
     private fun clickListener(pool: PoolInfo) {
         log.info("currency picker: navigating to address input for {}", pool.asset)
-        safeNavigate(
-            MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
-                pool.currencyCode,
-                pool.asset,
-                getString(R.string.maya_address_input_title, pool.currencyCode),
-                getString(R.string.maya_address_input_hint, pool.currencyCode)
+        if (viewModel.swapDirection.value == SwapDirection.SELL) {
+            safeNavigate(
+                MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
+                    pool.currencyCode,
+                    pool.asset,
+                    getString(R.string.maya_address_input_title, pool.currencyCode),
+                    getString(R.string.maya_address_input_hint, pool.currencyCode)
+                )
             )
-        )
+        } else {
+            AdaptiveDialog.create(
+                icon = null,
+                title = "Buy Swap",
+                message = "next step not implemented",
+                negativeButtonText = getString(R.string.button_cancel),
+                positiveButtonText = null,
+            ).show(requireActivity())
+        }
     }
 }
