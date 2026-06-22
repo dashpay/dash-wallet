@@ -63,6 +63,10 @@ class MayaBlockchainApiImpl @Inject constructor(
 ) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
+        // Maximum bytes the DASH OP_RETURN can hold (enforced by
+        // ScriptBuilder.createOpReturnScript). A Maya swap memo longer than this would
+        // otherwise crash with an IllegalArgumentException inside the builder.
+        private const val MAX_OP_RETURN_BYTES = 80
     }
 
     override suspend fun commitSwapTransaction(
@@ -95,6 +99,22 @@ class MayaBlockchainApiImpl @Inject constructor(
             val sendRequest: SendRequest
             val memo = swapTradeUIModel.memo
                 ?: "=:${swapTradeUIModel.outputAsset}:${swapTradeUIModel.destinationAddress}"
+
+            // Guard the OP_RETURN size before building the script. ScriptBuilder
+            // .createOpReturnScript throws an IllegalArgumentException (with a null
+            // message) for payloads over MAX_OP_RETURN_BYTES; fail cleanly instead so the
+            // UI can surface a real error. Long token identifiers (e.g. an asset contract
+            // address plus the destination address) are what push a memo past the limit.
+            val memoBytes = memo.toByteArray()
+            if (memoBytes.size > MAX_OP_RETURN_BYTES) {
+                log.error("maya swap memo too long: {} bytes (max {}): {}", memoBytes.size, MAX_OP_RETURN_BYTES, memo)
+                return ResponseResource.Failure(
+                    MayaException("swap memo too long for OP_RETURN: ${memoBytes.size} > $MAX_OP_RETURN_BYTES bytes"),
+                    false,
+                    0,
+                    null
+                )
+            }
             val tx = Transaction(params)
 
             // set outputs according to:

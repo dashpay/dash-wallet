@@ -26,11 +26,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.common.util.toFiat
 import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
@@ -72,9 +75,11 @@ import javax.inject.Inject
  * populated, with [PoolInfo.assetPriceFiat] computed directly from `/price` rather
  * than the stable-pool cross-product Maya uses.
  *
- * The DASH transaction itself is still built by [MayaBlockchainApi.buildAndSendSwapTx]
- * — SwapKit's `/v3/swap` response yields the same `vaultAddress` + `memo` shape the
- * existing builder needs, so no PSBT parsing is required for DASH-as-source.
+ * The DASH transaction is built per route provider: Maya routes reuse
+ * [MayaBlockchainApi.buildAndSendSwapTx] (vault + OP_RETURN memo), while non-Maya
+ * routes (NEAR Intents) use [buildAndSendDepositTx], a plain deposit to the SwapKit
+ * deposit address with no memo. Either way no PSBT parsing is required for
+ * DASH-as-source.
  */
 class SwapKitApiAggregator @Inject constructor(
     private val webApi: SwapKitWebApi,
@@ -86,7 +91,9 @@ class SwapKitApiAggregator @Inject constructor(
     // (SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets").
     private val mayaWebApi: MayaWebApi,
     // Persists the coin-list snapshot for instant cold-start rendering (SWR).
-    private val mayaConfig: MayaConfig
+    private val mayaConfig: MayaConfig,
+    // Builds/signs/broadcasts the plain DASH deposit for non-Maya routes (NEAR Intents).
+    private val sendPaymentService: SendPaymentService
 ) : SwapProvider {
     companion object {
         private val log = LoggerFactory.getLogger(SwapKitApiAggregator::class.java)
@@ -648,9 +655,70 @@ class SwapKitApiAggregator @Inject constructor(
             )
         )
         return if (refreshed is ResponseResource.Success) {
-            blockchainApi.buildAndSendSwapTx(refreshed.value)
+            if (isMayaRoute(refreshed.value)) {
+                // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN.
+                blockchainApi.buildAndSendSwapTx(refreshed.value)
+            } else {
+                // NEAR Intents (or any non-Maya provider): a plain DASH deposit to the
+                // one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using
+                // the Maya builder here would fabricate a Maya-format memo (Maya doesn't
+                // route the asset, so SwapKit returns no memo and the builder falls back
+                // to "=:ASSET:DEST") and overflow the 80-byte OP_RETURN limit for long
+                // token identifiers such as TRON.USDT-<contract>.
+                buildAndSendDepositTx(refreshed.value)
+            }
         } else {
             refreshed
+        }
+    }
+
+    /**
+     * True when the resolved route settles through MAYAChain. Mirrors the provider
+     * classification in [recommendedProviderFor]: [SwapTradeUIModel.routeName] carries
+     * the comma-joined SwapKit provider names (e.g. "MAYACHAIN").
+     */
+    private fun isMayaRoute(model: SwapTradeUIModel): Boolean =
+        model.routeName?.contains("MAYA", ignoreCase = true) == true
+
+    /**
+     * Builds + signs + broadcasts a plain DASH deposit to the SwapKit deposit address for
+     * non-Maya routes (NEAR Intents). The deposit address itself identifies the swap, so
+     * no OP_RETURN memo is attached — avoiding the Maya-only vault output ordering and the
+     * 80-byte OP_RETURN limit.
+     */
+    private suspend fun buildAndSendDepositTx(
+        swapTradeUIModel: SwapTradeUIModel
+    ): ResponseResource<SwapTradeUIModel> {
+        return try {
+            val params = walletDataProvider.networkParameters
+            val depositAddress = Address.fromBase58(params, swapTradeUIModel.vaultAddress)
+            // The deposit amount equals the quote's sellAmount (= amount.dash); the DASH
+            // mining fee is funded separately by the wallet's coin selection.
+            val amount = swapTradeUIModel.amount.dash
+                .setScale(8, RoundingMode.HALF_UP)
+                .toCoin()
+
+            // NEAR Intents UTXO deposits carry no memo. Warn if SwapKit unexpectedly
+            // returned one so we notice if a provider ever starts requiring it.
+            if (!swapTradeUIModel.memo.isNullOrBlank()) {
+                log.warn("non-Maya deposit route returned a memo; not encoding it: {}", swapTradeUIModel.memo)
+            }
+
+            log.info("swapkit deposit: {} to {}", amount.toFriendlyString(), depositAddress)
+            val sentTransaction = sendPaymentService.sendCoins(
+                depositAddress,
+                amount,
+                emptyWallet = swapTradeUIModel.maximum,
+                // Mirror the Maya builder, which bypasses leftover-balance checks for swaps.
+                checkBalanceConditions = false
+            )
+            swapTradeUIModel.txid = sentTransaction.txId
+            ResponseResource.Success(swapTradeUIModel)
+        } catch (e: InsufficientMoneyException) {
+            ResponseResource.Failure(e, false, 0, e.message)
+        } catch (e: Exception) {
+            log.error("failed to build/send swapkit deposit transaction", e)
+            ResponseResource.Failure(e, false, 0, e.message)
         }
     }
 
