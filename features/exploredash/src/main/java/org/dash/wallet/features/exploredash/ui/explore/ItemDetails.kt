@@ -58,7 +58,7 @@ import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
 import org.dash.wallet.features.exploredash.data.explore.model.*
 import org.dash.wallet.features.exploredash.ui.extensions.isMetric
-import java.text.DecimalFormat
+import org.dash.wallet.features.exploredash.utils.SavingsFormatting
 import java.util.*
 import kotlin.String
 
@@ -287,13 +287,8 @@ private fun MultipleProvidersSection(
     selectedProvider: GiftCardProviderType,
     onProviderSelected: (GiftCardProvider) -> Unit
 ) {
-    val discountFormat = remember {
-        DecimalFormat().apply {
-            maximumFractionDigits = 2
-            minimumFractionDigits = 0
-        }
-    }
-    val colors = LocalDashColors.current
+    val context = LocalContext.current
+
     Column {
         Text(
             text = stringResource(R.string.select_gift_card_provider),
@@ -311,7 +306,12 @@ private fun MultipleProvidersSection(
                     } else {
                         stringResource(R.string.fixed_amounts)
                     },
-                    discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%",
+                    discount = SavingsFormatting.format(
+                        context = context,
+                        percent = provider.savingsPercentage.toDouble() / 100,
+                        decimals = 2,
+                        discountPrefix = "-"
+                    ),
                     isSelected = provider.provider == selectedProvider.name,
                     isEnabled = provider.active,
                     onSelected = { onProviderSelected(provider) }
@@ -327,18 +327,18 @@ private fun MultipleProvidersSection(
 private fun SingleProviderSection(
     provider: GiftCardProvider
 ) {
-    val discountFormat = remember {
-        DecimalFormat().apply {
-            maximumFractionDigits = 2
-            minimumFractionDigits = 0
-        }
-    }
+    val context = LocalContext.current
     val subtitle = if (provider.denominationsType == DenominationType.MinMax.value) {
         stringResource(R.string.flexible_amounts)
     } else {
         stringResource(R.string.fixed_amounts)
     }
-    val discount = "-${discountFormat.format(provider.savingsPercentage.toDouble() / 100)}%"
+    val discount = SavingsFormatting.format(
+        context = context,
+        percent = provider.savingsPercentage.toDouble() / 100,
+        decimals = 2,
+        discountPrefix = "-"
+    )
     val isSelected = false
     val isEnabled = provider.active
     val onSelected = { }

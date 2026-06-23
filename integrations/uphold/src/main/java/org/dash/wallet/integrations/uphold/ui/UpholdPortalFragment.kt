@@ -50,11 +50,14 @@ import org.dash.wallet.integrations.uphold.data.UpholdConstants
 class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
     companion object {
         const val AUTH_RESULT_ACTION = "UpholdPortalFragment.AUTH_RESULT"
+        const val INTENT_ACTION = "action"
+        const val LOGIN_AND_CLOSE = "login_and_close"
     }
 
     private val binding by viewBinding(FragmentIntegrationPortalBinding::bind)
     private val viewModel by viewModels<UpholdViewModel>()
     private var balanceAnimator: ObjectAnimator? = null
+    private var action: String? = null
 
     private val authResultReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -76,6 +79,9 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        println(requireArguments())
+        action = requireArguments().getString(INTENT_ACTION)
 
         binding.balanceDash.setFormat(viewModel.balanceFormat)
         binding.balanceDash.setApplyMarkup(false)
@@ -133,6 +139,10 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
 
             if (uiState.isUserLoggedIn) {
                 setConnectedState(true)
+                if (action == LOGIN_AND_CLOSE) {
+                    action = null
+                    findNavController().popBackStack()
+                }
             } else if (binding.connectedGroup.isVisible) {
                 // The screen thinks it's still connected. Show the dialog and change the state.
                 showNotLoggedInDialog()
@@ -155,6 +165,9 @@ class UpholdPortalFragment : Fragment(R.layout.fragment_integration_portal) {
                 viewModel.refreshBalance()
                 viewModel.checkCapabilities()
             }
+        } else if (action == LOGIN_AND_CLOSE) {
+            // TODO: what event should be logged here?
+            linkAccount()
         }
 
         LocalBroadcastManager.getInstance(requireContext()).registerReceiver(

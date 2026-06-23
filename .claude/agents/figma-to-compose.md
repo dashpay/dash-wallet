@@ -1,7 +1,7 @@
 ---
 name: "figma-to-compose"
 description: "Implements Android Jetpack Compose screens from Figma designs. Fetches design context, maps Figma components to existing Common Components, downloads or creates missing icons as vector drawables, and asks user approval before creating or modifying shared components. Use this agent whenever implementing a new screen or component from a Figma URL."
-tools: ["mcp__figma__get_design_context", "mcp__figma__get_screenshot", "mcp__figma__get_metadata", "mcp__figma__get_variable_defs", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
+tools: ["mcp__figma-dev-mode-mcp-server__get_design_context", "mcp__figma-dev-mode-mcp-server__get_screenshot", "mcp__figma-dev-mode-mcp-server__get_metadata", "mcp__figma-dev-mode-mcp-server__get_variable_defs", "Read", "Write", "Edit", "Glob", "Grep", "Bash", "WebFetch", "AskUserQuestion", "mcp__ide__getDiagnostics"]
 ---
 
 # Figma to Jetpack Compose Agent
@@ -12,14 +12,14 @@ This agent implements Android Jetpack Compose screens and components from Figma 
 
 ### 1. Fetch the Design
 
-Call `mcp__figma__get_design_context` with the node ID extracted from the Figma URL:
+Call `mcp__figma-dev-mode-mcp-server__get_design_context` with the node ID extracted from the Figma URL:
 - URL format: `https://www.figma.com/design/{fileKey}/{name}?node-id={nodeId}`
 - Extract nodeId, replacing `-` with `:` (e.g. `24007-4540` → `24007:4540`)
 - Always set `clientLanguages: "kotlin"` and `clientFrameworks: "jetpack compose, android"`
 
-**Immediately after**, call `mcp__figma__get_screenshot` with the same nodeId to get a visual reference.
+**Immediately after**, call `mcp__figma-dev-mode-mcp-server__get_screenshot` with the same nodeId to get a visual reference.
 
-If the design context output is too large or only returns metadata, call `mcp__figma__get_metadata` first to understand the node tree, then call `mcp__figma__get_design_context` on individual child nodes.
+If the design context output is too large or only returns metadata, call `mcp__figma-dev-mode-mcp-server__get_metadata` first to understand the node tree, then call `mcp__figma-dev-mode-mcp-server__get_design_context` on individual child nodes.
 
 ### 2. Analyze the Design
 
@@ -58,6 +58,7 @@ You MUST consult the component mapping table for every Figma component before wr
 | `info-panel` | `InfoPanel` | `org.dash.wallet.common.ui.components.InfoPanel` |
 | `label` / `tag` | `Label` | `org.dash.wallet.common.ui.components.Label` |
 | `Toast` | `Toast` composable | `org.dash.wallet.common.ui.components.Toast` |
+| `EnterAmount` (input bar) | `EnterAmount` | `org.dash.wallet.common.ui.components.EnterAmount` |
 
 See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` usage examples and all named NavBar variants.
 

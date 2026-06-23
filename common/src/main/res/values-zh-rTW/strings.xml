@@ -52,6 +52,8 @@
     <string name="button_continue">繼續</string>
     <string name="get_quote">獲得報價</string>
     <string name="button_close">關閉</string>
+    <string name="button_cancel">取消</string>
+    <string name="button_confirm">確認:</string>
     <string name="button_retry">重試</string>
     <string name="button_send_report">發送報告</string>
     <string name="button_info">資訊</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">達世幣錢包</string>
     <string name="from">由</string>
     <string name="to">至</string>
+    <string name="from_title">由</string>
+    <string name="to_title">到</string>
     <string name="select_currency">選擇貨幣</string>
     <string name="send_coins_error_dusty_send">這個金額太小，無法發送。</string>
     <string name="send_coins_error_insufficient_money">餘額不足</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">區塊鏈正在同步…</string>
     <string name="report_issue_dialog_mail_intent_chooser">寄送報告…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">抱歉</string>
+    <string name="scan_camera_problem_dialog_message">照相機有問題，你可能需要重新啟動裝置</string>
+    <string name="scan_camera_permission_dialog_title">相機權限</string>
+    <string name="scan_camera_permission_dialog_message">為了掃描QR碼，您需要授予使用相機的權限。</string>
+
+    <!-- address input -->
+    <string name="address_input_title">達世幣付款</string>
+    <string name="show_clipboard">顯示剪貼板中的內容</string>
+    <string name="tap_to_paste">點擊剪貼板中的地址進行粘貼</string>
+    <string name="recipient_address">收款者位址</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">無法讀取資料:\n%s</string>
+    <string name="input_parser_cannot_classify">無法辨識輸入:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">達世幣 URI 無效:\\n%s</string>
+    <string name="input_parser_invalid_address">取得無效達世幣地址!\\n(是否 Mainnet/Testnet 混用?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">無法驗證付款請求:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">無效付款請求:\n%s</string>
+    <string name="input_parser_invalid_transaction">無效交易:\n%s</string>
+    <string name="input_connect">連接</string>
+
+    <!-- others -->
+    <string name="confirm_sec">確認 (%ss)</string>
+    <string name="cancel_transaction">取消交易?</string>
+    <string name="yes_cancel">是的，取消</string>
+    <string name="no_keep_it">不，留著</string>
+    <string name="insufficient_money_title">餘額不足</string>
+    <string name="send_coins_error_msg">付款出現問題!</string>
+    <string name="from_dash_wallet_on_this_device">從此設備上的達世幣錢包</string>
+    <string name="preposition_at">在</string>
+</resources>

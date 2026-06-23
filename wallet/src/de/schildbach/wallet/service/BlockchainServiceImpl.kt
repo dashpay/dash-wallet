@@ -525,12 +525,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 val transactionConfidence = tx.getConfidence(wallet.context)
                 val shouldStopListening = if (transactionConfidence.confidenceType == TransactionConfidence.ConfidenceType.BUILDING) {
                     transactionConfidence.depthInBlocks = wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
-//                    log.info(
-//                        "tx {}; {} == {}",
-//                        transactionConfidence.transactionHash,
-//                        transactionConfidence.depthInBlocks,
-//                        wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
-//                    )
+                    log.info(
+                        "tx {}; {} == {}",
+                        transactionConfidence.transactionHash,
+                        transactionConfidence.depthInBlocks,
+                        wallet.lastBlockSeenHeight - transactionConfidence.appearedAtChainHeight + 1
+                    )
 
                     val requiredDepth = if (tx.isCoinBase) {
                         wallet.params.spendableCoinbaseDepth
@@ -1763,7 +1763,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                                 log.info("transaction {} broadcast initiated", tx.txId)
                             } else {
                                 log.warn("peergroup not available, not broadcasting transaction {}", tx.txId)
-                                tx.confidence.setPeerInfo(0, 1)
+                                // tx.confidence.setPeerInfo(0, 1)
                             }
                         } else {
                             log.error("transaction {} not found in wallet", hash)
@@ -1937,6 +1937,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (peerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
+                    coinJoinService.prepareForShutdown()
                     // we may need to skip these, or move them to after the forceStop because they grab a lock
                     if (!peerGroup!!.lock.isLocked) {
                         peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)

@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.database.entity.DashPayProfile
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.dashpay.DashPayViewModel
 import de.schildbach.wallet.ui.LockScreenActivity
@@ -283,7 +284,7 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
 
     protected open suspend fun showPaymentConfirmation() {
         val dryRunRequest = viewModel.dryrunSendRequest ?: return
-        val address = viewModel.basePaymentIntent.address?.toBase58() ?: return
+        val address = viewModel.basePaymentIntent.getAddress(Constants.NETWORK_PARAMETERS)?.toBase58() ?: return
 
         val txFee = dryRunRequest.tx.fee
         val amount: Coin?

@@ -52,6 +52,8 @@
     <string name="button_continue">Продовжити</string>
     <string name="get_quote">Отримати пропозицію</string>
     <string name="button_close">Закрити</string>
+    <string name="button_cancel">Відміна</string>
+    <string name="button_confirm">Підтвердити</string>
     <string name="button_retry">Повторити</string>
     <string name="button_send_report">Надіслати Звіт</string>
     <string name="button_info">інформація</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">з</string>
     <string name="to">до</string>
+    <string name="from_title">З</string>
+    <string name="to_title">До</string>
     <string name="select_currency">Вибрати Валюту</string>
     <string name="send_coins_error_dusty_send">Сума надто мала для відправки</string>
     <string name="send_coins_error_insufficient_money">Недостатньо коштів</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">Блокчейн синхронізується...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Відправити звіт використовуючи…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Вибачте</string>
+    <string name="scan_camera_problem_dialog_message">Проблема з камерою. Можливо, вам потрібо перезавантажити пристрій.</string>
+    <string name="scan_camera_permission_dialog_title">Дозвіл на доступ до камери</string>
+    <string name="scan_camera_permission_dialog_message">Щоб сканувати QR-коди, вам потрібно надати дозвіл на використання камери.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Відправка Dash</string>
+    <string name="show_clipboard">Показати вміст у буфері обміну</string>
+    <string name="tap_to_paste">Натисніть на адресу з буфера обміну, щоб вставити її</string>
+    <string name="recipient_address">Адреса отримувача</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Не вдається прочитати дані:\n%s</string>
+    <string name="input_parser_cannot_classify">Не вдається розпізнати вхід:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Некоректна Dash-адреса:\n%s</string>
+    <string name="input_parser_invalid_address">Отримано некоректну Dash адесу!\n(Переплутані mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Не вдається перевірити запит на оплату:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Недопустимий запит на оплату:\n%s</string>
+    <string name="input_parser_invalid_transaction">Помилкова транзакція:\n%s</string>
+    <string name="input_connect">Підключитися</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Підтвердження (%s сек.)</string>
+    <string name="cancel_transaction">Відмінити транзакцію?</string>
+    <string name="yes_cancel">Так, відмінити</string>
+    <string name="no_keep_it">Ні, залишити</string>
+    <string name="insufficient_money_title">Недостньо монет</string>
+    <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
+    <string name="from_dash_wallet_on_this_device">З Dash Wallet на цьому пристрої</string>
+    <string name="preposition_at">в</string>
+</resources>

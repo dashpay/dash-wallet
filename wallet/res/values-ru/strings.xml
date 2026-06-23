@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Шифрование…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Расшифровка…</string>
     <string name="encrypt_keys_dialog_state_done">Готово</string>
-    <string name="scan_camera_problem_dialog_title">Извините</string>
-    <string name="scan_camera_problem_dialog_message">Проблема с камерой. Возможно, Вам нужно перезагрузить устройство.</string>
-    <string name="scan_camera_permission_dialog_title">Права на доступ к камере</string>
-    <string name="scan_camera_permission_dialog_message">Для сканирования QR-кодов, Вам нужно разрешить использовать камеру.</string>
-    <string name="input_parser_io_error">Не могу считать данные:\n%s</string>
-    <string name="input_parser_cannot_classify">Не могу распознать ввод:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Неверный Dash-URI:\n%s</string>
-    <string name="input_parser_invalid_address">Неверный адрес!\n(Путаем основную сеть с тестовой?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Не могу проверить платёжный запрос:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Неверный платёжный запрос:\n%s</string>
-    <string name="input_parser_invalid_transaction">Некорректная транзакция:\n%s</string>
     <string name="preferences_activity_title">Настройки</string>
     <string name="preferences_category_diagnostics">Диагностика</string>
     <string name="preferences_category_labs">Лаборатория</string>
@@ -294,7 +283,7 @@
     <string name="preferences_extended_public_key_title">Показать xpub</string>
     <string name="preferences_extended_public_key_summary">Просмотр расширенного открытого ключа Вашего кошелька может быть полезен для импортирования в другие приложения и услуги. Будьте осторожны: этим Вы нарушаете свою финансовую конфиденциальность.</string>
     <string name="bitmap_fragment_share">Поделиться…</string>
-    <string name="extended_public_key_fragment_title">Расширенный  публичный ключ</string>
+    <string name="extended_public_key_fragment_title">Расширенный публичный ключ (BIP44)</string>
     <string name="extended_public_key_fragment_share">Поделиться xpub…</string>
     <string name="extended_public_key_share_key">Поделиться ключом</string>
     <string name="report_issue_dialog_title_issue">Сообщить о проблеме</string>
@@ -319,13 +308,17 @@
     <string name="report_issue_dialog_status_background_traces">фоновые следы</string>
     <string name="report_issue_dialog_status_stack_trace">трассировка стека</string>
     <string name="report_issue_dialog_status_finishing">завершается</string>
-    <string name="report_transaction_history_export">Экспортировать</string>
+    <string name="report_transaction_history_export">Экспортировать транзакции</string>
     <string name="report_transaction_history_title">Экспортировать CSV</string>
+    <string name="report_transaction_history_dialog_title">Полная история транзакций будет экспортирована в виде CSV-файла</string>
     <string name="report_transaction_history_not_synced_title">Экспортировать CSV</string>
     <string name="report_transaction_history_not_synced_message">Перед экспортированием истории транзакций дождитесь полной синхронизации кошелька </string>
     <string name="report_transaction_history_message">Будет экспортирована полная история транзакций.\n\nВсе платежи будут считаться расходами, а все входящие транзакции - доходами. Ответственность за корректировку данных о балансовой стоимости несёт владелец кошелька согласно выбранной им системе налоговой отчётности. </string>
+    <string name="report_transaction_history_body_1">Все платежи будут считаться расходами, а все входящие транзакции - доходами.</string>
+    <string name="report_transaction_history_body_2">Ответственность за корректировку данных о балансовой стоимости несёт владелец кошелька согласно выбранной им системе налоговой отчётности. </string>
     <string name="report_transaction_history_mail_intent_chooser">Отправить историю транзакций с помощью...</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Ошибка при отправке истории транзакций.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Ошибка при экспортировании истории транзакций.</string>
 
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
@@ -422,10 +415,9 @@
     <string name="reason">Причина</string>
     <string name="link_account">Привязать аккаунт</string>
     <string name="buy_no_account_needed">Купить Dash · Без учётной записи</string>
+    <string name="convert_no_account_needed">Обменять Dash · Без учётной записи</string>
 
     <string name="recipient_address">Адрес получателя</string>
-    <string name="show_clipboard">Показать содержимое буфера обмена</string>
-    <string name="tap_to_paste">Чтобы вставить адрес из буфера обмена, нажмите на него</string>
     <string name="not_dash_address">Некорректный адрес Dash или URL запрос</string>
     <string name="send_to_address">Отправить на адрес</string>
 

@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">确认</string>
     <string name="dialog_confirm_pay_to">发送至</string>
     <string name="dialog_confirm_secured_by">受保护</string>
+    <string name="dialog_confirm_connected_to_unsecured">已连接到 (不安全的)</string>
     <string name="dialog_confirm_fee">网络手续费</string>
     <string name="dialog_confirm_total">总计</string>
     <string name="dialog_confirm_accept_contact_request">接受好友请求</string>
@@ -68,6 +69,11 @@
 
     <string name="pay_title">发送</string>
     <string name="history_title">历史</string>
+    <string name="wallet_transactions_building_cache">确认交易历史记录中...</string>
+    <string name="history_refresh_dialog_title">刷新交易列表</string>
+    <string name="history_refresh_dialog_message">这将清除交易显示缓存, 并从初始重建. 在重建过程中该列表将暂时不可用.</string>
+    <string name="history_refresh_dialog_confirm">刷新</string>
+    <string name="history_refresh_complete">已刷新交易列表</string>
     <string name="more_title">更多</string>
     <string name="settings_title">设置</string>
     <string name="security_title">安全</string>
@@ -280,13 +286,15 @@
 
     <string name="tools_address_book">地址簿</string>
     <string name="tools_import_private_key">导入私钥</string>
+    <string name="import_private_key_description">此操作会将Dash纸钱包中的所有币转移到此设备的DashPay应用程序.</string>
     <string name="tools_network_monitor">网络监视器</string>
-    <string name="tools_show_xpub">扩展的公钥</string>
+    <string name="tools_show_xpub">扩展公钥 (BIP44)</string>
 
     <string name="about_help_us_improve">帮助我们改善您的体验</string>
     <string name="about_review_and_rate">对app评价并评分</string>
     <string name="about_contact_support">联系支持</string>
     <string name="about_fork_disclaimer">这是从比特币钱包分叉而来的开源应用程序</string>
+    <string name="about_copyright">版权所有 © 2026 Dash Core Group</string>
     <string name="about_license">GNU 公共通用许可 v3.0</string>
     <string name="about_version_name">DashPay 钱包 %s</string>
     <string name="about_last_explore_device_sync">最后一次探索设备同步</string>
@@ -430,6 +438,11 @@
     <string name="reclassify_transactions_linked_accounts_message">在默认下, 所有进出您关联账户的交易 (交易所, 质押等) 都将被标记为转账.</string>
     <string name="reclassify_transactions_change_explanation">从主页选择任何交易并在交易详情页面更改类别.</string>
 
+    <string name="masternode_keys_title">主节点密钥</string>
+    <string name="masternode_key_type_owner">所有者密钥</string>
+    <string name="masternode_key_type_voting">投票者密钥</string>
+    <string name="masternode_key_type_operator">运行者密钥</string>
+    <string name="masternode_key_type_platform">HPMN 运行者密钥</string>
     <string name="masternode_key_type_total">%d 密钥</string>
     <string name="masternode_key_type_used">%d 已使用</string>
     <string name="masternode_key_pair_index">密钥对 %d</string>

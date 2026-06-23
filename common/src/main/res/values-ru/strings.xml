@@ -52,6 +52,8 @@
     <string name="button_continue">Продолжить</string>
     <string name="get_quote">Получить Quote</string>
     <string name="button_close">Закрыть</string>
+    <string name="button_cancel">Отмена</string>
+    <string name="button_confirm">Подтвердить</string>
     <string name="button_retry">Повторить</string>
     <string name="button_send_report">Отправить отчёт</string>
     <string name="button_info">информация</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">с</string>
     <string name="to">на</string>
+    <string name="from_title">От кого</string>
+    <string name="to_title">Кому</string>
     <string name="select_currency">Выберите валюту</string>
     <string name="send_coins_error_dusty_send">Сумма слишком мала для отправки</string>
     <string name="send_coins_error_insufficient_money">Недостаточно средств</string>
@@ -111,4 +115,38 @@
     <string name="chain_syncing">Блокчейн синхронизируется...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Отправить отчёт, используя…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Извините</string>
+    <string name="scan_camera_problem_dialog_message">Проблема с камерой. Возможно, Вам нужно перезагрузить устройство.</string>
+    <string name="scan_camera_permission_dialog_title">Права на доступ к камере</string>
+    <string name="scan_camera_permission_dialog_message">Для сканирования QR-кодов, Вам нужно разрешить использовать камеру.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Отправить Dash</string>
+    <string name="show_clipboard">Показать содержимое буфера обмена</string>
+    <string name="tap_to_paste">Чтобы вставить адрес из буфера обмена, нажмите на него</string>
+    <string name="not_valid_address">Некорректный адрес %s или URL запрос</string>
+    <string name="recipient_address">Адрес получателя</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Не могу считать данные:\n%s</string>
+    <string name="input_parser_cannot_classify">Не могу распознать ввод:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Неверный Dash-URI:\n%s</string>
+    <string name="input_parser_invalid_address">Неверный адрес!\n(Перепутали основную сеть с тестовой?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Не могу проверить платёжный запрос:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Неверный платёжный запрос:\n%s</string>
+    <string name="input_parser_invalid_transaction">Некорректная транзакция:\n%s</string>
+    <string name="address_input_paste_from">Вставить из %s</string>
+    <string name="input_connect">Подключиться</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Подтвердить (%s)</string>
+    <string name="cancel_transaction">Отменить транзакцию?</string>
+    <string name="yes_cancel">Да, отменить</string>
+    <string name="no_keep_it">Нет, оставить</string>
+    <string name="insufficient_money_title">Недостаточно монет</string>
+    <string name="insufficient_money_msg">В этом кошельке слишком мало монет для перевода.</string>
+    <string name="send_coins_error_msg">Проблема с отправкой средств!</string>
+    <string name="from_dash_wallet_on_this_device">С Dash Wallet на этом устройстве</string>
+    <string name="preposition_at">в</string>
+</resources>

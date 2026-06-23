@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Nie ma Bankomatów</string>
     <string name="distance_miles">%s mil</string>
     <string name="distance_kilometers">%s kilometrów</string>
+    <string name="explore_fee">opłata %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%dsprzedawcy</item>
         <item quantity="few">%dsprzewdawców</item>
@@ -89,7 +91,7 @@
     <string name="explore_location_settings">Obecne ustawienia lokalizacji</string>
     <string name="explore_reset_filters">Zresetuj filtry</string>
     <string name="explore_reset_all_filters">Zresetuj wszystkie filtry</string>
-    <string name="explore_filtered_by">Od filtrowane pod względem:</string>
+    <string name="explore_filtered_by">Filtrowane pod względem:</string>
     <string name="explore_pay_gift_card">Płać za pomocą karty podarunkowej</string>
     <string name="explore_sort_by">Sortuj według</string>
     <string name="gift_card_types">Rodzaje kart pordarunkowych</string>
@@ -188,6 +190,9 @@
     <string name="purchase_gift_card_at">przy</string>
     <string name="purchase_gift_card_min">Min: %s</string>
     <string name="purchase_gift_card_max">Max: %s</string>
+    <string name="gift_card_tab_single">Pojedyncza</string>
+    <string name="gift_card_tab_multiple">Wielokrotność</string>
+    <string name="gift_card_buy_title">Kup kartę podarunkową</string>
     <string name="purchase_gift_card_discount_hint">Kupujesz %s kartę podarunkową za %s (%s zniżki)</string>
     <string name="button_next">Dalej</string>
     <string name="purchase_gift_card_from">Od</string>
@@ -196,6 +201,14 @@
     <string name="purchase_gift_card_total_label">Wartość karty podarunkowej</string>
     <string name="purchase_gift_card_discount">Zniżka</string>
     <string name="purchase_gift_card_you_pay">Płacisz</string>
+    <string name="purchase_gift_card_quantity_label">Ilość sztuk</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d karta</item>
+        <item quantity="few">%d kart</item>
+        <item quantity="many">%d karty</item>
+        <item quantity="other">%d karty</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Wartość karty</string>
     <string name="purchase_gift_card_confirm">Potwierdź</string>
     <string name="purchase_gift_card_details">Szczegóły karty podarunkowej</string>
     <string name="purchase_original_purchase">Pierwszy zakup</string>
@@ -211,6 +224,9 @@
     <string name="purchase_tell_the_cashier">Powiedz kasjerowi, że płacisz cyfrową kartą podarunkową. Kasjer: wpisz całkowitą kwotę w polu Karta bankowa, następnie wpisz numer karty podarunkowej w polu Konto i naciśnij Enter.</string>
     <string name="purchase_in_the_payment_section">W sekcji płatności wprowadź numer swojej karty w polu karty podarunkowej.</string>
     <string name="purchase_powered_by">Obsługiwane przez</string>
+    <string name="purchase_cashier_instructions">Instrukcje kasjera</string>
+    <string name="purchase_cashier_instructions_body">Zaakceptuj kartę podarunkową lub eGift Card przy kasie i przetwórz ją jako płatność.</string>
+    <string name="purchase_gift_card_date_format">%1$sz %2$s</string>
     <string name="insufficient_money_title">Brak wystarczających środków</string>
     <string name="insufficient_money_msg">Niewystarczająca ilość funduszy</string>
     <string name="send_coins_error_msg">Problem z wysłaniem monet!</string>
@@ -218,7 +234,12 @@
     <string name="gift_card_tx_title">Karta podarunkowa · %s</string>
     <string name="select_amount">Wybierz kwotę</string>
     <string name="select_fixed_amount">Ten sprzedawca sprzedaje karty podarunkowe po stałych cenach</string>
-
+    <string name="purchase_gift_card_max_multiple_error">Możesz kupić maksymalnie %s kart podarunkowych na zamówienie</string>
+    <string name="purchase_gift_card_insufficient_money_error">Nie masz wystarczającej ilości Dash, aby kupić te karty podarunkowe</string>
+    <string name="purchase_gift_card_insufficient_inventory">Niewystarczające zapasy %s aby kupić %dx %s karty</string>
+    <string name="purchase_gift_card_inventory_toast">Sprzedawca ma %d dostępnych kart</string>
+    <string name="purchase_gift_card_single_card_only_toast">Możesz wybrać tylko jedną ilość kart</string>
+    <string name="purchase_gift_card_reset">Resetuj</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Wprowadź kod weryfikacyjny</string>
     <string name="verification_check_email">Sprawdź swoją pocztę e-mail i wprowadź kod weryfikacyjny</string>
@@ -252,6 +273,7 @@
     <string name="accept_to_proceed">Aby założyć konto w DashSpend musisz zaakceptować regulamin DashSpend</string>
     <string name="view_terms_conditions">Warunki &amp; zasady</string>
     <string name="barcode_placeholder">Proszę poczekaj aż szczegóły karty podarunkowej zostaną dostarczone.</string>
+    <string name="purchase_order_number">Numer zamówienia</string>
     <string name="gift_card_contact_ctx">Skontaktuj się z pomocą techniczną CTX</string>
     <string name="gift_card_contact_piggycards">Skontaktuj się z pomocą PiggyCards</string>
     <string name="gift_card_contact_support">Skontaktuj się z pomocą techniczną</string>

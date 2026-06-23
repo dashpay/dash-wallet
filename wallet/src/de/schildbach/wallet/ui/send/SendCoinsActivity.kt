@@ -29,10 +29,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
-import de.schildbach.wallet.payments.parsers.PaymentIntentParser
-import de.schildbach.wallet.payments.parsers.PaymentIntentParserException
+import org.dash.wallet.common.payments.parsers.PaymentIntentParserException
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.util.InputParser
 import de.schildbach.wallet.util.Nfc
@@ -42,6 +40,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.core.Coin
 import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.dash.wallet.common.data.PaymentIntent
+import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.bitcoinj.script.ScriptBuilder
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.ResourceString
@@ -57,10 +57,12 @@ open class SendCoinsActivity : LockScreenActivity() {
         const val INTENT_EXTRA_BUY_CREDITS = "buyCredits"
         const val INTENT_EXTRA_IS_QUICK_SCAN = "isQuickScan"
 
+        @JvmStatic
         fun start(context: Context, paymentIntent: PaymentIntent?) {
             start(context, null, paymentIntent, false)
         }
 
+        @JvmStatic
         fun start(context: Context, action: String?, paymentIntent: PaymentIntent?, keepUnlocked: Boolean, isQuickScan: Boolean = false) {
             val intent = Intent(context, SendCoinsActivity::class.java)
 
@@ -138,7 +140,7 @@ open class SendCoinsActivity : LockScreenActivity() {
             val intentPaymentIntent = intent.getParcelableExtra(INTENT_EXTRA_PAYMENT_INTENT) as PaymentIntent?
             val intentBuyCredits = intent.extras?.getBoolean(INTENT_EXTRA_BUY_CREDITS) ?: false
             val intentIsQuickScan = intent.extras?.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN) ?: false
-            
+
             if (intentPaymentIntent != null) {
                 // Intent extras are preserved, use them
                 paymentIntent = intentPaymentIntent
@@ -150,9 +152,9 @@ open class SendCoinsActivity : LockScreenActivity() {
                 buyCredits = savedInstanceState.getBoolean(INTENT_EXTRA_BUY_CREDITS, false)
                 isQuickScan = savedInstanceState.getBoolean(INTENT_EXTRA_IS_QUICK_SCAN, false)
             }
-            
+
             binding.progressRing.isVisible = false
-            
+
             // Re-initialize nav controller with restored state
             if (paymentIntent != null) {
                 initNavController(paymentIntent!!)
@@ -168,7 +170,7 @@ open class SendCoinsActivity : LockScreenActivity() {
         return if ((action == Intent.ACTION_VIEW || action == NfcAdapter.ACTION_NDEF_DISCOVERED) &&
             intentUri?.hasValidScheme() == true
         ) {
-            PaymentIntentParser.parse(intentUri.toString(), true)
+            DashPaymentIntentParser(Constants.NETWORK_PARAMETERS).parse(intentUri.toString(), true)
         } else if (action == NfcAdapter.ACTION_NDEF_DISCOVERED && mimeType == PaymentProtocol.MIMETYPE_PAYMENTREQUEST) {
             val ndefMessage = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES)?.get(0) as? NdefMessage
             val ndefMessagePayload = ndefMessage?.let {
@@ -284,5 +286,5 @@ open class SendCoinsActivity : LockScreenActivity() {
     }
 
     private fun Uri.hasValidScheme() =
-        this.scheme == Constants.DASH_SCHEME || this.scheme == Constants.ANYPAY_SCHEME
+        this.scheme == org.dash.wallet.common.util.Constants.DASH_SCHEME || this.scheme == org.dash.wallet.common.util.Constants.ANYPAY_SCHEME
 }

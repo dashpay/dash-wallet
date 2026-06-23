@@ -216,8 +216,6 @@
     <string name="tools_address_book">Sổ địa chỉ</string>
     <string name="tools_import_private_key">Nhập khoá riêng</string>
     <string name="tools_network_monitor">Giám sát mạng</string>
-    <string name="tools_show_xpub">Mã công khai mở rộng</string>
-
     <string name="about_help_us_improve">Hãy giúp chúng tôi cải thiện trải nghiệm cho bạn</string>
     <string name="about_contact_support">Liên hệ hỗ trợ</string>
     <string name="about_fork_disclaimer">Đây là một ứng dụng mã nguồn mở được xây dựng dựa trên ví Bitcoin</string>

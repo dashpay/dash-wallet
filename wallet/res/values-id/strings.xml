@@ -239,17 +239,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Mengenkripsi...</string>
     <string name="encrypt_keys_dialog_state_decrypting">Mendekripsi ...</string>
     <string name="encrypt_keys_dialog_state_done">Selesai</string>
-    <string name="scan_camera_problem_dialog_title">Maaf</string>
-    <string name="scan_camera_problem_dialog_message">Kamera mengalami masalah. Anda mungkin harus menyalakan ulang ponsel.</string>
-    <string name="scan_camera_permission_dialog_title">Izin kamera</string>
-    <string name="scan_camera_permission_dialog_message">Untuk memindai kode QR, Anda perlu memberikan izin untuk menggunakan kamera.</string>
-    <string name="input_parser_io_error">Tidak dapat membaca data:\n%s</string>
-    <string name="input_parser_cannot_classify">Tidak dapat mengenali masukan:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Tautan Dash Salah:\n%s</string>
-    <string name="input_parser_invalid_address">Alamat Dash salah!\n(Keliru dgn Mainet/Testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Tidak dapat memverifikasi permintaan pembayaran:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Permintaan pembayaran tidak valid:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transaksi tidak valid:\n%s</string>
     <string name="preferences_activity_title">Pengaturan</string>
     <string name="preferences_category_diagnostics">Diagnosa</string>
     <string name="preferences_category_labs">Lab</string>
@@ -294,8 +283,9 @@
     <string name="preferences_extended_public_key_title">Tampilkan xpub</string>
     <string name="preferences_extended_public_key_summary">Lihat kunci publik yang diperluas dari dompet Anda, sehingga dapat diimpor ke aplikasi dan layanan lain. Hati-hati: melakukannya akan mengungkapkan moneter pribadi anda di aplikasi tersebut.</string>
     <string name="bitmap_fragment_share">Bagikan...</string>
-    <string name="extended_public_key_fragment_title">Kunci Publik Diperpanjang</string>
+    <string name="extended_public_key_fragment_title">Kunci Publik Diperpanjang (BIP44)</string>
     <string name="extended_public_key_fragment_share">Bagikan xpub...</string>
+    <string name="extended_public_key_share_key">Bagikan kunci</string>
     <string name="report_issue_dialog_title_issue">Laporkan masalah</string>
     <string name="report_issue_dialog_title_crash">Kesalahan terdeteksi</string>
     <string name="report_issue_dialog_title_transaction">Laporkan masalah dengan pembayaran yang dipilih</string>
@@ -318,14 +308,10 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">penyelesaian</string>
-    <string name="report_transaction_history_export">Ekspor</string>
-    <string name="report_transaction_history_title">Ekspor CSV</string>
-    <string name="report_transaction_history_not_synced_title">Ekspor CSV</string>
     <string name="report_transaction_history_not_synced_message">Harap tunggu hingga dompet disinkronkan sepenuhnya sebelum mengekspor riwayat transaksi Anda.</string>
     <string name="report_transaction_history_message">Riwayat transaksi lengkap akan diekspor.\n\nSemua pembayaran akan dianggap sebagai pengeluaran dan semua transaksi yang masuk akan menjadi pendapatan. Pemilik dompet ini bertanggung jawab untuk membuat penyesuaian dasar biaya dalam sistem pelaporan pajak yang mereka pilih.</string>
     <string name="report_transaction_history_mail_intent_chooser">Kirim riwayat transaksi menggunakan…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Gagal mengirim riwayat transaksi.</string>
-
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
     <string name="zenledger_export_subtitle">Sederhanakan pajak kripto Anda</string>
@@ -421,10 +407,7 @@
     <string name="reason">Alasan</string>
     <string name="link_account">Tautkan akun Anda</string>
     <string name="buy_no_account_needed">Beli Dash · Tidak memerlukan akun</string>
-
     <string name="recipient_address">Alamat penerima</string>
-    <string name="show_clipboard">Tunjukkan konten dalam clipboard</string>
-    <string name="tap_to_paste">Ketuk alamat dari clipboard untuk menempelkannya</string>
     <string name="not_dash_address">Bukan Alamat Dash atau permintaan URL yang valid.</string>
     <string name="send_to_address">Kirim ke alamat</string>
 

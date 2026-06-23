@@ -54,6 +54,8 @@
     <string name="button_continue">Continue</string>
     <string name="get_quote">Get Quote</string>
     <string name="button_close">Close</string>
+    <string name="button_cancel">Cancel</string>
+    <string name="button_confirm">Confirm</string>
     <string name="button_retry">Retry</string>
     <string name="button_send_report">Send Report</string>
     <string name="button_info">info</string>
@@ -82,6 +84,8 @@
     <string name="dash_wallet_name">Dash Wallet</string>
     <string name="from">from</string>
     <string name="to">to</string>
+    <string name="from_title">From</string>
+    <string name="to_title">To</string>
     <string name="select_currency">Select Currency</string>
     <string name="exchange_rate_template" translatable="false">%1$s DASH = %2$s</string>
     <string name="send_coins_error_dusty_send">The amount is too small to send</string>
@@ -117,4 +121,39 @@
     <!-- basic formats -->
     <string name="percent" translatable="false">%d%%</string>
     <string name="two_lines_number_text" translatable="false">%d\n%s</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Sorry</string>
+    <string name="scan_camera_problem_dialog_message">The camera has a problem. You probably need to restart the device.</string>
+    <string name="scan_camera_permission_dialog_title">Camera permission</string>
+    <string name="scan_camera_permission_dialog_message">In order to scan QR codes, you need to grant permission to use the camera.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Send Dash</string>
+    <string name="show_clipboard">Show content in the clipboard</string>
+    <string name="tap_to_paste">Tap the address from the clipboard to paste it</string>
+    <string name="not_valid_address">Not a valid %s Address or URL request</string>
+    <string name="recipient_address">Recipient Address</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Cannot read data:\n%s</string>
+    <string name="input_parser_cannot_classify">Cannot recognize input:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Invalid Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Got invalid Dash address!\n(Mixing up mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Cannot verify payment request:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Invalid payment request:\n%s</string>
+    <string name="input_parser_invalid_transaction">Invalid transaction:\n%s</string>
+    <string name="address_input_paste_from">Paste from %s</string>
+    <string name="input_connect">Connect</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Confirm (%ss)</string>
+    <string name="cancel_transaction">Cancel transaction?</string>
+    <string name="yes_cancel">Yes, cancel</string>
+    <string name="no_keep_it">No, keep it</string>
+    <string name="insufficient_money_title">Not enough coins</string>
+    <string name="insufficient_money_msg">The amount of coins in the wallet is too small for this transaction.</string>
+    <string name="send_coins_error_msg">Problem sending coins!</string>
+    <string name="from_dash_wallet_on_this_device">From Dash wallet on this device</string>
+    <string name="preposition_at">at</string>
 </resources>

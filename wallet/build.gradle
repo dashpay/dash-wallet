@@ -28,6 +28,7 @@ dependencies {
     implementation project(path: ':integrations:uphold')
     implementation project(path: ":integrations:coinbase")
     implementation project(path: ":integrations:crowdnode")
+    implementation project(path: ":integrations:maya")
 
     implementation(project(':integration-android')) {
         exclude(group: 'com.google.android', module: 'android')
@@ -94,7 +95,7 @@ dependencies {
     implementation "androidx.constraintlayout:constraintlayout:$constrainLayoutVersion"
     implementation "com.github.bumptech.glide:glide:$glideVersion"
     ksp "com.github.bumptech.glide:compiler:$glideVersion"
-    implementation 'com.github.MikeOrtiz:TouchImageView:3.0.6'
+    implementation 'com.github.MikeOrtiz:TouchImageView:3.6'
     implementation "io.coil-kt:coil:$coilVersion"
 
     // Compose
@@ -224,8 +225,8 @@ android {
         minSdkVersion 24
         targetSdkVersion 35
         // version code: MMmmppbb; MM = Major Version, mm = minor version, pp == patch version, bb = build
-        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11070101
-        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.7.1"
+        versionCode project.hasProperty('versionCode') ? project.property('versionCode') as int : 11080101
+        versionName project.hasProperty('versionName') ? project.property('versionName') : "11.8.1"
         multiDexEnabled true
         generatedDensities = ['hdpi', 'xhdpi']
         vectorDrawables.useSupportLibrary = true
@@ -346,6 +347,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpay.onelink.me\"")
         }
         _testNet3 {
             applicationId = "hashengineering.darkcoin.wallet_test"
@@ -366,6 +368,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         staging {
             applicationId = "org.dash.dashpay.testnet"
@@ -390,6 +393,7 @@ android {
 
             def appsFlyerTemplateId = props.getProperty("APPSFLYER_TEMPLATE_ID_TESTNET", "\"\"")
             buildConfigField("String", "APPSFLYER_TEMPLATE_ID", appsFlyerTemplateId)
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
         devnet {
             applicationId = "org.dash.dashpay.devnet"
@@ -411,6 +415,7 @@ android {
             buildConfigField("String", "TOPPER_PRIVATE_KEY", topperPrivateKey)
             buildConfigField("String", "ZENLEDGER_CLIENT_ID", "\"\"")
             buildConfigField("String", "ZENLEDGER_CLIENT_SECRET", "\"\"")
+            buildConfigField("String", "APPSFLYER_BRAND_DOMAIN", "\"dashpaytest.onelink.me\"")
         }
     }
 
@@ -457,6 +462,7 @@ android {
     buildFeatures {
         viewBinding true
         compose true
+        buildConfig true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.14"
@@ -464,10 +470,14 @@ android {
     testOptions {
         unitTests.includeAndroidResources  = true
         unitTests.returnDefaultValues = true
+        unitTests.all {
+            maxHeapSize = "2g"
+        }
     }
     lint {
         abortOnError false
         disable 'MissingTranslation'
+        disable 'NullSafeMutableLiveData'
     }
     tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
         kotlinOptions {

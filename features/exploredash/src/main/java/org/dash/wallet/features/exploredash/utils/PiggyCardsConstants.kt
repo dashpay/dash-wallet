@@ -17,6 +17,8 @@
 
 package org.dash.wallet.features.exploredash.utils
 
+import org.dash.wallet.features.exploredash.BuildConfig
+
 object PiggyCardsConstants {
     const val REPORT_EMAIL = "support@piggy.cards"
     const val BASE_URL_DEV = "https://api.piggy.cards/dash/v1/"
@@ -24,4 +26,7 @@ object PiggyCardsConstants {
     const val BASE_URL = BASE_URL_PROD
 
     const val TOKEN_EXPIRES_IN_SECONDS = 3600
+
+    /** Release builds using bundle fastlane will set [SUPPORT_PIGGY_CARDS_TEST_MERCHANT] to false */
+    const val SUPPORT_PIGGY_CARDS_TEST_MERCHANT = BuildConfig.PIGGY_CARDS_TEST_MERCHANT
 }

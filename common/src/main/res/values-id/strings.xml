@@ -52,6 +52,8 @@
     <string name="button_continue">Teruskan</string>
     <string name="get_quote">Dapatkan Penawaran</string>
     <string name="button_close">Tutup</string>
+    <string name="button_cancel">Batal</string>
+    <string name="button_confirm">Memastikan</string>
     <string name="button_retry">Coba lagi</string>
     <string name="button_send_report">Kirim Laporan</string>
     <string name="button_info">info</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Dompet Dash</string>
     <string name="from">dari</string>
     <string name="to">ke</string>
+    <string name="from_title">Dari</string>
+    <string name="to_title">Ke</string>
     <string name="select_currency">Pilih mata uang</string>
     <string name="send_coins_error_dusty_send">Jumlah yang terlalu kecil untuk dikirim</string>
     <string name="send_coins_error_insufficient_money">Dana tidak mencukupi</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">Rantai sedang menyinkronkan…</string>
     <string name="report_issue_dialog_mail_intent_chooser">Kirim laporan dgn…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Maaf</string>
+    <string name="scan_camera_problem_dialog_message">Kamera mengalami masalah. Anda mungkin harus menyalakan ulang ponsel.</string>
+    <string name="scan_camera_permission_dialog_title">Izin kamera</string>
+    <string name="scan_camera_permission_dialog_message">Untuk memindai kode QR, Anda perlu memberikan izin untuk menggunakan kamera.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Kirim Dash</string>
+    <string name="show_clipboard">Tunjukkan konten dalam clipboard</string>
+    <string name="tap_to_paste">Ketuk alamat dari clipboard untuk menempelkannya</string>
+    <string name="recipient_address">Alamat penerima</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Tidak dapat membaca data:\n%s</string>
+    <string name="input_parser_cannot_classify">Tidak dapat mengenali masukan:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Tautan Dash Salah:\n%s</string>
+    <string name="input_parser_invalid_address">Alamat Dash salah!\n(Keliru dgn Mainet/Testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Tidak dapat memverifikasi permintaan pembayaran:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Permintaan pembayaran tidak valid:\n%s</string>
+    <string name="input_parser_invalid_transaction">Transaksi tidak valid:\n%s</string>
+    <string name="input_connect">hubungkan</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Konfirmasi (%ss)</string>
+    <string name="cancel_transaction">Batalkan transaksi?</string>
+    <string name="yes_cancel">Ya, batalkan</string>
+    <string name="no_keep_it">Tidak, simpan saja</string>
+    <string name="insufficient_money_title">Koin tidak cukup</string>
+    <string name="send_coins_error_msg">Gagal mengirim koin!</string>
+    <string name="from_dash_wallet_on_this_device">Dari dompet Dash di perangkat ini</string>
+    <string name="preposition_at">pada</string>
+</resources>

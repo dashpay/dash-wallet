@@ -21,7 +21,6 @@ import android.os.Bundle
 import androidx.core.os.bundleOf
 import androidx.navigation.fragment.NavHostFragment
 import dagger.hilt.android.AndroidEntryPoint
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
 import de.schildbach.wallet_test.R

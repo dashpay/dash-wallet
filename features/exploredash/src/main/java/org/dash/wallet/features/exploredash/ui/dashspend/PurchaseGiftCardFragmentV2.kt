@@ -1,0 +1,492 @@
+/*
+ * Copyright 2025 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package org.dash.wallet.features.exploredash.ui.dashspend
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
+import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
+import org.dash.wallet.common.util.Constants
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.common.util.discountBy
+import org.dash.wallet.common.util.toBigDecimal
+import org.dash.wallet.common.util.toFormattedString
+import org.dash.wallet.common.util.toFormattedStringRoundUp
+import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
+import org.dash.wallet.features.exploredash.data.dashspend.ctx.model.DenominationType
+import org.dash.wallet.features.exploredash.data.explore.model.Merchant
+import org.dash.wallet.features.exploredash.ui.dashspend.dialogs.PurchaseGiftCardConfirmDialog
+import org.dash.wallet.features.exploredash.ui.explore.ExploreViewModel
+import org.dash.wallet.features.exploredash.ui.explore.dialogs.ExploreDashInfoDialog
+import org.dash.wallet.features.exploredash.utils.PiggyCardsConstants
+import org.dash.wallet.features.exploredash.utils.PiggyCardsTestMerchants
+import org.dash.wallet.features.exploredash.utils.exploreViewModels
+import org.slf4j.LoggerFactory
+import java.math.BigDecimal
+import java.text.NumberFormat
+import kotlin.math.max
+
+@AndroidEntryPoint
+class PurchaseGiftCardFragmentV2 : Fragment() {
+
+    companion object {
+        private val log = LoggerFactory.getLogger(PurchaseGiftCardFragmentV2::class.java)
+    }
+
+    private val viewModel by exploreViewModels<DashSpendViewModel>()
+    private val exploreViewModel by exploreViewModels<ExploreViewModel>()
+
+    private val numberFormat = NumberFormat.getNumberInstance().apply {
+        minimumFractionDigits = 2
+        maximumFractionDigits = 2
+    }
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View = ComposeView(requireContext()).apply {
+        setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+        setContent {
+            val merchant by viewModel.giftCardMerchant.collectAsStateWithLifecycle()
+            val isFixedDenomination by viewModel.isFixedDenomination.collectAsStateWithLifecycle()
+            val isMultiple by viewModel.isFixedDenominationMultiple.collectAsStateWithLifecycle()
+            val isBlockchainReplaying by viewModel.isBlockchainReplaying.collectAsStateWithLifecycle()
+            val balance by viewModel.balance.asFlow().collectAsStateWithLifecycle(null)
+            val exchangeRate by viewModel.usdExchangeRate.asFlow().collectAsStateWithLifecycle(null)
+
+            // Hold the screen blank until the merchant is loaded and the Fixed/Flexible mode
+            // has been resolved. Without this gate we briefly render FlexibleSingle (the default
+            // for null/null) before flipping to the real mode after loadMerchant completes.
+            if (merchant == null || isFixedDenomination == null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MyTheme.Colors.backgroundPrimary)
+                )
+                return@setContent
+            }
+
+            var amountText by rememberSaveable { mutableStateOf("0") }
+            val denominationQuantities = remember { mutableStateMapOf<Double, Int>() }
+            var showBalance by remember { mutableStateOf(false) }
+            var minFiat by remember { mutableStateOf<Fiat?>(null) }
+            var maxFiat by remember { mutableStateOf<Fiat?>(null) }
+
+            // Refresh min/max values whenever the exchange rate or merchant changes.
+            // Keying on both is necessary because the merchant loads asynchronously after
+            // the exchange rate, so a rate-only key would read before the merchant is set.
+            LaunchedEffect(exchangeRate, merchant) {
+                viewModel.refreshMinMaxCardPurchaseValues()
+                minFiat = viewModel.minCardPurchaseFiat
+                maxFiat = viewModel.maxCardPurchaseFiat
+            }
+
+            // When isFixed switches, reset local state
+            LaunchedEffect(isFixedDenomination) {
+                amountText = "0"
+                denominationQuantities.clear()
+            }
+
+            // Compute the purchase mode from ViewModel state
+            val mode = remember(isFixedDenomination, merchant, maxFiat, isMultiple) {
+                buildPurchaseMode(isFixedDenomination, isMultiple, merchant)
+            }
+
+            // Balance text
+            val (dashBalanceString, fiatBalanceString) = remember(balance, exchangeRate) {
+                buildFiatBalanceText(balance, exchangeRate)
+            }
+
+            val fiatBalance = remember(balance, exchangeRate) {
+                buildFiatBalance(balance, exchangeRate)
+            }
+
+            // Total amount for multiple/fixed modes
+            val totalDouble = denominationQuantities.entries.sumOf { (denom, qty) -> denom * qty }
+            val totalAmountText = numberFormat.format(totalDouble)
+
+            // canContinue logic per mode
+            val canContinue = when (mode) {
+                is GiftCardPurchaseMode.FlexibleSingle -> {
+                    val amount = amountText.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                    val min = minFiat?.toBigDecimal() ?: BigDecimal.ZERO
+                    val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
+                    val balanceMax = fiatBalance.toBigDecimal()
+                    amount > BigDecimal.ZERO &&
+                        amount >= min &&
+                        amount <= max &&
+                        amount < balanceMax &&
+                        !isBlockchainReplaying
+                }
+                is GiftCardPurchaseMode.FlexibleMultiple,
+                is GiftCardPurchaseMode.Fixed -> {
+                    val exceedsInventory = denominationQuantities.entries.any { (denomination, quantity) ->
+                        merchant?.quantities[denomination]?.let { it < quantity } == true
+                    }
+                    val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.00
+                    denominationQuantities.isNotEmpty() &&
+                        totalDouble > 0.0 &&
+                        totalDouble >= min &&
+                        totalDouble < fiatBalance.toBigDecimal().toDouble() &&
+                        !isBlockchainReplaying &&
+                        totalDouble < 2500 &&
+                        !exceedsInventory
+                }
+            }
+
+            // Min/max hint text for single flexible mode
+            val minHintText = minFiat?.toFormattedString()
+                ?.let { getString(R.string.purchase_gift_card_min, it) } ?: ""
+            val maxHintText = maxFiat?.toFormattedString()
+                ?.let { getString(R.string.purchase_gift_card_max, it) } ?: ""
+
+            // Show error when amount is out of range
+            val errorText = when {
+                isBlockchainReplaying -> getString(R.string.send_coins_fragment_hint_replaying)
+                mode is GiftCardPurchaseMode.FlexibleSingle -> {
+                    val amount = amountText.toBigDecimalOrNull() ?: BigDecimal.ZERO
+                    val min = minFiat?.toBigDecimal() ?: BigDecimal.ZERO
+                    val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
+                    val balanceMax = fiatBalance.toBigDecimal()
+
+                    when {
+                        amount > BigDecimal.ZERO && amount < min -> getString(
+                            R.string.purchase_gift_card_min,
+                            minFiat?.toFormattedString() ?: ""
+                        )
+                        amount > balanceMax -> getString(R.string.insufficient_money_msg)
+                        amount > max -> getString(R.string.purchase_gift_card_max, maxFiat?.toFormattedString() ?: "")
+                        else -> ""
+                    }
+                }
+                else -> {
+                    val balanceMax = fiatBalance.toBigDecimal().toDouble()
+                    if (totalDouble > balanceMax) {
+                        getString(R.string.purchase_gift_card_insufficient_money_error)
+                    } else {
+                        ""
+                    }
+                }
+            }
+
+            val discountHintText = remember(
+                mode,
+                amountText,
+                totalDouble,
+                merchant,
+                minFiat,
+                maxFiat,
+                exchangeRate,
+                isBlockchainReplaying
+            ) {
+                buildDiscountHintText(mode, amountText, totalDouble, merchant, minFiat, maxFiat, isBlockchainReplaying)
+            }
+
+            val uiState = PurchaseGiftCardV2UiState(
+                mode = mode,
+                merchantName = merchant?.name.orEmpty(),
+                merchantLogoUrl = merchant?.logoLocation,
+                dashBalance = dashBalanceString,
+                fiatBalance = fiatBalanceString,
+                showBalance = showBalance,
+                amountText = amountText,
+                minHintText = minHintText,
+                maxHintText = maxHintText,
+                denominationQuantities = denominationQuantities.toMap(),
+                totalAmountText = totalAmountText,
+                canContinue = canContinue,
+                errorText = errorText,
+                discountHintText = discountHintText,
+                allowedQuantities = merchant?.quantities ?: mapOf()
+            )
+
+            PurchaseGiftCardScreenV2(
+                uiState = uiState,
+                onBack = { findNavController().popBackStack() },
+                onInfo = {
+                    ExploreDashInfoDialog().show(requireActivity())
+                },
+                onTabChanged = { isMultiple ->
+                    amountText = "0"
+                    denominationQuantities.clear()
+                    viewModel.setIsFixedDenominationMultiple(isMultiple)
+                    viewModel.resetSelectedDenomination()
+                    // Keep current merchant; just switch UI mode
+                },
+                onToggleBalance = { showBalance = !showBalance },
+                onKeyInput = { key ->
+                    amountText = processAmountKeyInput(amountText, key)
+                    // Update viewModel order info so confirm dialog has up-to-date amount
+                    val fiatAmount = try {
+                        Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                    } catch (e: Exception) {
+                        log.debug("Failed to parse fiat amount: $amountText", e)
+                        null
+                    }
+                    fiatAmount?.let { viewModel.setGiftCardOrderInfo(it, 1) }
+                },
+                onReset = {
+                    denominationQuantities.clear()
+                    viewModel.resetSelectedDenomination()
+                },
+                onQuantityChanged = { denomination, quantity ->
+                    if (quantity == 0) {
+                        denominationQuantities.remove(denomination)
+                    } else {
+                        denominationQuantities[denomination] = quantity
+                    }
+                    viewModel.setGiftCardOrderQuantities(denominationQuantities.toMap())
+                },
+                onShowToast = { message ->
+                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+                },
+                onContinue = {
+                    when (val m = mode) {
+                        is GiftCardPurchaseMode.FlexibleSingle -> {
+                            val fiat = try {
+                                Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                            } catch (e: Exception) {
+                                log.debug("Failed to parse fiat amount: $amountText", e)
+                                return@PurchaseGiftCardScreenV2
+                            }
+                            viewModel.setGiftCardOrderInfo(fiat, 1)
+                        }
+                        is GiftCardPurchaseMode.FlexibleMultiple,
+                        is GiftCardPurchaseMode.Fixed -> {
+                        }
+                    }
+                    PurchaseGiftCardConfirmDialog().show(requireActivity())
+                }
+            )
+        }
+    }
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        setupMerchant()
+    }
+
+    private fun setupMerchant() {
+        val savedMerchantId = viewModel.getSavedMerchantId()
+        val savedProvider = viewModel.getSavedProvider()
+        val currentMerchant = exploreViewModel.selectedItem.value
+        val currentProvider = viewModel.selectedProvider
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (savedMerchantId != null && currentMerchant == null &&
+                savedProvider != null && currentProvider == null
+            ) {
+                if (!loadMerchantById(savedMerchantId, savedProvider)) {
+                    findNavController().popBackStack()
+                }
+            } else if (currentMerchant is Merchant && currentMerchant.merchantId != null &&
+                !currentMerchant.source.isNullOrEmpty() && currentProvider != null
+            ) {
+                loadMerchant(currentMerchant)
+            } else {
+                findNavController().popBackStack()
+            }
+        }
+    }
+
+    private suspend fun loadMerchantById(merchantId: String, provider: String): Boolean {
+        val merchant = viewModel.getMerchantById(merchantId) ?: return false
+        viewModel.selectedProvider = GiftCardProviderType.fromProviderName(provider)
+        loadMerchant(merchant)
+        return true
+    }
+
+    private suspend fun loadMerchant(merchant: Merchant) {
+        // Invalidate any mode flag carried over from a previously-viewed merchant in the same
+        // ViewModel scope. Without this, a Flexible→Fixed (or Fixed→Flexible) transition would
+        // briefly render the previous merchant's mode before the new one resolves.
+        viewModel.setIsFixedDenomination(null)
+        viewModel.setGiftCardMerchant(merchant)
+        if (viewModel.giftCardMerchant.value?.active != true) {
+            findNavController().popBackStack()
+            return
+        }
+
+        // Optimistic mode determination from cached data so the screen renders immediately
+        // without waiting for updateMerchantDetails (which makes a network call that can take
+        // several seconds). Prefer the active provider's cached type; fall back to the merchant
+        // row's persisted denominationsType for deeplink-loaded merchants whose @Ignore
+        // giftCardProviders list isn't populated.
+        val currentProviderName = viewModel.selectedProvider?.name
+        val cachedDenominationType = currentProviderName?.let { name ->
+            merchant.giftCardProviders.find { it.provider == name }?.denominationsType
+        } ?: merchant.denominationsType
+        cachedDenominationType?.takeIf { it.isNotEmpty() }?.let { typeStr ->
+            try {
+                val isFixed = DenominationType.fromString(typeStr) is DenominationType.Fixed
+                viewModel.setIsFixedDenomination(isFixed)
+            } catch (_: IllegalArgumentException) {
+                // Unknown cached type — leave null and let the network response decide.
+            }
+        }
+
+        val updated = viewModel.updateMerchantDetails(merchant)
+        if (updated.active != true) {
+            findNavController().popBackStack()
+            return
+        }
+        viewModel.setGiftCardMerchant(updated)
+        val providerName = viewModel.selectedProvider?.name
+        if (providerName == null) {
+            findNavController().popBackStack()
+            return
+        }
+        val provider = updated.giftCardProviders.find { it.provider == providerName }
+        if (provider == null) {
+            findNavController().popBackStack()
+            return
+        }
+        viewModel.setIsFixedDenomination(
+            DenominationType.fromString(provider.denominationsType) is DenominationType.Fixed
+        )
+    }
+
+    private fun buildPurchaseMode(
+        isFixed: Boolean?,
+        isMultiple: Boolean?,
+        merchant: Merchant?
+    ): GiftCardPurchaseMode {
+        return when {
+            isFixed != true && isMultiple != true -> GiftCardPurchaseMode.FlexibleSingle
+            isFixed == true -> {
+                val denoms = merchant?.denominations ?: emptyList()
+                GiftCardPurchaseMode.Fixed(denoms)
+            }
+            else -> {
+                val minimum = max(merchant?.minCardPurchase ?: 0.0, 5.0)
+                val maximum = merchant?.maxCardPurchase ?: 500.00
+                val denominations = listOf(
+                    minimum,
+                    minimum * 2,
+                    minimum * 4,
+                    maximum / 2,
+                    maximum
+                ).filter { it in minimum..maximum }
+                    .distinct()
+                    .sorted()
+                if (PiggyCardsConstants.SUPPORT_PIGGY_CARDS_TEST_MERCHANT) {
+                    if (PiggyCardsTestMerchants.ALL.any { it.merchantId == merchant?.merchantId }) {
+                        val min = merchant?.minCardPurchase ?: 1.0
+                        return GiftCardPurchaseMode.FlexibleMultiple(
+                            List(5) { min + it.toDouble() }
+                        )
+                    }
+                }
+                GiftCardPurchaseMode.FlexibleMultiple(denominations)
+            }
+        }
+    }
+
+    private fun buildDiscountHintText(
+        mode: GiftCardPurchaseMode,
+        amountText: String,
+        totalDouble: Double,
+        merchant: Merchant?,
+        minFiat: Fiat?,
+        maxFiat: Fiat?,
+        isBlockchainReplaying: Boolean
+    ): String {
+        merchant ?: return ""
+        if (isBlockchainReplaying) return ""
+        val savingsFraction = merchant.savingsFraction
+        if (savingsFraction == 0.0) return ""
+        val amount = when (mode) {
+            GiftCardPurchaseMode.FlexibleSingle -> {
+                try {
+                    Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                } catch (_: Exception) {
+                    return ""
+                }
+            }
+            else -> {
+                try {
+                    Fiat.parseFiat(Constants.USD_CURRENCY, totalDouble.toBigDecimal().toPlainString())
+                } catch (_: Exception) {
+                    return ""
+                }
+            }
+        }
+        if (amount.isZero) return ""
+        if (mode is GiftCardPurchaseMode.FlexibleSingle) {
+            if (minFiat != null && amount.isLessThan(minFiat)) return ""
+            if (maxFiat != null && amount.isGreaterThan(maxFiat)) return ""
+        }
+        val discountedAmount = amount.discountBy(savingsFraction)
+        return getString(
+            R.string.purchase_gift_card_discount_hint,
+            amount.toFormattedString(),
+            discountedAmount.toFormattedStringRoundUp(),
+            GenericUtils.formatPercent(savingsFraction)
+        )
+    }
+
+    private fun buildFiatBalanceText(balance: Coin?, exchangeRate: ExchangeRate?): Pair<String, String> {
+        balance ?: return Pair("", "")
+        val dashText = viewModel.dashFormat.format(balance).toString()
+        val fiatRate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
+        return if (fiatRate != null) {
+            Pair(dashText, fiatRate.coinToFiat(balance).toFormattedString())
+        } else {
+            Pair(dashText, "")
+        }
+    }
+
+    private fun buildFiatBalance(balance: Coin?, exchangeRate: ExchangeRate?): Fiat {
+        val defaultResult = Fiat.valueOf(exchangeRate?.currencySymbol ?: Constants.USD_CURRENCY, 0)
+        balance ?: return defaultResult
+        val fiatRate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
+        return if (fiatRate != null) {
+            fiatRate.coinToFiat(balance)
+        } else {
+            defaultResult
+        }
+    }
+}

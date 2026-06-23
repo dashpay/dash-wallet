@@ -23,6 +23,7 @@
     <string name="dialog_confirm_confirm">Memastikan</string>
     <string name="dialog_confirm_pay_to">Kirim ke</string>
     <string name="dialog_confirm_secured_by">Diamankan oleh</string>
+    <string name="dialog_confirm_connected_to_unsecured">Terhubung ke (tidak diamankan)</string>
     <string name="dialog_confirm_fee">Biaya jaringan</string>
     <string name="dialog_confirm_total">Total</string>
     <string name="dialog_confirm_accept_contact_request">Terima permintaan kontak</string>
@@ -278,15 +279,17 @@
     <string name="menu_explore_title">Jelajahi</string>
     <string name="menu_explore_subtitle">Temukan toko yang menerima Dash</string>
 
-    <string name="tools_address_book">Buku alamat</string>
+    <string name="tools_address_book">Buku Alamat</string>
     <string name="tools_import_private_key">Impor kunci pribadi</string>
-    <string name="tools_network_monitor">Monitor jaringan</string>
-    <string name="tools_show_xpub">Kunci Publik Diperpanjang</string>
+    <string name="import_private_key_description">Tindakan ini akan memindahkan semua koin dari dompet kertas Dash ke aplikasi DashPay Anda di perangkat ini.</string>
+    <string name="tools_network_monitor">Monitor Jaringan</string>
+    <string name="tools_show_xpub">Kunci Publik Diperpanjang (BIP44)</string>
 
     <string name="about_help_us_improve">Bantu kami meningkatkan pengalaman Anda</string>
     <string name="about_review_and_rate">Tinjau dan beri peringkat aplikasi</string>
     <string name="about_contact_support">Hubungi Dukungan</string>
     <string name="about_fork_disclaimer">Ini adalah aplikasi open source yang bercabang dari Bitcoin Wallet</string>
+    <string name="about_copyright">Hak Cipta © 2026 Dash Core Group</string>
     <string name="about_license">GNU General Public License v3.0</string>
     <string name="about_version_name">Dompet DashPay %s</string>
     <string name="about_last_explore_device_sync">Sinkronisasi perangkat Explore Terakhir</string>
@@ -430,6 +433,11 @@
     <string name="reclassify_transactions_linked_accounts_message">secara default semua transaksi ke atau dari akun tertaut Anda (pertukaran, staking, dll) akan ditandai sebagai transfer.</string>
     <string name="reclassify_transactions_change_explanation">Pilih transaksi apa pun dari beranda dan ubah kategori di halaman detail transaksi.</string>
 
+    <string name="masternode_keys_title">Kunci Masternode</string>
+    <string name="masternode_key_type_owner">Kunci Pemilik</string>
+    <string name="masternode_key_type_voting">Kunci pemungutan suara</string>
+    <string name="masternode_key_type_operator">Kunci Operator</string>
+    <string name="masternode_key_type_platform">Kunci operator HPMN</string>
     <string name="masternode_key_type_total">%d kunci</string>
     <string name="masternode_key_type_used">%d digunakan</string>
     <string name="masternode_key_pair_index">Keypair %d</string>

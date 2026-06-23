@@ -26,7 +26,6 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.PaymentIntent
 import de.schildbach.wallet.integration.android.BitcoinIntegration
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.send.SendCoinsActivity
@@ -34,6 +33,7 @@ import de.schildbach.wallet.ui.util.InputParser.WalletUriParser
 import de.schildbach.wallet.ui.util.WalletUri
 import de.schildbach.wallet_test.R
 import org.bitcoinj.wallet.Wallet
+import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.ui.BaseAlertDialogBuilder
 import org.dash.wallet.common.ui.formatString
 import org.dash.wallet.integrations.coinbase.CoinbaseConstants

@@ -419,4 +419,8 @@ object AnalyticsConstants {
         const val INSIGHT_PICKED = "blockchain_explorer_insight_picked"
         const val BLOCKCHAIR_PICKED = "blockchain_explorer_blockchair_picked"
     }
+
+    object Maya {
+
+    }
 }

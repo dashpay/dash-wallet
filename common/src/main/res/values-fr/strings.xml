@@ -52,6 +52,8 @@
     <string name="button_continue">Continuer</string>
     <string name="get_quote">Obtenir un devis</string>
     <string name="button_close">Fermer</string>
+    <string name="button_cancel">Annuler</string>
+    <string name="button_confirm">Confirmer</string>
     <string name="button_retry">Réessayer</string>
     <string name="button_send_report">Envoyer un rapport</string>
     <string name="button_info">info</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">Portefeuille Dash</string>
     <string name="from">depuis</string>
     <string name="to">vers</string>
+    <string name="from_title">De</string>
+    <string name="to_title">À</string>
     <string name="select_currency">Choisir la monnaie</string>
     <string name="send_coins_error_dusty_send">Le montant est trop faible pour être envoyé</string>
     <string name="send_coins_error_insufficient_money">Fonds insuffisants</string>
@@ -111,4 +115,38 @@
     <string name="chain_syncing">Synchronisation de la chaîne...</string>
     <string name="report_issue_dialog_mail_intent_chooser">Envoyer le rapport avec…</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Désolé</string>
+    <string name="scan_camera_problem_dialog_message">L\'appareil photo-vidéo a un problème. Vous devez probablement redémarrer votre appareil.</string>
+    <string name="scan_camera_permission_dialog_title">Autorisation de l\'appareil photo-vidéo</string>
+    <string name="scan_camera_permission_dialog_message">Pour scanner des QR-codes, vous devez autoriser l\'utilisation de l\'appareil photo-vidéo.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">Envoyer dashs</string>
+    <string name="show_clipboard">Voir le contenu du presse-papiers</string>
+    <string name="tap_to_paste">Touchez l\'adresse du presse-papiers pour la coller</string>
+    <string name="not_valid_address">Requête d\'adresse ou URL %s invalide</string>
+    <string name="recipient_address">Adresse du destinataire</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">Impossible de lire les données :\n%s</string>
+    <string name="input_parser_cannot_classify">Impossible de reconnaître l\'entrée :\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">URI Dash invalide :\n%s</string>
+    <string name="input_parser_invalid_address">Réception d\'une adresse Dash invalide !\n(Confusion mainnet/testnet ?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Impossible de vérifier la demande de paiement :\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Demande de paiement invalide :\n%s</string>
+    <string name="input_parser_invalid_transaction">Transaction invalide :\n%s</string>
+    <string name="address_input_paste_from">Coller depuis %s</string>
+    <string name="input_connect">Se connecter</string>
+
+    <!-- others -->
+    <string name="confirm_sec">Confirmer (%ss)</string>
+    <string name="cancel_transaction">Annuler la transaction ?</string>
+    <string name="yes_cancel">Oui, annuler</string>
+    <string name="no_keep_it">Non, conserver</string>
+    <string name="insufficient_money_title">Pas assez de fonds</string>
+    <string name="insufficient_money_msg">Le montant dans le portefeuille est trop petit pour cette transaction.</string>
+    <string name="send_coins_error_msg">Problème durant l\'envoi  des fonds !</string>
+    <string name="from_dash_wallet_on_this_device">Depuis le portefeuille Dash sur cet appareil</string>
+    <string name="preposition_at">à</string>
+</resources>

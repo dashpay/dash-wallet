@@ -26,7 +26,8 @@ data class UpdatedMerchantDetails(
     val savingsPercentage: Int = 0,
     val redeemType: String = "",
     val enabled: Boolean = true,
-    val productId: String = ""
+    val productId: String = "",
+    val quantity: Map<Double, Int> = mapOf()
 ) {
     val denominationType: DenominationType
         get() = DenominationType.fromString(denominationsType)

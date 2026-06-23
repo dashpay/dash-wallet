@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_service_name">Maya</string>
+    <string name="maya_portal_convert_title">Dashを変換する</string>
+    <string name="maya_portal_convert_to_title">Dashを変換する</string>
+    <string name="maya_portal_convert_subtitle">Dashウォレットからあらゆる仮想通貨へ</string>
+    <string name="maya_portal_subtitle">Dashウォレット内のDashをMayaで対応しているあらゆる暗号資産に変換し、あらゆるウォレットへ送金します</string>
+    <string name="maya_address_input_hint">%sのアドレス</string>
+    <string name="maya_address_input_title">DASHを%sに変換する</string>
+    <string name="maya_crypto_convert_title">Dashを変換する</string>
+    <string name="maya_crypto_convert_order_preview_title">注文プレビュー</string>
+
+    <string name="cryptocurrency_any_network">%のネットワーク</string>
+    <string name="cryptocurrency_bitcoin_network">ビットコイン</string>
+    <string name="cryptocurrency_dash_network">Dash</string>
+    <string name="cryptocurrency_rune_network">Thorchain</string>
+    <string name="cryptocurrency_ethereum_network">イーサリアム (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
+    <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
+    <string name="cryptocurrency_tether_network">テザー (Ethereum)</string>
+    <string name="cryptocurrency_kuji_network">クジラ</string>
+    <string name="cryptocurrency_usk_network">USK</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_arbitrum_network">アービトラム (Arbitrum)</string>
+    <string name="cryptocurrency_dai_arbitrum_network">Dai (Arbitrum)</string>
+    <string name="cryptocurrency_ethereum_arbitrum_network">イーサリアム (Arbitrum)</string>
+    <string name="cryptocurrency_goldario_arbitrum_network">Goldario (Arbitrum)</string>
+    <string name="cryptocurrency_leo_arbitrum_network">UNUS SED LEO (Arbitrum)</string>
+
+    <string name="cryptocurrency_pepe_arbitrum_network">PEPE (Arbitrum)</string>
+    <string name="cryptocurrency_pepe_ethereum_network">PEPE (Ethereum)</string>
+    <string name="cryptocurrency_link_arbitrum_network">チェーンリンク (Arbitrum)</string>
+    <string name="cryptocurrency_tgt_arbitrum_network">THORWallet (Arbitrum)</string>
+    <string name="cryptocurrency_wbtc_arbitrum_network">ラップドビットコイン (Arbitrum)</string>
+    <string name="cryptocurrency_wsteth_arbitrum_network">Wrapped stETH (Arbitrum)</string>
+
+    <string name="cryptocurrency_lld_ethereum_network">LLD (Ethereum)</string>
+    <string name="cryptocurrency_moca_ethereum_network">モカバース (Ethereum)</string>
+    <string name="cryptocurrency_yum_arbitrum_network">YUM (Arbitrum)</string>
+    <string name="cryptocurrency_tether_arbitrum_network">テザー (Arbitrum)</string>
+    <string name="cryptocurrency_zec_network">Zcash</string>
+    <string name="cryptocurrency_xrd_network">Radix</string>
+    <string name="cryptocurrency_maya_network">Maya (Maya)</string>
+
+    <string name="maya_error">Mayaのエラー</string>
+    <string name="maya_error_not_available">Mayaのサービスは現在ご利用いただけません。後ほど再度お試しください。</string>
+    <string name="maya_error_report_issue">この問題については、メインメニューの「サポートへお問い合わせ」からDashウォレットのサポートチームまでご連絡ください。</string>
+    <string name="maya_error_address_not_valid">アドレスが無効です</string>
+
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">最小取引額は</string>
+    <string name="entered_amount_is_too_high">最大取引額は</string>
+    <string name="we_didnt_find_any_assets">お客様のCoinbaseアカウントに資産は見つかりませんでした。</string>
+    <string name="something_wrong_title">問題が発生しました!</string>
+    <string name="dont_have_any_dash">DashウォレットにDashがありません。</string>
+    <string name="you_will_receive_dash_on_your_dash_wallet">この端末のDashウォレットで~ %sDashを受け取ります。送金が完了するまでに2～3分かかる場合があります。</string>
+    <string name="you_dont_have_enough_balance">残高が不足しています</string>
+    <string name="you_dont_own_any_crypto">お客様は仮想通貨をお持ちではありません。仮想通貨を買って始めましょう。</string>
+    <string name="buy_crypto_on_coinbase">Coinbaseで仮想通貨を購入する</string>
+    <string name="purchase_failed">購入に失敗しました</string>
+    <string name="transfer_failed">取引に失敗しました</string>
+    <string name="transfer_failed_msg">Dashは正常にお客様のCoinbaseアカウントに入金されました。しかし、この端末のDashウォレットへの送金には問題がありました。</string>
+    <string name="send_to_wallet_error">申請限度額を越えているため、この金額を送金できません。</string>
+    <string name="purchase_successful">購入に成功しました</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">この端末のDashウォレットにDashが送金されるのに、2-3分かかることがあります。</string>
+    <string name="maya_it_could_take_up_to_5_minutes">Dashウォレットの%sを%sに変換し、指定したアドレスへ送金するには最大2分ほどかかる場合があります。</string>
+    <string name="maya_it_could_take_up_to_5_minutes_to_coinbase">この端末上のDashウォレットからお客様のCoinbaseアカウントの%sにDashを変換するには、最大5分かかります。</string>
+    <string name="conversion_failed">変換に失敗しました</string>
+    <string name="transfer_dash_successful">送金に成功しました</string>
+    <string name="maya_it_could_take_up_to_10_minutes">Coinbaseからこの端末のDashウォレットにDashを送金するのに、最長10分かかる場合があります。</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">この端末のDashウォレットからCoinbaseのアカウントにDashを転送するのに、最大10分かかることがあります。</string>
+    <string name="conversion_successful">変換に成功しました</string>
+    <string name="transfer_dash_failed_msg">この端末のDashウォレットへの送金中に問題がありました。</string>
+    <string name="auth_limit_description">Coinbaseの認証制限を超えてしまいました。</string>
+    <string name="you_will_receive">入金する</string>
+    <string name="contact_maya_support">Mayaのサポートにお問い合わせ</string>
+    <string name="maya_fees_in_crypto_purchase">仮想通貨変換でのMayaの料金</string>
+    <string name="maya_fee_info_msg_content">Mayaの取引には、インバウンド手数料、アウトバウンド手数料、流動性手数料など様々な手数料がかかります。入力した金額が実際に受け取る金額となります。</string>
+    <string name="learn_more">詳細はこちら</string>
+    <string name="debit_money">口座からお金を引き落とす</string>
+    <string name="change_limit">この制限を変更する</string>
+    <string name="set_auth_limit">Coinbaseで適正な認証制限を設定しましょう</string>
+    <string name="change_withdrawal_limit">DashウォレットのCoinbaseアカウントからログアウトして再ログインすれば、いつでも変更できます。</string>
+    <string name="got_it">了解しました</string>
+    <string name="conversion_preview">変換プレビュー</string>
+    <string name="you_send">送金</string>
+    <string name="from_your_coinbase_account">Coinbaseのアカウントから</string>
+    <string name="you_receive">入金</string>
+    <string name="to_dash_wallet_on_this_device">このデバイスのDashウォレットから</string>
+    <string name="purchase">購入</string>
+    <string name="maya_fee">Mayaの料金</string>
+    <string name="total">総計</string>
+    <string name="to_external_address">%sへ</string>
+
+    <string name="maya_error_information">%s%nの仮想通貨: %s</string>
+    <string name="maya_error_invalid_destination_address">宛先のアドレスが無効です</string>
+    <string name="maya_error_below_recommended_minimum">入力した金額は、推奨の最低金額を下回っています</string>
+    <string name="maya_error_trading_halted">%sでの取引は停止されています。</string>
+    <string name="maya_halted_label">取引停止しました</string>
+    <string name="maya_halted_coins_toast">一部のコインは一時的に取引が停止されており、利用できません</string>
+
+
+</resources>

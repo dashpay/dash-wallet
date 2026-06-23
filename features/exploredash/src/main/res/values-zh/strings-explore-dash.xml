@@ -176,12 +176,12 @@
     <string name="purchase_gift_card_at">在</string>
     <string name="purchase_gift_card_min">最少: %s</string>
     <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="gift_card_buy_title">购买礼品卡</string>
     <string name="purchase_gift_card_discount_hint">您正在以 %s 购买 %s 礼品卡 (%s 折扣)</string>
     <string name="button_next">下一个</string>
     <string name="purchase_gift_card_from">来自</string>
     <string name="purchase_gift_card_to">到</string>
     <string name="purchase_confirm_transaction">确认</string>
-    <string name="purchase_gift_card_total_label">礼品卡总计</string>
     <string name="purchase_gift_card_discount">折扣</string>
     <string name="purchase_gift_card_you_pay">您支付</string>
     <string name="purchase_gift_card_confirm">确认</string>
@@ -206,7 +206,7 @@
     <string name="gift_card_tx_title">礼品卡 · %s</string>
     <string name="select_amount">选择面额</string>
     <string name="select_fixed_amount">此商户以固定价格出售礼品卡</string>
-
+    <string name="purchase_gift_card_reset">重置</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">输入验证码</string>
     <string name="verification_check_email">检查您的电子邮箱并输入验证码</string>

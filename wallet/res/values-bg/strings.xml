@@ -220,17 +220,6 @@
     <string name="encrypt_keys_dialog_state_encrypting">Криптира…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Декриптира…</string>
     <string name="encrypt_keys_dialog_state_done">Завършено</string>
-    <string name="scan_camera_problem_dialog_title">Съжалявам</string>
-    <string name="scan_camera_problem_dialog_message">Камерата има проблем. Може би е необходимо да рестартирате устройството.</string>
-    <string name="scan_camera_permission_dialog_title">Разрешение камера</string>
-    <string name="scan_camera_permission_dialog_message">За да сканирате QR кодове, трябва да дадете разрешение за използване на камерата.</string>
-    <string name="input_parser_io_error">Не може да прочете информацията:\\n%s</string>
-    <string name="input_parser_cannot_classify">Не може да разпознае входа:\\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Невалиден Dash URI:\\n%s</string>
-    <string name="input_parser_invalid_address">Имате невалиден Dash адрес!\\n(смесване mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Не може да се провери заявката за плащанеt:\\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Невалидно искане за плащанеt:\\n%s</string>
-    <string name="input_parser_invalid_transaction">Невалидна транзакция:\\n%s</string>
     <string name="preferences_activity_title">Настройки</string>
     <string name="preferences_category_diagnostics">Диагностика</string>
     <string name="preferences_category_labs">Labs</string>
@@ -268,7 +257,6 @@
     <string name="preferences_extended_public_key_title">Показване на xpub</string>
     <string name="preferences_extended_public_key_summary">Вижте разширения публичен ключ от вашият портфейл, така ще можете да го импортирате в друго приложение или услуга. Бъдете внимателни: това ще разкрие вашата парична неприкосновеност на това приложение.</string>
     <string name="bitmap_fragment_share">Сподели…</string>
-    <string name="extended_public_key_fragment_title">Разширен публичен ключ</string>
     <string name="extended_public_key_fragment_share">Споделяне на xpub…</string>
     <string name="report_issue_dialog_title_issue">Докладвай проблем</string>
     <string name="report_issue_dialog_title_crash">Открит е предишен провал</string>

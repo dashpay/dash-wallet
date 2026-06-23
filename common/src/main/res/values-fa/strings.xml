@@ -52,6 +52,8 @@
     <string name="button_continue">ادامه</string>
     <string name="get_quote">دریافت قیمت تخمینی</string>
     <string name="button_close">بستن</string>
+    <string name="button_cancel">لغو</string>
+    <string name="button_confirm">تائید</string>
     <string name="button_retry">تلاش دوباره</string>
     <string name="button_send_report">ارسال گزارش</string>
     <string name="button_info">اطلاعات</string>
@@ -80,6 +82,8 @@
     <string name="dash_wallet_name">دش والت</string>
     <string name="from">از</string>
     <string name="to">به</string>
+    <string name="from_title">از</string>
+    <string name="to_title">به</string>
     <string name="select_currency">واحد پول‌تان را انتخاب کنید</string>
     <string name="send_coins_error_dusty_send">مبلغ مورد نظر، بیش از حد کم است</string>
     <string name="send_coins_error_insufficient_money">موجودی ناکافی</string>
@@ -111,4 +115,35 @@
     <string name="chain_syncing">بلاکچین در حال به‌روزرسانی...</string>
     <string name="report_issue_dialog_mail_intent_chooser">در حال ارسال گزارش...</string>
 
-    </resources>
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">متاسفیم!</string>
+    <string name="scan_camera_problem_dialog_message">دوربین مشکل دارد. احتمالا باید دستگاه‌تان را خاموش و دوباره روشن کنید.</string>
+    <string name="scan_camera_permission_dialog_title">مجوز استفاده از دوربین</string>
+    <string name="scan_camera_permission_dialog_message">برای اسکن کیوآر کد، باید مجوز استفاده از دوربین را داشته باشید.</string>
+
+    <!-- address input -->
+    <string name="address_input_title">ارسال دش</string>
+    <string name="show_clipboard">نشان دادن اطلاعات در کلیپ‌برد</string>
+    <string name="tap_to_paste">روی نشانی موجود در کلیپ‌برد لمس کنید تا چسبانده شود</string>
+    <string name="recipient_address">نشانی دریافت‌کننده</string>
+
+    <!-- input parser -->
+    <string name="input_parser_io_error">داده قابل خواندن نیست :n\%s</string>
+    <string name="input_parser_cannot_classify">نمی‌تواند ورودی را تشخیص دهد :n\%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">نشانی نامعتبر دش :n\%s</string>
+    <string name="input_parser_invalid_address">نشانی دش دریافتی نامعتبر است!n\ (مشکل در شبکه اصلی/شبکه تست؟)</string>
+    <string name="input_parser_unverifyable_paymentrequest">درخواست پرداخت قابل تایید نیست:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">درخواست نامعتبر پرداخت:n\%s</string>
+    <string name="input_parser_invalid_transaction">تراکنش نامعتبر:n\%s</string>
+    <string name="input_connect">اتصال</string>
+
+    <!-- others -->
+    <string name="confirm_sec">تائید (%sثانیه) </string>
+    <string name="cancel_transaction">تراکنش لغو شود؟ </string>
+    <string name="yes_cancel">بله! لغو شود</string>
+    <string name="no_keep_it">نه!لغو نشود</string>
+    <string name="insufficient_money_title">موجودی کافی نیست</string>
+    <string name="send_coins_error_msg">مشکل در ارسال مبلغ مورد نظر!</string>
+    <string name="from_dash_wallet_on_this_device">از دش والت روی این دستگاه</string>
+    <string name="preposition_at">در</string>
+</resources>

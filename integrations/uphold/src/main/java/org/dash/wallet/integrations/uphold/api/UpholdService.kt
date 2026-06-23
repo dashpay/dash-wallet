@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.uphold.api
 import org.dash.wallet.integrations.uphold.data.UpholdAccessToken
 import org.dash.wallet.integrations.uphold.data.UpholdCapability
 import org.dash.wallet.integrations.uphold.data.UpholdCard
+import org.dash.wallet.integrations.uphold.data.UpholdCardAddressList
 import org.dash.wallet.integrations.uphold.data.UpholdCryptoCardAddress
 import org.dash.wallet.integrations.uphold.data.UpholdTransaction
 import retrofit2.Call
@@ -50,11 +51,20 @@ interface UpholdService {
     @get:GET("v0/me/cards")
     val cards: Call<List<UpholdCard>>
 
+    @GET("v0/me/cards")
+    suspend fun getCards(): List<UpholdCard>?
+
     @POST("v0/me/cards")
     fun createCard(@Body body: Map<String, String>): Call<UpholdCard?>
 
     @POST("v0/me/cards/{id}/addresses")
     fun createCardAddress(@Path("id") cardId: String, @Body body: Map<String, String>): Call<UpholdCryptoCardAddress?>
+
+    @POST("v0/me/cards/{id}/addresses")
+    suspend fun createCardAddressAsync(@Path("id") cardId: String, @Body body: Map<String, String>): UpholdCryptoCardAddress? // ktlint-disable max-line-length
+
+    @GET("v0/me/cards/{id}/addresses")
+    suspend fun listCardAddresses(@Path("id") cardId: String): List<UpholdCardAddressList>?
 
     @POST("v0/me/cards/{cardId}/transactions")
     @JvmSuppressWildcards

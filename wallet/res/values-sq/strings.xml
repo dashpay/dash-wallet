@@ -160,15 +160,6 @@
     <string name="encrypt_keys_dialog_show">Trego PIN-in</string>
     <string name="encrypt_keys_dialog_state_encrypting">Duke enkriptuar…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Duke dekriptuar…</string>
-    <string name="scan_camera_problem_dialog_title">Na vjen keq</string>
-    <string name="scan_camera_problem_dialog_message">Ka një problem me kamerën, ju duhet ndoshta të ristartoni pajisjen tuaj.</string>
-    <string name="input_parser_io_error">Nuk mund të lexojë: \n%s</string>
-    <string name="input_parser_cannot_classify">Nuk mund të njoh hyrjen:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Jovalid Dash URI:\n%s</string>
-    <string name="input_parser_invalid_address">Dash adresë jovalide!\(Keni ngatërruar mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Nuk mund të verifikohet kërkesa për pages:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Kërkes jo valide për pages:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transaksion jo valid:\n%s</string>
     <string name="preferences_activity_title">Rregullat</string>
     <string name="preferences_category_diagnostics">Diagnoza</string>
     <string name="preferences_category_labs">Labs</string>
@@ -186,7 +177,6 @@
     <string name="preferences_extended_public_key_title">Trego xpub</string>
     <string name="preferences_extended_public_key_summary">Shfaq çelësin privat të zgjeruar të kuletës suaj, kështu që mund të importohet në aplikacionet dhe shërbime tjera. Jeni të kujdesshëm: nëse vazhdoni aplikacioni mund të ju rrezikoj privaticitetin.</string>
     <string name="bitmap_fragment_share">Ndaje…</string>
-    <string name="extended_public_key_fragment_title">Çelësi publik i zgjeruar</string>
     <string name="extended_public_key_fragment_share">Ndaje xpub…</string>
     <string name="report_issue_dialog_title_issue">Raporto problem</string>
     <string name="report_issue_dialog_title_crash">Është detektuar një dështim i mëhershëm</string>

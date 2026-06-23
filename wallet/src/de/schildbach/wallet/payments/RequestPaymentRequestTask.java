@@ -30,7 +30,7 @@ import java.io.InputStream;
 
 import javax.annotation.Nullable;
 
-import de.schildbach.wallet.data.PaymentIntent;
+import org.dash.wallet.common.data.PaymentIntent;
 import de.schildbach.wallet.ui.util.InputParser;
 import de.schildbach.wallet_test.R;
 import okhttp3.CacheControl;
