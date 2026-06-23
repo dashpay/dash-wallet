@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFontLoader
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -288,6 +289,7 @@ private fun MultipleProvidersSection(
     onProviderSelected: (GiftCardProvider) -> Unit
 ) {
     val context = LocalContext.current
+    val colors = LocalDashColors.current
 
     Column {
         Text(
