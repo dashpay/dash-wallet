@@ -85,8 +85,14 @@ class DEXEnterAmountFragment : Fragment() {
     }
 
     private fun onContinue(amount: String, currencyCode: String) {
-        // TODO: the buy (asset -> Dash) quote + preview flow is not built yet. For now just
-        // log the chosen amount so the screen is exercisable end-to-end up to this point.
+        // The committed amount lives in the nav-graph-scoped DEXEnterAmountViewModel and is shared
+        // with the refund-address step, so only the asset/currency need to travel as nav args.
         log.info("DEX buy: continue with amount={} {} for asset={}", amount, currencyCode, args.asset)
+        findNavController().navigate(
+            DEXEnterAmountFragmentDirections.dexEnterAmountToDexRefundAddress(
+                asset = args.asset,
+                currency = args.currency
+            )
+        )
     }
 }

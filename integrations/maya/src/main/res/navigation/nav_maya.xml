@@ -50,6 +50,25 @@
             android:name="fiatCurrency"
             app:argType="string"
             android:defaultValue="USD" />
+
+        <action android:id="@+id/dexEnterAmount_to_dexRefundAddress"
+            app:destination="@id/dexRefundAddressFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/dexRefundAddressFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXRefundAddressFragment"
+        android:label="dexRefundAddressFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
     </fragment>
 
     <fragment

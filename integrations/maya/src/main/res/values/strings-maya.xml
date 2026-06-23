@@ -352,5 +352,11 @@
     <string name="maya_no_available_coins">No available coins</string>
     <string name="maya_no_connection_toast">Check your connection and try again to see available coins</string>
 
+    <!-- DashDEX buy: enter refund address screen -->
+    <string name="dex_refund_address_heading">Enter refund address</string>
+    <string name="dex_refund_address_description">Where should we send your funds if the swap fails?</string>
+    <string name="dex_refund_address_field_label">Refund address</string>
+    <string name="dex_refund_address_placeholder">Long press to paste</string>
+
 
 </resources>

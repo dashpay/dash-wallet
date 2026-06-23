@@ -106,6 +106,14 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
         }
     }
 
+    /**
+     * The amount the user has committed on this (shared, nav-graph-scoped) screen, in all three
+     * display currencies (fiat / DASH / bought asset) with their codes and exchange rates. Returns
+     * a defensive copy so callers on later steps (e.g. the refund-address screen) can read the
+     * amount without mutating the live tracked value.
+     */
+    fun enteredAmount(): Amount = amount.copy()
+
     /** Handle a numeric-keyboard key ("0"–"9", ".", "back", "back_long"). */
     fun onKeyInput(key: String) {
         _uiState.update { state ->
