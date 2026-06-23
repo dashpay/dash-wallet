@@ -18,37 +18,19 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.dash.wallet.common.ui.components.AddressField
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
@@ -110,35 +92,23 @@ private fun DEXRefundAddressScreenContent(
             modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp)
         )
 
-        // Refund address field block: label + paste/scan input.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 20.dp, start = 20.dp, end = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.dex_refund_address_field_label),
-                style = MyTheme.Body2Medium,
-                color = MyTheme.Colors.textSecondary
-            )
-
-            DEXAddressField(
-                address = address,
-                hasError = hasError,
-                onAddressChanged = onAddressChanged,
-                onScanClick = onScanClick,
-                onPasteClick = onPasteClick
-            )
-
-            if (hasError) {
-                Text(
-                    text = stringResource(CommonR.string.not_valid_address, currencyCode),
-                    style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.red
-                )
-            }
-        }
+        // Refund address field (design-system AddressField): label + paste/scan input + inline
+        // error. The address must validate against the source currency on Continue.
+        AddressField(
+            value = address,
+            onValueChange = onAddressChanged,
+            label = stringResource(R.string.dex_refund_address_field_label),
+            placeholder = stringResource(R.string.dex_refund_address_placeholder),
+            message = if (hasError) {
+                stringResource(CommonR.string.not_valid_address, currencyCode)
+            } else {
+                null
+            },
+            isError = hasError,
+            onScanClick = onScanClick,
+            onLongPress = onPasteClick,
+            modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
+        )
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -153,71 +123,6 @@ private fun DEXRefundAddressScreenContent(
                 .fillMaxWidth()
                 .padding(horizontal = 40.dp, vertical = 16.dp)
         )
-    }
-}
-
-/**
- * Screen-local refund-address input: a rounded translucent field with a placeholder, a
- * long-press-to-paste gesture, and a trailing QR-scan icon button. Kept private to this screen;
- * no shared address-field Compose component exists yet.
- */
-@Composable
-private fun DEXAddressField(
-    address: String,
-    hasError: Boolean,
-    onAddressChanged: (String) -> Unit,
-    onScanClick: () -> Unit,
-    onPasteClick: () -> Unit
-) {
-    val fieldBg = Color(0x1AB0B6BC) // text-field/crypto-address/bg = rgba(176,182,188,0.1)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 50.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(fieldBg)
-            .pointerInput(Unit) {
-                detectTapGestures(onLongPress = { onPasteClick() })
-            }
-            .padding(start = 20.dp, end = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
-    ) {
-        Box(modifier = Modifier.weight(1f)) {
-            BasicTextField(
-                value = address,
-                onValueChange = onAddressChanged,
-                singleLine = true,
-                textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            if (address.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.dex_refund_address_placeholder),
-                    style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .clickable(onClick = onScanClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(CommonR.drawable.ic_scan_qr),
-                contentDescription = null,
-                tint = MyTheme.Colors.textPrimary
-            )
-        }
     }
 }
 
