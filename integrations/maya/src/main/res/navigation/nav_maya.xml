@@ -27,6 +27,29 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left"/>
 
+        <action android:id="@+id/mayaCurrencyPicker_to_dexEnterAmount"
+            app:destination="@id/dexEnterAmountFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+
+    </fragment>
+
+    <fragment
+        android:id="@+id/dexEnterAmountFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXEnterAmountFragment"
+        android:label="dexEnterAmountFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
+        <argument
+            android:name="fiatCurrency"
+            app:argType="string"
+            android:defaultValue="USD" />
     </fragment>
 
     <fragment

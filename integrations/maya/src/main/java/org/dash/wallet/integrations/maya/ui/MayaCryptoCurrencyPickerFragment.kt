@@ -99,13 +99,13 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
                 )
             )
         } else {
-            AdaptiveDialog.create(
-                icon = null,
-                title = "Buy Swap",
-                message = "next step not implemented",
-                negativeButtonText = getString(R.string.button_cancel),
-                positiveButtonText = null,
-            ).show(requireActivity())
+            log.info("currency picker: navigating to DEX enter amount for {}", pool.asset)
+            safeNavigate(
+                MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToDexEnterAmount(
+                    asset = pool.asset,
+                    currency = pool.currencyCode
+                )
+            )
         }
     }
 }

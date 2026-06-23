@@ -345,6 +345,7 @@
     <string name="maya_halted_label">Halted</string>
     <string name="maya_halted_coins_toast">Some coins are temporarily halted and unavailable for trading</string>
     <string name="maya_select_coin_title">Select coin</string>
+    <string name="dex_enter_amount_title">Enter amount</string>
     <string name="maya_route_label_maya" translatable="false">Maya</string>
     <string name="maya_route_label_near" translatable="false">NEAR</string>
     <string name="maya_route_label_multiple">Multiple networks</string>
