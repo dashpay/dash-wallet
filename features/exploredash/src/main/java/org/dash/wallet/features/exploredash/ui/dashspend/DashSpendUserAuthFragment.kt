@@ -40,6 +40,7 @@ import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.dashspend.GiftCardProviderType
 import org.dash.wallet.features.exploredash.databinding.FragmentDashSpendUserAuthBinding
+import org.dash.wallet.features.exploredash.repository.CTXSpendException
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import org.slf4j.LoggerFactory
 import retrofit2.HttpException
@@ -240,23 +241,45 @@ class DashSpendUserAuthFragment : Fragment(R.layout.fragment_dash_spend_user_aut
                 if (success) {
                     viewModel.logEvent(AnalyticsConstants.DashSpend.SUCCESSFUL_LOGIN)
                     hideKeyboard()
-                    when (viewModel.selectedProvider) {
+                    // Navigate based on the provider from nav args, not viewModel.selectedProvider:
+                    // selectedProvider is non-persisted nav-graph ViewModel state that resets to null
+                    // when the ViewModel is recreated (e.g. process death while the user leaves the app
+                    // to read the emailed code). That previously crashed this success path and was
+                    // mis-reported as an invalid code. Restore it so downstream screens still have it.
+                    viewModel.selectedProvider = provider
+                    when (provider) {
                         GiftCardProviderType.CTX -> safeNavigate(
                             DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragment()
                         )
                         GiftCardProviderType.PiggyCards -> safeNavigate(
                             DashSpendUserAuthFragmentDirections.authToPurchaseGiftCardFragmentV2()
                         )
-                        else -> error("serious error. provider = null")
                     }
+                } else {
+                    // A non-exception failure means the code was accepted but the backend returned
+                    // no usable tokens - a server anomaly, not a wrong code.
+                    viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
+                    showVerifyError(getString(R.string.loading_error))
                 }
             } catch (e: Exception) {
-                binding.inputWrapper.isErrorEnabled = true
-                binding.inputErrorTv.text = getString(R.string.invaild_code)
-                binding.inputErrorTv.isVisible = true
+                log.error(
+                    "DashSpend: verify code failed for ${provider.name}: ${e::class.simpleName} - ${e.message}",
+                    e
+                )
+                viewModel.logEvent(AnalyticsConstants.DashSpend.UNSUCCESSFUL_LOGIN)
+                // Only a genuine rejection of the entered code (HTTP 400) is the user's fault;
+                // transient/server/transport errors get a generic message instead of "wrong code".
+                val isInvalidCode = e is CTXSpendException && e.errorCode == 400
+                showVerifyError(getString(if (isInvalidCode) R.string.invaild_code else R.string.loading_error))
             }
             hideLoading()
         }
+    }
+
+    private fun showVerifyError(message: String) {
+        binding.inputWrapper.isErrorEnabled = true
+        binding.inputErrorTv.text = message
+        binding.inputErrorTv.isVisible = true
     }
 
     private fun isEmail(text: CharSequence?): Boolean {
