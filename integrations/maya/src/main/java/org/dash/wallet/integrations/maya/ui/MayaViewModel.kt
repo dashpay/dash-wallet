@@ -162,6 +162,9 @@ class MayaViewModel @Inject constructor(
 
     fun setSwapDirection(direction: SwapDirection) {
         _swapDirection.value = direction
+        // Let the backend skip direction-irrelevant work (e.g. SwapKit skips the Maya halt query
+        // and preferred-route quotes on BUY, which excludes Maya-only assets).
+        swapProvider.setSwapDirection(direction)
     }
 
     // Membership map: which assets are part of the curated MayaCurrencyList, with
@@ -237,6 +240,13 @@ class MayaViewModel @Inject constructor(
                             preferred == RouteProvider.NEAR -> {
                                 routeLabelId = R.string.maya_route_label_near
                                 routeCalculated = true
+                            }
+                            direction == SwapDirection.BUY -> {
+                                // BUY routes via NEAR (Maya can't buy DASH), so a both-provider
+                                // asset is bought via NEAR. Labelled statically — no preferred-route
+                                // quote is run for BUY.
+                                routeLabelId = R.string.maya_route_label_near
+                                routeCalculated = false
                             }
                             else -> {
                                 routeLabelId = R.string.maya_route_label_multiple

@@ -30,6 +30,7 @@ import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 
 /**
  * Backend-agnostic surface for cross-chain swaps.
@@ -63,6 +64,14 @@ interface SwapProvider {
         get() = EMPTY_PREFERRED_ROUTE_PROVIDERS
 
     suspend fun reset()
+
+    /**
+     * Tell the provider which swap direction the user is in, so backend refresh can skip work
+     * that only applies to the other direction. For BUY (crypto -> DASH) the SwapKit backend
+     * excludes Maya-only assets and routes everything via NEAR, so it skips the mayanode halt
+     * query and the Maya-vs-NEAR preferred-route quotes. Default no-op (Maya backend ignores it).
+     */
+    fun setSwapDirection(direction: SwapDirection) {}
 
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
 

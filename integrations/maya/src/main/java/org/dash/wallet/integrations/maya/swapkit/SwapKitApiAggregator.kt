@@ -44,6 +44,7 @@ import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapFees
 import org.dash.wallet.integrations.maya.model.SwapQuote
@@ -166,6 +167,16 @@ class SwapKitApiAggregator @Inject constructor(
         responseScope.launch { hydrateFromSnapshot() }
     }
 
+    // Active swap direction (set from the UI). For BUY the picker excludes Maya-only assets and
+    // everything routes via NEAR, so refreshPools skips the mayanode halt query and the
+    // preferred-route quotes — neither signal affects any BUY-eligible asset.
+    @Volatile
+    private var swapDirection: SwapDirection = SwapDirection.SELL
+
+    override fun setSwapDirection(direction: SwapDirection) {
+        swapDirection = direction
+    }
+
     override suspend fun reset() {
         log.info("swapkit reset")
         poolInfoList.value = emptyList()
@@ -213,10 +224,15 @@ class SwapKitApiAggregator @Inject constructor(
         val prices = webApi.getPrices(identifiers)
             .associateBy({ it.identifier.uppercase() }, { it.priceUsd })
 
-        // Refresh the Maya-only classification and Maya halt status before building
-        // the pools so each PoolInfo can be stamped in a single pass.
+        // Always refresh the Maya-only classification — the BUY picker needs it to know which
+        // assets to exclude. Maya halt status only feeds `mayaHalted`, which markMayaInfo sets
+        // for Maya-only assets only; those are excluded on BUY, so skip the mayanode halt query
+        // entirely when buying.
         refreshMayaOnlyClassification()
-        refreshMayaHaltStatus()
+        val isSell = swapDirection == SwapDirection.SELL
+        if (isSell) {
+            refreshMayaHaltStatus()
+        }
 
         // Populate `assetPriceFiat` with the raw USD price (stored as a Fiat with code "USD").
         // [applyPoolPrices] then converts USD → selected fiat in a second pass — same
@@ -246,7 +262,12 @@ class SwapKitApiAggregator @Inject constructor(
         // Resolve the recommended network for both-provider assets in the background
         // so the picker can replace "Multiple networks" with the actual provider.
         // Launched separately so it never delays publishing the pool list above.
-        responseScope.launch { resolvePreferredRouteProviders(pools) }
+        // SELL only: this is a DASH->asset (sell-direction) quote used to pick Maya vs NEAR for
+        // the SELL label. BUY routes everything via NEAR, so the picker labels both-provider
+        // assets NEAR statically and no quote is needed.
+        if (isSell) {
+            responseScope.launch { resolvePreferredRouteProviders(pools) }
+        }
     }
 
     /**
@@ -648,7 +669,12 @@ class SwapKitApiAggregator @Inject constructor(
                 sellAmount = sellAmount,
                 slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
                 sourceAddress = refundAddress,
-                destinationAddress = destinationAddress
+                destinationAddress = destinationAddress,
+                // Buys are NEAR-only: Maya can't buy DASH, and the refund flow relies on NEAR
+                // Intents' refund-to-sourceAddress semantics (Maya would refund to the inbound
+                // tx's VIN0, ignoring the refund address we collected). Pin the provider so a
+                // both-provider asset can never resolve to a Maya route here.
+                providers = listOf(SwapKitConstants.NEAR_PROVIDER)
             )
         ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
 

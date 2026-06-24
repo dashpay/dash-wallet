@@ -37,6 +37,7 @@ import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
 import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.SwapBackend
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -125,6 +126,8 @@ class DispatchingSwapProvider @Inject constructor(
     override var showNotificationOnResult: Boolean
         get() = active.showNotificationOnResult
         set(value) { active.showNotificationOnResult = value }
+
+    override fun setSwapDirection(direction: SwapDirection) = active.setSwapDirection(direction)
 
     override suspend fun reset() = active.reset()
 
