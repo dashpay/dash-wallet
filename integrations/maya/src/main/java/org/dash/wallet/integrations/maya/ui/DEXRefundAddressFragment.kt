@@ -32,6 +32,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.scan.ScanActivity
+import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
 
 /**
@@ -101,14 +102,19 @@ class DEXRefundAddressFragment : Fragment() {
     private fun onContinue() {
         val address = viewModel.validateAddress() ?: return // invalid -> inline error already shown
 
-        // TODO: the buy (asset -> Dash) quote + preview flow is not built yet. For now persist the
-        // refund address and log it (matching DEXEnterAmountFragment.onContinue) so the screen is
-        // exercisable end-to-end up to this point. The entered amount is already shared via the
-        // nav-graph-scoped DEXEnterAmountViewModel.
+        // The entered amount is shared via the nav-graph-scoped DEXEnterAmountViewModel, so only the
+        // asset/currency and the validated refund address travel as nav args to the receive screen.
         val amount = enterAmountViewModel.enteredAmount()
         log.info(
             "DEX buy: continue with refund address={} for asset={} amount(dash={} fiat={} crypto={})",
             address, args.asset, amount.dash, amount.fiat, amount.crypto
+        )
+        safeNavigate(
+            DEXRefundAddressFragmentDirections.dexRefundAddressToDexReceive(
+                asset = args.asset,
+                currency = args.currency,
+                refundAddress = address
+            )
         )
     }
 }

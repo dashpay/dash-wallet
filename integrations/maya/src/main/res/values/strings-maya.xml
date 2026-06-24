@@ -358,5 +358,9 @@
     <string name="dex_refund_address_field_label">Refund address</string>
     <string name="dex_refund_address_placeholder">Long press to paste</string>
 
+    <!-- DashDEX buy: send crypto to deposit address screen -->
+    <string name="dex_receive_heading">Send %1$s to this address</string>
+    <string name="dex_receive_description">Once the network confirms your transfer, we\'ll convert it to Dash and deposit it in your DashPay wallet</string>
+    <string name="dex_receive_uri_label">URI</string>
 
 </resources>

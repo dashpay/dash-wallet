@@ -69,6 +69,28 @@
         <argument
             android:name="currency"
             app:argType="string" />
+
+        <action android:id="@+id/dexRefundAddress_to_dexReceive"
+            app:destination="@id/dexReceiveFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:popEnterAnim="@anim/activity_stay"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left"/>
+    </fragment>
+
+    <fragment
+        android:id="@+id/dexReceiveFragment"
+        android:name="org.dash.wallet.integrations.maya.ui.DEXReceiveFragment"
+        android:label="dexReceiveFragment">
+        <argument
+            android:name="asset"
+            app:argType="string" />
+        <argument
+            android:name="currency"
+            app:argType="string" />
+        <argument
+            android:name="refundAddress"
+            app:argType="string" />
     </fragment>
 
     <fragment
