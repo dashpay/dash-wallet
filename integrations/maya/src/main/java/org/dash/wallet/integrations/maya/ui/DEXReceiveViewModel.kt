@@ -27,7 +27,11 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -58,7 +62,8 @@ data class DEXReceiveUIState(
 @HiltViewModel
 class DEXReceiveViewModel @Inject constructor(
     private val swapProvider: SwapProvider,
-    private val walletDataProvider: WalletDataProvider
+    private val walletDataProvider: WalletDataProvider,
+    private val transactionMetadataProvider: TransactionMetadataProvider
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(DEXReceiveViewModel::class.java)
@@ -111,7 +116,12 @@ class DEXReceiveViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
-
+            transactionMetadataProvider.markAddressWithTaxCategory(
+                destinationAddress.toString(),
+                false,
+                TaxCategory.Income,
+                ServiceName.Swapkit
+            )
             when (val result = swapProvider.createBuyOrder(asset, sellAmount, destinationAddress, refundAddress)) {
                 is ResponseResource.Success -> {
                     val order = result.value

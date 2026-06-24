@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -165,6 +166,10 @@ private fun QrArea(content: String, isLoading: Boolean) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
+                    // The QR bitmap is the raw module grid (tiny); scaling it to 200dp with the
+                    // default (smoothing) filter blurs the modules. None = nearest-neighbour, so the
+                    // squares stay crisp (mirrors Qr.themeAwareDrawable's isFilterBitmap = false).
+                    filterQuality = FilterQuality.None,
                     modifier = Modifier.size(200.dp)
                 )
             } else {

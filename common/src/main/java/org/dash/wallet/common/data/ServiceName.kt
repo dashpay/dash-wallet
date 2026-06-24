@@ -7,6 +7,7 @@ object ServiceName {
     const val CTXSpend = "ctxspend"
     const val PiggyCards = "piggycards"
     const val Maya = "maya"
+    const val Swapkit = "swapkit"
     const val Unknown = "unknown"
 
     fun isDashSpend(serviceName: String?) = serviceName == CTXSpend || serviceName == PiggyCards
