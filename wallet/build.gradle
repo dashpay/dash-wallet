@@ -216,6 +216,20 @@ if (file("../local.properties").exists()) {
     file("../local.properties").withInputStream { localProps.load(it) }
 }
 
+// Year of the most recent commit on the current branch, used for the copyright notice.
+// Uses providers.exec so it stays compatible with the Gradle configuration cache.
+// Falls back to the current year if git is unavailable (e.g. building from a source tarball).
+def commitYear
+try {
+    def out = providers.exec {
+        workingDir = rootDir
+        commandLine 'git', 'log', '-1', '--format=%cd', '--date=format:%Y'
+    }.standardOutput.asText.get().trim()
+    commitYear = (out ==~ /\d{4}/) ? out : new Date().format('yyyy')
+} catch (Exception ignored) {
+    commitYear = new Date().format('yyyy')
+}
+
 android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
@@ -249,6 +263,7 @@ android {
         }
         buildConfigField("String", "DPP_VERSION", "\"$dppVersion\"")
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
+        buildConfigField("int", "COMMIT_YEAR", "$commitYear")
     }
 
     buildTypes {
