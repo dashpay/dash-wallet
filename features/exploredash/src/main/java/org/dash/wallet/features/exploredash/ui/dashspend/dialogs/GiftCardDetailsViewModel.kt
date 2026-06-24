@@ -197,7 +197,12 @@ class GiftCardDetailsViewModel @Inject constructor(
                 }
 
                 try {
-                    val giftCards = ctxSpendRepository.getGiftCard(txid.toStringBase58())
+                    val orderId = giftCardDao.getCardForTransaction(txid).firstOrNull()?.note
+                    val giftCards = if (orderId != null) {
+                        ctxSpendRepository.getGiftCard(orderId)
+                    } else {
+                        ctxSpendRepository.getGiftCardByTxId(txid.toStringBase58())
+                    }
                     val giftCard = giftCards.firstOrNull()
                     // Single state update with all changes
                     val newState = if (giftCard != null) {
@@ -263,24 +268,14 @@ class GiftCardDetailsViewModel @Inject constructor(
                                     state
                                 } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
                                     log.error("CTXSpend returned a redeem url card: not supported")
-                                    val state = uiState.value.copy(
+                                    updateGiftCardWithURL(index = 0, giftCard.redeemUrl, giftCard.redeemUrlChallenge)
+                                    val newState = uiState.value.copy(
                                         status = giftCard.status,
                                         queries = uiState.value.queries + 1,
-                                        error = CTXSpendException(
-                                            ResourceString(
-                                                R.string.gift_card_redeem_url_not_supported,
-                                                listOf(
-                                                    GiftCardProviderType.CTX.name,
-                                                    giftCard.id,
-                                                    giftCard.paymentId ?: "",
-                                                    txid
-                                                )
-                                            ),
-                                            giftCard
-                                        )
+                                        error = null
                                     )
                                     cancelTicker()
-                                    state
+                                    newState
                                 } else {
                                     uiState.value.copy(
                                         status = giftCard.status,
@@ -485,7 +480,11 @@ class GiftCardDetailsViewModel @Inject constructor(
                                             }
                                         }
                                     } else if (giftCard.redeemUrl?.isNotEmpty() == true) {
-                                        updateGiftCard(cardIndex, giftCard.redeemUrl)
+                                        updateGiftCardWithURL(
+                                            cardIndex,
+                                            giftCard.redeemUrl,
+                                            giftCard.redeemUrlChallenge
+                                        )
                                     }
                                 }
                                 cancelTicker()
@@ -580,13 +579,14 @@ class GiftCardDetailsViewModel @Inject constructor(
         logOnPurchaseEvents(giftCard)
     }
 
-    private suspend fun updateGiftCard(index: Int, merchantUrl: String) {
+    private suspend fun updateGiftCardWithURL(index: Int, redeemUrl: String, redeemUrlChallenge: String?) {
         val giftCard = uiState.value.giftCards.find { it.index == index } ?: return
 
         applicationScope.launch {
             metadataProvider.updateGiftCardMetadata(
                 giftCard.copy(
-                    merchantUrl = merchantUrl
+                    merchantUrl = redeemUrl,
+                    redeemUrlChallenge = redeemUrlChallenge
                 )
             )
         }.join()

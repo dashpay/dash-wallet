@@ -330,7 +330,8 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 txId,
                 service,
                 TaxCategory.Expense,
-                iconUrl
+                iconUrl,
+                0
             )
         }
 
@@ -372,12 +373,15 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // for now, only save the first card
         if (merged.index == 0) {
             transactionMetadataChangeCacheDao.insertGiftCardData(
-                merged.txId,
-                merged.number,
-                merged.pin,
-                merged.merchantName,
-                merged.price,
-                merged.merchantUrl
+                giftCard.txId,
+                giftCard.number,
+                giftCard.pin,
+                giftCard.merchantName,
+                giftCard.price,
+                giftCard.merchantUrl,
+                giftCard.note,
+                giftCard.redeemUrlChallenge,
+                giftCard.index
             )
         }
     }
@@ -385,7 +389,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
         giftCardDao.updateBarcode(txId, index, barcodeValue, barcodeFormat)
         if (index == 0) {
-            transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString())
+            transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString(), index)
         }
     }
 
@@ -704,7 +708,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 pin = giftCard.pin ?: existingGiftCard.pin,
                 barcodeValue = giftCard.barcodeValue ?: existingGiftCard.barcodeValue,
                 barcodeFormat = giftCard.barcodeFormat ?: existingGiftCard.barcodeFormat,
-                merchantUrl = giftCard.merchantUrl ?: existingGiftCard.merchantUrl
+                merchantUrl = giftCard.merchantUrl ?: existingGiftCard.merchantUrl,
+                note = giftCard.note ?: existingGiftCard.note,
+                redeemUrlChallenge = giftCard.redeemUrlChallenge ?: existingGiftCard.redeemUrlChallenge
             )
             giftCardDao.updateGiftCard(updatedGiftCard)
         }
