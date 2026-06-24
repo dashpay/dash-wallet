@@ -31,6 +31,7 @@ import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -128,7 +129,7 @@ class DEXReceiveViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             address = order.depositAddress,
-                            uri = buildUri(order.depositAddress),
+                            uri = buildUri(order.depositAddress, order.sellAmount),
                             isLoading = false,
                             errorMessage = null
                         )
@@ -145,11 +146,21 @@ class DEXReceiveViewModel @Inject constructor(
     }
 
     /**
-     * Build the payment URI for the QR / URI row from the deposit address.
+     * Build the BIP-21-style payment URI for the QR / URI row: `<scheme>:<address>?amount=<amount>`.
      *
-     * TODO(buy backend): derive the real per-currency BIP-21-style scheme + amount/memo params
-     * (e.g. "bitcoin:<addr>?amount=...") from the asset chain and the swap's memo. For now the QR
-     * encodes the plain deposit address, which every wallet can scan.
+     * The scheme (the "coin name", e.g. "bitcoin", "litecoin", "ethereum") is taken from the
+     * payment processor registered for the chosen [asset] — its [PaymentIntentParser.uriPrefix].
+     * The [amount] is the human-unit decimal of the crypto the user is sending in.
+     *
+     * Falls back to the plain [address] when the asset has no registered processor or the amount is
+     * blank — every wallet can still scan a bare address.
      */
-    private fun buildUri(address: String): String = address
+    private fun buildUri(address: String, amount: String): String {
+        val scheme = MayaCurrencyList[asset]?.paymentIntentParser?.uriPrefix
+        if (scheme.isNullOrBlank()) {
+            return address
+        }
+        val base = "$scheme:$address"
+        return if (amount.isNotBlank()) "$base?amount=$amount" else base
+    }
 }
