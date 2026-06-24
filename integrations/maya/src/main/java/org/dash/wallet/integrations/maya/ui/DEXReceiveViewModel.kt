@@ -18,11 +18,17 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 /**
@@ -33,8 +39,8 @@ import javax.inject.Inject
  * the received crypto to DASH and deposits it in the user's DashPay wallet.
  *
  * The deposit [address] (and the [uri] that the QR encodes) is produced by a SwapKit buy-swap
- * call that does not exist yet (see [DEXReceiveViewModel.loadDepositAddress]); until it lands the
- * screen renders a loading state ([isLoading] = true).
+ * call (see [DEXReceiveViewModel.loadDepositAddress]); the screen renders a loading state until it
+ * resolves, or [errorMessage] if it fails.
  */
 data class DEXReceiveUIState(
     // Display code of the crypto being sent in (e.g. "BTC"), used in the heading.
@@ -50,25 +56,33 @@ data class DEXReceiveUIState(
 )
 
 @HiltViewModel
-class DEXReceiveViewModel @Inject constructor() : ViewModel() {
+class DEXReceiveViewModel @Inject constructor(
+    private val swapProvider: SwapProvider,
+    private val walletDataProvider: WalletDataProvider
+) : ViewModel() {
+    companion object {
+        private val log = LoggerFactory.getLogger(DEXReceiveViewModel::class.java)
+    }
 
     private val _uiState = MutableStateFlow(DEXReceiveUIState())
     val uiState: StateFlow<DEXReceiveUIState> = _uiState.asStateFlow()
 
-    // The asset being bought (e.g. "BTC.BTC") and the refund address entered on the previous step.
-    // Held for the (not-yet-implemented) buy-swap call in loadDepositAddress().
+    // Inputs gathered on the previous steps, held for the buy-swap call in loadDepositAddress().
     private var asset: String = ""
     private var refundAddress: String = ""
+    private var sellAmount: String = ""
 
     /**
      * Seed the screen with the inputs gathered on the previous steps. [currencyCode] (e.g. "BTC")
-     * is the display code shown in the heading; [asset] (e.g. "BTC.BTC") is the SwapKit identifier
-     * and [refundAddress] is the address funds are returned to if the swap fails (also used by
-     * SwapKit as the source/refund address for NEAR-route buys).
+     * is the display code shown in the heading; [asset] (e.g. "BTC.BTC") is the SwapKit identifier;
+     * [sellAmount] is the human-unit amount of the crypto being sent in (from the shared
+     * DEXEnterAmountViewModel); [refundAddress] is the address funds are returned to if the swap
+     * fails (also reported to SwapKit as the source/refund address for NEAR-route buys).
      */
-    fun setArguments(asset: String, currencyCode: String, refundAddress: String) {
+    fun setArguments(asset: String, currencyCode: String, refundAddress: String, sellAmount: String) {
         this.asset = asset
         this.refundAddress = refundAddress
+        this.sellAmount = sellAmount
         _uiState.update {
             it.copy(
                 coinCode = currencyCode,
@@ -81,38 +95,51 @@ class DEXReceiveViewModel @Inject constructor() : ViewModel() {
     }
 
     /**
-     * Resolve the deposit (inbound) address for the buy swap.
-     *
-     * TODO(buy backend): the buy (crypto -> DASH) swap call does not exist yet. The real
-     * implementation must call a new SwapProvider buy-swap method that performs SwapKit
-     * `/v3/quote` + `/v3/swap` with the direction of [SwapKitApiAggregator.getSwapInfo] flipped:
-     *   - sellAsset        = [asset] (the chosen crypto, e.g. "BTC.BTC")
-     *   - buyAsset         = SwapKitConstants.DASH_ASSET
-     *   - sellAmount       = the entered amount in the crypto, read from the shared, nav-graph-scoped
-     *                        DEXEnterAmountViewModel.enteredAmount() (Amount.crypto)
-     *   - destinationAddress = the user's DASH receive address (where the converted DASH lands)
-     *   - sourceAddress    = [refundAddress] (SwapKit uses this for NEAR-route refunds)
-     * Then read back swap.inboundAddress (+ memo) and:
-     *   - set uiState.address = swap.inboundAddress
-     *   - set uiState.uri     = buildUri(coinCode, swap.inboundAddress, memo/amount)
-     *   - set uiState.isLoading = false
-     * On failure set uiState.errorMessage and isLoading = false.
-     *
-     * For now this only keeps the screen in its loading state — no network call, no fabricated
-     * address.
+     * Resolve the deposit (inbound) address for the buy swap (crypto -> DASH) via SwapKit
+     * `/v3/quote` + `/v3/swap`: sell the chosen [asset] for DASH, with the converted DASH sent to
+     * the wallet's current receive address and [refundAddress] reported as the source/refund
+     * address. The resulting inbound address is where the user sends the crypto.
      */
     fun loadDepositAddress() {
-        _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-        // Intentionally left as a loading state until the buy-swap backend exists (see TODO above).
+        if (asset.isBlank() || sellAmount.isBlank() || refundAddress.isBlank()) {
+            log.warn("loadDepositAddress: missing inputs asset={} sellAmount={} refund(blank)={}",
+                asset, sellAmount, refundAddress.isBlank())
+            _uiState.update { it.copy(isLoading = false, errorMessage = "Missing swap details") }
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
+
+            when (val result = swapProvider.createBuyOrder(asset, sellAmount, destinationAddress, refundAddress)) {
+                is ResponseResource.Success -> {
+                    val order = result.value
+                    _uiState.update {
+                        it.copy(
+                            address = order.depositAddress,
+                            uri = buildUri(order.depositAddress),
+                            isLoading = false,
+                            errorMessage = null
+                        )
+                    }
+                }
+                is ResponseResource.Failure -> {
+                    log.error("createBuyOrder failed: {}", result.throwable.message)
+                    _uiState.update {
+                        it.copy(isLoading = false, errorMessage = result.throwable.message)
+                    }
+                }
+            }
+        }
     }
 
     /**
-     * Build the payment URI for the QR / URI row from the coin and deposit address.
+     * Build the payment URI for the QR / URI row from the deposit address.
      *
      * TODO(buy backend): derive the real per-currency BIP-21-style scheme + amount/memo params
-     * (e.g. "bitcoin:<addr>?amount=...") once the buy-swap response (inbound address + memo) is
-     * available. For now this is unused (address is never set) and returns the plain address.
+     * (e.g. "bitcoin:<addr>?amount=...") from the asset chain and the swap's memo. For now the QR
+     * encodes the plain deposit address, which every wallet can scan.
      */
-    @Suppress("unused")
     private fun buildUri(address: String): String = address
 }

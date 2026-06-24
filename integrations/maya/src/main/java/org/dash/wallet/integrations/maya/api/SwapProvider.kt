@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
@@ -96,6 +97,27 @@ interface SwapProvider {
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
+
+    /**
+     * Creates a BUY order (crypto -> DASH). SwapKit only: runs `/v3/quote` + `/v3/swap` with
+     * sellAsset = [sellAsset] (the chosen crypto, e.g. "BTC.BTC"), buyAsset = DASH, and returns
+     * the inbound deposit [BuyOrder.depositAddress] the user must send [sellAmount] (a human-unit
+     * decimal of the crypto) to. [destinationAddress] is the user's DASH receive address (where the
+     * converted DASH lands); [refundAddress] is reported to SwapKit as the source address and is
+     * where NEAR-route refunds are returned. The native Maya backend doesn't implement buys and
+     * returns a failure via the default below.
+     */
+    suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
 
     /** Stub-friendly user-accounts probe; today only Maya returns a single placeholder. */
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>

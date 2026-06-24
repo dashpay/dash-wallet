@@ -42,6 +42,7 @@ import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Account
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapFees
@@ -627,6 +628,88 @@ class SwapKitApiAggregator @Inject constructor(
             availableRoutes = quote.routes.map { "${it.providers.joinToString(",")}: ${it.meta?.tags ?: listOf() }" }
         )
         return ResponseResource.Success(result)
+    }
+
+    override suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> {
+        // BUY = crypto -> DASH: the mirror of getSwapInfo (which sells DASH). sellAsset is the
+        // chosen crypto, buyAsset is DASH, the deposit lands on the crypto chain, and the
+        // converted DASH is sent to the user's wallet (destinationAddress). The refund address
+        // (a crypto-chain address the user entered) is reported as sourceAddress — for NEAR
+        // routes that's where a failed swap is refunded.
+        val quote = webApi.getQuote(
+            SwapKitQuoteRequest(
+                sellAsset = sellAsset,
+                buyAsset = SwapKitConstants.DASH_ASSET,
+                sellAmount = sellAmount,
+                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
+                sourceAddress = refundAddress,
+                destinationAddress = destinationAddress
+            )
+        ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
+
+        if (quote.error != null) {
+            return ResponseResource.Failure(MayaException(quote.error), false, 0, null)
+        }
+        val route = quote.routes.bestRoute()
+            ?: return ResponseResource.Failure(
+                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                false,
+                0,
+                null
+            )
+
+        // disableBalanceCheck + disableBuildTx: we only need the inbound deposit address. The user
+        // funds the deposit from their own external wallet, so SwapKit must not try to build or
+        // balance-check a transaction from sourceAddress — and on UTXO sell-chains (e.g. BTC) the
+        // build step would fetch per-address balance even with disableBalanceCheck alone.
+        val swap = webApi.postSwap(
+            SwapKitSwapRequest(
+                routeId = route.routeId,
+                sourceAddress = refundAddress,
+                destinationAddress = destinationAddress,
+                disableBalanceCheck = true,
+                disableBuildTx = true
+            )
+        ) ?: return ResponseResource.Failure(MayaException("swapkit /v3/swap failed"), false, 0, null)
+
+        if (swap.error != null) {
+            val errorMessage = buildString {
+                append(swap.error)
+                if (swap.message != null) {
+                    append(": ")
+                    append(swap.message)
+                }
+            }
+            return ResponseResource.Failure(MayaException(errorMessage), false, 0, null)
+        }
+
+        // For a buy the deposit is where the SELL asset (crypto) is sent, i.e. the inbound
+        // address; targetAddress is only a fallback. (The sell path prefers targetAddress because
+        // there the inbound chain is DASH and the value is the Asgard vault.)
+        val depositAddress = swap.inboundAddress ?: swap.targetAddress
+            ?: return ResponseResource.Failure(
+                MayaException("swapkit returned no deposit address"),
+                false,
+                0,
+                null
+            )
+        val expectedDash = (swap.expectedBuyAmount ?: route.expectedBuyAmount)
+            .toBigDecimalOrNull() ?: BigDecimal.ZERO
+
+        return ResponseResource.Success(
+            BuyOrder(
+                depositAddress = depositAddress,
+                memo = swap.memo,
+                expectedDashAmount = expectedDash,
+                sellAsset = sellAsset,
+                sellAmount = sellAmount
+            )
+        )
     }
 
     override suspend fun commitSwapTransaction(

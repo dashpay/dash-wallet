@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -66,6 +67,7 @@ fun DEXReceiveScreen(
         address = uiState.address,
         uri = uiState.uri,
         isLoading = uiState.isLoading,
+        errorMessage = uiState.errorMessage,
         onBackClick = onBackClick,
         onCopyClick = onCopyClick
     )
@@ -77,6 +79,7 @@ private fun DEXReceiveScreenContent(
     address: String,
     uri: String,
     isLoading: Boolean,
+    errorMessage: String?,
     onBackClick: () -> Unit,
     onCopyClick: (String) -> Unit
 ) {
@@ -120,12 +123,22 @@ private fun DEXReceiveScreenContent(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
+                if (errorMessage != null) {
+                    Text(
+                        text = errorMessage,
+                        style = MyTheme.Body2Regular,
+                        color = MyTheme.Colors.red,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                } else {
+                    QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
 
-                UriRow(
-                    uri = uri.ifBlank { address },
-                    onCopyClick = { onCopyClick(uri.ifBlank { address }) }
-                )
+                    UriRow(
+                        uri = uri.ifBlank { address },
+                        onCopyClick = { onCopyClick(uri.ifBlank { address }) }
+                    )
+                }
             }
         }
     }
@@ -216,6 +229,7 @@ private fun DEXReceiveScreenLoadingPreview() {
         address = "",
         uri = "",
         isLoading = true,
+        errorMessage = null,
         onBackClick = {},
         onCopyClick = {}
     )
@@ -229,6 +243,21 @@ private fun DEXReceiveScreenLoadedPreview() {
         address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
         uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
         isLoading = false,
+        errorMessage = null,
+        onBackClick = {},
+        onCopyClick = {}
+    )
+}
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXReceiveScreenErrorPreview() {
+    DEXReceiveScreenContent(
+        coinCode = "BTC",
+        address = "",
+        uri = "",
+        isLoading = false,
+        errorMessage = "No route found for this amount",
         onBackClick = {},
         onCopyClick = {}
     )

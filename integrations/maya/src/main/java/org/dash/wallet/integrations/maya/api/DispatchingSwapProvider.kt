@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
@@ -149,6 +150,14 @@ class DispatchingSwapProvider @Inject constructor(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel)
+
+    override suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> =
+        active.createBuyOrder(sellAsset, sellAmount, destinationAddress, refundAddress)
 
     override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> =
         active.getUserAccounts(currency)

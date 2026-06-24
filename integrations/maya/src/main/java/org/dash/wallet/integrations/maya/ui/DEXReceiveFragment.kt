@@ -33,6 +33,7 @@ import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.R as CommonR
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
 
 /**
  * DashDEX buy "Send {COIN} to this address" screen (Figma node 35042-51682).
@@ -62,16 +63,21 @@ class DEXReceiveFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
+        // The amount of the chosen crypto the user is sending in, as a human-unit decimal — the
+        // sellAmount for the SwapKit buy quote. Comes from the shared enter-amount step.
+        val sellAmount = enterAmountViewModel.enteredAmount().crypto
+            .setScale(8, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
         viewModel.setArguments(
             asset = args.asset,
             currencyCode = args.currency,
-            refundAddress = args.refundAddress
+            refundAddress = args.refundAddress,
+            sellAmount = sellAmount
         )
-        // Kick off resolving the deposit address (currently a no-op loading state — see TODO in VM).
-        val amount = enterAmountViewModel.enteredAmount()
         log.info(
-            "DEX buy: receive screen for asset={} amount(crypto={}) refundAddress={}",
-            args.asset, amount.crypto, args.refundAddress
+            "DEX buy: receive screen for asset={} sellAmount={} refundAddress={}",
+            args.asset, sellAmount, args.refundAddress
         )
         viewModel.loadDepositAddress()
 
