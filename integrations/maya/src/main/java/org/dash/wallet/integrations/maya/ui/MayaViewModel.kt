@@ -233,6 +233,15 @@ class MayaViewModel @Inject constructor(
                                 routeLabelId = R.string.maya_route_label_near
                                 routeCalculated = false
                             }
+                            direction == SwapDirection.BUY -> {
+                                // BUY routes via NEAR (Maya can't buy DASH), so a both-provider
+                                // asset is bought via NEAR. Checked BEFORE the preferred-route map:
+                                // that map can still hold a stale MAYA entry from a prior SELL
+                                // session or the persisted snapshot, which would otherwise show as
+                                // "Maya*" here. No preferred-route quote is run for BUY.
+                                routeLabelId = R.string.maya_route_label_near
+                                routeCalculated = false
+                            }
                             preferred == RouteProvider.MAYA -> {
                                 routeLabelId = R.string.maya_route_label_maya
                                 routeCalculated = true
@@ -240,13 +249,6 @@ class MayaViewModel @Inject constructor(
                             preferred == RouteProvider.NEAR -> {
                                 routeLabelId = R.string.maya_route_label_near
                                 routeCalculated = true
-                            }
-                            direction == SwapDirection.BUY -> {
-                                // BUY routes via NEAR (Maya can't buy DASH), so a both-provider
-                                // asset is bought via NEAR. Labelled statically — no preferred-route
-                                // quote is run for BUY.
-                                routeLabelId = R.string.maya_route_label_near
-                                routeCalculated = false
                             }
                             else -> {
                                 routeLabelId = R.string.maya_route_label_multiple
