@@ -41,5 +41,6 @@ interface DashSpendRepository {
         merchantId: String
     ): List<GiftCardInfo>
     suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo>
+    suspend fun getGiftCardByTxId(txId: String): List<GiftCardInfo>
     fun getGiftCardDiscount(merchantId: String, denomination: Double): Double
 }

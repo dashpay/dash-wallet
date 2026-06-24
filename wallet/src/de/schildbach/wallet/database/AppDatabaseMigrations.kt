@@ -189,6 +189,41 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration18to19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Collapsed CTX redeem-URL / gift card backup migration. None of the
+                // intermediate versions (19, 20, 21) ever shipped past master (v18), so
+                // the column additions are merged into a single 18 -> 19 step:
+                //  - gift_cards gains `redeemUrlChallenge` (CTX redeem-URL challenge).
+                //  - the transaction metadata backup tables gain `order` (PiggyCards
+                //    order ID), `giftCardChallenge` (CTX redeem-URL challenge), and
+                //    `index` (which gift card the metadata refers to when a single
+                //    transaction has multiple gift cards).
+                // `order` and `index` are SQL keywords, so they must be quoted.
+                database.execSQL(
+                    "ALTER TABLE `gift_cards` ADD COLUMN `redeemUrlChallenge` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `order` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `giftCardChallenge` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_cache` ADD COLUMN `index` INTEGER"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `order` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `giftCardChallenge` TEXT"
+                )
+                database.execSQL(
+                    "ALTER TABLE `transaction_metadata_platform` ADD COLUMN `index` INTEGER"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

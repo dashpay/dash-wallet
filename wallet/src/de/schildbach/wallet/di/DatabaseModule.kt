@@ -45,7 +45,8 @@ object DatabaseModule {
                 AppDatabaseMigrations.migration14to15,
                 AppDatabaseMigrations.migration15to16,
                 AppDatabaseMigrations.migration16to17,
-                AppDatabaseMigrations.migration17to18
+                AppDatabaseMigrations.migration17to18,
+                AppDatabaseMigrations.migration18to19
             )
             // destructive migrations are used from versions 1 to 11
             .fallbackToDestructiveMigration()

@@ -102,7 +102,7 @@ class CTXSpendRepository @Inject constructor(
     private val api: CTXSpendApi,
     private val config: CTXSpendConfig,
     private val tokenAuthenticator: TokenAuthenticator
-) : CTXSpendRepositoryInt, DashSpendRepository {
+) : DashSpendRepository {
     companion object {
         private val REFRESH_TOKEN_EXPIRATION = TimeUnit.DAYS.toMillis(90)
     }
@@ -144,7 +144,7 @@ class CTXSpendRepository @Inject constructor(
         config.clearTokenState()
     }
 
-    override suspend fun purchaseGiftCard(
+    suspend fun purchaseGiftCard(
         cryptoCurrency: String,
         fiatCurrency: String,
         fiatAmount: String,
@@ -153,7 +153,7 @@ class CTXSpendRepository @Inject constructor(
         return api.purchaseGiftCard(
             purchaseGiftCardRequest = PurchaseGiftCardRequest(
                 cryptoCurrency = "DASH",
-                fiatCurrency = "USD",
+                fiatCurrency = fiatCurrency,
                 fiatAmount = fiatAmount,
                 merchantId = merchantId
             )
@@ -194,7 +194,57 @@ class CTXSpendRepository @Inject constructor(
     }
 
     override suspend fun getGiftCard(giftCardId: String): List<GiftCardInfo> {
-        val response = getGiftCardByTxid(giftCardId)
+        val response = getGiftCardByOrderId2(giftCardId)
+
+        return response?.let { card ->
+            listOf(
+                GiftCardInfo(
+                    card.id,
+                    merchantName = card.merchantName,
+                    status = GiftCardStatus.valueOf(card.status.uppercase()),
+                    barcodeUrl = card.barcodeUrl,
+                    cardNumber = card.cardNumber,
+                    cardPin = card.cardPin,
+                    cryptoAmount = card.cryptoAmount,
+                    cryptoCurrency = card.cryptoCurrency,
+                    paymentCryptoNetwork = card.paymentCryptoNetwork,
+                    paymentId = card.paymentId,
+                    percentDiscount = card.percentDiscount,
+                    rate = card.rate,
+                    redeemUrl = card.redeemUrl,
+                    redeemUrlChallenge = card.redeemUrlChallenge,
+                    fiatAmount = card.fiatAmount,
+                    fiatCurrency = card.fiatCurrency,
+                    paymentUrls = card.paymentUrls
+                )
+            )
+        } ?: listOf()
+
+//        return response?.result?.map { card ->
+//            GiftCardInfo(
+//                card.id,
+//                merchantName = card.merchantName,
+//                status = GiftCardStatus.valueOf(card.status.uppercase()),
+//                barcodeUrl = card.barcodeUrl,
+//                cardNumber = card.cardNumber,
+//                cardPin = card.cardPin,
+//                cryptoAmount = card.cryptoAmount,
+//                cryptoCurrency = card.cryptoCurrency,
+//                paymentCryptoNetwork = card.paymentCryptoNetwork,
+//                paymentId = card.paymentId,
+//                percentDiscount = card.percentDiscount,
+//                rate = card.rate,
+//                redeemUrl = card.redeemUrl,
+//                redeemUrlChallenge = card.redeemUrlChallenge,
+//                fiatAmount = card.fiatAmount,
+//                fiatCurrency = card.fiatCurrency,
+//                paymentUrls = card.paymentUrls
+//            )
+//        } ?: listOf()
+    }
+
+    override suspend fun getGiftCardByTxId(giftCardId: String): List<GiftCardInfo> {
+        val response = _getGiftCardByTxId(giftCardId)
 
         return response?.let {
             listOf(
@@ -212,6 +262,7 @@ class CTXSpendRepository @Inject constructor(
                     percentDiscount = response.percentDiscount,
                     rate = response.rate,
                     redeemUrl = response.redeemUrl,
+                    redeemUrlChallenge = response.redeemUrlChallenge,
                     fiatAmount = response.fiatAmount,
                     fiatCurrency = response.fiatCurrency,
                     paymentUrls = response.paymentUrls
@@ -254,8 +305,12 @@ class CTXSpendRepository @Inject constructor(
 //    override suspend fun getMerchant(merchantId: String): GetMerchantResponse? =
 //        api.getMerchant(merchantId)
 
-    override suspend fun getGiftCardByTxid(txid: String): GiftCardResponse? {
-        return api.getGiftCard(txid)
+    private suspend fun _getGiftCardByTxId(txid: String): GiftCardResponse? {
+        return api.getGiftCardByTxId(txid)
+    }
+
+    private suspend fun getGiftCardByOrderId2(orderId: String): GiftCardResponse? {
+        return api.getGiftCardByOrderId(orderId)
     }
 
     override suspend fun refreshToken(): Boolean {

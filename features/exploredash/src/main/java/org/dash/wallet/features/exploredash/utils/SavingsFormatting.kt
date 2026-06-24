@@ -44,6 +44,11 @@ object SavingsFormatting {
             roundingMode = RoundingMode.HALF_UP
         }
         val absValue = numberFormat.format(abs(percent))
+        // If the value rounds to zero at the requested precision, there is no
+        // discount or fee to show (avoids rendering "-0%").
+        if (absValue == numberFormat.format(0.0)) {
+            return "${numberFormat.format(0.0)}%"
+        }
         return if (percent < 0.0) {
             context.getString(R.string.explore_fee, absValue)
         } else {

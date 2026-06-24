@@ -421,6 +421,7 @@ private fun GiftCardItemCard(
     val hasNumber = !giftCard?.number.isNullOrEmpty()
     val hasPin = !giftCard?.pin.isNullOrEmpty()
     val hasMerchantUrl = !giftCard?.merchantUrl.isNullOrEmpty()
+    val hasRedeemUrlChallenge = !giftCard?.redeemUrlChallenge.isNullOrEmpty()
     val isLoading = giftCard != null &&
         !hasNumber &&
         !hasMerchantUrl &&
@@ -449,6 +450,21 @@ private fun GiftCardItemCard(
                 trailingActionText = stringResource(R.string.purchase_check_current_balance),
                 onTrailingActionClick = { onBalanceCheck() }
             )
+            if (hasRedeemUrlChallenge) {
+                ListItem(
+                    label = stringResource(R.string.purchase_redeem_url_challange),
+                    trailingText = giftCard.redeemUrlChallenge,
+                    trailingTrailingIcon = {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_copy),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable { onCopyNumber(giftCard.redeemUrlChallenge!!) }
+                        )
+                    }
+                )
+            }
         }
 
         // Error text

@@ -63,7 +63,10 @@ open class DatabaseMigrationTest {
         AppDatabaseMigrations.migration12To13,
         AppDatabaseMigrations.migration13to14,
         AppDatabaseMigrations.migration14to15,
-        AppDatabaseMigrations.migration15to16
+        AppDatabaseMigrations.migration15to16,
+        AppDatabaseMigrations.migration16to17,
+        AppDatabaseMigrations.migration17to18,
+        AppDatabaseMigrations.migration18to19
     )
 
     @Rule

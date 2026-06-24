@@ -172,7 +172,6 @@ private fun SettingsScreenContent(
             // Settings Header
             TopIntro(
                 heading = stringResource(R.string.settings_title),
-                modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
             )
 
             // Scrollable Content

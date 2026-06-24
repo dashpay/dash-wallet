@@ -57,10 +57,15 @@ You MUST consult the component mapping table for every Figma component before wr
 | `Sheet/Buttons group` | `SheetButtonGroup` | `org.dash.wallet.common.ui.components.SheetButtonGroup` |
 | `info-panel` | `InfoPanel` | `org.dash.wallet.common.ui.components.InfoPanel` |
 | `label` / `tag` | `Label` | `org.dash.wallet.common.ui.components.Label` |
+| `List1`…`List11` | `ListItem1`…`ListItem11` | `org.dash.wallet.common.ui.components.ListItem1` (etc.) |
+| `ListX` (ad-hoc) | `ListItem` | `org.dash.wallet.common.ui.components.ListItem` |
+| `ListEmptyState` | `ListEmptyState` | `org.dash.wallet.common.ui.components.ListEmptyState` |
 | `Toast` | `Toast` composable | `org.dash.wallet.common.ui.components.Toast` |
 | `EnterAmount` (input bar) | `EnterAmount` | `org.dash.wallet.common.ui.components.EnterAmount` |
 
 See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` usage examples and all named NavBar variants.
+
+For list rows, prefer the numbered design-system variants `ListItem1`…`ListItem11` (Figma **List** playground node `7968:2076`) in `ListItemVariants.kt` — each maps 1-to-1 to a `ListX` symbol. Fall back to the general-purpose `ListItem` only for combinations no numbered symbol covers. See `development-patterns` → "ListItem variants" for the per-variant signature table.
 
 #### Button Mapping (btn → DashButton)
 
@@ -80,8 +85,8 @@ See `development-patterns` for full `NavBarBack`/`NavBarBackTitle`/`TopIntro` us
 | `Headline/Headline M Bold` | `MyTheme.Typography.HeadlineMediumBold` |
 | `Title/Title S Medium` | `MyTheme.Typography.TitleSmallMedium` |
 | `Title/Title M Semibold` | `MyTheme.Typography.TitleMediumSemibold` |
-| `Body/Body M Regular` | `MyTheme.Body2Regular` |
-| `Body/Body M Medium` | `MyTheme.Body2Medium` |
+| `Body/Body M Regular` | `MyTheme.Typography.BodyMedium` |
+| `Body/Body M Medium` | `MyTheme.Typography.BodyMediumMedium` |
 | `Body/Body S Regular` | `MyTheme.Typography.BodySmall` |
 | `Label/Label M Regular` | `MyTheme.Typography.LabelMedium` |
 | `Overline` | `MyTheme.OverlineSemibold` |

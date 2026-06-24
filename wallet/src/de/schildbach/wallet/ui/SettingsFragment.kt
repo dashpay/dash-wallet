@@ -41,7 +41,6 @@ import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
-import de.schildbach.wallet.ui.more.AboutActivity
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
@@ -104,7 +103,7 @@ class SettingsFragment : Fragment() {
                     onRescanBlockchainClick = { resetBlockchain() },
                     onAboutDashClick = {
                         viewModel.logEvent(AnalyticsConstants.Settings.ABOUT)
-                        startActivity(Intent(requireContext(), AboutActivity::class.java))
+                        findNavController().navigate(R.id.settings_to_about)
                     },
                     onNotificationsClick = { systemActions.openNotificationSettings()  },
                     onCoinJoinClick = {

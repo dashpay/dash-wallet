@@ -305,7 +305,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     private var balance = Coin.ZERO
     private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
-    private var pendingForegroundNotification: Notification? = null
 
     // Background state tracking for Android 15 thread optimization
     private var isAppInBackground = false
@@ -1808,33 +1807,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 startForeground(notification)
                 log.info("start foreground service")
             } catch (e: ForegroundServiceStartNotAllowedException) {
-                log.info("failed to start in foreground, try again", e)
-                // On Android 15+, we'll retry later when the app is in foreground
-                // For now, continue running as a regular service
-                scheduleRetryForegroundService(notification)
+                // The app is in the background and is not allowed to promote to the foreground.
+                // Don't retry on a delay - a postDelayed() retry can't beat the ~5s startForeground()
+                // deadline. Just log and continue running as an ordinary background service; the
+                // service is re-promoted later via rescheduleService()/forceForeground() once the app
+                // is foregrounded. (Matches upstream bitcoin-wallet BlockchainService behavior.)
+                log.warn("foreground start not allowed, continuing as background service", e)
             }
         } else {
             startForeground(notification)
             log.info("start foreground service")
         }
-    }
-
-    private fun scheduleRetryForegroundService(notification: Notification) {
-        pendingForegroundNotification = notification
-        // Schedule a retry after a few seconds to see if the app comes to foregrxound
-        handler.postDelayed({
-            if (pendingForegroundNotification != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                try {
-                    startForeground(pendingForegroundNotification!!)
-                    log.info("start foreground service (delayed)")
-                    pendingForegroundNotification = null
-                    log.info("Successfully started foreground service on retry")
-                } catch (e: ForegroundServiceStartNotAllowedException) {
-                    log.info("Foreground service start still not allowed, will continue as background service")
-                    pendingForegroundNotification = null
-                }
-            }
-        }, 5000) // Retry after 5 seconds
     }
 
     override fun onDestroy() {
@@ -2236,9 +2219,22 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     fun forceForeground() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val intent = Intent(this, BlockchainServiceImpl::class.java)
-            ContextCompat.startForegroundService(this, intent)
-            // call startForeground just after startForegroundService.
-            startForegroundAndCatch(createNetworkSyncNotification())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                try {
+                    ContextCompat.startForegroundService(this, intent)
+                    // call startForeground just after startForegroundService.
+                    startForegroundAndCatch(createNetworkSyncNotification())
+                } catch (e: ForegroundServiceStartNotAllowedException) {
+                    // Not allowed to start an FGS from the background. The service is never created,
+                    // so no startForeground() promise is armed - nothing to clean up, just log.
+                    // (Matches upstream bitcoin-wallet BlockchainService.start().)
+                    log.info("failed to start in foreground", e)
+                }
+            } else {
+                ContextCompat.startForegroundService(this, intent)
+                // call startForeground just after startForegroundService.
+                startForegroundAndCatch(createNetworkSyncNotification())
+            }
         }
     }
 

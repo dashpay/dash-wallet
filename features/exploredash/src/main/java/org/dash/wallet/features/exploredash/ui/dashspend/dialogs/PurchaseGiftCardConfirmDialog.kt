@@ -115,6 +115,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
 
     companion object {
         private val log = LoggerFactory.getLogger(PurchaseGiftCardConfirmDialog::class.java)
+
+        // Baseline screen height (in dp, at the default font scale) needed to fit the amount,
+        // detail card and action buttons in the wrap-content sheet. The actual threshold is
+        // this value multiplied by the current fontScale: bigger fonts inflate the content, so
+        // they require a taller screen before the compact layout is safe. Below the threshold we
+        // force the sheet to expand (full height + scrollable body with pinned buttons).
+        // Tune this value if clipping is still observed.
+        private const val SMALL_SCREEN_HEIGHT_DP = 720
         private val USD_CURRENCY = Currency.getInstance(Constants.USD_CURRENCY)
         private val noCentsFormat = NumberFormat.getCurrencyInstance().apply {
             currency = USD_CURRENCY
@@ -205,7 +213,14 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         )
 
         val breakdownLines = breakdown?.lineSequence()?.count() ?: 0
-        needsExpand = breakdownLines >= 2
+        // Expand when there are multiple breakdown lines, or when the available height is too
+        // small to show everything without clipping the bottom action buttons. The effective
+        // content height grows with the user's font scale (and narrow screens wrap text taller),
+        // so the threshold is scaled by fontScale rather than compared to a fixed dp value.
+        val config = resources.configuration
+        val requiredHeightDp = SMALL_SCREEN_HEIGHT_DP * config.fontScale
+        val isShortScreen = config.screenHeightDp < requiredHeightDp
+        needsExpand = breakdownLines >= 2 || isShortScreen
         if (needsExpand) {
             view.updateLayoutParams { height = ViewGroup.LayoutParams.MATCH_PARENT }
         }
@@ -611,15 +626,12 @@ internal fun PurchaseGiftCardConfirmView(
 
         Column(
             modifier = Modifier
-                .let { if (uiState.useExpandedLayout) it.weight(1f) else it }
+                // Always allow the body to scroll so the pinned buttons below stay
+                // visible on short screens. fill = false keeps the sheet wrapping its
+                // content when it fits, and only caps/scrolls the body when it doesn't.
+                .weight(1f, fill = uiState.useExpandedLayout)
                 .fillMaxWidth()
-                .let {
-                    if (uiState.useExpandedLayout) {
-                        it.verticalScroll(rememberScrollState())
-                    } else {
-                        it
-                    }
-                }
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)

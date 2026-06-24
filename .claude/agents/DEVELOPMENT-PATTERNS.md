@@ -74,7 +74,7 @@ component to our component:
 - feature.list - FeatureList
 - feature.single.item - FeatureSingleItem
 - Sheet/Buttons group - SheetButtonGroup
-- ListX - ListItem (X is number 1 to 20)
+- ListX - ListItemX (numbered design-system variant, e.g. List1 → `ListItem1`); the general-purpose `ListItem` still covers ad-hoc combinations
 - ListEmptyState - ListEmptyState
 - tablelist-masternodekeys - TableListMasternodeKeyRow
 - EnterAmount (input bar) - EnterAmount
@@ -289,13 +289,48 @@ DashButton(
 )
 ```
 
-## ListItem / ListEmptyState (Figma: List1–List23, ListEmptyState)
+## ListItem variants (Figma: List1–List11, ListEmptyState)
 
-The `ListItem` composable covers all numbered Figma list variants (`List1` … `List23`) in a **single component**. `ListEmptyState` handles the empty-list placeholder. Both live in:
+There are two layers:
 
+1. **Numbered variants `ListItem1` … `ListItem11`** — strongly-typed wrappers, one per Figma `ListX` symbol in the updated **List** playground (Figma node `7968:2076`). Prefer these when a row matches a design symbol exactly. They live in:
+   ```
+   common/src/main/java/org/dash/wallet/common/ui/components/ListItemVariants.kt
+   ```
+2. **General-purpose `ListItem`** — a single flexible composable for ad-hoc combinations not covered by a numbered symbol. `ListEmptyState` handles the empty-list placeholder. Both live in:
+   ```
+   common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
+   ```
+
+All variants share the same row scaffold (14 dp horizontal / 12 dp vertical padding, 20 dp gap, vertically centred) and are transparent — wrap one or more in `Menu` for the standard rounded white card.
+
+### Numbered variant quick-reference (node `7968:2076`)
+
+| Variant | Shape | Signature |
+|---|---|---|
+| `ListItem1` | label \| value | `(label, value, trailing = null)` — optional `trailing` slot after the value |
+| `ListItem2` | label \| multi-line value | `(label, valueLines)` |
+| `ListItem3` | label \| icon + value | `(label, value, leadingIcon = ic_dash_blue_filled)` |
+| `ListItem4` | title \| gray value › | `(label, value)` |
+| `ListItem5` | action › | `(action)` |
+| `ListItem6` | title / help \| value › | `(title, helpText, value)` |
+| `ListItem7` | help / value \| copy icon | `(helpText, value, trailingIcon = ic_copy, onTrailingIconClick)` |
+| `ListItem8` | label \| amount + Dash symbol | `(label, amount, amountIcon = ic_dash_d_black)` |
+| `ListItem9` | version block \| status block | `(title, subtitle1, subtitle2, trailingTitle, trailingHelpText, trailingHelpIcon = ic_left_right_arrows)` |
+| `ListItem10` | secondary text / primary text | `(secondaryText, primaryText, primaryColor = null)` — colour the value, e.g. a blue link |
+| `ListItem11` | label / primary text | `(label, primaryText, primaryMaxLines = ∞)` — cap + ellipsise the value |
+
+Every variant also takes `modifier` and an optional `onClick`. Example:
+
+```kotlin
+Menu {
+    ListItem1(label = "Network", value = "Mainnet")
+    ListItem4(label = "Backup wallet", value = "Recommended", onClick = { /* navigate */ })
+    ListItem5(action = "Recover from seed", onClick = { /* navigate */ })
+}
 ```
-common/src/main/java/org/dash/wallet/common/ui/components/ListItem.kt
-```
+
+### General-purpose `ListItem`
 
 **Figma section node ID:** `2760:14713`
 
@@ -317,7 +352,8 @@ Row { [leadingContent]  [left]  [trailing]   }
 | `label` | `String?` | Tertiary gray "key" text — left side of **key-value** rows |
 | `showInfoIcon` | `Boolean` | ℹ icon after `label` or `title` (List10) |
 | `helpTextAbove` | `String?` | Small gray text above `title` (List13/14/22) |
-| `title` | `String?` | Primary bold text — **content-block** mode |
+| `title` | `String?` | Primary value text (LabelLarge) — **content-block** mode |
+| `titleColor` | `Color?` | Override colour for `title` (default text/primary; e.g. blue for a link — List10) |
 | `subtitle` | `String?` | Small gray text below `title` |
 | `bottomHelpText` | `String?` | Small gray text at the bottom of the left column (List13) |
 | `trailingText` | `String?` | Primary value text on the right |
@@ -339,7 +375,8 @@ Row { [leadingContent]  [left]  [trailing]   }
 
 **Content-block mode** — set `title` (and optionally surrounding texts):
 - The column expands to fill available width (`weight=1f`)
-- Stack order: `helpTextAbove` (BodySmall/gray) → `title` (Body2Medium/primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- Stack order: `helpTextAbove` (BodySmall/text-secondary) → `title` (Typography.LabelLarge, `titleColor` ?: text-primary) → `subtitle` (BodySmall/gray) → `bottomHelpText` (BodySmall/gray)
+- The `helpTextAbove` + `title` pair is the Figma **List10** stacked block (secondary label over primary value); set `titleColor` for a coloured value such as a blue link.
 
 ### Variant quick-reference
 
@@ -353,7 +390,7 @@ Row { [leadingContent]  [left]  [trailing]   }
 | List6 | `label`, `trailingTextLines` |
 | List7 | `label`, `trailingLabel` |
 | List8, List9 | `title` only |
-| List10 | `label`, `showInfoIcon = true`, `trailingText` |
+| List10 | `helpTextAbove` (secondary label), `title` (primary value), optional `titleColor` for a blue link |
 | List12 | `topLabel`, `bottomLabel`, `leadingContent { }`, `title`, `subtitle`, `trailingText` |
 | List13 | `helpTextAbove`, `title`, `subtitle`, `bottomHelpText`, `trailingTrailingIcon { }` |
 | List14, List22 | `helpTextAbove`, `title` |
@@ -397,8 +434,14 @@ ListItem(label = "Status", trailingLabel = "Active")
 // List8 — standalone title
 ListItem(title = "Section header")
 
-// List10 — label with ℹ info icon
-ListItem(label = "Public key", showInfoIcon = true, trailingText = "XpubABCD…")
+// List10 — stacked secondary label / primary value (optionally a blue link)
+ListItem(helpTextAbove = "Firebase installation ID", title = "fxUBdkvxQhO-ICxXXXN5mAI")
+ListItem(
+    helpTextAbove = "This is an open sourced app forked from Bitcoin Wallet",
+    title = "https://github.com/dashevo/dash-wallet",
+    titleColor = MyTheme.Colors.dashBlue,
+    onClick = { /* open link */ }
+)
 
 // List13 — full multi-line left block with trailing icon
 ListItem(
