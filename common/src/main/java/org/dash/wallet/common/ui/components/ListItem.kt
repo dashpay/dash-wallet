@@ -59,7 +59,9 @@ import org.dash.wallet.common.R
  *
  * **Left content** — two mutually exclusive modes:
  *  - Key-value mode: provide [label] (gray tertiary text). No title/subtitle.
- *  - Content block mode: provide [title]; optionally [helpTextAbove], [subtitle], [bottomHelpText].
+ *  - Content block mode: provide [title]; optionally [titleColor], [helpTextAbove], [subtitle], [bottomHelpText].
+ *    [helpTextAbove] renders in text/secondary and [title] in [titleColor] (default text/primary) to match the
+ *    Figma List10 stacked secondary/primary block — e.g. a blue value for a link.
  *
  * **Trailing content** — combine as needed:
  *  - [trailingText] — primary-coloured value text
@@ -113,6 +115,7 @@ fun ListItem(
     // ── Left side: content block (List8–9, List13–14, List16, List20–23) ──
     helpTextAbove: String? = null,
     title: String? = null,
+    titleColor: Color? = null,
     subtitle: String? = null,
     bottomHelpText: String? = null,
     // ── Right side: text content ──────────────────────────────────────────
@@ -172,7 +175,7 @@ fun ListItem(
                         Text(
                             text = it,
                             style = MyTheme.Typography.BodySmall,
-                            color = MyTheme.Colors.textTertiary
+                            color = MyTheme.Colors.textSecondary
                         )
                     }
                     title?.let { titleText ->
@@ -183,7 +186,7 @@ fun ListItem(
                             Text(
                                 text = titleText,
                                 style = MyTheme.Typography.LabelLarge,
-                                color = MyTheme.Colors.textPrimary
+                                color = titleColor ?: MyTheme.Colors.textPrimary
                             )
                             if (showInfoIcon) {
                                 Icon(

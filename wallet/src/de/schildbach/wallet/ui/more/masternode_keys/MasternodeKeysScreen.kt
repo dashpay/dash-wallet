@@ -76,7 +76,6 @@ private fun MasternodeKeysScreenContent(
 
         TopIntro(
             heading = stringResource(R.string.masternode_keys_title),
-            modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp)
         )
 
         Column(
