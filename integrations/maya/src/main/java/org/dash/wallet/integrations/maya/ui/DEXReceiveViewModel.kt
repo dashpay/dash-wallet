@@ -146,21 +146,10 @@ class DEXReceiveViewModel @Inject constructor(
     }
 
     /**
-     * Build the BIP-21-style payment URI for the QR / URI row: `<scheme>:<address>?amount=<amount>`.
-     *
-     * The scheme (the "coin name", e.g. "bitcoin", "litecoin", "ethereum") is taken from the
-     * payment processor registered for the chosen [asset] — its [PaymentIntentParser.uriPrefix].
-     * The [amount] is the human-unit decimal of the crypto the user is sending in.
-     *
-     * Falls back to the plain [address] when the asset has no registered processor or the amount is
-     * blank — every wallet can still scan a bare address.
+     * Build the payment URI for the QR / URI row.
      */
     private fun buildUri(address: String, amount: String): String {
-        val scheme = MayaCurrencyList[asset]?.paymentIntentParser?.uriPrefix
-        if (scheme.isNullOrBlank()) {
-            return address
-        }
-        val base = "$scheme:$address"
-        return if (amount.isNotBlank()) "$base?amount=$amount" else base
+        val addressParser = MayaCurrencyList[asset]
+        return addressParser?.getPaymentRequestURI(address, amount) ?: address
     }
 }
