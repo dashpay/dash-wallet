@@ -27,6 +27,8 @@
     <string name="dash_address">Dash Address</string>
     <string name="username">Username</string>
     <string name="balance">Balance:</string>
+    <string name="hide_balance">Hide balance</string>
+    <string name="show_balance">Show balance</string>
     <string name="nothing_here">Nothing here</string>
 
     <!-- Local Currency List: GGP -->
