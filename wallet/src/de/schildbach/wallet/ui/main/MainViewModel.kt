@@ -93,6 +93,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
 import org.dash.wallet.common.transactions.TransactionWrapper
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import java.util.Currency
 import java.util.Locale
@@ -124,7 +126,8 @@ class MainViewModel @Inject constructor(
     dashPayContactRequestDao: DashPayContactRequestDao,
     private val coinJoinConfig: CoinJoinConfig,
     private val coinJoinService: CoinJoinService,
-    private val txDisplayCacheService: TxDisplayCacheService
+    private val txDisplayCacheService: TxDisplayCacheService,
+    private val swapProvider: DispatchingSwapProvider
 ) : BaseContactsViewModel(blockchainIdentityDataDao, dashPayProfileDao, dashPayContactRequestDao) {
     var restoringBackup: Boolean = false
 
@@ -646,6 +649,16 @@ class MainViewModel @Inject constructor(
             percentage = 0
         }
         _blockchainSyncPercentage.postValue(percentage)
+    }
+
+    /**
+     * Selects the cross-chain swap backend before entering the Dash DEX portal so
+     * the portal doesn't inherit a stale provider left over from a previous Buy/Sell
+     * selection. Mirrors BuyAndSellViewModel.setSwapBackend. SwapKit exposes both Buy
+     * and Sell and falls back to Maya automatically when no SwapKit API key is set.
+     */
+    fun setSwapBackend(backend: SwapBackend) {
+        swapProvider.setBackend(backend)
     }
 
     companion object {

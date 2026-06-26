@@ -88,8 +88,8 @@ class MayaCryptoCurrencyPickerFragment : Fragment() {
     }
 
     private fun clickListener(pool: PoolInfo) {
-        log.info("currency picker: navigating to address input for {}", pool.asset)
         if (viewModel.swapDirection.value == SwapDirection.SELL) {
+            log.info("currency picker: navigating to address input for {}", pool.asset)
             safeNavigate(
                 MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
                     pool.currencyCode,

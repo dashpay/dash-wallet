@@ -88,6 +88,7 @@ import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -408,6 +409,7 @@ class WalletFragment : Fragment(R.layout.home_content) {
             }
             ShortcutOption.DASH_DEX -> {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_DASH_DEX)
+                viewModel.setSwapBackend(SwapBackend.SWAPKIT)
                 safeNavigate(WalletFragmentDirections.homeToMaya())
             }
             ShortcutOption.SEND_TO_ADDRESS -> {
