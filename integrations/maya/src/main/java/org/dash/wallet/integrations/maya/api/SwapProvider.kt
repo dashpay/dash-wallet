@@ -128,6 +128,26 @@ interface SwapProvider {
         null
     )
 
+    /**
+     * Checks that a BUY order (crypto -> DASH) for [sellAmount] of [sellAsset] is routable, without
+     * committing a swap. Runs the same NEAR-pinned `/v3/quote` [createBuyOrder] would, reporting
+     * [refundAddress] as the source address. Used by the enter-amount screen to validate the typed
+     * amount against the route's minimum before the user has supplied a real refund address — the
+     * caller passes the asset's example address. Returns Success when a route exists; Failure with
+     * the provider's error message otherwise. The native Maya backend doesn't support buys and
+     * returns the unsupported failure below.
+     */
+    suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
+
     /** Stub-friendly user-accounts probe; today only Maya returns a single placeholder. */
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>
 

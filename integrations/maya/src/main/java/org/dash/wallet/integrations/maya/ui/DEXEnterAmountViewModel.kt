@@ -18,15 +18,24 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
+import org.dash.wallet.common.util.GenericUtils
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
 import javax.inject.Inject
@@ -54,11 +63,27 @@ data class DEXEnterAmountUIState(
     val selectedCurrencyIndex: Int = 0,
     // Raw entered amount string, as shown in the primary amount slot, in the selected currency.
     val amount: String = "0",
-    val continueEnabled: Boolean = false
+    val continueEnabled: Boolean = false,
+    // True while a buy quote is in flight checking that the entered amount is routable.
+    val isValidating: Boolean = false,
+    // Non-null when the entered amount can't be swapped (e.g. below the route minimum); carries
+    // the provider's error message, or null when blank/unknown so the screen shows a generic one.
+    val validationError: String? = null,
+    // TopIntroSend header fields. The "to" target is the coin being bought (icon + code).
+    val coinIconUrl: String? = null,
+    // Whether the wallet balance row is shown (eye toggle).
+    val showBalance: Boolean = true,
+    // TODO: wire real balances — needs WalletDataProvider + exchange rate. A buy is funded with
+    // the crypto being sent in, not the wallet's DASH, so confirm whether the DASH balance even
+    // belongs on this screen before populating these.
+    val dashBalance: String = "",
+    val fiatBalance: String? = null
 )
 
 @HiltViewModel
-class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
+class DEXEnterAmountViewModel @Inject constructor(
+    private val swapProvider: SwapProvider
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DEXEnterAmountUIState())
     val uiState: StateFlow<DEXEnterAmountUIState> = _uiState.asStateFlow()
@@ -67,6 +92,13 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
     // currently-selected currency; the other two are recomputed from the exchange rates so that
     // switching currency shows the converted amount.
     private var amount = Amount()
+
+    // In-flight buy-quote validation triggered by Continue (see [onContinueClicked]).
+    private var validationJob: Job? = null
+
+    // Fired once the entered amount has passed (or skipped) validation; the Fragment observes this
+    // to navigate to the refund-address step.
+    val onValidationPassed = SingleLiveEvent<Unit>()
 
     /**
      * Seed the screen with the asset/currency selected on the previous (picker) step and the
@@ -93,6 +125,7 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
                 .setScale(CALC_SCALE, RoundingMode.HALF_UP)
             anchoredType = CurrencyInputType.Fiat
         }
+        validationJob?.cancel()
         _uiState.update {
             it.copy(
                 asset = asset,
@@ -101,9 +134,17 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
                 currencyCodes = buildCurrencyCodes(fiatCurrencyCode, assetCurrencyCode),
                 selectedCurrencyIndex = 0,
                 amount = "0",
-                continueEnabled = false
+                continueEnabled = false,
+                isValidating = false,
+                validationError = null,
+                coinIconUrl = GenericUtils.getCoinIconUrls(assetCurrencyCode, asset).firstOrNull()
             )
         }
+    }
+
+    /** Toggle the wallet-balance row visibility in the TopIntroSend header. */
+    fun onToggleBalance() {
+        _uiState.update { it.copy(showBalance = !it.showBalance) }
     }
 
     /**
@@ -120,9 +161,11 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
             val type = currencyTypeFor(state, state.selectedCurrencyIndex)
             val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
             amount.setAnchored(type, updated.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+            // Editing the amount clears any stale rejection from a previous validation attempt.
             state.copy(
                 amount = updated,
-                continueEnabled = isPositive(updated)
+                continueEnabled = isPositive(updated),
+                validationError = null
             )
         }
     }
@@ -139,6 +182,52 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
                 amount = formatForDisplay(value, maxDecimalsFor(type)),
                 continueEnabled = value.signum() > 0
             )
+        }
+    }
+
+    /**
+     * Validate the entered amount when the user presses Continue, then signal navigation via
+     * [onValidationPassed]. The check is a quote-only buy ([SwapProvider.validateBuyOrder]) for the
+     * crypto-unit sell amount, using the chosen asset's example address as the (placeholder)
+     * refund/source address — the user hasn't supplied a real one yet. On failure the rejection
+     * reason is surfaced inline and navigation is suppressed. An asset with no known example address
+     * is allowed through (we can't validate it here).
+     */
+    fun onContinueClicked() {
+        if (_uiState.value.isValidating) return
+
+        val sellCrypto = amount.crypto
+        if (sellCrypto.signum() <= 0) return
+
+        val asset = _uiState.value.asset
+        val exampleAddress = MayaCurrencyList[asset]?.exampleAddress
+        if (asset.isBlank() || exampleAddress.isNullOrBlank()) {
+            log.warn("onContinueClicked: no example address for asset={}, skipping validation", asset)
+            onValidationPassed.call()
+            return
+        }
+
+        val sellAmount = sellCrypto.setScale(MAX_CRYPTO_DECIMALS, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+
+        validationJob?.cancel()
+        validationJob = viewModelScope.launch {
+            _uiState.update { it.copy(isValidating = true, validationError = null, continueEnabled = false) }
+            when (val result = swapProvider.validateBuyOrder(asset, sellAmount, exampleAddress)) {
+                is ResponseResource.Success -> {
+                    _uiState.update {
+                        it.copy(isValidating = false, validationError = null, continueEnabled = isPositive(it.amount))
+                    }
+                    onValidationPassed.call()
+                }
+                is ResponseResource.Failure -> {
+                    log.info("onContinueClicked: amount {} {} rejected: {}", sellAmount, asset, result.throwable.message)
+                    _uiState.update {
+                        it.copy(isValidating = false, validationError = result.throwable.message, continueEnabled = isPositive(it.amount))
+                    }
+                }
+            }
         }
     }
 
@@ -181,6 +270,8 @@ class DEXEnterAmountViewModel @Inject constructor() : ViewModel() {
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(DEXEnterAmountViewModel::class.java)
+
         private const val MAX_FIAT_DECIMALS = 2
         private const val MAX_CRYPTO_DECIMALS = 8
 

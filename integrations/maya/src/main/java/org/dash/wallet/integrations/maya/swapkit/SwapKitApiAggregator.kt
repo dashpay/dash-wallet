@@ -662,32 +662,12 @@ class SwapKitApiAggregator @Inject constructor(
         // converted DASH is sent to the user's wallet (destinationAddress). The refund address
         // (a crypto-chain address the user entered) is reported as sourceAddress — for NEAR
         // routes that's where a failed swap is refunded.
-        val quote = webApi.getQuote(
-            SwapKitQuoteRequest(
-                sellAsset = sellAsset,
-                buyAsset = SwapKitConstants.DASH_ASSET,
-                sellAmount = sellAmount,
-                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
-                sourceAddress = refundAddress,
-                destinationAddress = destinationAddress,
-                // Buys are NEAR-only: Maya can't buy DASH, and the refund flow relies on NEAR
-                // Intents' refund-to-sourceAddress semantics (Maya would refund to the inbound
-                // tx's VIN0, ignoring the refund address we collected). Pin the provider so a
-                // both-provider asset can never resolve to a Maya route here.
-                providers = listOf(SwapKitConstants.NEAR_PROVIDER)
-            )
-        ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
-
-        if (quote.error != null) {
-            return ResponseResource.Failure(MayaException(quote.error), false, 0, null)
+        val route = when (
+            val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
+        ) {
+            is ResponseResource.Success -> result.value
+            is ResponseResource.Failure -> return result
         }
-        val route = quote.routes.bestRoute()
-            ?: return ResponseResource.Failure(
-                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
-                false,
-                0,
-                null
-            )
 
         // disableBalanceCheck + disableBuildTx: we only need the inbound deposit address. The user
         // funds the deposit from their own external wallet, so SwapKit must not try to build or
@@ -736,6 +716,64 @@ class SwapKitApiAggregator @Inject constructor(
                 sellAmount = sellAmount
             )
         )
+    }
+
+    override suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> {
+        // Quote-only validity check for the enter-amount screen: run the same NEAR-pinned buy
+        // quote createBuyOrder would, but stop before /v3/swap (no deposit address is created).
+        // The converted DASH lands in the wallet, so the destination is our own receive address;
+        // the caller passes the asset's example address as the refund/source address.
+        val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
+        return when (
+            val result = requestBuyRoute(sellAsset, sellAmount, refundAddress, destinationAddress)
+        ) {
+            is ResponseResource.Success -> ResponseResource.Success(Unit)
+            is ResponseResource.Failure -> result
+        }
+    }
+
+    /**
+     * Runs the NEAR-pinned buy quote (crypto [sellAsset] -> DASH) shared by [createBuyOrder] and
+     * [validateBuyOrder], returning the best route or a failure carrying the provider's error.
+     *
+     * Buys are NEAR-only: Maya can't buy DASH, and the refund flow relies on NEAR Intents'
+     * refund-to-sourceAddress semantics (Maya would refund to the inbound tx's VIN0, ignoring the
+     * refund address we collected). Pinning the provider keeps a both-provider asset from ever
+     * resolving to a Maya route here. [refundAddress] is reported as sourceAddress.
+     */
+    private suspend fun requestBuyRoute(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String,
+        destinationAddress: String
+    ): ResponseResource<SwapKitRoute> {
+        val quote = webApi.getQuote(
+            SwapKitQuoteRequest(
+                sellAsset = sellAsset,
+                buyAsset = SwapKitConstants.DASH_ASSET,
+                sellAmount = sellAmount,
+                slippage = SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT,
+                sourceAddress = refundAddress,
+                destinationAddress = destinationAddress,
+                providers = listOf(SwapKitConstants.NEAR_PROVIDER)
+            )
+        ) ?: return ResponseResource.Failure(MayaException("swapkit quote failed"), false, 0, null)
+
+        if (quote.error != null) {
+            return ResponseResource.Failure(MayaException(quote.error), false, 0, null)
+        }
+        val route = quote.routes.bestRoute()
+            ?: return ResponseResource.Failure(
+                MayaException(quote.providerErrors?.firstOrNull()?.message ?: "no swapkit route"),
+                false,
+                0,
+                null
+            )
+        return ResponseResource.Success(route)
     }
 
     override suspend fun commitSwapTransaction(

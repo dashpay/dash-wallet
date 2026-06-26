@@ -72,27 +72,28 @@ class DEXEnterAmountFragment : Fragment() {
             assetPriceFiat = assetPool?.assetPriceFiat?.toBigDecimal() ?: BigDecimal.ZERO
         )
 
+        // The amount is validated by a buy quote on Continue (DEXEnterAmountViewModel.onContinueClicked);
+        // navigation only happens once that quote passes. The committed amount lives in the
+        // nav-graph-scoped ViewModel shared with the refund-address step, so only the asset/currency
+        // travel as nav args.
+        viewModel.onValidationPassed.observe(viewLifecycleOwner) {
+            log.info("DEX buy: amount validated, continuing for asset={}", args.asset)
+            findNavController().navigate(
+                DEXEnterAmountFragmentDirections.dexEnterAmountToDexRefundAddress(
+                    asset = args.asset,
+                    currency = args.currency
+                )
+            )
+        }
+
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
                 DEXEnterAmountScreen(
                     viewModel = viewModel,
-                    onBackClick = { findNavController().popBackStack() },
-                    onContinueClick = ::onContinue
+                    onBackClick = { findNavController().popBackStack() }
                 )
             }
         }
-    }
-
-    private fun onContinue(amount: String, currencyCode: String) {
-        // The committed amount lives in the nav-graph-scoped DEXEnterAmountViewModel and is shared
-        // with the refund-address step, so only the asset/currency need to travel as nav args.
-        log.info("DEX buy: continue with amount={} {} for asset={}", amount, currencyCode, args.asset)
-        findNavController().navigate(
-            DEXEnterAmountFragmentDirections.dexEnterAmountToDexRefundAddress(
-                asset = args.asset,
-                currency = args.currency
-            )
-        )
     }
 }

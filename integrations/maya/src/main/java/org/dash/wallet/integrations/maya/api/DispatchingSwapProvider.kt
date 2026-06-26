@@ -162,6 +162,13 @@ class DispatchingSwapProvider @Inject constructor(
     ): ResponseResource<BuyOrder> =
         active.createBuyOrder(sellAsset, sellAmount, destinationAddress, refundAddress)
 
+    override suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> =
+        active.validateBuyOrder(sellAsset, sellAmount, refundAddress)
+
     override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> =
         active.getUserAccounts(currency)
 
