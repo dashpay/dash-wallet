@@ -25,41 +25,99 @@
     <color name="menu_gray">#FFC9C9C9</color>
 
     <!-- foreground -->
-    <color name="fg_significant">#66000000</color>
-    <color name="fg_less_significant">#ff666666</color>
-    <color name="fg_insignificant">#ffbbbbbb</color>
-    <color name="fg_error">#ffff0000</color>
-    <color name="fg_network_significant">#ffffffff</color>
-    <color name="fg_network_insignificant">#ffa0a0a0</color>
+    <color name="fg_significant">@color/content_primary</color>
+    <color name="fg_less_significant">@color/content_tertiary</color>
+    <color name="fg_insignificant">@color/content_secondary</color>
+    <color name="fg_error">@color/palette_red</color>
+    <color name="fg_network_significant">@color/content_primary</color>
+    <color name="fg_network_insignificant">@color/content_secondary</color>
 
     <!-- background -->
     <color name="bg_bright">#ffffffff</color>
-    <color name="bg_list">#40ffffff</color>
+    <color name="bg_list">@color/background_primary</color>
     <color name="bg_panel">#fff2f2f8</color>
     <color name="bg_list_selected">#40808090</color>
     <color name="bg_dialog_title">@android:color/transparent</color>
     <color name="bg_shortcut">@color/colorPrimary</color>
+
+    <!-- ============================================================= -->
+    <!-- Figma base palette (primitives, theme-independent).           -->
+    <!-- Mirrors the MyTheme.ColorScheme companion object.             -->
+    <!-- These are the source colors that the semantic day/night       -->
+    <!-- colors below reference. Do NOT override these in              -->
+    <!-- values-night; they are the same in both themes.               -->
+    <!-- ============================================================= -->
+
+    <!-- Blue -->
+    <color name="palette_blue">#008DE4</color>
+    <color name="palette_blue_alpha5">#0D008DE4</color>
+    <color name="palette_blue_alpha10">#1A008DE4</color>
+
+    <!-- Gray / Black -->
+    <color name="palette_black">#0A0B0D</color>
+    <color name="palette_black_800">#1E1F24</color>
+    <color name="palette_black_900">#141519</color>
+    <color name="palette_black_alpha5">#0D0A0B0D</color>
+    <color name="palette_black_alpha8">#140A0B0D</color>
+    <color name="palette_black_alpha10">#1A0A0B0D</color>
+    <color name="palette_black_alpha15">#260A0B0D</color>
+    <color name="palette_black_alpha20">#330A0B0D</color>
+    <color name="palette_black_alpha30">#4D0A0B0D</color>
+    <color name="palette_black_alpha40">#660A0B0D</color>
+    <color name="palette_black_alpha50">#800A0B0D</color>
+    <color name="palette_black_alpha90">#E60A0B0D</color>
+
+    <!-- Gray -->
+    <color name="palette_gray_50">#F5F6F7</color>
+    <color name="palette_gray_100">#EBEDEE</color>
+    <color name="palette_gray_300">#B0B6BC</color>
+    <color name="palette_gray_300_alpha10">#1AB0B6BC</color>
+    <color name="palette_gray_300_alpha20">#33B0B6BC</color>
+    <color name="palette_gray_300_alpha30">#4DB0B6BC</color>
+    <color name="palette_gray_300_alpha50">#80B0B6BC</color>
+    <color name="palette_gray_400">#75808A</color>
+    <color name="palette_gray_400_alpha10">#1A75808A</color>
+    <color name="palette_gray_400_alpha25">#4075808A</color>
+    <color name="palette_gray_500">#525C66</color>
+
+    <!-- Green / Orange / Red -->
+    <color name="palette_green">#3EB489</color>
+    <color name="palette_orange">#FA9269</color>
+    <color name="palette_red">#EA3943</color>
+
+    <!-- White -->
+    <color name="palette_white">#FFFFFF</color>
+    <color name="palette_white_alpha5">#0DFFFFFF</color>
+    <color name="palette_white_alpha10">#1AFFFFFF</color>
+    <color name="palette_white_alpha15">#26FFFFFF</color>
+    <color name="palette_white_alpha20">#33FFFFFF</color>
+    <color name="palette_white_alpha30">#4DFFFFFF</color>
+    <color name="palette_white_alpha40">#66FFFFFF</color>
+    <color name="palette_white_alpha50">#80FFFFFF</color>
+    <color name="palette_white_alpha60">#99FFFFFF</color>
+    <color name="palette_white_alpha80">#CCFFFFFF</color>
+    <color name="palette_white_alpha90">#E6FFFFFF</color>
 
 
     <!-- Design System colors -->
 
     <!-- Content -->
     <color name="colorPrimary">@color/dash_blue</color>
-    <color name="content_primary">@color/dash_black</color>
-    <color name="content_secondary">@color/extra_dark_gray</color>
-    <color name="content_tertiary">@color/dark_gray</color>
+    <color name="content_primary">@color/palette_black</color>
+    <color name="content_secondary">@color/palette_gray_500</color>
+    <color name="content_tertiary">@color/palette_gray_400</color>
     <color name="content_disabled">#92929C</color>
     <color name="content_warning">@color/system_red</color>
     <color name="input_hint_gray">#c5c6c7</color>
     <color name="content_loading_track">@color/background_tertiary</color>
     <color name="tertiary_text_highlight">@color/ultra_light_gray</color>
-    <color name="input_background">@color/extra_light_gray</color>
+    <color name="input_background">@color/palette_gray_100</color>
 
     <!-- Background -->
-    <color name="background_primary">#f7f7f7</color>
-    <color name="background_secondary">@android:color/white</color>
-    <color name="background_tertiary">#F2F2F2</color>
-    <color name="overlay_primary">#B3000000</color>
+    <color name="background_primary">@color/palette_gray_50</color>
+    <color name="background_secondary">@color/palette_white</color>
+    <color name="background_tertiary">@color/palette_gray_100</color>
+    <color name="overlay_primary">@color/palette_black_alpha50</color>
     <color name="background_explore">#003470</color>
     <color name="background_accuracy_circle">#26008DE4</color>
     <color name="button_ripple_color">#1f000000</color>
@@ -82,38 +140,38 @@
     <color name="input_focused_stroke">#33008DE4</color>
     <color name="input_error_stroke">#33E85C4A</color>
 
-    <!-- Palette -->
-    <color name="dash_blue">#008DE4</color>
+    <!-- Palette (legacy names; snapped to Figma primitives where one exists) -->
+    <color name="dash_blue">@color/palette_blue</color>
     <color name="coinbase_blue">#0052FF</color>
-    <color name="dash_black">#191C1F</color>
+    <color name="dash_black">@color/palette_black</color>
     <color name="ultra_dark_gray">#2D3033</color>
-    <color name="extra_dark_gray">#525C66</color>
-    <color name="dark_gray">#75808A</color>
-    <color name="gray">#B0B6BC</color>
+    <color name="extra_dark_gray">@color/palette_gray_500</color>
+    <color name="dark_gray">@color/palette_gray_400</color>
+    <color name="gray">@color/palette_gray_300</color>
     <color name="light_gray">#CED2D5</color>
-    <color name="extra_light_gray">#EBEDEE</color>
-    <color name="ultra_light_gray">#f5f6f7</color>
+    <color name="extra_light_gray">@color/palette_gray_100</color>
+    <color name="ultra_light_gray">@color/palette_gray_50</color>
     <color name="system_red">#E85C4A</color>
-    <color name="system_green">#3CB878</color>
-    <color name="orange">#FA9269</color>
+    <color name="system_green">@color/palette_green</color>
+    <color name="orange">@color/palette_orange</color>
     <color name="system_teal">#78C4F5</color>
     <color name="purple">#6273BD</color>
 
-    <color name="dash_black_0.9">#E6191C1F</color>
-    <color name="dash_black_0.7">#B3191C1F</color>
-    <color name="dash_black_0.05">#0D191C1F</color>
-    <color name="dash_black_0.08">#14191C1F</color>
-    <color name="dash_black_0.1">#1A191C1F</color>
-    <color name="dash_black_0.3">#4D191C1F</color>
+    <color name="dash_black_0.9">@color/palette_black_alpha90</color>
+    <color name="dash_black_0.7">#B30A0B0D</color>
+    <color name="dash_black_0.05">@color/palette_black_alpha5</color>
+    <color name="dash_black_0.08">@color/palette_black_alpha8</color>
+    <color name="dash_black_0.1">@color/palette_black_alpha10</color>
+    <color name="dash_black_0.3">@color/palette_black_alpha30</color>
     <color name="system_green_0.1">#1A3CB878</color>
     <color name="extra_dark_gray_0.1">#1A525C66</color>
-    <color name="dash_blue_0.1">#1A008DE4</color>
-    <color name="dash_blue_0.05">#0D008DE4</color>
+    <color name="dash_blue_0.1">@color/palette_blue_alpha10</color>
+    <color name="dash_blue_0.05">@color/palette_blue_alpha5</color>
     <color name="dash_blue_0.08">#14008DE4</color>
     <color name="system_red_0.1">#1AE85C4A</color>
     <color name="dash_white_0.25">#40FFFFFF</color>
-    <color name="dash_white_0.50">#80FFFFFF</color>
-    <color name="dash_white_0.10">#1AFFFFFF</color>
+    <color name="dash_white_0.50">@color/palette_white_alpha50</color>
+    <color name="dash_white_0.10">@color/palette_white_alpha10</color>
 
     <color name="blue_50">#F0F8FE</color>
     <color name="light_blue">#1A008DE4</color>
@@ -125,7 +183,7 @@
     <color name="gray_300">#AAAEB3</color>
     <color name="gray_600">#5D5F61</color>
 
-    <color name="red">#EA3943</color>
+    <color name="red">@color/palette_red</color>
     <color name="red_0.05">#0DEA3943</color>
 
     <!-- scanner -->

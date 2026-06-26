@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -157,9 +158,17 @@ fun DashCheckbox(
     }
 }
 
+@Preview(name = "Checkbox Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Checkbox Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun CheckboxSample() {
+    DashWalletTheme {
+        CheckboxSampleContent()
+    }
+}
+
+@Composable
+private fun CheckboxSampleContent() {
     var isChecked by remember { mutableStateOf(false) }
     var isChecked1 by remember { mutableStateOf(false) }
     var isChecked2 by remember { mutableStateOf(false) }
@@ -169,7 +178,7 @@ fun CheckboxSample() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {

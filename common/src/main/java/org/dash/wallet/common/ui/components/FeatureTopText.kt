@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -119,13 +120,21 @@ fun FeatureTopText(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Feature Top Text Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Feature Top Text Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureTopTextPreview() {
+    DashWalletTheme {
+        FeatureTopTextPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureTopTextPreviewContent() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(16.dp)
     ) {
         FeatureTopText(
@@ -141,13 +150,21 @@ private fun FeatureTopTextPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "No Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "No Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun FeatureTopTextNoButtonPreview() {
+    DashWalletTheme {
+        FeatureTopTextNoButtonPreviewContent()
+    }
+}
+
+@Composable
+private fun FeatureTopTextNoButtonPreviewContent() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(LocalDashColors.current.backgroundPrimary)
             .padding(16.dp)
     ) {
         FeatureTopText(

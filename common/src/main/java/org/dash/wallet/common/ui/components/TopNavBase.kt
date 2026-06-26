@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -418,7 +419,8 @@ fun NavBarBackAction(
 
 // ── Preview ───────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Nav Bar Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Nav Bar Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun NavBarPreview() {
     DashWalletTheme {

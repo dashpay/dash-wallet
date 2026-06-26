@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -388,9 +389,17 @@ fun ListEmptyState(
 
 // ── Previews ──────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true)
+@Preview(name = "List Item Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "List Item Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ListItemPreview() {
+    DashWalletTheme {
+        ListItemPreviewContent()
+    }
+}
+
+@Composable
+private fun ListItemPreviewContent() {
     var checked1 by remember { mutableStateOf(false) }
     var checked2 by remember { mutableStateOf(true) }
     val colors = LocalDashColors.current
@@ -535,9 +544,17 @@ private fun ListItemPreview() {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "List Empty State Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "List Empty State Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ListEmptyStatePreview() {
+    DashWalletTheme {
+        ListEmptyStatePreviewContent()
+    }
+}
+
+@Composable
+private fun ListEmptyStatePreviewContent() {
     val colors = LocalDashColors.current
     ListEmptyState(
         modifier = Modifier.background(colors.backgroundSecondary),

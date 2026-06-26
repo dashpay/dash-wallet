@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 
 import androidx.compose.ui.text.style.TextOverflow
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -186,8 +187,9 @@ enum class Size(
     ExtraSmall(12.sp, 16.sp,13.dp, 6.dp, 8.dp, 4.dp, 6.dp, 28.dp)
 }
 
+@Preview(name = "Dash Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dash Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun DashButtonPreview() {
     DashWalletTheme {
     val colors = LocalDashColors.current
@@ -256,7 +258,7 @@ fun DashButtonPreview() {
             onClick = { }
         )
         Column(modifier = Modifier
-            .background(MyTheme.Colors.dashBlue)
+            .background(colors.dashBlue)
             .padding(10.dp, 20.dp)) {
             DashButton(
                 text = "TintedWhite",

@@ -94,7 +94,7 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
                     modifier = Modifier.height(32.dp),
                     selectedIndex = selectedTab,
                     style = SegmentedPickerStyle(
-                        backgroundColor = colors.gray400,
+                        backgroundColor = colors.gray400.copy(alpha = 0.1f),
                         thumbColor = colors.backgroundSecondary
                     )
                 ) { option, index ->

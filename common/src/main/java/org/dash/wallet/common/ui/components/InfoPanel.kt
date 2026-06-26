@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -111,14 +112,17 @@ fun InfoPanel(
     }
 }
 
-@Preview
+@Preview(name = "Info Panel Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Info Panel Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun InfoPanelPreview() {
-    InfoPanel(
-        title = "Customize shortcut bar",
-        description = "Hold any button above to replace it with the function you need",
-        leftIconRes = R.drawable.ic_dash_blue_filled,
-        actionIconRes = R.drawable.ic_popup_close,
-        onAction = {}
-    )
+    DashWalletTheme {
+        InfoPanel(
+            title = "Customize shortcut bar",
+            description = "Hold any button above to replace it with the function you need",
+            leftIconRes = R.drawable.ic_dash_blue_filled,
+            actionIconRes = R.drawable.ic_popup_close,
+            onAction = {}
+        )
+    }
 } 

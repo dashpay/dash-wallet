@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.enter_amount
 
+import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -41,6 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
 /**
@@ -77,6 +80,7 @@ fun NumericKeyboardCompose(
     bottomSlot: (@Composable ColumnScope.() -> Unit)? = null,
     onKeyInput: (String) -> Unit
 ) {
+    val colors = LocalDashColors.current
     val rows = listOf(
         listOf("1", "2", "3"),
         listOf("4", "5", "6"),
@@ -87,7 +91,7 @@ fun NumericKeyboardCompose(
     Column(
         modifier = modifier
             .background(
-                color = MyTheme.Colors.backgroundSecondary,
+                color = colors.backgroundSecondary,
                 shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
             )
             .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp),
@@ -105,7 +109,7 @@ fun NumericKeyboardCompose(
                             .weight(1f)
                             .height(56.dp)
                             .background(
-                                color = MyTheme.Colors.backgroundSecondary,
+                                color = colors.backgroundSecondary,
                                 shape = RoundedCornerShape(10.dp)
                             )
                             .combinedClickable(
@@ -120,14 +124,14 @@ fun NumericKeyboardCompose(
                             Icon(
                                 painter = painterResource(R.drawable.ic_delete_backward),
                                 contentDescription = null,
-                                tint = MyTheme.Colors.textPrimary,
+                                tint = colors.textPrimary,
                                 modifier = Modifier.size(24.dp)
                             )
                         } else {
                             Text(
                                 text = key,
                                 style = MyTheme.Typography.TitleLarge,
-                                color = MyTheme.Colors.textPrimary,
+                                color = colors.textPrimary,
                                 textAlign = TextAlign.Center
                             )
                         }
@@ -139,15 +143,24 @@ fun NumericKeyboardCompose(
     }
 }
 
+@Preview(name = "Numeric Keyboard Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Numeric Keyboard Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 private fun NumericKeyboardPreview() {
-    Box(modifier = Modifier.background(MyTheme.Colors.backgroundPrimary)) {
+    DashWalletTheme {
+        NumericKeyboardPreviewContent()
+    }
+}
+
+@Composable
+private fun NumericKeyboardPreviewContent() {
+    val colors = LocalDashColors.current
+    Box(modifier = Modifier.background(colors.backgroundPrimary)) {
         Column(
             modifier = Modifier
                 .width(393.dp)
                 .height(336.dp)
-                .background(color = MyTheme.Colors.dashBlue)
+                .background(color = colors.dashBlue)
                 .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp, Alignment.Top),
             horizontalAlignment = Alignment.CenterHorizontally,

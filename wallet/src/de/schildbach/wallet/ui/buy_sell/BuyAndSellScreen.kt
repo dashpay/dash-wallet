@@ -54,6 +54,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -119,11 +120,12 @@ private fun BuyAndSellScreenContent(
     onMayaClick: () -> Unit = {}
 ) {
     fun serviceOf(type: ServiceType) = services.find { it.serviceType == type }
+    val colors = LocalDashColors.current
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopNavBase(
@@ -189,8 +191,8 @@ private fun BuyAndSellScreenContent(
                 if (!hasValidCredentials) {
                     Text(
                         text = stringResource(R.string.services_portal_subtitle_error),
-                        style = MyTheme.OverlineCaptionRegular,
-                        color = MyTheme.Colors.red,
+                        style = MyTheme.Typography.LabelMediumMedium,
+                        color = colors.red,
                         modifier = Modifier.padding(horizontal = 20.dp)
                     )
                 }
@@ -215,7 +217,7 @@ private fun BuyAndSellScreenContent(
                 Text(
                     text = stringResource(R.string.no_connection),
                     style = MyTheme.Caption,
-                    color = Color.White
+                    color = colors.textPrimary
                 )
             }
         }
@@ -267,6 +269,7 @@ private fun ServiceItem(
 
 @Composable
 private fun PoweredByUpholdStrip() {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -287,7 +290,7 @@ private fun PoweredByUpholdStrip() {
         Text(
             text = stringResource(R.string.topper_powered_by),
             style = MyTheme.OverlineCaptionRegular,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.padding(start = 6.dp)
         )
     }

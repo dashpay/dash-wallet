@@ -31,6 +31,7 @@ import de.schildbach.wallet.data.ServiceType
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.common.util.safeNavigate
@@ -58,37 +59,39 @@ class BuyAndSellIntegrationsFragment : Fragment() {
 
         return ComposeView(requireContext()).apply {
             setContent {
-                BuyAndSellScreen(
-                    onBackClick = {
-                        findNavController().popBackStack()
-                    },
-                    onTopperClick = {
-                        lifecycleScope.launch {
-                            val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
-                            viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
-                            requireActivity().openCustomTab(uri)
-                        }
-                    },
-                    onUpholdClick = {
-                        viewModel.logEnterUphold()
-                        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
-                    },
-                    onCoinbaseClick = {
-                        viewModel.logEnterCoinbase()
-                        if (viewModel.uiState.value.isCoinbaseAuthenticated) {
-                            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
-                        } else {
-                            safeNavigate(
-                                BuyAndSellIntegrationsFragmentDirections.buySellToOverview(
-                                    ServiceType.COINBASE
+                DashWalletTheme {
+                    BuyAndSellScreen(
+                        onBackClick = {
+                            findNavController().popBackStack()
+                        },
+                        onTopperClick = {
+                            lifecycleScope.launch {
+                                val uri = viewModel.topperBuyUrl(getString(R.string.dash_wallet_name))
+                                viewModel.logEvent(AnalyticsConstants.Topper.ENTER_BUY_SELL)
+                                requireActivity().openCustomTab(uri)
+                            }
+                        },
+                        onUpholdClick = {
+                            viewModel.logEnterUphold()
+                            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToUphold())
+                        },
+                        onCoinbaseClick = {
+                            viewModel.logEnterCoinbase()
+                            if (viewModel.uiState.value.isCoinbaseAuthenticated) {
+                                safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToCoinbase())
+                            } else {
+                                safeNavigate(
+                                    BuyAndSellIntegrationsFragmentDirections.buySellToOverview(
+                                        ServiceType.COINBASE
+                                    )
                                 )
-                            )
+                            }
+                        },
+                        onMayaClick = {
+                            safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
                         }
-                    },
-                    onMayaClick = {
-                        safeNavigate(BuyAndSellIntegrationsFragmentDirections.buySellToMaya())
-                    }
-                )
+                    )
+                }
             }
         }
     }

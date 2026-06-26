@@ -137,7 +137,7 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
                     modifier = Modifier.height(36.dp),
                     selectedIndex = currentFilterOption,
                     style = SegmentedPickerStyle(
-                        backgroundColor = colors.gray400,
+                        backgroundColor = colors.gray400.copy(alpha = 0.1f),
                         thumbColor = colors.backgroundSecondary
                     )
                 ) { option, index ->

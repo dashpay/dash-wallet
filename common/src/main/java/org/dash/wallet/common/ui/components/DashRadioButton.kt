@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -175,9 +176,17 @@ private fun TextContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Radio Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Radio Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun RadioButtonPreview() {
+    DashWalletTheme {
+        RadioButtonPreviewContent()
+    }
+}
+
+@Composable
+private fun RadioButtonPreviewContent() {
     var selectedOption by remember { mutableIntStateOf(1) }
 
     Column(modifier = Modifier.padding(16.dp)) {

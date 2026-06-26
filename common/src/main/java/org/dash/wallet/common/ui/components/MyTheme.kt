@@ -625,43 +625,110 @@ object MyTheme {
         val primary5: Color,
         val primary8: Color,
         val primary40: Color,
-    )
+    ) {
+        /**
+         * Base color palette exported from Figma (the "General" collection).
+         *
+         * These are the primitive, theme-independent colors that every semantic /
+         * component token aliases to. The same primitive may serve different roles
+         * depending on the theme — e.g. [Black] is the primary text color in light
+         * mode while [WhiteAlpha90] is the primary text color in dark mode.
+         *
+         * Light/dark [ColorScheme] instances should reference these constants rather
+         * than repeating raw hex literals.
+         */
+        companion object {
+            // Blue
+            val Blue = Color(0xFF008DE4)
+            val BlueAlpha5 = Color(0x0D008DE4)
+            val BlueAlpha10 = Color(0x1A008DE4)
+
+            // Gray / Black
+            val Black = Color(0xFF0A0B0D)
+            val Black800 = Color(0xFF1E1F24)
+            val Black900 = Color(0xFF141519)
+            val BlackAlpha5 = Color(0x0D0A0B0D)
+            val BlackAlpha8 = Color(0x140A0B0D)
+            val BlackAlpha10 = Color(0x1A0A0B0D)
+            val BlackAlpha15 = Color(0x260A0B0D)
+            val BlackAlpha20 = Color(0x330A0B0D)
+            val BlackAlpha30 = Color(0x4D0A0B0D)
+            val BlackAlpha40 = Color(0x660A0B0D)
+            val BlackAlpha50 = Color(0x800A0B0D)
+            val BlackAlpha90 = Color(0xE60A0B0D)
+
+            // Gray
+            val Gray50 = Color(0xFFF5F6F7)
+            val Gray100 = Color(0xFFEBEDEE)
+            val Gray300 = Color(0xFFB0B6BC)
+            val Gray300Alpha10 = Color(0x1AB0B6BC)
+            val Gray300Alpha20 = Color(0x33B0B6BC)
+            val Gray300Alpha30 = Color(0x4DB0B6BC)
+            val Gray300Alpha50 = Color(0x80B0B6BC)
+            val Gray400 = Color(0xFF75808A)
+            val Gray400Alpha10 = Color(0x1A75808A)
+            val Gray400Alpha25 = Color(0x4075808A)
+            val Gray500 = Color(0xFF525C66)
+
+            // Green
+            val Green = Color(0xFF3EB489)
+
+            // Orange
+            val Orange = Color(0xFFFA9269)
+
+            // Red
+            val Red = Color(0xFFEA3943)
+
+            // White
+            val White = Color(0xFFFFFFFF)
+            val WhiteAlpha5 = Color(0x0DFFFFFF)
+            val WhiteAlpha10 = Color(0x1AFFFFFF)
+            val WhiteAlpha15 = Color(0x26FFFFFF)
+            val WhiteAlpha20 = Color(0x33FFFFFF)
+            val WhiteAlpha30 = Color(0x4DFFFFFF)
+            val WhiteAlpha40 = Color(0x66FFFFFF)
+            val WhiteAlpha50 = Color(0x80FFFFFF)
+            val WhiteAlpha60 = Color(0x99FFFFFF)
+            val WhiteAlpha80 = Color(0xCCFFFFFF)
+            val WhiteAlpha90 = Color(0xE6FFFFFF)
+        }
+    }
 
     val Colors = ColorScheme(
         // Backgrounds
-        backgroundPrimary = Color(0xFFF5F6F7),
-        backgroundSecondary = Color(0xFFFFFFFF),
-        backgroundTertiary = Color(0xFFF2F2F2),
-        overlayPrimary = Color(0xB3000000),
+        backgroundPrimary = ColorScheme.Gray50,
+        backgroundSecondary = ColorScheme.White,
+        backgroundTertiary = ColorScheme.Gray100,
+        overlayPrimary = ColorScheme.BlackAlpha50,
         // Text / content
-        textPrimary = Color(0xFF191C1F),
-        textSecondary = Color(0xFF6E757C),
-        textTertiary = Color(0xFF75808A),
-        contentDisabled = Color(0xFF92929C),
-        contentWarning = Color(0xFFE85C4A),
+        textPrimary = ColorScheme.Black,
+        textSecondary = ColorScheme.Gray500,
+        textTertiary = ColorScheme.Gray400,
+        contentDisabled = Color(0xFF92929C), // no Figma primitive
+        contentWarning = Color(0xFFE85C4A), // no Figma primitive (distinct from Red)
         // Brand
-        dashBlue = Color(0xFF008DE4),
-        dashBlue5 = Color(0x0D008DE4),
+        dashBlue = ColorScheme.Blue,
+        dashBlue5 = ColorScheme.BlueAlpha5,
         // Palette
-        orange = Color(0xFFFA9269),
-        yellow = Color(0xFFFFC043),
-        green = Color(0xFF3CB878),
-        systemRed = Color(0xFFE85C4A),
-        systemTeal = Color(0xFF78C4F5),
-        purple = Color(0xFF6273BD),
-        red = Color(0xFFEA3943),
-        red5 = Color(0x0DEA3943),
-        gray = Color(0xFFB0B6BC),
-        gray300 = Color(0xFFB0B6BC),
-        gray400 = Color(0xFF75808A),
-        extraLightGray = Color(0xFFEBEDEE),
-        lightGray = Color(0xFFCED2D5),
-        extraDarkGray = Color(0xFF525C66),
-        ultraDarkGray = Color(0xFF2D3033),
-        ultraLightGray = Color(0xFFF5F6F7),
-        darkGray = Color(0xFF75808A),
-        darkerGray50 = Color(0x80B0B6BC),
-        // Gray scale (design system)
+        orange = ColorScheme.Orange,
+        yellow = Color(0xFFFFC043), // no Figma primitive
+        green = ColorScheme.Green,
+        systemRed = Color(0xFFE85C4A), // no Figma primitive
+        systemTeal = Color(0xFF78C4F5), // no Figma primitive
+        purple = Color(0xFF6273BD), // no Figma primitive
+        red = ColorScheme.Red,
+        red5 = Color(0x0DEA3943), // Red @5% — no Figma alpha primitive
+        gray = ColorScheme.Gray300,
+        gray300 = ColorScheme.Gray300,
+        gray400 = ColorScheme.Gray400,
+        extraLightGray = ColorScheme.Gray100,
+        lightGray = Color(0xFFCED2D5), // no Figma primitive
+        extraDarkGray = ColorScheme.Gray500,
+        ultraDarkGray = Color(0xFF2D3033), // no Figma primitive
+        ultraLightGray = ColorScheme.Gray50,
+        darkGray = ColorScheme.Gray400,
+        darkerGray50 = ColorScheme.Gray300Alpha50,
+        // Gray scale (design system) — distinct from Figma Gray* primitives
         gray40 = Color(0xFFF2F3F5),
         gray100 = Color(0xFFE1E3E6),
         gray200 = Color(0xFFC4C8CC),
@@ -673,7 +740,7 @@ object MyTheme {
         inputFocusedStroke = Color(0x33008DE4),
         inputErrorStroke = Color(0x33E85C4A),
         // Inputs / buttons
-        inputBackground = Color(0xFFEBEDEE),
+        inputBackground = ColorScheme.Gray100,
         inputErrorBackground = Color(0x1AE85C4A),
         disabledButtonBg = Color(0xFFEEEEEE),
         buttonRipple = Color(0x1F000000),
@@ -683,44 +750,46 @@ object MyTheme {
         txReceivedBackground = Color(0xFFEDF8F2),
         txOrangeBackground = Color(0xFFFDF5F1),
         // Legacy alpha tokens
-        primary4 = Color(0x14191C1F),
-        primary5 = Color(0x0D191C1F),
-        primary8 = Color(0x14191C1F),
-        primary40 = Color(0x66191C1F),
+        primary4 = ColorScheme.BlackAlpha8,
+        primary5 = ColorScheme.BlackAlpha5,
+        primary8 = ColorScheme.BlackAlpha8,
+        primary40 = ColorScheme.BlackAlpha40,
     )
 
     val DarkColors = ColorScheme(
         // Backgrounds
-        backgroundPrimary = Color(0xFF0A0B0D),
-        backgroundSecondary = Color(0xFF1E1F24),
+        backgroundPrimary = ColorScheme.Black,
+        backgroundSecondary = ColorScheme.Black800,
+        // Figma dark export reports Tertiary as #EBEDEE (a light gray), which looks
+        // like an un-overridden variable artifact; keep Transparent as before.
         backgroundTertiary = Color.Transparent,
-        overlayPrimary = Color(0xB3000000),
-        // Text / content
-        textPrimary = Color(0xFFFAFBFC),
-        textSecondary = Color(0xFFA4ABB2),
-        textTertiary = Color(0xFF8D9399),
-        contentDisabled = Color(0xFF92929C),
-        contentWarning = Color(0xFFE96453),
+        overlayPrimary = ColorScheme.BlackAlpha50,
+        // Text / content (Figma dark uses white-with-opacity rather than solid grays)
+        textPrimary = ColorScheme.WhiteAlpha90,
+        textSecondary = ColorScheme.WhiteAlpha80,
+        textTertiary = ColorScheme.WhiteAlpha60,
+        contentDisabled = Color(0xFF92929C), // no Figma primitive
+        contentWarning = Color(0xFFE96453), // no Figma primitive (distinct from Red)
         // Brand
-        dashBlue = Color(0xFF0094F0),
-        dashBlue5 = Color(0x0D0094F0),
+        dashBlue = ColorScheme.Blue,
+        dashBlue5 = ColorScheme.BlueAlpha5,
         // Palette
-        orange = Color(0xFFFA9B75),
-        yellow = Color(0xFFFFC043),
-        green = Color(0xFF3FC07D),
-        systemRed = Color(0xFFE96453),
-        systemTeal = Color(0xFF84C9F6),
-        purple = Color(0xFF6A7CCC),
-        red = Color(0xFFE96453),
-        red5 = Color(0x0DE96453),
-        gray = Color(0xFF45494D),
+        orange = ColorScheme.Orange,
+        yellow = Color(0xFFFFC043), // no Figma primitive
+        green = ColorScheme.Green,
+        systemRed = Color(0xFFE96453), // no Figma primitive
+        systemTeal = Color(0xFF84C9F6), // no Figma primitive
+        purple = Color(0xFF6A7CCC), // no Figma primitive
+        red = ColorScheme.Red,
+        red5 = Color(0x0DE96453), // no Figma alpha primitive
+        gray = Color(0xFF45494D), // dark-only gray, no Figma primitive
         gray300 = Color(0xFF45494D),
         gray400 = Color(0xFF757A80),
         extraLightGray = Color(0xFFA4ABB2),
         lightGray = Color(0xFF8D9399),
         extraDarkGray = Color(0xFF45494D),
         ultraDarkGray = Color(0xFF2D3033),
-        ultraLightGray = Color(0xFFF5F6F7),
+        ultraLightGray = ColorScheme.Gray50,
         darkGray = Color(0xFF757A80),
         darkerGray50 = Color(0x8045494D),
         // Gray scale (no night override — same as light)
@@ -745,10 +814,10 @@ object MyTheme {
         txReceivedBackground = Color(0xFF232826),
         txOrangeBackground = Color(0xFF302D2D),
         // Legacy alpha tokens
-        primary4 = Color(0x14FAFBFC),
-        primary5 = Color(0x0DFAFBFC),
-        primary8 = Color(0x14FAFBFC),
-        primary40 = Color(0x66FAFBFC),
+        primary4 = Color(0x14FFFFFF), // 8% white — no Figma alpha primitive
+        primary5 = ColorScheme.WhiteAlpha5,
+        primary8 = Color(0x14FFFFFF), // 8% white — no Figma alpha primitive
+        primary40 = ColorScheme.WhiteAlpha40,
     )
 }
 
@@ -759,3 +828,14 @@ fun DashWalletTheme(content: @Composable () -> Unit) {
     val colors = if (isSystemInDarkTheme()) MyTheme.DarkColors else MyTheme.Colors
     CompositionLocalProvider(LocalDashColors provides colors, content = content)
 }
+
+@Composable
+fun DarkPreviewTheme(composable: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalDashColors provides MyTheme.DarkColors, composable)
+}
+
+@Composable
+fun LightPreviewTheme(composable: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalDashColors provides MyTheme.Colors, composable)
+}
+
