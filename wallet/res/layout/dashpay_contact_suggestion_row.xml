@@ -5,7 +5,7 @@
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="70dp"
-    android:background="@android:color/white">
+    android:background="@color/background_primary">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/contact_row"

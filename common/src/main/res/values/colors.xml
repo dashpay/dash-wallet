@@ -33,7 +33,7 @@
     <color name="fg_network_insignificant">@color/content_secondary</color>
 
     <!-- background -->
-    <color name="bg_bright">#ffffffff</color>
+    <color name="bg_bright">@color/background_secondary</color>
     <color name="bg_list">@color/background_primary</color>
     <color name="bg_panel">#fff2f2f8</color>
     <color name="bg_list_selected">#40808090</color>

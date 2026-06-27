@@ -26,6 +26,8 @@
     <color name="tx_received_background">#232826</color>
     <color name="tx_orange_background">#302D2D</color>
     <color name="disabled_button_bg">#3C3C3C</color>
+    <!-- bg_bright inherits @color/background_secondary (#1E1F24) from values/ -->
+    <color name="bg_panel">#2D3033</color>
 
     <!-- Palette (legacy names; snapped to Figma primitives where one exists) -->
     <color name="dash_blue">@color/palette_blue</color>

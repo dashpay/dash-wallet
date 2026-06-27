@@ -3,7 +3,7 @@
     android:id="@+id/bitcoin_address_qr_card"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
+    android:background="@color/background_primary"
     android:foreground="?android:attr/selectableItemBackground">
 
     <ImageView
