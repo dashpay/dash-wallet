@@ -17,9 +17,11 @@
 
 package de.schildbach.wallet.ui.staking
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.viewModels
+import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
@@ -47,6 +49,16 @@ import javax.inject.Inject
 class StakingActivity : LockScreenActivity() {
     companion object {
         private val log = LoggerFactory.getLogger(StakingActivity::class.java)
+
+        // When set, navigate straight to the CrowdNode withdrawal screen (for existing accounts)
+        const val EXTRA_GO_TO_WITHDRAW = "extra_go_to_withdraw"
+        private const val WITHDRAW_ARG = "withdraw"
+
+        fun createIntent(context: Context, goToWithdraw: Boolean = false): Intent {
+            return Intent(context, StakingActivity::class.java).apply {
+                putExtra(EXTRA_GO_TO_WITHDRAW, goToWithdraw)
+            }
+        }
     }
 
     private val viewModel: CrowdNodeViewModel by viewModels()
@@ -62,6 +74,7 @@ class StakingActivity : LockScreenActivity() {
         binding = ActivityStakingBinding.inflate(layoutInflater)
         lifecycleScope.launch {
             navController = setNavigationGraph()
+            maybeNavigateToWithdrawal()
             viewModel.observeOnlineAccountStatus().observe(this@StakingActivity, ::handleOnlineAccountStatus)
         }
 
@@ -72,6 +85,19 @@ class StakingActivity : LockScreenActivity() {
         viewModel.setNotificationIntent(intent)
 
         setContentView(binding.root)
+    }
+
+    private fun maybeNavigateToWithdrawal() {
+        if (!intent.getBooleanExtra(EXTRA_GO_TO_WITHDRAW, false)) {
+            return
+        }
+
+        // Only existing accounts (start destination = Portal) can go straight to withdrawal.
+        // Navigate on top of Portal so Back returns to it.
+        val status = viewModel.signUpStatus
+        if (status == SignUpStatus.Finished || status == SignUpStatus.LinkedOnline) {
+            navController.navigate(R.id.transferFragment, bundleOf(WITHDRAW_ARG to true))
+        }
     }
 
     private fun handleNavigationRequest(request: NavigationRequest) {

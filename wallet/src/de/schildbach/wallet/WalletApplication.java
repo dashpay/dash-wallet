@@ -300,7 +300,7 @@ public class WalletApplication extends MultiDexApplication
 
     }
 
-    // Initialize AppsFlyer after checking Google Play Services availability
+    // Initialize AppsFlyer
     private void initializeAppsFlyer() {
         try {
             AppsFlyerLib appsFlyerLib = AppsFlyerLib.getInstance();
