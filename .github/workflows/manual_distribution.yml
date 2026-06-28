@@ -6,11 +6,11 @@ on:
       taskID:
         description: 'Task ID'
         required: true
-        default: 'NMA-'
+        default: 'MO-'
       flavor:
         description: 'Flavor'
         required: true
-        default: 'staging'
+        default: '_testNet3'
       type:
         description: 'Type'
         required: true
