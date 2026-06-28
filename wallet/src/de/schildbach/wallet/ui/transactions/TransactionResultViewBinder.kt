@@ -32,7 +32,6 @@ import coil.load
 import coil.transform.RoundedCornersTransformation
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.TransactionResultContentBinding
 import org.bitcoinj.core.Address
@@ -56,7 +55,8 @@ import org.dash.wallet.common.util.makeLinks
 class TransactionResultViewBinder(
     private val wallet: Wallet,
     private val dashFormat: MonetaryFormat,
-    private val binding: TransactionResultContentBinding
+    private val binding: TransactionResultContentBinding,
+    private val openProfile: (DashPayProfile) -> Unit
 ): TransactionConfidence.Listener {
     private val iconSize = binding.root.context.resources.getDimensionPixelSize(R.dimen.transaction_details_icon_size)
     private val context by lazy { binding.root.context }
@@ -372,10 +372,6 @@ class TransactionResultViewBinder(
 
     private fun isFeeAvailable(transactionFee: Coin?): Boolean {
         return transactionFee != null && transactionFee.isPositive
-    }
-
-    private fun openProfile(profile: DashPayProfile) {
-        context.startActivity(DashPayUserActivity.createIntent(context, profile))
     }
 
     private fun setInputs(inputAddresses: List<Address>, inflater: LayoutInflater) {
