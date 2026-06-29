@@ -77,7 +77,7 @@ fun ModalDialog(
                         .padding(horizontal = horizontalPadding),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = colors.backgroundPrimary
+                        containerColor = colors.backgroundSecondary
                     )
                 ) {
                     Column(
@@ -130,7 +130,7 @@ fun ModalDialog(
                                         text = textBlock,
                                         style = MyTheme.Body2Regular,
                                         textAlign = textAlign,
-                                        color = colors.extraDarkGray //Color(0xFF525C66)
+                                        color = colors.textSecondary
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(20.dp))
@@ -172,7 +172,7 @@ fun ModalDialog(
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Normal,
                                                 lineHeight = 16.sp,
-                                                color = colors.extraDarkGray //Color(0xFF525C66)
+                                                color = colors.textSecondary
                                             )
                                         }
                                     }
@@ -185,7 +185,7 @@ fun ModalDialog(
                                             text = textBlock,
                                             style = MyTheme.Body2Regular,
                                             textAlign = textAlign,
-                                            color = colors.extraDarkGray //Color(0xFF525C66)
+                                            color = colors.textSecondary
                                         )
                                     }
                                 }
@@ -257,26 +257,28 @@ data class ButtonData(
 @Preview(name = "Modal Dialog Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun ModalDialogPreview() {
-    ModalDialog(
-        showDialog = true,
-        onDismissRequest = { },
-        icon = ImageVector.vectorResource(id = R.drawable.ic_info_blue),
-        heading = "Heading",
-        textBlocks = listOf(
-            "This is the first text block with some information for the user",
-            "This is the second text block with additional details",
-            "And a final text block at the bottom of the dialog"
-        ),
-        limitationItems = listOf(
-            LimitationItem("0", "text", true),
-            LimitationItem("0", "text", true),
-            LimitationItem("0", "text", true)
-        ),
-        moreInfoButton = ButtonData("Learn more", {}),
-        buttons = listOf(
-            ButtonData("Primary Action", {}, true),
-            ButtonData("Secondary Action", {}),
-            ButtonData("Tertiary Action", {})
+    DashWalletTheme {
+        ModalDialog(
+            showDialog = true,
+            onDismissRequest = { },
+            icon = ImageVector.vectorResource(id = R.drawable.ic_info_blue),
+            heading = "Heading",
+            textBlocks = listOf(
+                "This is the first text block with some information for the user",
+                "This is the second text block with additional details",
+                "And a final text block at the bottom of the dialog"
+            ),
+            limitationItems = listOf(
+                LimitationItem("0", "text", true),
+                LimitationItem("0", "text", true),
+                LimitationItem("0", "text", true)
+            ),
+            moreInfoButton = ButtonData("Learn more", {}),
+            buttons = listOf(
+                ButtonData("Primary Action", {}, true),
+                ButtonData("Secondary Action", {}),
+                ButtonData("Tertiary Action", {})
+            )
         )
-    )
+    }
 }

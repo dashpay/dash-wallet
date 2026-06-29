@@ -154,21 +154,10 @@ private fun localSecondsToUtcMidnight(localSeconds: Long): Long {
 }
 
 @Preview(name = "DatePicker Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Composable
-fun WalletCreationDatePickerDialogLightPreview() {
-    LightPreviewTheme {
-        WalletCreationDatePickerDialog(
-            initialCreationDate = System.currentTimeMillis() / 1000,
-            onDateSelected = {},
-            onDismiss = {}
-        )
-    }
-}
-
 @Preview(name = "DatePicker Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-fun WalletCreationDatePickerDialogDarkPreview() {
-    DarkPreviewTheme {
+fun WalletCreationDatePickerDialogPreview() {
+    LightPreviewTheme {
         WalletCreationDatePickerDialog(
             initialCreationDate = System.currentTimeMillis() / 1000,
             onDateSelected = {},

@@ -165,7 +165,7 @@ fun RescanBlockchainDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = colors.backgroundSecondary,
+                            color = colors.backgroundPrimary,
                             shape = RoundedCornerShape(16.dp)
                         )
                         .clickable(onClick = { showDatePicker = true })
