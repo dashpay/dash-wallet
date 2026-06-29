@@ -88,7 +88,7 @@ private fun DEXRefundAddressScreenContent(
         // `safe-area/top` (10dp) remains as real padding.
         TopIntro(
             heading = stringResource(R.string.dex_refund_address_heading),
-            text = stringResource(R.string.dex_refund_address_description),
+            text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode),
             modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp)
         )
 

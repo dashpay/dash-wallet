@@ -357,7 +357,7 @@
 
     <!-- DashDEX buy: enter refund address screen -->
     <string name="dex_refund_address_heading">Enter refund address</string>
-    <string name="dex_refund_address_description">Where should we send your funds if the swap fails?</string>
+    <string name="dex_refund_address_description">If the swap fails, your %s will be returned to this address. Make sure it\'s a %s address from a wallet you or the sender controls.\n\nYour swap cannot be processed without a refund address.</string>
     <string name="dex_refund_address_field_label">Refund address</string>
     <string name="dex_refund_address_placeholder">Long press to paste</string>
 

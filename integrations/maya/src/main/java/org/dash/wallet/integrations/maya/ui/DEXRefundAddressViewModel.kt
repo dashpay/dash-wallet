@@ -36,8 +36,9 @@ import javax.inject.Inject
  * check happens when Continue is pressed and surfaces [errorMessageArg] for an inline error.
  */
 data class DEXRefundAddressUIState(
-    // The asset being bought (e.g. "BTC.BTC") and its display code (e.g. "BTC"), passed in
-    // from the enter-amount step. The code is used in the "not a valid X address" error copy.
+    // The asset being bought (e.g. "BTC.BTC") and its display code (e.g. "BTC", or
+    // "USDC (Ethereum)" for a token), passed in from the enter-amount step. The code is used in
+    // the description and the "not a valid X address" error copy.
     val asset: String = "",
     val currencyCode: String = "",
     // The current refund address text shown in the field.
@@ -59,10 +60,14 @@ class DEXRefundAddressViewModel @Inject constructor() : ViewModel() {
 
     /** Seed the screen with the asset/currency chosen on the previous (enter-amount) step. */
     fun setArguments(asset: String, currencyCode: String) {
+        // Qualify tokens with their host network (e.g. "ETH (Ethereum)") so the user knows which
+        // chain the refund address must be valid for; native L1 coins show just the code.
+        val network = MayaCurrencyList.networkName(asset)
+        val displayCode = if (network != null) "$currencyCode ($network)" else currencyCode
         _uiState.update {
             it.copy(
                 asset = asset,
-                currencyCode = currencyCode,
+                currencyCode = displayCode,
                 address = "",
                 continueEnabled = false,
                 errorCurrencyCode = null
