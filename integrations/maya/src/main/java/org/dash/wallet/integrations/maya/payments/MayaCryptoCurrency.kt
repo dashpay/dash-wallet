@@ -672,6 +672,9 @@ class MayaSuiTokenCryptoCurrency(
 
 object MayaCurrencyList {
     private val currencyMap: Map<String, MayaCryptoCurrency>
+    // The raw registration list before associateBy collapses duplicate asset keys. Exposed so tests
+    // can detect a duplicate asset (which would otherwise be silently dropped from currencyMap/all).
+    internal val registeredCurrencies: List<MayaCryptoCurrency>
     init {
         val currencyList = listOf(
             MayaBitcoinCryptoCurrency(),
@@ -1543,6 +1546,7 @@ object MayaCurrencyList {
                 R.string.cryptocurrency_usdcoin_sui_network
             )
         )
+        registeredCurrencies = currencyList
         currencyMap = currencyList.associateBy({ it.asset }, { it })
     }
     operator fun get(asset: String) = currencyMap[asset]

@@ -161,6 +161,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
             }
         }
 
+        // Apply any processing state that was buffered while the view didn't exist
+        // (e.g. a quote still in flight across a rotation).
+        if (isProcessing) {
+            applyProcessingState()
+        }
+
         // initAmount()
     }
 
@@ -221,14 +227,23 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
      */
     fun setProcessing(processing: Boolean) {
         isProcessing = processing
+        // The parent's showLoading observer can deliver a retained value before this
+        // fragment's view has been (re)created after rotation. Buffer the state in
+        // isProcessing and let onViewCreated apply it rather than touching the binding
+        // before the view exists.
+        if (view == null) return
+        applyProcessingState()
+    }
+
+    private fun applyProcessingState() {
         // Detaching the listener (rather than hiding the keys) keeps the keypad on
         // screen but inert; the dim signals it's temporarily disabled.
-        binding.keyboardView.onKeyboardActionListener = if (processing) null else keyboardActionListener
-        binding.keyboardView.alpha = if (processing) 0.4f else 1.0f
-        binding.maxButton.isEnabled = !processing
-        binding.continueProgress.isVisible = processing
-        binding.continueBtn.text = if (processing) "" else continueButtonText
-        binding.continueBtn.isEnabled = canContinue && !processing
+        binding.keyboardView.onKeyboardActionListener = if (isProcessing) null else keyboardActionListener
+        binding.keyboardView.alpha = if (isProcessing) 0.4f else 1.0f
+        binding.maxButton.isEnabled = !isProcessing
+        binding.continueProgress.isVisible = isProcessing
+        binding.continueBtn.text = if (isProcessing) "" else continueButtonText
+        binding.continueBtn.isEnabled = canContinue && !isProcessing
     }
 
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {

@@ -166,16 +166,23 @@ private fun MayaCryptoCurrencyPickerScreenContent(
                     }
                 }
 
-                items.isEmpty() -> {
-                    // Empty list area (offline with no cache, or a genuinely empty list):
-                    // a centered "No available coins" message, per design.
+                displayItems.isEmpty() -> {
+                    // Empty list area. Check the rendered list (displayItems), not the full
+                    // dataset, so this also covers a search that filters every coin out.
+                    // Show a search-specific message when filtering is the cause, otherwise
+                    // the generic "No available coins" (offline with no cache / empty list).
+                    val emptyMessage = if (query.isEmpty()) {
+                        R.string.maya_no_available_coins
+                    } else {
+                        R.string.maya_no_search_results
+                    }
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
                     ) {
                         Text(
-                            text = stringResource(R.string.maya_no_available_coins),
+                            text = stringResource(emptyMessage),
                             style = MyTheme.Typography.TitleSmall,
                             color = MyTheme.Colors.textSecondary,
                             modifier = Modifier.align(Alignment.Center)

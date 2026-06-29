@@ -352,6 +352,7 @@
     <string name="maya_route_label_near" translatable="false">NEAR</string>
     <string name="maya_route_label_multiple">Multiple networks</string>
     <string name="maya_no_available_coins">No available coins</string>
+    <string name="maya_no_search_results">No coins match your search</string>
     <string name="maya_no_connection_toast">Check your connection and try again to see available coins</string>
 
     <!-- DashDEX buy: enter refund address screen -->

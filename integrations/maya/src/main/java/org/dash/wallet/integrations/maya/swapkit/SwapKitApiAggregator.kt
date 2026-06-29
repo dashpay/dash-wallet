@@ -338,9 +338,14 @@ class SwapKitApiAggregator @Inject constructor(
             )
         ) ?: return null
         val providers = response.routes.bestRoute()?.providers ?: return null
+        val hasMaya = providers.any { it.uppercase().contains("MAYA") }
+        val hasNear = providers.any { it.uppercase().contains("NEAR") }
         return when {
-            providers.any { it.uppercase().contains("MAYA") } -> RouteProvider.MAYA
-            providers.any { it.uppercase().contains("NEAR") } -> RouteProvider.NEAR
+            // A mixed route (both providers present) is ambiguous: we can't tell which
+            // builder applies, so leave the asset unresolved rather than guessing MAYA.
+            hasMaya && hasNear -> null
+            hasMaya -> RouteProvider.MAYA
+            hasNear -> RouteProvider.NEAR
             else -> null
         }
     }
@@ -495,7 +500,26 @@ class SwapKitApiAggregator @Inject constructor(
      * classification + halt status. `mayaHalted` is only meaningful for Maya-only
      * assets — others have a NEAR route and stay tradable through a Maya halt.
      */
+    /**
+     * True once we have real provider classification — either freshly fetched from
+     * /tokens or restored from a snapshot (both set [classificationLastUpdated]). Until
+     * then [markMayaInfo] must not stamp optimistic both-provider tradability onto pools.
+     */
+    private fun isClassificationAvailable(): Boolean =
+        classificationLastUpdated != 0L || mayaOnlyAssets.isNotEmpty() || nearOnlyAssets.isNotEmpty()
+
     private fun markMayaInfo(pool: PoolInfo) {
+        if (!isClassificationAvailable()) {
+            // No real /tokens classification yet (first launch with no snapshot, or the
+            // token-list fetch failed). Don't advertise optimistic both-provider
+            // tradability: a both/Maya-only asset would otherwise be stamped mayaOnly=false
+            // and shown as buyable. Mark it Maya-only so BUY (which only lists !mayaOnly
+            // assets) hides it until real data lands; SELL routes everything via Maya anyway.
+            pool.mayaOnly = true
+            pool.nearOnly = false
+            pool.mayaHalted = false
+            return
+        }
         val isMayaOnly = mayaOnlyAssets.contains(pool.asset.uppercase())
         pool.mayaOnly = isMayaOnly
         pool.nearOnly = nearOnlyAssets.contains(pool.asset.uppercase())

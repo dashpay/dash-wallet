@@ -91,9 +91,9 @@ data class CurrencyPickerUIState(
     val coins: List<CoinPickerItem> = emptyList(),
     val searchQuery: String = "",
     val isLoading: Boolean = true,
-    // False when the device has no internet. The picker still renders the cached coin
-    // list (if any) with every row disabled and a "no connection" graphic; with no cache
-    // it shows the full-screen graphic and hides the search bar.
+    // False when the device has no internet. While offline the coin list is emptied
+    // (see currencyPickerUIState), so the picker hides the search bar and shows the
+    // "No available coins" empty state plus the "no connection" toast.
     val isOnline: Boolean = true
 )
 
