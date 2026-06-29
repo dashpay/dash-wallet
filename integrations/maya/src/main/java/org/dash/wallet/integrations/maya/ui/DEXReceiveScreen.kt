@@ -24,12 +24,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -49,8 +50,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
+import org.dash.wallet.common.ui.components.Size
+import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.util.Qr
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
@@ -59,6 +64,7 @@ import org.dash.wallet.common.R as CommonR
 fun DEXReceiveScreen(
     viewModel: DEXReceiveViewModel,
     onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit,
     onCopyClick: (String) -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,6 +76,7 @@ fun DEXReceiveScreen(
         isLoading = uiState.isLoading,
         errorMessage = uiState.errorMessage,
         onBackClick = onBackClick,
+        onBackHomeClick = onBackHomeClick,
         onCopyClick = onCopyClick
     )
 }
@@ -82,6 +89,7 @@ private fun DEXReceiveScreenContent(
     isLoading: Boolean,
     errorMessage: String?,
     onBackClick: () -> Unit,
+    onBackHomeClick: () -> Unit,
     onCopyClick: (String) -> Unit
 ) {
     // The QR encodes the payment URI when present, otherwise the plain address.
@@ -94,16 +102,19 @@ private fun DEXReceiveScreenContent(
     ) {
         NavBarBack(onBackClick = onBackClick)
 
+        // Scrollable content fills the space above the pinned bottom button.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
                 // Heading sits directly below the nav bar: Figma's content `pt-116px` is just the
                 // height of the (overlaid) status + nav bar that NavBarBack already occupies, so only
                 // the 10dp `safe-area/top` remains as real padding (matches DEXRefundAddressScreen).
-                .padding(top = 10.dp, start = 20.dp, end = 20.dp),
+                .padding(top = 10.dp, start = 20.dp, end = 20.dp, bottom = 20.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            org.dash.wallet.common.ui.components.TopIntro(
+            TopIntro(
                 heading = stringResource(R.string.dex_receive_heading, coinCode),
                 text = stringResource(R.string.dex_receive_description),
                 modifier = Modifier.fillMaxWidth()
@@ -141,6 +152,63 @@ private fun DEXReceiveScreenContent(
                     )
                 }
             }
+
+            // Expiry warning card (Figma 36265:22210): yellow triangle + title + refund note.
+            ExpiryWarning(coinCode = coinCode)
+        }
+
+        // Pinned bottom "Back home" button (btn-l tinted-gray). Figma insets the button an extra
+        // 40dp inside the 20dp safe area, so it sits narrower than the cards above.
+        DashButton(
+            text = stringResource(R.string.dex_receive_back_home),
+            style = Style.TintedGray,
+            size = Size.Large,
+            onClick = onBackHomeClick,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 60.dp, vertical = 16.dp)
+        )
+    }
+}
+
+/** Gray card warning that the deposit address expires; refund vs. convert note. */
+@Composable
+private fun ExpiryWarning(coinCode: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0x1AB0B6BC))
+            .padding(16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(CommonR.drawable.ic_warning_triangle),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(top = 2.dp, end = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(1.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.dex_receive_expiry_title),
+                style = MyTheme.Typography.TitleMediumMedium,
+                color = MyTheme.Colors.textPrimary
+            )
+            Text(
+                text = stringResource(R.string.dex_receive_expiry_message, coinCode),
+                style = MyTheme.Body2Regular,
+                color = MyTheme.Colors.textSecondary
+            )
         }
     }
 }
@@ -236,6 +304,7 @@ private fun DEXReceiveScreenLoadingPreview() {
         isLoading = true,
         errorMessage = null,
         onBackClick = {},
+        onBackHomeClick = {},
         onCopyClick = {}
     )
 }
@@ -250,6 +319,7 @@ private fun DEXReceiveScreenLoadedPreview() {
         isLoading = false,
         errorMessage = null,
         onBackClick = {},
+        onBackHomeClick = {},
         onCopyClick = {}
     )
 }
@@ -264,6 +334,7 @@ private fun DEXReceiveScreenErrorPreview() {
         isLoading = false,
         errorMessage = "No route found for this amount",
         onBackClick = {},
+        onBackHomeClick = {},
         onCopyClick = {}
     )
 }

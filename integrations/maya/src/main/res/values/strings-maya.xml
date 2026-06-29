@@ -364,5 +364,8 @@
     <string name="dex_receive_heading">Send %1$s to this address</string>
     <string name="dex_receive_description">Once the network confirms your transfer, we\'ll convert it to Dash and deposit it in your DashPay wallet</string>
     <string name="dex_receive_uri_label">URI</string>
+    <string name="dex_receive_expiry_title">This address expires in 10 minutes</string>
+    <string name="dex_receive_expiry_message">Send your %1$s before the timer runs out. If you send after the address expires, your funds will be refunded — not converted.</string>
+    <string name="dex_receive_back_home">Back home</string>
 
 </resources>

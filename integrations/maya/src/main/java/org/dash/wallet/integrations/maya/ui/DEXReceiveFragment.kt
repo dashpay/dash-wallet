@@ -87,6 +87,13 @@ class DEXReceiveFragment : Fragment() {
                 DEXReceiveScreen(
                     viewModel = viewModel,
                     onBackClick = { findNavController().popBackStack() },
+                    // "Back home" exits the whole buy flow to the wallet home (WalletFragment).
+                    // navController.graph is the root nav_home graph, whose start destination is
+                    // walletFragment — same "go home" pattern as MayaConvertResultFragment.
+                    onBackHomeClick = {
+                        val navController = findNavController()
+                        navController.popBackStack(navController.graph.startDestinationId, false)
+                    },
                     onCopyClick = ::copyToClipboard
                 )
             }
