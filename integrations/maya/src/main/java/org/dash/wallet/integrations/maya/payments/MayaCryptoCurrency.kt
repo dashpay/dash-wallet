@@ -583,8 +583,10 @@ open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "STRK"
     override val name: String = "Starknet"
     override val asset: String = "STRK.STRK"
+    // A sample Starknet account (wallet) address — intentionally distinct from the
+    // mainnet STRK token contract (0x04718f5a...), which is not a valid swap destination.
     override val exampleAddress: String =
-        "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d"
+        "0x064b48806902a367c8598f4f95c305e8c1a1acba5f082d294a43793113115691"
     override val paymentIntentParser: PaymentIntentParser = StarknetPaymentIntentParser()
     override val addressParser: AddressParser = StarknetAddressParser()
     override val codeId: Int = R.string.cryptocurrency_strk_code
@@ -1240,7 +1242,7 @@ object MayaCurrencyList {
                 "\$WIF",
                 "dogwifhat",
                 "SOL.\$WIF-EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm",
-                "SOL.WIF-zcjm",
+                "SOL.\$WIF-zcjm",
                 R.string.cryptocurrency_wif_code,
                 R.string.cryptocurrency_wif_solana_network
             ),
@@ -1546,6 +1548,55 @@ object MayaCurrencyList {
     operator fun get(asset: String) = currencyMap[asset]
     val all: Collection<MayaCryptoCurrency>
         get() = currencyMap.values
+
+    // SwapKit/Maya chain prefix -> human-readable host-network name. Shown after a token's code
+    // (e.g. "USDC (Ethereum)") so the user knows which chain the asset lives on. Proper-noun
+    // network names; kept here next to the chain definitions rather than as per-locale strings.
+    private val NETWORK_NAMES = mapOf(
+        "ETH" to "Ethereum",
+        "ARB" to "Arbitrum",
+        "BASE" to "Base",
+        "OP" to "Optimism",
+        "AVAX" to "Avalanche",
+        "BSC" to "BSC",
+        "POL" to "Polygon",
+        "GNO" to "Gnosis",
+        "MONAD" to "Monad",
+        "XLAYER" to "X Layer",
+        "BERA" to "Berachain",
+        "SOL" to "Solana",
+        "NEAR" to "NEAR",
+        "TON" to "Toncoin",
+        "TRON" to "TRON",
+        "SUI" to "Sui",
+        "THOR" to "Thorchain",
+        "MAYA" to "Maya",
+        "KUJI" to "Kujira",
+        "GAIA" to "Cosmos",
+        "STRK" to "Starknet",
+        "ADA" to "Cardano",
+        "XRD" to "Radix",
+        "XRP" to "XRP",
+        "BTC" to "Bitcoin",
+        "LTC" to "Litecoin",
+        "DOGE" to "Dogecoin",
+        "BCH" to "Bitcoin Cash",
+        "DASH" to "Dash",
+        "ZEC" to "Zcash"
+    )
+
+    /**
+     * Human-readable host-network name for [asset] when it is a token (or a native coin bridged
+     * onto another chain) — i.e. the SwapKit chain prefix differs from the symbol — so callers
+     * can render e.g. "USDC (Ethereum)" or "ETH (Base)". Returns null for native L1 coins
+     * (BTC.BTC, ETH.ETH, …) where the chain and symbol match and no network qualifier is needed.
+     */
+    fun networkName(asset: String): String? {
+        val chain = asset.substringBefore(".")
+        val symbol = asset.substringAfter(".").substringBefore("-")
+        if (chain.isEmpty() || chain == symbol) return null
+        return NETWORK_NAMES[chain] ?: chain
+    }
     fun getPaymentProcessors(): PaymentParsers {
         val paymentProcessors = PaymentParsers()
         val registeredCodes = mutableSetOf<String>()

@@ -48,7 +48,8 @@ import javax.inject.Inject
  * resolves, or [errorMessage] if it fails.
  */
 data class DEXReceiveUIState(
-    // Display code of the crypto being sent in (e.g. "BTC"), used in the heading.
+    // Display code of the crypto being sent in (e.g. "BTC", or "USDC (Ethereum)" for a token),
+    // used in the heading and expiry note.
     val coinCode: String = "",
     // The SwapKit inbound (deposit) address the user must send the crypto to. Empty while loading.
     val address: String = "",
@@ -89,9 +90,13 @@ class DEXReceiveViewModel @Inject constructor(
         this.asset = asset
         this.refundAddress = refundAddress
         this.sellAmount = sellAmount
+        // Qualify tokens with their host network (e.g. "USDC (Ethereum)") so the user can tell which
+        // chain to send on; native L1 coins (BTC, ETH, …) show just the code.
+        val network = MayaCurrencyList.networkName(asset)
+        val displayCode = if (network != null) "$currencyCode ($network)" else currencyCode
         _uiState.update {
             it.copy(
-                coinCode = currencyCode,
+                coinCode = displayCode,
                 address = "",
                 uri = "",
                 isLoading = true,
