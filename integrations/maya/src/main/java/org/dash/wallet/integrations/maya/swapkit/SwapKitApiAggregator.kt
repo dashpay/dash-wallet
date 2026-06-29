@@ -355,40 +355,54 @@ class SwapKitApiAggregator @Inject constructor(
         if (poolInfoList.value.isNotEmpty()) return
         val raw = runCatching { mayaConfig.get(MayaConfig.SWAPKIT_POOL_SNAPSHOT) }.getOrNull()
         if (raw.isNullOrBlank()) return
-        val snapshot = runCatching { gson.fromJson(raw, SwapKitSnapshot::class.java) }.getOrNull()
-        if (snapshot == null || snapshot.pools.isEmpty()) return
-        // Don't clobber data that landed while we were reading from disk.
+        // Parse defensively: a corrupt or schema-drifted snapshot must never crash
+        // the app. Compute everything up front and only commit to in-memory state on
+        // success, so a failure leaves the existing caches untouched and lets the
+        // background network refresh repopulate.
+        val hydrated = runCatching {
+            val snapshot = gson.fromJson(raw, SwapKitSnapshot::class.java)
+                ?: return@runCatching null
+            if (snapshot.pools.isEmpty()) return@runCatching null
+
+            val freshUsdPrices = mutableMapOf<String, BigDecimal>()
+            val pools = snapshot.pools.map { p ->
+                PoolInfo(asset = p.asset, status = "Available").also { pool ->
+                    if (p.priceUsd > 0.0) {
+                        val priceBd = BigDecimal(p.priceUsd)
+                        freshUsdPrices[p.asset] = priceBd
+                        pool.assetPriceFiat = priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
+                    }
+                    pool.mayaOnly = p.mayaOnly
+                    pool.nearOnly = p.nearOnly
+                    pool.mayaHalted = p.mayaHalted
+                }
+            }
+            val routes = snapshot.preferredRoutes
+                .mapNotNull { (asset, name) ->
+                    runCatching { asset to RouteProvider.valueOf(name) }.getOrNull()
+                }
+                .toMap()
+            HydratedSnapshot(snapshot, pools, freshUsdPrices, routes)
+        }.onFailure {
+            log.info("swapkit: failed to hydrate snapshot: {}", it.message)
+        }.getOrNull() ?: return
+
+        // Don't clobber data that landed while we were reading/parsing from disk.
         if (poolInfoList.value.isNotEmpty()) return
 
         usdPriceCache.clear()
-        mayaOnlyAssets = snapshot.mayaOnly.toSet()
-        nearOnlyAssets = snapshot.nearOnly.toSet()
-        classificationLastUpdated = snapshot.classificationAtMs
-
-        val pools = snapshot.pools.map { p ->
-            PoolInfo(asset = p.asset, status = "Available").also { pool ->
-                if (p.priceUsd > 0.0) {
-                    val priceBd = BigDecimal(p.priceUsd)
-                    usdPriceCache[p.asset] = priceBd
-                    pool.assetPriceFiat = priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
-                }
-                pool.mayaOnly = p.mayaOnly
-                pool.nearOnly = p.nearOnly
-                pool.mayaHalted = p.mayaHalted
-            }
-        }
-        preferredRouteProviders.value = snapshot.preferredRoutes
-            .mapNotNull { (asset, name) ->
-                runCatching { asset to RouteProvider.valueOf(name) }.getOrNull()
-            }
-            .toMap()
+        usdPriceCache.putAll(hydrated.usdPrices)
+        mayaOnlyAssets = hydrated.snapshot.mayaOnly.toSet()
+        nearOnlyAssets = hydrated.snapshot.nearOnly.toSet()
+        classificationLastUpdated = hydrated.snapshot.classificationAtMs
+        preferredRouteProviders.value = hydrated.routes
         // Seed resolution timestamps so the TTL spans cold start — the background
         // refresh only re-quotes preferred routes once they age past the TTL.
-        preferredRouteProviders.value.keys.forEach { asset ->
-            preferredRouteResolvedAt[asset] = snapshot.savedAtMs
+        hydrated.routes.keys.forEach { asset ->
+            preferredRouteResolvedAt[asset] = hydrated.snapshot.savedAtMs
         }
-        poolInfoList.value = pools
-        log.info("swapkit: hydrated {} pools from snapshot", pools.size)
+        poolInfoList.value = hydrated.pools
+        log.info("swapkit: hydrated {} pools from snapshot", hydrated.pools.size)
     }
 
     /** Persist the current in-memory list + classification + preferred routes. */
@@ -1062,4 +1076,12 @@ private data class SwapKitPoolSnapshot(
     val mayaOnly: Boolean = false,
     val nearOnly: Boolean = false,
     val mayaHalted: Boolean = false
+)
+
+/** Fully-parsed snapshot held until we're ready to commit it to in-memory state. */
+private class HydratedSnapshot(
+    val snapshot: SwapKitSnapshot,
+    val pools: List<PoolInfo>,
+    val usdPrices: Map<String, BigDecimal>,
+    val routes: Map<String, RouteProvider>
 )
