@@ -232,8 +232,7 @@
     <fragment
         android:id="@+id/exploreFragment"
         android:name="de.schildbach.wallet.ui.explore.ExploreFragment"
-        android:label="Explore"
-        tools:layout="@layout/fragment_explore">
+        android:label="Explore">
 
         <argument
             android:name="ShowNavBar"
