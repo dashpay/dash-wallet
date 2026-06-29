@@ -84,7 +84,8 @@ fun InfoPanel(
             ) {
                 Text(
                     text = title,
-                    style = MyTheme.CaptionMedium
+                    style = MyTheme.CaptionMedium,
+                    color = colors.textPrimary
                 )
                 
                 Text(

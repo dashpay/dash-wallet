@@ -62,6 +62,7 @@ fun ModalDialog(
     horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp
 ) {
     if (showDialog) {
+        val colors = LocalDashColors.current
         DashWalletTheme {
             Dialog(
                 onDismissRequest = onDismissRequest,
@@ -76,10 +77,9 @@ fun ModalDialog(
                         .padding(horizontal = horizontalPadding),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White
+                        containerColor = colors.backgroundPrimary
                     )
                 ) {
-                    val colors = LocalDashColors.current
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

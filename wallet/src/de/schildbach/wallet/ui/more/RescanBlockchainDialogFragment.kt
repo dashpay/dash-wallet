@@ -17,8 +17,8 @@
 
 package de.schildbach.wallet.ui.more
 
-import android.app.DatePickerDialog
 import android.app.Dialog
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -32,10 +32,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
@@ -56,7 +55,6 @@ import de.schildbach.wallet.ui.compose_views.createWalletCreationDateInfoDialog
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.*
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -83,21 +81,23 @@ class RescanBlockchainDialogFragment : DialogFragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                RescanBlockchainDialog(
-                    initialCreationDate = initialCreationDate,
-                    onDismissRequest = {
-                        onConfirm?.invoke(false, null)
-                        dismiss()
-                    },
-                    onConfirm = { creationDate ->
-                        onConfirm?.invoke(true, creationDate)
-                        dismiss()
-                    },
-                    onShowDateInfo = {
-                        createWalletCreationDateInfoDialog()
-                            .show(requireActivity().supportFragmentManager, "wallet_creation_date_info")
-                    }
-                )
+                DashWalletTheme {
+                    RescanBlockchainDialog(
+                        initialCreationDate = initialCreationDate,
+                        onDismissRequest = {
+                            onConfirm?.invoke(false, null)
+                            dismiss()
+                        },
+                        onConfirm = { creationDate ->
+                            onConfirm?.invoke(true, creationDate)
+                            dismiss()
+                        },
+                        onShowDateInfo = {
+                            createWalletCreationDateInfoDialog()
+                                .show(requireActivity().supportFragmentManager, "wallet_creation_date_info")
+                        }
+                    )
+                }
             }
         }
     }
@@ -109,6 +109,7 @@ class RescanBlockchainDialogFragment : DialogFragment() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RescanBlockchainDialog(
     initialCreationDate: Long? = null,
@@ -117,48 +118,8 @@ fun RescanBlockchainDialog(
     onShowDateInfo: () -> Unit = {}
 ) {
     var selectedCreationDate by remember { mutableStateOf(initialCreationDate) }
-    val context = LocalContext.current
     val dateFormat = remember { SimpleDateFormat("MMMM d, yyyy", Locale.getDefault()) }
-    var datePickerDialog by remember { mutableStateOf<DatePickerDialog?>(null) }
-
-    // Dismiss date picker when dialog is disposed (e.g., lock screen appears)
-    DisposableEffect(Unit) {
-        onDispose {
-            datePickerDialog?.dismiss()
-        }
-    }
-
-    fun showDatePicker() {
-        val minDate = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
-        val maxDate = System.currentTimeMillis()
-
-        val calendar = Calendar.getInstance()
-        // Initialize with the selected creation date if available, otherwise use today
-        if (selectedCreationDate != null) {
-            calendar.timeInMillis = selectedCreationDate!! * 1000L
-        }
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH)
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
-
-        datePickerDialog = DatePickerDialog(
-            context,
-            { _, selectedYear, selectedMonth, selectedDay ->
-                val selectedCalendar = Calendar.getInstance()
-                selectedCalendar.set(selectedYear, selectedMonth, selectedDay, 0, 0, 0)
-                selectedCalendar.set(Calendar.MILLISECOND, 0)
-                selectedCreationDate = selectedCalendar.timeInMillis / 1000L // Convert to seconds
-            },
-            year,
-            month,
-            day
-        )
-
-        datePickerDialog?.datePicker?.minDate = minDate
-        datePickerDialog?.datePicker?.maxDate = maxDate
-        datePickerDialog?.setTitle(context.getString(R.string.restore_wallet_date_picker_title))
-        datePickerDialog?.show()
-    }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     val colors = LocalDashColors.current
     ModalDialog(
@@ -204,10 +165,10 @@ fun RescanBlockchainDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(
-                            color = colors.backgroundPrimary,
+                            color = colors.backgroundSecondary,
                             shape = RoundedCornerShape(16.dp)
                         )
-                        .clickable(onClick = { showDatePicker() })
+                        .clickable(onClick = { showDatePicker = true })
                         .padding(horizontal = 12.dp, vertical = 11.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -260,25 +221,42 @@ fun RescanBlockchainDialog(
             )
         )
     )
+
+    if (showDatePicker) {
+        WalletCreationDatePickerDialog(
+            initialCreationDate = selectedCreationDate,
+            onDateSelected = {
+                selectedCreationDate = it
+                showDatePicker = false
+            },
+            onDismiss = { showDatePicker = false }
+        )
+    }
 }
 
+//@Preview(name = "Dialog Light", showBackground = false, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dialog Dark", showBackground = false, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun RescanBlockchainDialogPreview() {
-    RescanBlockchainDialog(
-        onDismissRequest = {},
-        onConfirm = {},
-        onShowDateInfo = {}
-    )
+    DashWalletTheme {
+        RescanBlockchainDialog(
+            onDismissRequest = {},
+            onConfirm = {},
+            onShowDateInfo = {}
+        )
+    }
 }
 
+//@Preview(name = "Dialog Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dialog Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-@Preview
 fun RescanBlockchainDialogWithDatePreview() {
-    RescanBlockchainDialog(
-        initialCreationDate = System.currentTimeMillis() / 1000,
-        onDismissRequest = {},
-        onConfirm = {},
-        onShowDateInfo = {}
-    )
+    DashWalletTheme {
+        RescanBlockchainDialog(
+            initialCreationDate = System.currentTimeMillis() / 1000,
+            onDismissRequest = {},
+            onConfirm = {},
+            onShowDateInfo = {}
+        )
+    }
 }
