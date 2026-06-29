@@ -50,6 +50,7 @@ import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.SwapBackend
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -152,6 +153,17 @@ class MayaViewModel @Inject constructor(
 
     private val _searchQuery = MutableStateFlow("")
 
+    // The operation the user picked on the portal (BUY/SELL). Drives which coins the
+    // picker offers: BUY (crypto -> Dash) is SwapKit-only and cannot route Maya-only
+    // assets, so those are hidden when buying. Defaults to SELL (Dash -> crypto), the
+    // direction supported by both backends.
+    private val _swapDirection = MutableStateFlow(SwapDirection.SELL)
+    val swapDirection: StateFlow<SwapDirection> = _swapDirection.asStateFlow()
+
+    fun setSwapDirection(direction: SwapDirection) {
+        _swapDirection.value = direction
+    }
+
     // Membership map: which assets are part of the curated MayaCurrencyList, with
     // their translatable name/code resource IDs. Replaces the old defaultItemMap.
     private val currencyResIds: Map<String, Pair<Int, Int>> =
@@ -168,8 +180,12 @@ class MayaViewModel @Inject constructor(
             inboundAddresses,
             _searchQuery,
             swapProvider.preferredRouteProviders,
-            networkState.isConnected
-        ) { pools, addresses, query, preferredRoutes, isOnline ->
+            // Pair connectivity with the chosen direction so the coin list recomputes
+            // when either changes (combine tops out at 5 typed flows).
+            networkState.isConnected.combine(_swapDirection) { isOnline, direction ->
+                isOnline to direction
+            }
+        ) { pools, addresses, query, preferredRoutes, (isOnline, direction) ->
             // Offline: show no coins at all (the screen renders the "No available coins"
             // empty state + the no-connection toast). We don't surface the cached pool
             // list, since it can't be traded without a live connection.
@@ -182,6 +198,9 @@ class MayaViewModel @Inject constructor(
                             pool.status.equals("available", ignoreCase = true)
                     }
                     .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
+                    // BUY (crypto -> Dash) routes only through SwapKit/NEAR; Maya-only
+                    // assets have no buy path, so hide them. SELL keeps the full list.
+                    .filter { pool -> direction == SwapDirection.SELL || !pool.mayaOnly }
                     .map { pool ->
                         val chain = pool.asset.substringBefore('.')
                         val inbound = addresses.find { it.chain == chain }

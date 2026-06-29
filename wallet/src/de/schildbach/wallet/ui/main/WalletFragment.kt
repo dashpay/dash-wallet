@@ -406,6 +406,10 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_BUY_AND_SELL)
                 safeNavigate(WalletFragmentDirections.homeToBuySell())
             }
+            ShortcutOption.DASH_DEX -> {
+                viewModel.logEvent(AnalyticsConstants.Home.SHORTCUT_DASH_DEX)
+                safeNavigate(WalletFragmentDirections.homeToMaya())
+            }
             ShortcutOption.SEND_TO_ADDRESS -> {
                 handlePayToAddress()
             }

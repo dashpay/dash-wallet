@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 
 @AndroidEntryPoint
 class MayaPortalFragment : Fragment() {
@@ -40,11 +41,18 @@ class MayaPortalFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setContent {
                 MayaPortalScreen(
-                    activeBackend = mayaViewModel.activeSwapBackend,
+                    showBuy = mayaViewModel.activeSwapBackend.supportsBuy,
                     onBackClick = {
                         findNavController().popBackStack()
                     },
-                    onConvertClick = {
+                    onBuyClick = {
+                        mayaViewModel.setSwapDirection(SwapDirection.BUY)
+                        // TODO: the downstream swap execution still assumes Dash -> asset (sell);
+                        // the buy (asset -> Dash) flow itself is not built yet.
+                        safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                    },
+                    onSellClick = {
+                        mayaViewModel.setSwapDirection(SwapDirection.SELL)
                         safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
                     }
                 )
