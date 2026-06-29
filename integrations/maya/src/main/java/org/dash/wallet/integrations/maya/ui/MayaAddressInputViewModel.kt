@@ -12,6 +12,7 @@ import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import javax.inject.Inject
 
@@ -27,16 +28,29 @@ class MayaAddressInputViewModel @Inject constructor(
     val addressSources: Flow<List<AddressSource>>
         get() = _addressSources.asStateFlow()
 
-    private fun refreshAddressSources(it: List<ExchangeIntegration>) {
-        val sources = it.map { integration ->
-            AddressSource(
-                integration.id,
-                integration.name,
-                integration.iconId,
-                integration.address,
-                integration.currency
-            )
-        }
+    private fun refreshAddressSources(integrations: List<ExchangeIntegration>) {
+        // The selected [asset] (e.g. "TRON.USDT") pins the destination network. An
+        // exchange such as Coinbase may only support some networks for a coin (e.g.
+        // ERC-20 USDT, not TRON.USDT) and hand back a deposit address on the wrong
+        // network. Sending the swap output there would lose funds, so drop any
+        // connected source whose address doesn't validate against this asset's own
+        // parser. Sources without an address yet (not connected) are kept so the user
+        // can still connect.
+        val addressParser = if (::asset.isInitialized) MayaCurrencyList[asset]?.addressParser else null
+        val sources = integrations
+            .filter { integration ->
+                val address = integration.address
+                address == null || addressParser == null || addressParser.exactMatch(address.trim())
+            }
+            .map { integration ->
+                AddressSource(
+                    integration.id,
+                    integration.name,
+                    integration.iconId,
+                    integration.address,
+                    integration.currency
+                )
+            }
         _addressSources.value = sources
     }
 

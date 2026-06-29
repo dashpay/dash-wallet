@@ -72,6 +72,12 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
     private var maxAmountSelected: Boolean = false
     private var hasInternet: Boolean = true
+
+    // While a swap quote is being fetched we block all amount input so the value
+    // shown on the preview screen can't drift from what was submitted.
+    private var isProcessing: Boolean = false
+    private var canContinue: Boolean = false
+    private var continueButtonText: CharSequence = ""
     private var pickedCurrencyIndex by mutableIntStateOf(0)
     private var currencyConversionOptions by mutableStateOf(listOf<SegmentedOption>())
     private val pickedCurrencyOption: String
@@ -105,6 +111,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         pickedCurrencyIndex = 0
 
         binding.maxButton.setOnClickListener {
+            if (isProcessing) return@setOnClickListener
             viewModel.selectedCryptoCurrencyAccount.value?.let { userAccountData ->
                 viewModel.getMaxAmount()?.let { maxAmount ->
                     val cryptoCurrency = userAccountData.coinbaseAccount.currency
@@ -147,6 +154,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                     shadowElevation = 0
                 )
             ) { value, index ->
+                if (isProcessing) return@SegmentedPicker
                 pickedCurrencyIndex = index
                 setAmountValue(value.title)
                 viewModel.selectedPickerCurrencyCode = value.title
@@ -197,12 +205,30 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     }
 
     fun setViewDetails(continueText: String, keyboardHeader: View?) {
+        continueButtonText = continueText
         lifecycleScope.launchWhenStarted {
             binding.continueBtn.text = continueText
             keyboardHeader?.let {
                 binding.keyboardContainer.addView(keyboardHeader, 0)
             }
         }
+    }
+
+    /**
+     * Blocks/unblocks all amount input while a swap quote is being fetched. Disables
+     * the keypad, the max button and the currency picker, and replaces the Continue
+     * button label with a spinner so the submitted amount can't be changed mid-request.
+     */
+    fun setProcessing(processing: Boolean) {
+        isProcessing = processing
+        // Detaching the listener (rather than hiding the keys) keeps the keypad on
+        // screen but inert; the dim signals it's temporarily disabled.
+        binding.keyboardView.onKeyboardActionListener = if (processing) null else keyboardActionListener
+        binding.keyboardView.alpha = if (processing) 0.4f else 1.0f
+        binding.maxButton.isEnabled = !processing
+        binding.continueProgress.isVisible = processing
+        binding.continueBtn.text = if (processing) "" else continueButtonText
+        binding.continueBtn.isEnabled = canContinue && !processing
     }
 
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -385,7 +411,8 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     }
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
-        binding.continueBtn.isEnabled = hasBalance
+        canContinue = hasBalance
+        binding.continueBtn.isEnabled = hasBalance && !isProcessing
     }
 
     fun handleNetworkState(hasInternet: Boolean) {

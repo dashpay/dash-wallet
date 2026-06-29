@@ -104,7 +104,6 @@ abstract class MayaModule {
                 .build()
                 .create(SwapKitEndpoint::class.java)
         }
-
     }
 
     @Binds

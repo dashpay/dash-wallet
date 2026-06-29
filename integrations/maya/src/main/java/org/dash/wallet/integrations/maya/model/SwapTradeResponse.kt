@@ -81,7 +81,7 @@ data class SwapTradeUIModel(
     var memo: String? = null,
     var txid: Sha256Hash = Sha256Hash.ZERO_HASH,
     var expectedOutputAmount: BigDecimal = BigDecimal.ZERO,
-    val routeName: String? = "maya-default",
+    val routeName: String? = "",
     val availableRoutes: List<String> = listOf()
 ) : Parcelable {
     @IgnoredOnParcel

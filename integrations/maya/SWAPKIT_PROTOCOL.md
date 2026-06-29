@@ -448,6 +448,63 @@ Output amounts shown are already net of all fees except inbound.
 
 ---
 
+## Detecting Maya-only Assets (for the cryptocurrency list screen)
+
+> Verified live against the API on 2026-06-08.
+
+Some coins are routable from DASH **only via MAYACHAIN** — no other provider can carry them. These inherit Maya's two liabilities: (a) halt exposure with **no fallback** (when Maya halts, the coin is simply unavailable — see "how to tell if trading is halted" below), and (b) the OP_RETURN-memo requirement that makes Maya unusable for the **buy** direction from an external wallet. The list screen may want to flag or hide these.
+
+### Why it's tractable
+
+Only **two** SwapKit providers route DASH at all — confirmed from `/providers` (the only entries whose `supportedChainIds` contain `dash`):
+
+- `NEAR` (NEAR Intents)
+- `MAYACHAIN_STREAMING`
+
+(`MAYACHAIN` non-streaming returns `noTokenListsFound` — only the streaming variant carries a token list.) Because DASH originates through exactly these two, **"Maya-only" reduces to "NEAR can't route it."**
+
+### Method — provider token-list intersection (3 static, cacheable calls)
+
+Do **not** infer this from a normal quote's `noRoutesFound` — that error is ambiguous (halt vs. no liquidity vs. amount-too-small). Membership in provider token lists is a clean *capability* signal, independent of live liquidity or halt state.
+
+1. `GET /tokens?provider=NEAR` → set of identifiers NEAR can route.
+2. `GET /tokens?provider=MAYACHAIN_STREAMING` → Maya's set.
+3. `GET /swapTo?sellAsset=DASH.DASH` → everything reachable from DASH.
+
+Then classify each reachable identifier:
+
+```
+maya_only  =  reachable  AND  (id ∈ MAYA list)  AND  (id ∉ NEAR list)
+```
+
+Compare identifiers case-insensitively; the `identifier` from `/tokens` is canonical (never hand-build from a ticker).
+
+### Verified result (2026-06-08)
+
+Counts: NEAR 140 tokens, MAYACHAIN_STREAMING 19, `/swapTo` from DASH = 150 reachable. **11 coins were Maya-only:**
+
+```
+MAYA.CACAO, MAYA.MAYA, THOR.RUNE,
+ETH.MOCA, ETH.WSTETH,
+ARB.GLD, ARB.LEO, ARB.USDT, ARB.WBTC, ARB.WSTETH, ARB.YUM
+```
+
+The other ~139 reachable coins (BTC, ETH, major tokens) are NEAR-capable and therefore survive a Maya halt.
+
+**Cross-checked with provider-forced quotes** (`providers: [...]` on `/v3/quote`), and the prediction held exactly:
+
+- `MAYA.CACAO`, `THOR.RUNE` forced to `["NEAR"]` → `noRoutesFound`; forced to `["MAYACHAIN_STREAMING"]` → route returned. ✅ Maya-only.
+- `BTC.BTC` → both providers returned routes. ✅ not Maya-only.
+
+### Caveats
+
+1. **Capability, not live status.** "Maya-only" means *only Maya can ever route it* — it does not mean Maya is up right now. Combine with halt detection: a Maya-only coin **during** a Maya halt is unavailable with no fallback, exactly the set to grey out / flag first.
+2. **Lists drift** — provider token lists change as listings come and go. Refresh on a cadence; do **not** hardcode the 11.
+3. **Single-leg assumption.** This treats reachability as "both assets on the same provider." SwapKit can in principle multi-leg, but since DASH originates only via NEAR or Maya and the Maya-only coins returned `noRoutesFound` when NEAR was forced, there is no NEAR→…→coin path in practice today. If SwapKit ever adds DASH to a third provider, re-derive the DASH-provider set from `/providers` first.
+4. **Buy direction.** Maya-only coins are precisely the ones unusable as a *buy* source through an external wallet (OP_RETURN memo). Hiding the Maya-only set on the buy screen specifically is a reasonable use of this classification.
+
+---
+
 ## Testing Endpoints
 
 ```bash

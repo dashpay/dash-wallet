@@ -18,195 +18,42 @@
 package org.dash.wallet.integrations.maya.ui
 
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
-import androidx.compose.ui.res.stringResource
-import androidx.core.content.ContextCompat
-import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
-import androidx.recyclerview.widget.DiffUtil
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.ui.components.Toast
-import org.dash.wallet.common.ui.components.ToastImageResource
-import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
-import org.dash.wallet.common.ui.radio_group.IconSelectMode
-import org.dash.wallet.common.ui.radio_group.IconifiedViewItem
-import org.dash.wallet.common.ui.recyclerview.IconifiedListAdapter
-import org.dash.wallet.common.ui.viewBinding
-import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.FragmentCurrencyPickerBinding
 import org.dash.wallet.integrations.maya.model.PoolInfo
-import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.slf4j.LoggerFactory
 
 @AndroidEntryPoint
-class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_picker) {
+class MayaCryptoCurrencyPickerFragment : Fragment() {
     companion object {
         private val log = LoggerFactory.getLogger(MayaCryptoCurrencyPickerFragment::class.java)
     }
-    private val binding by viewBinding(FragmentCurrencyPickerBinding::bind)
+
     private val viewModel by mayaViewModels<MayaViewModel>()
-    private var itemList = listOf<IconifiedViewItem>()
-    private lateinit var defaultItemMap: Map<String, IconifiedViewItem>
 
-    class FullDiffCallback : DiffUtil.ItemCallback<IconifiedViewItem>() {
-        override fun areItemsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem.id != null && oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: IconifiedViewItem, newItem: IconifiedViewItem): Boolean {
-            return oldItem == newItem
-        }
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        binding.toolbar.setNavigationOnClickListener {
-            findNavController().popBackStack()
-        }
-
-        val adapter = IconifiedListAdapter(diffCallback = FullDiffCallback()) { item, _ ->
-            viewModel.poolList.value.firstOrNull {
-                it.asset == item.id
-            }?.let {
-                val inboundAddress = viewModel.getInboundAddress(it.asset)
-                // if trading is halted, then don't perform an action
-                if (inboundAddress != null && !inboundAddress.halted) {
-                    clickListener(it)
-                }
-            }
-        }
-
-        val divider = ContextCompat.getDrawable(requireContext(), org.dash.wallet.common.R.drawable.list_divider)!!
-        val decorator = ListDividerDecorator(
-            divider,
-            showAfterLast = false,
-            marginStart = resources.getDimensionPixelOffset(org.dash.wallet.common.R.dimen.divider_margin_horizontal),
-            marginEnd = resources.getDimensionPixelOffset(org.dash.wallet.common.R.dimen.divider_margin_horizontal)
-        )
-        binding.contentList.addItemDecoration(decorator)
-        binding.contentList.adapter = adapter
-
-        // using this allows for translation of cryptocurrency names
-        defaultItemMap = MayaCurrencyList.all.associateBy({ it.asset }, {
-            IconifiedViewItem(
-                requireContext().getString(it.codeId),
-                requireContext().getString(it.nameId)
-            )
-        })
-
-        binding.searchQuery.doAfterTextChanged { text ->
-            lifecycleScope.launch {
-                if (!text.isNullOrEmpty()) {
-                    val fromQuery = itemList.filter {
-                        it.title.contains(text.toString().uppercase()) || it.subtitle.uppercase()
-                            .contains(text.toString().uppercase())
-                    }
-                    adapter.submitList(fromQuery)
-                } else {
-                    adapter.submitList(itemList)
-                }
-            }
-        }
-
-        combine(viewModel.poolList, viewModel.inboundAddresses) { pools, addresses ->
-            pools.filter { pool -> pool.asset != "DASH.DASH" }
-                .filter { pool ->
-                    defaultItemMap.containsKey(pool.asset) && pool.status.equals(
-                        "available",
-                        ignoreCase = true
-                    )
-                }
-                .filter { pool -> addresses.any { pool.asset.startsWith(it.chain) } }
-                .map { pool ->
-                    val chain = pool.asset.substringBefore('.')
-                    val inbound = addresses.find { it.chain == chain }
-                    val isEnabled = inbound != null && !inbound.halted
-                    val price = if (isEnabled) {
-                        GenericUtils.formatFiatWithoutComma(
-                            viewModel.formatFiat(pool.assetPriceFiat)
-                        )
-                    } else {
-                        null
-                    }
-                    val haltedLabel = if (inbound?.halted == true) getString(R.string.maya_halted_label) else null
-                    if (defaultItemMap.containsKey(pool.asset)) {
-                        defaultItemMap[pool.asset]!!.copy(
-                            iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
-                            iconSelectMode = IconSelectMode.None,
-                            additionalInfo = price,
-                            actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
-                            isEnabled = isEnabled,
-                            id = pool.asset
-                        )
-                    } else {
-                        IconifiedViewItem(
-                            pool.currencyCode,
-                            pool.asset,
-                            iconUrl = GenericUtils.getCoinIcon(pool.currencyCode),
-                            iconSelectMode = IconSelectMode.None,
-                            additionalInfo = price,
-                            actionText = haltedLabel,
-                            actionBackgroundColor = if (inbound?.halted == true) R.color.gray_100 else null,
-                            actionTextColor = if (inbound?.halted == true) R.color.content_secondary else null,
-                            isEnabled = isEnabled,
-                            id = pool.asset
-                        )
-                    }
-                }.sortedBy { it.title }
-        }.observe(viewLifecycleOwner) { items ->
-            itemList = items
-            log.info("exchange rate: updating itemList with {}", itemList.firstOrNull()?.additionalInfo)
-            val currentQuery = binding.searchQuery.text?.toString() ?: ""
-            if (currentQuery.isNotEmpty()) {
-                adapter.submitList(
-                    itemList.filter {
-                        it.title.contains(currentQuery.uppercase()) ||
-                            it.subtitle.uppercase().contains(currentQuery.uppercase())
-                    }
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MayaCryptoCurrencyPickerScreen(
+                    viewModel = viewModel,
+                    onBackClick = { findNavController().popBackStack() },
+                    onCoinClick = ::onCoinSelected,
+                    onShowError = ::showErrorAlert
                 )
-            } else {
-                adapter.submitList(itemList)
-            }
-        }
-
-        viewModel.uiState.observe(viewLifecycleOwner) { uiState ->
-            uiState.errorCode?.let {
-                showErrorAlert(it)
-            }
-        }
-
-        binding.haltedCoinsToast.setViewCompositionStrategy(
-            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-        )
-        binding.haltedCoinsToast.setContent {
-            val hasHaltedCoins by viewModel.hasHaltedCoins.collectAsStateWithLifecycle()
-            var dismissed by remember { mutableStateOf(false) }
-
-            if (hasHaltedCoins && !dismissed) {
-                Toast(
-                    text = stringResource(R.string.maya_halted_coins_toast),
-                    actionText = stringResource(android.R.string.ok),
-                    imageResource = ToastImageResource.Warning.resourceId
-                ) {
-                    dismissed = true
-                }
             }
         }
     }
@@ -227,7 +74,19 @@ class MayaCryptoCurrencyPickerFragment : Fragment(R.layout.fragment_currency_pic
         }
     }
 
+    private fun onCoinSelected(asset: String) {
+        // Defense-in-depth: re-check halt status before navigating. The Compose row
+        // already disables clicks for halted/unavailable coins, but the asset can
+        // transition to halted between render and tap.
+        val pool = viewModel.poolList.value.firstOrNull { it.asset == asset } ?: return
+        val inboundAddress = viewModel.getInboundAddress(pool.asset)
+        if (inboundAddress != null && !inboundAddress.halted && !pool.mayaHalted) {
+            clickListener(pool)
+        }
+    }
+
     private fun clickListener(pool: PoolInfo) {
+        log.info("currency picker: navigating to address input for {}", pool.asset)
         safeNavigate(
             MayaCryptoCurrencyPickerFragmentDirections.mayaCurrencyPickerToAddressInput(
                 pool.currencyCode,

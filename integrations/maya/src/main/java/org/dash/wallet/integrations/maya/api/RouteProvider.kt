@@ -15,15 +15,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.utils
+package org.dash.wallet.integrations.maya.api
 
 /**
- * Which backend powers the cross-chain swap surface. Selected once at app startup
- * via the Hilt provider in
- * [org.dash.wallet.integrations.maya.di.MayaModule.provideSwapProvider]; changes
- * take effect on the next launch.
+ * The cross-chain swap provider that routes a DASH→asset swap. For assets routable
+ * via a single provider this is known statically from the token-list classification;
+ * for assets routable via BOTH it is resolved asynchronously by an indicative quote
+ * (the SwapKit-recommended route) — see
+ * [org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator].
  */
-enum class SwapBackend {
+enum class RouteProvider {
     MAYA,
-    SWAPKIT
+    NEAR
 }

@@ -47,6 +47,7 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import de.schildbach.wallet.Constants
 import de.schildbach.wallet.data.BuyAndSellDashServicesModel
 import de.schildbach.wallet.data.ServiceStatus
 import de.schildbach.wallet.data.ServiceType
@@ -181,25 +182,29 @@ private fun BuyAndSellScreenContent(
                 }
 
                 // Card 3: Maya
-                Menu {
-                    serviceOf(ServiceType.MAYA)?.let { service ->
-                        ServiceItem(
-                            service = service,
-                            balanceFormat = balanceFormat,
-                            onClick = if (service.isAvailable()) onMayaClick else null
-                        )
+                if (Constants.SUPPORTS_MAYA_NATIVE) {
+                    Menu {
+                        serviceOf(ServiceType.MAYA)?.let { service ->
+                            ServiceItem(
+                                service = service,
+                                balanceFormat = balanceFormat,
+                                onClick = if (service.isAvailable()) onMayaClick else null
+                            )
+                        }
                     }
                 }
 
                 // Card 4: SwapKit — same destination as Maya, the backend is
                 // switched in the click handler.
-                Menu {
-                    serviceOf(ServiceType.SWAPKIT)?.let { service ->
-                        ServiceItem(
-                            service = service,
-                            balanceFormat = balanceFormat,
-                            onClick = if (service.isAvailable()) onSwapKitClick else null
-                        )
+                if (Constants.SUPPORTS_SWAPKIT) {
+                    Menu {
+                        serviceOf(ServiceType.SWAPKIT)?.let { service ->
+                            ServiceItem(
+                                service = service,
+                                balanceFormat = balanceFormat,
+                                onClick = if (service.isAvailable()) onSwapKitClick else null
+                            )
+                        }
                     }
                 }
 

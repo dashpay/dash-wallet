@@ -46,5 +46,14 @@ open class MayaConfig @Inject constructor(
          * `SwapProvider` provider; changes take effect on the next launch.
          */
         val SWAP_BACKEND = stringPreferencesKey("swap_backend")
+
+        /**
+         * Cached SwapKit coin-list snapshot (JSON): the last published pool list +
+         * Maya/NEAR classification + preferred-route map + timestamps. Hydrated on cold
+         * start so the currency picker renders instantly (stale-while-revalidate); the
+         * aggregator refreshes in the background and overwrites it. See
+         * [org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator].
+         */
+        val SWAPKIT_POOL_SNAPSHOT = stringPreferencesKey("swapkit_pool_snapshot")
     }
 }

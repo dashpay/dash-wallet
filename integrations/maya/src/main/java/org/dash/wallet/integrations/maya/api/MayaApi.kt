@@ -70,10 +70,11 @@ interface MayaApi {
 
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
     suspend fun getInboundAddresses(): List<InboundAddress>
+
     // Default lives on [SwapProvider.getDefaultSwapQuote] — Kotlin refuses defaults
     // declared on more than one super interface, so [MayaApiAggregator] gets the
     // default solely from [SwapProvider].
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long): SwapQuote?
 }
 
 class MayaApiAggregator @Inject constructor(
@@ -233,7 +234,7 @@ class MayaApiAggregator @Inject constructor(
         // Sum of asset balances / sum of cacao balances naturally weights by depth.
         val stablePools = pools.filter {
             (it.currencyCode == "USDT" || it.currencyCode == "USDC") &&
-                    it.status.equals("available", ignoreCase = true)
+                it.status.equals("available", ignoreCase = true)
         }
         val sumStableCacao = stablePools.fold(BigDecimal.ZERO) { acc, p ->
             acc + (p.balanceCacao.toBigDecimalOrNull() ?: BigDecimal.ZERO)

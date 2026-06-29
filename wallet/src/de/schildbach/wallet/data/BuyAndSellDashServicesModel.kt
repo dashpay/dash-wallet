@@ -52,7 +52,6 @@ data class BuyAndSellDashServicesModel(
             BuyAndSellDashServicesModel(ServiceType.TOPPER, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.UPHOLD, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.COINBASE, ServiceStatus.IDLE),
-            BuyAndSellDashServicesModel(ServiceType.MAYA, ServiceStatus.IDLE),
             BuyAndSellDashServicesModel(ServiceType.SWAPKIT, ServiceStatus.IDLE)
         )
     }

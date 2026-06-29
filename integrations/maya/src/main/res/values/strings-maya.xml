@@ -16,7 +16,7 @@
   -->
 <resources>
     <string name="maya_service_name">Maya</string>
-    <string name="swapkit_service_name" translatable="false">SwapKit</string>
+    <string name="swapkit_service_name" translatable="false">Dash DEX</string>
     <string name="maya_portal_convert_title">Convert Dash</string>
     <string name="maya_portal_convert_to_title">Convert Dash to</string>
     <string name="maya_portal_convert_subtitle">From Dash Wallet to any crypto</string>
@@ -36,7 +36,7 @@
     <string name="cryptocurrency_ethereum_code" translatable="false">ETH</string>
     <string name="cryptocurrency_usdcoin_code" translatable="false">USDC</string>
     <string name="cryptocurrency_tether_code" translatable="false">USDT</string>
-    <string name="cryptocurrency_ethereum_network">Ethereum  (Ethereum)</string>
+    <string name="cryptocurrency_ethereum_network">Ethereum (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_network">USD Coin (Ethereum)</string>
     <string name="cryptocurrency_usdcoin_arbitrum_network">USD Coin (Arbitrum)</string>
     <string name="cryptocurrency_tether_network">Tether (Ethereum)</string>
@@ -45,7 +45,7 @@
     <string name="cryptocurrency_usk_code" translatable="false">USK</string>
     <string name="cryptocurrency_usk_network">USK</string>
     <string name="cryptocurrency_wsteth_code" translatable="false">WSTETH</string>
-    <string name="cryptocurrency_wsteth_network">Wrapped stETH  (Ethereum)</string>
+    <string name="cryptocurrency_wsteth_network">Wrapped stETH (Ethereum)</string>
     <string name="cryptocurrency_arbitrum_code" translatable="false">ARB</string>
     <string name="cryptocurrency_arbitrum_network">Arbitrum (Arbitrum)</string>
     <string name="cryptocurrency_dai_code" translatable="false">DAI</string>
@@ -309,6 +309,7 @@
     <string name="transfer_dash_failed_msg">There was a problem transferring it to Dash Wallet on this device.</string>
     <string name="auth_limit_description">You exceeded the authorization limit on Coinbase.</string>
     <string name="you_will_receive">Receive amount</string>
+    <string name="maya_receive_using_network">using %s network</string>
     <string name="contact_maya_support">Contact Maya Support</string>
     <string name="maya_fees_in_crypto_purchase">Maya Fees in crypto conversions</string>
     <string name="maya_fee_info_msg_content">There are various inbound, outbound and liquidity fees associated to Maya transactions.  The amount that you entered is the amount that will be received.</string>
@@ -324,7 +325,8 @@
     <string name="you_receive">you receive</string>
     <string name="to_dash_wallet_on_this_device">from Dash Wallet on this device</string>
     <string name="purchase">Purchase</string>
-    <string name="maya_fee">Maya Fee</string>
+    <string name="maya_fee">Fee</string>
+    <string name="network_label">Network</string>
     <string name="total">Total</string>
     <string name="to_external_address">to %s</string>
 
@@ -336,6 +338,12 @@
     <string name="maya_error_quote">Could not obtain quote from Maya for this conversion</string>
     <string name="maya_halted_label">Halted</string>
     <string name="maya_halted_coins_toast">Some coins are temporarily halted and unavailable for trading</string>
+    <string name="maya_select_coin_title">Select coin</string>
+    <string name="maya_route_label_maya" translatable="false">Maya</string>
+    <string name="maya_route_label_near" translatable="false">NEAR</string>
+    <string name="maya_route_label_multiple">Multiple networks</string>
+    <string name="maya_no_available_coins">No available coins</string>
+    <string name="maya_no_connection_toast">Check your connection and try again to see available coins</string>
 
 
 </resources>

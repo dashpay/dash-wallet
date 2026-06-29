@@ -127,6 +127,12 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             proceedWithSwap(request)
         }
 
+        // While the quote is being fetched, block all amount input on the enter-amount
+        // screen so a late key press can't alter the value carried to the preview.
+        viewModel.showLoading.observe(viewLifecycleOwner) { loading ->
+            fragment.setProcessing(loading == true)
+        }
+
         binding.authLimitBanner.warningLimitInfo.setOnClickListener {
             AdaptiveDialog.custom(R.layout.dialog_withdrawal_limit_info).show(requireActivity())
         }
@@ -159,7 +165,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 val paymentIntent = try {
                     viewModel.getUpdatedPaymentIntent(
                         convertViewModel.enteredConvertDashAmount.value!!,
-                        Address.fromBase58(null, swapTrade.vaultAddress)
+                        Address.fromBase58(viewModel.networkParameters, swapTrade.vaultAddress)
                     )
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
@@ -252,6 +258,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.dashInput = amount
         }
 
@@ -259,12 +266,14 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val hasAmount = !amount.isZero
             binding.youWillReceiveLabel.isVisible = hasAmount
             binding.youWillReceiveValue.isVisible = hasAmount
+            updateReceiveNetwork(hasAmount)
             binding.convertView.fiatInput = amount
         }
 
         convertViewModel.enteredConvertCryptoAmount.observe(viewLifecycleOwner) { amount ->
             binding.youWillReceiveLabel.isVisible = amount.second.isNotEmpty()
             binding.youWillReceiveValue.isVisible = amount.second.isNotEmpty()
+            updateReceiveNetwork(amount.second.isNotEmpty())
 
             if (binding.convertView.dashToCrypto) {
                 binding.youWillReceiveValue.text = getString(
@@ -288,6 +297,21 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         convertViewModel.setSelectedAsset(args.asset)
+    }
+
+    /**
+     * Shows the route-provider line ("using <Maya/NEAR> network") under the receive amount.
+     * Hidden when there's no amount, or when the selected asset's route isn't a single known
+     * provider (mirrors the currency picker's route label).
+     */
+    private fun updateReceiveNetwork(visible: Boolean) {
+        val routeResId = mayaViewModel.getRouteLabelResId(args.asset)
+        if (visible && routeResId != null) {
+            binding.usingNetwork.text = getString(R.string.maya_receive_using_network, getString(routeResId))
+            binding.usingNetwork.isVisible = true
+        } else {
+            binding.usingNetwork.isVisible = false
+        }
     }
 
     private fun proceedWithSwap(request: SwapRequest, checkSendingConditions: Boolean = true) {
@@ -406,7 +430,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             val accountData = it.coinbaseAccount
             val currency = accountData.currency.lowercase()
             val iconUrl = if (accountData.currency.isNotEmpty()) {
-                GenericUtils.getCoinIcon(currency)
+                GenericUtils.getCoinIcon(currency, accountData.asset)
             } else {
                 null
             }

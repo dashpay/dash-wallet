@@ -48,12 +48,14 @@ import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
+import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConversionPreviewBinding
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TransactionType
+import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 import java.math.BigDecimal
@@ -174,6 +176,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             newSwapOrderId = it.swapTradeId
             countDownTimer.start()
+            it.updateConversionPreviewUI()
         }
 
         viewModel.commitSwapTradeSuccessState.observe(viewLifecycleOwner) { params ->
@@ -188,6 +191,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 )
             )
         }
+
         observeNavigationCallBack()
 
         viewModel.onInsufficientMoneyCallback.observe(viewLifecycleOwner) {
@@ -197,6 +201,23 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
                 getString(R.string.insufficient_money_msg),
                 getString(R.string.button_close)
             ).show(requireActivity())
+        }
+    }
+
+    /**
+     * Map the raw provider string from [SwapTradeUIModel.routeName] (e.g. "maya-default",
+     * "MAYACHAIN_STREAMING", "NEAR", or a comma-joined list) to the user-facing route label
+     * shown in the currency picker. Mirrors the MAYA-then-NEAR classification in
+     * [org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator]; falls back to the raw
+     * value for anything unrecognised.
+     */
+    private fun prettyRouteName(routeName: String?): String {
+        val raw = routeName?.trim().orEmpty()
+        return when {
+            raw.isEmpty() -> getString(R.string.maya_route_label_maya)
+            raw.contains("MAYA", ignoreCase = true) -> getString(R.string.maya_route_label_maya)
+            raw.contains("NEAR", ignoreCase = true) -> getString(R.string.maya_route_label_near)
+            else -> raw
         }
     }
 
@@ -306,7 +327,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             amount.anchoredType == CurrencyInputType.Fiat
         )
         binding.contentOrderReview.inputAccountIcon
-            .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase())) {
+            .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase(), SwapKitConstants.DASH_ASSET)) {
                 crossfade(true)
                 scale(Scale.FILL)
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
@@ -314,20 +335,28 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             }
 
         binding.contentOrderReview.convertOutputIcon
-            .load(GenericUtils.getCoinIcon(this.outputCurrency.lowercase())) {
+            .load(GenericUtils.getCoinIcon(this.outputCurrency.lowercase(), this.outputAsset)) {
                 crossfade(true)
                 scale(Scale.FILL)
                 placeholder(org.dash.wallet.common.R.drawable.ic_default_flag)
                 transformations(CircleCropTransformation())
             }
 
-        val routeName = this.routeName
-        val routes = this.availableRoutes
-        binding.contentOrderReview.orderInfo.text = """
-            selected: $routeName
+        binding.contentOrderReview.networkValue.text = prettyRouteName(this.routeName)
 
-            all: $routes
-        """.trimIndent()
+        // Route diagnostics are dev-only; hidden in release builds.
+        if (BuildConfig.DEBUG) {
+            val routeName = this.routeName
+            val routes = this.availableRoutes
+            binding.contentOrderReview.orderInfo.isVisible = true
+            binding.contentOrderReview.orderInfo.text = """
+                selected: $routeName
+
+                all: $routes
+            """.trimIndent()
+        } else {
+            binding.contentOrderReview.orderInfo.isVisible = false
+        }
     }
 
     private fun setValueWithCurrencyCodeOrSymbol(

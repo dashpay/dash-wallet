@@ -58,6 +58,8 @@ class MayaConvertCryptoViewModel @Inject constructor(
     networkState: NetworkStateInt,
     private val analyticsService: AnalyticsService
 ) : ViewModel() {
+    val networkParameters get() = walletDataProvider.networkParameters
+
     var paymentIntent: PaymentIntent? = null
     private val _showLoading: MutableLiveData<Boolean> = MutableLiveData()
     val showLoading: LiveData<Boolean>
@@ -94,7 +96,7 @@ class MayaConvertCryptoViewModel @Inject constructor(
             target_maya_asset = swapTradeInfo.cryptoCurrencyAsset,
             fiatCurrency = swapTradeInfo.fiatCurrencyCode,
             targetAddress = swapTradeInfo.destinationAddress,
-            maximum = swapTradeInfo.maximum,
+            maximum = swapTradeInfo.maximum
         )
 
         when (val result = swapProvider.getSwapInfo(swapRequest)) {

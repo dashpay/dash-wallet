@@ -25,7 +25,18 @@ object SwapKitConstants {
     const val DASH_ASSET = "DASH.DASH"
 
     /** Default slippage (percent) for indicative quotes. */
-    const val DEFAULT_SLIPPAGE_PERCENT = 3
+    const val DEFAULT_SLIPPAGE_PERCENT = 2
+
+    /**
+     * The only two providers that route DASH (verified from `/providers`:
+     * the sole entries whose `supportedChainIds` contain `dash`). An asset is
+     * "Maya-only" when MAYACHAIN can route it but NEAR cannot — see
+     * SWAPKIT_PROTOCOL.md → "Detecting Maya-only Assets".
+     */
+    const val NEAR_PROVIDER = "NEAR"
+
+    /** MAYACHAIN non-streaming returns no token list; only the streaming variant does. */
+    const val MAYACHAIN_PROVIDER = "MAYACHAIN_STREAMING"
 
     /**
      * SwapKit API key, sourced from `service.properties` (SWAPKIT_API_KEY) at build
