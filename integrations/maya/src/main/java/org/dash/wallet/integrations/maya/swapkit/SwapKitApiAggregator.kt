@@ -831,17 +831,26 @@ class SwapKitApiAggregator @Inject constructor(
             )
         )
         return if (refreshed is ResponseResource.Success) {
-            if (isMayaRoute(refreshed.value)) {
-                // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN.
-                blockchainApi.buildAndSendSwapTx(refreshed.value)
+            val model = refreshed.value
+            // A MAYAChain vault deposit is matched to its swap *only* by the OP_RETURN memo;
+            // sending DASH to a Maya vault without it strands the funds. So the discriminator
+            // is NOT just the provider name (which substring-matching can miss — SwapKit may
+            // return an empty/absent providers list or a Maya-settling provider whose name
+            // doesn't literally contain "MAYA"): if SwapKit returned a memo at all, the deposit
+            // MUST carry it, so route through the OP_RETURN builder. Maya routes always come
+            // with a memo; NEAR deposits never do (see buildAndSendDepositTx), so this only
+            // ever pulls a genuine memo-bearing route back onto the safe path.
+            if (isMayaRoute(model) || !model.memo.isNullOrBlank()) {
+                // Maya route: DASH → Asgard vault with the swap memo as an OP_RETURN. If a Maya
+                // route ever arrives without a memo the builder fabricates "=:ASSET:DEST" and
+                // its 80-byte guard fails loudly — a recoverable error, never a silent loss.
+                blockchainApi.buildAndSendSwapTx(model)
             } else {
-                // NEAR Intents (or any non-Maya provider): a plain DASH deposit to the
-                // one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using
-                // the Maya builder here would fabricate a Maya-format memo (Maya doesn't
-                // route the asset, so SwapKit returns no memo and the builder falls back
-                // to "=:ASSET:DEST") and overflow the 80-byte OP_RETURN limit for long
-                // token identifiers such as TRON.USDT-<contract>.
-                buildAndSendDepositTx(refreshed.value)
+                // NEAR Intents (or any non-Maya provider) with no memo: a plain DASH deposit to
+                // the one-time SwapKit deposit address — no MAYAChain OP_RETURN memo. Using the
+                // Maya builder here would fabricate a Maya-format memo and overflow the 80-byte
+                // OP_RETURN limit for long token identifiers such as TRON.USDT-<contract>.
+                buildAndSendDepositTx(model)
             }
         } else {
             refreshed
@@ -852,6 +861,11 @@ class SwapKitApiAggregator @Inject constructor(
      * True when the resolved route settles through MAYAChain. Mirrors the provider
      * classification in [recommendedProviderFor]: [SwapTradeUIModel.routeName] carries
      * the comma-joined SwapKit provider names (e.g. "MAYACHAIN").
+     *
+     * Note: this is a best-effort label only. [commitSwapTransaction] does NOT rely on it
+     * alone to decide whether to attach the OP_RETURN memo — the presence of a memo is the
+     * authoritative signal — because an empty/mislabelled providers list would otherwise route
+     * a memo-required Maya deposit through the memo-less path and strand the funds.
      */
     private fun isMayaRoute(model: SwapTradeUIModel): Boolean =
         model.routeName?.contains("MAYA", ignoreCase = true) == true
