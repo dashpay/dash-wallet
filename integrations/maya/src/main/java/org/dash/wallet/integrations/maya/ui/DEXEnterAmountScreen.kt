@@ -39,10 +39,9 @@ import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.MyTheme
-import org.dash.wallet.common.ui.components.NavBarBack
+import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
-import org.dash.wallet.common.ui.components.TopIntroSend
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
 import java.util.Locale
@@ -98,7 +97,8 @@ private fun DEXEnterAmountScreenContent(
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        NavBarBack(
+        NavBarBackTitle(
+            title = stringResource(R.string.dex_enter_amount_title),
             onBackClick = onBackClick
         )
 
@@ -112,17 +112,9 @@ private fun DEXEnterAmountScreenContent(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            TopIntroSend(
-                heading = stringResource(R.string.dex_enter_amount_title),
-                balanceVisible = showBalance,
-                onToggleVisibility = onToggleBalance,
-                dashBalance = dashBalance,
-                preposition = stringResource(org.dash.wallet.common.R.string.preposition_at),
-                toIconUrl = coinIconUrl,
-                // toName = coinName,
-                fiatBalance = fiatBalance,
-                modifier = Modifier
-            )
+//            TopIntro(
+//                heading = stringResource(R.string.dex_enter_amount_title),
+//            )
             EnterAmount(
                 primaryAmount = amount,
                 currencyCodes = currencyCodes,
@@ -135,18 +127,13 @@ private fun DEXEnterAmountScreenContent(
                 onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
             )
 
-            // Buy-quote validation status for the entered amount: a muted "checking" line while a
-            // quote is in flight, or the rejection reason in red (e.g. below the route minimum).
-            if (isValidating) {
+            if (validationError != null) {
+                val errorText = when (validationError) {
+                    "noRoutesFound" -> stringResource(R.string.maya_error_below_allowed_minimum)
+                    else -> stringResource(R.string.dex_enter_amount_invalid)
+                }
                 Text(
-                    text = stringResource(R.string.dex_enter_amount_checking),
-                    style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            } else if (validationError != null) {
-                Text(
-                    text = validationError.ifBlank { stringResource(R.string.dex_enter_amount_invalid) },
+                    text = errorText.ifBlank { stringResource(R.string.dex_enter_amount_invalid) },
                     style = MyTheme.Body2Regular,
                     color = MyTheme.Colors.red,
                     modifier = Modifier.padding(top = 8.dp)
