@@ -134,6 +134,12 @@ class SwapKitApiAggregator @Inject constructor(
     private val gson = Gson()
     private var poolListLastUpdated: Long = 0L
 
+    // Latest fiat rate handed to [observePoolList], remembered so a direction switch can trigger
+    // its own background refresh: observePoolList is not re-invoked when the direction changes, so
+    // [setSwapDirection] must kick the refresh itself. Null until observePoolList first runs.
+    @Volatile
+    private var lastFiatExchangeRate: Fiat? = null
+
     // When the Maya/NEAR classification was last fetched from /tokens; gates the
     // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch).
     private var classificationLastUpdated: Long = 0L
@@ -174,7 +180,29 @@ class SwapKitApiAggregator @Inject constructor(
     private var swapDirection: SwapDirection = SwapDirection.SELL
 
     override fun setSwapDirection(direction: SwapDirection) {
+        if (direction == swapDirection) return
         swapDirection = direction
+        // BUY and SELL keep separate caches (different excluded assets / metadata), so on a
+        // direction switch drop the now-wrong in-memory list and re-hydrate from this direction's
+        // snapshot for an instant render. Resetting poolListLastUpdated forces observePoolList to
+        // run a fresh refresh for the new direction rather than reusing the other direction's.
+        poolInfoList.value = emptyList()
+        poolListLastUpdated = 0L
+        preferredRouteProviders.value = emptyMap()
+        preferredRouteResolvedAt.clear()
+        val rate = lastFiatExchangeRate
+        responseScope.launch {
+            hydrateFromSnapshot()
+            // observePoolList — which normally kicks the background refresh — is NOT re-invoked on
+            // a direction change, so trigger the refresh here or the picker spins forever. If a
+            // snapshot already repopulated the list this is a background revalidation; otherwise it
+            // is what fills the list. When rate is still null observePoolList hasn't run yet and
+            // will trigger the refresh itself once the fiat flow emits, so skipping here is safe.
+            if (rate != null && shouldRefresh()) {
+                refreshPools(rate)
+                poolListLastUpdated = System.currentTimeMillis()
+            }
+        }
     }
 
     override suspend fun reset() {
@@ -190,10 +218,14 @@ class SwapKitApiAggregator @Inject constructor(
         mayaGlobalHalt = false
         preferredRouteProviders.value = emptyMap()
         preferredRouteResolvedAt.clear()
-        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, "") }
+        runCatching {
+            mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, "")
+            mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT_BUY, "")
+        }
     }
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
+        lastFiatExchangeRate = fiatExchangeRate
         if (shouldRefresh()) {
             responseScope.launch {
                 refreshPools(fiatExchangeRate)
@@ -351,14 +383,25 @@ class SwapKitApiAggregator @Inject constructor(
     }
 
     /**
-     * Restore the last persisted coin-list snapshot into memory so the picker can
-     * render immediately on cold start. Only applies while no fresh data is present;
+     * DataStore key holding the cached snapshot for [direction]. BUY and SELL keep separate
+     * snapshots because their cached metadata differs (SELL resolves preferred routes + Maya halt
+     * status; BUY excludes Maya-only assets and routes via NEAR), so one direction's background
+     * refresh must not overwrite the other's cache.
+     */
+    private fun snapshotKey(direction: SwapDirection) = when (direction) {
+        SwapDirection.BUY -> MayaConfig.SWAPKIT_POOL_SNAPSHOT_BUY
+        SwapDirection.SELL -> MayaConfig.SWAPKIT_POOL_SNAPSHOT
+    }
+
+    /**
+     * Restore the last persisted coin-list snapshot for the current [swapDirection] into memory so
+     * the picker can render immediately on cold start. Only applies while no fresh data is present;
      * deliberately leaves [poolListLastUpdated] at 0 so [observePoolList] still triggers
      * a background refresh (stale-while-revalidate). Best-effort: any failure is ignored.
      */
     private suspend fun hydrateFromSnapshot() {
         if (poolInfoList.value.isNotEmpty()) return
-        val raw = runCatching { mayaConfig.get(MayaConfig.SWAPKIT_POOL_SNAPSHOT) }.getOrNull()
+        val raw = runCatching { mayaConfig.get(snapshotKey(swapDirection)) }.getOrNull()
         if (raw.isNullOrBlank()) return
         // Parse defensively: a corrupt or schema-drifted snapshot must never crash
         // the app. Compute everything up front and only commit to in-memory state on
@@ -410,7 +453,10 @@ class SwapKitApiAggregator @Inject constructor(
         log.info("swapkit: hydrated {} pools from snapshot", hydrated.pools.size)
     }
 
-    /** Persist the current in-memory list + classification + preferred routes. */
+    /**
+     * Persist the current in-memory list + classification + preferred routes under the snapshot
+     * key for the active [swapDirection], so BUY and SELL keep independent caches.
+     */
     private suspend fun persistSnapshot() {
         val pools = poolInfoList.value
         if (pools.isEmpty()) return
@@ -430,7 +476,7 @@ class SwapKitApiAggregator @Inject constructor(
             nearOnly = nearOnlyAssets.toList(),
             preferredRoutes = preferredRouteProviders.value.mapValues { it.value.name }
         )
-        runCatching { mayaConfig.set(MayaConfig.SWAPKIT_POOL_SNAPSHOT, gson.toJson(snapshot)) }
+        runCatching { mayaConfig.set(snapshotKey(swapDirection), gson.toJson(snapshot)) }
             .onFailure { log.info("swapkit: failed to persist snapshot: {}", it.message) }
     }
 
