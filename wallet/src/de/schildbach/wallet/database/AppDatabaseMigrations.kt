@@ -224,6 +224,19 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration19to20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // tx_display_cache gains `customIconId` — the hex id of the merchant/service
+                // icon bitmap in `icon_bitmaps`. Used to re-load the gift card merchant logo
+                // at display time (the bitmap itself is not cached in this table). Existing
+                // rows default to NULL and show the static icon until the cache is rebuilt or
+                // the transaction's metadata is next observed.
+                database.execSQL(
+                    "ALTER TABLE `tx_display_cache` ADD COLUMN `customIconId` TEXT"
+                )
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this
