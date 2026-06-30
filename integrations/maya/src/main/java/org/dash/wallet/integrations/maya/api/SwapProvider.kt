@@ -24,11 +24,13 @@ import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 
 /**
  * Backend-agnostic surface for cross-chain swaps.
@@ -63,6 +65,14 @@ interface SwapProvider {
 
     suspend fun reset()
 
+    /**
+     * Tell the provider which swap direction the user is in, so backend refresh can skip work
+     * that only applies to the other direction. For BUY (crypto -> DASH) the SwapKit backend
+     * excludes Maya-only assets and routes everything via NEAR, so it skips the mayanode halt
+     * query and the Maya-vs-NEAR preferred-route quotes. Default no-op (Maya backend ignores it).
+     */
+    fun setSwapDirection(direction: SwapDirection) {}
+
     fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
 
     /**
@@ -96,6 +106,47 @@ interface SwapProvider {
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel>
+
+    /**
+     * Creates a BUY order (crypto -> DASH). SwapKit only: runs `/v3/quote` + `/v3/swap` with
+     * sellAsset = [sellAsset] (the chosen crypto, e.g. "BTC.BTC"), buyAsset = DASH, and returns
+     * the inbound deposit [BuyOrder.depositAddress] the user must send [sellAmount] (a human-unit
+     * decimal of the crypto) to. [destinationAddress] is the user's DASH receive address (where the
+     * converted DASH lands); [refundAddress] is reported to SwapKit as the source address and is
+     * where NEAR-route refunds are returned. The native Maya backend doesn't implement buys and
+     * returns a failure via the default below.
+     */
+    suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
+
+    /**
+     * Checks that a BUY order (crypto -> DASH) for [sellAmount] of [sellAsset] is routable, without
+     * committing a swap. Runs the same NEAR-pinned `/v3/quote` [createBuyOrder] would, reporting
+     * [refundAddress] as the source address. Used by the enter-amount screen to validate the typed
+     * amount against the route's minimum before the user has supplied a real refund address — the
+     * caller passes the asset's example address. Returns Success when a route exists; Failure with
+     * the provider's error message otherwise. The native Maya backend doesn't support buys and
+     * returns the unsupported failure below.
+     */
+    suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> = ResponseResource.Failure(
+        UnsupportedOperationException("buy not supported by this provider"),
+        false,
+        0,
+        null
+    )
 
     /** Stub-friendly user-accounts probe; today only Maya returns a single placeholder. */
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>

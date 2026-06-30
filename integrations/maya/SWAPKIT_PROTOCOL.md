@@ -421,6 +421,50 @@ SwapKitApiAggregator
 - After 60 s, `/v3/swap` will auto-refresh and may return `outputAmountDeviationTooHigh` if pricing drifted >5%.
 - After 5 min, `/v3/swap` returns `swapRouteNotFound` and the client must call `/v3/quote` again.
 
+### Deposit Address / QR Validity (the *other* clock)
+
+There are **two** independent timers, and the dangerous one is **not** the quote lifecycle
+above. For the BUY receive screen (where we show a SwapKit `inboundAddress` + QR and the user
+funds the deposit from an external wallet, possibly minutes later) the relevant question is *how
+long the deposit address stays good*. Findings (researched 2026-06-24):
+
+- **SwapKit exposes no deposit-window field.** Neither `/v3/quote` nor `/v3/swap` returns an
+  `expiresAt` / `deadline` / `validUntil` / `timeWhenInactive`. The only SwapKit-level timer is the
+  `routeId` (60 s soft / 5 min hard cache) — that governs *re-quoting*, not the deposit window.
+  The actual deposit window is the **underlying provider's**, and the two providers we route
+  through behave very differently in the failure case:
+
+- **MAYACHAIN / THORChain routes — stale address = LOSS OF FUNDS.** The `inboundAddress` is a
+  shared **vault that churns** (selected by bond-to-asset ratio, rotates unpredictably). THORChain
+  guidance: *"Do not cache inbound addresses as they change regularly"* and *"Quotes should only be
+  considered valid for 10 minutes, and sending funds to an old inbound address will result in loss
+  of funds."* THORChain's quote carries an `expiry` Unix timestamp and *"transactions delayed
+  beyond this timestamp will be refunded"* — **but SwapKit does not surface that field to us.**
+  Two distinct failure modes: deposit to the *correct* vault but confirmed after `expiry` → refund;
+  deposit to an *old/churned* vault → **lost**.
+
+- **NEAR Intents routes — safe, refund-backed.** The address is a per-swap **deposit channel** with
+  a `deadline` (quote-expiry) and a `timeWhenInactive` refund clock (**default ~1 hour**). A
+  late / under / failed deposit is **refunded to `refundTo`** — i.e. the `sourceAddress` we pass,
+  which is the refund address the user entered on the previous screen. (Chainflip, if ever routed,
+  is also a deposit-channel model with channel expiry, like NEAR.)
+
+**Implication for `DEXReceiveViewModel` / `DEXReceiveScreen`:** the deposit address must be treated
+as **short-lived and route-dependent**, not indefinite. Since SwapKit returns no expiry, the safe
+default is to bound the address to a **conservative ~5 min window** (matches SwapKit's own `routeId`
+hard cache and is *tighter* than THORChain's 10 min) and force a re-quote/refresh afterward — and on
+refresh **never silently rotate the displayed address** (a Maya vault/NEAR channel can change),
+because a user mid-send to the old address could lose funds (Maya) or hit the refund path (NEAR).
+The collected refund address only fully protects **NEAR** routes; it does **not** save a deposit to
+a churned **Maya** vault.
+
+Status today: not implemented — `createBuyOrder` / `BuyOrder` capture no expiry and the screen
+resolves the address once with no countdown or refresh. Held pending an authoritative per-provider
+deposit `deadline` from SwapKit (see Open Questions).
+
+Sources: SwapKit `/v3/swap`, `/v3/quote`, quote+swap flow, `/track` docs; THORChain dev docs
+(querying / inbound addresses); NEAR Intents 1Click API docs.
+
 ### Fees
 
 Up to six fee categories are returned per route:
@@ -549,6 +593,7 @@ These need to be answered before any client code is written:
 3. **Where does the API key live?** In-app (insecure), proxied through a backend, or fetched from remote config like the Uphold/Coinbase keys?
 4. **Affiliate fee policy.** What basis-point split, and configured at the dashboard or per request?
 5. **Does SwapKit duplicate Maya's offering enough to *replace* the direct integration, or should it be an additional swap source presented alongside Maya?**
+6. **Can SwapKit expose a per-swap deposit `deadline` / address-validity timestamp in the `/v3/swap` response?** Today there is no expiry field, so the BUY receive screen can't drive an accurate countdown or know when the `inboundAddress` goes stale (see "Deposit Address / QR Validity"). Specifically: (a) the deposit window per provider (MAYACHAIN vault vs NEAR channel); (b) confirmation that a late deposit on NEAR refunds to `sourceAddress`; (c) confirmation that a deposit to a churned MAYACHAIN vault is unrecoverable, and the recommended max address age to avoid it.
 
 ---
 

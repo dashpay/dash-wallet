@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
+import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
@@ -36,6 +37,7 @@ import org.dash.wallet.integrations.maya.swapkit.SwapKitApiAggregator
 import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.SwapBackend
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -125,6 +127,8 @@ class DispatchingSwapProvider @Inject constructor(
         get() = active.showNotificationOnResult
         set(value) { active.showNotificationOnResult = value }
 
+    override fun setSwapDirection(direction: SwapDirection) = active.setSwapDirection(direction)
+
     override suspend fun reset() = active.reset()
 
     override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> =
@@ -149,6 +153,21 @@ class DispatchingSwapProvider @Inject constructor(
         tradeId: String,
         swapTradeUIModel: SwapTradeUIModel
     ): ResponseResource<SwapTradeUIModel> = active.commitSwapTransaction(tradeId, swapTradeUIModel)
+
+    override suspend fun createBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        destinationAddress: String,
+        refundAddress: String
+    ): ResponseResource<BuyOrder> =
+        active.createBuyOrder(sellAsset, sellAmount, destinationAddress, refundAddress)
+
+    override suspend fun validateBuyOrder(
+        sellAsset: String,
+        sellAmount: String,
+        refundAddress: String
+    ): ResponseResource<Unit> =
+        active.validateBuyOrder(sellAsset, sellAmount, refundAddress)
 
     override suspend fun getUserAccounts(currency: String): List<AccountDataUIModel> =
         active.getUserAccounts(currency)
