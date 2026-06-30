@@ -31,8 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.core.widget.doOnTextChanged
 import androidx.recyclerview.widget.RecyclerView
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.databinding.SearchHeaderViewBinding
 import org.dash.wallet.features.exploredash.ui.explore.ExploreTopic
@@ -127,28 +130,35 @@ class SearchHeaderAdapter(private val topic: ExploreTopic) : RecyclerView.Adapte
             ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
         )
         binding.filterOptions.setContent {
-            SegmentedPicker(
-                options,
-                modifier = Modifier.height(36.dp),
-                selectedIndex = currentFilterOption
-            ) { option, index ->
-                currentFilterOption = index
-                onFilterOptionChosen?.invoke(
-                    if (topic == ExploreTopic.Merchants) {
-                        when (index) {
-                            0 -> FilterMode.Online
-                            1 -> FilterMode.Nearby
-                            else -> FilterMode.All
+            DashWalletTheme {
+                val colors = LocalDashColors.current
+                SegmentedPicker(
+                    options,
+                    modifier = Modifier.height(36.dp),
+                    selectedIndex = currentFilterOption,
+                    style = SegmentedPickerStyle(
+                        backgroundColor = colors.gray400.copy(alpha = 0.1f),
+                        thumbColor = colors.backgroundSecondary
+                    )
+                ) { option, index ->
+                    currentFilterOption = index
+                    onFilterOptionChosen?.invoke(
+                        if (topic == ExploreTopic.Merchants) {
+                            when (index) {
+                                0 -> FilterMode.Online
+                                1 -> FilterMode.Nearby
+                                else -> FilterMode.All
+                            }
+                        } else {
+                            when (index) {
+                                1 -> FilterMode.Buy
+                                2 -> FilterMode.Sell
+                                3 -> FilterMode.BuySell
+                                else -> FilterMode.All
+                            }
                         }
-                    } else {
-                        when (index) {
-                            1 -> FilterMode.Buy
-                            2 -> FilterMode.Sell
-                            3 -> FilterMode.BuySell
-                            else -> FilterMode.All
-                        }
-                    }
-                )
+                    )
+                }
             }
         }
 

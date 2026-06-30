@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun Grabber(modifier: Modifier = Modifier) {
+    val colors = LocalDashColors.current
     Column(modifier = modifier.fillMaxWidth()) {
         Spacer(modifier = Modifier.height(6.dp))
         Box(
@@ -43,7 +45,7 @@ fun Grabber(modifier: Modifier = Modifier) {
                 .align(Alignment.CenterHorizontally)
                 .size(width = 36.dp, height = 5.dp)
                 .background(
-                    color = MyTheme.Colors.lightGray,
+                    color = colors.lightGray,
                     shape = RoundedCornerShape(2.dp)
                 )
         )
@@ -51,8 +53,11 @@ fun Grabber(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+@Preview(name = "Grapper Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Grapper Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun GrapperPreview() {
-    Grabber()
+    DashWalletTheme {
+        Grabber()
+    }
 }

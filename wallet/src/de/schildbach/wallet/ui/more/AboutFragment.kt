@@ -39,6 +39,7 @@ import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.bitcoinj.core.NetworkParameters
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.features.exploredash.ExploreSyncWorker
 import org.dash.wallet.features.exploredash.utils.ExploreDatabasePrefs
 import org.slf4j.LoggerFactory
@@ -74,32 +75,33 @@ class AboutFragment : Fragment() {
                     else -> " - ${Constants.NETWORK_PARAMETERS.devNetName}"
                 }
                 val appVersion = "${BuildConfig.VERSION_NAME} " +
-                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network
-
-                AboutScreen(
-                    uiState = AboutUIState(
-                        versionName = appVersion,
-                        dashjVersion = BuildConfig.DASHJ_VERSION,
-                        platformVersion = BuildConfig.DPP_VERSION,
-                        deviceSyncStatus = deviceSyncStatus,
-                        serverUpdateStatus = serverUpdateStatus,
-                        firebaseInstallationId = state.firebaseInstallationId,
-                        fcmToken = state.firebaseCloudMessagingToken,
-                        showForceSyncButton = !state.isMainNet,
-                        isMainNet = state.isMainNet,
-                        copyrightYear = BuildConfig.COMMIT_YEAR
-                    ),
-                    onBackClick = { findNavController().popBackStack() },
-                    onForceSyncClick = { forceSync() },
-                    onFirebaseInstallationIdClick = { viewModel.copyFirebaseInstallationId() },
-                    onFcmTokenClick = { viewModel.copyFCMToken() },
-                    onGithubLinkClick = { openGithubLink() },
-                    onReviewAndRateClick = { viewModel.reviewApp() },
-                    onContactSupportClick = {
-                        viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
-                        handleReportIssue()
-                    }
-                )
+                        getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network
+                DashWalletTheme {
+                    AboutScreen(
+                        uiState = AboutUIState(
+                            versionName = appVersion,
+                            dashjVersion = BuildConfig.DASHJ_VERSION,
+                            platformVersion = BuildConfig.DPP_VERSION,
+                            deviceSyncStatus = deviceSyncStatus,
+                            serverUpdateStatus = serverUpdateStatus,
+                            firebaseInstallationId = state.firebaseInstallationId,
+                            fcmToken = state.firebaseCloudMessagingToken,
+                            showForceSyncButton = !state.isMainNet,
+                            isMainNet = state.isMainNet,
+                            copyrightYear = BuildConfig.COMMIT_YEAR
+                        ),
+                        onBackClick = { findNavController().popBackStack() },
+                        onForceSyncClick = { forceSync() },
+                        onFirebaseInstallationIdClick = { viewModel.copyFirebaseInstallationId() },
+                        onFcmTokenClick = { viewModel.copyFCMToken() },
+                        onGithubLinkClick = { openGithubLink() },
+                        onReviewAndRateClick = { viewModel.reviewApp() },
+                        onContactSupportClick = {
+                            viewModel.logEvent(AnalyticsConstants.Settings.ABOUT_SUPPORT)
+                            handleReportIssue()
+                        }
+                    )
+                }
             }
         }
     }

@@ -54,7 +54,6 @@ private fun WalletCreationDateInfoContent() {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            //.background(MyTheme.Colors.backgroundSecondary)
             .padding(top = 60.dp) // Space for drag indicator and close button
     ) {
         // Content wrapper with padding

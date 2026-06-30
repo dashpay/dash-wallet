@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 
@@ -47,6 +48,7 @@ private fun CreateInstantUsernameContent(
     onCreateClick: () -> Unit,
     onCancelClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -68,7 +70,7 @@ private fun CreateInstantUsernameContent(
                 text = stringResource(R.string.create_instant_username_title),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF191C1F),
+                color = colors.textPrimary, //Color(0xFF191C1F),
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -80,7 +82,7 @@ private fun CreateInstantUsernameContent(
                 text = stringResource(R.string.create_instant_username_description),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                color = Color(0xFF525C66),
+                color = colors.extraDarkGray, // Color(0xFF525C66),
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp,
                 modifier = Modifier.fillMaxWidth()

@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ fun DashList(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -56,19 +58,22 @@ fun DashList(
                 spotColor = DashListShadowColor.copy(alpha = 0.10f)
             )
             .clip(DashListShape)
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .padding(6.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
         content = content
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFF5F6F7)
+@Preview(name = "Dash List Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dash List Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun DashListPreview() {
-    DashList {
-        ListItem(label = "Original purchase", trailingText = "$50.00")
-        ListItem(label = "Card number", trailingText = "6006491727005748")
-        ListItem(label = "Card PIN", trailingText = "1411")
+    DashWalletTheme {
+        DashList {
+            ListItem(label = "Original purchase", trailingText = "$50.00")
+            ListItem(label = "Card number", trailingText = "6006491727005748")
+            ListItem(label = "Card PIN", trailingText = "1411")
+        }
     }
 }

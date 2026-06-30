@@ -50,6 +50,7 @@ import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.ListItem10
 import org.dash.wallet.common.ui.components.ListItem11
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -94,10 +95,11 @@ fun AboutScreen(
     onReviewAndRateClick: () -> Unit = {},
     onContactSupportClick: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         // Fixed top navigation — back chevron only
         NavBarBack(onBackClick = onBackClick)
@@ -145,7 +147,7 @@ fun AboutScreen(
                 ListItem10(
                     secondaryText = stringResource(R.string.about_fork_disclaimer),
                     primaryText = stringResource(R.string.about_github_link),
-                    primaryColor = MyTheme.Colors.dashBlue,
+                    primaryColor = colors.dashBlue,
                     onClick = onGithubLinkClick
                 )
             }
@@ -194,14 +196,14 @@ fun AboutScreen(
                 Text(
                     text = stringResource(R.string.about_copyright, uiState.copyrightYear),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
                     text = stringResource(R.string.about_license),
                     style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.textSecondary,
+                    color = colors.textSecondary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -216,6 +218,7 @@ fun AboutScreen(
  */
 @Composable
 private fun DashLogoHeader(isMainNet: Boolean) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -226,7 +229,7 @@ private fun DashLogoHeader(isMainNet: Boolean) {
             painter = painterResource(R.drawable.ic_dash_logo_white),
             contentDescription = null,
             colorFilter = ColorFilter.tint(
-                if (isMainNet) MyTheme.Colors.dashBlue else MyTheme.Colors.orange
+                if (isMainNet) colors.dashBlue else colors.orange
             ),
             modifier = Modifier
                 .height(28.dp)
@@ -244,6 +247,7 @@ private fun AboutSectionTitle(
     text: String,
     trailing: (@Composable () -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -256,7 +260,7 @@ private fun AboutSectionTitle(
         Text(
             text = text,
             style = MyTheme.Body2Medium,
-            color = MyTheme.Colors.textTertiary
+            color = colors.textTertiary
         )
         if (trailing != null) {
             Spacer(Modifier.weight(1f))

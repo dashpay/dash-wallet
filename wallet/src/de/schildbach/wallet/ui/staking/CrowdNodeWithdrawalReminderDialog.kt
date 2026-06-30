@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.staking
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -35,7 +36,9 @@ import androidx.compose.ui.unit.dp
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.ButtonGroupOrientation
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.FeatureTopText
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.SheetButton
 import org.dash.wallet.common.ui.components.SheetButtonGroup
@@ -71,6 +74,7 @@ private fun CrowdNodeWithdrawalReminderContent(
     onWithdraw: () -> Unit,
     onClose: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -85,7 +89,7 @@ private fun CrowdNodeWithdrawalReminderContent(
             Box(
                 modifier = Modifier
                     .size(90.dp)
-                    .background(MyTheme.Colors.backgroundPrimary, CircleShape),
+                    .background(colors.backgroundPrimary, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -131,8 +135,11 @@ private fun CrowdNodeWithdrawalReminderContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Reminder Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Reminder Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun CrowdNodeWithdrawalReminderContentPreview() {
-    CrowdNodeWithdrawalReminderContent(onWithdraw = {}, onClose = {})
+    DashWalletTheme {
+        CrowdNodeWithdrawalReminderContent(onWithdraw = {}, onClose = {})
+    }
 }

@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 import org.dash.wallet.common.SecureActivity
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
@@ -70,18 +71,20 @@ class ToolsFragment : Fragment() {
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                ToolsScreen(
-                    onBackClick = { findNavController().popBackStack() },
-                    onAddressBookClick = { onAddressBook() },
-                    onImportPrivateKeyClick = { onImportKeys() },
-                    onNetworkMonitorClick = { onNetworkMonitor() },
-                    onExtendPublicKeyClick = { handleExtendedPublicKey() },
-                    onMasternodeKeysClick = { onMasternodeKeys() },
-                    onCsvExportClick = { onTransactionExport() },
-                    onZenLedgerExport = { onZenLedgerExport() },
-                    onCreditsInfoClick = { onCreditsInfo() },
-                    onBuyCredits = { onBuyCredits() }
-                )
+                DashWalletTheme {
+                    ToolsScreen(
+                        onBackClick = { findNavController().popBackStack() },
+                        onAddressBookClick = { onAddressBook() },
+                        onImportPrivateKeyClick = { onImportKeys() },
+                        onNetworkMonitorClick = { onNetworkMonitor() },
+                        onExtendPublicKeyClick = { handleExtendedPublicKey() },
+                        onMasternodeKeysClick = { onMasternodeKeys() },
+                        onCsvExportClick = { onTransactionExport() },
+                        onZenLedgerExport = { onZenLedgerExport() },
+                        onCreditsInfoClick = { onCreditsInfo() },
+                        onBuyCredits = { onBuyCredits() }
+                    )
+                }
             }
         }
     }
@@ -107,8 +110,8 @@ class ToolsFragment : Fragment() {
             }
         } else {
             SendCoinsActivity.startBuyCredits(requireActivity())
-        }
     }
+            }
 
     private fun onTransactionExport() {
         if (viewModel.uiState.value.isSyncing) {

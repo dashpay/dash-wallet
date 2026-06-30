@@ -49,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -102,10 +103,11 @@ fun PurchaseGiftCardScreenV2(
     onShowToast: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         TopNavBase(
             modifier = Modifier.align(Alignment.TopCenter),
@@ -236,6 +238,7 @@ private fun PurchaseLimitsErrorDiscountHint(
     discountHintText: String,
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     if (minHintText.isEmpty() && maxHintText.isEmpty() && errorText.isEmpty() && discountHintText.isEmpty()) return
 
     // Detect which bound is exceeded so we can colour it red independently.
@@ -256,12 +259,12 @@ private fun PurchaseLimitsErrorDiscountHint(
             Text(
                 text = minHintText,
                 style = MyTheme.Typography.BodyMedium,
-                color = if (minError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (minError) colors.red else colors.textSecondary
             )
             Text(
                 text = maxHintText,
                 style = MyTheme.Typography.BodyMedium,
-                color = if (maxError) MyTheme.Colors.red else MyTheme.Colors.textSecondary
+                color = if (maxError) colors.red else colors.textSecondary
             )
         }
     }
@@ -272,7 +275,7 @@ private fun PurchaseLimitsErrorDiscountHint(
         Text(
             text = errorText,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.red,
+            color = colors.red,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
@@ -285,7 +288,7 @@ private fun PurchaseLimitsErrorDiscountHint(
             text = discountHintText,
             textAlign = TextAlign.Center,
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.fillMaxWidth()
         )
     }
@@ -428,6 +431,7 @@ private fun DenominationList(
     onReset: () -> Unit,
     onShowToast: (String) -> Unit
 ) {
+    val colors = LocalDashColors.current
     val currencyFormat = NumberFormat.getCurrencyInstance().apply {
         currency = Currency.getInstance(Constants.USD_CURRENCY)
         minimumFractionDigits = 0
@@ -446,7 +450,7 @@ private fun DenominationList(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                color = MyTheme.Colors.backgroundSecondary,
+                color = colors.backgroundSecondary,
                 shape = RoundedCornerShape(20.dp)
             )
             .padding(20.dp),
@@ -508,8 +512,9 @@ private fun DenominationRow(
     onDecrease: () -> Unit,
     onIncrease: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val decreaseEnabled = quantity > 0
-    val quantityColor = if (increaseEnabled || quantity > 0) MyTheme.Colors.textPrimary else MyTheme.Colors.gray
+    val quantityColor = if (increaseEnabled || quantity > 0) colors.textPrimary else colors.gray
 
     // Per Figma node 3118:45517 the row has natural height (icon 26h, stepper 34h with 4px touch
     // padding = 42 total). Card padding (20dp) + 10dp inter-row gaps already control spacing.
@@ -530,7 +535,7 @@ private fun DenominationRow(
             text = label,
             // Body/Body L Medium per Figma (16sp / 24 line-height / Medium 500).
             style = MyTheme.Typography.BodyLargeMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
 
@@ -547,7 +552,7 @@ private fun DenominationRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_stepper_minus),
                     contentDescription = null,
-                    tint = if (decreaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
+                    tint = if (decreaseEnabled) colors.textPrimary else colors.gray,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -568,7 +573,7 @@ private fun DenominationRow(
                 Icon(
                     painter = painterResource(R.drawable.ic_stepper_plus),
                     contentDescription = null,
-                    tint = if (increaseEnabled) MyTheme.Colors.textPrimary else MyTheme.Colors.gray,
+                    tint = if (increaseEnabled) colors.textPrimary else colors.gray,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -583,6 +588,7 @@ private fun CircleButton(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit
 ) {
+    val colors = LocalDashColors.current
     // Per Figma: 34dp visible circle (1.5dp stroke) wrapped in a 42dp touch area
     // (4dp padding on each side). `enabled` controls visual styling only — clicks always fire
     // so callers can show a toast explaining why the action is blocked.
@@ -597,7 +603,7 @@ private fun CircleButton(
                 .size(34.dp)
                 .border(
                     width = 1.5.dp,
-                    color = if (enabled) MyTheme.Colors.primary5 else MyTheme.Colors.primary4,
+                    color = if (enabled) colors.primary5 else colors.primary4,
                     shape = CircleShape
                 )
                 .clip(CircleShape),

@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -49,10 +50,11 @@ fun InfoPanel(
     @DrawableRes actionIconRes: Int? = null,
     onAction: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
+            .background(colors.backgroundSecondary, RoundedCornerShape(16.dp))
             .shadow(elevation = 20.dp, spotColor = Color(0x1AB8C1CC), ambientColor = Color(0x1AB8C1CC)),
     ) {
         Row(
@@ -82,13 +84,14 @@ fun InfoPanel(
             ) {
                 Text(
                     text = title,
-                    style = MyTheme.CaptionMedium
+                    style = MyTheme.CaptionMedium,
+                    color = colors.textPrimary
                 )
                 
                 Text(
                     text = description,
                     style = MyTheme.Caption,
-                    color = MyTheme.Colors.textSecondary
+                    color = colors.textSecondary
                 )
             }
 
@@ -102,7 +105,7 @@ fun InfoPanel(
                     Icon(
                         painter = painterResource(id = actionIconRes),
                         contentDescription = "Close",
-                        tint = MyTheme.Colors.gray
+                        tint = colors.gray
                     )
                 }
             }
@@ -110,14 +113,17 @@ fun InfoPanel(
     }
 }
 
-@Preview
+@Preview(name = "Info Panel Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Info Panel Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun InfoPanelPreview() {
-    InfoPanel(
-        title = "Customize shortcut bar",
-        description = "Hold any button above to replace it with the function you need",
-        leftIconRes = R.drawable.ic_dash_blue_filled,
-        actionIconRes = R.drawable.ic_popup_close,
-        onAction = {}
-    )
+    DashWalletTheme {
+        InfoPanel(
+            title = "Customize shortcut bar",
+            description = "Hold any button above to replace it with the function you need",
+            leftIconRes = R.drawable.ic_dash_blue_filled,
+            actionIconRes = R.drawable.ic_popup_close,
+            onAction = {}
+        )
+    }
 } 

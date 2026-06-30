@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -82,20 +83,23 @@ private fun ListItemRow(
 
 @Composable
 private fun KeyLabel(text: String) {
-    Text(text = text, style = MyTheme.Typography.BodyMediumMedium, color = MyTheme.Colors.textTertiary)
+    val colors = LocalDashColors.current
+    Text(text = text, style = MyTheme.Typography.BodyMediumMedium, color = colors.textTertiary)
 }
 
 @Composable
 private fun ValueText(text: String) {
-    Text(text = text, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
+    val colors = LocalDashColors.current
+    Text(text = text, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
 }
 
 @Composable
 private fun Chevron() {
+    val colors = LocalDashColors.current
     Icon(
         painter = painterResource(R.drawable.ic_list_chevron_right),
         contentDescription = null,
-        tint = MyTheme.Colors.textTertiary,
+        tint = colors.textTertiary,
         modifier = Modifier.size(16.dp)
     )
 }
@@ -180,14 +184,15 @@ fun ListItem4(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
-        Text(text = label, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
+        Text(text = label, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
         Spacer(Modifier.weight(1f))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Text(text = value, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textTertiary)
+            Text(text = value, style = MyTheme.Typography.BodyMedium, color = colors.textTertiary)
             Chevron()
         }
     }
@@ -202,8 +207,9 @@ fun ListItem5(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
-        Text(text = action, style = MyTheme.Typography.BodyMediumMedium, color = MyTheme.Colors.textPrimary)
+        Text(text = action, style = MyTheme.Typography.BodyMediumMedium, color = colors.textPrimary)
         Spacer(Modifier.weight(1f))
         Chevron()
     }
@@ -220,17 +226,18 @@ fun ListItem6(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = title, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
-            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textTertiary)
+            Text(text = title, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
+            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = colors.textTertiary)
         }
         Spacer(Modifier.weight(1f))
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(text = value, style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textPrimary)
+            Text(text = value, style = MyTheme.Typography.BodySmall, color = colors.textPrimary)
             Chevron()
         }
     }
@@ -248,16 +255,17 @@ fun ListItem7(
     onTrailingIconClick: (() -> Unit)? = null,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = MyTheme.Colors.textSecondary)
-            Text(text = value, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textPrimary)
+            Text(text = helpText, style = MyTheme.Typography.BodySmall, color = colors.textSecondary)
+            Text(text = value, style = MyTheme.Typography.BodyMedium, color = colors.textPrimary)
         }
         Spacer(Modifier.weight(1f))
         Icon(
             painter = painterResource(trailingIcon),
             contentDescription = null,
-            tint = MyTheme.Colors.textTertiary,
+            tint = colors.textTertiary,
             modifier = Modifier
                 .then(if (onTrailingIconClick != null) Modifier.clickable { onTrailingIconClick() } else Modifier)
                 .size(14.dp)
@@ -276,6 +284,7 @@ fun ListItem8(
     @DrawableRes amountIcon: Int = R.drawable.ic_dash_d_black,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         KeyLabel(label)
         Spacer(Modifier.weight(1f))
@@ -287,7 +296,7 @@ fun ListItem8(
             Icon(
                 painter = painterResource(amountIcon),
                 contentDescription = null,
-                tint = MyTheme.Colors.textPrimary,
+                tint = colors.textPrimary,
                 modifier = Modifier.size(14.dp)
             )
         }
@@ -312,16 +321,17 @@ fun ListItem9(
     @DrawableRes trailingHelpIcon: Int = R.drawable.ic_left_right_arrows,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         // Inline LabelLarge/LabelMedium (Figma List9 uses Label L/M Regular) — do NOT
         // route the title through the shared ValueText helper (List1/2/3/4/6/8 use it).
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = title, style = MyTheme.Typography.LabelLarge, color = MyTheme.Colors.textPrimary)
-            Text(text = subtitle1, style = MyTheme.Typography.LabelMedium, color = MyTheme.Colors.textTertiary)
-            Text(text = subtitle2, style = MyTheme.Typography.LabelMedium, color = MyTheme.Colors.textTertiary)
+            Text(text = title, style = MyTheme.Typography.LabelLarge, color = colors.textPrimary)
+            Text(text = subtitle1, style = MyTheme.Typography.LabelMedium, color = colors.textTertiary)
+            Text(text = subtitle2, style = MyTheme.Typography.LabelMedium, color = colors.textTertiary)
         }
         Column(horizontalAlignment = Alignment.End) {
-            Text(text = trailingTitle, style = MyTheme.Typography.LabelLarge, color = MyTheme.Colors.textPrimary)
+            Text(text = trailingTitle, style = MyTheme.Typography.LabelLarge, color = colors.textPrimary)
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -329,10 +339,10 @@ fun ListItem9(
                 Icon(
                     painter = painterResource(trailingHelpIcon),
                     contentDescription = null,
-                    tint = MyTheme.Colors.textTertiary,
+                    tint = colors.textTertiary,
                     modifier = Modifier.size(10.dp)
                 )
-                Text(text = trailingHelpText, style = MyTheme.Typography.LabelMedium, color = MyTheme.Colors.textTertiary)
+                Text(text = trailingHelpText, style = MyTheme.Typography.LabelMedium, color = colors.textTertiary)
             }
         }
     }
@@ -349,10 +359,11 @@ fun ListItem10(
     primaryColor: Color? = null,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(text = secondaryText, style = MyTheme.Typography.BodyMedium, color = MyTheme.Colors.textSecondary)
-            Text(text = primaryText, style = MyTheme.Typography.BodyMedium, color = primaryColor ?: MyTheme.Colors.textPrimary)
+            Text(text = secondaryText, style = MyTheme.Typography.BodyMedium, color = colors.textSecondary)
+            Text(text = primaryText, style = MyTheme.Typography.BodyMedium, color = primaryColor ?: colors.textPrimary)
         }
     }
 }
@@ -371,16 +382,17 @@ fun ListItem11(
     primaryMaxLines: Int = Int.MAX_VALUE,
     onClick: (() -> Unit)? = null
 ) {
+    val colors = LocalDashColors.current
     ListItemRow(modifier, onClick) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            Text(text = label, style = MyTheme.Typography.BodyMediumMedium, color = MyTheme.Colors.textTertiary)
+            Text(text = label, style = MyTheme.Typography.BodyMediumMedium, color = colors.textTertiary)
             Text(
                 text = primaryText,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textPrimary,
+                color = colors.textPrimary,
                 maxLines = primaryMaxLines,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.fillMaxWidth()
@@ -391,43 +403,47 @@ fun ListItem11(
 
 // ── Preview ───────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark",  showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun ListItemVariantsPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundSecondary)
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
-    ) {
-        Text(text = "list1")
-        ListItem1(label = "Label", value = "Text")
-        Text(text = "list2")
-        ListItem2(label = "Label", valueLines = listOf("Text", "Text"))
-        Text(text = "list3")
-        ListItem3(label = "Label", value = "Text")
-        Text(text = "list4")
-        ListItem4(label = "Label", value = "Text")
-        Text(text = "list5")
-        ListItem5(action = "Action")
-        Text(text = "list6")
-        ListItem6(title = "Label", helpText = "Help text", value = "Text")
-        Text(text = "list7")
-        ListItem7(helpText = "Help text", value = "Value")
-        Text(text = "list8")
-        ListItem8(label = "Label", amount = "0.00")
-        Text(text = "list9")
-        ListItem9(
-            title = "00.000.00.00",
-            subtitle1 = "/Dash Core:00.0.0/",
-            subtitle2 = "protocol: 00000",
-            trailingTitle = "X blocks",
-            trailingHelpText = "00 ms"
-        )
-        Text(text = "list10")
-        ListItem10(secondaryText = "Secondary text", primaryText = "Primary text")
-        Text(text = "list11")
-        ListItem11(label = "Label", primaryText = "Primary text")
-        Spacer(Modifier.width(0.dp))
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
+            modifier = Modifier
+                .background(colors.backgroundSecondary)
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            Text(text = "list1", color = colors.textPrimary)
+            ListItem1(label = "Label", value = "Text")
+            Text(text = "list2", color = colors.textPrimary)
+            ListItem2(label = "Label", valueLines = listOf("Text", "Text"))
+            Text(text = "list3", color = colors.textPrimary)
+            ListItem3(label = "Label", value = "Text")
+            Text(text = "list4", color = colors.textPrimary)
+            ListItem4(label = "Label", value = "Text")
+            Text(text = "list5", color = colors.textPrimary)
+            ListItem5(action = "Action")
+            Text(text = "list6", color = colors.textPrimary)
+            ListItem6(title = "Label", helpText = "Help text", value = "Text")
+            Text(text = "list7", color = colors.textPrimary)
+            ListItem7(helpText = "Help text", value = "Value")
+            Text(text = "list8", color = colors.textPrimary)
+            ListItem8(label = "Label", amount = "0.00")
+            Text(text = "list9", color = colors.textPrimary)
+            ListItem9(
+                title = "00.000.00.00",
+                subtitle1 = "/Dash Core:00.0.0/",
+                subtitle2 = "protocol: 00000",
+                trailingTitle = "X blocks",
+                trailingHelpText = "00 ms"
+            )
+            Text(text = "list10", color = colors.textPrimary)
+            ListItem10(secondaryText = "Secondary text", primaryText = "Primary text")
+            Text(text = "list11", color = colors.textPrimary)
+            ListItem11(label = "Label", primaryText = "Primary text")
+            Spacer(Modifier.width(0.dp))
+        }
     }
 }

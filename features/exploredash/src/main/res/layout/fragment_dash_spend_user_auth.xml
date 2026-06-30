@@ -152,7 +152,7 @@
             android:layout_gravity="center"
             android:indeterminate="true"
             android:visibility="gone"
-            app:indicatorColor="@color/white"
+            app:indicatorColor="@color/background_secondary"
             app:trackThickness="3dp" />
     </FrameLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>

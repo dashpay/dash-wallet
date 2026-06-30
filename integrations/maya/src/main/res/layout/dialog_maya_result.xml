@@ -72,7 +72,7 @@
     <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/coinbase_buy_dialog_positive_button"
         style="@style/Button.Primary.Large.LightBlue"
-        android:background="@android:color/white"
+        android:background="@color/background_primary"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="20dp"

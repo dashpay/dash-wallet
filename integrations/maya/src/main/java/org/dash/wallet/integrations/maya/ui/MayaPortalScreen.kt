@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +40,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
@@ -54,10 +57,11 @@ fun MayaPortalScreen(
     onBackClick: () -> Unit = {},
     onConvertClick: () -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(MyTheme.Colors.backgroundPrimary)
+            .background(colors.backgroundPrimary)
     ) {
         TopNavBase(
             leadingIcon = ImageVector.vectorResource(CommonR.drawable.ic_menu_chevron),
@@ -105,8 +109,12 @@ fun MayaPortalScreen(
     }
 }
 
+
 @Composable
-@Preview
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun MayaPortalScreenPreview() {
-    MayaPortalScreen()
+    DashWalletTheme {
+        MayaPortalScreen()
+    }
 }

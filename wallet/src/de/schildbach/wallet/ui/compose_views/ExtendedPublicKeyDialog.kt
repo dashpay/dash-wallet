@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.FeatureTopText
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -59,7 +60,7 @@ private fun ExtendedPublicKeyContent(
     onShare: () -> Unit
 ) {
     val qrBitmap = remember(xpubWithCreationDate) { Qr.qrBitmap(xpubWithCreationDate) }
-
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -70,7 +71,7 @@ private fun ExtendedPublicKeyContent(
             Image(
                 bitmap = bitmap.asImageBitmap(),
                 contentDescription = null,
-                colorFilter = ColorFilter.tint(MyTheme.Colors.textPrimary, BlendMode.SrcIn),
+                colorFilter = ColorFilter.tint(colors.textPrimary, BlendMode.SrcIn),
                 modifier = Modifier
                     .padding(vertical = 30.dp)
                     .size(180.dp)
@@ -86,7 +87,7 @@ private fun ExtendedPublicKeyContent(
         Text(
             text = xpub,
             style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textSecondary,
+                color = colors.textSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()

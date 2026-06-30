@@ -35,6 +35,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 
 @Composable
@@ -42,12 +43,13 @@ fun ShortcutListItem(
     shortcutOption: ShortcutOption,
     onClick: (ShortcutOption) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 2.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(MyTheme.Colors.backgroundSecondary)
+            .background(colors.backgroundSecondary)
             .clickable { onClick(shortcutOption) }
             .padding(horizontal = 10.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -67,7 +69,7 @@ fun ShortcutListItem(
         Text(
             text = stringResource(id = shortcutOption.textResId),
             style = MyTheme.Body2Regular,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier
                 .weight(1f)
                 .padding(start = 16.dp)

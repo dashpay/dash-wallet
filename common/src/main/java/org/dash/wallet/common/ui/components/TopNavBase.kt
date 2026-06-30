@@ -36,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 
@@ -80,6 +81,7 @@ fun TopNavBase(
     centralPart: Boolean = true,
     title: String = "Label"
 ) {
+    val colors = LocalDashColors.current
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -99,7 +101,7 @@ fun TopNavBase(
                     Text(
                         text = leadingText,
                         style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.textPrimary
+                        color = colors.textPrimary
                     )
                 }
             }
@@ -146,7 +148,7 @@ fun TopNavBase(
                     Text(
                         text = trailingText,
                         style = MyTheme.CaptionMedium,
-                        color = MyTheme.Colors.dashBlue
+                        color = colors.dashBlue
                     )
                 }
             }
@@ -417,40 +419,44 @@ fun NavBarBackAction(
 
 // ── Preview ───────────────────────────────────────────────────────────────────
 
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Nav Bar Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Nav Bar Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun NavBarPreview() {
-    Column(
-        modifier = Modifier
-            .background(MyTheme.Colors.backgroundPrimary)
-            .padding(vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        NavBarBack(onBackClick = {})
-        NavBarBackTitle(title = "Label", onBackClick = {})
-        NavBarBackTitleInfo(title = "Label", onBackClick = {}, onInfoClick = {})
-        NavBarTitleClose(title = "Label", onCloseClick = {})
-        NavBarBackTitlePlus(title = "Label", onBackClick = {}, onPlusClick = {})
-        NavBarBackPlus(onBackClick = {}, onPlusClick = {})
+    DashWalletTheme {
+        val colors = LocalDashColors.current
+        Column(
+            modifier = Modifier
+                .background(colors.backgroundPrimary)
+                .padding(vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            NavBarBack(onBackClick = {})
+            NavBarBackTitle(title = "Label", onBackClick = {})
+            NavBarBackTitleInfo(title = "Label", onBackClick = {}, onInfoClick = {})
+            NavBarTitleClose(title = "Label", onCloseClick = {})
+            NavBarBackTitlePlus(title = "Label", onBackClick = {}, onPlusClick = {})
+            NavBarBackPlus(onBackClick = {}, onPlusClick = {})
         NavBarTitle(title = "Title Only")
-        NavBarClose(onCloseClick = {})
-        NavBarActionTitleAction(
-            title = "Label",
-            leadingActionText = "Cancel",
-            onLeadingActionClick = {},
-            trailingActionText = "Apply",
-            onTrailingActionClick = {}
-        )
-        NavBarBackTitleAction(
-            title = "Label",
-            onBackClick = {},
-            actionText = "Quick voting",
-            onActionClick = {}
-        )
-        NavBarBackAction(
-            onBackClick = {},
-            actionText = "Quick voting",
-            onActionClick = {}
-        )
+            NavBarClose(onCloseClick = {})
+            NavBarActionTitleAction(
+                title = "Label",
+                leadingActionText = "Cancel",
+                onLeadingActionClick = {},
+                trailingActionText = "Apply",
+                onTrailingActionClick = {}
+            )
+            NavBarBackTitleAction(
+                title = "Label",
+                onBackClick = {},
+                actionText = "Quick voting",
+                onActionClick = {}
+            )
+            NavBarBackAction(
+                onBackClick = {},
+                actionText = "Quick voting",
+                onActionClick = {}
+            )
+        }
     }
 }

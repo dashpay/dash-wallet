@@ -1,5 +1,6 @@
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
@@ -44,10 +45,11 @@ fun DashRadioButton(
     enabled: Boolean = true,
     onlyOption: Boolean = false
 ) {
-    val primaryTextColor = MyTheme.Colors.textPrimary
-    val secondaryTextColor = MyTheme.Colors.textSecondary
-    val radioButtonColor = MyTheme.Colors.dashBlue
-    val borderColor = if (selected) radioButtonColor else Color(0xFFCED2D5)  // #CED2D5 from Figma
+    val colors = LocalDashColors.current
+    val primaryTextColor = colors.textPrimary
+    val secondaryTextColor = colors.textSecondary
+    val radioButtonColor = colors.dashBlue
+    val borderColor = if (selected) radioButtonColor else colors.lightGray //Color(0xFFCED2D5)  // #CED2D5 from Figma
 
     val contentAlpha = if (enabled) 1f else 0.6f
 
@@ -174,9 +176,17 @@ private fun TextContent(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Radio Button Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Radio Button Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun RadioButtonPreview() {
+    DashWalletTheme {
+        RadioButtonPreviewContent()
+    }
+}
+
+@Composable
+private fun RadioButtonPreviewContent() {
     var selectedOption by remember { mutableIntStateOf(1) }
 
     Column(modifier = Modifier.padding(16.dp)) {

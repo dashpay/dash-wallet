@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dashspend.dialogs
 
+import android.content.res.Configuration
 import android.os.Bundle
 import android.view.View
 import androidx.compose.foundation.Image
@@ -57,6 +58,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
@@ -114,6 +117,7 @@ internal fun GiftCardOrderDetailsView(
     onCloseClick: () -> Unit = {},
     onCardClick: (GiftCard) -> Unit = {}
 ) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -133,7 +137,7 @@ internal fun GiftCardOrderDetailsView(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(20.dp))
-                        .background(MyTheme.Colors.backgroundSecondary)
+                        .background(colors.backgroundSecondary)
                         .padding(20.dp)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -150,6 +154,7 @@ internal fun GiftCardOrderDetailsView(
 
 @Composable
 private fun MerchantHeader(uiState: GiftCardOrderUIState) {
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(15.dp),
@@ -187,13 +192,14 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
         Text(
             text = uiState.merchantName,
             style = MyTheme.Typography.LabelLargeMedium,
-            color = MyTheme.Colors.textPrimary
+            color = colors.textPrimary
         )
     }
 }
 
 @Composable
 private fun GiftCardRow(card: GiftCard, onClick: () -> Unit) {
+    val colors = LocalDashColors.current
     val currencyFormat = remember {
         (NumberFormat.getCurrencyInstance() as DecimalFormat).apply {
             currency = Currency.getInstance(Constants.USD_CURRENCY)
@@ -215,13 +221,13 @@ private fun GiftCardRow(card: GiftCard, onClick: () -> Unit) {
         Text(
             text = currencyFormat.format(card.price),
             style = MyTheme.Typography.BodyLargeMedium,
-            color = MyTheme.Colors.textPrimary,
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
         Icon(
             painter = painterResource(R.drawable.ic_list_chevron_right),
             contentDescription = null,
-            tint = MyTheme.Colors.gray,
+            tint = colors.gray,
             modifier = Modifier.size(16.dp)
         )
     }
@@ -229,6 +235,7 @@ private fun GiftCardRow(card: GiftCard, onClick: () -> Unit) {
 
 @Composable
 private fun PoweredByFooter(serviceName: String?) {
+    val colors = LocalDashColors.current
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -237,7 +244,7 @@ private fun PoweredByFooter(serviceName: String?) {
         Text(
             text = stringResource(R.string.purchase_powered_by),
             style = MyTheme.Typography.LabelMedium,
-            color = MyTheme.Colors.textTertiary,
+            color = colors.textTertiary,
             textAlign = TextAlign.Center
         )
         val poweredByRes = if (serviceName == ServiceName.CTXSpend) {
@@ -261,10 +268,18 @@ private fun fakeCard(index: Int, price: Double) = GiftCard(
     price = price,
     index = index
 )
-
-@Preview(showBackground = true, backgroundColor = 0xFFF5F6F7)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(showBackground = true)
 @Composable
 private fun GiftCardOrderDetailsPreview() {
+    DashWalletTheme {
+        GiftCardOrderDetailsPreviewContents()
+    }
+}
+
+@Composable
+private fun GiftCardOrderDetailsPreviewContents() {
     GiftCardOrderDetailsView(
         uiState = GiftCardOrderUIState(
             merchantName = "Amazon",

@@ -22,16 +22,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
 import de.schildbach.wallet.service.work.BaseWorker
 import de.schildbach.wallet.ui.dashpay.utils.TransactionMetadataSettings
@@ -43,14 +44,16 @@ import org.dash.wallet.common.data.Resource
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashCheckbox
 import org.dash.wallet.common.ui.components.DashRadioButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.TopNavBase
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionMetadataSettingsScreen(
     onBackClick: () -> Unit,
@@ -58,9 +61,10 @@ fun TransactionMetadataSettingsScreen(
     onSaveToNetwork: () -> Unit,
     viewModel: TransactionMetadataSettingsPreviewViewModel
 ) {
-    val backgroundColor = MyTheme.Colors.backgroundPrimary
-    val primaryTextColor = MyTheme.Colors.textPrimary
-    val secondaryTextColor = MyTheme.Colors.textSecondary
+    val colors = LocalDashColors.current
+    val backgroundColor = colors.backgroundPrimary
+    val primaryTextColor = colors.textPrimary
+    val secondaryTextColor = colors.textSecondary
     val scrollState = rememberScrollState()
     val dateFormat = SimpleDateFormat.getDateInstance(SimpleDateFormat.MEDIUM)
 
@@ -73,61 +77,23 @@ fun TransactionMetadataSettingsScreen(
     val isSaving = BaseWorker.extractProgress(publishingState.data?.progress) != -1
     val currentDate = Date(System.currentTimeMillis())
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onBackClick) {
-                        Icon(painter = painterResource(id = R.drawable.ic_chevron), contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = onInfoButtonClick) {
-                        Icon(
-                            painter = painterResource(R.drawable.ic_info),
-                            contentDescription = "Info",
-                            tint = MyTheme.Colors.dashBlue
-                        )
-                    }
-                },
-                // TODO: Why is this bar white
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Unspecified
-                )
-            )
-        },
-        bottomBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = backgroundColor
-                    ),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Spacer(modifier = Modifier.height(20.dp))
-                DashButton(
-                    onClick = { onSaveToNetwork() },
-                    modifier = Modifier
-                        .padding(20.dp, 0.dp)
-                        .fillMaxWidth(),
-                    style = Style.FilledBlue,
-                    text = stringResource(if (filterState.modified && !filterState.saveToNetwork) {
-                        R.string.transaction_metadata_save_to_network
-                    } else {
-                        R.string.save_changes
-                    }),
-                    isEnabled = filterState.modified && filterState.isValid()
-                )
-            }
-        }
-    ) { paddingValues ->
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor)
+    ) {
+        TopNavBase(
+            leadingIcon = ImageVector.vectorResource(R.drawable.ic_menu_chevron),
+            onLeadingClick = onBackClick,
+            trailingIcon = ImageVector.vectorResource(R.drawable.ic_info),
+            trailingIconCircle = false,
+            onTrailingClick = onInfoButtonClick,
+            centralPart = false
+        )
+
         Column(
             modifier = Modifier
-                .padding(paddingValues)
-                .fillMaxSize()
-                .background(backgroundColor)
+                .weight(1f)
                 .verticalScroll(scrollState)
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 60.dp)
         ) {
@@ -160,10 +126,16 @@ fun TransactionMetadataSettingsScreen(
                         stringResource(R.string.transaction_metadata_past_syncing, dateFormat.format(currentDate))
                     } else if (hasPastTransactionsToSave) {
                         stringResource(R.string.transaction_metadata_past_subtitle, dateFormat.format(currentDate))
-                    } else if (lastSaveDate != 0L){
-                        stringResource(R.string.transaction_metadata_past_already_saved, dateFormat.format(Date(lastSaveDate)))
+                    } else if (lastSaveDate != 0L) {
+                        stringResource(
+                            R.string.transaction_metadata_past_already_saved,
+                            dateFormat.format(Date(lastSaveDate))
+                        )
                     } else {
-                        stringResource(R.string.transaction_metadata_past_already_saved_none, dateFormat.format(Date(lastSaveDate)))
+                        stringResource(
+                            R.string.transaction_metadata_past_already_saved_none,
+                            dateFormat.format(Date(lastSaveDate))
+                        )
                     },
                     enabled = hasPastTransactionsToSave && !isSaving
                 )
@@ -175,9 +147,15 @@ fun TransactionMetadataSettingsScreen(
                     },
                     title = stringResource(R.string.transaction_metadata_future_title),
                     subtitle = if (futureSaveDate != 0L) {
-                        stringResource(R.string.transaction_metadata_future_subtitle, dateFormat.format(Date(futureSaveDate)))
+                        stringResource(
+                            R.string.transaction_metadata_future_subtitle,
+                            dateFormat.format(Date(futureSaveDate))
+                        )
                     } else {
-                        stringResource(R.string.transaction_metadata_future_subtitle, stringResource(R.string.time_today))
+                        stringResource(
+                            R.string.transaction_metadata_future_subtitle,
+                            stringResource(R.string.time_today)
+                        )
                     }
                 )
             }
@@ -244,11 +222,38 @@ fun TransactionMetadataSettingsScreen(
                 }
             }
         }
+
+        // Bottom bar
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(backgroundColor),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
+            DashButton(
+                onClick = onSaveToNetwork,
+                modifier = Modifier
+                    .padding(horizontal = 20.dp)
+                    .fillMaxWidth(),
+                style = Style.FilledBlue,
+                text = stringResource(
+                    if (filterState.modified && !filterState.saveToNetwork) {
+                        R.string.transaction_metadata_save_to_network
+                    } else {
+                        R.string.save_changes
+                    }
+                ),
+                isEnabled = filterState.modified && filterState.isValid()
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+        }
     }
 }
 
 @Composable
 fun SectionTitle(titleId: Int) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -256,7 +261,7 @@ fun SectionTitle(titleId: Int) {
     ) {
         Text(
             text = stringResource(titleId),
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             style = MyTheme.CaptionMedium
         )
     }
@@ -264,6 +269,7 @@ fun SectionTitle(titleId: Int) {
 
 @Composable
 fun SectionTitle(title: String) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -271,7 +277,7 @@ fun SectionTitle(title: String) {
     ) {
         Text(
             text = title,
-            color = MyTheme.Colors.textSecondary,
+            color = colors.textSecondary,
             style = MyTheme.CaptionMedium
         )
     }
@@ -279,18 +285,15 @@ fun SectionTitle(title: String) {
 
 @Composable
 fun CardSection(content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
+    val colors = LocalDashColors.current
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(colors.backgroundSecondary)
+            .padding(horizontal = 8.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(8.dp, 0.dp),
-        ) {
-            content()
-        }
+        content()
     }
 }
 

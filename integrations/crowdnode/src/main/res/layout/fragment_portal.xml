@@ -106,6 +106,7 @@
             android:layout_marginTop="-30dp"
             app:cardCornerRadius="16dp"
             app:layout_constraintTop_toBottomOf="@id/header"
+            app:cardBackgroundColor="@color/background_secondary"
             app:layout_constraintVertical_chainStyle="packed">
 
             <LinearLayout
@@ -292,6 +293,7 @@
             android:layout_marginTop="15dp"
             android:layout_marginHorizontal="15dp"
             app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="@color/background_secondary"
             app:layout_constraintTop_toBottomOf="@id/actions_view">
 
             <LinearLayout

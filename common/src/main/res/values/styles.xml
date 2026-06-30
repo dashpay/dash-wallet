@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
-<!--    <style name="My.Theme" parent="Theme.AppCompat.DayNight"> &lt;!&ndash; Change to this and uncomment night mode colors to test the night mode &ndash;&gt;-->
-    <style name="My.Theme" parent="Theme.AppCompat.Light.DarkActionBar">
+    <style name="My.Theme" parent="Theme.AppCompat.DayNight"> <!-- Change to this and uncomment night mode colors to test the night mode -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/dash_deep_blue</item>
         <item name="colorAccent">@color/colorAccent</item>
@@ -82,7 +81,10 @@
         <item name="android:windowContentOverlay">@null</item>
     </style>
 
-    <style name="My.Theme.Dialog" parent="Theme.AppCompat.Light.Dialog.Alert" />
+    <style name="My.Theme.Dialog" parent="Theme.AppCompat.DayNight.Dialog.Alert">
+        <item name="android:colorBackground">@color/background_secondary</item>
+        <item name="android:colorBackgroundFloating">@color/background_secondary</item>
+    </style>
 
     <style name="My.Widget.AutoCompleteTextView" parent="@android:style/Widget.Holo.Light.AutoCompleteTextView">
         <item name="android:textColor">@color/content_primary</item>

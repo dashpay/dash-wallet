@@ -17,6 +17,7 @@
 
 package org.dash.wallet.common.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -97,6 +98,7 @@ fun EnterAmount(
     onCurrencyPickerSelect: (SegmentedOption, Int) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
+    val colors = LocalDashColors.current
     val primaryIndex = selectedCurrencyIndex.coerceIn(0, currencyCodes.lastIndex.coerceAtLeast(0))
     val primaryCode = currencyCodes.getOrNull(primaryIndex) ?: DASH_CURRENCY_CODE
     val secondaryCode = currencyCodes
@@ -126,7 +128,7 @@ fun EnterAmount(
                 Text(
                     text = helpTextTop,
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary,
+                    color = colors.textTertiary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 2.dp)
                 )
@@ -155,7 +157,7 @@ fun EnterAmount(
                 Text(
                     text = helpTextBottom,
                     style = MyTheme.Typography.BodySmall,
-                    color = MyTheme.Colors.textTertiary,
+                    color = colors.textTertiary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 2.dp)
                 )
@@ -189,10 +191,11 @@ private fun MaxBtn(onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
+        val colors = LocalDashColors.current
         Text(
             text = "Max",
             style = MyTheme.Typography.LabelSmallSemibold,
-            color = MyTheme.Colors.dashBlue,
+            color = colors.dashBlue,
             textAlign = TextAlign.Center
         )
     }
@@ -200,11 +203,12 @@ private fun MaxBtn(onClick: () -> Unit) {
 
 @Composable
 private fun ShowBalanceBtn(onClick: () -> Unit) {
+    val colors = LocalDashColors.current
     Box(
         modifier = Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(MyTheme.Colors.primary8)
+            .background(colors.primary8)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -226,6 +230,7 @@ private fun AmountPrimary(
     onClick: () -> Unit
 ) {
     val mode = modeFor(currencyCode)
+    val colors = LocalDashColors.current
     Row(
         modifier = Modifier
             .clickable(onClick = onClick)
@@ -239,7 +244,7 @@ private fun AmountPrimary(
         Text(
             text = amount,
             style = MyTheme.Typography.HeadlineLargeMedium,
-            color = MyTheme.Colors.textPrimary
+            color = colors.textPrimary
         )
         if (!symbolBeforeAmount) {
             PrimarySymbol(mode = mode, currencyCode = currencyCode, locale = locale)
@@ -256,6 +261,7 @@ private fun AmountPrimary(
 
 @Composable
 private fun PrimarySymbol(mode: EnterAmountMode, currencyCode: String, locale: Locale) {
+    val colors = LocalDashColors.current
     when (mode) {
         EnterAmountMode.Dash -> Image(
             painter = painterResource(R.drawable.ic_dash_d_black),
@@ -265,7 +271,7 @@ private fun PrimarySymbol(mode: EnterAmountMode, currencyCode: String, locale: L
         EnterAmountMode.Fiat -> Text(
             text = fiatSymbolForCode(currencyCode, locale),
             style = MyTheme.Typography.HeadlineLargeMedium,
-            color = MyTheme.Colors.textPrimary
+            color = colors.textPrimary
         )
     }
 }
@@ -278,6 +284,7 @@ private fun AmountSecondary(
     symbolBeforeAmount: Boolean,
     onClick: () -> Unit
 ) {
+    val colors = LocalDashColors.current
     val mode = modeFor(currencyCode)
     Row(
         modifier = Modifier
@@ -296,7 +303,7 @@ private fun AmountSecondary(
             Text(
                 text = amount,
                 style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textTertiary
+                color = colors.textTertiary
             )
             if (!symbolBeforeAmount) {
                 SecondarySymbol(mode = mode, currencyCode = currencyCode, locale = locale)
@@ -305,7 +312,7 @@ private fun AmountSecondary(
         Image(
             painter = painterResource(R.drawable.ic_chevron_down_small),
             contentDescription = null,
-            colorFilter = ColorFilter.tint(MyTheme.Colors.textTertiary),
+            colorFilter = ColorFilter.tint(colors.textTertiary),
             modifier = Modifier.size(width = 5.dp, height = 2.5.dp)
         )
     }
@@ -313,6 +320,7 @@ private fun AmountSecondary(
 
 @Composable
 private fun SecondarySymbol(mode: EnterAmountMode, currencyCode: String, locale: Locale) {
+    val colors = LocalDashColors.current
     when (mode) {
         EnterAmountMode.Dash -> Image(
             painter = painterResource(R.drawable.ic_dash_d_gray),
@@ -322,7 +330,7 @@ private fun SecondarySymbol(mode: EnterAmountMode, currencyCode: String, locale:
         EnterAmountMode.Fiat -> Text(
             text = fiatSymbolForCode(currencyCode, locale),
             style = MyTheme.Typography.BodyMedium,
-            color = MyTheme.Colors.textTertiary
+            color = colors.textTertiary
         )
     }
 }
@@ -349,73 +357,91 @@ private fun isCurrencySymbolPrefix(locale: Locale): Boolean {
     return true
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "Fiat Primary Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Fiat Primary Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountFiatPrimaryPreview() {
-    EnterAmount(
-        primaryAmount = "1,234.00",
-        secondaryAmount = "12.3456",
-        currencyCodes = listOf("USD", DASH_CURRENCY_CODE),
-        selectedCurrencyIndex = 0,
-        locale = Locale.US
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "1,234.00",
+            secondaryAmount = "12.3456",
+            currencyCodes = listOf("USD", DASH_CURRENCY_CODE),
+            selectedCurrencyIndex = 0,
+            locale = Locale.US
+        )
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "Dash Primary Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dash Primary Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountDashPrimaryPreview() {
-    EnterAmount(
-        primaryAmount = "12.3456",
-        secondaryAmount = "1,234.00",
-        currencyCodes = listOf("USD", DASH_CURRENCY_CODE),
-        selectedCurrencyIndex = 1,
-        locale = Locale.US
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "12.3456",
+            secondaryAmount = "1,234.00",
+            currencyCodes = listOf("USD", DASH_CURRENCY_CODE),
+            selectedCurrencyIndex = 1,
+            locale = Locale.US
+        )
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "French Locale Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "French Locale Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountFrenchLocalePreview() {
     // fr-FR puts the symbol AFTER the amount: "1 234,00 €"
-    EnterAmount(
-        primaryAmount = "1 234,00",
-        secondaryAmount = "12,3456",
-        currencyCodes = listOf("EUR", DASH_CURRENCY_CODE),
-        selectedCurrencyIndex = 0,
-        locale = Locale.FRANCE
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "1 234,00",
+            secondaryAmount = "12,3456",
+            currencyCodes = listOf("EUR", DASH_CURRENCY_CODE),
+            selectedCurrencyIndex = 0,
+            locale = Locale.FRANCE
+        )
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "With Help Text Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "With Help Text Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountWithHelpTextPreview() {
-    EnterAmount(
-        primaryAmount = "1,234.00",
-        secondaryAmount = "12.3456",
-        helpTextTop = "Available balance: $1,234",
-        helpTextBottom = "Network fee: $0.10"
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "1,234.00",
+            secondaryAmount = "12.3456",
+            helpTextTop = "Available balance: $1,234",
+            helpTextBottom = "Network fee: $0.10"
+        )
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "Minimal Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Minimal Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountMinimalPreview() {
-    EnterAmount(
-        primaryAmount = "25",
-        showMaxButton = false,
-        showBalanceButton = false,
-        showSecondary = false
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "25",
+            showMaxButton = false,
+            showBalanceButton = false,
+            showSecondary = false
+        )
+    }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 393)
+@Preview(name = "With Currency Picker Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "With Currency Picker Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun EnterAmountWithCurrencyPickerPreview() {
-    EnterAmount(
-        primaryAmount = "100",
-        secondaryAmount = "1.0023",
-        currencyCodes = listOf("USD", "EUR", DASH_CURRENCY_CODE),
-        selectedCurrencyIndex = 0,
-        showCurrencyPicker = true
-    )
+    DashWalletTheme {
+        EnterAmount(
+            primaryAmount = "100",
+            secondaryAmount = "1.0023",
+            currencyCodes = listOf("USD", "EUR", DASH_CURRENCY_CODE),
+            selectedCurrencyIndex = 0,
+            showCurrencyPicker = true
+        )
+    }
 }

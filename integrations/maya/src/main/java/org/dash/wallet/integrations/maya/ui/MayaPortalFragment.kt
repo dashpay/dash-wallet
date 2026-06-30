@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.util.safeNavigate
 
 @AndroidEntryPoint
@@ -37,14 +38,16 @@ class MayaPortalFragment : Fragment() {
     ): View {
         return ComposeView(requireContext()).apply {
             setContent {
-                MayaPortalScreen(
-                    onBackClick = {
-                        findNavController().popBackStack()
-                    },
-                    onConvertClick = {
-                        safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
-                    }
-                )
+                DashWalletTheme {
+                    MayaPortalScreen(
+                        onBackClick = {
+                            findNavController().popBackStack()
+                        },
+                        onConvertClick = {
+                            safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
+                        }
+                    )
+                }
             }
         }
     }
