@@ -76,15 +76,20 @@ fun ModalDialog(
                         .fillMaxWidth()
                         .padding(horizontal = horizontalPadding),
                     shape = RoundedCornerShape(16.dp),
+                    // Pin elevation to 0 so Material3 does not blend a surfaceColorAtElevation
+                    // tint over the container color — the dialog must render as exactly backgroundSecondary.
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = colors.backgroundSecondary
+                        containerColor = colors.backgroundSecondary,
+                        contentColor = colors.textPrimary
                     )
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .background(colors.backgroundSecondary)
                             .padding(start = 20.dp, end = 20.dp, top = 32.dp, bottom = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         // Info icon if provided
                         icon?.let {
@@ -130,7 +135,7 @@ fun ModalDialog(
                                         text = textBlock,
                                         style = MyTheme.Body2Regular,
                                         textAlign = textAlign,
-                                        color = colors.textSecondary
+                                        color = colors.textPrimary
                                     )
                                 }
                                 Spacer(modifier = Modifier.height(20.dp))
@@ -172,7 +177,7 @@ fun ModalDialog(
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Normal,
                                                 lineHeight = 16.sp,
-                                                color = colors.textSecondary
+                                                color = colors.textPrimary
                                             )
                                         }
                                     }
@@ -185,7 +190,7 @@ fun ModalDialog(
                                             text = textBlock,
                                             style = MyTheme.Body2Regular,
                                             textAlign = textAlign,
-                                            color = colors.textSecondary
+                                            color = colors.textPrimary
                                         )
                                     }
                                 }
