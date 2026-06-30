@@ -30,7 +30,6 @@ import android.widget.Toast
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.ConcatAdapter
 import de.schildbach.wallet.ui.CreateUsernameActivity
-import de.schildbach.wallet.ui.DashPayUserActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.HistoryHeaderAdapter
@@ -51,6 +50,7 @@ import de.schildbach.wallet.data.InvitationValidationState
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.InviteHandlerViewModel
+import de.schildbach.wallet.ui.dashpay.user.DashPayUserBottomSheet
 import de.schildbach.wallet.ui.registerLockScreenDeactivated
 import de.schildbach.wallet.ui.transactions.TransactionDetailsDialogFragment
 import de.schildbach.wallet.ui.transactions.TransactionGroupDetailsFragment
@@ -107,12 +107,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
             viewLifecycleOwner.lifecycleScope.launch {
                 if (rowView is TransactionRowView) {
                     if (isProfileClick && rowView.contact != null) {
-                        requireContext().startActivity(
-                            DashPayUserActivity.createIntent(
-                                requireContext(),
-                                rowView.contact
-                            )
-                        )
+                    DashPayUserBottomSheet.newInstance(rowView.contact).show(requireActivity())
                     } else {
                         // For rows loaded from the display cache, txWrapper is null.
                         // Fall back to the live wrapper list so CoinJoin/CrowdNode groups still open.
