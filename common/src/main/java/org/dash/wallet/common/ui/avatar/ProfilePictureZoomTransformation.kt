@@ -34,6 +34,11 @@ class ProfilePictureZoomTransformation(private val zoomedRect: RectF) : Transfor
             "${zoomedRect.right},${zoomedRect.bottom})"
 
     override suspend fun transform(input: Bitmap, size: Size): Bitmap {
+        // A malformed/empty zoom rect (right<=left or bottom<=top) would otherwise produce a 1px
+        // sliver, since the cropWidth/cropHeight coercion floors at 1. Reject it up front.
+        if (zoomedRect.right <= zoomedRect.left || zoomedRect.bottom <= zoomedRect.top) {
+            return input
+        }
         val x = Math.round(zoomedRect.left * input.width).coerceIn(0, input.width - 1)
         val y = Math.round(zoomedRect.top * input.height).coerceIn(0, input.height - 1)
         val cropWidth = Math.round(input.width * (zoomedRect.right - zoomedRect.left))
