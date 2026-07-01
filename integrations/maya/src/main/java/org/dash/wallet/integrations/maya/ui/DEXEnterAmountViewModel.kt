@@ -30,6 +30,7 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
+import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Amount
@@ -161,6 +162,13 @@ class DEXEnterAmountViewModel @Inject constructor(
             val type = currencyTypeFor(state, state.selectedCurrencyIndex)
             val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
             amount.setAnchored(type, updated.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+            // Reject input that would push the DASH-equivalent past the protocol maximum, mirroring
+            // the common EnterAmountFragment which rejects amounts greater than Constants.MAX_MONEY.
+            // Uses the Amount model's own conversion so it caps fiat / DASH / asset entry alike.
+            if (amount.dash > maxMoneyDash()) {
+                amount.setAnchored(type, state.amount.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+                return@update state
+            }
             // Editing the amount clears any stale rejection from a previous validation attempt.
             state.copy(
                 amount = updated,
@@ -222,9 +230,18 @@ class DEXEnterAmountViewModel @Inject constructor(
                     onValidationPassed.call()
                 }
                 is ResponseResource.Failure -> {
-                    log.info("onContinueClicked: amount {} {} rejected: {}", sellAmount, asset, result.throwable.message)
+                    log.info(
+                        "onContinueClicked: amount {} {} rejected: {}",
+                        sellAmount,
+                        asset,
+                        result.throwable.message
+                    )
                     _uiState.update {
-                        it.copy(isValidating = false, validationError = result.throwable.message, continueEnabled = isPositive(it.amount))
+                        it.copy(
+                            isValidating = false,
+                            validationError = result.throwable.message,
+                            continueEnabled = isPositive(it.amount)
+                        )
                     }
                 }
             }
@@ -260,6 +277,9 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     private fun isPositive(amount: String): Boolean =
         amount.toBigDecimalOrNull()?.let { it.signum() > 0 } ?: false
+
+    /** Protocol maximum (Constants.MAX_MONEY) in whole DASH. Read fresh so it tracks the network. */
+    private fun maxMoneyDash(): BigDecimal = BigDecimal(Constants.MAX_MONEY.toPlainString())
 
     private fun buildCurrencyCodes(fiat: String, assetCode: String): List<String> {
         val codes = mutableListOf(fiat, DASH_CURRENCY_CODE)
