@@ -16,8 +16,8 @@
 
 package org.dash.wallet.integrations.maya.payments
 
-import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**

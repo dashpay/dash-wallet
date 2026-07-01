@@ -12,8 +12,8 @@ import org.dash.wallet.common.integrations.ExchangeIntegration
 import org.dash.wallet.common.integrations.ExchangeIntegrationProvider
 import org.dash.wallet.common.ui.address_input.AddressSource
 import org.dash.wallet.integrations.maya.api.SwapProvider
-import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.model.SwapQuote
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import javax.inject.Inject
 
 @OptIn(ExperimentalCoroutinesApi::class)

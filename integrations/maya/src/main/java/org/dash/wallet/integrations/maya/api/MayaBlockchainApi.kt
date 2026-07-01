@@ -63,6 +63,7 @@ class MayaBlockchainApiImpl @Inject constructor(
 ) : MayaBlockchainApi {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(MayaBlockchainApiImpl::class.java)
+
         // Maximum bytes the DASH OP_RETURN can hold (enforced by
         // ScriptBuilder.createOpReturnScript). A Maya swap memo longer than this would
         // otherwise crash with an IllegalArgumentException inside the builder.

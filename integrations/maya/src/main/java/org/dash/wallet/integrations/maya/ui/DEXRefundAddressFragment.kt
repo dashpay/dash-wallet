@@ -51,6 +51,7 @@ class DEXRefundAddressFragment : Fragment() {
     }
 
     private val viewModel by mayaViewModels<DEXRefundAddressViewModel>()
+
     // Same nav-graph-scoped instance used by DEXEnterAmountFragment: carries the committed amount.
     private val enterAmountViewModel by mayaViewModels<DEXEnterAmountViewModel>()
     private val args by navArgs<DEXRefundAddressFragmentArgs>()
@@ -107,7 +108,11 @@ class DEXRefundAddressFragment : Fragment() {
         val amount = enterAmountViewModel.enteredAmount()
         log.info(
             "DEX buy: continue with refund address={} for asset={} amount(dash={} fiat={} crypto={})",
-            address, args.asset, amount.dash, amount.fiat, amount.crypto
+            address,
+            args.asset,
+            amount.dash,
+            amount.fiat,
+            amount.crypto
         )
         safeNavigate(
             DEXRefundAddressFragmentDirections.dexRefundAddressToDexReceive(

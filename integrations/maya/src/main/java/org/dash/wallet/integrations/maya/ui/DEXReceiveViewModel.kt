@@ -32,7 +32,6 @@ import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
-import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -113,8 +112,12 @@ class DEXReceiveViewModel @Inject constructor(
      */
     fun loadDepositAddress() {
         if (asset.isBlank() || sellAmount.isBlank() || refundAddress.isBlank()) {
-            log.warn("loadDepositAddress: missing inputs asset={} sellAmount={} refund(blank)={}",
-                asset, sellAmount, refundAddress.isBlank())
+            log.warn(
+                "loadDepositAddress: missing inputs asset={} sellAmount={} refund(blank)={}",
+                asset,
+                sellAmount,
+                refundAddress.isBlank()
+            )
             _uiState.update { it.copy(isLoading = false, errorMessage = "Missing swap details") }
             return
         }

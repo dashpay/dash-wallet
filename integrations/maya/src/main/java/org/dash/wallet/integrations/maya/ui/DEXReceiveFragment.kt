@@ -31,9 +31,9 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.R as CommonR
 import org.slf4j.LoggerFactory
 import java.math.RoundingMode
+import org.dash.wallet.common.R as CommonR
 
 /**
  * DashDEX buy "Send {COIN} to this address" screen (Figma node 35042-51682).
@@ -53,6 +53,7 @@ class DEXReceiveFragment : Fragment() {
     }
 
     private val viewModel by mayaViewModels<DEXReceiveViewModel>()
+
     // Same nav-graph-scoped instance used by the earlier steps: carries the committed amount, which
     // the (future) buy-swap call in the ViewModel needs as the sell amount.
     private val enterAmountViewModel by mayaViewModels<DEXEnterAmountViewModel>()
@@ -77,7 +78,9 @@ class DEXReceiveFragment : Fragment() {
         )
         log.info(
             "DEX buy: receive screen for asset={} sellAmount={} refundAddress={}",
-            args.asset, sellAmount, args.refundAddress
+            args.asset,
+            sellAmount,
+            args.refundAddress
         )
         viewModel.loadDepositAddress()
 

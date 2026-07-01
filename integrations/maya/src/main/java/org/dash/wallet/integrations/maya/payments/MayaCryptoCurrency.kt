@@ -125,13 +125,16 @@ open class MayaEthereumCryptoCurrency : MayaCryptoCurrency {
     override val addressParser: AddressParser = AddressParser.getEthereumAddressParser()
     override val codeId: Int = R.string.cryptocurrency_ethereum_code
     override val nameId: Int = R.string.cryptocurrency_ethereum_network
+
     // EIP-155 chain id, derived from the SwapKit chain prefix of [asset] (e.g. "ARB" in "ARB.ARB-…").
     open val chain: Int
         get() = EVM_CHAIN_IDS[asset.substringBefore(".")] ?: 1
     companion object {
         const val GWEI_PER_COIN = 1_000_000_000L
+
         // 18 decimals — every EVM native gas coin (ETH, AVAX, BNB, POL, …) uses 1e18 base units.
         const val NATIVE_DECIMALS = 18
+
         // SwapKit/Maya chain prefix -> EIP-155 chain id.
         val EVM_CHAIN_IDS = mapOf(
             "ETH" to 1,
@@ -177,6 +180,7 @@ open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = Bech32AddressParser("kujira", 38, null)
     override val codeId: Int = R.string.cryptocurrency_kuji_code
     override val nameId: Int = R.string.cryptocurrency_kuji_network
+
     // No payment-URI scheme honored by Cosmos/Kujira wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -236,6 +240,7 @@ open class MayaRuneCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = RuneAddressParser()
     override val codeId: Int = R.string.cryptocurrency_rune_code
     override val nameId: Int = R.string.cryptocurrency_rune_network
+
     // No payment-URI scheme honored by THORChain wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -255,6 +260,7 @@ open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = Bech32AddressParser("maya", 38, null)
     override val codeId: Int = R.string.cryptocurrency_maya_code
     override val nameId: Int = R.string.cryptocurrency_maya_network
+
     // No payment-URI scheme honored by Maya/Cosmos wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -274,6 +280,7 @@ open class MayaCacaoCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = Bech32AddressParser("maya", 38, null)
     override val codeId: Int = R.string.cryptocurrency_cacao_code
     override val nameId: Int = R.string.cryptocurrency_cacao_network
+
     // No payment-URI scheme honored by Maya/Cosmos wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -287,6 +294,7 @@ open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = ZcashAddressParser()
     override val codeId: Int = R.string.cryptocurrency_zec_code
     override val nameId: Int = R.string.cryptocurrency_zec_network
+
     // ZIP-321 transparent-address payment URI.
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "zcash:$address?amount=$amount"
@@ -305,6 +313,7 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
     )
     override val codeId: Int = R.string.cryptocurrency_xrd_code
     override val nameId: Int = R.string.cryptocurrency_xrd_network
+
     // No payment-URI scheme honored by Radix wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -495,6 +504,7 @@ open class MayaCardanoCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = CardanoAddressParser()
     override val codeId: Int = R.string.cryptocurrency_ada_code
     override val nameId: Int = R.string.cryptocurrency_ada_network
+
     // CIP-13 (web+cardano:) is rarely scannable — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -522,6 +532,7 @@ open class MayaNearCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = NearAddressParser()
     override val codeId: Int = R.string.cryptocurrency_near_code
     override val nameId: Int = R.string.cryptocurrency_near_network
+
     // NEAR is account-based with no standard payment URI — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -535,6 +546,7 @@ open class MayaTronCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = TronAddressParser()
     override val codeId: Int = R.string.cryptocurrency_trx_code
     override val nameId: Int = R.string.cryptocurrency_trx_network
+
     // No payment-URI scheme honored by TRON wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -548,6 +560,7 @@ open class MayaXrpCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = XrpAddressParser()
     override val codeId: Int = R.string.cryptocurrency_xrp_code
     override val nameId: Int = R.string.cryptocurrency_xrp_network
+
     // XRP deposits often need a destination tag too; no universally scannable URI — bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -561,6 +574,7 @@ open class MayaTonCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = TonAddressParser()
     override val codeId: Int = R.string.cryptocurrency_ton_code
     override val nameId: Int = R.string.cryptocurrency_ton_network
+
     // No payment-URI scheme honored by TON wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -575,6 +589,7 @@ open class MayaSuiCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = SuiAddressParser()
     override val codeId: Int = R.string.cryptocurrency_sui_code
     override val nameId: Int = R.string.cryptocurrency_sui_network
+
     // No payment-URI scheme honored by Sui wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -583,6 +598,7 @@ open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "STRK"
     override val name: String = "Starknet"
     override val asset: String = "STRK.STRK"
+
     // A sample Starknet account (wallet) address — intentionally distinct from the
     // mainnet STRK token contract (0x04718f5a...), which is not a valid swap destination.
     override val exampleAddress: String =
@@ -591,6 +607,7 @@ open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val addressParser: AddressParser = StarknetAddressParser()
     override val codeId: Int = R.string.cryptocurrency_strk_code
     override val nameId: Int = R.string.cryptocurrency_strk_network
+
     // No payment-URI scheme honored by Starknet wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
 }
@@ -672,6 +689,7 @@ class MayaSuiTokenCryptoCurrency(
 
 object MayaCurrencyList {
     private val currencyMap: Map<String, MayaCryptoCurrency>
+
     // The raw registration list before associateBy collapses duplicate asset keys. Exposed so tests
     // can detect a duplicate asset (which would otherwise be silently dropped from currencyMap/all).
     internal val registeredCurrencies: List<MayaCryptoCurrency>

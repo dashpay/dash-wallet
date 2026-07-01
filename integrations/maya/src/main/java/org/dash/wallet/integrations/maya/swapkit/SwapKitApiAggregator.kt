@@ -44,7 +44,6 @@ import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
-import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapFees
 import org.dash.wallet.integrations.maya.model.SwapQuote
@@ -56,6 +55,7 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitRoute
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import org.dash.wallet.integrations.maya.utils.SwapDirection
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode

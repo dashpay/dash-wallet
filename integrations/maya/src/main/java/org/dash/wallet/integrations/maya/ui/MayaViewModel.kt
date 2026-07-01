@@ -149,6 +149,7 @@ class MayaViewModel @Inject constructor(
     val hasHaltedCoins: StateFlow<Boolean> = combine(inboundAddresses, poolList) { addresses, pools ->
         addresses.any { it.halted } || pools.any { it.mayaHalted }
     }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     // Lazy: building the parsers iterates the full currency list, which is only needed
     // once the user reaches the address-input screen. Computing it eagerly ran on the
     // main thread during the nav-graph-scoped construction (triggered by the portal),
