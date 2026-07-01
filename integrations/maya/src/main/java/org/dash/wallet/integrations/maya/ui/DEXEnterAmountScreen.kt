@@ -18,13 +18,10 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,6 +41,7 @@ import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
+import java.math.BigDecimal
 import java.util.Locale
 
 @Composable
@@ -108,13 +106,10 @@ private fun DEXEnterAmountScreenContent(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                //.height(110.dp)
+                // .height(110.dp)
                 .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-//            TopIntro(
-//                heading = stringResource(R.string.dex_enter_amount_title),
-//            )
             EnterAmount(
                 primaryAmount = amount,
                 currencyCodes = currencyCodes,
@@ -129,7 +124,13 @@ private fun DEXEnterAmountScreenContent(
 
             if (validationError != null) {
                 val errorText = when (validationError) {
-                    "noRoutesFound" -> stringResource(R.string.maya_error_below_allowed_minimum)
+                    "noRoutesFound" -> {
+                        if (amount.toBigDecimal() < BigDecimal.TEN.multiply(BigDecimal.TEN)) {
+                            stringResource(R.string.maya_error_below_allowed_minimum)
+                        } else {
+                            stringResource(R.string.maya_error_below_allowed_maximum)
+                        }
+                    }
                     else -> stringResource(R.string.dex_enter_amount_invalid)
                 }
                 Text(
