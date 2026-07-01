@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.dashspend
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +49,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
@@ -299,6 +301,7 @@ private fun FlexibleSingleContent(
     uiState: PurchaseGiftCardV2UiState,
     onTabChanged: (isMultiple: Boolean) -> Unit
 ) {
+    val colors = LocalDashColors.current
     Column {
         val tabOptions = listOf(
             SegmentedOption(stringResource(R.string.gift_card_tab_single)),
@@ -308,7 +311,9 @@ private fun FlexibleSingleContent(
             options = tabOptions,
             selectedIndex = 0,
             onOptionSelected = { _, index -> onTabChanged(index == 1) },
-            style = SegmentedPickerStyle(cornerRadius = 20f),
+            style = SegmentedPickerStyle(
+                cornerRadius = 20f
+            ),
             modifier = Modifier.fillMaxWidth().height(40.dp)
         )
 
@@ -615,95 +620,101 @@ private fun CircleButton(
 }
 
 // ── Previews ──────────────────────────────────────────────────────────────────
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single")
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PreviewFlexibleSingle() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.FlexibleSingle,
-            merchantName = "Amazon",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = true,
-            amountText = "25",
-            minHintText = "Min: $5.00",
-            maxHintText = "Max: $200.00",
-            totalAmountText = "0.00",
-            canContinue = true,
-            allowedQuantities = mapOf(),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.FlexibleSingle,
+                merchantName = "Amazon",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = true,
+                amountText = "25",
+                minHintText = "Min: $5.00",
+                maxHintText = "Max: $200.00",
+                totalAmountText = "0.00",
+                canContinue = true,
+                allowedQuantities = mapOf(),
+                errorText = ""
+            ),
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple")
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PreviewFlexibleMultiple() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.FlexibleMultiple(
-                denominations = listOf(5.0, 10.0, 20.0, 50.0, 200.0)
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.FlexibleMultiple(
+                    denominations = listOf(5.0, 10.0, 20.0, 50.0, 200.0)
+                ),
+                merchantName = "Amazon",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = true,
+                amountText = "0",
+                denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
+                totalAmountText = "40.00",
+                canContinue = true,
+                allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
+                errorText = ""
             ),
-            merchantName = "Amazon",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = true,
-            amountText = "0",
-            denominationQuantities = mapOf(10.0 to 2, 20.0 to 1),
-            totalAmountText = "40.00",
-            canContinue = true,
-            allowedQuantities = mapOf(5.0 to 6, 10.0 to 1, 20.0 to 1),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }
-
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations")
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PreviewFixed() {
-    PurchaseGiftCardScreenV2(
-        uiState = PurchaseGiftCardV2UiState(
-            mode = GiftCardPurchaseMode.Fixed(
-                denominations = listOf(15.0, 25.0, 50.0, 100.0)
+    DashWalletTheme {
+        PurchaseGiftCardScreenV2(
+            uiState = PurchaseGiftCardV2UiState(
+                mode = GiftCardPurchaseMode.Fixed(
+                    denominations = listOf(15.0, 25.0, 50.0, 100.0)
+                ),
+                merchantName = "Target",
+                merchantLogoUrl = null,
+                dashBalance = "0.4812",
+                fiatBalance = "$29.50",
+                showBalance = false,
+                amountText = "0",
+                denominationQuantities = mapOf(25.0 to 1),
+                totalAmountText = "25.00",
+                canContinue = true,
+                allowedQuantities = mapOf(15.0 to 1),
+                errorText = ""
             ),
-            merchantName = "Target",
-            merchantLogoUrl = null,
-            dashBalance = "0.4812",
-            fiatBalance = "$29.50",
-            showBalance = false,
-            amountText = "0",
-            denominationQuantities = mapOf(25.0 to 1),
-            totalAmountText = "25.00",
-            canContinue = true,
-            allowedQuantities = mapOf(15.0 to 1),
-            errorText = ""
-        ),
-        onBack = {},
-        onInfo = {},
-        onTabChanged = {},
-        onToggleBalance = {},
-        onKeyInput = {},
-        onQuantityChanged = { _, _ -> },
-        onReset = {},
-        onContinue = {}
-    )
+            onBack = {},
+            onInfo = {},
+            onTabChanged = {},
+            onToggleBalance = {},
+            onKeyInput = {},
+            onQuantityChanged = { _, _ -> },
+            onReset = {},
+            onContinue = {}
+        )
+    }
 }

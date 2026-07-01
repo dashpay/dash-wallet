@@ -61,8 +61,10 @@ enum class PickerDisplayMode {
 
 data class SegmentedPickerStyle(
     val displayMode: PickerDisplayMode = PickerDisplayMode.Horizontal,
-    val backgroundColor: Color = MyTheme.Colors.gray400.copy(alpha = 0.1f),
-    val thumbColor: Color = MyTheme.Colors.backgroundSecondary,
+    // Null means "resolve from the active theme" — see SegmentedPicker. Hardcoding a color here
+    // would freeze it to the light scheme (data-class defaults can't read LocalDashColors).
+    val backgroundColor: Color? = null,
+    val thumbColor: Color? = null,
     val cornerRadius: Float = 12f,
     val textStyle: TextStyle = MyTheme.CaptionMedium,
     val shadowElevation: Int = 2
@@ -87,13 +89,18 @@ fun SegmentedPicker(
     val density = LocalDensity.current
     val layoutDirection = LocalLayoutDirection.current
 
+    // Resolve theme-aware defaults so the picker tracks light/dark; explicit style colors win.
+    val colors = LocalDashColors.current
+    val backgroundColor = style.backgroundColor ?: colors.gray400.copy(alpha = 0.1f)
+    val thumbColor = style.thumbColor ?: colors.backgroundSecondary
+
     var containerWidth by remember { mutableIntStateOf(0) }
     var containerHeight by remember { mutableIntStateOf(0) }
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(style.cornerRadius.dp))
-            .background(style.backgroundColor)
+            .background(backgroundColor)
             .padding(1.dp)
             .onGloballyPositioned { coordinates ->
                 containerWidth = coordinates.size.width
@@ -135,7 +142,6 @@ fun SegmentedPicker(
                 }
             }
         )
-        val colors = LocalDashColors.current
         // Draw dividers between options
         if (isHorizontal) {
             Row(
@@ -161,7 +167,7 @@ fun SegmentedPicker(
         if (containerSize > 0) {
             Surface(
                 shape = RoundedCornerShape((style.cornerRadius - 2).dp),
-                color = style.thumbColor,
+                color = thumbColor,
                 shadowElevation = style.shadowElevation.dp,
                 modifier = Modifier
                     .then(

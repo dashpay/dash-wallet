@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.dash.wallet.common.R
 import org.dash.wallet.common.databinding.DialogComposeSheetBinding
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.Grabber
 import org.dash.wallet.common.ui.viewBinding
 
@@ -36,9 +37,11 @@ open class ComposeBottomSheet : OffsetDialogFragment(R.layout.dialog_compose_she
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.composeContainer.setContent {
-            Column(modifier = Modifier.navigationBarsPadding()) {
-                Grabber()
-                Content()
+            DashWalletTheme {
+                Column(modifier = Modifier.navigationBarsPadding()) {
+                    Grabber()
+                    Content()
+                }
             }
         }
     }
