@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,9 +28,28 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.NetworkStateInt
+import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.dash.wallet.integrations.maya.swapkit.SwapKitErrors
+import org.slf4j.LoggerFactory
 import javax.inject.Inject
+
+/**
+ * Result of a successful buy-order creation, handed to the Fragment so it can navigate to the
+ * receive screen carrying the SwapKit deposit address (and the sell amount used to build its URI).
+ */
+data class DEXRefundOrderResult(
+    val depositAddress: String,
+    val sellAmount: String
+)
 
 /**
  * UI state for the DashDEX buy "Enter refund address" screen (Figma node 35199-9405).
@@ -53,6 +73,11 @@ data class DEXRefundAddressUIState(
     // When non-null, the field is in an error state; the value is the currency code to format
     // into R.string.not_valid_address. Cleared as soon as the user edits the address.
     val errorCurrencyCode: String? = null,
+    // True while the buy order is being created with SwapKit (Continue shows a spinner).
+    val isSubmitting: Boolean = false,
+    // Non-null when creating the order failed: a friendly, localized message resource mapped from the
+    // SwapKit error by [SwapKitErrors]. Resolved by the screen with [currencyCode] as the format arg.
+    @StringRes val orderErrorRes: Int? = null,
     // False when the device has no network connection; the screen shows a no-connection toast.
     val isOnline: Boolean = true
 ) {
@@ -61,12 +86,19 @@ data class DEXRefundAddressUIState(
 
 @HiltViewModel
 class DEXRefundAddressViewModel @Inject constructor(
+    private val swapProvider: SwapProvider,
+    private val walletDataProvider: WalletDataProvider,
+    private val transactionMetadataProvider: TransactionMetadataProvider,
     networkState: NetworkStateInt,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DEXRefundAddressUIState())
     val uiState: StateFlow<DEXRefundAddressUIState> = _uiState.asStateFlow()
+
+    // Fired with the created order once SwapKit accepts the swap; the Fragment observes this to
+    // navigate to the receive screen. Carries the deposit address so receive doesn't re-create it.
+    val onOrderCreated = SingleLiveEvent<DEXRefundOrderResult>()
 
     init {
         // Mirror connectivity into the UI state so the screen can show the no-connection toast,
@@ -98,7 +130,9 @@ class DEXRefundAddressViewModel @Inject constructor(
                 currencyCode = displayCode,
                 address = restored,
                 continueEnabled = restored.isNotBlank(),
-                errorCurrencyCode = null
+                errorCurrencyCode = null,
+                isSubmitting = false,
+                orderErrorRes = null
             )
         }
         persistAddress()
@@ -113,7 +147,8 @@ class DEXRefundAddressViewModel @Inject constructor(
             it.copy(
                 address = address,
                 continueEnabled = address.isNotBlank(),
-                errorCurrencyCode = null
+                errorCurrencyCode = null,
+                orderErrorRes = null
             )
         }
         persistAddress()
@@ -126,10 +161,60 @@ class DEXRefundAddressViewModel @Inject constructor(
     }
 
     /**
+     * Handle Continue: validate the entered address against the bought asset's chain, then create
+     * the buy order with SwapKit for [sellAmount] (the human-unit crypto amount from the enter-amount
+     * step). This both validates the swap end-to-end and yields the deposit address, which is handed
+     * to the receive screen via [onOrderCreated] — so the receive screen no longer calls createBuyOrder.
+     *
+     * On an invalid address the inline "not a valid X address" error is shown; on a SwapKit failure
+     * [DEXRefundAddressUIState.orderErrorRes] is set. Navigation happens only on success.
+     */
+    fun submitOrder(sellAmount: String) {
+        val state = _uiState.value
+        if (state.isSubmitting || !state.isOnline) return
+
+        val validAddress = validateAddress() ?: return // invalid -> inline error already shown
+
+        _uiState.update { it.copy(isSubmitting = true, orderErrorRes = null) }
+        viewModelScope.launch {
+            // The converted DASH lands in the wallet's current receive address; mark it as income for
+            // tax reporting (moved here from the receive screen along with the createBuyOrder call).
+            val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
+            transactionMetadataProvider.markAddressWithTaxCategory(
+                destinationAddress.toString(),
+                false,
+                TaxCategory.Income,
+                ServiceName.Swapkit
+            )
+            when (
+                val result = swapProvider.createBuyOrder(state.asset, sellAmount, destinationAddress, validAddress)
+            ) {
+                is ResponseResource.Success -> {
+                    val order = result.value
+                    _uiState.update { it.copy(isSubmitting = false, orderErrorRes = null) }
+                    onOrderCreated.postValue(
+                        DEXRefundOrderResult(depositAddress = order.depositAddress, sellAmount = order.sellAmount)
+                    )
+                }
+                is ResponseResource.Failure -> {
+                    // Log the raw SwapKit message for diagnostics; surface a friendly, localized one.
+                    log.error("createBuyOrder failed: {}", result.throwable.message)
+                    _uiState.update {
+                        it.copy(
+                            isSubmitting = false,
+                            orderErrorRes = SwapKitErrors.messageResFor(result.throwable.message)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Validate the entered address against the bought asset's chain. Returns the trimmed,
      * valid address on success; null (and sets an inline error) on failure or unknown asset.
      */
-    fun validateAddress(): String? {
+    private fun validateAddress(): String? {
         val state = _uiState.value
         val candidate = state.address.trim()
         val parser = MayaCurrencyList[state.asset]?.addressParser
@@ -143,6 +228,8 @@ class DEXRefundAddressViewModel @Inject constructor(
     }
 
     companion object {
+        private val log = LoggerFactory.getLogger(DEXRefundAddressViewModel::class.java)
+
         // SavedStateHandle keys for restoring the entered refund address after process death.
         private const val KEY_ADDRESS = "dex_refund_address"
         private const val KEY_ASSET = "dex_refund_address_asset"

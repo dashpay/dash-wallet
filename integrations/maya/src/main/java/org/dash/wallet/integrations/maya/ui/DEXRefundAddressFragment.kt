@@ -34,6 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.scan.ScanActivity
 import org.dash.wallet.common.util.safeNavigate
 import org.slf4j.LoggerFactory
+import java.math.RoundingMode
 
 /**
  * DashDEX buy "Enter refund address" screen (Figma node 35199-9405).
@@ -73,6 +74,20 @@ class DEXRefundAddressFragment : Fragment() {
     ): View {
         viewModel.setArguments(asset = args.asset, currencyCode = args.currency)
 
+        // Once the buy order is created with SwapKit, carry its deposit address (and the sell amount
+        // used to build the payment URI) to the receive screen — which no longer calls createBuyOrder.
+        viewModel.onOrderCreated.observe(viewLifecycleOwner) { order ->
+            log.info("DEX buy: order created for asset={}, navigating to receive", args.asset)
+            safeNavigate(
+                DEXRefundAddressFragmentDirections.dexRefundAddressToDexReceive(
+                    asset = args.asset,
+                    currency = args.currency,
+                    sellAmount = order.sellAmount,
+                    depositAddress = order.depositAddress
+                )
+            )
+        }
+
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
@@ -101,25 +116,16 @@ class DEXRefundAddressFragment : Fragment() {
     }
 
     private fun onContinue() {
-        val address = viewModel.validateAddress() ?: return // invalid -> inline error already shown
-
-        // The entered amount is shared via the nav-graph-scoped DEXEnterAmountViewModel, so only the
-        // asset/currency and the validated refund address travel as nav args to the receive screen.
-        val amount = enterAmountViewModel.enteredAmount()
-        log.info(
-            "DEX buy: continue with refund address={} for asset={} amount(dash={} fiat={} crypto={})",
-            address,
-            args.asset,
-            amount.dash,
-            amount.fiat,
-            amount.crypto
-        )
-        safeNavigate(
-            DEXRefundAddressFragmentDirections.dexRefundAddressToDexReceive(
-                asset = args.asset,
-                currency = args.currency,
-                refundAddress = address
-            )
-        )
+        // The entered amount is shared via the nav-graph-scoped DEXEnterAmountViewModel; convert it to
+        // the human-unit crypto sell amount and hand it to the ViewModel, which validates the address
+        // and creates the buy order with SwapKit. Navigation happens via onOrderCreated on success.
+        val sellAmount = enterAmountViewModel.enteredAmount().crypto
+            .setScale(SELL_AMOUNT_SCALE, RoundingMode.HALF_UP)
+            .stripTrailingZeros()
+            .toPlainString()
+        log.info("DEX buy: continue for asset={} sellAmount={}", args.asset, sellAmount)
+        viewModel.submitOrder(sellAmount)
     }
 }
+
+private const val SELL_AMOUNT_SCALE = 8

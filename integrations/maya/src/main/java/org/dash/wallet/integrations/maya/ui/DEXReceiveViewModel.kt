@@ -27,19 +27,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import org.dash.wallet.common.WalletDataProvider
-import org.dash.wallet.common.data.ResponseResource
-import org.dash.wallet.common.data.ServiceName
-import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.NetworkStateInt
-import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
-import org.dash.wallet.integrations.maya.swapkit.SwapKitErrors
 import org.slf4j.LoggerFactory
-import java.math.BigDecimal
 import javax.inject.Inject
 
 /**
@@ -49,9 +40,9 @@ import javax.inject.Inject
  * this screen shows the deposit address (+ QR) the user must send the crypto to. SwapKit converts
  * the received crypto to DASH and deposits it in the user's DashPay wallet.
  *
- * The deposit [address] (and the [uri] that the QR encodes) is produced by a SwapKit buy-swap
- * call (see [DEXReceiveViewModel.loadDepositAddress]); the screen renders a loading state until it
- * resolves, or [errorMessageRes] if it fails.
+ * The deposit [address] (and the [uri] that the QR encodes) is created on the previous
+ * (refund-address) step by the SwapKit buy-swap call and passed in via nav args, so this screen is
+ * purely presentational — see [DEXReceiveViewModel.setArguments].
  */
 data class DEXReceiveUIState(
     // Display code of the crypto being sent in (e.g. "BTC", or "USDC (Ethereum)" for a token),
@@ -61,11 +52,10 @@ data class DEXReceiveUIState(
     val address: String = "",
     // The payment URI encoded in the QR and shown in the URI row. Falls back to [address] when blank.
     val uri: String = "",
-    // True until the deposit address has been resolved (currently always true — see loadDepositAddress).
+    // True only briefly before setArguments runs; the deposit address arrives ready via nav args.
     val isLoading: Boolean = true,
-    // Non-null when resolving the deposit address failed: a friendly, localized message resource
-    // mapped from the SwapKit error by [SwapKitErrors]. The screen resolves it with [coinCode] as
-    // the format argument. Kept as a resource id (not a String) so the ViewModel stays Context-free.
+    // Non-null only in the defensive case where no deposit address was passed in; a friendly,
+    // localized message. Kept as a resource id (not a String) so the ViewModel stays Context-free.
     @StringRes val errorMessageRes: Int? = null,
     // False when the device has no network connection; the screen shows a no-connection toast.
     val isOnline: Boolean = true
@@ -73,9 +63,6 @@ data class DEXReceiveUIState(
 
 @HiltViewModel
 class DEXReceiveViewModel @Inject constructor(
-    private val swapProvider: SwapProvider,
-    private val walletDataProvider: WalletDataProvider,
-    private val transactionMetadataProvider: TransactionMetadataProvider,
     networkState: NetworkStateInt
 ) : ViewModel() {
     companion object {
@@ -93,103 +80,41 @@ class DEXReceiveViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    // Inputs gathered on the previous steps, held for the buy-swap call in loadDepositAddress().
-    private var asset: String = ""
-    private var refundAddress: String = ""
-    private var sellAmount: String = ""
-
     /**
-     * Seed the screen with the inputs gathered on the previous steps. [currencyCode] (e.g. "BTC")
-     * is the display code shown in the heading; [asset] (e.g. "BTC.BTC") is the SwapKit identifier;
-     * [sellAmount] is the human-unit amount of the crypto being sent in (from the shared
-     * DEXEnterAmountViewModel); [refundAddress] is the address funds are returned to if the swap
-     * fails (also reported to SwapKit as the source/refund address for NEAR-route buys).
+     * Seed the screen with the already-created order. [currencyCode] (e.g. "BTC") is the display
+     * code shown in the heading; [asset] (e.g. "BTC.BTC") is the SwapKit identifier used to build
+     * the payment URI; [sellAmount] is the human-unit amount of the crypto to send; [depositAddress]
+     * is the SwapKit inbound address resolved by the refund step's createBuyOrder call.
      */
-    fun setArguments(asset: String, currencyCode: String, refundAddress: String, sellAmount: String) {
-        this.asset = asset
-        this.refundAddress = refundAddress
-        this.sellAmount = sellAmount
+    fun setArguments(asset: String, currencyCode: String, sellAmount: String, depositAddress: String) {
         // Qualify tokens with their host network (e.g. "USDC (Ethereum)") so the user can tell which
         // chain to send on; native L1 coins (BTC, ETH, …) show just the code.
         val network = MayaCurrencyList.networkName(asset)
         val displayCode = if (network != null) "$currencyCode ($network)" else currencyCode
+        if (depositAddress.isBlank()) {
+            // Defensive: the refund step only navigates here with a valid deposit address, so this
+            // shouldn't happen — but never show a blank QR if it does.
+            log.warn("setArguments: blank deposit address for asset={}", asset)
+            _uiState.update {
+                it.copy(coinCode = displayCode, isLoading = false, errorMessageRes = R.string.dex_error_generic)
+            }
+            return
+        }
         _uiState.update {
             it.copy(
                 coinCode = displayCode,
-                address = "",
-                uri = "",
-                isLoading = true,
+                address = depositAddress,
+                uri = buildUri(asset, depositAddress, sellAmount),
+                isLoading = false,
                 errorMessageRes = null
             )
         }
     }
 
     /**
-     * Resolve the deposit (inbound) address for the buy swap (crypto -> DASH) via SwapKit
-     * `/v3/quote` + `/v3/swap`: sell the chosen [asset] for DASH, with the converted DASH sent to
-     * the wallet's current receive address and [refundAddress] reported as the source/refund
-     * address. The resulting inbound address is where the user sends the crypto.
-     */
-    fun loadDepositAddress() {
-        // A non-positive sell amount (e.g. "0") is not blank, so guard on the parsed value too:
-        // sending it to SwapKit yields an opaque `validation_error`. Failing fast here gives the
-        // user a clear "enter an amount" message instead — and never fires a doomed /v3/swap.
-        val sellAmountValue = sellAmount.toBigDecimalOrNull()
-        if (asset.isBlank() || refundAddress.isBlank() ||
-            sellAmountValue == null || sellAmountValue <= BigDecimal.ZERO
-        ) {
-            log.warn(
-                "loadDepositAddress: missing/invalid inputs asset={} sellAmount={} refund(blank)={}",
-                asset,
-                sellAmount,
-                refundAddress.isBlank()
-            )
-            _uiState.update {
-                it.copy(isLoading = false, errorMessageRes = R.string.dex_error_missing_details)
-            }
-            return
-        }
-
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessageRes = null) }
-            val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
-            transactionMetadataProvider.markAddressWithTaxCategory(
-                destinationAddress.toString(),
-                false,
-                TaxCategory.Income,
-                ServiceName.Swapkit
-            )
-            when (val result = swapProvider.createBuyOrder(asset, sellAmount, destinationAddress, refundAddress)) {
-                is ResponseResource.Success -> {
-                    val order = result.value
-                    _uiState.update {
-                        it.copy(
-                            address = order.depositAddress,
-                            uri = buildUri(order.depositAddress, order.sellAmount),
-                            isLoading = false,
-                            errorMessageRes = null
-                        )
-                    }
-                }
-                is ResponseResource.Failure -> {
-                    // Log the raw SwapKit message for diagnostics, but surface a friendly, localized
-                    // message mapped from the error code (see [SwapKitErrors]).
-                    log.error("createBuyOrder failed: {}", result.throwable.message)
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            errorMessageRes = SwapKitErrors.messageResFor(result.throwable.message)
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    /**
      * Build the payment URI for the QR / URI row.
      */
-    private fun buildUri(address: String, amount: String): String {
+    private fun buildUri(asset: String, address: String, amount: String): String {
         val addressParser = MayaCurrencyList[asset]
         return addressParser?.getPaymentRequestURI(address, amount) ?: address
     }

@@ -32,19 +32,15 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import org.slf4j.LoggerFactory
-import java.math.RoundingMode
 import org.dash.wallet.common.R as CommonR
 
 /**
  * DashDEX buy "Send {COIN} to this address" screen (Figma node 35042-51682).
  *
  * Final step of the buy flow: shows the SwapKit deposit address (+ QR) the user must send the
- * chosen crypto to. Reached from [DEXRefundAddressFragment] with the asset/currency and the
- * validated refund address. The entered amount is read from the shared, nav-graph-scoped
- * [DEXEnterAmountViewModel] (see [mayaViewModels]).
- *
- * The deposit address comes from a SwapKit buy-swap call that is not implemented yet, so the
- * screen renders a loading state — see [DEXReceiveViewModel.loadDepositAddress].
+ * chosen crypto to. Reached from [DEXRefundAddressFragment], which already created the buy order
+ * with SwapKit and passes the resolved deposit address (and the sell amount used to build the
+ * payment URI) as nav args — so this screen is purely presentational.
  */
 @AndroidEntryPoint
 class DEXReceiveFragment : Fragment() {
@@ -53,10 +49,6 @@ class DEXReceiveFragment : Fragment() {
     }
 
     private val viewModel by mayaViewModels<DEXReceiveViewModel>()
-
-    // Same nav-graph-scoped instance used by the earlier steps: carries the committed amount, which
-    // the (future) buy-swap call in the ViewModel needs as the sell amount.
-    private val enterAmountViewModel by mayaViewModels<DEXEnterAmountViewModel>()
     private val args by navArgs<DEXReceiveFragmentArgs>()
 
     override fun onCreateView(
@@ -64,25 +56,18 @@ class DEXReceiveFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        // The amount of the chosen crypto the user is sending in, as a human-unit decimal — the
-        // sellAmount for the SwapKit buy quote. Comes from the shared enter-amount step.
-        val sellAmount = enterAmountViewModel.enteredAmount().crypto
-            .setScale(8, RoundingMode.HALF_UP)
-            .stripTrailingZeros()
-            .toPlainString()
         viewModel.setArguments(
             asset = args.asset,
             currencyCode = args.currency,
-            refundAddress = args.refundAddress,
-            sellAmount = sellAmount
+            sellAmount = args.sellAmount,
+            depositAddress = args.depositAddress
         )
         log.info(
-            "DEX buy: receive screen for asset={} sellAmount={} refundAddress={}",
+            "DEX buy: receive screen for asset={} sellAmount={} deposit={}",
             args.asset,
-            sellAmount,
-            args.refundAddress
+            args.sellAmount,
+            args.depositAddress
         )
-        viewModel.loadDepositAddress()
 
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)

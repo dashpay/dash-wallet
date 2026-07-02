@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -59,6 +61,8 @@ fun DEXRefundAddressScreen(
         currencyCode = uiState.currencyCode,
         continueEnabled = uiState.continueEnabled,
         hasError = uiState.hasError,
+        isSubmitting = uiState.isSubmitting,
+        orderErrorRes = uiState.orderErrorRes,
         isOnline = uiState.isOnline,
         onAddressChanged = viewModel::onAddressChanged,
         onScanClick = onScanClick,
@@ -74,6 +78,8 @@ private fun DEXRefundAddressScreenContent(
     currencyCode: String,
     continueEnabled: Boolean,
     hasError: Boolean,
+    isSubmitting: Boolean,
+    @StringRes orderErrorRes: Int?,
     isOnline: Boolean,
     onAddressChanged: (String) -> Unit,
     onScanClick: () -> Unit,
@@ -112,23 +118,37 @@ private fun DEXRefundAddressScreenContent(
                     null
                 },
                 isError = hasError,
-                // Disabled while offline (typing / paste / scan): the swap can't proceed without a
-                // connection, so there's nothing to validate the address against yet.
-                enabled = isOnline,
+                // Disabled while offline (typing / paste / scan) or while the order is being created:
+                // there's nothing to validate against without a connection, and the input is locked
+                // while the swap is submitted.
+                enabled = isOnline && !isSubmitting,
                 onScanClick = onScanClick,
                 onLongPress = onPasteClick,
                 modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
             )
 
+            // SwapKit order-creation error (e.g. no route / expired quote), distinct from the
+            // address-format error shown inline in the field above.
+            if (orderErrorRes != null) {
+                Text(
+                    // currencyCode is the format arg; messages without a placeholder ignore it.
+                    text = stringResource(orderErrorRes, currencyCode),
+                    style = MyTheme.Body2Regular,
+                    color = MyTheme.Colors.red,
+                    modifier = Modifier.padding(top = 8.dp, start = 20.dp, end = 20.dp)
+                )
+            }
+
             Spacer(modifier = Modifier.weight(1f))
 
-            // Pinned bottom Continue button.
+            // Pinned bottom Continue button. Shows a spinner while the buy order is created with
+            // SwapKit; disabled while offline (nothing to validate against without a connection).
             DashButton(
                 text = stringResource(R.string.button_continue),
                 style = Style.FilledBlue,
                 size = Size.Large,
-                // Disabled while offline: nothing to validate against without a connection.
-                isEnabled = continueEnabled && isOnline,
+                isEnabled = continueEnabled && isOnline && !isSubmitting,
+                isLoading = isSubmitting,
                 onClick = onContinueClick,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -159,6 +179,8 @@ private fun DEXRefundAddressScreenEmptyPreview() {
         currencyCode = "BTC",
         continueEnabled = false,
         hasError = false,
+        isSubmitting = false,
+        orderErrorRes = null,
         isOnline = true,
         onAddressChanged = {},
         onScanClick = {},
@@ -176,6 +198,8 @@ private fun DEXRefundAddressScreenFilledPreview() {
         currencyCode = "BTC",
         continueEnabled = true,
         hasError = false,
+        isSubmitting = false,
+        orderErrorRes = null,
         isOnline = true,
         onAddressChanged = {},
         onScanClick = {},
@@ -193,6 +217,8 @@ private fun DEXRefundAddressScreenErrorPreview() {
         currencyCode = "BTC",
         continueEnabled = true,
         hasError = true,
+        isSubmitting = false,
+        orderErrorRes = null,
         isOnline = true,
         onAddressChanged = {},
         onScanClick = {},

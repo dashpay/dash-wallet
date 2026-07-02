@@ -88,8 +88,13 @@
         <argument
             android:name="currency"
             app:argType="string" />
+        <!-- Human-unit amount of the crypto being sent in; used to build the deposit payment URI. -->
         <argument
-            android:name="refundAddress"
+            android:name="sellAmount"
+            app:argType="string" />
+        <!-- SwapKit inbound deposit address, resolved by the refund screen's createBuyOrder call. -->
+        <argument
+            android:name="depositAddress"
             app:argType="string" />
     </fragment>
 
