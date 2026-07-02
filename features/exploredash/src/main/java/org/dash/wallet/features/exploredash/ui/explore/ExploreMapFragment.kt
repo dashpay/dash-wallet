@@ -51,6 +51,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import javax.inject.Inject
+import androidx.core.graphics.createBitmap
 
 @AndroidEntryPoint
 class ExploreMapFragment : SupportMapFragment() {
