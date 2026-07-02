@@ -24,12 +24,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.api.SwapProvider
@@ -63,14 +66,17 @@ data class DEXReceiveUIState(
     // Non-null when resolving the deposit address failed: a friendly, localized message resource
     // mapped from the SwapKit error by [SwapKitErrors]. The screen resolves it with [coinCode] as
     // the format argument. Kept as a resource id (not a String) so the ViewModel stays Context-free.
-    @StringRes val errorMessageRes: Int? = null
+    @StringRes val errorMessageRes: Int? = null,
+    // False when the device has no network connection; the screen shows a no-connection toast.
+    val isOnline: Boolean = true
 )
 
 @HiltViewModel
 class DEXReceiveViewModel @Inject constructor(
     private val swapProvider: SwapProvider,
     private val walletDataProvider: WalletDataProvider,
-    private val transactionMetadataProvider: TransactionMetadataProvider
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    networkState: NetworkStateInt
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(DEXReceiveViewModel::class.java)
@@ -78,6 +84,14 @@ class DEXReceiveViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(DEXReceiveUIState())
     val uiState: StateFlow<DEXReceiveUIState> = _uiState.asStateFlow()
+
+    init {
+        // Mirror connectivity into the UI state so the screen can show the no-connection toast,
+        // matching the coin picker (see MayaViewModel).
+        networkState.isConnected
+            .onEach { online -> _uiState.update { it.copy(isOnline = online) } }
+            .launchIn(viewModelScope)
+    }
 
     // Inputs gathered on the previous steps, held for the buy-swap call in loadDepositAddress().
     private var asset: String = ""

@@ -17,12 +17,17 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import javax.inject.Inject
 
@@ -47,19 +52,42 @@ data class DEXRefundAddressUIState(
     val continueEnabled: Boolean = false,
     // When non-null, the field is in an error state; the value is the currency code to format
     // into R.string.not_valid_address. Cleared as soon as the user edits the address.
-    val errorCurrencyCode: String? = null
+    val errorCurrencyCode: String? = null,
+    // False when the device has no network connection; the screen shows a no-connection toast.
+    val isOnline: Boolean = true
 ) {
     val hasError: Boolean get() = errorCurrencyCode != null
 }
 
 @HiltViewModel
-class DEXRefundAddressViewModel @Inject constructor() : ViewModel() {
+class DEXRefundAddressViewModel @Inject constructor(
+    networkState: NetworkStateInt,
+    private val savedStateHandle: SavedStateHandle
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DEXRefundAddressUIState())
     val uiState: StateFlow<DEXRefundAddressUIState> = _uiState.asStateFlow()
 
+    init {
+        // Mirror connectivity into the UI state so the screen can show the no-connection toast,
+        // matching the coin picker (see MayaViewModel).
+        networkState.isConnected
+            .onEach { online -> _uiState.update { it.copy(isOnline = online) } }
+            .launchIn(viewModelScope)
+    }
+
     /** Seed the screen with the asset/currency chosen on the previous (enter-amount) step. */
     fun setArguments(asset: String, currencyCode: String) {
+        // Called from the Fragment's onCreateView, which re-runs on back-navigation and after
+        // process death. While the ViewModel is alive keep an address the user already typed for the
+        // same asset; otherwise restore one persisted before process death (asset-gated), falling
+        // back to empty for a genuinely new entry.
+        if (_uiState.value.asset == asset && _uiState.value.address.isNotBlank()) {
+            return
+        }
+        val restored = savedStateHandle.get<String>(KEY_ADDRESS)
+            ?.takeIf { savedStateHandle.get<String>(KEY_ASSET) == asset }
+            .orEmpty()
         // Qualify tokens with their host network (e.g. "ETH (Ethereum)") so the user knows which
         // chain the refund address must be valid for; native L1 coins show just the code.
         val network = MayaCurrencyList.networkName(asset)
@@ -68,15 +96,19 @@ class DEXRefundAddressViewModel @Inject constructor() : ViewModel() {
             it.copy(
                 asset = asset,
                 currencyCode = displayCode,
-                address = "",
-                continueEnabled = false,
+                address = restored,
+                continueEnabled = restored.isNotBlank(),
                 errorCurrencyCode = null
             )
         }
+        persistAddress()
     }
 
     /** Update the entered address (typing / paste / scan), clearing any prior error state. */
     fun onAddressChanged(address: String) {
+        // Address entry is disabled while offline; the field enforces this, but paste/scan are
+        // triggered from the Fragment, so guard here too.
+        if (!_uiState.value.isOnline) return
         _uiState.update {
             it.copy(
                 address = address,
@@ -84,6 +116,13 @@ class DEXRefundAddressViewModel @Inject constructor() : ViewModel() {
                 errorCurrencyCode = null
             )
         }
+        persistAddress()
+    }
+
+    /** Persist the entered address + its asset so it survives process death. */
+    private fun persistAddress() {
+        savedStateHandle[KEY_ADDRESS] = _uiState.value.address
+        savedStateHandle[KEY_ASSET] = _uiState.value.asset
     }
 
     /**
@@ -101,5 +140,11 @@ class DEXRefundAddressViewModel @Inject constructor() : ViewModel() {
             _uiState.update { it.copy(errorCurrencyCode = it.currencyCode) }
             null
         }
+    }
+
+    companion object {
+        // SavedStateHandle keys for restoring the entered refund address after process death.
+        private const val KEY_ADDRESS = "dex_refund_address"
+        private const val KEY_ASSET = "dex_refund_address_asset"
     }
 }

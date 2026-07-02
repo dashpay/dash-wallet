@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -36,6 +38,8 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBack
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.Toast
+import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.common.R as CommonR
@@ -55,6 +59,7 @@ fun DEXRefundAddressScreen(
         currencyCode = uiState.currencyCode,
         continueEnabled = uiState.continueEnabled,
         hasError = uiState.hasError,
+        isOnline = uiState.isOnline,
         onAddressChanged = viewModel::onAddressChanged,
         onScanClick = onScanClick,
         onPasteClick = onPasteClick,
@@ -69,60 +74,80 @@ private fun DEXRefundAddressScreenContent(
     currencyCode: String,
     continueEnabled: Boolean,
     hasError: Boolean,
+    isOnline: Boolean,
     onAddressChanged: (String) -> Unit,
     onScanClick: () -> Unit,
     onPasteClick: () -> Unit,
     onBackClick: () -> Unit,
     onContinueClick: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        NavBarBack(onBackClick = onBackClick)
+        Column(modifier = Modifier.fillMaxSize()) {
+            NavBarBack(onBackClick = onBackClick)
 
-        // Heading + primary description. Reuses the design-system TopIntro (heading + body text).
-        // Sits directly below the nav bar — Figma's content `pt-116px` is just the height of the
-        // (overlaid) status bar + nav bar, which NavBarBack already occupies here; only the
-        // `safe-area/top` (10dp) remains as real padding.
-        TopIntro(
-            heading = stringResource(R.string.dex_refund_address_heading),
-            text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode),
-            modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp)
-        )
+            // Heading + primary description. Reuses the design-system TopIntro (heading + body text).
+            // Sits directly below the nav bar — Figma's content `pt-116px` is just the height of the
+            // (overlaid) status bar + nav bar, which NavBarBack already occupies here; only the
+            // `safe-area/top` (10dp) remains as real padding.
+            TopIntro(
+                heading = stringResource(R.string.dex_refund_address_heading),
+                text = stringResource(R.string.dex_refund_address_description, currencyCode, currencyCode),
+                modifier = Modifier.padding(top = 10.dp, start = 20.dp, end = 20.dp)
+            )
 
-        // Refund address field (design-system AddressField): label + paste/scan input + inline
-        // error. The address must validate against the source currency on Continue.
-        AddressField(
-            value = address,
-            onValueChange = onAddressChanged,
-            label = stringResource(R.string.dex_refund_address_field_label),
-            placeholder = stringResource(R.string.dex_refund_address_placeholder),
-            message = if (hasError) {
-                stringResource(CommonR.string.not_valid_address, currencyCode)
-            } else {
-                null
-            },
-            isError = hasError,
-            onScanClick = onScanClick,
-            onLongPress = onPasteClick,
-            modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
-        )
+            // Refund address field (design-system AddressField): label + paste/scan input + inline
+            // error. The address must validate against the source currency on Continue.
+            AddressField(
+                value = address,
+                onValueChange = onAddressChanged,
+                label = stringResource(R.string.dex_refund_address_field_label),
+                placeholder = stringResource(R.string.dex_refund_address_placeholder),
+                message = if (hasError) {
+                    stringResource(CommonR.string.not_valid_address, currencyCode)
+                } else {
+                    null
+                },
+                isError = hasError,
+                // Disabled while offline (typing / paste / scan): the swap can't proceed without a
+                // connection, so there's nothing to validate the address against yet.
+                enabled = isOnline,
+                onScanClick = onScanClick,
+                onLongPress = onPasteClick,
+                modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
+            )
 
-        Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.weight(1f))
 
-        // Pinned bottom Continue button.
-        DashButton(
-            text = stringResource(R.string.button_continue),
-            style = Style.FilledBlue,
-            size = Size.Large,
-            isEnabled = continueEnabled,
-            onClick = onContinueClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 40.dp, vertical = 16.dp)
-        )
+            // Pinned bottom Continue button.
+            DashButton(
+                text = stringResource(R.string.button_continue),
+                style = Style.FilledBlue,
+                size = Size.Large,
+                // Disabled while offline: nothing to validate against without a connection.
+                isEnabled = continueEnabled && isOnline,
+                onClick = onContinueClick,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 40.dp, vertical = 16.dp)
+            )
+        }
+
+        // No-connection toast, pinned at the bottom. Not dismissable — it must stay visible for as
+        // long as the device is offline, since the whole screen is disabled until connectivity returns.
+        if (!isOnline) {
+            Toast(
+                text = stringResource(R.string.maya_no_connection_toast),
+                imageResource = ToastImageResource.NoInternet.resourceId,
+                onActionClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 25.dp, vertical = 8.dp)
+            )
+        }
     }
 }
 
@@ -134,6 +159,7 @@ private fun DEXRefundAddressScreenEmptyPreview() {
         currencyCode = "BTC",
         continueEnabled = false,
         hasError = false,
+        isOnline = true,
         onAddressChanged = {},
         onScanClick = {},
         onPasteClick = {},
@@ -150,6 +176,7 @@ private fun DEXRefundAddressScreenFilledPreview() {
         currencyCode = "BTC",
         continueEnabled = true,
         hasError = false,
+        isOnline = true,
         onAddressChanged = {},
         onScanClick = {},
         onPasteClick = {},
@@ -166,6 +193,7 @@ private fun DEXRefundAddressScreenErrorPreview() {
         currencyCode = "BTC",
         continueEnabled = true,
         hasError = true,
+        isOnline = true,
         onAddressChanged = {},
         onScanClick = {},
         onPasteClick = {},

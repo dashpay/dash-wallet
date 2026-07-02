@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -39,6 +40,8 @@ import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarBackTitle
 import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
+import org.dash.wallet.common.ui.components.Toast
+import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
 import java.util.Locale
@@ -56,6 +59,7 @@ fun DEXEnterAmountScreen(
         selectedCurrencyIndex = uiState.selectedCurrencyIndex,
         continueEnabled = uiState.continueEnabled,
         isValidating = uiState.isValidating,
+        isOnline = uiState.isOnline,
         validationError = uiState.validationError,
         coinName = uiState.assetCurrencyCode,
         coinIconUrl = uiState.coinIconUrl,
@@ -76,6 +80,7 @@ private fun DEXEnterAmountScreenContent(
     selectedCurrencyIndex: Int,
     continueEnabled: Boolean,
     isValidating: Boolean,
+    isOnline: Boolean,
     validationError: String?,
     coinName: String?,
     coinIconUrl: String?,
@@ -87,72 +92,91 @@ private fun DEXEnterAmountScreenContent(
     onBackClick: () -> Unit,
     onContinueClick: () -> Unit
 ) {
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MyTheme.Colors.backgroundPrimary)
     ) {
-        NavBarBackTitle(
-            title = stringResource(R.string.dex_enter_amount_title),
-            onBackClick = onBackClick
-        )
-
-        // Amount input bar (design-system EnterAmount). Fiat is the primary input; DASH and
-        // the asset being bought are offered as alternate display currencies in the picker.
-        // No Max / balance / help text in this frame — only the amount + currency selector.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                // .height(110.dp)
-                .padding(horizontal = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            EnterAmount(
-                primaryAmount = amount,
-                currencyCodes = currencyCodes,
-                selectedCurrencyIndex = selectedCurrencyIndex,
-                locale = Locale.getDefault(),
-                showMaxButton = false,
-                showBalanceButton = false,
-                showSecondary = false,
-                showCurrencyPicker = true,
-                onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
+        Column(modifier = Modifier.fillMaxSize()) {
+            NavBarBackTitle(
+                title = stringResource(R.string.dex_enter_amount_title),
+                onBackClick = onBackClick
             )
 
-            if (validationError != null) {
-                // SwapKit's noRoutesFound can't tell us whether the amount is too low, too high, or
-                // simply unroutable right now, and the entered value is in the selected display
-                // currency — so any min/max guess would be misleading. Show a single neutral message
-                // that points the user back at the amount they entered.
-                Text(
-                    text = stringResource(R.string.dex_enter_amount_invalid),
-                    style = MyTheme.Body2Regular,
-                    color = MyTheme.Colors.red,
-                    modifier = Modifier.padding(top = 8.dp)
+            // Amount input bar (design-system EnterAmount). Fiat is the primary input; DASH and
+            // the asset being bought are offered as alternate display currencies in the picker.
+            // No Max / balance / help text in this frame — only the amount + currency selector.
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // .height(110.dp)
+                    .padding(horizontal = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                EnterAmount(
+                    primaryAmount = amount,
+                    currencyCodes = currencyCodes,
+                    selectedCurrencyIndex = selectedCurrencyIndex,
+                    locale = Locale.getDefault(),
+                    showMaxButton = false,
+                    showBalanceButton = false,
+                    showSecondary = false,
+                    showCurrencyPicker = true,
+                    onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
                 )
+
+                if (validationError != null) {
+                    // SwapKit's noRoutesFound can't tell us whether the amount is too low, too high, or
+                    // simply unroutable right now, and the entered value is in the selected display
+                    // currency — so any min/max guess would be misleading. Show a single neutral message
+                    // that points the user back at the amount they entered.
+                    Text(
+                        text = stringResource(R.string.dex_enter_amount_invalid),
+                        style = MyTheme.Body2Regular,
+                        color = MyTheme.Colors.red,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
+
+            // Empty flexible space between the amount bar and the keypad.
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Numeric keypad with the Continue button in its bottom slot, flush to the bottom edge.
+            NumericKeyboardCompose(
+                modifier = Modifier.fillMaxWidth(),
+                // Fully disabled (dimmed, not tappable) while offline — a swap can't be quoted
+                // without a connection.
+                enabled = isOnline,
+                onKeyInput = onKeyInput,
+                bottomSlot = {
+                    DashButton(
+                        text = stringResource(R.string.button_continue),
+                        style = Style.FilledBlue,
+                        size = Size.Large,
+                        // Disabled while offline: a swap can't be quoted without a connection.
+                        isEnabled = continueEnabled && isOnline,
+                        onClick = onContinueClick,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 20.dp, start = 20.dp, end = 20.dp)
+                    )
+                }
+            )
         }
 
-        // Empty flexible space between the amount bar and the keypad.
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Numeric keypad with the Continue button in its bottom slot, flush to the bottom edge.
-        NumericKeyboardCompose(
-            modifier = Modifier.fillMaxWidth(),
-            onKeyInput = onKeyInput,
-            bottomSlot = {
-                DashButton(
-                    text = stringResource(R.string.button_continue),
-                    style = Style.FilledBlue,
-                    size = Size.Large,
-                    isEnabled = continueEnabled,
-                    onClick = onContinueClick,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 20.dp, start = 20.dp, end = 20.dp)
-                )
-            }
-        )
+        // No-connection toast, pinned at the bottom. Not dismissable — it must stay visible for as
+        // long as the device is offline, since the whole screen is disabled until connectivity returns.
+        if (!isOnline) {
+            Toast(
+                text = stringResource(R.string.maya_no_connection_toast),
+                imageResource = ToastImageResource.NoInternet.resourceId,
+                onActionClick = {},
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 25.dp, vertical = 8.dp)
+            )
+        }
     }
 }
 
@@ -165,6 +189,7 @@ private fun DEXEnterAmountScreenZeroPreview() {
         selectedCurrencyIndex = 0,
         continueEnabled = false,
         isValidating = false,
+        isOnline = true,
         validationError = null,
         coinName = "BTC",
         coinIconUrl = null,
@@ -187,6 +212,7 @@ private fun DEXEnterAmountScreenEnabledPreview() {
         selectedCurrencyIndex = 0,
         continueEnabled = true,
         isValidating = false,
+        isOnline = true,
         validationError = null,
         coinName = "BTC",
         coinIconUrl = null,

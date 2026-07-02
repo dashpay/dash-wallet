@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,10 +25,13 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.SingleLiveEvent
+import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.Constants
@@ -67,6 +71,8 @@ data class DEXEnterAmountUIState(
     val continueEnabled: Boolean = false,
     // True while a buy quote is in flight checking that the entered amount is routable.
     val isValidating: Boolean = false,
+    // False when the device has no network connection; the screen shows a no-connection toast.
+    val isOnline: Boolean = true,
     // Non-null when the entered amount can't be swapped (e.g. below the route minimum); carries
     // the provider's error message, or null when blank/unknown so the screen shows a generic one.
     val validationError: String? = null,
@@ -83,7 +89,9 @@ data class DEXEnterAmountUIState(
 
 @HiltViewModel
 class DEXEnterAmountViewModel @Inject constructor(
-    private val swapProvider: SwapProvider
+    private val swapProvider: SwapProvider,
+    networkState: NetworkStateInt,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DEXEnterAmountUIState())
@@ -91,7 +99,8 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     // Tracks the entered value across fiat / DASH / the bought asset at once. Typing anchors the
     // currently-selected currency; the other two are recomputed from the exchange rates so that
-    // switching currency shows the converted amount.
+    // switching currency shows the converted amount. Persisted to [savedStateHandle] on every change
+    // so a typed amount survives process death (Amount is @Parcelize, rates + anchor included).
     private var amount = Amount()
 
     // In-flight buy-quote validation triggered by Continue (see [onContinueClicked]).
@@ -100,6 +109,26 @@ class DEXEnterAmountViewModel @Inject constructor(
     // Fired once the entered amount has passed (or skipped) validation; the Fragment observes this
     // to navigate to the refund-address step.
     val onValidationPassed = SingleLiveEvent<Unit>()
+
+    init {
+        // Restore a previously-entered amount after process death. The persisted [Amount] is fully
+        // self-contained (values + rates + anchor + codes), so restore it here — not only in
+        // setArguments — so downstream steps (refund / receive) can read enteredAmount() even when
+        // the OS relaunches straight onto their screen and this screen's setArguments never runs.
+        savedStateHandle.get<Amount>(KEY_AMOUNT)?.let { amount = it }
+
+        // Mirror connectivity into the UI state so the screen can show the no-connection toast,
+        // matching the coin picker (see MayaViewModel).
+        networkState.isConnected
+            .onEach { online -> _uiState.update { it.copy(isOnline = online) } }
+            .launchIn(viewModelScope)
+    }
+
+    /** Persist the entered amount + its asset so it can be restored after process death. */
+    private fun persistAmount() {
+        savedStateHandle[KEY_AMOUNT] = amount.copy()
+        savedStateHandle[KEY_ASSET] = _uiState.value.asset
+    }
 
     /**
      * Seed the screen with the asset/currency selected on the previous (picker) step and the
@@ -117,11 +146,14 @@ class DEXEnterAmountViewModel @Inject constructor(
         // is called from the Fragment's onCreateView — which runs again whenever the user navigates
         // BACK to this screen. Re-seeding then would reset [amount] to zero and wipe an amount the
         // user already committed, so the receive step would send a zero sell amount to SwapKit
-        // (surfacing as an opaque `validation_error`). Only (re)seed for a genuinely new entry — a
-        // different asset, or nothing entered yet — and otherwise keep the committed amount.
+        // (surfacing as an opaque `validation_error`). While the ViewModel is alive keep the
+        // committed amount for the same asset; a genuinely new entry (or process-death restore) is
+        // handled below.
         if (_uiState.value.asset == asset && amount.crypto.signum() > 0) {
             return
         }
+
+        val codes = buildCurrencyCodes(fiatCurrencyCode, assetCurrencyCode)
         amount = Amount(
             dashCode = DASH_CURRENCY_CODE,
             fiatCode = fiatCurrencyCode,
@@ -135,22 +167,53 @@ class DEXEnterAmountViewModel @Inject constructor(
                 .setScale(CALC_SCALE, RoundingMode.HALF_UP)
             anchoredType = CurrencyInputType.Fiat
         }
+
+        // Restore a previously-entered amount after process death (the VM was recreated, so the
+        // in-memory [amount] was lost). Only restore when it belongs to this asset, and re-anchor it
+        // on the freshly-seeded rates so the converted currencies reflect current prices.
+        val restored = savedStateHandle.get<Amount>(KEY_AMOUNT)
+            ?.takeIf { savedStateHandle.get<String>(KEY_ASSET) == asset && it.anchoredValue.signum() > 0 }
+        if (restored != null) {
+            when (restored.anchoredType) {
+                CurrencyInputType.Dash -> amount.dash = restored.dash
+                CurrencyInputType.Fiat -> amount.fiat = restored.fiat
+                CurrencyInputType.Crypto -> amount.crypto = restored.crypto
+            }
+        }
+
+        val selectedIndex = indexForType(codes, amount.anchoredType, assetCurrencyCode)
+        val anchoredValue = amount.getValue(amount.anchoredType)
+        val displayString = if (restored != null) {
+            formatForDisplay(anchoredValue, maxDecimalsFor(amount.anchoredType))
+        } else {
+            "0"
+        }
+
         validationJob?.cancel()
         _uiState.update {
             it.copy(
                 asset = asset,
                 assetCurrencyCode = assetCurrencyCode,
                 fiatCurrencyCode = fiatCurrencyCode,
-                currencyCodes = buildCurrencyCodes(fiatCurrencyCode, assetCurrencyCode),
-                selectedCurrencyIndex = 0,
-                amount = "0",
-                continueEnabled = false,
+                currencyCodes = codes,
+                selectedCurrencyIndex = selectedIndex,
+                amount = displayString,
+                continueEnabled = anchoredValue.signum() > 0,
                 isValidating = false,
                 validationError = null,
                 coinIconUrl = GenericUtils.getCoinIconUrls(assetCurrencyCode, asset).firstOrNull()
             )
         }
+        persistAmount()
     }
+
+    /** Picker index for the currently-anchored currency (fiat is always the primary slot, index 0). */
+    private fun indexForType(codes: List<String>, type: CurrencyInputType, assetCode: String): Int =
+        when (type) {
+            CurrencyInputType.Fiat -> 0
+            CurrencyInputType.Dash -> codes.indexOf(DASH_CURRENCY_CODE).coerceAtLeast(0)
+            CurrencyInputType.Crypto -> codes.indexOf(assetCode).let { if (it < 0) 0 else it }
+        }
 
     /**
      * The amount the user has committed on this (shared, nav-graph-scoped) screen, in all three
@@ -162,6 +225,8 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     /** Handle a numeric-keyboard key ("0"–"9", ".", "back", "back_long"). */
     fun onKeyInput(key: String) {
+        // Amount entry is disabled while offline — a swap can't be quoted without a connection.
+        if (!_uiState.value.isOnline) return
         _uiState.update { state ->
             val type = currencyTypeFor(state, state.selectedCurrencyIndex)
             val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
@@ -180,10 +245,13 @@ class DEXEnterAmountViewModel @Inject constructor(
                 validationError = null
             )
         }
+        // Persist so the typed amount survives process death.
+        persistAmount()
     }
 
     /** Switch the active display currency, re-deriving the shown amount from the tracked value. */
     fun onCurrencySelected(index: Int) {
+        if (!_uiState.value.isOnline) return
         _uiState.update { state ->
             val newIndex = index.coerceIn(0, state.currencyCodes.lastIndex.coerceAtLeast(0))
             val type = currencyTypeFor(state, newIndex)
@@ -195,6 +263,8 @@ class DEXEnterAmountViewModel @Inject constructor(
                 continueEnabled = value.signum() > 0
             )
         }
+        // Persist so the active currency (anchor) survives process death.
+        persistAmount()
     }
 
     /**
@@ -206,7 +276,7 @@ class DEXEnterAmountViewModel @Inject constructor(
      * is allowed through (we can't validate it here).
      */
     fun onContinueClicked() {
-        if (_uiState.value.isValidating) return
+        if (_uiState.value.isValidating || !_uiState.value.isOnline) return
 
         val sellCrypto = amount.crypto
         if (sellCrypto.signum() <= 0) return
@@ -295,6 +365,10 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DEXEnterAmountViewModel::class.java)
+
+        // SavedStateHandle keys for restoring the entered amount after process death.
+        private const val KEY_AMOUNT = "dex_enter_amount"
+        private const val KEY_ASSET = "dex_enter_amount_asset"
 
         private const val MAX_FIAT_DECIMALS = 2
         private const val MAX_CRYPTO_DECIMALS = 8
