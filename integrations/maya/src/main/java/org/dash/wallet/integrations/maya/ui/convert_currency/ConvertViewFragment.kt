@@ -77,6 +77,10 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
     // shown on the preview screen can't drift from what was submitted.
     private var isProcessing: Boolean = false
     private var canContinue: Boolean = false
+
+    // Hard gate on Continue independent of the entered value — set false by the host (e.g. when the
+    // wallet has no DASH to convert) so Continue stays disabled no matter what the user types.
+    private var inputEnabled: Boolean = true
     private var continueButtonText: CharSequence = ""
     private var pickedCurrencyIndex by mutableIntStateOf(0)
     private var currencyConversionOptions by mutableStateOf(listOf<SegmentedOption>())
@@ -243,7 +247,17 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         binding.maxButton.isEnabled = !isProcessing
         binding.continueProgress.isVisible = isProcessing
         binding.continueBtn.text = if (isProcessing) "" else continueButtonText
-        binding.continueBtn.isEnabled = canContinue && !isProcessing
+        binding.continueBtn.isEnabled = canContinue && inputEnabled && !isProcessing
+    }
+
+    /**
+     * Hard-enable/disable Continue regardless of the entered amount. Used by the host to block the
+     * swap when it can't proceed (e.g. the wallet has no DASH). Buffered until the view exists.
+     */
+    fun setInputEnabled(enabled: Boolean) {
+        inputEnabled = enabled
+        if (view == null) return
+        binding.continueBtn.isEnabled = canContinue && inputEnabled && !isProcessing
     }
 
     private val keyboardActionListener = object : NumericKeyboardView.OnKeyboardActionListener {
@@ -427,7 +441,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
 
     private fun checkTheUserEnteredValue(hasBalance: Boolean) {
         canContinue = hasBalance
-        binding.continueBtn.isEnabled = hasBalance && !isProcessing
+        binding.continueBtn.isEnabled = hasBalance && inputEnabled && !isProcessing
     }
 
     fun handleNetworkState(hasInternet: Boolean) {

@@ -22,6 +22,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -213,12 +214,10 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            AdaptiveDialog.create(
-                R.drawable.ic_error,
-                getString(R.string.dont_have_any_dash),
-                "",
-                getString(R.string.button_close)
-            ).show(requireActivity())
+            // No DASH to convert: surface it as a toast (not a blocking dialog) and keep Continue
+            // disabled so the user can't proceed regardless of what they type.
+            Toast.makeText(requireContext(), R.string.dont_have_any_dash, Toast.LENGTH_LONG).show()
+            fragment.setInputEnabled(false)
         }
 
         convertViewModel.setSelectedCryptoCurrency(
