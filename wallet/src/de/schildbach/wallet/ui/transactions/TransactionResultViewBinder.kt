@@ -82,6 +82,9 @@ class TransactionResultViewBinder(
     private var merchantName: String? = null
     private var dashPayProfile: DashPayProfile? = null
 
+    /** Pending delayed reveal of the animated checkIcon; cancelled when the icon state changes. */
+    private var pendingIconReveal: Runnable? = null
+
     /** Icon size expressed in dp, for the generated Compose fallback icon. */
     private val iconSizeDp = (iconSize / context.resources.displayMetrics.density).dp
 
@@ -289,6 +292,11 @@ class TransactionResultViewBinder(
             return
         }
 
+        // Cancel any pending animated-icon reveal so a stale callback can't force checkIcon
+        // visible over a newly selected icon branch (e.g. the generated merchant-name icon).
+        pendingIconReveal?.let { binding.checkIcon.removeCallbacks(it) }
+        pendingIconReveal = null
+
         val iconRes = if (isError) {
             R.drawable.ic_transaction_failed
         } else if (iconRes != null) {
@@ -338,10 +346,12 @@ class TransactionResultViewBinder(
 
             if (binding.checkIcon.drawable is Animatable) {
                 binding.checkIcon.isVisible = false
-                binding.checkIcon.postDelayed({
+                val reveal = Runnable {
                     binding.checkIcon.isVisible = true
-                    (binding.checkIcon.drawable as Animatable).start()
-                }, 300)
+                    (binding.checkIcon.drawable as? Animatable)?.start()
+                }
+                pendingIconReveal = reveal
+                binding.checkIcon.postDelayed(reveal, 300)
             }
         } else {
             binding.iconCompose.isVisible = false

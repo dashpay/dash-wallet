@@ -25,6 +25,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.createBitmap
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.lifecycleScope
 import coil.ImageLoader
@@ -50,7 +51,6 @@ import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import javax.inject.Inject
-import androidx.core.graphics.createBitmap
 
 @AndroidEntryPoint
 class ExploreMapFragment : SupportMapFragment() {

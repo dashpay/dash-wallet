@@ -279,7 +279,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
         provider.updateGiftCardMetadata(existing.copy(number = "N", pin = "P"))
 
         coVerify(exactly = 0) {
-            cacheDao.insertGiftCardData(any(), any(), any(), any(), any(), any(), any(), any(), any())
+            cacheDao.insertGiftCardData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
         }
     }
 }
