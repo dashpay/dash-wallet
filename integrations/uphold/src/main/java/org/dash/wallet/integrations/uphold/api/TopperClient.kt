@@ -19,8 +19,6 @@ package org.dash.wallet.integrations.uphold.api
 
 import androidx.annotation.VisibleForTesting
 import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.io.Decoders
