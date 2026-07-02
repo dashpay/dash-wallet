@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -74,7 +75,7 @@ fun DEXReceiveScreen(
         address = uiState.address,
         uri = uiState.uri,
         isLoading = uiState.isLoading,
-        errorMessage = uiState.errorMessage,
+        errorMessageRes = uiState.errorMessageRes,
         onBackClick = onBackClick,
         onBackHomeClick = onBackHomeClick,
         onCopyClick = onCopyClick
@@ -87,7 +88,7 @@ private fun DEXReceiveScreenContent(
     address: String,
     uri: String,
     isLoading: Boolean,
-    errorMessage: String?,
+    @StringRes errorMessageRes: Int?,
     onBackClick: () -> Unit,
     onBackHomeClick: () -> Unit,
     onCopyClick: (String) -> Unit
@@ -135,9 +136,10 @@ private fun DEXReceiveScreenContent(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (errorMessage != null) {
+                if (errorMessageRes != null) {
                     Text(
-                        text = errorMessage,
+                        // coinCode is the format arg; messages without a placeholder ignore it.
+                        text = stringResource(errorMessageRes, coinCode),
                         style = MyTheme.Body2Regular,
                         color = MyTheme.Colors.red,
                         textAlign = TextAlign.Center,
@@ -302,7 +304,7 @@ private fun DEXReceiveScreenLoadingPreview() {
         address = "",
         uri = "",
         isLoading = true,
-        errorMessage = null,
+        errorMessageRes = null,
         onBackClick = {},
         onBackHomeClick = {},
         onCopyClick = {}
@@ -317,7 +319,7 @@ private fun DEXReceiveScreenLoadedPreview() {
         address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
         uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
         isLoading = false,
-        errorMessage = null,
+        errorMessageRes = null,
         onBackClick = {},
         onBackHomeClick = {},
         onCopyClick = {}
@@ -332,7 +334,7 @@ private fun DEXReceiveScreenErrorPreview() {
         address = "",
         uri = "",
         isLoading = false,
-        errorMessage = "No route found for this amount",
+        errorMessageRes = R.string.dex_error_no_route,
         onBackClick = {},
         onBackHomeClick = {},
         onCopyClick = {}

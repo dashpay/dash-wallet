@@ -113,6 +113,15 @@ class DEXEnterAmountViewModel @Inject constructor(
         dashPriceFiat: BigDecimal,
         assetPriceFiat: BigDecimal
     ) {
+        // This ViewModel is nav-graph scoped and shared with the refund + receive steps, and this
+        // is called from the Fragment's onCreateView — which runs again whenever the user navigates
+        // BACK to this screen. Re-seeding then would reset [amount] to zero and wipe an amount the
+        // user already committed, so the receive step would send a zero sell amount to SwapKit
+        // (surfacing as an opaque `validation_error`). Only (re)seed for a genuinely new entry — a
+        // different asset, or nothing entered yet — and otherwise keep the committed amount.
+        if (_uiState.value.asset == asset && amount.crypto.signum() > 0) {
+            return
+        }
         amount = Amount(
             dashCode = DASH_CURRENCY_CODE,
             fiatCode = fiatCurrencyCode,
@@ -141,11 +150,6 @@ class DEXEnterAmountViewModel @Inject constructor(
                 coinIconUrl = GenericUtils.getCoinIconUrls(assetCurrencyCode, asset).firstOrNull()
             )
         }
-    }
-
-    /** Toggle the wallet-balance row visibility in the TopIntroSend header. */
-    fun onToggleBalance() {
-        _uiState.update { it.copy(showBalance = !it.showBalance) }
     }
 
     /**

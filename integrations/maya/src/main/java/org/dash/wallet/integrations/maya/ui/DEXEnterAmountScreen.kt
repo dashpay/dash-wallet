@@ -41,7 +41,6 @@ import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
-import java.math.BigDecimal
 import java.util.Locale
 
 @Composable
@@ -63,7 +62,6 @@ fun DEXEnterAmountScreen(
         showBalance = uiState.showBalance,
         dashBalance = uiState.dashBalance,
         fiatBalance = uiState.fiatBalance,
-        onToggleBalance = viewModel::onToggleBalance,
         onKeyInput = viewModel::onKeyInput,
         onCurrencySelected = viewModel::onCurrencySelected,
         onBackClick = onBackClick,
@@ -84,7 +82,6 @@ private fun DEXEnterAmountScreenContent(
     showBalance: Boolean,
     dashBalance: String,
     fiatBalance: String?,
-    onToggleBalance: () -> Unit,
     onKeyInput: (String) -> Unit,
     onCurrencySelected: (Int) -> Unit,
     onBackClick: () -> Unit,
@@ -123,18 +120,12 @@ private fun DEXEnterAmountScreenContent(
             )
 
             if (validationError != null) {
-                val errorText = when (validationError) {
-                    "noRoutesFound" -> {
-                        if (amount.toBigDecimal() < BigDecimal.TEN.multiply(BigDecimal.TEN)) {
-                            stringResource(R.string.maya_error_below_allowed_minimum)
-                        } else {
-                            stringResource(R.string.maya_error_below_allowed_maximum)
-                        }
-                    }
-                    else -> stringResource(R.string.dex_enter_amount_invalid)
-                }
+                // SwapKit's noRoutesFound can't tell us whether the amount is too low, too high, or
+                // simply unroutable right now, and the entered value is in the selected display
+                // currency — so any min/max guess would be misleading. Show a single neutral message
+                // that points the user back at the amount they entered.
                 Text(
-                    text = errorText.ifBlank { stringResource(R.string.dex_enter_amount_invalid) },
+                    text = stringResource(R.string.dex_enter_amount_invalid),
                     style = MyTheme.Body2Regular,
                     color = MyTheme.Colors.red,
                     modifier = Modifier.padding(top = 8.dp)
@@ -180,7 +171,6 @@ private fun DEXEnterAmountScreenZeroPreview() {
         showBalance = true,
         dashBalance = "1.23456789",
         fiatBalance = "USD 45.67",
-        onToggleBalance = {},
         onKeyInput = {},
         onCurrencySelected = {},
         onBackClick = {},
@@ -203,7 +193,6 @@ private fun DEXEnterAmountScreenEnabledPreview() {
         showBalance = true,
         dashBalance = "1.23456789",
         fiatBalance = "USD 45.67",
-        onToggleBalance = {},
         onKeyInput = {},
         onCurrencySelected = {},
         onBackClick = {},

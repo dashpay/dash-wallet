@@ -17,6 +17,7 @@
 
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,9 +31,12 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.TaxCategory
 import org.dash.wallet.common.services.TransactionMetadataProvider
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
+import org.dash.wallet.integrations.maya.swapkit.SwapKitErrors
 import org.slf4j.LoggerFactory
+import java.math.BigDecimal
 import javax.inject.Inject
 
 /**
@@ -44,7 +48,7 @@ import javax.inject.Inject
  *
  * The deposit [address] (and the [uri] that the QR encodes) is produced by a SwapKit buy-swap
  * call (see [DEXReceiveViewModel.loadDepositAddress]); the screen renders a loading state until it
- * resolves, or [errorMessage] if it fails.
+ * resolves, or [errorMessageRes] if it fails.
  */
 data class DEXReceiveUIState(
     // Display code of the crypto being sent in (e.g. "BTC", or "USDC (Ethereum)" for a token),
@@ -56,8 +60,10 @@ data class DEXReceiveUIState(
     val uri: String = "",
     // True until the deposit address has been resolved (currently always true — see loadDepositAddress).
     val isLoading: Boolean = true,
-    // Non-null when resolving the deposit address failed; surfaced to the user.
-    val errorMessage: String? = null
+    // Non-null when resolving the deposit address failed: a friendly, localized message resource
+    // mapped from the SwapKit error by [SwapKitErrors]. The screen resolves it with [coinCode] as
+    // the format argument. Kept as a resource id (not a String) so the ViewModel stays Context-free.
+    @StringRes val errorMessageRes: Int? = null
 )
 
 @HiltViewModel
@@ -99,7 +105,7 @@ class DEXReceiveViewModel @Inject constructor(
                 address = "",
                 uri = "",
                 isLoading = true,
-                errorMessage = null
+                errorMessageRes = null
             )
         }
     }
@@ -111,19 +117,27 @@ class DEXReceiveViewModel @Inject constructor(
      * address. The resulting inbound address is where the user sends the crypto.
      */
     fun loadDepositAddress() {
-        if (asset.isBlank() || sellAmount.isBlank() || refundAddress.isBlank()) {
+        // A non-positive sell amount (e.g. "0") is not blank, so guard on the parsed value too:
+        // sending it to SwapKit yields an opaque `validation_error`. Failing fast here gives the
+        // user a clear "enter an amount" message instead — and never fires a doomed /v3/swap.
+        val sellAmountValue = sellAmount.toBigDecimalOrNull()
+        if (asset.isBlank() || refundAddress.isBlank() ||
+            sellAmountValue == null || sellAmountValue <= BigDecimal.ZERO
+        ) {
             log.warn(
-                "loadDepositAddress: missing inputs asset={} sellAmount={} refund(blank)={}",
+                "loadDepositAddress: missing/invalid inputs asset={} sellAmount={} refund(blank)={}",
                 asset,
                 sellAmount,
                 refundAddress.isBlank()
             )
-            _uiState.update { it.copy(isLoading = false, errorMessage = "Missing swap details") }
+            _uiState.update {
+                it.copy(isLoading = false, errorMessageRes = R.string.dex_error_missing_details)
+            }
             return
         }
 
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update { it.copy(isLoading = true, errorMessageRes = null) }
             val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
             transactionMetadataProvider.markAddressWithTaxCategory(
                 destinationAddress.toString(),
@@ -139,14 +153,19 @@ class DEXReceiveViewModel @Inject constructor(
                             address = order.depositAddress,
                             uri = buildUri(order.depositAddress, order.sellAmount),
                             isLoading = false,
-                            errorMessage = null
+                            errorMessageRes = null
                         )
                     }
                 }
                 is ResponseResource.Failure -> {
+                    // Log the raw SwapKit message for diagnostics, but surface a friendly, localized
+                    // message mapped from the error code (see [SwapKitErrors]).
                     log.error("createBuyOrder failed: {}", result.throwable.message)
                     _uiState.update {
-                        it.copy(isLoading = false, errorMessage = result.throwable.message)
+                        it.copy(
+                            isLoading = false,
+                            errorMessageRes = SwapKitErrors.messageResFor(result.throwable.message)
+                        )
                     }
                 }
             }
