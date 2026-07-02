@@ -40,6 +40,7 @@ import com.google.maps.android.ktx.awaitMap
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
+import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.features.exploredash.R
 import org.dash.wallet.features.exploredash.data.explore.model.GeoBounds
@@ -49,6 +50,7 @@ import org.dash.wallet.features.exploredash.data.explore.model.SearchResult
 import org.dash.wallet.features.exploredash.services.UserLocationStateInt
 import org.dash.wallet.features.exploredash.utils.exploreViewModels
 import javax.inject.Inject
+import androidx.core.graphics.createBitmap
 
 @AndroidEntryPoint
 class ExploreMapFragment : SupportMapFragment() {
@@ -420,8 +422,21 @@ class ExploreMapFragment : SupportMapFragment() {
                         }
                     },
                     onError = {
-                        if (item.latitude != null && item.longitude != null && markerDrawable != null) {
-                            addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, markerDrawable!!, item.id)
+                        if (item.latitude != null && item.longitude != null) {
+                            // Merchants with no (or unloadable) logo get a generated full-name
+                            // icon instead of the generic Dash-logo marker.
+                            val fallback = if (item is Merchant) {
+                                merchantNameBitmap(
+                                    requireContext(),
+                                    item.name ?: "",
+                                    resources.getDimensionPixelSize(R.dimen.explore_marker_size)
+                                )
+                            } else {
+                                markerDrawable
+                            }
+                            if (fallback != null) {
+                                addMarkerItemToMap(isSelected, item.latitude!!, item.longitude!!, fallback, item.id)
+                            }
                         }
                     }
                 )
@@ -496,7 +511,7 @@ class ExploreMapFragment : SupportMapFragment() {
     private fun getBitmapFromDrawable(drawableId: Int): Bitmap? {
         val drawable = AppCompatResources.getDrawable(requireActivity(), drawableId)
         val bitmap =
-            drawable?.let { Bitmap.createBitmap(it.intrinsicWidth, drawable.intrinsicHeight, Bitmap.Config.ARGB_8888) }
+            drawable?.let { createBitmap(it.intrinsicWidth, drawable.intrinsicHeight) }
         val canvas = bitmap?.let { Canvas(it) }
         canvas?.width?.let { drawable.setBounds(0, 0, it, canvas.height) }
         canvas?.let { drawable.draw(it) }

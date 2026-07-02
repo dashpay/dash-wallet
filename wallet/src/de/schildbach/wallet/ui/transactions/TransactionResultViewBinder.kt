@@ -25,11 +25,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.widget.TextView
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.compose.ui.unit.dp
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import coil.load
 import coil.transform.RoundedCornersTransformation
+import org.dash.wallet.common.ui.components.MerchantNameIcon
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.ui.DashPayUserActivity
@@ -75,7 +79,17 @@ class TransactionResultViewBinder(
     @DrawableRes
     private var iconRes: Int? = null
     private var customTitle: String? = null
+    private var merchantName: String? = null
     private var dashPayProfile: DashPayProfile? = null
+
+    /** Icon size expressed in dp, for the generated Compose fallback icon. */
+    private val iconSizeDp = (iconSize / context.resources.displayMetrics.density).dp
+
+    init {
+        binding.iconCompose.setViewCompositionStrategy(
+            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+        )
+    }
     // Address List
     private var inputAddresses: List<Address> = listOf()
     private var outputAddresses: List<Address> = listOf()
@@ -264,6 +278,12 @@ class TransactionResultViewBinder(
         binding.transactionTitle.setTextColor(ContextCompat.getColor(context, R.color.content_primary))
     }
 
+    /** Raw merchant name for gift card transactions, used to generate a fallback icon. */
+    fun setMerchantName(name: String) {
+        merchantName = name
+        updateIcon()
+    }
+
     private fun updateIcon() {
         if (!::transaction.isInitialized) {
             return
@@ -281,7 +301,15 @@ class TransactionResultViewBinder(
             R.drawable.ic_transaction_sent
         }
 
+        // Gift card with no merchant logo → generated full-name icon (like the merchant list).
+        val useGeneratedIcon = dashPayProfile == null &&
+            iconBitmap == null &&
+            iconRes == R.drawable.ic_gift_card_tx &&
+            !merchantName.isNullOrBlank()
+
         if (dashPayProfile != null) {
+            binding.iconCompose.isVisible = false
+            binding.checkIcon.visibility = View.VISIBLE
             binding.checkIcon.load(dashPayProfile!!.avatarUrl) {
                 transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
                 placeholder(R.drawable.ic_avatar)
@@ -289,7 +317,22 @@ class TransactionResultViewBinder(
             }
             binding.secondaryIcon.isVisible = true
             binding.secondaryIcon.setImageResource(iconRes)
+        } else if (useGeneratedIcon) {
+            // Keep checkIcon INVISIBLE (not GONE) so secondaryIcon, anchored to it, stays put.
+            binding.checkIcon.visibility = View.INVISIBLE
+            binding.iconCompose.isVisible = true
+            binding.iconCompose.setContent {
+                MerchantNameIcon(
+                    merchantName = merchantName ?: "",
+                    size = iconSizeDp,
+                    shape = CircleShape
+                )
+            }
+            binding.secondaryIcon.isVisible = true
+            binding.secondaryIcon.setImageResource(iconRes)
         } else if (iconBitmap == null) {
+            binding.iconCompose.isVisible = false
+            binding.checkIcon.visibility = View.VISIBLE
             binding.checkIcon.setImageResource(iconRes)
             binding.secondaryIcon.isVisible = false
 
@@ -301,6 +344,8 @@ class TransactionResultViewBinder(
                 }, 300)
             }
         } else {
+            binding.iconCompose.isVisible = false
+            binding.checkIcon.visibility = View.VISIBLE
             binding.checkIcon.load(iconBitmap) {
                 transformations(RoundedCornersTransformation(iconSize * 2.toFloat()))
             }

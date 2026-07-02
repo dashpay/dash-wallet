@@ -70,9 +70,11 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.wallet.WalletEx
+import de.schildbach.wallet_test.R
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.PresentableTxMetadata
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.ui.components.merchantNameBitmap
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.transactions.TransactionUtils.isEntirelySelf
@@ -84,6 +86,7 @@ import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -982,8 +985,29 @@ class TxDisplayCacheService @Inject constructor(
         } catch (e: IllegalArgumentException) {
             return null
         }
-        return metadata[txId]?.icon
+        val meta = metadata[txId] ?: return null
+        // Real merchant logo, when present.
+        meta.icon?.let { return it }
+        // DashSpend gift card with no merchant logo → generate a full-name icon from the
+        // merchant name (meta.title) instead of falling back to the static gift card icon.
+        if (ServiceName.isDashSpend(meta.service) && !meta.title.isNullOrBlank()) {
+            return generatedMerchantIcon(meta.title!!)
+        }
+        return null
     }
+
+    /** Cache of generated full-name merchant icons, keyed by merchant name. */
+    private val generatedMerchantIcons = ConcurrentHashMap<String, Bitmap>()
+
+    /**
+     * Returns a generated full-name icon for [merchantName], created once and cached.
+     * Used for gift card transactions whose merchant has no logo.
+     */
+    private fun generatedMerchantIcon(merchantName: String): Bitmap =
+        generatedMerchantIcons.computeIfAbsent(merchantName) {
+            val sizePx = walletApplication.resources.getDimensionPixelSize(R.dimen.transaction_icon_size)
+            merchantNameBitmap(walletApplication, it, sizePx)
+        }
 
     /**
      * Cold-start variant: prefers the in-memory bitmap, then falls back to reading the

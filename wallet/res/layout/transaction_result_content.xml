@@ -84,6 +84,16 @@
         app:srcCompat="@drawable/check_animated"
         tools:src="@drawable/ic_transaction_sent" />
 
+    <!-- Generated full-name fallback icon, shown only for gift card txs with no merchant logo. -->
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/icon_compose"
+        android:layout_width="@dimen/transaction_details_icon_size"
+        android:layout_height="@dimen/transaction_details_icon_size"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/fiat_value"
+        app:layout_constraintEnd_toStartOf="@id/right_guideline"
+        app:layout_constraintTop_toTopOf="@id/transaction_title" />
+
     <ImageView
         android:id="@+id/secondary_icon"
         android:layout_width="24dp"
