@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -175,4 +176,9 @@ class DispatchingSwapProvider @Inject constructor(
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
         active.applyPoolPrices(pools, usdToFiat)
     }
+
+    @StringRes
+    override fun errorMessageRes(error: String?): Int = active.errorMessageRes(error)
+
+    override fun isAmountTooLowError(error: String?): Boolean = active.isAmountTooLowError(error)
 }

@@ -38,7 +38,6 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
-import org.dash.wallet.integrations.maya.swapkit.SwapKitErrors
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
@@ -76,7 +75,8 @@ data class DEXRefundAddressUIState(
     // True while the buy order is being created with SwapKit (Continue shows a spinner).
     val isSubmitting: Boolean = false,
     // Non-null when creating the order failed: a friendly, localized message resource mapped from the
-    // SwapKit error by [SwapKitErrors]. Resolved by the screen with [currencyCode] as the format arg.
+    // provider error by [SwapProvider.errorMessageRes]. Resolved by the screen with [currencyCode]
+    // as the format arg.
     @StringRes val orderErrorRes: Int? = null,
     // False when the device has no network connection; the screen shows a no-connection toast.
     val isOnline: Boolean = true
@@ -202,7 +202,7 @@ class DEXRefundAddressViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
-                            orderErrorRes = SwapKitErrors.messageResFor(result.throwable.message)
+                            orderErrorRes = swapProvider.errorMessageRes(result.throwable.message)
                         )
                     }
                 }

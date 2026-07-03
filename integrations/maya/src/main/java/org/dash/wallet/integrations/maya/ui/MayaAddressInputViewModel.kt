@@ -1,5 +1,6 @@
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -22,6 +23,15 @@ class MayaAddressInputViewModel @Inject constructor(
     private val exchangeIntegrationProvider: ExchangeIntegrationProvider,
     private val swapProvider: SwapProvider
 ) : ViewModel() {
+    companion object {
+        // Indicative sell amount for the bootstrap quote: 1 DASH in base units.
+        private const val DEFAULT_QUOTE_VALUE = 1_0000_0000L
+
+        // How many times the default amount is doubled when a route rejects it as
+        // below its minimum (1 -> 2 -> 4 DASH).
+        private const val MAX_QUOTE_DOUBLINGS = 2
+    }
+
     lateinit var asset: String
     private val inputCurrency = MutableStateFlow<String?>(null)
     private val _addressSources = MutableStateFlow(listOf<AddressSource>())
@@ -71,6 +81,25 @@ class MayaAddressInputViewModel @Inject constructor(
     }
 
     suspend fun getDefaultQuote(destinationAddress: String): SwapQuote? {
-        return swapProvider.getDefaultSwapQuote(asset, destinationAddress)
+        var value = DEFAULT_QUOTE_VALUE
+        var quote = swapProvider.getDefaultSwapQuote(asset, destinationAddress, value)
+        // Some routes have a minimum above the default indicative amount, which the
+        // backend reports as an amount-too-low error. Double the amount and retry —
+        // at most [MAX_QUOTE_DOUBLINGS] times — before surfacing the error. Other
+        // errors (bad address, network failure) won't be fixed by a bigger amount,
+        // so they are returned as is.
+        repeat(MAX_QUOTE_DOUBLINGS) {
+            val error = quote?.error
+            if (error == null || !swapProvider.isAmountTooLowError(error)) {
+                return quote
+            }
+            value *= 2
+            quote = swapProvider.getDefaultSwapQuote(asset, destinationAddress, value)
+        }
+        return quote
     }
+
+    /** Friendly message resource for a quote error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
 }

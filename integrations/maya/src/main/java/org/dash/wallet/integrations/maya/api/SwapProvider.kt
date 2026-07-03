@@ -18,11 +18,13 @@
 package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.ResponseResource
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.BuyOrder
 import org.dash.wallet.integrations.maya.model.InboundAddress
@@ -152,4 +154,23 @@ interface SwapProvider {
     suspend fun getUserAccounts(currency: String): List<AccountDataUIModel>
 
     fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat)
+
+    /**
+     * Map a raw provider error (the message from a failed quote/swap) to a friendly, localized
+     * message resource. Each backend owns its own error vocabulary and mapping — Maya via
+     * [org.dash.wallet.integrations.maya.model.getMayaErrorString], SwapKit via
+     * [org.dash.wallet.integrations.maya.swapkit.SwapKitErrors] — so callers can render
+     * provider-agnostic error copy without knowing which backend produced it. The returned string
+     * may take the coin/currency code as its single format argument; messages without a placeholder
+     * simply ignore it. Defaults to a generic "something went wrong".
+     */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = R.string.something_wrong_title
+
+    /**
+     * True when [error] means the entered amount is below the route's/pool's minimum — the one case
+     * the UI surfaces inline (a red banner the user can fix by raising the amount) rather than as a
+     * modal. Backend-specific: Maya's "not enough asset to pay for fees", SwapKit's `noRoutesFound`.
+     */
+    fun isAmountTooLowError(error: String?): Boolean = false
 }

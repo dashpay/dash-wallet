@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.swapkit
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import com.google.gson.Gson
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -1115,6 +1116,14 @@ class SwapKitApiAggregator @Inject constructor(
             ?: firstOrNull { it.meta?.tags?.contains("CHEAPEST") == true }
             ?: first()
     }
+
+    // SwapKit's own error vocabulary → friendly message resource (see SwapKitErrors).
+    @StringRes
+    override fun errorMessageRes(error: String?): Int = SwapKitErrors.messageResFor(error)
+
+    // SwapKit reports a below-minimum sell amount as `noRoutesFound` (no provider can fill it).
+    override fun isAmountTooLowError(error: String?): Boolean =
+        error?.substringBefore(':')?.trim() == "noRoutesFound"
 
     override fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
         // usdToFiat is the wallet's "1 USD in SELECTED_CURRENCY" rate. Unlike Maya

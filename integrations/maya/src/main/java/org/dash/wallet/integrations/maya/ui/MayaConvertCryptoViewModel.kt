@@ -16,6 +16,7 @@
  */
 package org.dash.wallet.integrations.maya.ui
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -199,4 +200,11 @@ class MayaConvertCryptoViewModel @Inject constructor(
             )
         }
     }
+
+    /** Friendly message resource for a swap error, mapped by whichever backend is active. */
+    @StringRes
+    fun errorMessageRes(error: String?): Int = swapProvider.errorMessageRes(error)
+
+    /** True when the swap failed because the amount is below the route's minimum (shown inline). */
+    fun isAmountTooLowError(error: String?): Boolean = swapProvider.isAmountTooLowError(error)
 }

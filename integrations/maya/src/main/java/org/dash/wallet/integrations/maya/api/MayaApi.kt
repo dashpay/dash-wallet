@@ -18,6 +18,7 @@
 package org.dash.wallet.integrations.maya.api
 
 import android.content.Intent
+import androidx.annotation.StringRes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -39,12 +40,16 @@ import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.InboundAddress
+import org.dash.wallet.integrations.maya.model.MayaErrorType
 import org.dash.wallet.integrations.maya.model.PoolInfo
 import org.dash.wallet.integrations.maya.model.SwapQuote
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
+import org.dash.wallet.integrations.maya.model.getMayaErrorString
+import org.dash.wallet.integrations.maya.model.getMayaErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConfig
 import org.slf4j.LoggerFactory
 import java.math.BigDecimal
@@ -265,6 +270,14 @@ class MayaApiAggregator @Inject constructor(
             log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
         }
     }
+
+    // Maya's own error vocabulary → friendly message resource (see model/MayaErrorResponse).
+    @StringRes
+    override fun errorMessageRes(error: String?): Int =
+        getMayaErrorString(error ?: "") ?: R.string.something_wrong_title
+
+    override fun isAmountTooLowError(error: String?): Boolean =
+        getMayaErrorType(error ?: "") == MayaErrorType.AMOUNT_TOO_LOW
 
     private fun priceInUsd(
         pool: PoolInfo,
