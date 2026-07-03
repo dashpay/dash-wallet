@@ -224,6 +224,23 @@ class DEXEnterAmountViewModel @Inject constructor(
      */
     fun enteredAmount(): Amount = amount.copy()
 
+    /**
+     * Forget the committed amount and its persisted copy. Called when the user leaves the buy flow
+     * backwards — back past the enter-amount screen to the coin picker, or "Back home" on the
+     * receive screen — so the next entry into the flow starts from a blank amount instead of
+     * restoring this one (the ViewModel is nav-graph scoped and outlives those screens while the
+     * picker is still on the back stack).
+     */
+    fun clearEnteredAmount() {
+        validationJob?.cancel()
+        amount = Amount()
+        savedStateHandle.remove<Amount>(KEY_AMOUNT)
+        savedStateHandle.remove<String>(KEY_ASSET)
+        _uiState.update {
+            it.copy(amount = "0", continueEnabled = false, isValidating = false, validationFailed = false)
+        }
+    }
+
     /** Handle a numeric-keyboard key ("0"–"9", ".", "back", "back_long"). */
     fun onKeyInput(key: String) {
         // Amount entry is disabled while offline — a swap can't be quoted without a connection —

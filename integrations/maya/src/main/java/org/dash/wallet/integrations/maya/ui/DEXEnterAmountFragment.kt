@@ -96,4 +96,16 @@ class DEXEnterAmountFragment : Fragment() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // isRemoving is true only when this screen is popped off the back stack — back (button or
+        // gesture) to the coin picker, or the receive screen's "Back home" popping the whole flow —
+        // not on config changes or process death. The shared ViewModel outlives this fragment while
+        // the picker is still on the stack, so without this it would restore the stale amount on
+        // the next entry into the buy flow.
+        if (isRemoving) {
+            viewModel.clearEnteredAmount()
+        }
+    }
 }
