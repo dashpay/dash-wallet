@@ -226,8 +226,11 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     /** Handle a numeric-keyboard key ("0"–"9", ".", "back", "back_long"). */
     fun onKeyInput(key: String) {
-        // Amount entry is disabled while offline — a swap can't be quoted without a connection.
-        if (!_uiState.value.isOnline) return
+        // Amount entry is disabled while offline — a swap can't be quoted without a connection —
+        // and while a validation quote is in flight, so its Success can never navigate forward
+        // with an amount other than the one that was validated. Input re-enables when validation
+        // fails (on success the screen navigates away).
+        if (!_uiState.value.isOnline || _uiState.value.isValidating) return
         _uiState.update { state ->
             val type = currencyTypeFor(state, state.selectedCurrencyIndex)
             val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
@@ -252,7 +255,8 @@ class DEXEnterAmountViewModel @Inject constructor(
 
     /** Switch the active display currency, re-deriving the shown amount from the tracked value. */
     fun onCurrencySelected(index: Int) {
-        if (!_uiState.value.isOnline) return
+        // Same guards as onKeyInput: no changes while offline or mid-validation.
+        if (!_uiState.value.isOnline || _uiState.value.isValidating) return
         _uiState.update { state ->
             val newIndex = index.coerceIn(0, state.currencyCodes.lastIndex.coerceAtLeast(0))
             val type = currencyTypeFor(state, newIndex)

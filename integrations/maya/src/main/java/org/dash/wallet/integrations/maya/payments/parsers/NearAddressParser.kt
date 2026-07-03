@@ -21,10 +21,21 @@ import org.dash.wallet.common.payments.parsers.AddressParser
 /**
  * NEAR account address parser:
  *  - implicit accounts: 64 lowercase hex characters
- *  - named accounts: 2-64 chars of `[a-z0-9_-]` separated by `.`,
- *    typically ending in `.near`
+ *  - named accounts: dot-separated labels (typically ending in `.near`); each label is
+ *    lowercase alphanumeric with single `-`/`_` separators that can't lead or trail a
+ *    label (NEAR account-id grammar), max 64 characters overall
+ *
+ * Named accounts carry no checksum, so this grammar is the only structural gate before
+ * the address is used as a refund/source address.
  */
 class NearAddressParser : AddressParser(
-    "([a-f0-9]{64})|([a-z0-9_-]{2,64}(\\.[a-z0-9_-]{1,64})+)",
+    "([a-f0-9]{64})|((([a-z0-9]+[-_])*[a-z0-9]+\\.)+([a-z0-9]+[-_])*[a-z0-9]+)",
     null
-)
+) {
+    override fun verifyAddress(addressCandidate: String) {
+        // The grammar bounds each label but not the account id itself — NEAR caps it at 64.
+        require(addressCandidate.length in 2..64) {
+            "NEAR account ids are 2-64 characters"
+        }
+    }
+}

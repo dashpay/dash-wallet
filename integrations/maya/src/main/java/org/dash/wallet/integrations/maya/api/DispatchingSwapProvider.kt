@@ -66,8 +66,15 @@ class DispatchingSwapProvider @Inject constructor(
         private val log = LoggerFactory.getLogger(DispatchingSwapProvider::class.java)
     }
 
+    private val backendLock = Any()
+
     @Volatile
     private var activeBackend: SwapBackend = SwapBackend.MAYA
+
+    // Set once [setBackend] has been called; the async init below must not overwrite an
+    // explicit choice that raced ahead of the persisted-value load.
+    @Volatile
+    private var backendExplicitlySet = false
 
     private val persistScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
@@ -79,7 +86,11 @@ class DispatchingSwapProvider @Inject constructor(
                 .getOrNull()
                 ?.let { runCatching { SwapBackend.valueOf(it) }.getOrNull() }
                 ?: SwapBackend.MAYA
-            activeBackend = effective(configured)
+            synchronized(backendLock) {
+                if (!backendExplicitlySet) {
+                    activeBackend = effective(configured)
+                }
+            }
         }
     }
 
@@ -101,7 +112,10 @@ class DispatchingSwapProvider @Inject constructor(
      */
     fun setBackend(requested: SwapBackend) {
         val resolved = effective(requested)
-        activeBackend = resolved
+        synchronized(backendLock) {
+            backendExplicitlySet = true
+            activeBackend = resolved
+        }
         persistScope.launch { config.set(MayaConfig.SWAP_BACKEND, resolved.name) }
     }
 

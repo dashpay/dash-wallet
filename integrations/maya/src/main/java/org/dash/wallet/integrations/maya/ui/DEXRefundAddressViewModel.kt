@@ -179,23 +179,25 @@ class DEXRefundAddressViewModel @Inject constructor(
 
         _uiState.update { it.copy(isSubmitting = true, orderErrorRes = null) }
         viewModelScope.launch {
-            // The converted DASH lands in the wallet's current receive address; mark it as income for
-            // tax reporting (moved here from the receive screen along with the createBuyOrder call).
+            // The converted DASH lands in the wallet's current receive address.
             // Deriving the receive address touches the keychain — keep it off the main thread.
             val destinationAddress = withContext(Dispatchers.IO) {
                 walletDataProvider.currentReceiveAddress().toBase58()
             }
-            transactionMetadataProvider.markAddressWithTaxCategory(
-                destinationAddress,
-                false,
-                TaxCategory.Income,
-                ServiceName.Swapkit
-            )
             when (
                 val result = swapProvider.createBuyOrder(state.asset, sellAmount, destinationAddress, validAddress)
             ) {
                 is ResponseResource.Success -> {
                     val order = result.value
+                    // Mark the receive address as income for tax reporting only once the order
+                    // actually exists — tagging before createBuyOrder would leave stray metadata
+                    // on a failed attempt.
+                    transactionMetadataProvider.markAddressWithTaxCategory(
+                        destinationAddress,
+                        false,
+                        TaxCategory.Income,
+                        ServiceName.Swapkit
+                    )
                     _uiState.update { it.copy(isSubmitting = false, orderErrorRes = null) }
                     onOrderCreated.postValue(
                         DEXRefundOrderResult(depositAddress = order.depositAddress, sellAmount = order.sellAmount)

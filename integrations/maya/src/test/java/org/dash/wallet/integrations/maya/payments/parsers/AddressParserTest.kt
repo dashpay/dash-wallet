@@ -127,6 +127,16 @@ class AddressParserTest {
         assertFalse(parser.exactMatch("alice"))
         assertFalse(parser.exactMatch(""))
 
+        // Labels can contain single -/_ separators but can't start or end with one,
+        // and the whole account id is capped at 64 characters.
+        assertTrue(parser.exactMatch("sub-account.alice.near"))
+        assertTrue(parser.exactMatch("sub_account.alice.near"))
+        assertFalse(parser.exactMatch("-alice.near"))
+        assertFalse(parser.exactMatch("alice-.near"))
+        assertFalse(parser.exactMatch("alice.near-"))
+        assertFalse(parser.exactMatch("al--ice.near"))
+        assertFalse(parser.exactMatch("a".repeat(60) + ".near"))
+
         assertEquals(
             2,
             parser.findAll(
@@ -166,19 +176,27 @@ class AddressParserTest {
     fun starknetAddressTest() {
         val parser = StarknetAddressParser()
 
-        // 0x + 1..64 hex chars (252-bit felt).
+        // 0x + 50..64 hex chars (a 252-bit felt, with or without leading-zero padding).
         assertTrue(
             parser.exactMatch("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d")
         )
-        assertTrue(parser.exactMatch("0xdeadbeef"))
+        // Leading zeros stripped (63 chars) — the same felt in its short form.
+        assertTrue(
+            parser.exactMatch("0x4718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d")
+        )
 
+        // Truncated felts are legal on-chain but never real accounts — sending burns funds.
+        assertFalse(parser.exactMatch("0xdeadbeef"))
+        assertFalse(parser.exactMatch("0x0"))
+        // The zero felt, even at full length.
+        assertFalse(parser.exactMatch("0x" + "0".repeat(64)))
         // Missing 0x prefix and more than 64 hex chars.
         assertFalse(parser.exactMatch("04718f5a"))
         assertFalse(parser.exactMatch("0x" + "a".repeat(65)))
         assertFalse(parser.exactMatch(""))
 
         assertEquals(
-            2,
+            1,
             parser.findAll(
                 """
                 first 0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d

@@ -146,8 +146,9 @@ private fun DEXEnterAmountScreenContent(
             NumericKeyboardCompose(
                 modifier = Modifier.fillMaxWidth(),
                 // Fully disabled (dimmed, not tappable) while offline — a swap can't be quoted
-                // without a connection.
-                enabled = isOnline,
+                // without a connection — and while the entered amount is being validated, so the
+                // validated amount can't change mid-flight.
+                enabled = isOnline && !isValidating,
                 onKeyInput = onKeyInput,
                 bottomSlot = {
                     DashButton(

@@ -20,10 +20,8 @@ import androidx.annotation.StringRes
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.Base58
-import org.bitcoinj.core.Coin
 import org.bitcoinj.core.ECKey
 import org.bitcoinj.params.MainNetParams
-import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.common.payments.parsers.Bech32
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
@@ -105,17 +103,14 @@ open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
     override val codeId: Int = R.string.cryptocurrency_bitcoin_code
     override val nameId: Int = R.string.cryptocurrency_bitcoin_network
     override fun getPaymentRequestURI(address: String, amount: String): String {
-        return try {
-            BitcoinURI.convertToBitcoinURI(
-                Address.fromBase58(BitcoinMainNetParams(), address),
-                Coin.parseCoin(amount),
-                null,
-                null
-            )
-        } catch (e: AddressFormatException) {
+        // Validate the address before encoding it — legacy base58 or bech32 (SwapKit/NEAR
+        // return bech32 deposit addresses). Either form goes into a plain BIP-21 URI.
+        try {
+            Address.fromBase58(BitcoinMainNetParams(), address)
+        } catch (_: AddressFormatException) {
             SegwitAddress.fromBech32(BitcoinMainNetParams(), address)
-            "bitcoin:$address&amount=$amount"
         }
+        return "bitcoin:$address?amount=$amount"
     }
 
     companion object {
