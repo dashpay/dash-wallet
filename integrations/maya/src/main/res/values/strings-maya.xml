@@ -348,7 +348,7 @@
     <string name="maya_select_coin_title">Select coin</string>
     <string name="dex_enter_amount_title">Enter amount</string>
     <string name="dex_enter_amount_checking">Checking amount…</string>
-    <string name="dex_enter_amount_invalid">This amount can\'t be swapped. Try a different amount.</string>
+    <string name="dex_enter_amount_invalid">This amount can\'t be swapped right now. Try a different amount, or try again shortly.</string>
     <string name="maya_route_label_maya" translatable="false">Maya</string>
     <string name="maya_route_label_near" translatable="false">NEAR</string>
     <string name="maya_route_label_multiple">Multiple networks</string>
@@ -376,7 +376,7 @@
          %1$s is the coin code (e.g. "BTC"); messages that don't need it simply ignore the argument. -->
     <string name="dex_error_generic">Something went wrong setting up your swap. Please try again.</string>
     <string name="dex_error_missing_details">Swap details are missing. Please go back and enter an amount.</string>
-    <string name="dex_error_no_route">This amount can\'t be swapped right now. Try a different amount.</string>
+    <string name="dex_error_no_route">This amount can\'t be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount.</string>
     <string name="dex_error_blacklisted">%1$s can\'t be swapped at the moment.</string>
     <string name="dex_error_validation">We couldn\'t set up your swap. Please check the amount and refund address, then try again.</string>
     <string name="dex_error_unavailable">Swaps are temporarily unavailable. Please try again later.</string>
