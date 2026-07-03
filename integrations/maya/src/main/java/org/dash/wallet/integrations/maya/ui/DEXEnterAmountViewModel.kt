@@ -270,10 +270,11 @@ class DEXEnterAmountViewModel @Inject constructor(
     /**
      * Validate the entered amount when the user presses Continue, then signal navigation via
      * [onValidationPassed]. The check is a quote-only buy ([SwapProvider.validateBuyOrder]) for the
-     * crypto-unit sell amount, using the chosen asset's example address as the (placeholder)
-     * refund/source address — the user hasn't supplied a real one yet. On failure the rejection
-     * reason is surfaced inline and navigation is suppressed. An asset with no known example address
-     * is allowed through (we can't validate it here).
+     * crypto-unit sell amount, using a session-generated example address
+     * ([MayaCryptoCurrency.getNewExampleAddress]) as the placeholder refund/source address — the
+     * user hasn't supplied a real one yet, and a fresh address avoids submitting the well-known
+     * hardcoded example to SwapKit. On failure the rejection reason is surfaced inline and
+     * navigation is suppressed. An unknown asset is allowed through (we can't validate it here).
      */
     fun onContinueClicked() {
         if (_uiState.value.isValidating || !_uiState.value.isOnline) return
@@ -282,7 +283,7 @@ class DEXEnterAmountViewModel @Inject constructor(
         if (sellCrypto.signum() <= 0) return
 
         val asset = _uiState.value.asset
-        val exampleAddress = MayaCurrencyList[asset]?.exampleAddress
+        val exampleAddress = MayaCurrencyList[asset]?.getNewExampleAddress()
         if (asset.isBlank() || exampleAddress.isNullOrBlank()) {
             log.warn("onContinueClicked: no example address for asset={}, skipping validation", asset)
             onValidationPassed.call()

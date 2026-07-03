@@ -19,9 +19,13 @@ package org.dash.wallet.integrations.maya.payments
 import androidx.annotation.StringRes
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
+import org.bitcoinj.core.Base58
 import org.bitcoinj.core.Coin
+import org.bitcoinj.core.ECKey
+import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.uri.BitcoinURI
 import org.dash.wallet.common.payments.parsers.AddressParser
+import org.dash.wallet.common.payments.parsers.Bech32
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
@@ -58,6 +62,16 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 
 interface MayaCryptoCurrency {
+    companion object {
+        /**
+         * Generated once per app session; every [getNewExampleAddress] derives its address from
+         * this key, so within a session each chain's generated address is stable. The private key
+         * is never persisted or used to sign anything — the addresses are indicative only and
+         * funds must never be sent to them.
+         */
+        val sessionExampleKey: ECKey by lazy { ECKey() }
+    }
+
     val code: String
     val name: String
     val asset: String
@@ -71,6 +85,14 @@ interface MayaCryptoCurrency {
     fun getPoolDepth(depthInSmallUnits: BigDecimal): BigDecimal = BigDecimal.ZERO
     fun getFee(feeInSmallUnits: BigDecimal): BigDecimal = BigDecimal.ZERO
     fun getPaymentRequestURI(address: String, amount: String): String
+
+    /**
+     * A format-valid address for this asset's chain derived from [sessionExampleKey] — the
+     * session-stable counterpart of the hardcoded [exampleAddress], checksummed whenever the
+     * chain's address format defines one. Used where an indicative destination is needed (e.g.
+     * bootstrap quotes) without reusing the static example address every session.
+     */
+    fun getNewExampleAddress(): String
 }
 
 open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
@@ -106,14 +128,25 @@ open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
     override fun getFee(feeInSmallUnits: BigDecimal): BigDecimal {
         return feeInSmallUnits.setScale(8, RoundingMode.HALF_UP).div(BigDecimal(SATOSHIS_PER_COIN))
     }
+
+    // Native segwit P2WPKH (bc1q…) of the session key — a genuinely derivable Bitcoin address.
+    override fun getNewExampleAddress(): String =
+        SegwitAddress.fromKey(BitcoinMainNetParams(), MayaCryptoCurrency.sessionExampleKey).toBech32()
 }
 class MayaDashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "DASH"
     override val name: String = "Dash"
     override val asset: String = "DASH.DASH"
     override val exampleAddress: String = "XssjzLKgsfATYGqTQmiJURQzeKdpL5K1k3"
+
+    // The inherited parser validates against *Bitcoin* params and rejects Dash addresses.
+    override val addressParser: AddressParser = AddressParser.getDashAddressParser(MainNetParams.get())
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "dash:$address?amount=$amount"
+
+    // Dash mainnet P2PKH: version byte 76 ('X') + HASH160 of the session key.
+    override fun getNewExampleAddress(): String =
+        Base58.encodeChecked(76, MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaEthereumCryptoCurrency : MayaCryptoCurrency {
@@ -163,6 +196,12 @@ open class MayaEthereumCryptoCurrency : MayaCryptoCurrency {
         val weiAmount = BigDecimal(amount).movePointRight(NATIVE_DECIMALS).toBigInteger()
         return "ethereum:$address@$chain?value=$weiAmount"
     }
+
+    // 20 session-key-derived bytes as lowercase hex — all-lowercase carries no EIP-55 checksum,
+    // so it is valid on any EVM chain. (The real keccak-256 derivation isn't available here.)
+    // Inherited by every EVM L2 subclass and ERC-20 token wrapper.
+    override fun getNewExampleAddress(): String =
+        "0x" + AddressGenerator.hex(AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "EVM", 20))
 }
 
 open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -183,6 +222,10 @@ open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Cosmos/Kujira wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Cosmos account: bech32 of HASH160(pubkey) — the session key's real Kujira address.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.bech32("kujira", MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 class MayaKujiraTokenCryptoCurrency(
@@ -243,6 +286,10 @@ open class MayaRuneCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by THORChain wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Cosmos account: bech32 of HASH160(pubkey) — the session key's real THORChain address.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.bech32("thor", MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -263,6 +310,10 @@ open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Maya/Cosmos wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Cosmos account: bech32 of HASH160(pubkey) — the session key's real Maya address.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.bech32("maya", MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaCacaoCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -283,6 +334,10 @@ open class MayaCacaoCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Maya/Cosmos wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // CACAO lives on the Maya chain — same bech32 "maya" account encoding as MAYA.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.bech32("maya", MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -298,6 +353,12 @@ open class MayaZcashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     // ZIP-321 transparent-address payment URI.
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "zcash:$address?amount=$amount"
+
+    // Transparent P2PKH ("t1…"): Zcash's two-byte 0x1CB8 prefix + HASH160 of the session key.
+    override fun getNewExampleAddress(): String = AddressGenerator.base58Check(
+        byteArrayOf(0x1C, 0xB8.toByte()),
+        MayaCryptoCurrency.sessionExampleKey.pubKeyHash
+    )
 }
 
 open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -316,6 +377,13 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Radix wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Babylon account: bech32m of entity byte 0xD1 (virtual account) + 29 key-derived bytes.
+    override fun getNewExampleAddress(): String = AddressGenerator.bech32(
+        "account_rdx",
+        byteArrayOf(0xD1.toByte()) + AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "XRD", 29),
+        Bech32.Encoding.BECH32M
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -446,6 +514,11 @@ open class MayaBitcoinCashCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val nameId: Int = R.string.cryptocurrency_bch_network
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "bitcoincash:${address.removePrefix("bitcoincash:")}?amount=$amount"
+
+    // Legacy P2PKH ('1…'): no CashAddr encoder is available here, and the legacy Base58Check
+    // form (matched by this parser's second alternative) is still valid everywhere on BCH.
+    override fun getNewExampleAddress(): String =
+        Base58.encodeChecked(0, MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaLitecoinCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -467,6 +540,10 @@ open class MayaLitecoinCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val nameId: Int = R.string.cryptocurrency_ltc_network
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "litecoin:$address?amount=$amount"
+
+    // Native segwit P2WPKH (ltc1q…) of the session key, encoded directly (no LTC NetworkParameters).
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.segwitV0("ltc", MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaDogecoinCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -488,6 +565,10 @@ open class MayaDogecoinCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val nameId: Int = R.string.cryptocurrency_doge_network
     override fun getPaymentRequestURI(address: String, amount: String): String =
         "dogecoin:$address?amount=$amount"
+
+    // Dogecoin P2PKH: version byte 30 ('D') + HASH160 of the session key.
+    override fun getNewExampleAddress(): String =
+        Base58.encodeChecked(30, MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 // ---------------------------------------------------------------------------
@@ -507,6 +588,13 @@ open class MayaCardanoCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // CIP-13 (web+cardano:) is rarely scannable — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Shelley base address ("addr1q…"): header 0x01 (payment + stake key, mainnet) followed by
+    // two 28-byte credentials derived from the session key (blake2b-224 isn't available here).
+    override fun getNewExampleAddress(): String = AddressGenerator.bech32(
+        "addr",
+        byteArrayOf(0x01) + AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "ADA", 56)
+    )
 }
 
 open class MayaSolanaCryptoCurrency : MayaCryptoCurrency {
@@ -521,6 +609,11 @@ open class MayaSolanaCryptoCurrency : MayaCryptoCurrency {
     override fun getPaymentRequestURI(address: String, amount: String): String {
         return "solana:$address?amount=$amount"
     }
+
+    // Base58 of 32 key-derived bytes standing in for an ed25519 public key (no checksum on Solana;
+    // off-curve values are legal address bytes — program-derived accounts are off-curve too).
+    override fun getNewExampleAddress(): String =
+        Base58.encode(AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "SOL", 32))
 }
 
 open class MayaNearCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -535,6 +628,10 @@ open class MayaNearCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // NEAR is account-based with no standard payment URI — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Implicit account: 64 lowercase hex chars (an ed25519 key stand-in derived from the session key).
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.hex(AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "NEAR", 32))
 }
 
 open class MayaTronCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -549,6 +646,11 @@ open class MayaTronCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by TRON wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // TRON Base58Check: prefix 0x41 ('T') + 20 session-key bytes (TRON's own hash is keccak-based,
+    // not available here; the checksum — what validators actually verify — is correct).
+    override fun getNewExampleAddress(): String =
+        Base58.encodeChecked(0x41, MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaXrpCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -563,6 +665,11 @@ open class MayaXrpCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // XRP deposits often need a destination tag too; no universally scannable URI — bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // Classic address: ripple-alphabet Base58Check of HASH160(pubkey) — XRP account IDs use the
+    // same RIPEMD160(SHA256(pubkey)) derivation as Bitcoin, so this is the session key's real address.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.rippleBase58Check(MayaCryptoCurrency.sessionExampleKey.pubKeyHash)
 }
 
 open class MayaTonCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -577,6 +684,10 @@ open class MayaTonCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by TON wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // User-friendly bounceable form ("EQ…"): tag + workchain 0 + 32 key-derived bytes + CRC16.
+    override fun getNewExampleAddress(): String =
+        AddressGenerator.tonFriendly(AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "TON", 32))
 }
 
 open class MayaSuiCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -592,6 +703,10 @@ open class MayaSuiCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Sui wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // 0x + 64 hex chars: a 32-byte account id (blake2b-256 of the key on real Sui) — key-derived here.
+    override fun getNewExampleAddress(): String =
+        "0x" + AddressGenerator.hex(AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "SUI", 32))
 }
 
 open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
@@ -610,6 +725,14 @@ open class MayaStarknetCryptoCurrency : MayaBitcoinCryptoCurrency() {
 
     // No payment-URI scheme honored by Starknet wallets — encode the bare address.
     override fun getPaymentRequestURI(address: String, amount: String): String = address
+
+    // A 252-bit felt: 32 key-derived bytes with the top 5 bits cleared so the value stays below
+    // Starknet's field prime (~2^251).
+    override fun getNewExampleAddress(): String {
+        val bytes = AddressGenerator.deriveBytes(MayaCryptoCurrency.sessionExampleKey, "STRK", 32)
+        bytes[0] = (bytes[0].toInt() and 0x07).toByte()
+        return "0x" + AddressGenerator.hex(bytes)
+    }
 }
 
 // ---------------------------------------------------------------------------
