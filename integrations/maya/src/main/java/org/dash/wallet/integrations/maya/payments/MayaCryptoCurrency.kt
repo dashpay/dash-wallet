@@ -574,8 +574,11 @@ open class MayaCardanoCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val code: String = "ADA"
     override val name: String = "Cardano"
     override val asset: String = "ADA.ADA"
+
+    // CIP-19 mainnet base-address test vector — the previous example here was fabricated and
+    // failed the bech32 checksum the parser now verifies.
     override val exampleAddress: String =
-        "addr1q9c8e2wjwj4uxsmrk2lqkkpqalwzvxgyx7uxjkfeg7xc3xa07c6qzwrcfh2x4f4z4uyez5lpd07v3jkh3ttn0xc2x7qspewtaa"
+        "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
     override val paymentIntentParser: PaymentIntentParser = CardanoPaymentIntentParser()
     override val addressParser: AddressParser = CardanoAddressParser()
     override val codeId: Int = R.string.cryptocurrency_ada_code

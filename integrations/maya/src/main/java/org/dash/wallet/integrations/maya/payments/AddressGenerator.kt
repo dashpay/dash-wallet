@@ -99,6 +99,26 @@ internal object AddressGenerator {
     }
 
     /**
+     * Inverse of [rippleBase58Check]'s encoding step: ripple-alphabet Base58 back to raw bytes
+     * (version + payload + 4-byte checksum, with leading zero bytes restored). Used by the XRP
+     * address parser to verify the checksum; throws on characters outside the ripple alphabet.
+     */
+    fun rippleBase58Decode(address: String): ByteArray {
+        var num = BigInteger.ZERO
+        val base = BigInteger.valueOf(58)
+        for (c in address) {
+            val digit = RIPPLE_ALPHABET.indexOf(c)
+            require(digit >= 0) { "invalid ripple Base58 character '$c'" }
+            num = num.multiply(base).add(BigInteger.valueOf(digit.toLong()))
+        }
+        val stripped = num.toByteArray().let {
+            if (it.size > 1 && it[0] == 0.toByte()) it.copyOfRange(1, it.size) else it
+        }
+        val leadingZeros = address.takeWhile { it == RIPPLE_ALPHABET[0] }.length
+        return ByteArray(leadingZeros) + (if (num.signum() == 0) ByteArray(0) else stripped)
+    }
+
+    /**
      * TON user-friendly address: tag 0x11 (bounceable, mainnet-safe) + workchain 0 + 32-byte
      * account hash + CRC16-XMODEM, base64url — 48 chars starting "EQ".
      */
@@ -108,7 +128,8 @@ internal object AddressGenerator {
         return BaseEncoding.base64Url().encode(data + byteArrayOf((crc shr 8).toByte(), crc.toByte()))
     }
 
-    private fun crc16Xmodem(data: ByteArray): Int {
+    // Shared with TonAddressParser, which verifies the same CRC on user-entered addresses.
+    fun crc16Xmodem(data: ByteArray): Int {
         var crc = 0
         for (b in data) {
             crc = crc xor ((b.toInt() and 0xFF) shl 8)
