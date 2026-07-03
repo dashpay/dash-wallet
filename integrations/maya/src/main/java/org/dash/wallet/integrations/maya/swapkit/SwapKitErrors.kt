@@ -33,7 +33,8 @@ import org.dash.wallet.integrations.maya.R
  * convention — the composable resolves it via `stringResource`. Reusable by any swap surface
  * (buy/receive today, sell/preview later), not just [org.dash.wallet.integrations.maya.ui.DEXReceiveViewModel].
  *
- * Error codes are documented in `integrations/maya/SWAPKIT_PROTOCOL.md` (§4 quote, §5 swap).
+ * Error codes are documented in `integrations/maya/SWAPKIT_PROTOCOL.md` (§4 quote, §5 swap);
+ * its "User-Facing Error Display" section lists which screens show which of these messages.
  */
 object SwapKitErrors {
     /**

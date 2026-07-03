@@ -492,6 +492,82 @@ Output amounts shown are already net of all fees except inbound.
 
 ---
 
+## User-Facing Error Display (per flow / screen)
+
+SwapKit failures carry a machine code in the top-level `error` field (§4 quote, §5 swap).
+`swapkit/SwapKitErrors.messageResFor()` maps the code to a localized string in
+`res/values/strings-maya.xml`; which screens use that mapping — and which show their own
+fixed copy instead — is listed below. English text as of this writing; `%1$s` is the coin
+code (e.g. "BTC"). Codes not listed fall back to `dex_error_generic`.
+
+### Buy flow (SwapKit backend only)
+
+**Enter Amount** (`DEXEnterAmountScreen`) — red text under the amount bar. Does NOT use the
+code→message table: every Continue-validation quote failure (including `noRoutesFound`) shows
+the single fixed string `dex_enter_amount_invalid`:
+
+> This amount can't be swapped right now. Try a different amount, or try again shortly.
+
+**Refund Address** (`DEXRefundAddressScreen`) — red text under the address field. The only buy
+screen using the full `SwapKitErrors` table; `createBuyOrder` calls both `/v3/quote` and
+`/v3/swap`, so every code can surface here:
+
+| Error | String id | English text |
+|---|---|---|
+| local address check (not a SwapKit code) | `not_valid_address` (common) | Not a valid %1$s Address or URL request |
+| `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| `swapRouteNotFound` | `dex_error_quote_expired` | This quote expired. Please go back and try again. |
+| `isSanctionedAddress` | `dex_error_sanctioned` | This address can't be used for swaps. |
+| `insufficientBalance` | `dex_error_insufficient_balance` | The amount is more than what you're sending. |
+| `insufficientAllowance` | `dex_error_allowance` | This token needs approval before it can be swapped. |
+| `unableToBuildTransaction` | `dex_error_build_failed` | We couldn't prepare this swap. Please try again. |
+| `invalidSourceAddress` | `dex_error_invalid_refund_address` | That refund address isn't a valid %1$s address. |
+| `invalidDestinationAddress` | `dex_error_invalid_destination` | We couldn't set up your deposit. Please try again. |
+| `outputAmountDeviationTooHigh` | `dex_error_price_moved` | The price moved too much. Please go back and try again. |
+| anything else (e.g. `unknownError` 500) | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+**Receive** (`DEXReceiveScreen`) — purely presentational, no network calls, so no SwapKit codes
+reach it. One defensive case, shown in place of the QR content:
+
+| Error | String id | English text |
+|---|---|---|
+| blank deposit address (shouldn't happen) | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+### Sell flow (SwapKit table applies only when the SwapKit backend is active; the Maya backend maps its own vocabulary in `MayaApi`/`MayaErrorResponse`)
+
+Only `/v3/quote` codes occur here — the sell flow never calls `/v3/swap` (the DASH deposit
+transaction is built locally).
+
+**Address Input** (`MayaAddressInputFragment`) — inline error under the address field:
+
+| Error | String id | English text |
+|---|---|---|
+| `noRoutesFound` | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| `blackListAsset` | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| anything else | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+**Sell Enter Amount** (`MayaConvertCryptoFragment`) — an amount-too-low-classified error shows
+the red banner (no modal, so the user can raise the amount and retry); all other codes pop an
+`AdaptiveDialog` with the mapped message. The banner text comes from the active backend's
+`errorMessageRes`, so Maya's genuine amount-too-low keeps its minimum copy while SwapKit's
+ambiguous `noRoutesFound` gets the neutral no-route copy:
+
+| Error | Shown as | String id | English text |
+|---|---|---|---|
+| `noRoutesFound` (SwapKit backend) | banner | `dex_error_no_route` | This amount can't be swapped right now. Routes can be briefly unavailable — try again shortly, or try a different amount. |
+| amount too low (Maya backend) | banner | `maya_error_below_allowed_minimum` | Entered amount is lower than the allowed minimum |
+| `blackListAsset` | dialog | `dex_error_blacklisted` | %1$s can't be swapped at the moment. |
+| `invalidRequest`, `validation_error` | dialog | `dex_error_validation` | We couldn't set up your swap. Please check the amount and address, then try again. |
+| `apiKeyInvalid`, `unauthorized` | dialog | `dex_error_unavailable` | Swaps are temporarily unavailable. Please try again later. |
+| anything else | dialog | `dex_error_generic` | Something went wrong setting up your swap. Please try again. |
+
+---
+
 ## Detecting Maya-only Assets (for the cryptocurrency list screen)
 
 > Verified live against the API on 2026-06-08.

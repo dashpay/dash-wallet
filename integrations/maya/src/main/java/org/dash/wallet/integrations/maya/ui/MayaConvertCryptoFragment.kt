@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import android.widget.Toast
+import androidx.annotation.StringRes
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isGone
 import androidx.core.view.isVisible
@@ -190,9 +191,12 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
             // An amount-too-low error (SwapKit's `noRoutesFound`, Maya's "amount too low")
             // shouldn't pop a modal — surface it in the same red banner the local min-amount check
             // uses, so the user can simply raise the amount and retry without dismissing a dialog.
-            // The active backend's aggregator classifies and localizes the error (see SwapProvider).
+            // The active backend's aggregator classifies and localizes the error (see SwapProvider):
+            // Maya's amount-too-low keeps its "below the allowed minimum" copy, while SwapKit's
+            // noRoutesFound — which can also mean the route is briefly unavailable — gets the same
+            // neutral no-route message the DEX buy screens show.
             if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
-                showAmountTooLowBanner()
+                showAmountTooLowBanner(viewModel.errorMessageRes(it))
                 return@observe
             }
 
@@ -408,10 +412,10 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         binding.limitDesc.text = getString(R.string.exchange_rate_not_found)
     }
 
-    private fun showAmountTooLowBanner() {
+    private fun showAmountTooLowBanner(@StringRes messageRes: Int) {
         binding.authLimitBanner.root.isGone = true
         binding.limitDesc.isVisible = true
-        binding.limitDesc.setText(R.string.maya_error_below_allowed_minimum)
+        binding.limitDesc.setText(messageRes)
         setGuidelinePercent(false)
     }
 
