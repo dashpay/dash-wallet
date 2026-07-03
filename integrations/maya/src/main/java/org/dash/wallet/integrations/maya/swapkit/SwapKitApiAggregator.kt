@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -142,8 +143,10 @@ class SwapKitApiAggregator @Inject constructor(
 
     // Asset → USD price, captured at refresh time. applyPoolPrices re-seeds from
     // this cache so it stays idempotent across re-emissions AND handles
-    // selected-currency switches without re-fetching from SwapKit.
-    private val usdPriceCache = mutableMapOf<String, BigDecimal>()
+    // selected-currency switches without re-fetching from SwapKit. Concurrent because
+    // it is written on responseScope (refresh/hydrate) but read from the ViewModel's
+    // main-dispatcher pipeline via applyPoolPrices.
+    private val usdPriceCache = ConcurrentHashMap<String, BigDecimal>()
 
     // Upper-cased identifiers routable from DASH only via MAYACHAIN (no NEAR
     // fallback). Refreshed alongside the pool list. Empty until first refresh.
