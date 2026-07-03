@@ -22,6 +22,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
@@ -179,9 +181,12 @@ class DEXRefundAddressViewModel @Inject constructor(
         viewModelScope.launch {
             // The converted DASH lands in the wallet's current receive address; mark it as income for
             // tax reporting (moved here from the receive screen along with the createBuyOrder call).
-            val destinationAddress = walletDataProvider.currentReceiveAddress().toBase58()
+            // Deriving the receive address touches the keychain — keep it off the main thread.
+            val destinationAddress = withContext(Dispatchers.IO) {
+                walletDataProvider.currentReceiveAddress().toBase58()
+            }
             transactionMetadataProvider.markAddressWithTaxCategory(
-                destinationAddress.toString(),
+                destinationAddress,
                 false,
                 TaxCategory.Income,
                 ServiceName.Swapkit

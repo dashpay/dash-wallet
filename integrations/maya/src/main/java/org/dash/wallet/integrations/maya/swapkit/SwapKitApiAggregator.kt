@@ -34,7 +34,6 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toCoin
 import org.dash.wallet.common.util.toFiat
-import org.dash.wallet.integrations.maya.BuildConfig
 import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import org.dash.wallet.integrations.maya.api.MayaException
 import org.dash.wallet.integrations.maya.api.MayaWebApi
@@ -114,13 +113,6 @@ class SwapKitApiAggregator @Inject constructor(
         // Indicative quote size used to pick the recommended network for assets
         // routable via BOTH Maya and NEAR — $50 worth of DASH.
         private val PREFERRED_QUOTE_USD = BigDecimal("50")
-
-        // TEMP TEST FLAG — when true (debug builds only), every Maya-only asset is
-        // rendered as halted so the "Halted" chip / disabled state / toast can be
-        // verified without waiting for a real Maya halt on a listed Maya-only coin
-        // (the only live Maya halts—XRD/ZEC—are not Maya-only here). Set back to
-        // false or delete the forcedHalt branch in markMayaInfo() before merging.
-        private const val DEBUG_FORCE_MAYA_ONLY_HALT = false
     }
 
     override val poolInfoList = MutableStateFlow<List<PoolInfo>>(emptyList())
@@ -276,7 +268,7 @@ class SwapKitApiAggregator @Inject constructor(
         val pools = identifiers.map { identifier ->
             val priceUsd = prices[identifier.uppercase()] ?: 0.0
             val priceUsdFiat = if (priceUsd > 0.0) {
-                val priceBd = BigDecimal(priceUsd)
+                val priceBd = BigDecimal.valueOf(priceUsd)
                 usdPriceCache[identifier] = priceBd
                 priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
             } else {
@@ -417,7 +409,7 @@ class SwapKitApiAggregator @Inject constructor(
             val pools = snapshot.pools.map { p ->
                 PoolInfo(asset = p.asset, status = "Available").also { pool ->
                     if (p.priceUsd > 0.0) {
-                        val priceBd = BigDecimal(p.priceUsd)
+                        val priceBd = BigDecimal.valueOf(p.priceUsd)
                         freshUsdPrices[p.asset] = priceBd
                         pool.assetPriceFiat = priceBd.toFiat(MayaConstants.DEFAULT_EXCHANGE_CURRENCY)
                     }
@@ -572,10 +564,7 @@ class SwapKitApiAggregator @Inject constructor(
         pool.nearOnly = nearOnlyAssets.contains(pool.asset.uppercase())
         val chainHalted = mayaGlobalHalt ||
             mayaHaltedChains.contains(pool.asset.substringBefore('.').uppercase())
-        // TEMP TEST: force Maya-only assets to halted in debug builds — see
-        // DEBUG_FORCE_MAYA_ONLY_HALT. Remove this branch before merging.
-        val forcedHalt = BuildConfig.DEBUG && DEBUG_FORCE_MAYA_ONLY_HALT
-        pool.mayaHalted = isMayaOnly && (forcedHalt || chainHalted)
+        pool.mayaHalted = isMayaOnly && chainHalted
     }
 
     override suspend fun getInboundAddresses(): List<InboundAddress> {
@@ -1016,6 +1005,8 @@ class SwapKitApiAggregator @Inject constructor(
                 liquidity = "0",
                 outbound = outboundBaseUnits,
                 slippageBps = slippageBpsInt,
+                // SwapKit doesn't break fees down the way Maya does; the outbound fee is the
+                // best available stand-in for the total. Both fields only feed display estimates.
                 total = outboundBaseUnits,
                 totalBps = slippageBpsInt
             ),

@@ -465,37 +465,15 @@ class MayaViewModel @Inject constructor(
     }
 
     fun isTradingActive(): Boolean {
-        return when (swapProvider) {
+        // The injected provider is always the DispatchingSwapProvider binding; unwrap it to
+        // decide by the backend actually in use.
+        val active = (swapProvider as? DispatchingSwapProvider)?.active ?: swapProvider
+        return when (active) {
             is MayaApiAggregator -> {
                 val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
-                if (dashInbound == null) {
-                    false
-                } else {
-                    dashInbound.halted != true
-                }
+                dashInbound != null && dashInbound.halted != true
             }
-
-            is SwapKitApiAggregator -> {
-                inboundAddresses.value.isNotEmpty()
-            }
-            is DispatchingSwapProvider -> {
-                when (swapProvider.active) {
-                    is MayaApiAggregator -> {
-                        val dashInbound = _inboundAddresses.value.find { it.chain == "DASH" }
-                        if (dashInbound == null) {
-                            false
-                        } else {
-                            dashInbound.halted != true
-                        }
-                    }
-
-                    is SwapKitApiAggregator -> {
-                        inboundAddresses.value.isNotEmpty()
-                    }
-
-                    else -> false
-                }
-            }
+            is SwapKitApiAggregator -> inboundAddresses.value.isNotEmpty()
             else -> false
         }
     }

@@ -60,7 +60,7 @@ fun DEXEnterAmountScreen(
         continueEnabled = uiState.continueEnabled,
         isValidating = uiState.isValidating,
         isOnline = uiState.isOnline,
-        validationError = uiState.validationError,
+        validationFailed = uiState.validationFailed,
         coinName = uiState.assetCurrencyCode,
         coinIconUrl = uiState.coinIconUrl,
         showBalance = uiState.showBalance,
@@ -81,7 +81,7 @@ private fun DEXEnterAmountScreenContent(
     continueEnabled: Boolean,
     isValidating: Boolean,
     isOnline: Boolean,
-    validationError: String?,
+    validationFailed: Boolean,
     coinName: String?,
     coinIconUrl: String?,
     showBalance: Boolean,
@@ -125,7 +125,7 @@ private fun DEXEnterAmountScreenContent(
                     onCurrencyPickerSelect = { _, index -> onCurrencySelected(index) }
                 )
 
-                if (validationError != null) {
+                if (validationFailed) {
                     // SwapKit's noRoutesFound can't tell us whether the amount is too low, too high, or
                     // simply unroutable right now, and the entered value is in the selected display
                     // currency — so any min/max guess would be misleading. Show a single neutral message
@@ -190,7 +190,7 @@ private fun DEXEnterAmountScreenZeroPreview() {
         continueEnabled = false,
         isValidating = false,
         isOnline = true,
-        validationError = null,
+        validationFailed = false,
         coinName = "BTC",
         coinIconUrl = null,
         showBalance = true,
@@ -213,7 +213,7 @@ private fun DEXEnterAmountScreenEnabledPreview() {
         continueEnabled = true,
         isValidating = false,
         isOnline = true,
-        validationError = null,
+        validationFailed = false,
         coinName = "BTC",
         coinIconUrl = null,
         showBalance = true,

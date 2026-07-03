@@ -73,9 +73,10 @@ data class DEXEnterAmountUIState(
     val isValidating: Boolean = false,
     // False when the device has no network connection; the screen shows a no-connection toast.
     val isOnline: Boolean = true,
-    // Non-null when the entered amount can't be swapped (e.g. below the route minimum); carries
-    // the provider's error message, or null when blank/unknown so the screen shows a generic one.
-    val validationError: String? = null,
+    // True when the entered amount was rejected by the validation quote (e.g. below the route
+    // minimum). The provider's raw message is logged, not shown — the screen renders a single
+    // neutral localized error.
+    val validationFailed: Boolean = false,
     // TopIntroSend header fields. The "to" target is the coin being bought (icon + code).
     val coinIconUrl: String? = null,
     // Whether the wallet balance row is shown (eye toggle).
@@ -200,7 +201,7 @@ class DEXEnterAmountViewModel @Inject constructor(
                 amount = displayString,
                 continueEnabled = anchoredValue.signum() > 0,
                 isValidating = false,
-                validationError = null,
+                validationFailed = false,
                 coinIconUrl = GenericUtils.getCoinIconUrls(assetCurrencyCode, asset).firstOrNull()
             )
         }
@@ -242,7 +243,7 @@ class DEXEnterAmountViewModel @Inject constructor(
             state.copy(
                 amount = updated,
                 continueEnabled = isPositive(updated),
-                validationError = null
+                validationFailed = false
             )
         }
         // Persist so the typed amount survives process death.
@@ -296,11 +297,11 @@ class DEXEnterAmountViewModel @Inject constructor(
 
         validationJob?.cancel()
         validationJob = viewModelScope.launch {
-            _uiState.update { it.copy(isValidating = true, validationError = null, continueEnabled = false) }
+            _uiState.update { it.copy(isValidating = true, validationFailed = false, continueEnabled = false) }
             when (val result = swapProvider.validateBuyOrder(asset, sellAmount, exampleAddress)) {
                 is ResponseResource.Success -> {
                     _uiState.update {
-                        it.copy(isValidating = false, validationError = null, continueEnabled = isPositive(it.amount))
+                        it.copy(isValidating = false, validationFailed = false, continueEnabled = isPositive(it.amount))
                     }
                     onValidationPassed.call()
                 }
@@ -314,7 +315,7 @@ class DEXEnterAmountViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isValidating = false,
-                            validationError = result.throwable.message,
+                            validationFailed = true,
                             continueEnabled = isPositive(it.amount)
                         )
                     }

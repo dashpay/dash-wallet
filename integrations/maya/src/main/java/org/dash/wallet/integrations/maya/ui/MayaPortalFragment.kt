@@ -52,8 +52,6 @@ class MayaPortalFragment : Fragment() {
                     },
                     onBuyClick = {
                         mayaViewModel.setSwapDirection(SwapDirection.BUY)
-                        // TODO: the downstream swap execution still assumes Dash -> asset (sell);
-                        // the buy (asset -> Dash) flow itself is not built yet.
                         safeNavigate(MayaPortalFragmentDirections.mayaPortalToCurrencyPicker())
                     },
                     onSellClick = {

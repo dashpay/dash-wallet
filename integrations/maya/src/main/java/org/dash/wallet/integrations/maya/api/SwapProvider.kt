@@ -50,6 +50,12 @@ private val EMPTY_PREFERRED_ROUTE_PROVIDERS: StateFlow<Map<String, RouteProvider
     MutableStateFlow(emptyMap())
 
 interface SwapProvider {
+    companion object {
+        // Default indicative-quote size: 10 DASH in duffs. Bumped from 1 DASH so the
+        // bootstrap quote clears route minimums on low-liquidity assets.
+        const val DEFAULT_QUOTE_DUFFS = 10_0000_0000L
+    }
+
     val poolInfoList: StateFlow<List<PoolInfo>>
     val apiError: StateFlow<Exception?>
     var notificationIntent: Intent?
@@ -86,10 +92,14 @@ interface SwapProvider {
     suspend fun getInboundAddresses(): List<InboundAddress>
 
     /** Indicative quote against a chain's example address — used to bootstrap the input screen. */
-    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 10_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(toAsset: String, value: Long = DEFAULT_QUOTE_DUFFS): SwapQuote?
 
     /** Indicative quote against a user-specified destination address. */
-    suspend fun getDefaultSwapQuote(toAsset: String, destinationAddress: String, value: Long = 1_0000_0000): SwapQuote?
+    suspend fun getDefaultSwapQuote(
+        toAsset: String,
+        destinationAddress: String,
+        value: Long = DEFAULT_QUOTE_DUFFS
+    ): SwapQuote?
 
     /**
      * Resolves a [SwapQuoteRequest] into a fully-specified [SwapTradeUIModel] with vault
