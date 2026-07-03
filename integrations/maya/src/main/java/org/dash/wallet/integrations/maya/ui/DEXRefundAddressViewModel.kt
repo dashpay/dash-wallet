@@ -46,10 +46,13 @@ import javax.inject.Inject
 /**
  * Result of a successful buy-order creation, handed to the Fragment so it can navigate to the
  * receive screen carrying the SwapKit deposit address (and the sell amount used to build its URI).
+ * [memo] is the chain memo/tag some chains require alongside the deposit — the receive screen must
+ * surface it, or a deposit sent without it can't be attributed to the swap (funds lost).
  */
 data class DEXRefundOrderResult(
     val depositAddress: String,
-    val sellAmount: String
+    val sellAmount: String,
+    val memo: String?
 )
 
 /**
@@ -200,7 +203,11 @@ class DEXRefundAddressViewModel @Inject constructor(
                     )
                     _uiState.update { it.copy(isSubmitting = false, orderErrorRes = null) }
                     onOrderCreated.postValue(
-                        DEXRefundOrderResult(depositAddress = order.depositAddress, sellAmount = order.sellAmount)
+                        DEXRefundOrderResult(
+                            depositAddress = order.depositAddress,
+                            sellAmount = order.sellAmount,
+                            memo = order.memo
+                        )
                     )
                 }
                 is ResponseResource.Failure -> {

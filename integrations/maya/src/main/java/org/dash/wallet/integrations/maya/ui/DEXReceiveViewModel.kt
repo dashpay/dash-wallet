@@ -52,6 +52,10 @@ data class DEXReceiveUIState(
     val address: String = "",
     // The payment URI encoded in the QR and shown in the URI row. Falls back to [address] when blank.
     val uri: String = "",
+    // Chain memo/tag that must accompany the deposit (empty when the chain needs none). A deposit
+    // sent without a required memo can't be attributed to the swap — the screen must show it
+    // prominently, with a warning, because the QR encodes only address + amount.
+    val memo: String = "",
     // True only briefly before setArguments runs; the deposit address arrives ready via nav args.
     val isLoading: Boolean = true,
     // Non-null only in the defensive case where no deposit address was passed in; a friendly,
@@ -84,9 +88,16 @@ class DEXReceiveViewModel @Inject constructor(
      * Seed the screen with the already-created order. [currencyCode] (e.g. "BTC") is the display
      * code shown in the heading; [asset] (e.g. "BTC.BTC") is the SwapKit identifier used to build
      * the payment URI; [sellAmount] is the human-unit amount of the crypto to send; [depositAddress]
-     * is the SwapKit inbound address resolved by the refund step's createBuyOrder call.
+     * is the SwapKit inbound address resolved by the refund step's createBuyOrder call; [memo] is
+     * the chain memo/tag the deposit must carry (empty when none).
      */
-    fun setArguments(asset: String, currencyCode: String, sellAmount: String, depositAddress: String) {
+    fun setArguments(
+        asset: String,
+        currencyCode: String,
+        sellAmount: String,
+        depositAddress: String,
+        memo: String
+    ) {
         // Qualify tokens with their host network (e.g. "USDC (Ethereum)") so the user can tell which
         // chain to send on; native L1 coins (BTC, ETH, …) show just the code.
         val network = MayaCurrencyList.networkName(asset)
@@ -100,11 +111,15 @@ class DEXReceiveViewModel @Inject constructor(
             }
             return
         }
+        if (memo.isNotBlank()) {
+            log.info("setArguments: deposit for asset={} requires a memo", asset)
+        }
         _uiState.update {
             it.copy(
                 coinCode = displayCode,
                 address = depositAddress,
                 uri = buildUri(asset, depositAddress, sellAmount),
+                memo = memo.trim(),
                 isLoading = false,
                 errorMessageRes = null
             )

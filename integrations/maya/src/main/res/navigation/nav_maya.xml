@@ -96,6 +96,13 @@
         <argument
             android:name="depositAddress"
             app:argType="string" />
+        <!-- Chain memo/tag some chains require alongside the deposit; empty when none. A deposit
+             sent without a required memo can't be attributed to the swap (funds lost), so the
+             receive screen must display it. -->
+        <argument
+            android:name="memo"
+            app:argType="string"
+            android:defaultValue="" />
     </fragment>
 
     <fragment

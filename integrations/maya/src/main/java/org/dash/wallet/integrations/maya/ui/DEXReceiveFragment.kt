@@ -60,7 +60,8 @@ class DEXReceiveFragment : Fragment() {
             asset = args.asset,
             currencyCode = args.currency,
             sellAmount = args.sellAmount,
-            depositAddress = args.depositAddress
+            depositAddress = args.depositAddress,
+            memo = args.memo
         )
         log.info(
             "DEX buy: receive screen for asset={} sellAmount={} deposit={}",

@@ -76,6 +76,7 @@ fun DEXReceiveScreen(
         coinCode = uiState.coinCode,
         address = uiState.address,
         uri = uiState.uri,
+        memo = uiState.memo,
         isLoading = uiState.isLoading,
         errorMessageRes = uiState.errorMessageRes,
         isOnline = uiState.isOnline,
@@ -90,6 +91,7 @@ private fun DEXReceiveScreenContent(
     coinCode: String,
     address: String,
     uri: String,
+    memo: String,
     isLoading: Boolean,
     @StringRes errorMessageRes: Int?,
     isOnline: Boolean,
@@ -153,10 +155,28 @@ private fun DEXReceiveScreenContent(
                     } else {
                         QrArea(content = qrContent, isLoading = isLoading || qrContent.isBlank())
 
-                        UriRow(
-                            uri = uri.ifBlank { address },
+                        LabeledCopyRow(
+                            label = stringResource(R.string.dex_receive_uri_label),
+                            value = uri.ifBlank { address },
                             onCopyClick = { onCopyClick(uri.ifBlank { address }) }
                         )
+
+                        // Some chains require a memo/tag alongside the deposit; without it the
+                        // funds can't be matched to the swap. The QR only encodes address +
+                        // amount, so the memo gets its own copyable row and a red warning.
+                        if (memo.isNotBlank()) {
+                            LabeledCopyRow(
+                                label = stringResource(R.string.dex_receive_memo_label),
+                                value = memo,
+                                onCopyClick = { onCopyClick(memo) }
+                            )
+                            Text(
+                                text = stringResource(R.string.dex_receive_memo_warning),
+                                style = MyTheme.Body2Regular,
+                                color = MyTheme.Colors.red,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
 
@@ -268,9 +288,9 @@ private fun QrArea(content: String, isLoading: Boolean) {
     }
 }
 
-/** Full-width row: "URI" label + value on the left, a tinted-gray copy button on the right. */
+/** Full-width row: label + value on the left, a tinted-gray copy button on the right. */
 @Composable
-private fun UriRow(uri: String, onCopyClick: () -> Unit) {
+private fun LabeledCopyRow(label: String, value: String, onCopyClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,13 +304,13 @@ private fun UriRow(uri: String, onCopyClick: () -> Unit) {
         ) {
             // Footnote (13sp, text/secondary): closest existing token is MyTheme.Caption (13sp).
             Text(
-                text = stringResource(R.string.dex_receive_uri_label),
+                text = label,
                 style = MyTheme.Caption,
                 color = MyTheme.Colors.textSecondary
             )
             // Subhead (15sp, text/primary): no 15sp token exists; closest is BodyMedium (14sp).
             Text(
-                text = uri,
+                text = value,
                 style = MyTheme.Typography.BodyMedium,
                 color = MyTheme.Colors.textPrimary
             )
@@ -307,7 +327,7 @@ private fun UriRow(uri: String, onCopyClick: () -> Unit) {
         ) {
             Icon(
                 painter = painterResource(CommonR.drawable.ic_copy),
-                contentDescription = stringResource(R.string.dex_receive_uri_label),
+                contentDescription = label,
                 tint = MyTheme.Colors.textPrimary,
                 modifier = Modifier.size(17.dp)
             )
@@ -322,6 +342,7 @@ private fun DEXReceiveScreenLoadingPreview() {
         coinCode = "BTC",
         address = "",
         uri = "",
+        memo = "",
         isLoading = true,
         errorMessageRes = null,
         isOnline = true,
@@ -338,6 +359,24 @@ private fun DEXReceiveScreenLoadedPreview() {
         coinCode = "BTC",
         address = "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
         uri = "bitcoin:bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+        memo = "",
+        isLoading = false,
+        errorMessageRes = null,
+        isOnline = true,
+        onBackClick = {},
+        onBackHomeClick = {},
+        onCopyClick = {}
+    )
+}
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 760)
+@Composable
+private fun DEXReceiveScreenMemoPreview() {
+    DEXReceiveScreenContent(
+        coinCode = "XRP",
+        address = "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh",
+        uri = "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh",
+        memo = "2043055709",
         isLoading = false,
         errorMessageRes = null,
         isOnline = true,
@@ -354,6 +393,7 @@ private fun DEXReceiveScreenErrorPreview() {
         coinCode = "BTC",
         address = "",
         uri = "",
+        memo = "",
         isLoading = false,
         errorMessageRes = R.string.dex_error_no_route,
         isOnline = true,

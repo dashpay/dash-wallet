@@ -83,7 +83,8 @@ class DEXRefundAddressFragment : Fragment() {
                     asset = args.asset,
                     currency = args.currency,
                     sellAmount = order.sellAmount,
-                    depositAddress = order.depositAddress
+                    depositAddress = order.depositAddress,
+                    memo = order.memo.orEmpty()
                 )
             )
         }
