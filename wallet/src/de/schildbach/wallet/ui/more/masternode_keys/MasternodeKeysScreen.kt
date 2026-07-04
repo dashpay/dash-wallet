@@ -35,10 +35,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.flow.StateFlow
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.ListItem
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.Menu
@@ -136,17 +138,20 @@ private fun TableListMasternodeKeyItem(
     )
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun MasternodeKeysScreenPreview() {
-    MasternodeKeysScreenContent(
-        uiState = MasternodeKeysUIState(
-            keyTypes = listOf(
-                MasternodeKeyTypeInfo(MasternodeKeyType.OWNER, 5, 3),
-                MasternodeKeyTypeInfo(MasternodeKeyType.VOTING, 3, 1),
-                MasternodeKeyTypeInfo(MasternodeKeyType.OPERATOR, 2, 0),
-                MasternodeKeyTypeInfo(MasternodeKeyType.PLATFORM, 1, 0)
+    DashWalletTheme {
+        MasternodeKeysScreenContent(
+            uiState = MasternodeKeysUIState(
+                keyTypes = listOf(
+                    MasternodeKeyTypeInfo(MasternodeKeyType.OWNER, 5, 3),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.VOTING, 3, 1),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.OPERATOR, 2, 0),
+                    MasternodeKeyTypeInfo(MasternodeKeyType.PLATFORM, 1, 0)
+                )
             )
         )
-    )
+    }
 }

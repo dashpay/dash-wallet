@@ -41,6 +41,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +49,7 @@ import coil.compose.AsyncImage
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashRadioButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Size
@@ -543,7 +545,7 @@ private fun ItemContactDetails(
             Card(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isOnline) Color.White else colors.backgroundSecondary
+                    containerColor = colors.backgroundSecondary
                 )
             ) {
                 Column(modifier = Modifier.padding(if (isOnline) 6.dp else 10.dp)) {
@@ -874,7 +876,8 @@ private fun String.maskEmail(): String {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun PreviewMerchantDetails() {
     val ctxProvider = GiftCardProvider(
@@ -913,10 +916,12 @@ private fun PreviewMerchantDetails() {
         )
     }
 
-    ItemDetails(
-        item = merchant,
-        isLoggedIn = true,
-        userEmail = "user@example.com",
-        selectedProvider = GiftCardProviderType.CTX
-    )
+    DashWalletTheme {
+        ItemDetails(
+            item = merchant,
+            isLoggedIn = true,
+            userEmail = "user@example.com",
+            selectedProvider = GiftCardProviderType.CTX
+        )
+    }
 }

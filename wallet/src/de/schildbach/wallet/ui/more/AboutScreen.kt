@@ -43,10 +43,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.ListItem1
 import org.dash.wallet.common.ui.components.ListItem10
 import org.dash.wallet.common.ui.components.ListItem11
@@ -290,57 +292,66 @@ private fun ForceSyncButton(onClick: () -> Unit) {
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "01 Jan 2026 at 20:00",
-            serverUpdateStatus = "01 Jan 2026",
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = true,
-            isMainNet = true,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "11.8.2 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "01 Jan 2026 at 20:00",
+                serverUpdateStatus = "01 Jan 2026",
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = true,
+                isMainNet = true,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "TestNet Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "TestNet Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenTestNetPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "11.8.2 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "01 Jan 2026 at 20:00",
-            serverUpdateStatus = "01 Jan 2026",
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = true,
-            isMainNet = false,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "11.8.2 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "01 Jan 2026 at 20:00",
+                serverUpdateStatus = "01 Jan 2026",
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:APA91bFxb4Zn9gbNfaN-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = true,
+                isMainNet = false,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }
 
 @Composable
-@Preview(showBackground = true, widthDp = 393)
+@Preview(name = "Loading Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Loading Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 private fun AboutScreenLoadingPreview() {
-    AboutScreen(
-        uiState = AboutUIState(
-            versionName = "7.4.7 (10)",
-            dashjVersion = "22.0.3",
-            platformVersion = "4.0.0",
-            deviceSyncStatus = "Syncing…",
-            serverUpdateStatus = null,
-            firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
-            fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
-            showForceSyncButton = false,
-            copyrightYear = 2026
+    DashWalletTheme {
+        AboutScreen(
+            uiState = AboutUIState(
+                versionName = "7.4.7 (10)",
+                dashjVersion = "22.0.3",
+                platformVersion = "4.0.0",
+                deviceSyncStatus = "Syncing…",
+                serverUpdateStatus = null,
+                firebaseInstallationId = "fxUBdkvxQhO-ICxXXXN5mAI",
+                fcmToken = "fxUBdkvxQhO-ICxXXXN5mAI:A...N-rJDGQRFKX3yuQUF2PB",
+                showForceSyncButton = false,
+                copyrightYear = 2026
+            )
         )
-    )
+    }
 }

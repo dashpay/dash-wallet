@@ -181,7 +181,7 @@ fun MixingStatusCard(
                                     painter = painterResource(id = R.drawable.ic_dash_d_black),
                                     contentDescription = "Dash logo",
                                     modifier = Modifier.size(10.47.dp),
-                                    tint = Color(0xFF0C0C0D)
+                                    tint = colors.textPrimary
                                 )
                             }
                         }

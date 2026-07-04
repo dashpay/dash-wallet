@@ -77,7 +77,7 @@
             android:layout_marginStart="25dp"
             android:layout_marginEnd="25dp"
             android:layout_marginTop="8dp"
-            android:background="@color/dash_light_gray" />
+            android:background="@color/divider_color" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/activity_rv"

@@ -30,6 +30,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.ui.ContactRelation
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.DashButton
+import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyImages
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.Style
@@ -110,7 +111,7 @@ private fun DisclaimerText(text: String) {
     Text(
         text = text,
         style = MyTheme.Typography.LabelMedium,
-        color = MyTheme.Colors.textSecondary,
+        color = LocalDashColors.current.textSecondary,
         modifier = Modifier.fillMaxWidth()
     )
 }

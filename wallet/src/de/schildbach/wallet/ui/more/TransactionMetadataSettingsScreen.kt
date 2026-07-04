@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.work.WorkInfo
@@ -297,7 +298,8 @@ fun CardSection(content: @Composable ColumnScope.() -> Unit) {
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun TransactionMetadataScreenPreview() {
     val viewModel = object: TransactionMetadataSettingsPreviewViewModel {
@@ -310,5 +312,7 @@ fun TransactionMetadataScreenPreview() {
         override fun updatePreferences(settings: TransactionMetadataSettings) {}
         override fun observePublishOperation(workId: String): Flow<Resource<WorkInfo>>  = MutableStateFlow(Resource.canceled())
     }
-    TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
+    DashWalletTheme {
+        TransactionMetadataSettingsScreen({}, {}, {}, viewModel)
+    }
 }

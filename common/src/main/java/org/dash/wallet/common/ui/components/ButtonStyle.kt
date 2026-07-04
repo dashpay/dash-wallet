@@ -43,9 +43,9 @@ object ButtonStyles {
 
     @Composable
     fun blueWithWhiteText() = ButtonDefaults.buttonColors(
-        containerColor = MyTheme.Colors.dashBlue,
+        containerColor = LocalDashColors.current.dashBlue,
         contentColor = Color.White,
-        disabledContainerColor = MyTheme.Colors.primary5,
-        disabledContentColor = MyTheme.Colors.primary40
+        disabledContainerColor = LocalDashColors.current.primary5,
+        disabledContentColor = LocalDashColors.current.primary40
     )
 }

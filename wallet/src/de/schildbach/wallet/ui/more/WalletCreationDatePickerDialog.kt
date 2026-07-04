@@ -35,8 +35,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.components.DarkPreviewTheme
-import org.dash.wallet.common.ui.components.LightPreviewTheme
+import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.components.MyTheme
 import java.util.Calendar
@@ -157,7 +156,7 @@ private fun localSecondsToUtcMidnight(localSeconds: Long): Long {
 @Preview(name = "DatePicker Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 fun WalletCreationDatePickerDialogPreview() {
-    LightPreviewTheme {
+    DashWalletTheme {
         WalletCreationDatePickerDialog(
             initialCreationDate = System.currentTimeMillis() / 1000,
             onDateSelected = {},

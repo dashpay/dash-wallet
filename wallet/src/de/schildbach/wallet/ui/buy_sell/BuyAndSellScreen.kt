@@ -217,7 +217,7 @@ private fun BuyAndSellScreenContent(
                 Text(
                     text = stringResource(R.string.no_connection),
                     style = MyTheme.Caption,
-                    color = colors.textPrimary
+                    color = Color.White
                 )
             }
         }

@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -250,7 +251,8 @@ private fun SettingsScreenContent(
 }
 
 @Composable
-@Preview
+@Preview(name = "Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun MoreScreenPreview() {
     DashWalletTheme {
         SettingsScreenContent(uiState = SettingsUIState())
@@ -258,7 +260,8 @@ fun MoreScreenPreview() {
 }
 
 @Composable
-@Preview(name = "Settings with CoinJoin Active")
+@Preview(name = "Settings with CoinJoin Active - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Settings with CoinJoin Active - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
 fun MoreScreenPreviewWithCoinJoin() {
     val customState = SettingsUIState(
         localCurrencySymbol = "USD",

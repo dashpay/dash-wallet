@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import de.schildbach.wallet_test.R
@@ -225,25 +226,28 @@ private fun KeyFieldRow(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(name = "Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
 private fun MasternodeKeyChainScreenPreview() {
-    MasternodeKeyChainScreenContent(
-        uiState = MasternodeKeyChainUIState(
-            keyType = MasternodeKeyType.OWNER,
-            keypairs = listOf(
-                KeypairEntry(
-                    index = 0,
-                    usageStatus = null,
-                    usageIpAddress = null,
-                    fields = listOf(
-                        KeyFieldEntry(KeyFieldType.ADDRESS, "XuuRQMVEK9fQMsoAegE32Bdc1XvHhAiWa9"),
-                        KeyFieldEntry(KeyFieldType.PUBLIC_KEY, "03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127"),
-                        KeyFieldEntry(KeyFieldType.PRIVATE_KEY_HEX, null),
-                        KeyFieldEntry(KeyFieldType.PRIVATE_KEY_WIF, null)
+    DashWalletTheme {
+        MasternodeKeyChainScreenContent(
+            uiState = MasternodeKeyChainUIState(
+                keyType = MasternodeKeyType.OWNER,
+                keypairs = listOf(
+                    KeypairEntry(
+                        index = 0,
+                        usageStatus = null,
+                        usageIpAddress = null,
+                        fields = listOf(
+                            KeyFieldEntry(KeyFieldType.ADDRESS, "XuuRQMVEK9fQMsoAegE32Bdc1XvHhAiWa9"),
+                            KeyFieldEntry(KeyFieldType.PUBLIC_KEY, "03eeda68f0eb482935c7ecbebf7b6497756e471b7a0fad5014bbe6ab593cb6127"),
+                            KeyFieldEntry(KeyFieldType.PRIVATE_KEY_HEX, null),
+                            KeyFieldEntry(KeyFieldType.PRIVATE_KEY_WIF, null)
+                        )
                     )
                 )
             )
         )
-    )
+    }
 }
