@@ -102,7 +102,8 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                     }
                 }
         }
-        fragment.setViewDetails(getString(R.string.button_continue), null)
+        // "Get quote" (not "Continue"): pressing it fetches a quote rather than committing anything.
+        fragment.setViewDetails(getString(R.string.get_quote), null)
 
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             fragment.handleNetworkState(hasInternet)

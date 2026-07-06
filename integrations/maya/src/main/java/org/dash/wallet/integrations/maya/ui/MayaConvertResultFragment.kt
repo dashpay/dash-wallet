@@ -34,6 +34,7 @@ import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.LockScreenAware
 import org.dash.wallet.common.ui.viewBinding
+import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.MayaConvertResultFragmentBinding
 import org.dash.wallet.integrations.maya.model.MayaResultType
@@ -168,6 +169,56 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         )
         binding.contactSupport.isGone = true
         binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+        showExplorerLink(params?.routeName, params?.params?.txid, params?.params?.depositAddress)
+    }
+
+    /**
+     * Shows a link to the settlement network's explorer so the user can follow this swap.
+     * Maya tracks a swap by its inbound (DASH) transaction hash, so with a [txid] the
+     * link opens the swap itself on mayascan.org. NEAR Intents tracks a swap by the
+     * one-time deposit address it issued, so NEAR routes link to
+     * explorer.near-intents.org/transactions/[depositAddress]. If the identifier is
+     * missing, the link falls back to the explorer's home page. Unrecognised routes show
+     * nothing. Route classification mirrors the order preview: an empty route name
+     * means Maya.
+     */
+    private fun showExplorerLink(routeName: String?, txid: String?, depositAddress: String?) {
+        val raw = routeName?.trim().orEmpty()
+        val isMayaRoute = raw.isEmpty() || raw.contains("MAYA", ignoreCase = true)
+        val isNearRoute = !isMayaRoute && raw.contains("NEAR", ignoreCase = true)
+
+        val explorer = when {
+            isMayaRoute -> Triple(
+                R.string.maya_explorer_description_maya,
+                R.string.maya_explorer_view_maya,
+                if (txid.isNullOrBlank()) {
+                    getString(R.string.maya_explorer_url_maya)
+                } else {
+                    // MAYAChain indexes inbound transactions by uppercase hash.
+                    getString(R.string.maya_explorer_tx_url_maya, txid.uppercase())
+                }
+            )
+            isNearRoute -> Triple(
+                R.string.maya_explorer_description_near,
+                R.string.maya_explorer_view_near,
+                if (depositAddress.isNullOrBlank()) {
+                    getString(R.string.maya_explorer_url_near)
+                } else {
+                    getString(R.string.maya_explorer_tx_url_near, depositAddress)
+                }
+            )
+            else -> null
+        }
+
+        binding.explorerDescription.isVisible = explorer != null
+        binding.explorerLink.isVisible = explorer != null
+        explorer?.let { (descriptionRes, linkRes, url) ->
+            binding.explorerDescription.setText(descriptionRes)
+            binding.explorerLink.setText(linkRes)
+            binding.explorerLink.setOnClickListener {
+                requireActivity().openCustomTab(url)
+            }
+        }
     }
 
     private fun setTransferDashSuccess() {

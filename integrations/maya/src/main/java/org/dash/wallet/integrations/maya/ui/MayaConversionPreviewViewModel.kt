@@ -113,7 +113,9 @@ class MayaConversionPreviewViewModel @Inject constructor(
                         swapTradeUIModel.amount,
                         swapTradeUIModel.feeAmount,
                         swapTradeUIModel.destinationAddress,
-                        MayaConstants.TRANSACTION_TYPE_SEND
+                        MayaConstants.TRANSACTION_TYPE_SEND,
+                        txid = txId.takeIf { it != Sha256Hash.ZERO_HASH }?.toString(),
+                        depositAddress = swapTradeUIModel.vaultAddress
                     )
                     // TODO add more information about the transaction to metadata.  it is a trade
                     transactionMetadataProvider.markAddressAsync(

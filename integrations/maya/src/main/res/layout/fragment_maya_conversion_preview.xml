@@ -47,6 +47,18 @@
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <TextView
+        android:id="@+id/quote_expiry_label"
+        style="@style/Caption.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="10dp"
+        android:gravity="center"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/confirm_btn_container"
+        tools:text="@string/maya_quote_expires_in" />
+
+    <TextView
         android:id="@+id/cancel_btn"
         style="@style/Subtitle2"
         android:layout_width="wrap_content"
@@ -107,6 +119,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="visible"
-        app:constraint_referenced_ids="cancel_btn, confirm_btn_container"
+        app:constraint_referenced_ids="cancel_btn, confirm_btn_container, quote_expiry_label"
         />
 </androidx.constraintlayout.widget.ConstraintLayout>

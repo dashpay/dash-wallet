@@ -63,21 +63,42 @@ import java.math.RoundingMode
 
 @AndroidEntryPoint
 class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion_preview) {
+    companion object {
+        // How long a fetched quote is treated as valid before the user must refresh it.
+        // TBC: the actual quote validity per network hasn't been confirmed yet, so both
+        // use a conservative 10 seconds until real numbers are provided.
+        private const val MAYA_QUOTE_EXPIRY_MS = 10_000L
+        private const val NEAR_QUOTE_EXPIRY_MS = 10_000L
+    }
+
     private val binding by viewBinding(FragmentMayaConversionPreviewBinding::bind)
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
     private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
-    private var isRetrying = false
+    private var isRefreshing = false
     private var transactionStateDialog: MayaResultDialog? = null
     private var newSwapOrderId: String? = null
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var networkStatusView: View? = null
 
-    private val countDownTimer by lazy {
-        object : CountDownTimer(10000, 1000) {
+    private var countDownTimer: CountDownTimer? = null
+
+    /**
+     * (Re)starts the quote-expiry countdown. The timer only tracks how long the quote
+     * stays valid — nothing is sent automatically; the label spells that out so the
+     * ticking clock isn't mistaken for an auto-send. When it runs out the Confirm
+     * button turns into Refresh (see [setRefreshStatus]).
+     */
+    private fun startQuoteExpiryCountdown() {
+        countDownTimer?.cancel()
+        countDownTimer = object : CountDownTimer(quoteExpiryMillis(), 1000) {
 
             override fun onTick(millisUntilFinished: Long) {
-                binding.confirmBtn.text = getString(R.string.confirm_sec, (millisUntilFinished / 1000).toString())
+                // Round up so the countdown reads 10, 9, 8… (the first tick fires
+                // a few ms in, which would otherwise show 9 immediately).
+                val secondsLeft = (millisUntilFinished + 999) / 1000
+                binding.quoteExpiryLabel.text = getString(R.string.maya_quote_expires_in, secondsLeft.toString())
+                binding.confirmBtn.text = getString(R.string.button_confirm)
                 binding.confirmProgress.isGone = true
                 binding.retryIcon.visibility = View.GONE
                 setConfirmBtnStyle(
@@ -87,8 +108,16 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             }
 
             override fun onFinish() {
-                setRetryStatus()
+                setRefreshStatus()
             }
+        }.start()
+    }
+
+    private fun quoteExpiryMillis(): Long {
+        return if (viewModel.swapTradeUIModel.routeName?.contains("NEAR", ignoreCase = true) == true) {
+            NEAR_QUOTE_EXPIRY_MS
+        } else {
+            MAYA_QUOTE_EXPIRY_MS
         }
     }
 
@@ -127,14 +156,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         }
 
         binding.confirmBtnContainer.setOnClickListener {
-            countDownTimer.cancel()
-            if (isRetrying) {
+            countDownTimer?.cancel()
+            if (isRefreshing) {
                 binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
                     requireContext(),
                     R.color.dash_blue
                 )
                 getNewCommitOrder()
-                isRetrying = false
+                isRefreshing = false
             } else {
                 binding.confirmProgress.indeterminateTintList = ContextCompat.getColorStateList(
                     requireContext(),
@@ -151,7 +180,7 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         viewModel.showLoading.observe(viewLifecycleOwner) { showLoading ->
             binding.cancelBtn.isEnabled = !showLoading
             binding.confirmProgress.isGone = !showLoading
-            binding.retryIcon.isGone = showLoading || !isRetrying
+            binding.retryIcon.isGone = showLoading || !isRefreshing
             binding.confirmBtnContainer.isEnabled = !showLoading
             binding.confirmBtnContainer.alpha = if (showLoading) 0.6f else 1.0f
         }
@@ -175,7 +204,8 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             newSwapOrderId = it.swapTradeId
-            countDownTimer.start()
+            viewModel.swapTradeUIModel = it
+            startQuoteExpiryCountdown()
             it.updateConversionPreviewUI()
         }
 
@@ -187,7 +217,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             }
             safeNavigate(
                 MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
-                    MayaTransactionParams(params, TransactionType.SellSwap, walletName)
+                    MayaTransactionParams(
+                        params,
+                        TransactionType.SellSwap,
+                        walletName,
+                        viewModel.swapTradeUIModel.routeName
+                    )
                 )
             )
         }
@@ -276,16 +311,30 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             false
         )
 
-        val currencySymbol = GenericUtils.currencySymbol(this.amount.anchoredCurrencyCode)
-        val digits = if (this.feeAmount.anchoredType == CurrencyInputType.Fiat) {
+        // The swap fee is charged in DASH on top of the amount being sold — it never
+        // changes how much of the receiving currency arrives (that's the "To" row above,
+        // straight from the quote). If the user typed the amount denominated in the
+        // receiving crypto, showing purchase ± fee in that crypto would misstate what
+        // they receive, so the purchase/fee/total breakdown falls back to DASH.
+        val breakdownType = if (this.amount.anchoredType == CurrencyInputType.Crypto) {
+            CurrencyInputType.Dash
+        } else {
+            this.amount.anchoredType
+        }
+        val breakdownIsFiat = breakdownType == CurrencyInputType.Fiat
+        val breakdownIsDash = breakdownType == CurrencyInputType.Dash
+        val currencySymbol = GenericUtils.currencySymbol(
+            if (breakdownIsFiat) this.amount.fiatCode else this.amount.dashCode
+        )
+        val digits = if (breakdownIsFiat) {
             GenericUtils.getCurrencyDigits()
         } else {
             8
         }
         val purchaseAmount = if (this.maximum) {
-            (this.amount.anchoredValue - this.feeAmount.anchoredValue)
+            (this.amount.getValue(breakdownType) - this.feeAmount.getValue(breakdownType))
         } else {
-            this.amount.anchoredValue
+            this.amount.getValue(breakdownType)
         }.setScale(digits, RoundingMode.HALF_UP)
 
         setValueWithCurrencyCodeOrSymbol(
@@ -293,26 +342,25 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
             purchaseAmount,
             currencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
-            amount.anchoredType == CurrencyInputType.Fiat
+            breakdownIsDash,
+            breakdownIsFiat
         )
 
-        val feeCurrencySymbol = GenericUtils.currencySymbol(this.feeAmount.anchoredCurrencyCode)
-        val feeAmount = this.feeAmount.anchoredValue.setScale(digits, RoundingMode.HALF_UP)
+        val feeAmount = this.feeAmount.getValue(breakdownType).setScale(digits, RoundingMode.HALF_UP)
 
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.mayaFeeAmount,
             feeAmount,
-            feeCurrencySymbol,
+            currencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
-            amount.anchoredType == CurrencyInputType.Fiat
+            breakdownIsDash,
+            breakdownIsFiat
         )
 
         val totalAmount = if (this.maximum) {
-            this.amount.anchoredValue
+            this.amount.getValue(breakdownType)
         } else {
-            (this.amount.anchoredValue + this.feeAmount.anchoredValue).setScale(
+            (this.amount.getValue(breakdownType) + this.feeAmount.getValue(breakdownType)).setScale(
                 digits,
                 RoundingMode.HALF_UP
             )
@@ -321,10 +369,10 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         setValueWithCurrencyCodeOrSymbol(
             binding.contentOrderReview.totalAmount,
             totalAmount,
-            feeCurrencySymbol,
+            currencySymbol,
             isCurrencyCodeFirst,
-            amount.anchoredCurrencyCode == Constants.DASH_CURRENCY,
-            amount.anchoredType == CurrencyInputType.Fiat
+            breakdownIsDash,
+            breakdownIsFiat
         )
         binding.contentOrderReview.inputAccountIcon
             .load(GenericUtils.getCoinIcon(this.inputCurrency.lowercase(), SwapKitConstants.DASH_ASSET)) {
@@ -456,14 +504,14 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         super.onResume()
         if (viewModel.isFirstTime) {
             viewModel.isFirstTime = false
-            countDownTimer.start()
+            startQuoteExpiryCountdown()
         } else {
-            setRetryStatus()
+            setRefreshStatus()
         }
     }
 
     override fun onPause() {
-        countDownTimer.cancel()
+        countDownTimer?.cancel()
         super.onPause()
     }
 
@@ -481,11 +529,12 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         viewModel.swapTrade(viewModel.swapTradeUIModel)
     }
 
-    private fun setRetryStatus() {
-        binding.confirmBtn.text = getString(R.string.button_retry)
+    private fun setRefreshStatus() {
+        binding.quoteExpiryLabel.text = getString(R.string.maya_quote_expired)
+        binding.confirmBtn.text = getString(R.string.button_refresh)
         binding.confirmProgress.isGone = true
         binding.retryIcon.visibility = View.VISIBLE
-        isRetrying = true
+        isRefreshing = true
         setConfirmBtnStyle(R.style.PrimaryButtonTheme_Large_LightBlue, R.color.dash_blue)
     }
 
