@@ -1923,23 +1923,28 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
                 config.unregisterOnSharedPreferenceChangeListener(sharedPrefsChangeListener)
                 platformSyncService.shutdown()
-                if (peerGroup != null) {
+                // Snapshot peerGroup into a local. onDestroy() may proceed without the check()
+                // mutex (after the 5s timeout above), so a concurrent checkService() can set the
+                // peerGroup field to null between this guard and any later deref. Using the local
+                // avoids that check-then-act race (previously an NPE at peerGroup!!.forceStop()).
+                val localPeerGroup = peerGroup
+                if (localPeerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
                     coinJoinService.prepareForShutdown()
                     // we may need to skip these, or move them to after the forceStop because they grab a lock
-                    if (!peerGroup!!.lock.isLocked) {
-                        peerGroup!!.removeDisconnectedEventListener(peerConnectivityListener)
-                        peerGroup!!.removeConnectedEventListener(peerConnectivityListener)
-                        peerGroup!!.removeTimeoutErrorListener(timeoutErrorListener)
+                    if (!localPeerGroup.lock.isLocked) {
+                        localPeerGroup.removeDisconnectedEventListener(peerConnectivityListener)
+                        localPeerGroup.removeConnectedEventListener(peerConnectivityListener)
+                        localPeerGroup.removeTimeoutErrorListener(timeoutErrorListener)
                     }
                     dashSystemService.system.removeWallet(wallet)
-                    peerGroup!!.removeWallet(application.wallet)
+                    localPeerGroup.removeWallet(application.wallet)
                     platformSyncService.removePreBlockProgressListener(blockchainDownloadListener)
                     log.info("CLEANUP STEP 1: peerGroup listeners and wallet removed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.DISCONNECTING)
                     log.info("CLEANUP STEP 2: About to call peerGroup.forceStop(7000)")
-                    peerGroup!!.forceStop(7_000)
+                    localPeerGroup.forceStop(7_000)
                     log.info("CLEANUP STEP 2: peerGroup.forceStop() completed")
                     blockchainStateDataProvider.setNetworkStatus(NetworkStatus.STOPPED)
                     log.info("CLEANUP STEP 3: About to close dashSystemService.system")
@@ -1949,7 +1954,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         wallet.riskAnalyzer = defaultRiskAnalyzer
                     }
                     log.info("CLEANUP STEP 4: About to shutdown riskAnalyzer")
-                    riskAnalyzer!!.shutdown()
+                    riskAnalyzer?.shutdown()
                     log.info("CLEANUP STEP 4: riskAnalyzer shutdown completed, peergroup fully stopped")
                 }
                 log.info("CLEANUP STEP 5: About to stop peerConnectivityListener")
@@ -1969,9 +1974,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     propagateContext()
                     application.saveWallet()
                 }
-                if (wakeLock!!.isHeld) {
-                    log.debug("wakelock still held, releasing")
-                    wakeLock!!.release()
+                // wakeLock is only assigned in onCreate; if onDestroy runs after an early/partial
+                // onCreate it may still be null, so guard rather than assert.
+                wakeLock?.let { lock ->
+                    if (lock.isHeld) {
+                        log.debug("wakelock still held, releasing")
+                        lock.release()
+                    }
                 }
                 if (resetBlockchainOnShutdown || deleteWalletFileOnShutdown) {
                     log.info("removing blockchain")
