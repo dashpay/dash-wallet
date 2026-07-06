@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Поврати Биткоин клуч</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Испрати</string>
+    <string name="pay_title">Испрати</string>
+    <string name="settings_title">Поставувања</string>
+    <string name="payments_tab_pay_label">Испрати</string>
+    <string name="options_paste_from_clipboard_title">Внеси од склад</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Ова плаќање сѐ уште не е испратено.</string>
+    <string name="preferences_report_issue_summary">Прибери информации за твојата грешка и испрати извештај во е-порака до програмерите.</string>
+    <string name="request_coins_clipboard_address_msg">Биткоин адресата е копирана во склад</string>
+    <string name="wallet_lock_reset">Ресетирај</string>
+    <string name="menu_settings_title">Поставувања</string>
+    <string name="tools_address_book">Адресар</string>
+    <string name="tools_network_monitor">Набљудувач на мрежата</string>
+    <string name="masternode_key_address">Адреса</string>
+    </resources>

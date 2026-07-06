@@ -125,6 +125,7 @@
     <string name="address_input_title">達世幣付款</string>
     <string name="show_clipboard">顯示剪貼板中的內容</string>
     <string name="tap_to_paste">點擊剪貼板中的地址進行粘貼</string>
+    <string name="not_valid_address">這地址 %s 不是有效的位址或 URL 請求</string>
     <string name="recipient_address">收款者位址</string>
 
     <!-- input parser -->
@@ -135,6 +136,7 @@
     <string name="input_parser_unverifyable_paymentrequest">無法驗證付款請求:\n%s</string>
     <string name="input_parser_invalid_paymentrequest">無效付款請求:\n%s</string>
     <string name="input_parser_invalid_transaction">無效交易:\n%s</string>
+    <string name="address_input_paste_from">貼自 %s</string>
     <string name="input_connect">連接</string>
 
     <!-- others -->
@@ -143,7 +145,8 @@
     <string name="yes_cancel">是的，取消</string>
     <string name="no_keep_it">不，留著</string>
     <string name="insufficient_money_title">餘額不足</string>
+    <string name="insufficient_money_msg">錢包中的幣量不足以支付本次交易。</string>
     <string name="send_coins_error_msg">付款出現問題!</string>
     <string name="from_dash_wallet_on_this_device">從此設備上的達世幣錢包</string>
     <string name="preposition_at">在</string>
-</resources>
+    </resources>

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Recuperar cartera</string>
+    <string name="dialog_confirm_fee">Comissió de xarxa</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Envia</string>
+    <string name="pay_title">Envia</string>
+    <string name="settings_title">Ajustaments</string>
+    <string name="payments_tab_pay_label">Envia</string>
+    <string name="options_paste_from_clipboard_title">Enganxa des del porta-retalls</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Aquest pagament encara no s\'ha transferit.</string>
+    <string name="preferences_report_issue_summary">Agafa informació sobre el problema i envia un correu amb el teu informe als desenvolupadors.</string>
+    <string name="request_coins_clipboard_address_msg">L\'adreça Dash s\'ha copiat al porta-retalls.</string>
+    <string name="wallet_lock_reset">Reinicia</string>
+    <string name="menu_settings_title">Ajustaments</string>
+    <string name="tools_address_book">Llibreta d\'adreces</string>
+    <string name="tools_network_monitor">Monitor de xarxa</string>
+    <string name="masternode_key_address">Adreça</string>
+    </resources>

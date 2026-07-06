@@ -149,4 +149,5 @@
     <string name="send_coins_error_msg">¡Problema enviando monedas!</string>
     <string name="from_dash_wallet_on_this_device">Desde la billetera de Dash en este dispositivo</string>
     <string name="preposition_at">en</string>
+    <string name="info">Información</string>
 </resources>

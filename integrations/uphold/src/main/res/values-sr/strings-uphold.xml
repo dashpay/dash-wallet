@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="uphold_buy_dash_activity_title">Kupi/Prodaj Dash sa Uphold</string>
+    <string name="uphold_buy_dash_with_uphold">Kupi Dash sa Uphold nalogom</string>
+    <string name="uphold_buy_dash_button">Kupi Dash</string>
+    <string name="uphold_transfer_to_this_wallet_button">Transfer sa Uphold</string>
+    <string name="uphold_withdrawal_deduct_fee_disclaimer">Provizija će biti naplaćena sa traženog iznosa.</string>
+    <string name="uphold_withdrawal_success_title">Uspešno</string>
+    <string name="uphold_withdrawal_success_message">Vaša transakcija je poslata i iznos bi trebalo da se pojavi u vašem novčaniku u roku od nekoliko minuta.\n\nID transakcije: %s</string>
+    <string name="uphold_transfer">Prebaci</string>
+    <string name="uphold_see_on_uphold">Vidi na Uphold</string>
+    <string name="uphold_general_error_title">Greška</string>
+    </resources>

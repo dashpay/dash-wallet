@@ -111,6 +111,8 @@
     <string name="maya_error_invalid_destination_address">Ongeldig bestemmingsadres</string>
     <string name="maya_error_below_recommended_minimum">Het ingevoerde bedrag is lager dan het aanbevolen minimum</string>
     <string name="maya_error_trading_halted">De handel is gestopt op %s.</string>
+    <string name="maya_error_below_allowed_minimum">Ingevoerd bedrag is lager dan het toegestane minimum</string>
+    <string name="maya_error_quote">Kon geen prijsopgave van Maya verkrijgen voor deze conversie</string>
     <string name="maya_halted_label">Gestopt</string>
     <string name="maya_halted_coins_toast">Sommige crypto zijn tijdelijk gestopt en niet beschikbaar voor handel</string>
 

@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="processing_error_retry">Yritä uudelleen</string>
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Tallenna</string>
+    <string name="error_updating_profile_cancel">Peruuta</string>
+    <string name="platform_credits_error">Virhe</string>
+    <string name="create_instant_username_cancel">Peruuta</string>
+
+</resources>

@@ -46,6 +46,8 @@
     <string name="explore_no_atms">ATMがありません</string>
     <string name="distance_miles">%sマイル</string>
     <string name="distance_kilometers">%skm</string>
+    <string name="explore_fee">%s%%の料金</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d店舗</item>
     </plurals>
@@ -176,14 +178,22 @@
     <string name="purchase_gift_card_at">で</string>
     <string name="purchase_gift_card_min">最低金額: %s</string>
     <string name="purchase_gift_card_max">最高金額: %s</string>
+    <string name="gift_card_tab_single">シングル</string>
+    <string name="gift_card_tab_multiple">マルチ</string>
     <string name="gift_card_buy_title">ギフトカードを購入する</string>
     <string name="purchase_gift_card_discount_hint">%sのギフトカードを%sで購入します (%s割引)</string>
     <string name="button_next">次へ</string>
     <string name="purchase_gift_card_from">から</string>
     <string name="purchase_gift_card_to">へ</string>
     <string name="purchase_confirm_transaction">確認する</string>
+    <string name="purchase_gift_card_total_label">ギフトカードの金額</string>
     <string name="purchase_gift_card_discount">割引</string>
     <string name="purchase_gift_card_you_pay">お客様の支払額</string>
+    <string name="purchase_gift_card_quantity_label">数量</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="other">%dのカード</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">カードの金額</string>
     <string name="purchase_gift_card_confirm">確認する</string>
     <string name="purchase_gift_card_details">ギフトカードの詳細</string>
     <string name="purchase_original_purchase">当初の購入額</string>
@@ -199,6 +209,9 @@
     <string name="purchase_tell_the_cashier">キャッシャーにデジタルギフトカードで支払うことを伝えます。キャッシャーは、銀行カードの欄に合計金額を入力し、アカウントの欄にギフトカードの番号を入力してエンターを押すことになります。</string>
     <string name="purchase_in_the_payment_section">決済セクションでは、お客様のデジタルギフトカードの番号をギフトカードの欄に入力します。</string>
     <string name="purchase_powered_by">提供元</string>
+    <string name="purchase_cashier_instructions">レジ係への指示</string>
+    <string name="purchase_cashier_instructions_body">支払い時にギフトカードまたはeギフトカードを適用し、決済として処理してください。</string>
+    <string name="purchase_gift_card_date_format">%2$sでの%1$s</string>
     <string name="insufficient_money_title">充分なコインがありません</string>
     <string name="insufficient_money_msg">資金不足</string>
     <string name="send_coins_error_msg">送金に問題が発生しました！</string>
@@ -206,6 +219,11 @@
     <string name="gift_card_tx_title">ギフトカード · %s</string>
     <string name="select_amount">金額を選択する</string>
     <string name="select_fixed_amount">この加盟店はギフトカードを固定価格で販売しています</string>
+    <string name="purchase_gift_card_max_multiple_error">1回の注文につき、最大%s分のギフトカードを購入できます</string>
+    <string name="purchase_gift_card_insufficient_money_error">これらのギフトカードを購入するには、Dashが不足しています</string>
+    <string name="purchase_gift_card_insufficient_inventory">在庫不足のため、%sは%sの%dカードを購入できません</string>
+    <string name="purchase_gift_card_inventory_toast">加盟店で利用可能なカードは%d枚のみです</string>
+    <string name="purchase_gift_card_single_card_only_toast">カードの金額は1つだけ選択できます</string>
     <string name="purchase_gift_card_reset">リセット</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">認証コードを入力</string>
@@ -240,6 +258,7 @@
     <string name="accept_to_proceed">DashSpendでアカウントを作成するにあたって、お客様はDashSpendの利用規約に同意する必要があります</string>
     <string name="view_terms_conditions">利用規約</string>
     <string name="barcode_placeholder">ギフトカードの詳細が届くまでお待ちください。</string>
+    <string name="purchase_order_number">注文番号</string>
     <string name="gift_card_contact_ctx">CTXサポートにお問い合わせする</string>
     <string name="gift_card_contact_piggycards">PiggyCardsのサポートへ連絡する</string>
     <string name="gift_card_contact_support">サポートへ連絡する</string>
