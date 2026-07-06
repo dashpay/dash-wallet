@@ -170,7 +170,7 @@ class CrowdNodeApiAggregator @Inject constructor(
                 return
             }
 
-            if (tryRestoreSignUp()) {
+            if (tryRestoreCachedSignUp() || tryRestoreSignUp()) {
                 requireNotNull(accountAddress) { "Restored signup tx set but address is null" }
                 globalConfig.crowdNodeAccountAddress = accountAddress!!.toBase58()
                 restoreCreatedOnlineAccount(accountAddress!!)
@@ -237,6 +237,7 @@ class CrowdNodeApiAggregator @Inject constructor(
             checkIfAcceptTermsConfirmed(acceptTermsResponseTx)
 
             signUpStatus.value = SignUpStatus.Finished
+            config.set(CrowdNodeConfig.SIGN_UP_FINISHED, true)
             log.info("CrowdNode sign up finished")
             analyticsService.logEvent(AnalyticsConstants.CrowdNode.CREATE_ACCOUNT_SUCCESS, mapOf())
             refreshBalance(3)
@@ -538,6 +539,27 @@ class CrowdNodeApiAggregator @Inject constructor(
         return false
     }
 
+    /**
+     * A finished sign-up is permanent (until the wallet is wiped, which clears [CrowdNodeConfig]),
+     * so once detected it is cached and restored from here. This avoids rescanning every wallet
+     * transaction in [tryRestoreSignUp], which takes the wallet lock and can block peer threads.
+     */
+    private suspend fun tryRestoreCachedSignUp(): Boolean {
+        if (config.get(CrowdNodeConfig.SIGN_UP_FINISHED) != true) {
+            return false
+        }
+
+        val savedAddress = globalConfig.crowdNodeAccountAddress
+
+        if (savedAddress.isEmpty()) {
+            return false
+        }
+
+        log.info("restoring CrowdNode sign up from cached state")
+        setFinished(Address.fromBase58(params, savedAddress))
+        return true
+    }
+
     private suspend fun tryRestoreSignUp(): Boolean {
         val fullSignUpSet = blockchainApi.getFullSignUpTxSet()
         fullSignUpSet?.let { set ->
@@ -812,6 +834,7 @@ class CrowdNodeApiAggregator @Inject constructor(
         signUpStatus.value = SignUpStatus.Finished
         refreshBalance(3)
         configScope.launch {
+            config.set(CrowdNodeConfig.SIGN_UP_FINISHED, true)
             markAccountAddressWithTaxCategory()
         }
     }
