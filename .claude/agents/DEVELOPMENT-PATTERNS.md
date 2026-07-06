@@ -898,8 +898,9 @@ there's content it shrinks to a small line above the text (`Typography.LabelMedi
 
 ### Slots
 
-- `label` — floating label inside the field (Figma `label`)
-- `placeholder` — text-line placeholder when empty; only used when `label` is null
+- `label` — floating label inside the field (Figma `label`): full-size on the text line when empty, shrinks above the text once filled
+- `innerLabel` — permanent small label above the text line, always visible even when empty (same as `AddressField.innerLabel`; don't combine with `label`). **Address-input screens use this for "BTC Address"-style text — never a disappearing hint.**
+- `placeholder` — text-line placeholder (hint) when empty; only used when `label` is null
 - `helperTextInside` — right-aligned `Typography.BodySmall` inside the field, below the text line (Figma `helpTextInside`); when null and `maxLength` is set, an automatic `n/max` counter renders here
 - `message` + `isError` — help text below the field (Figma `helpTextOutside`); `isErrorMessage` (defaults to `isError`) controls the message color independently — pass `isErrorMessage = false` for an error-styled field with neutral gray help text (Figma shows both)
 - `trailingIcon` + `onTrailingIconClick` — custom trailing button in a 30 dp / 8 dp-radius touch area (Figma `buttonIcon`); the clear button takes precedence while typing

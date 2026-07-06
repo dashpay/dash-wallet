@@ -80,6 +80,9 @@ import org.dash.wallet.common.R
  *
  * Slots (matching the Figma component's properties):
  * - [label] — floating label inside the field (Figma `label`).
+ * - [innerLabel] — permanent small label inside the field, above the text line (the
+ *   [AddressField.innerLabel] behavior, e.g. "BTC address") — always visible, even when empty.
+ *   Don't combine with [label].
  * - [placeholder] — text-line placeholder when empty; only used when [label] is null.
  * - [helperTextInside] — right-aligned small text inside the field, below the text line
  *   (Figma `helpTextInside`). When null and [maxLength] is set, a `n/max` counter renders here.
@@ -98,6 +101,7 @@ fun TextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String? = null,
     helperTextInside: String? = null,
     message: String? = null,
@@ -127,6 +131,7 @@ fun TextField(
         onFocusChanged = { focused = it },
         modifier = modifier,
         label = label,
+        innerLabel = innerLabel,
         placeholder = placeholder,
         helperTextInside = helperTextInside,
         message = message,
@@ -153,6 +158,7 @@ private fun TextFieldContent(
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String? = null,
     helperTextInside: String? = null,
     message: String? = null,
@@ -220,10 +226,12 @@ private fun TextFieldContent(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
-                    // Floating label: small line above the text once there's content.
-                    if (label != null && value.isNotEmpty()) {
+                    // Small label above the text line: [innerLabel] is permanent (always visible);
+                    // the floating [label] only appears here once there's content.
+                    val smallLabel = innerLabel ?: label?.takeIf { value.isNotEmpty() }
+                    if (smallLabel != null) {
                         Text(
-                            text = label,
+                            text = smallLabel,
                             style = MyTheme.Typography.LabelMedium,
                             color = MyTheme.Colors.textSecondary.copy(alpha = contentAlpha),
                             maxLines = 1,

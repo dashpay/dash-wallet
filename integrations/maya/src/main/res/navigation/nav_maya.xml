@@ -108,8 +108,7 @@
     <fragment
         android:id="@+id/mayaAddressInputFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaAddressInputFragment"
-        android:label="Address Input"
-        tools:layout="@layout/fragment_address_input" >
+        android:label="Address Input" >
         <argument
             android:name="currency"
             app:argType="string" />

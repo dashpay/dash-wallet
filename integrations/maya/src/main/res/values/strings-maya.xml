@@ -29,6 +29,12 @@
     <string name="dash_dex_sell_subtitle">From Dash Wallet to any crypto</string>
     <string name="maya_address_input_hint">%s Address</string>
     <string name="maya_address_input_title">Convert DASH to %s</string>
+    <!-- Title of the address input screen (Figma 24007:13081) -->
+    <string name="maya_enter_address_title">Enter Address</string>
+    <!-- Header of the address-sources card on the address input screen (Figma 24007:13081) -->
+    <string name="maya_paste_address_from">Paste address from</string>
+    <!-- Title of the clipboard row in the address-sources card -->
+    <string name="maya_clipboard">Clipboard</string>
     <string name="maya_crypto_convert_title">Convert Dash</string>
     <string name="maya_crypto_convert_order_preview_title">Order Preview</string>
 

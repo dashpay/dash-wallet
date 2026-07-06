@@ -33,6 +33,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -44,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -64,11 +67,15 @@ import org.dash.wallet.common.R
  * - **Focused**: white background with a hairline border; a cursor shows. Empty keeps the QR
  *   icon; with text the trailing icon becomes a clear (✕) button.
  * - **Filled** (unfocused, with text): translucent gray background, no trailing icon.
- * - **Error**: translucent red background and the [message] rendered in red; no trailing icon.
+ * - **Error**: the field keeps its normal look; only the [message] below renders in red.
  *
  * The trailing icon is automatic: QR (when empty, calls [onScanClick]) or clear (when non-empty
  * and focused, resets the value via [onValueChange]). Pass [onLongPress] to support long-press
  * to paste.
+ *
+ * [innerLabel] renders a permanent small label inside the field, above the text line (the
+ * "TextField-Base" style, e.g. "BTC address" on the Maya enter-address screen) — unlike
+ * [placeholder], it stays visible once text is entered.
  */
 @Composable
 fun AddressField(
@@ -76,13 +83,18 @@ fun AddressField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String = "",
     message: String? = null,
     isError: Boolean = false,
     showScanIcon: Boolean = true,
     enabled: Boolean = true,
     onScanClick: () -> Unit = {},
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    // Optional: lets callers focus the field programmatically (e.g. auto-open the keyboard).
+    focusRequester: FocusRequester? = null,
+    // Optional: invoked when the keyboard's Done action is pressed.
+    onImeAction: (() -> Unit)? = null
 ) {
     // Focus is owned here so the field can switch between its default/filled and focused looks.
     // The rendering lives in the stateless [AddressFieldContent] so previews can force any state.
@@ -95,13 +107,16 @@ fun AddressField(
         onFocusChanged = { focused = it },
         modifier = modifier,
         label = label,
+        innerLabel = innerLabel,
         placeholder = placeholder,
         message = message,
         isError = isError,
         showScanIcon = showScanIcon,
         enabled = enabled,
         onScanClick = onScanClick,
-        onLongPress = onLongPress
+        onLongPress = onLongPress,
+        focusRequester = focusRequester,
+        onImeAction = onImeAction
     )
 }
 
@@ -113,20 +128,23 @@ private fun AddressFieldContent(
     onFocusChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     label: String? = null,
+    innerLabel: String? = null,
     placeholder: String = "",
     message: String? = null,
     isError: Boolean = false,
     showScanIcon: Boolean = true,
     enabled: Boolean = true,
     onScanClick: () -> Unit = {},
-    onLongPress: (() -> Unit)? = null
+    onLongPress: (() -> Unit)? = null,
+    focusRequester: FocusRequester? = null,
+    onImeAction: (() -> Unit)? = null
 ) {
-    val backgroundColor = when {
-        isError -> MyTheme.Colors.red.copy(alpha = 0.1f)
-        focused -> MyTheme.Colors.backgroundSecondary
-        else -> MyTheme.Colors.gray300.copy(alpha = 0.1f)
+    val backgroundColor = if (focused) {
+        MyTheme.Colors.backgroundSecondary
+    } else {
+        MyTheme.Colors.gray300.copy(alpha = 0.1f)
     }
-    val borderColor = if (focused && !isError) {
+    val borderColor = if (focused) {
         MyTheme.Colors.gray300.copy(alpha = 0.3f)
     } else {
         Color.Transparent
@@ -166,38 +184,62 @@ private fun AddressFieldContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(vertical = 15.dp)
+                    .padding(vertical = 15.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                BasicTextField(
-                    value = value,
-                    onValueChange = onValueChange,
-                    enabled = enabled,
-                    textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
-                    cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .onFocusChanged { onFocusChanged(it.isFocused) }
-                )
-
-                if (value.isEmpty()) {
+                if (innerLabel != null) {
                     Text(
-                        text = placeholder,
+                        text = innerLabel,
                         style = MyTheme.Body2Regular,
-                        color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
+                        color = MyTheme.Colors.textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Box {
+                    BasicTextField(
+                        value = value,
+                        onValueChange = onValueChange,
+                        enabled = enabled,
+                        textStyle = MyTheme.Body2Regular.copy(color = MyTheme.Colors.textPrimary),
+                        cursorBrush = SolidColor(MyTheme.Colors.textPrimary),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = if (onImeAction != null) {
+                            KeyboardActions(onDone = { onImeAction() })
+                        } else {
+                            KeyboardActions.Default
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { onFocusChanged(it.isFocused) }
+                            .then(
+                                if (focusRequester != null) {
+                                    Modifier.focusRequester(focusRequester)
+                                } else {
+                                    Modifier
+                                }
+                            )
+                    )
+
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = MyTheme.Body2Regular,
+                            color = MyTheme.Colors.textPrimary.copy(alpha = 0.5f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             // Trailing icon: clear (✕) when there's text and the field is focused, otherwise the
-            // QR-scan affordance while empty. None in the error/filled states (matches the design).
+            // QR-scan affordance while empty. None in the unfocused filled state.
             val trailing: Pair<Int, () -> Unit>? = when {
-                isError -> null
                 value.isNotEmpty() && focused -> R.drawable.ic_clear_input to { onValueChange("") }
                 value.isEmpty() && showScanIcon -> R.drawable.ic_scan_qr to onScanClick
                 else -> null
@@ -290,7 +332,7 @@ private fun AddressFieldEnteredLongPreview() {
     )
 }
 
-/** Error — the error message appears below the field in red; the field background is tinted red. */
+/** Error — the error message appears below the field in red; the field itself looks normal. */
 @Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360)
 @Composable
 private fun AddressFieldErrorPreview() {
@@ -303,6 +345,28 @@ private fun AddressFieldErrorPreview() {
         message = "BTC address is not valid",
         isError = true
     )
+}
+
+/** Inner label — permanent label inside the field, above the text line; stays when filled. */
+@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF, widthDp = 360)
+@Composable
+private fun AddressFieldInnerLabelPreview() {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AddressFieldContent(
+            value = "",
+            onValueChange = {},
+            focused = true,
+            onFocusChanged = {},
+            innerLabel = "BTC address"
+        )
+        AddressFieldContent(
+            value = "TJvRMiThoqMM97PnnA4qCAx7XQo8wNxjY3",
+            onValueChange = {},
+            focused = true,
+            onFocusChanged = {},
+            innerLabel = "BTC address"
+        )
+    }
 }
 
 /** Filled — the user tapped outside the field area (unfocused, has text, no icon). */
