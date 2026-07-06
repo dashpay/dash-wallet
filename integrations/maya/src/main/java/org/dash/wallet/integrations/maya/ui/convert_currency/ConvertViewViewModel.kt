@@ -67,7 +67,7 @@ class ConvertViewViewModel @Inject constructor(
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
-        private val log = LoggerFactory.getLogger(ConvertViewFragment::class.java)
+        private val log = LoggerFactory.getLogger(ConvertViewViewModel::class.java)
         private const val KEY_AMOUNT = "amount"
     }
     var destinationCurrency: String? = null

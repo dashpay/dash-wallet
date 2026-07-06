@@ -135,8 +135,7 @@
 
     <fragment android:id="@+id/mayaConvertCryptoFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertCryptoFragment"
-        android:label="Enter Amount"
-        tools:layout="@layout/fragment_maya_enter_amount">
+        android:label="Enter Amount">
 
         <argument android:name="currency"
             app:argType="string" />
