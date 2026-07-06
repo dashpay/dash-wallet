@@ -371,8 +371,14 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                         )
                         if (exchangeRate != null) {
                             log.info("Setting exchange rate on received transaction.  Rate:  " + exchangeRate + " tx: " + tx.txId.toString())
+                            // Set the rate on the in-memory tx only. Do NOT saveWallet() here:
+                            // this callback runs inline under the wallet lock while commitTx() holds
+                            // it, and a full save of a large wallet takes seconds — doing it here
+                            // blocked the send path (purchase confirm dialog hung, tx not broadcast
+                            // until restart) and, firing for every CoinJoin mixing tx, starved the
+                            // lock. The exchange rate is non-critical and is persisted separately in
+                            // the transaction metadata table.
                             tx.exchangeRate = ExchangeRate(Coin.COIN, exchangeRate.fiat)
-                            application.saveWallet()
                         }
                     } catch (e: Exception) {
                         log.error("Failed to get exchange rate", e)
