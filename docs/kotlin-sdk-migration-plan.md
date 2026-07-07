@@ -1,0 +1,215 @@
+# Kotlin SDK Migration Plan — Dash Android Wallet
+
+**Date:** 2026-07-07
+**Scope:** Migrate the Android wallet off dashj (+ dashj-platform) onto the new Kotlin SDK (`platform` repo, branch `feat/kotlin-sdk-and-example-app`), and replace CoinJoin with shielded balances.
+
+## Execution status (updated 2026-07-07)
+
+- ✅ **Phase 2 — CoinJoin removal: DONE** (this branch). Mixing engine, UI, config, analytics, and
+  resources removed; CoinJoin keychain still provisioned on load/create/restore so previously mixed
+  funds remain visible and spendable via the standard coin selector; historical mixing transactions
+  keep their grouped display. Verified: `assemble_testNet3Debug` builds and the full wallet unit-test
+  suite passes.
+- 🔄 **Phase 1 — seam neutralization: STARTED.** Done so far: neutral `SyncStage` enum in common
+  (`BlockchainStateProvider` no longer exposes `PeerGroup.SyncStage`/`AbstractBlockChain`); dead
+  `SendPaymentService.isFeeTooHigh` removed; duplicate `observeSpendableBalance` consolidated into
+  `observeTotalBalance`. Remaining (large): neutral money types to replace `Coin`/`Fiat`/
+  `MonetaryFormat`/`ExchangeRate.fiat` across integrations; `WalletDataProvider`/`SendPaymentService`
+  money-typed methods; crowdnode transaction-model redesign. See Phase 1 section for the full list.
+- ⬜ Phases 0, 3–6: not started (Phase 0 lives in the platform repo).
+
+---
+
+## 1. Verdict: can we switch now, and how much?
+
+**We cannot fully cut over today, but roughly 65–70% of the functionality the app gets from dashj/dashj-platform has a working counterpart in the Kotlin SDK, and ~100% of the preparatory app-side work can start immediately** (it doesn't even require the SDK as a dependency).
+
+### Coverage by area (SDK readiness today)
+
+| Area | SDK coverage | Notes |
+|---|---|---|
+| L1 wallet core (create/restore, addresses, balances, tx history, send, SPV sync) | ~80% | Real Rust SPV (`dash-spv` via rust-dashcore) with compact block filters (BIP157/158). Gaps: no fee estimator, no BIP70, no per-UTXO coin control, no arbitrary watched addresses, coarse tx-confidence (mempool / InstantSend / inBlock / ChainLocked only), no `spendable` balance field. |
+| Platform / DashPay (identities, DPNS, contacts, profiles, credits, top-ups) | ~90% | Richer than the current `org.dashj.platform:dash-sdk-*` stack. First-class DashPay contacts/profiles, DPNS incl. contested-name voting, credit transfer/withdraw. Kills the per-flavor dpp version matrix. |
+| Shielded balances (CoinJoin's conceptual replacement) | ~80% | Orchard/Halo2 shielded pool over Platform credits. Fund from L1 asset lock or credits (Type 15), transfer (16), unshield to credits (17), withdraw to L1 (19), seed-pool anonymity filler. All UI/UX is new app work. ~30s proving time per spend. |
+| Wallet migration from dashj `.wallet` protobuf | **0%** | Does not exist. Only path: re-import BIP39 mnemonic + SPV rescan from a birth height. Must be built app-side. |
+| Productization (Maven artifact, versioning, API stability, L1 test depth) | Missing | Currently a GitHub-release AAR, pinned to a rust-dashcore git rev, thin L1 automated test coverage. |
+| CoinJoin mixing | N/A (by design) | Not implemented in the SDK — only a CoinJoin *account derivation type* exists (`key-wallet::get_coinjoin_account`). This aligns with removing mixing. |
+| Exchange rates / fiat | None (by design) | Stays app-side; already sourced from CTX/BitPay/etc. |
+
+### Hard blockers for full cutover
+1. **No `.wallet` → SDK migration path** — must be designed and built (Phase 5).
+2. **SDK productization** — no Maven coordinates, unpinned/rev-pinned rust-dashcore, preview-quality L1 test coverage (Phase 0).
+3. **minSdk 29 and 64-bit-only** (arm64-v8a + x86_64; Halo2 cannot build 32-bit) vs. the app's current minSdk 24 and 32-bit ABIs. Note `Constants.SUPPORTS_PLATFORM = !is32Bit` already excludes 32-bit devices from Platform.
+4. **Restore must discover CoinJoin-account funds** — previously mixed UTXOs live on the DIP-9 CoinJoin derivation path inside the wallet; the SDK's restore/rescan must scan that account or those funds are orphaned. Must be verified/implemented in `platform-wallet` (top risk, Phase 0 item).
+5. **BIP70 / fee estimation / coin-control gaps** — need app-side implementations or product decisions to drop.
+
+---
+
+## 2. Architecture recommendation
+
+**Use the Kotlin SDK directly as a dependency of this app — do not create another intermediate library. But consume it only through the app's own internal service seam.**
+
+```
+UI (fragments/compose, viewmodels)
+        │
+common module: service interfaces + NEUTRAL types      ← the insulation layer
+  (WalletDataProvider, SendPaymentService,
+   BlockchainStateProvider, TransactionWrapper, …)
+        │
+adapter implementations (in :wallet, or a new :wallet-sdk-adapter module)
+        │
+Kotlin SDK (AAR: PlatformWalletManager, ManagedPlatformWallet, Sdk)
+        │  JNI (rs-unified-sdk-jni → libdash_sdk_jni.so)
+Rust: platform-wallet / rs-sdk-ffi / key-wallet / dash-spv (rust-dashcore)
+```
+
+Rationale:
+- The stack is already three layers deep below the app (Kotlin SDK → JNI → Rust). A separately-versioned wrapper library adds a fourth release train and version-skew surface while the SDK is churning daily — maximum friction exactly when you need fast iteration.
+- The insulation a wrapper would provide **already has a home**: the Hilt-injected interfaces in `common/services` + `WalletDataProvider`. Today those interfaces leak dashj types (`Coin`, `Address`, `Transaction`, `Wallet`, `SendRequest`, `PeerGroup.SyncStage`) into all 7 modules — fixing that (Phase 1) gives identical swap-ability with zero artifact overhead.
+- There is no second consumer for a shared wrapper: iOS uses swift-sdk; `integration-android` doesn't touch dashj. If a second Android consumer appears later, extracting a clean internal module into a library is cheap *after* the seam is neutral.
+- Things that stay app-side regardless: exchange rates/fiat, BIP70 (if kept), tx metadata, analytics, PIN security model.
+
+Implication for dashj: dashj eventually disappears entirely (core, bls, x11, scrypt artifacts). During transition the app runs a **flag-gated cutover** (per build flavor / rollout cohort), not both SPV engines at once for a user.
+
+---
+
+## 3. Phased plan
+
+### Phase 0 — SDK productization & decisions (platform repo; parallel to Phases 1–2)
+
+**Goal:** make the SDK consumable and confirm the app's non-negotiables.
+
+- [ ] Maven publishing for the AAR (`maven-publish`, groupId/artifactId/version, publish to Maven Central or GitHub Packages) — today the only artifact is `sdk-release.aar` attached to GitHub releases.
+- [ ] Versioning/stability policy; cadence for updating the pinned rust-dashcore rev (currently a raw git rev in `Cargo.toml`).
+- [ ] **Verify/implement CoinJoin-account discovery on restore** in `platform-wallet` (funds on the DIP-9 CoinJoin path must be found during rescan and spendable). *Blocking for Phase 5.*
+- [ ] API gaps the app needs (file issues now):
+  - `spendable` balance field (Kotlin `Balance` lacks it; PARITY.md flags it),
+  - fee-rate policy suitable for Dash (static default fine; expose clearly),
+  - coin-selection needs for integrations (CrowdNode uses `ByAddressCoinSelector` / `ExactOutputsSelector` semantics),
+  - richer tx metadata for history UI if needed (confidence depth),
+  - decision: BIP70 support (SDK-side, app-side over the signer, or drop).
+- [ ] App decisions with data: raise minSdk 24 → 29 (measure user %), drop 32-bit ABIs (Play has required 64-bit since 2019; Platform features already excluded on 32-bit), accept compact-filter sync model (no Bloom filters).
+- [ ] Broaden L1 send/broadcast automated test coverage in the SDK (currently thin; the DashPay path itself is flagged as compile+Robolectric-only verified).
+
+**Exit criteria:** published versioned AAR; coinjoin-account restore verified; minSdk/ABI sign-off; issue list for API gaps triaged.
+
+### Phase 1 — Neutralize the seam (this repo; **starts now**, no SDK dependency)
+
+**Goal:** only the `wallet` module (and adapter impls) knows about dashj. This is the largest de-risking step and is 100% executable today.
+
+Current leakage: 225 files in `wallet`, 54 in `common`, 33 crowdnode, 22 coinbase, 20 maya, 15 exploredash, 3 uphold import `org.bitcoinj`/`org.dashj`. Most pervasive: `Coin` (151), `Transaction` (90), `Sha256Hash` (80), `Address` (74), `Wallet` (64), `MonetaryFormat` (52), `NetworkParameters` (50), `Fiat` (38).
+
+- [ ] Define neutral core types in `common` (no dashj imports): a Dash amount value class over duff `Long` (+ formatting), address wrapper (string + network), `TxId`, a neutral transaction view type for history/UI, `ExchangeRate` without `org.bitcoinj.utils.Fiat`.
+- [ ] Refactor interface signatures to neutral types: `WalletDataProvider`, `SendPaymentService` (drop `SendRequest`/`InsufficientMoneyException` surface), `BlockchainStateProvider` (drop `AbstractBlockChain`/`PeerGroup.SyncStage`), `TransactionWrapper`/`TransactionWrapperFactory`, `ConfirmTransactionService`, `TransactionMetadataProvider`.
+- [ ] Migrate integrations to the neutral types and remove their `dashj-core` Gradle dependency: uphold (trivial) → exploredash → maya → coinbase → crowdnode (hardest: models CrowdNode API responses as dashj `Transaction` subtypes; rework to neutral tx views + wallet-side filters).
+- [ ] Keep dashj-backed implementations of everything (behavior unchanged); `util/DashJExt.kt`-style adapters live with the implementation, not the interface.
+
+**Exit criteria:** `grep org.bitcoinj|org.dashj` ≈ 0 outside `wallet` + designated adapter files; integration modules build without dashj; app behaves identically.
+
+### Phase 2 — Remove CoinJoin mixing (**starts now**, independent of the SDK)
+
+**Goal:** no mixing capability; previously mixed balances remain fully spendable.
+
+Delete (self-contained):
+- [ ] `service/CoinJoinService.kt` (~785 lines), `data/CoinJoinConfig.kt` (DataStore `"coinjoin"`), DI binding in `DashPayModule.kt`.
+- [ ] `ui/coinjoin/*` (activity, info/level fragments, viewmodel), `nav_coinjoin.xml`, manifest entry, `mixing_anim.json`.
+- [ ] `MixingStatusCard.kt` (home), `MixDashFirstDialogFragment` + viewmodel, coinjoin settings row (`SettingsFragment`, `SettingsScreen`/`SettingsViewModel`, `MoreFragment`).
+- [ ] `MaxOutputAmountCoinJoinCoinSelector.kt`; the `coinJoinSend` path in `SendCoinsTaskRunner`/`SendCoinsViewModel`/`SendCoinsFragment` (always use `ZeroConfCoinSelector` → old mixed UTXOs are ordinary coins to it).
+- [ ] Mixing notification path in `BlockchainServiceImpl` (`createCoinJoinNotification`, `ForegroundService.COINJOIN_MIXING` promotion).
+- [ ] `getMixedBalance`/`observeMixedBalance` from `WalletDataProvider`/`WalletApplication`/`WalletBalanceObserver`/`MainViewModel`; `WalletUIConfig.LAST_MIXED_BALANCE`.
+- [ ] `useCoinJoin` threading in Platform top-ups (`CreateIdentityService`, `TopUpRepository`, `RequestUserNameViewModel` `COINJOIN_SPENDABLE` usage).
+- [ ] Analytics `CoinJoinPrivacy` events; ~38 base strings + ~18 locales; 6 drawables; 4 layouts; time-skew coinjoin dialog variant.
+
+Keep (critical for old funds + history):
+- [ ] **Wallet loads as `WalletEx` and `initializeCoinJoin(...)` still runs on load** so the CoinJoin keychain (DIP-9 path) is recognized and its UTXOs are spendable. Do not strip the keychain from the wallet file.
+- [ ] Historical transaction labeling: keep `CoinJoinTxResourceMapper`, `CoinJoinMixingTxSet`, `CoinJoinTxWrapperFactory` (read-only) so old mixing tx groups still render sensibly. (Alternative: flatten to generic rows — product call.)
+- [ ] Update tests: `SendCoinsTaskRunnerTest`, `MainViewModelTest`, BIP70 test, `coinjoin.wallet` fixture (repurpose as the "old mixed funds stay spendable" regression test).
+
+**Exit criteria:** no mixing UI/service; regression test proves the `coinjoin.wallet` fixture's mixed UTXOs are spendable via the normal send flow; settings/home clean.
+
+### Phase 3 — Introduce the SDK; replace the Platform/DashPay stack
+
+**Goal:** drop `org.dashj.platform:dash-sdk-{java,kotlin,android}` (and its per-flavor `dppVersions` matrix); DashPay/identity/DPNS runs on the Kotlin SDK. dashj-core still owns L1.
+
+- [ ] Add the SDK dependency (Maven from Phase 0); init `Sdk` + `WalletManagerStore` for the app's network; **do not start SDK SPV** in this phase.
+- [ ] Reconcile storage/security: SDK owns its own Room DB + Keystore-backed secret store (`org.dashfoundation.wallet.secrets`); feed it the mnemonic via `MnemonicResolverAndPersister` from the app's existing PIN-encrypted seed at first use.
+- [ ] Port `service/platform/*` (12 files: `PlatformService`, `PlatformSyncService`, `PlatformBroadcastService`, `IdentityRepository`, `TopUpRepository`, workers) and `ui/dashpay/PlatformRepo` to SDK namespaces (`identities`, `dpns`, `documents`, `dashpay`, `credits`).
+- [ ] Bridge L1↔L2: identity funding asset-locks are still created by the dashj wallet in this phase — wire dashj-built asset locks into SDK identity registration/top-up (SDK accepts asset-lock funding), or route top-ups through SDK funding APIs.
+- [ ] Contested username voting, invites, profiles, contact requests — port `ui/dashpay/` viewmodel data sources one flow at a time behind the existing `Constants.SUPPORTS_PLATFORM` gate.
+
+**Exit criteria:** dashj-platform artifacts removed from `wallet/build.gradle`; all DashPay flows pass on testnet against the SDK.
+
+### Phase 4 — Shielded balances (the CoinJoin replacement, user-facing)
+
+**Goal:** ship the new privacy model: shield L1 funds/credits into the Orchard pool; spend/unshield/withdraw.
+
+- [ ] Lifecycle wiring: `configureShielded(dbPath)` per network, `bindShielded(walletId)`, shielded sync loop (`startShieldedSync` / interval), following `AppContainer` in the example app.
+- [ ] Balance model & home UI: shielded balance shown alongside (or inside) the main balance; replaces the old mixed/unmixed split.
+- [ ] Flows (reference: example app `SendTransactionScreen` — `CORE_TO_CORE`, `PLATFORM_TO_SHIELDED`, `SHIELDED_TO_SHIELDED`, `SHIELDED_TO_PLATFORM`, `SHIELDED_TO_CORE`):
+  - Shield: from L1 via asset lock (`shieldedFundFromAssetLock`) and from Platform credits (`shieldedShield`, only when credits > 0),
+  - Send shielded→shielded (with ≤32-byte memo),
+  - Unshield to credits (`shieldedUnshield`) and withdraw to L1 (`shieldedWithdraw`, 1000:1 credits→duffs, Fibonacci fee constraint).
+- [ ] UX for ~30s Halo2 proving per spend (progress state, cancel semantics) and the non-retryable `ShieldedSpendUnconfirmed` ambiguous-broadcast outcome (needs explicit "check before retry" UX).
+- [ ] Shielded activity in transaction history (`ShieldedActivityEntity` → history rows); seed-pool participation policy (anonymity-set filler notes).
+- [ ] Migration UX for former mixers: their mixed coins are now just L1 funds — first-run prompt offering "shield your balance".
+- [ ] Settings: shielded on/off + sync status replaces the CoinJoin settings entry.
+
+**Exit criteria:** shield → transfer → unshield → withdraw round-trip on testnet with failure-mode handling; design-approved UI.
+
+### Phase 5 — L1 cutover (the big one; gated on Phase 0 hardening)
+
+**Goal:** SDK SPV replaces dashj `PeerGroup`/`SPVBlockStore`/`WalletEx`; dashj no longer runs.
+
+- [ ] **Wallet migration flow:**
+  - Unlock seed with the user's PIN (existing `SecurityGuard`), call `createWallet(mnemonic, birthHeight = earliest-key-time)` to bound the rescan.
+  - Verify discovery of: BIP44 account funds, **CoinJoin-account funds** (Phase 0 prerequisite), Platform/identity keys (`AuthenticationGroupExtension` equivalents re-derived by the SDK).
+  - Legacy wallets that are not seed-derivable (pre-BIP39 random keys, if any remain in the fleet): build a sweep-to-new-wallet flow instead.
+  - Carry over app-level data that the wallet file won't: tx metadata Room DB, address labels, fiat-at-time-of-tx records.
+  - Keep the old `.wallet` file untouched as an escape hatch; migration behind a flag with rollback for N releases.
+- [ ] Replace `BlockchainServiceImpl` internals: `startSpv`/`stopSpv` + `spvProgress` (headers / filter headers / filters / masternode phases) mapped into the existing blockchain-state UI and sync notification; delete `PeerGroup`, `BlockChain`, `SPVBlockStore`, `MasternodeSync`, bloom-filter and peer-management code paths.
+- [ ] Replace send path: `SendCoinsTaskRunner`/`SendCoinsOfflineTask` → `CoreTransactionBuilder` + `sendToAddresses` (per-wallet mutex already handles the double-spend window); map coin-selection strategy choices; leftover-balance rules (CrowdNode) on neutral types; fee policy.
+- [ ] Replace balances/history/receive: `WalletBalanceObserver` → SDK balance + Room flows; `TransactionWrapper` factories over SDK `TransactionEntity` (`context` enum drives InstantSend/ChainLock badges); receive addresses from `core_addresses` pools.
+- [ ] BIP70: implement app-side over SDK signing, or drop (per Phase 0 decision). NFC/`dash:` URI flows re-pointed at neutral types (done in Phase 1).
+- [ ] Security-model reconciliation: app PIN remains the auth gate; SDK Keystore storage holds the mnemonic; define wipe/reset and backup-reveal flows against SDK storage.
+- [ ] Rollout: flavor-gated (`_testNet3` first) → staging → prod staged % with migration telemetry (rescan duration, discovered-balance match vs dashj, failure rates). Battery/network benchmarking of compact-filter sync vs current bloom sync.
+
+**Exit criteria:** migration success (balance parity incl. old mixed funds and identities) on a corpus of real wallet files; sync/battery/crash parity; dashj not initialized at runtime.
+
+### Phase 6 — dashj removal & cleanup
+
+- [ ] Remove `org.dashj:dashj-core`, `dashj-bls-android`, `dashj-x11-android`, `dashj-scrypt-android` from all modules; remove bitcoinj packaging excludes and `Context` propagation.
+- [ ] Delete `WalletEx`/protobuf load-save code after the migration horizon (keep the migration reader for N more releases).
+- [ ] Finalize minSdk 29 / 64-bit-only; ProGuard rules for the SDK; update CLAUDE.md/README; delete dead strings/resources across locales.
+
+---
+
+## 4. Sequencing & parallelism
+
+```
+now ──────────────────────────────────────────────────────▶
+Phase 0 (platform repo) ─────────────┐ (publishing, restore-coinjoin, hardening)
+Phase 1 seam neutralization ──┐      │
+Phase 2 coinjoin removal ──┐  │      │
+                           ▼  ▼      ▼
+                    Phase 3 platform swap ──▶ Phase 4 shielded ──▶ Phase 5 L1 cutover ──▶ Phase 6 cleanup
+```
+
+Phases 1 and 2 are pure app work and can ship to production on dashj long before the SDK is ready — they make the app better regardless. Phase 3 needs only SDK publishing. Phase 5 is last and gated on Phase 0 hardening + the coinjoin-account restore guarantee.
+
+## 5. Top risks
+
+1. **CoinJoin-account discovery on SDK restore** — if the rescan doesn't cover the DIP-9 CoinJoin derivation path, previously mixed funds vanish at migration. Verify in `platform-wallet` before any Phase 5 work.
+2. **Non-seed-derivable legacy wallets** — need fleet data on how many pre-BIP39 wallets exist; sweep flow if > 0.
+3. **SDK preview quality on L1** — send/broadcast paths have thin automated coverage; the whole L1 surface is intentionally minimal ("Platform-first" SDK). Budget hardening time in the platform repo.
+4. **Compact-filter sync performance** on mobile radios/battery vs the current bloom-filter model — benchmark early (can be done with the example app today).
+5. **minSdk 29 + 64-bit-only** — user-base cut needs product sign-off.
+6. **Shielded UX physics** — ~30s proving per spend and `ShieldedSpendUnconfirmed` ambiguity are UX problems, not bugs; design for them from the start.
+7. **Two persistence worlds during transition** — dashj `.wallet` + app Room vs SDK Room + Keystore. The flag-gated cutover (never both SPV engines live for one user) keeps this manageable; dual-running would not be.
+
+## 6. Open questions to resolve early
+
+- Does `platform-wallet` restore scan the CoinJoin account path? (blocking)
+- Keep or drop BIP70? (CTX/DashDirect dependencies?)
+- Keep historical mixing-tx grouping UI or flatten old mixing txs to plain rows?
+- Fleet stats: 32-bit devices, API 24–28 devices, pre-BIP39 wallets.
+- Where does the app's PIN sit relative to SDK Keystore/biometric gating (one gate or two)?
