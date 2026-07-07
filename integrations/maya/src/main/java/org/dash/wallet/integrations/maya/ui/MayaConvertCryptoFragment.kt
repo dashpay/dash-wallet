@@ -53,6 +53,7 @@ import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Balance
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
 import org.dash.wallet.integrations.maya.model.getCoinBaseExchangeRateConversion
+import org.dash.wallet.integrations.maya.payments.MayaCurrencyList
 import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
@@ -132,9 +133,14 @@ class MayaConvertCryptoFragment : Fragment() {
         val dashPoolInfo = mayaViewModel.getPoolInfo(Constants.DASH_CURRENCY)
         val currencyMapper = MayaCurrencyMapper(requireContext())
 
+        // Tokens are qualified with their host network ("USDT (Ethereum)"); native L1 coins
+        // (BTC.BTC, …) show just the code.
+        val network = MayaCurrencyList.networkName(args.asset)
+        val displayCode = if (network != null) "${args.currency} ($network)" else args.currency
+
         uiState = uiState.copy(
-            // Same parameterized title the address-input step of this flow uses ("Convert DASH to %s").
-            title = getString(R.string.maya_address_input_title, args.currency),
+            // "Convert DASH to <code>" per design, e.g. "Convert DASH to USDT (Ethereum)".
+            title = getString(R.string.maya_address_input_title, displayCode),
             toCurrencyName = currencyMapper.getCurrencyName(args.currency),
             toAddress = getArgAddress(),
             toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset)

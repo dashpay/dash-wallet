@@ -35,7 +35,6 @@ import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.ui.components.DASH_CURRENCY_CODE
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.Constants
-import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
@@ -61,6 +60,9 @@ data class DEXEnterAmountUIState(
     // in the EnterAmount picker alongside the user's fiat and DASH.
     val asset: String = "",
     val assetCurrencyCode: String = "",
+    // Heading form of the asset per design: tokens qualified with their host network
+    // ("USDT (Ethereum)"); native L1 coins just the code ("BTC").
+    val assetDisplayCode: String = "",
     // Fiat ISO code the amount is entered in (primary input), e.g. "USD".
     val fiatCurrencyCode: String = "USD",
     // Display order for the EnterAmount currency picker: fiat (primary), DASH, asset.
@@ -76,16 +78,7 @@ data class DEXEnterAmountUIState(
     // True when the entered amount was rejected by the validation quote (e.g. below the route
     // minimum). The provider's raw message is logged, not shown — the screen renders a single
     // neutral localized error.
-    val validationFailed: Boolean = false,
-    // TopIntroSend header fields. The "to" target is the coin being bought (icon + code).
-    val coinIconUrl: String? = null,
-    // Whether the wallet balance row is shown (eye toggle).
-    val showBalance: Boolean = true,
-    // TODO: wire real balances — needs WalletDataProvider + exchange rate. A buy is funded with
-    // the crypto being sent in, not the wallet's DASH, so confirm whether the DASH balance even
-    // belongs on this screen before populating these.
-    val dashBalance: String = "",
-    val fiatBalance: String? = null
+    val validationFailed: Boolean = false
 )
 
 @HiltViewModel
@@ -155,6 +148,10 @@ class DEXEnterAmountViewModel @Inject constructor(
         }
 
         val codes = buildCurrencyCodes(fiatCurrencyCode, assetCurrencyCode)
+        // Heading form of the asset: tokens are qualified with their host network
+        // ("USDT (Ethereum)"); native L1 coins (BTC.BTC, …) show just the code.
+        val network = MayaCurrencyList.networkName(asset)
+        val displayCode = if (network != null) "$assetCurrencyCode ($network)" else assetCurrencyCode
         amount = Amount(
             dashCode = DASH_CURRENCY_CODE,
             fiatCode = fiatCurrencyCode,
@@ -195,14 +192,14 @@ class DEXEnterAmountViewModel @Inject constructor(
             it.copy(
                 asset = asset,
                 assetCurrencyCode = assetCurrencyCode,
+                assetDisplayCode = displayCode,
                 fiatCurrencyCode = fiatCurrencyCode,
                 currencyCodes = codes,
                 selectedCurrencyIndex = selectedIndex,
                 amount = displayString,
                 continueEnabled = anchoredValue.signum() > 0,
                 isValidating = false,
-                validationFailed = false,
-                coinIconUrl = GenericUtils.getCoinIconUrls(assetCurrencyCode, asset).firstOrNull()
+                validationFailed = false
             )
         }
         persistAmount()
