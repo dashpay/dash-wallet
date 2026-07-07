@@ -1233,6 +1233,24 @@ public class WalletApplication extends MultiDexApplication
     }
 
     @NotNull
+    @Override
+    public String getNetworkId() {
+        return getNetworkParameters().getId();
+    }
+
+    @NotNull
+    @Override
+    public String currentReceiveAddressString() {
+        return currentReceiveAddress().toBase58();
+    }
+
+    @NotNull
+    @Override
+    public String freshReceiveAddressString() {
+        return freshReceiveAddress().toBase58();
+    }
+
+    @NotNull
     public Coin getWalletBalance() {
         if (wallet == null || walletBalanceObserver == null) {
             return Coin.ZERO;

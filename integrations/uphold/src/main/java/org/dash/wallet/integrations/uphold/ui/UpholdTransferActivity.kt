@@ -32,12 +32,11 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.InteractionAwareActivity
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.services.ConfirmTransactionService
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
@@ -60,11 +59,11 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_MESSAGE = "extra_message"
 
-        fun createIntent(context: Context, title: String, message: CharSequence, maxAmount: String): Intent {
+        fun createIntent(context: Context, title: String, message: CharSequence, maxAmount: Dash): Intent {
             val intent = Intent(context, UpholdTransferActivity::class.java)
             intent.putExtra(EXTRA_TITLE, title)
             intent.putExtra(EXTRA_MESSAGE, message)
-            intent.putExtra(EXTRA_MAX_AMOUNT, maxAmount)
+            intent.putExtra(EXTRA_MAX_AMOUNT, maxAmount.duffs)
             return intent
         }
     }
@@ -73,17 +72,17 @@ class UpholdTransferActivity : InteractionAwareActivity() {
     @Inject lateinit var walletDataProvider: WalletDataProvider
     @Inject lateinit var transactionMetadataProvider: TransactionMetadataProvider
     @Inject lateinit var confirmTransactionLauncher: ConfirmTransactionService
-    private lateinit var balance: Coin
+    private var balance: Dash = Dash.ZERO
     private lateinit var withdrawalDialog: UpholdWithdrawalHelper
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContentView(R.layout.activity_uphold_tranfser)
-        balance = intent.extras?.get(EXTRA_MAX_AMOUNT) as Coin? ?: Coin.ZERO
+        balance = Dash.valueOf(intent.extras?.getLong(EXTRA_MAX_AMOUNT, 0L) ?: 0L)
 
         if (savedInstanceState == null) {
-            val fragment = EnterAmountFragment.newInstance()
+            val fragment = EnterAmountFragment.newInstanceDash()
             supportFragmentManager.beginTransaction()
                 .replace(R.id.container, fragment)
                 .commitNow()
@@ -95,7 +94,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
             builder.appendLine(intent.getStringExtra(EXTRA_MESSAGE))
             builder.append("  ")
             builder.setSpan(dashSymbol, builder.length - 2, builder.length - 1, 0)
-            val dashFormat = MonetaryFormat().noCode().minDecimals(6).optionalDecimals()
+            val dashFormat = MoneyFormat().noCode().minDecimals(6).optionalDecimals()
             builder.append(dashFormat.format(balance))
             builder.append("  ")
             builder.append(getText(R.string.enter_amount_available))
@@ -120,7 +119,7 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         title = intent.getStringExtra(EXTRA_TITLE)
 
         enterAmountViewModel.setMaxAmount(balance)
-        enterAmountViewModel.onContinueEvent.observe(this) {
+        enterAmountViewModel.onContinueDashEvent.observe(this) {
             UpholdWithdrawalHelper.requirementsSatisfied(this) { result ->
                 when (result) {
                     RequirementsCheckResult.Satisfied -> {
@@ -137,20 +136,18 @@ class UpholdTransferActivity : InteractionAwareActivity() {
         }
     }
 
-    private fun showPaymentConfirmation(amount: Coin) {
-        val receiveAddress = walletDataProvider.freshReceiveAddress()
+    private fun showPaymentConfirmation(amount: Dash) {
+        val receiveAddress = walletDataProvider.freshReceiveAddressString()
 
         withdrawalDialog = UpholdWithdrawalHelper(
             BigDecimal(balance.toPlainString()),
             object : OnTransferListener {
                 override fun onConfirm(transaction: UpholdTransaction) {
-                    val address: String = receiveAddress.toBase58()
+                    val address: String = receiveAddress
                     val amountStr = transaction.origin.base.toPlainString()
 
                     // if the exchange rate is not available, then show "Not Available"
-                    val exchangeRate = enterAmountViewModel.selectedExchangeRate.value?.let {
-                        ExchangeRate(Coin.COIN, it.fiat)
-                    }
+                    val exchangeRate = enterAmountViewModel.selectedExchangeRate.value
 
                     val fee = transaction.origin.fee.toPlainString()
                     val total = transaction.origin.amount.toPlainString()
@@ -172,14 +169,14 @@ class UpholdTransferActivity : InteractionAwareActivity() {
 
                 override fun onTransfer() {
                     transactionMetadataProvider.markAddressAsTransferInAsync(
-                        receiveAddress.toBase58(),
+                        receiveAddress,
                         ServiceName.Uphold
                     )
                     finish()
                 }
             }
         )
-        withdrawalDialog.transfer(this, receiveAddress.toBase58(), BigDecimal(amount.toPlainString()), false)
+        withdrawalDialog.transfer(this, receiveAddress, BigDecimal(amount.toPlainString()), false)
     }
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {

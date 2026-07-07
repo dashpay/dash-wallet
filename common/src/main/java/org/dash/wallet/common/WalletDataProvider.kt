@@ -47,6 +47,13 @@ interface WalletDataProvider {
     fun freshReceiveAddress(): Address
     fun currentReceiveAddress(): Address
 
+    // Neutral (dashj-free) accessors for feature/integration modules.
+    // Default implementations delegate to the dashj-typed methods above.
+    val networkId: String
+        get() = networkParameters.id
+    fun freshReceiveAddressString(): String = freshReceiveAddress().toBase58()
+    fun currentReceiveAddressString(): String = currentReceiveAddress().toBase58()
+
     fun getWalletBalance(): Coin
 
     fun observeWalletChanged(): Flow<Unit>

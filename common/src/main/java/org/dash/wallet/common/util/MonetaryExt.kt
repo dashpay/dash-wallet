@@ -20,6 +20,9 @@ package org.dash.wallet.common.util
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.toFiat
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -47,6 +50,16 @@ fun BigDecimal.toCoin() : Coin {
 
 fun BigDecimal.toFiat(currency: String) : Fiat {
     return Fiat.valueOf(currency, this.scaleByPowerOfTen(Fiat.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [BigDecimal.toCoin] for modules that don't depend on dashj. */
+fun BigDecimal.toDash(): Dash {
+    return Dash(this.scaleByPowerOfTen(Coin.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [Fiat.toFormattedString] for modules that don't depend on dashj. */
+fun FiatValue.toFormattedString(): String {
+    return toFiat().toFormattedString()
 }
 
 val Fiat.currencySymbol: String

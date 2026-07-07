@@ -262,7 +262,7 @@ class BuyAndSellViewModel @Inject constructor(
     suspend fun topperBuyUrl(walletName: String): String {
         return topperClient.getOnRampUrl(
             walletUIConfig.getExchangeCurrencyCode(),
-            walletData.freshReceiveAddress(),
+            walletData.freshReceiveAddressString(),
             walletName
         )
     }

@@ -28,6 +28,9 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
@@ -60,6 +63,9 @@ class EnterAmountViewModel @Inject constructor(
         get() = _selectedExchangeRate
 
     val onContinueEvent = SingleLiveEvent<Pair<Coin, Fiat>>()
+
+    /** Neutral mirror of [onContinueEvent] for modules that don't depend on dashj. */
+    val onContinueDashEvent = SingleLiveEvent<Pair<Dash, FiatValue>>()
 
     internal val _dashToFiatDirection = MutableLiveData<Boolean>()
     val dashToFiatDirection: LiveData<Boolean>
@@ -152,6 +158,11 @@ class EnterAmountViewModel @Inject constructor(
 
     fun setMaxAmount(coin: Coin) {
         _maxAmount.value = coin
+    }
+
+    /** Neutral counterpart of [setMaxAmount] for modules that don't depend on dashj. */
+    fun setMaxAmount(amount: Dash) {
+        setMaxAmount(amount.toCoin())
     }
 
     fun setMinAmount(coin: Coin, isIncludedMin: Boolean = false) {
