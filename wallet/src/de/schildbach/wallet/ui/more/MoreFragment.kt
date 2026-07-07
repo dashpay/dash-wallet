@@ -43,7 +43,6 @@ import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.coinjoin.CoinJoinLevelViewModel
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.display
@@ -51,9 +50,7 @@ import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
@@ -84,7 +81,6 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     private val editProfileViewModel: EditProfileViewModel by viewModels()
     private val createInviteViewModel: CreateInviteViewModel by viewModels()
     private val createIdentityViewModel: CreateIdentityViewModel by viewModels()
-    private val coinJoinViewModel: CoinJoinLevelViewModel by viewModels()
 
     @Inject lateinit var packageInfoProvider: PackageInfoProvider
     @Inject lateinit var configuration: Configuration
@@ -148,15 +144,7 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                 val inviteHistory = mainActivityViewModel.getInviteHistory()
                 mainActivityViewModel.logEvent(AnalyticsConstants.MoreMenu.INVITE)
                 if (inviteHistory.isEmpty()) {
-                    val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
-                    if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                        safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
-                    } else {
-                        MixDashFirstDialogFragment()
-                            .show(requireActivity()) {
-                                safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
-                            }
-                    }
+                    safeNavigate(MoreFragmentDirections.moreToInviteFee("more"))
                 } else {
                     safeNavigate(MoreFragmentDirections.moreToInviteHistory("more"))
                 }
@@ -171,17 +159,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.errorUpdatingProfile.cancel.setOnClickListener { dismissProfileError() }
         binding.editUpdateSwitcher.isVisible = false
         binding.joinDashpayContainer.setOnClickListener {
-            viewLifecycleOwner.lifecycleScope.launch {
-                val shouldShowMixDashDialog = withContext(Dispatchers.IO) { createIdentityViewModel.shouldShowMixDash() }
-                mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
-                if (coinJoinViewModel.isMixing || !shouldShowMixDashDialog) {
-                    startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
-                } else {
-                    MixDashFirstDialogFragment().show(requireActivity()) {
-                        startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
-                    }
-                }
-            }
+            mainActivityViewModel.logEvent(AnalyticsConstants.UsersContacts.JOIN_DASHPAY)
+            startActivity(Intent(requireContext(), CreateUsernameActivity::class.java))
         }
         binding.usernameVoting.isVisible = Constants.SUPPORTS_PLATFORM
         binding.usernameVoting.setOnClickListener {

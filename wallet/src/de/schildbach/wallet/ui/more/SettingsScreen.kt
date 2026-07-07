@@ -17,7 +17,6 @@
 
 package de.schildbach.wallet.ui.more
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -37,17 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet_test.R
-import org.bitcoinj.core.Coin
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
-import org.dash.wallet.common.util.toBigDecimal
-import java.text.DecimalFormat
 
 @Composable
 fun SettingsScreen(
@@ -56,7 +50,6 @@ fun SettingsScreen(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
@@ -69,7 +62,6 @@ fun SettingsScreen(
         onRescanBlockchainClick = onRescanBlockchainClick,
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
-        onCoinJoinClick = onCoinJoinClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick
     )
@@ -83,7 +75,6 @@ fun SettingsScreen(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
@@ -96,7 +87,6 @@ fun SettingsScreen(
         onRescanBlockchainClick = onRescanBlockchainClick,
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
-        onCoinJoinClick = onCoinJoinClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick
     )
@@ -110,46 +100,9 @@ private fun SettingsScreenContent(
     onRescanBlockchainClick: () -> Unit = {},
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
-    onCoinJoinClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
-    @StringRes val statusId: Int
-    var balance: String? = null
-    var balanceIcon: Int? = null
-    val decimalFormat = DecimalFormat("0.000")
-    
-    if (uiState.coinJoinMixingMode == CoinJoinMode.NONE && uiState.coinJoinMixingStatus != MixingStatus.FINISHING) {
-        statusId = R.string.turned_off
-   } else {
-        if (uiState.coinJoinMixingStatus == MixingStatus.FINISHED) {
-            statusId = R.string.coinjoin_progress_finished
-        } else {
-            statusId = when(uiState.coinJoinMixingStatus) {
-                MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
-                MixingStatus.MIXING -> R.string.coinjoin_mixing
-                MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
-                MixingStatus.PAUSED -> R.string.coinjoin_paused
-                else -> R.string.error
-            }
-            if (!uiState.hideBalance) {
-                balance = stringResource(
-                    R.string.coinjoin_progress_balance,
-                    decimalFormat.format(uiState.mixedBalance.toBigDecimal()),
-                    decimalFormat.format(uiState.totalBalance.toBigDecimal())
-                )
-                balanceIcon = R.drawable.ic_dash_d_black
-            } else {
-                balance = stringResource(R.string.coinjoin_progress_amount_hidden)
-            }
-        }
-    }
-    val coinJoinStatusText = when {
-        uiState.coinJoinMixingMode != CoinJoinMode.NONE && (uiState.coinJoinMixingStatus == MixingStatus.MIXING || uiState.coinJoinMixingStatus == MixingStatus.FINISHING) ->
-            stringResource(R.string.coinjoin_progress_status_percentage, stringResource(statusId), uiState.mixingProgress.toInt())
-        else -> stringResource(statusId)
-    }
-    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -205,16 +158,6 @@ private fun SettingsScreenContent(
                     action = onNotificationsClick
                 )
 
-                // CoinJoin
-                MenuItem(
-                    title = stringResource(R.string.coinjoin),
-                    subtitle = coinJoinStatusText,
-                    icon = R.drawable.ic_mixing,
-                    action = onCoinJoinClick,
-                    dashAmount = balance,
-                    dashIcon = balanceIcon
-                )
-
                 // Transaction Metadata
                 if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
                     MenuItem(
@@ -250,16 +193,10 @@ fun MoreScreenPreview() {
 }
 
 @Composable
-@Preview(name = "Settings with CoinJoin Active")
-fun MoreScreenPreviewWithCoinJoin() {
+@Preview(name = "Settings populated")
+fun MoreScreenPreviewPopulated() {
     val customState = SettingsUIState(
         localCurrencySymbol = "USD",
-        coinJoinMixingMode = CoinJoinMode.INTERMEDIATE,
-        coinJoinMixingStatus = MixingStatus.MIXING,
-        mixingProgress = 50.0,
-        mixedBalance = Coin.COIN,
-        totalBalance = Coin.COIN.multiply(2L),
-        hideBalance = false,
         ignoringBatteryOptimizations = true,
         transactionMetadataVisible = true,
         transactionMetadataSubtitle = "Last saved: Jan 15, 2024"

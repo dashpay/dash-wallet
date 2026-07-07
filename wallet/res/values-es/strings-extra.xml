@@ -470,8 +470,6 @@
     <string name="masternode_key_not_used">No usada</string>
     <string name="masternode_key_revoked">Revocado</string>
     <string name="masternode_key_private_public_base64">Llaves privadas / públicas (base64)</string>
-    <string name="timeskew_ahead">adelante</string>
-    <string name="timeskew_behind">detrás</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Los precios no fueron encontrados. Los valores mostrados en FIAT pueden estar equivocados.</string>

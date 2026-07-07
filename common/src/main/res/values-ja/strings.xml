@@ -87,7 +87,6 @@
     <string name="select_currency">通貨を選択する</string>
     <string name="send_coins_error_dusty_send">送金額が小さすぎます</string>
     <string name="send_coins_error_insufficient_money">資金不足</string>
-    <string name="send_coins_error_insufficient_mixed_money">ミキシング資金が不足しています。CoinJoinのミキシングが完了するまで待つか、設定でこの機能を無効にしてこの取引を完了してください。</string>
     <string name="syncing">同期中</string>
     <string name="no_connection">インターネット接続がありません</string>
     <string name="rate_not_available">ご利用できません</string>

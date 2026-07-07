@@ -310,13 +310,6 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             binding.topStack.layoutParams = params
         }
 
-        if (dashPayViewModel.createUsernameArgs?.invite != null) {
-            requestUserNameViewModel.isInviteMixed.observe(viewLifecycleOwner) {
-                binding.inviteWithUnmixedFunds.isVisible = !it
-            }
-        } else {
-            binding.inviteWithUnmixedFunds.isVisible = false
-        }
         requestUserNameViewModel.inviteBalance.observe(viewLifecycleOwner) {
             val isInviteForContestedNames = requestUserNameViewModel.isInviteForContestedNames()
             val isInviteContested = requestUserNameViewModel.isUsingInvite() && requestUserNameViewModel.isInviteForContestedNames()

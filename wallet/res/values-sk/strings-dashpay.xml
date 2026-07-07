@@ -258,7 +258,6 @@ používateľské meno</b></string>
     <string name="please_note_cant_change_this_later">Upozorňujeme, že neskôr to už nebudete môcť zmeniť</string>
     <string name="Intermediate_level_WIFI_Warning">Stredná úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
     <string name="Advanced_level_WIFI_Warning">Pokročilá úroveň ochrany osobných údajov vyžaduje spoľahlivé internetové pripojenie</string>
-    <string name="privcay_level_WIFI_warning_desc">Aby ste sa vyhli ďalším poplatkom za miešanie, odporúča sa byť v pripojený naWi-Fi</string>
     <string name="continue_anyway">Napriek tomu pokračovať</string>
     <string name="welcome_to_dash_pay">Vitajte v Dash Pay</string>
     <string name="pay_to_usernames">Plaťte na používateľské mená. Už žiadne alfanumerické adresy.</string>
@@ -404,34 +403,13 @@ používateľské meno</b></string>
     <string name="request_username_min_balance_disclaimer">Ak chcete požiadať o používateľské meno v sieti Dash, musíte mať viac ako %s Dash</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Vypnuté</string>
-    <string name="coinjoin_info_subtitle">Miešanie vašich Dashov spraví vaše transakcie súkromnejšie</string>
-    <string name="coinjoin_description_1">Keď je miešanie zapnuté, budete môcť minúť iba zmiešané Dashe. Toto je možné kedykoľvek vypnúť.</string>
-    <string name="coinjoin_description_2">Novo prijaté Dashe budú automaticky zmiešané pri otvorení peňaženky</string>
-    <string name="coinjoin_description_3">Zapnutie tejto funkcie spôsobí vyššiu spotrebu batérie</string>
-    <string name="coinjoin_mixing_level_title">Zvoliť úroveň miešania</string>
-    <string name="coinjoin_mixing_level_subtitle">Miešanie môžete kedykoľvek zastaviť, alebo zmeniť jeho úroveň</string>
     <string name="coinjoin_mixing_transactions">Miešacie transakcie</string>
     <string name="coinjoin_transaction_group">Tieto transakcie majú súvis s miešaním.</string>
     <string name="intermediate">Stredne pokročilá</string>
     <string name="advanced">Pokročilá</string>
     <string name="intermediate_level_card_decs">Pokročilí používatelia, ktorí majú veľmi vysokú úroveň technických znalostí, môžu určiť vašu históriu transakcií</string>
     <string name="advanced_level_card_decs">Pre pokročilých používateľov s vysokou úrovňou technických znalostí, by bolo veľmi ťažké určiť vašu históriu transakcií</string>
-    <string name="coinjoin_intermediate_time">Do 30 minút</string>
-    <string name="coinjoin_advanced_time">Niekoľko hodín</string>
-    <string name="coinjoin_start">Začať miešanie</string>
-    <string name="coinjoin_stop">Zastaviť miešanie</string>
-    <string name="coinjoin_mixing">Miešanie</string>
-    <string name="coinjoin_mixing_finishing">Dokončovanie</string>
-    <string name="coinjoin_paused">Pozastavené</string>
-    <string name="coinjoin_not_started">Nespustené</string>
-    <string name="coinjoin_progress_balance">%1$s z %2$s</string>
-    <string name="coinjoin_progress_finished">Plne zmiešané</string>
-    <string name="coinjoin_change_level_confirmation">Naozaj chcete zmeniť úroveň ochrany osobných údajov\?</string>
-    <string name="coinjoin_stop_mixing_title">Naozaj chcete prestať s miešaním\?</string>
-    <string name="coinjoin_stop_mixing_message">Všetky prostriedky, ktoré boli zmiešané, sa spoja s vašimi nezmiešanými prostriedkami</string>
-    <string name="coinjoin_mixed_balance">Zmiešaná bilancia:</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Váš kreditný zostatok je nízky</string>
@@ -460,9 +438,6 @@ používateľské meno</b></string>
     <string name="request_username_lost_vote">Požadované používateľské meno bolo pridelené niekomu inému</string>
     <string name="request_username_blocked_message">Používateľské meno %s bolo zablokované sieťou Dash Network. Skúste to znova a požiadajte o iné používateľské meno.</string>
     <string name="request_username_lost_vote_message">Kvôli procesu hlasovania sa Dash Network rozhodla prideliť používateľské meno %s niekomu inému. Skúste to znova a požiadajte o iné používateľské meno.</string>
-    <string name="mix_dash_mix">Miešaný zostatok</string>
-    <string name="mix_dash_title">Namiešajte váš Dash</string>
-    <string name="mix_dash_message">Ak chcete zabrániť tomu, aby ostatní ľudia videli, komu uskutočňujete platby, odporúča sa pred vytvorením používateľského mena zmiešať zostatok.</string>
     <string name="tools_credits_title">Kredity</string>
     <string name="tools_credits_buy_button">Kúpiť</string>
     <string name="dashpay_what_are_credits_title">Čo sú to kredity\?</string>
@@ -531,7 +506,6 @@ používateľské meno</b></string>
     <string name="invitation_creating_progress_wip">Vytvára sa pozvánka...</string>
     <string name="invitation_fee_confirm_and_pay_button">Potvrdiť a zaplatiť</string>
     <string name="error_sending_invite_transaction">Chyba pri odosielaní transakcie pozvánky</string>
-    <string name="request_username_invitation_not_mixed_message">Pozvánka bola vytvorená z nezmiešaných prostriedkov</string>
     <string name="request_username_invitation_only_noncontested_message">Pomocou tejto pozvánky si môžete vytvoriť iba nesporné používateľské meno.</string>
     <string name="username_types_title">Čo sú sporné a nesporné používateľské mená\?</string>
     <string name="username_types_message">Existujú dva typy používateľských mien: sporné a nesporné.\n\nNesporné používateľské mená majú aspoň jedno číslo (2 – 9) alebo sú dlhšie ako 20 znakov. Tieto budú automaticky schválené.\n\nAk si chcete vytvoriť sporné používateľské meno, ktoré je kratšie a bez čísel, musíte sa zaregistrovať na DashPay bez pozvánky, zaplatiť požadovaný poplatok a počkať na schválenie po ukončení hlasovacieho obdobia.</string>

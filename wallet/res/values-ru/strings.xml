@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Синхронизация зависла</string>
     <string name="blockchain_state_progress_problem_storage">Синхронизация: проблема со свободным местом</string>
     <string name="blockchain_state_progress_problem_network">Синхронизация: проблема с сетью</string>
-    <string name="mixing_state_progress_mixing">Перемешивание средств (%1$s %%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Адрес скопирован в буфер обмена</string>
     <string name="wallet_address_dialog_fragment_hint">Для защиты Вашей конфиденциальности Ваш адрес будет меняться каждый раз при получении средств.</string>
     <string name="wallet_balance_fragment_too_much">Сумма монет довольно существенная для карманного бумажника. Пожалуйста, перенесите её часть в более безопасное место.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Управлять приложениями</string>
     <string name="wallet_timeskew_dialog_title">Проверьте настройки даты и времени</string>
     <string name="wallet_timeskew_dialog_msg">Время на Вашем устройстве отличается на %d минут. По этой причине Вы, возможно, не сможете отправлять или получать средства.\\n\\nПроверьте настройки и при необходимости скорректируйте дату, время и часовой пояс.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">Время на вашем устройстве %s на %d секунды. Поэтому вы не можете использовать CoinJoin.\n\nЧтобы воспользоваться CoinJoin, выставьте в настройках своего устройства \"Задать время автоматически\". </string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">Время на вашем устройстве отличается более чем на 5 секунд. Поэтому вы не можете использовать CoinJoin.\n\nЧтобы воспользоваться CoinJoin, выставьте в настройках своего устройства \"Задать время автоматически\". </string>
     <string name="send_coins_activity_title">Отправить Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Получение подписи %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ошибка при получении подписи</string>

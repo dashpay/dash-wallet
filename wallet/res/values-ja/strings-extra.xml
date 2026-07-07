@@ -464,8 +464,6 @@
     <string name="masternode_key_not_used">未使用です</string>
     <string name="masternode_key_revoked">無効になっています</string>
     <string name="masternode_key_private_public_base64">プライベート/パブリックキー(ベース64)</string>
-    <string name="timeskew_ahead">進む</string>
-    <string name="timeskew_behind">戻る</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">価格を取得できませんでした。フィアットの値が正しくない可能性があります。</string>

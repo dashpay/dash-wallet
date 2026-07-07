@@ -62,7 +62,7 @@ class CreateInviteViewModel @Inject constructor(
             .onEach { blockchainStateData.value = it }
             .launchIn(viewModelScope)
 
-        walletData.observeSpendableBalance()
+        walletData.observeTotalBalance()
             .onEach {
                 spendableBalance.value = it
             }

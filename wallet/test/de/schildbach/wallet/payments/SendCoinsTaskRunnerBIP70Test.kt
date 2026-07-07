@@ -21,12 +21,8 @@ import com.google.firebase.FirebaseApp
 import dagger.hilt.android.testing.HiltAndroidTest
 import dagger.hilt.android.testing.HiltTestApplication
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.security.SecurityFunctions
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.CoinJoinService
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.security.SecurityGuard
@@ -88,8 +84,6 @@ class SendCoinsTaskRunnerBIP70Test {
     private lateinit var packageInfoProvider: PackageInfoProvider
     private lateinit var analyticsService: AnalyticsService
     private lateinit var identityConfig: BlockchainIdentityConfig
-    private lateinit var coinJoinConfig: CoinJoinConfig
-    private lateinit var coinJoinService: CoinJoinService
     private lateinit var identityRepo: IdentityRepository
     private lateinit var platformRepo: PlatformRepo
     private lateinit var metadataProvider: TransactionMetadataProvider
@@ -110,8 +104,6 @@ class SendCoinsTaskRunnerBIP70Test {
         packageInfoProvider = mockk(relaxed = true)
         analyticsService = mockk(relaxed = true)
         identityConfig = mockk(relaxed = true)
-        coinJoinConfig = mockk(relaxed = true)
-        coinJoinService = mockk(relaxed = true)
         identityRepo = mockk(relaxed = true)
         platformRepo = mockk(relaxed = true)
         metadataProvider = mockk(relaxed = true)
@@ -129,9 +121,6 @@ class SendCoinsTaskRunnerBIP70Test {
         // every { wallet.params } returns networkParams
         every { packageInfoProvider.httpUserAgent() } returns "DashWallet-Test/1.0"
 
-        // Setup CoinJoin mocks to return non-mixing state
-        every { coinJoinConfig.observeMode() } returns MutableStateFlow(CoinJoinMode.NONE)
-        every { coinJoinService.observeMixingState() } returns MutableStateFlow(MixingStatus.NOT_STARTED)
 
         // Mock SecurityGuard.getInstance() and related security functions
         val mockSecurityGuard = mockk<SecurityGuard>(relaxed = true)
@@ -149,8 +138,6 @@ class SendCoinsTaskRunnerBIP70Test {
                 packageInfoProvider,
                 analyticsService,
                 identityConfig,
-                coinJoinConfig,
-                coinJoinService,
                 identityRepo,
                 platformRepo,
                 metadataProvider

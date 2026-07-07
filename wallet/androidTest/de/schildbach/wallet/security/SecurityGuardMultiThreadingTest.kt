@@ -1184,10 +1184,6 @@ class SecurityGuardMultiThreadingTest {
                             TODO("Not yet implemented")
                         }
 
-                        override fun getMixedBalance(): Coin {
-                            TODO("Not yet implemented")
-                        }
-
                         override fun observeWalletChanged(): Flow<Unit> {
                             TODO("Not yet implemented")
                         }
@@ -1197,10 +1193,6 @@ class SecurityGuardMultiThreadingTest {
                         }
 
                         override fun observeBalance(balanceType: Wallet.BalanceType, coinSelector: CoinSelector?): Flow<Coin> {
-                            TODO("Not yet implemented")
-                        }
-
-                        override fun observeSpendableBalance(): Flow<Coin> {
                             TODO("Not yet implemented")
                         }
 
@@ -1248,10 +1240,6 @@ class SecurityGuardMultiThreadingTest {
                         }
 
                         override fun observeMostRecentTransaction(): Flow<Transaction> {
-                            TODO("Not yet implemented")
-                        }
-
-                        override fun observeMixedBalance(): Flow<Coin> {
                             TODO("Not yet implemented")
                         }
 

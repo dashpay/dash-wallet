@@ -261,7 +261,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     @Inject
     lateinit var dashSystemService: DashSystemService
 
-    @Inject lateinit var coinJoinService: CoinJoinService
     @Inject lateinit var serviceConfig: BlockchainServiceConfig
     @Inject lateinit var analyticsService: AnalyticsService
     @Inject lateinit var securityFunctions: AuthenticationManager
@@ -300,10 +299,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
     var peerDiscoveryList = ArrayList<PeerDiscovery>(2)
     private val executor: Executor = Executors.newSingleThreadExecutor()
     private var syncPercentage = 0 // 0 to 100%
-    private var mixingStatus = MixingStatus.NOT_STARTED
-    private var mixingProgress = 0.0
     private var balance = Coin.ZERO
-    private var mixedBalance = Coin.ZERO
     private var foregroundService = ForegroundService.NONE
 
     // Background state tracking for Android 15 thread optimization
@@ -1281,10 +1277,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     }
                     builder.append(entry)
                 }
-                log.info(
-                    "History of transactions/blocks/headers/mnlistdiff: " +
-                            (if (mixingStatus == MixingStatus.MIXING) "[mixing] " else "") + builder
-                )
+                log.info("History of transactions/blocks/headers/mnlistdiff: $builder")
 
                 // determine if block and transaction activity is idling
                 var isIdle = false
@@ -1308,7 +1301,7 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
 
                 // if idling, shutdown service
-                if (isIdle && mixingStatus != MixingStatus.MIXING) {
+                if (isIdle) {
                     log.info("idling detected, stopping service")
                     if (blockchainState?.replaying == true) {
                         rescheduleService()
@@ -1595,7 +1588,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     propagateContext()
                     blockChain = BlockChain(Constants.NETWORK_PARAMETERS, wallet, blockStore)
                     headerChain = BlockChain(Constants.NETWORK_PARAMETERS, headerStore)
-                    blockchainStateDataProvider.setBlockChain(blockChain)
                 } catch (x: BlockStoreException) {
                     throw Error("blockchain cannot be created", x)
                 }
@@ -1631,27 +1623,13 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 peerDiscoveryList.add(dnsDiscovery)
                 updateAppWidget()
                 blockchainStateDao.observeState().observe(this@BlockchainServiceImpl) { blockchainState ->
-                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
+                    handleBlockchainStateNotification(blockchainState)
                 }
                 apiConfirmationHandler = registerCrowdNodeConfirmedAddressFilter()
-                coinJoinService.observeMixingState().observe(this@BlockchainServiceImpl) { mixingStatus ->
-                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-                }
-                coinJoinService.observeMixingProgress().observe(this@BlockchainServiceImpl) { mixingProgress ->
-                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
-                }
 
-                // we need the total wallet balance for the CoinJoin notification
                 application.observeTotalBalance().observe(this@BlockchainServiceImpl) {
                     balance = it
-                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                     updateAppWidget()
-                }
-
-                // we need the mixed balance for the CoinJoin notification
-                application.observeMixedBalance().observe(this@BlockchainServiceImpl) {
-                    mixedBalance = it
-                    handleBlockchainStateNotification(blockchainState, mixingStatus, mixingProgress)
                 }
 
 
@@ -1675,33 +1653,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 }
             }
         }
-    }
-
-    private fun createCoinJoinNotification(): Notification {
-        val notificationIntent = createIntent(this)
-        val decimalFormat = DecimalFormat("0.000")
-        val statusStringId = when (mixingStatus) {
-            MixingStatus.NOT_STARTED -> R.string.coinjoin_not_started
-            MixingStatus.MIXING -> R.string.coinjoin_mixing
-            MixingStatus.FINISHING -> R.string.coinjoin_mixing_finishing
-            MixingStatus.PAUSED -> R.string.coinjoin_paused
-            MixingStatus.FINISHED -> R.string.coinjoin_progress_finished
-            else -> R.string.error
-        }
-        val message = getString(
-            R.string.coinjoin_progress,
-            getString(statusStringId),
-            mixingProgress,
-            decimalFormat.format(mixedBalance.toBigDecimal()),
-            decimalFormat.format(balance.toBigDecimal())
-        )
-        return notificationService.buildNotification(
-            message,
-            getString(R.string.app_name),
-            null,
-            notificationIntent,
-            Constants.NOTIFICATION_CHANNEL_ID_ONGOING
-        )
     }
 
     private fun resetMNLists(requestFreshList: Boolean) {
@@ -1931,7 +1882,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                 if (localPeerGroup != null) {
                     log.info("shutting down peerGroup and system services")
                     propagateContext()
-                    coinJoinService.prepareForShutdown()
                     // we may need to skip these, or move them to after the forceStop because they grab a lock
                     if (!localPeerGroup.lock.isLocked) {
                         localPeerGroup.removeDisconnectedEventListener(peerConnectivityListener)
@@ -1966,7 +1916,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     log.info("closing blockchain stores")
                     blockStore?.close()
                     headerStore?.close()
-                    blockchainStateDataProvider.setBlockChain(null)
                 } catch (x: BlockStoreException) {
                     throw RuntimeException(x)
                 }
@@ -1989,7 +1938,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     resetMNLists(false)
                     if (deleteWalletFileOnShutdown) {
                         log.info("removing wallet file and app data")
-                        coinJoinService.shutdown()
                         application.finalizeWipe()
                     }
                     //Clear the blockchain identity
@@ -2059,7 +2007,6 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         )
 
         val title = when {
-            coinJoinService.isMixing() -> getString(R.string.coinjoin_paused)
             blockchainState?.replaying == true -> getString(R.string.notification_sync_paused)
             else -> getString(R.string.notification_background_processes_paused)
         }
@@ -2158,23 +2105,17 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast)
     }
 
-    private fun handleBlockchainStateNotification(
-        blockchainState: BlockchainState?,
-        mixingStatus: MixingStatus,
-        mixingProgress: Double
-    ) {
+    private fun handleBlockchainStateNotification(blockchainState: BlockchainState?) {
         // send this out for the Network Monitor, other activities observe the database
         val broadcast = Intent(BlockchainService.ACTION_BLOCKCHAIN_STATE)
         broadcast.setPackage(packageName)
         LocalBroadcastManager.getInstance(this).sendBroadcast(broadcast)
-        // log.info("handle blockchain state notification: {}, {}", foregroundService, mixingStatus);
-        this.mixingProgress = mixingProgress
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && blockchainState != null && blockchainState.bestChainDate != null) {
             //Handle Ongoing notification state
             val syncing =
                 blockchainState.bestChainDate!!.time < Utils.currentTimeMillis() - DateUtils.HOUR_IN_MILLIS //1 hour
             try {
-                if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver && mixingStatus != MixingStatus.MIXING && mixingStatus != MixingStatus.FINISHING) {
+                if (!syncing && blockchainState.bestChainHeight == config.bestChainHeightEver) {
                     //Remove ongoing notification if blockchain sync finished
                     stopForeground(true)
                     foregroundService = ForegroundService.NONE
@@ -2183,24 +2124,12 @@ class BlockchainServiceImpl : LifecycleService(), BlockchainService {
                     //Shows ongoing notification when synchronizing the blockchain
                     val notification = createNetworkSyncNotification(blockchainState)
                     nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-                } else if (mixingStatus == MixingStatus.MIXING || mixingStatus == MixingStatus.PAUSED || mixingStatus == MixingStatus.FINISHING) {
-                    log.info("foreground service: {}", foregroundService)
-                    if (foregroundService == ForegroundService.NONE) {
-                        log.info("foreground service not active, create notification")
-                        startForegroundAndCatch(createCoinJoinNotification())
-                        foregroundService = ForegroundService.COINJOIN_MIXING
-                    } else {
-                        log.info("foreground service active, update notification")
-                        val notification = createCoinJoinNotification()
-                        nm!!.notify(Constants.NOTIFICATION_ID_BLOCKCHAIN_SYNC, notification)
-                    }
                 }
             } catch (e: RuntimeException) {
                 log.warn("notification manager call failed, system may be shutting down", e)
             }
         }
         this.blockchainState = blockchainState
-        this.mixingStatus = mixingStatus
     }
 
     private fun percentageSync(): Int {

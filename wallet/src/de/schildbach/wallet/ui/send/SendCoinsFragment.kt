@@ -162,12 +162,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             }
             updateView()
         }
-        viewModel.coinJoinActive.observe(viewLifecycleOwner) { isActive ->
-            if (isActive) {
-                binding.paymentHeader.setBalanceTitle(getString(R.string.coinjoin_mixed_balance))
-            }
-        }
-
         enterAmountViewModel.dashToFiatDirection.observe(viewLifecycleOwner) { viewModel.isDashToFiatPreferred = it }
         enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
             lifecycleScope.launch { authenticateOrConfirm() }
@@ -186,7 +180,6 @@ open class SendCoinsFragment: Fragment(R.layout.send_coins_fragment) {
             log.info("dryRunException:", dryRunException)
             errorMessage = when (dryRunException) {
                 is Wallet.DustySendRequested -> getString(R.string.send_coins_error_dusty_send)
-                is InsufficientCoinJoinMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_mixed_money)
                 is InsufficientMoneyException -> getErrorMessage(R.string.send_coins_error_insufficient_money)
                 is Wallet.CouldNotAdjustDownwards -> getString(R.string.send_coins_error_dusty_send)
                 else -> dryRunException.toString()

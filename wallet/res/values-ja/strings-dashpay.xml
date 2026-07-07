@@ -257,7 +257,6 @@
     <string name="please_note_cant_change_this_later">この設定は後で変更することはできませんのでご注意ください</string>
     <string name="Intermediate_level_WIFI_Warning">中程度のプライバシーレベルには、安定したインターネット接続が必要です</string>
     <string name="Advanced_level_WIFI_Warning">高度のプライバシーレベルには、安定したインターネット接続が必要です</string>
-    <string name="privcay_level_WIFI_warning_desc">余分なミキシング料金を防ぐため、Wi-Fiネットワークに接続することを推奨します</string>
     <string name="continue_anyway">このまま続行する</string>
     <string name="welcome_to_dash_pay">Dash Payへようこそ</string>
     <string name="pay_to_usernames">ユーザー名に支払い。英数字のアドレスはもう不要。</string>
@@ -403,34 +402,13 @@
     <string name="request_username_min_balance_disclaimer">Dashネットワークでユーザー名を申請するには、%sDash以上が必要です</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">オフ</string>
-    <string name="coinjoin_info_subtitle">Dashコインをミキシングすると、よりプライベートな取引ができるようになります</string>
-    <string name="coinjoin_description_1">これがオンになっている場合のみ、ミキシングされたDashを使用することができます。これはいつでもオフにすることができます。</string>
-    <string name="coinjoin_description_2">新たに受け取ったDashは、ウォレットを開いたときに自動的にミキシングされます</string>
-    <string name="coinjoin_description_3">この機能をオンにすると、バッテリーの消費量が増えます</string>
-    <string name="coinjoin_mixing_level_title">ミキシングレベルを選択する</string>
-    <string name="coinjoin_mixing_level_subtitle">ミキシングレベルはいつでも変更や停止ができます</string>
     <string name="coinjoin_mixing_transactions">ミキシングの取引</string>
     <string name="coinjoin_transaction_group">ミキシングに関する取引があります。</string>
     <string name="intermediate">通常のもの</string>
     <string name="advanced">高度なもの</string>
     <string name="intermediate_level_card_decs">非常に高いレベルの技術的な専門知識を持つ上級ユーザーは、取引履歴を判別することができます</string>
     <string name="advanced_level_card_decs">技術的な専門知識を持つ上級ユーザーにとっても、取引履歴を確認することは非常に困難です</string>
-    <string name="coinjoin_intermediate_time">最長30分</string>
-    <string name="coinjoin_advanced_time">数時間</string>
-    <string name="coinjoin_start">ミキシングを開始する</string>
-    <string name="coinjoin_stop">ミキシングを停止する</string>
-    <string name="coinjoin_mixing">ミキシング中</string>
-    <string name="coinjoin_mixing_finishing">完了中</string>
-    <string name="coinjoin_paused">一時停止しました</string>
-    <string name="coinjoin_not_started">開始していません</string>
-    <string name="coinjoin_progress_balance">%2$sの%1$s</string>
-    <string name="coinjoin_progress_finished">ミキシング完了しました</string>
-    <string name="coinjoin_change_level_confirmation">プライバシーレベルを変更してよろしいですか。</string>
-    <string name="coinjoin_stop_mixing_title">ミキシングを停止してもよろしいですか。</string>
-    <string name="coinjoin_stop_mixing_message">ミキシングした資金は、ミキシングしていない資金と合算されます</string>
-    <string name="coinjoin_mixed_balance">ミキシング後の残高：</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Dashの残高が不足しています</string>
@@ -459,9 +437,6 @@
     <string name="request_username_lost_vote">リクエストしたユーザー名は、すでに他の人が使用しています</string>
     <string name="request_username_blocked_message">%sというユーザー名は、Dashネットワークでブロックされました。別のユーザー名をリクエストして再度お試しください。</string>
     <string name="request_username_lost_vote_message">投票の結果、Dashネットワークはユーザー名%sを他のユーザーに割り当てることに決定しました。別のユーザー名をリクエストして再度お試しください。</string>
-    <string name="mix_dash_mix">ミキシング残高</string>
-    <string name="mix_dash_title">Dashをミキシングする</string>
-    <string name="mix_dash_message">他者に送金先を閲覧されないようにするため、残高をミキシングしてからユーザー名を作成することを推奨します。</string>
     <string name="tools_credits_title">残高</string>
     <string name="tools_credits_buy_button">購入</string>
     <string name="dashpay_what_are_credits_title">残高とは\?</string>
@@ -530,7 +505,6 @@
     <string name="invitation_creating_progress_wip">招待状を作成中...</string>
     <string name="invitation_fee_confirm_and_pay_button">確認して支払う</string>
     <string name="error_sending_invite_transaction">招待状の取引の送信でエラーが発生しました</string>
-    <string name="request_username_invitation_not_mixed_message">招待状をミキシングされていない資金で作成しました</string>
     <string name="request_username_invitation_only_noncontested_message">この招待状を使用して、非競合のユーザー名を作成できます</string>
     <string name="username_types_title">競合・非競合のユーザー名とは\?</string>
     <string name="username_types_message">ユーザー名は、競合と非競合の2種類あります。\n\n非競合のユーザー名は、2～9の数字を1つ以上含むか、20文字を超えるもので、自動的に承認されます。\n\n短いものや数字を含まない競合ユーザー名を作成したい場合は、招待状なしでDashPayに登録し、必要な料金を支払い、投票期間が終了するまで承認を待つ必要があります。</string>

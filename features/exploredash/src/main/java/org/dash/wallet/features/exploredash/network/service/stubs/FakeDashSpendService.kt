@@ -79,7 +79,6 @@ class FakeDashSpendService @Inject constructor(
         }
     }
 
-    override fun isFeeTooHigh(tx: Transaction): Boolean = false
     override suspend fun completeTransaction(sendRequest: SendRequest) {
         return realService.completeTransaction(sendRequest)
     }

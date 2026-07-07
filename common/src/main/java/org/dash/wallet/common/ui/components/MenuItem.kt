@@ -344,8 +344,8 @@ fun PreviewMenuItem() {
 
         // Complex example matching Figma
         MenuItem(
-            title = "CoinJoin",
-            subtitle = "Mixing",
+            title = "Balance",
+            subtitle = "Syncing",
             icon = R.drawable.ic_dash_blue_filled,
             dashAmount = "0.0011 of 1.0000",
             //fiatAmount = "0.0011 of 1.0000"

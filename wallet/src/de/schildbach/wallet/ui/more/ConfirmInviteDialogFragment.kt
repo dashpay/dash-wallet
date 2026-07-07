@@ -57,7 +57,7 @@ class ConfirmInviteDialogFragment: OffsetDialogFragment(R.layout.dialog_confirm_
             lifecycleScope.launch {
                 try {
                     val inviteAmount = Coin.valueOf(args.amount)
-                    val spendableBalance = invitationFragmentViewModel.walletData.observeSpendableBalance().first()
+                    val spendableBalance = invitationFragmentViewModel.walletData.observeTotalBalance().first()
                     if (spendableBalance < inviteAmount) {
                         binding.confirmMessage.text = getString(
                             R.string.invitation_cant_afford_message,

@@ -469,8 +469,6 @@
     <string name="masternode_key_not_used">Nepoužité</string>
     <string name="masternode_key_revoked">Zrušený</string>
     <string name="masternode_key_private_public_base64">Súkromné / Verejné kľúče (base64)</string>
-    <string name="timeskew_ahead">popredu</string>
-    <string name="timeskew_behind">pozadu</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Nepodarilo sa získať ceny. Hotovostné ceny môžu byť nesprávne.</string>

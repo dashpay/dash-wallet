@@ -463,8 +463,6 @@
     <string name="masternode_key_not_used">hindi ginagamit</string>
     <string name="masternode_key_revoked">Binawi</string>
     <string name="masternode_key_private_public_base64">Pribado / Pampublikong Susi (base64)</string>
-    <string name="timeskew_ahead">sa unahan</string>
-    <string name="timeskew_behind">sa huli</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Hindi nakuha ang mga presyo. Maaaring mali ang mga halaga ng Fiat.</string>

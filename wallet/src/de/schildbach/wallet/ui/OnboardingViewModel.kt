@@ -76,6 +76,8 @@ class OnboardingViewModel @Inject constructor(
             if (!walletApplication.isWalletUpgradedToBIP44) {
                 walletApplication.wallet!!.addKeyChain(Constants.BIP44_PATH)
             }
+            // mixing was removed from the app, but the CoinJoin keychain is still provisioned
+            // so that funds mixed by older versions (or other wallets sharing this seed) stay visible
             (walletApplication.wallet as WalletEx).initializeCoinJoin(0)
             configuration.armBackupSeedReminder()
 

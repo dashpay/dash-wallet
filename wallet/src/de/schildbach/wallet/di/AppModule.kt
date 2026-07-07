@@ -29,7 +29,6 @@ import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.payments.ConfirmTransactionLauncher
 import de.schildbach.wallet.payments.SendCoinsTaskRunner
@@ -111,13 +110,11 @@ abstract class AppModule {
             packageInfoProvider: PackageInfoProvider,
             analyticsService: AnalyticsService,
             identityConfig: BlockchainIdentityConfig,
-            coinJoinConfig: CoinJoinConfig,
-            coinJoinService: CoinJoinService,
             identityRepository: IdentityRepository,
             platformRepo: PlatformRepo,
             transactionMetadataProvider: TransactionMetadataProvider
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, coinJoinConfig, coinJoinService, identityRepository, platformRepo, transactionMetadataProvider)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

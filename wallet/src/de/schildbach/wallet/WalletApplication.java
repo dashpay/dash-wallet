@@ -95,7 +95,6 @@ import ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy;
 import ch.qos.logback.core.util.FileSize;
 import de.schildbach.wallet.security.SecurityInitializer;
 import de.schildbach.wallet.service.BlockchainStateDataProvider;
-import de.schildbach.wallet.service.CoinJoinService;
 import de.schildbach.wallet.service.TxDisplayCacheService;
 import de.schildbach.wallet.service.DashSystemService;
 import de.schildbach.wallet.service.PackageInfoProvider;
@@ -240,7 +239,6 @@ public class WalletApplication extends MultiDexApplication
     @Inject
     TxDisplayCacheService txDisplayCacheService;
     private WalletBalanceObserver walletBalanceObserver;
-    private CoinJoinService coinJoinService;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
 
@@ -498,7 +496,9 @@ public class WalletApplication extends MultiDexApplication
         }
         WalletEx walletEx = (WalletEx) wallet;
         if (walletEx.getCoinJoin() != null) {
-            // this wallet is not encrypted yet
+            // Mixing was removed from the app, but wallets that mixed in the past still hold
+            // funds on the CoinJoin keychain. Initializing it here keeps those UTXOs
+            // recognized and spendable through the regular send flow.
             walletEx.initializeCoinJoin(null, 0);
         }
     }
@@ -1261,15 +1261,6 @@ public class WalletApplication extends MultiDexApplication
         return  walletBalanceObserver.getTotalBalance().getValue();
     }
 
-    @NotNull
-    public Coin getMixedBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
-            return Coin.ZERO;
-        }
-
-        return  walletBalanceObserver.getMixedBalance().getValue();
-    }
-
     @NonNull
     @Override
     public Flow<Coin> observeTotalBalance() {
@@ -1278,16 +1269,6 @@ public class WalletApplication extends MultiDexApplication
         }
 
         return walletBalanceObserver.getTotalBalance();
-    }
-
-    @NonNull
-    @Override
-    public Flow<Coin> observeMixedBalance() {
-        if (wallet == null || walletBalanceObserver == null) {
-            return FlowKt.emptyFlow();
-        }
-
-        return walletBalanceObserver.getMixedBalance();
     }
 
     @NonNull
@@ -1303,15 +1284,6 @@ public class WalletApplication extends MultiDexApplication
         return walletBalanceObserver.observe(balanceType, coinSelector);
     }
 
-    @NonNull
-    @Override
-    public Flow<Coin> observeSpendableBalance() {
-        if (wallet == null || walletBalanceObserver == null || coinJoinService == null) {
-            return FlowKt.emptyFlow();
-        }
-
-        return walletBalanceObserver.observeSpendable(coinJoinService);
-    }
 
     @NonNull
     @Override
@@ -1447,10 +1419,6 @@ public class WalletApplication extends MultiDexApplication
     @Override
     public boolean canAffordIdentityCreation() {
         return !getWalletBalance().isLessThan(Constants.DASH_PAY_FEE);
-    }
-
-    public void setCoinJoinService(CoinJoinService coinJoinService) {
-        this.coinJoinService = coinJoinService;
     }
 
     @Override
