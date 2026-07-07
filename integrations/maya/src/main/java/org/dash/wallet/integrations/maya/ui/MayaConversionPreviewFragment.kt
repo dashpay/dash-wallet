@@ -126,6 +126,13 @@ class MayaConversionPreviewFragment : Fragment(R.layout.fragment_maya_conversion
         setupBackNavigation()
         mayaCurrencyMapper = MayaCurrencyMapper(requireContext())
 
+        // Slippage disclosure: the estimate can move by up to the default slippage tolerance
+        // before the swap settles. Driven by the same constant the quote requests use.
+        binding.contentOrderReview.slippageNotice.text = getString(
+            R.string.maya_slippage_notice,
+            SwapKitConstants.DEFAULT_SLIPPAGE_PERCENT
+        )
+
         viewModel.isDeviceConnectedToInternet.observe(viewLifecycleOwner) { hasInternet ->
             setNetworkState(hasInternet)
         }

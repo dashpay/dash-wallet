@@ -311,5 +311,16 @@
         app:layout_constraintTop_toBottomOf="@id/total_label"
         tools:text="more details here"
         />
+
+    <TextView
+        android:id="@+id/slippage_notice"
+        style="@style/Caption.Secondary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="5dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/order_info"
+        tools:text="@string/maya_slippage_notice" />
 </androidx.constraintlayout.widget.ConstraintLayout>
 

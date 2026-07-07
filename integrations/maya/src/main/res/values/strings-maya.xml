@@ -377,6 +377,8 @@
     <string name="maya_no_connection_toast">Check your connection and try again to see available coins</string>
 
     <!-- DashDEX buy: enter refund address screen -->
+    <!-- Slippage disclosure on the conversion preview (%1$d = slippage percent, e.g. 2) -->
+    <string name="maya_slippage_notice">The final amount you receive may differ from this estimate by up to %1$d%% due to price slippage.</string>
     <string name="dex_refund_address_heading">Enter refund address</string>
     <string name="dex_refund_address_description">If the swap fails, your %s will be returned to this address. Make sure it\'s a %s address from a wallet you control.\n\nYour swap cannot be processed without a refund address.</string>
     <string name="dex_refund_address_field_label">Refund address</string>
