@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -86,7 +87,7 @@ fun MayaConvertResultScreen(
                 modifier = Modifier.align(Alignment.Center)
             )
         } else {
-            // Result content, centered in the space above the bottom button.
+            // Result content, centered in the space above the bottom button (Figma 34195:9065).
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -97,34 +98,37 @@ fun MayaConvertResultScreen(
                 Image(
                     painter = painterResource(
                         if (state.isSuccess) {
-                            R.drawable.ic_success_green_white_border
+                            CommonR.drawable.ic_success_green
                         } else {
                             CommonR.drawable.ic_error
                         }
                     ),
-                    contentDescription = null
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(top = 20.dp, bottom = 10.dp)
+                        .size(90.dp)
                 )
 
                 Text(
                     text = state.title,
-                    style = MyTheme.H5Bold,
-                    color = if (state.isSuccess) MyTheme.Colors.green else MyTheme.Colors.red,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 20.dp)
-                        .padding(horizontal = 20.dp)
-                )
-
-                Text(
-                    text = state.message,
-                    style = MyTheme.Body2Regular,
+                    style = MyTheme.Typography.HeadlineMediumBold,
                     color = MyTheme.Colors.textPrimary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp)
-                        .padding(horizontal = 36.dp)
+                        .padding(top = 20.dp)
+                        .padding(horizontal = 60.dp)
+                )
+
+                Text(
+                    text = state.message,
+                    style = MyTheme.Typography.TitleMedium,
+                    color = MyTheme.Colors.textSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 6.dp)
+                        .padding(horizontal = 60.dp)
                 )
 
                 if (state.showContactSupport) {
@@ -168,14 +172,14 @@ fun MayaConvertResultScreen(
 
             DashButton(
                 text = state.buttonText,
-                style = Style.TintedBlue,
+                style = Style.FilledBlue,
                 size = Size.Large,
                 onClick = onButtonClick,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .padding(bottom = 15.dp)
+                    .padding(horizontal = 60.dp)
+                    .padding(bottom = 20.dp)
             )
         }
     }
@@ -190,11 +194,12 @@ private fun MayaConvertResultSuccessPreview() {
         state = MayaConvertResultUIState(
             isLoading = false,
             isSuccess = true,
-            title = "Conversion successful",
-            message = "It could take up to 5 minutes to transfer Dash from DASH to BTC.",
+            title = "You successfully converted DASH to BTC",
+            message = "It can take up to a few minutes for your Bitcoin to arrive " +
+                "at the destination address using Maya Protocol",
             explorerDescription = "You can follow this swap on the Maya explorer",
             explorerLinkText = "View on mayascan.org",
-            buttonText = "Close"
+            buttonText = "Done"
         ),
         onButtonClick = {},
         onContactSupportClick = {},
