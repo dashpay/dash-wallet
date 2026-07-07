@@ -20,7 +20,6 @@ import androidx.annotation.StringRes
 import org.dash.wallet.common.payments.parsers.AddressParser
 import org.dash.wallet.common.payments.parsers.Bech32AddressParser
 import org.dash.wallet.common.payments.parsers.BitcoinAddressParser
-import org.dash.wallet.common.payments.parsers.BitcoinMainNetParams
 import org.dash.wallet.common.payments.parsers.PaymentIntentParser
 import org.dash.wallet.common.payments.parsers.PaymentParsers
 import org.dash.wallet.integrations.maya.R
@@ -56,7 +55,7 @@ open class MayaBitcoinCryptoCurrency : MayaCryptoCurrency {
     override val asset: String = "BTC.BTC"
     override val exampleAddress: String = "bc1qxhgnnp745zryn2ud8hm6k3mygkkpkm35020js0"
     override val paymentIntentParser: PaymentIntentParser = BitcoinPaymentIntentParser()
-    override val addressParser: AddressParser = BitcoinAddressParser(BitcoinMainNetParams())
+    override val addressParser: AddressParser = BitcoinAddressParser()
     override val codeId: Int = R.string.cryptocurrency_bitcoin_code
     override val nameId: Int = R.string.cryptocurrency_bitcoin_network
 
@@ -111,7 +110,7 @@ open class MayaKujiraCryptoCurrency : MayaBitcoinCryptoCurrency() {
         38,
         "KIJI.KUJI"
     )
-    override val addressParser: AddressParser = Bech32AddressParser("kujira", 38, null)
+    override val addressParser: AddressParser = Bech32AddressParser("kujira", 38)
     override val codeId: Int = R.string.cryptocurrency_kuji_code
     override val nameId: Int = R.string.cryptocurrency_kuji_network
 }
@@ -156,7 +155,7 @@ open class MayaMayaTokenCryptoCurrency : MayaBitcoinCryptoCurrency() {
         38,
         "MAYA.MAYA"
     )
-    override val addressParser: AddressParser = Bech32AddressParser("maya", 38, null)
+    override val addressParser: AddressParser = Bech32AddressParser("maya", 38)
     override val codeId: Int = R.string.cryptocurrency_maya_code
     override val nameId: Int = R.string.cryptocurrency_maya_network
 }
@@ -180,8 +179,7 @@ open class MayaRadixCryptoCurrency : MayaBitcoinCryptoCurrency() {
     override val paymentIntentParser: PaymentIntentParser = XrdPaymentIntentParser()
     override val addressParser: AddressParser = Bech32AddressParser(
         "account_rdx",
-        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}",
-        null
+        "1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{50,65}"
     )
     override val codeId: Int = R.string.cryptocurrency_xrd_code
     override val nameId: Int = R.string.cryptocurrency_xrd_network

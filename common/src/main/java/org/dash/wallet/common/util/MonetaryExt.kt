@@ -57,6 +57,16 @@ fun BigDecimal.toDash(): Dash {
     return Dash(this.scaleByPowerOfTen(Coin.SMALLEST_UNIT_EXPONENT).toLong())
 }
 
+/** Neutral counterpart of [BigDecimal.toFiat] for modules that don't depend on dashj. */
+fun BigDecimal.toFiatValue(currency: String): FiatValue {
+    return FiatValue(currency, this.scaleByPowerOfTen(Fiat.SMALLEST_UNIT_EXPONENT).toLong())
+}
+
+/** Neutral counterpart of [Fiat.isCurrencyFirst] for modules that don't depend on dashj. */
+fun FiatValue.isCurrencyFirst(): Boolean {
+    return toFiat().isCurrencyFirst()
+}
+
 /** Neutral counterpart of [Fiat.toFormattedString] for modules that don't depend on dashj. */
 fun FiatValue.toFormattedString(): String {
     return toFiat().toFormattedString()

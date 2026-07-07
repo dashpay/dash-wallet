@@ -22,7 +22,6 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.integrations.maya.api.CurrencyBeaconApi
 import org.dash.wallet.integrations.maya.api.ExchangeRateApi
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateAggregatedProvider
@@ -30,8 +29,6 @@ import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.FreeCurrencyApi
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.api.MayaApiAggregator
-import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
-import org.dash.wallet.integrations.maya.api.MayaBlockchainApiImpl
 import org.dash.wallet.integrations.maya.api.MayaEndpoint
 import org.dash.wallet.integrations.maya.api.RemoteDataSource
 import org.dash.wallet.integrations.maya.utils.MayaConstants
@@ -43,10 +40,9 @@ abstract class MayaModule {
     companion object {
         @Provides
         fun provideMayaEndpoint(
-            remoteDataSource: RemoteDataSource,
-            walletDataProvider: WalletDataProvider
+            remoteDataSource: RemoteDataSource
         ): MayaEndpoint {
-            val baseUrl = MayaConstants.getBaseUrl(walletDataProvider.networkParameters)
+            val baseUrl = MayaConstants.getBaseUrl()
             return remoteDataSource.buildApi(MayaEndpoint::class.java, baseUrl)
         }
 
@@ -79,9 +75,9 @@ abstract class MayaModule {
     @Singleton
     abstract fun bindMayaApi(mayaApi: MayaApiAggregator): MayaApi
 
-    @Binds
-    @Singleton
-    abstract fun bindMayaBlockchainApi(mayaApi: MayaBlockchainApiImpl): MayaBlockchainApi
+    // Note: MayaBlockchainApi is implemented and bound in the wallet module
+    // (de.schildbach.wallet.payments.MayaBlockchainApiImpl), which owns the dashj
+    // transaction machinery that swap-transaction construction requires.
 
     @Binds
     @Singleton

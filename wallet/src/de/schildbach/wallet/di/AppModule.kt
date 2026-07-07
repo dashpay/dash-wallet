@@ -57,6 +57,8 @@ import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
 import de.schildbach.wallet.payments.FakeDashSpendService
+import de.schildbach.wallet.payments.MayaBlockchainApiImpl
+import org.dash.wallet.integrations.maya.api.MayaBlockchainApi
 import javax.inject.Singleton
 
 @Module
@@ -164,4 +166,10 @@ abstract class AppModule {
     @Singleton
     @Binds
     abstract fun provideDashSystemService(dashSystemService: DashSystemServiceImpl): DashSystemService
+
+    // Bound here rather than in integrations/maya so that the swap-transaction construction
+    // (which requires dashj) stays inside the wallet module.
+    @Binds
+    @Singleton
+    abstract fun bindMayaBlockchainApi(mayaBlockchainApi: MayaBlockchainApiImpl): MayaBlockchainApi
 }

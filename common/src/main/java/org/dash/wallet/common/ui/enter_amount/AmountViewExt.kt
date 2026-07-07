@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Dash Core Group.
+ * Copyright 2026 Dash Core Group.
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,23 +15,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.dash.wallet.integrations.maya.ui.convert_currency.model
+package org.dash.wallet.common.ui.enter_amount
 
-import org.dash.wallet.common.money.Dash
+import org.bitcoinj.core.Coin
+import org.bitcoinj.utils.ExchangeRate
 import org.dash.wallet.common.money.FiatValue
-import org.dash.wallet.common.util.toDash
-import org.dash.wallet.common.util.toFiatValue
-import org.dash.wallet.integrations.maya.model.Amount
+import org.dash.wallet.common.money.toFiat
 
-data class SwapRequest(
-    val amount: Amount,
-    val maximum: Boolean,
-    val destinationAddress: String,
-    val cryptoCurrencyCode: String,
-    val cryptoCurrencyAsset: String,
-    val fiatCurrencyCode: String,
-    val dashToCrypto: Boolean = true
-) {
-    val dashAmount: Dash = amount.dash.toDash()
-    val cryptoAmount: FiatValue = amount.crypto.toFiatValue(cryptoCurrencyCode)
+/**
+ * Neutral counterpart of [AmountView.exchangeRate] for modules that must not depend on dashj:
+ * sets the view's conversion rate from the fiat [price] of one Dash (null clears the rate).
+ * Mirrors `exchangeRate = ExchangeRate(Coin.COIN, price)`.
+ */
+fun AmountView.setDashPrice(price: FiatValue?) {
+    exchangeRate = price?.let { ExchangeRate(Coin.COIN, it.toFiat()) }
 }

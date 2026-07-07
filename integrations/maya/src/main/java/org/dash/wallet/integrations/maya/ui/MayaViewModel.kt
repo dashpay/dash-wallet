@@ -23,9 +23,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import org.bitcoinj.utils.Fiat
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.MoneyFormat
+import org.dash.wallet.common.money.fiatValue
+import org.dash.wallet.common.money.moneyFormat
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -33,8 +35,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.isCurrencyFirst
-import org.dash.wallet.common.util.toBigDecimal
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.api.FiatExchangeRateProvider
 import org.dash.wallet.integrations.maya.api.MayaApi
 import org.dash.wallet.integrations.maya.model.InboundAddress
@@ -67,21 +68,20 @@ class MayaViewModel @Inject constructor(
         private val log: Logger = LoggerFactory.getLogger(MayaViewModel::class.java)
     }
 
-    private var fiatFormat: MonetaryFormat = MonetaryFormat()
+    private var fiatFormat: MoneyFormat = MoneyFormat()
         .minDecimals(GenericUtils.getCurrencyDigits())
         .withLocale(Locale.getDefault())
         .noCode()
 
     val networkError = SingleLiveEvent<Unit>()
 
-    // private var dashExchangeRate: org.bitcoinj.utils.ExchangeRate? = null
-    private var fiatExchangeRate: Fiat? = null
+    private var fiatExchangeRate: FiatValue? = null
 
     private val _uiState = MutableStateFlow(MayaPortalUIState())
     val uiState: StateFlow<MayaPortalUIState> = _uiState.asStateFlow()
 
-    val dashFormat: MonetaryFormat
-        get() = globalConfig.format.noCode()
+    val dashFormat: MoneyFormat
+        get() = globalConfig.moneyFormat.noCode()
 
     val poolList = MutableStateFlow<List<PoolInfo>>(listOf())
     private val _inboundAddresses = MutableStateFlow<List<InboundAddress>>(emptyList())
@@ -107,12 +107,12 @@ class MayaViewModel @Inject constructor(
             .filterNotNull()
             .onEach { fiatRate ->
                 fiatFormat = fiatFormat.minDecimals(GenericUtils.getCurrencyDigits(fiatRate.currencyCode))
-                fiatExchangeRate = fiatRate.fiat
+                fiatExchangeRate = fiatRate.fiatValue
                 log.info("exchange rate: {}", fiatRate)
             }
             .flatMapLatest { fiatRate ->
-                mayaApi.observePoolList(fiatRate.fiat).mapLatest { pools ->
-                    pools to fiatRate.fiat
+                mayaApi.observePoolList(fiatRate.fiatValue!!).mapLatest { pools ->
+                    pools to fiatRate.fiatValue!!
                 }
             }
             .onEach { (newPoolList, usdToFiat) ->
@@ -128,7 +128,7 @@ class MayaViewModel @Inject constructor(
         updateInboundAddresses()
     }
 
-    private fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: Fiat) {
+    private fun applyPoolPrices(pools: List<PoolInfo>, usdToFiat: FiatValue) {
         // Liquidity-weighted USD price of CACAO from all available USD-stable pools.
         // Sum of asset balances / sum of cacao balances naturally weights by depth.
         val stablePools = pools.filter {
@@ -160,7 +160,7 @@ class MayaViewModel @Inject constructor(
                 log.info("no USD price for {}", pool.asset)
                 return@forEach
             }
-            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiat(usdToFiat.currencyCode)
+            pool.assetPriceFiat = priceUsd.multiply(fiatPerUsd).toFiatValue(usdToFiat.currencyCode)
             log.info("$priceUsd, ${pool.assetPriceFiat} -> ${pool.asset}")
         }
     }
@@ -177,7 +177,7 @@ class MayaViewModel @Inject constructor(
             .divide(asset.multiply(sumStableCacao), 10, RoundingMode.HALF_UP)
     }
 
-    fun formatFiat(fiatAmount: Fiat): String {
+    fun formatFiat(fiatAmount: FiatValue): String {
         val localCurrencySymbol = GenericUtils.getLocalCurrencySymbol(fiatAmount.currencyCode)
 
         val fiatBalance = fiatFormat.format(fiatAmount).toString()

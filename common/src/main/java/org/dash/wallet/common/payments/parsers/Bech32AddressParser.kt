@@ -28,6 +28,10 @@ open class Bech32AddressParser(hrp: String, regex: String, params: NetworkParame
     }
     constructor(hrp: String, length: Int, params: NetworkParameters?) :
         this(hrp, "1[$BECH32_ALPHABET]{$length}", params)
+
+    // Neutral (dashj-free) constructors for pattern-only parsing in modules that must not depend on dashj.
+    constructor(hrp: String, regex: String) : this(hrp, regex, null)
+    constructor(hrp: String, length: Int) : this(hrp, length, null)
     constructor(length: Int, params: NetworkParameters) :
         this(params.segwitAddressHrp, "1[$BECH32_ALPHABET]{$length}", params)
     constructor(min: Int, max: Int, params: NetworkParameters) :

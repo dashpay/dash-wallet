@@ -20,10 +20,12 @@ package org.dash.wallet.common
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import org.bitcoinj.core.Sha256Hash
+import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.services.LeftoverBalanceException
+import org.dash.wallet.common.transactions.filters.LockedTransaction
 
 // ---------------------------------------------------------------------------------------------
 // Neutral (dashj-free) adapters over WalletDataProvider for feature/integration modules.
@@ -32,6 +34,24 @@ import org.dash.wallet.common.services.LeftoverBalanceException
 
 /** [WalletDataProvider.observeTotalBalance] as neutral [Dash] amounts. */
 fun WalletDataProvider.observeTotalDashBalance(): Flow<Dash> = observeTotalBalance().map { it.toDash() }
+
+/** [WalletDataProvider.observeBalance] (with its default estimated balance type) as neutral [Dash] amounts. */
+fun WalletDataProvider.observeDashBalance(): Flow<Dash> = observeBalance().map { it.toDash() }
+
+/** [WalletDataProvider.getWalletBalance] as a neutral [Dash] amount. */
+fun WalletDataProvider.getDashBalance(): Dash = getWalletBalance().toDash()
+
+/** Estimated wallet balance (mirrors `wallet.getBalance(BalanceType.ESTIMATED)`), or null when no wallet is loaded. */
+@Suppress("DEPRECATION")
+fun WalletDataProvider.getEstimatedDashBalance(): Dash? =
+    wallet?.getBalance(Wallet.BalanceType.ESTIMATED)?.toDash()
+
+/**
+ * Emits the hex tx id once the wallet transaction with hex id [txId] is IS-locked or confirmed
+ * (mirrors [WalletDataProvider.observeTransactions] with a [LockedTransaction] filter).
+ */
+fun WalletDataProvider.observeTransactionLocked(txId: String): Flow<String> =
+    observeTransactions(true, LockedTransaction(Sha256Hash.wrap(txId))).map { it.txId.toString() }
 
 /**
  * Net wallet value of the transaction with hex id [txId] (mirrors

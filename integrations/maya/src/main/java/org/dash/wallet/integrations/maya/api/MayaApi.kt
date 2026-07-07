@@ -30,8 +30,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.NotificationService
 import org.dash.wallet.common.services.TransactionMetadataProvider
@@ -54,7 +54,7 @@ interface MayaApi {
     suspend fun swap()
     suspend fun reset()
 
-    fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>>
+    fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>>
     suspend fun getInboundAddresses(): List<InboundAddress>
     suspend fun getDefaultSwapQuote(toAsset: String, value: Long = 1_0000_0000): SwapQuote?
 }
@@ -74,7 +74,6 @@ class MayaApiAggregator @Inject constructor(
         private val UPDATE_FREQ_MS = TimeUnit.SECONDS.toMillis(30)
     }
 
-    private val params = walletDataProvider.networkParameters
     private var tickerJob: Job? = null
     private val configScope = CoroutineScope(Dispatchers.IO)
     private val responseScope = CoroutineScope(
@@ -110,7 +109,7 @@ class MayaApiAggregator @Inject constructor(
             .launchIn(configScope)
     }
 
-    private suspend fun updatePoolList(fiatExchangeRate: Fiat) {
+    private suspend fun updatePoolList(fiatExchangeRate: FiatValue) {
         poolInfoList.value = webApi.getPoolInfo()
     }
 
@@ -163,7 +162,7 @@ class MayaApiAggregator @Inject constructor(
         }
     }
 
-    override fun observePoolList(fiatExchangeRate: Fiat): Flow<List<PoolInfo>> {
+    override fun observePoolList(fiatExchangeRate: FiatValue): Flow<List<PoolInfo>> {
         log.info("observePoolList(${fiatExchangeRate.toFriendlyString()})")
         if (shouldRefresh()) {
             refreshRates(fiatExchangeRate)
@@ -171,7 +170,7 @@ class MayaApiAggregator @Inject constructor(
         return poolInfoList
     }
 
-    private fun refreshRates(fiatExchangeRate: Fiat) {
+    private fun refreshRates(fiatExchangeRate: FiatValue) {
         log.info("refreshRates(${fiatExchangeRate.toFriendlyString()})")
         if (!shouldRefresh()) {
             return

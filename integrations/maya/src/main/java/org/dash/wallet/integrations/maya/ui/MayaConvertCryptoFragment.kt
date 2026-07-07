@@ -33,17 +33,16 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Address
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.fiatValue
+import org.dash.wallet.common.payments.parsers.opReturnMessage
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.dialogs.MinimumBalanceDialog
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.common.util.safeNavigate
-import org.dash.wallet.common.util.toBigDecimal
 import org.dash.wallet.common.util.toFormattedString
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentMayaConvertCryptoBinding
@@ -157,7 +156,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
                 val paymentIntent = try {
                     viewModel.getUpdatedPaymentIntent(
                         convertViewModel.enteredConvertDashAmount.value!!,
-                        Address.fromBase58(null, dashInbound.address)
+                        dashInbound.address
                     )
                 } catch (e: Exception) {
                     AdaptiveDialog.create(
@@ -230,7 +229,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         viewModel.paymentIntent = args.paymentIntent
 
         convertViewModel.selectedLocalExchangeRate.observe(viewLifecycleOwner) {
-            binding.convertView.exchangeRate = it?.let { ExchangeRate(Coin.COIN, it.fiat) }
+            binding.convertView.exchangeRate = it?.fiatValue
             setConvertViewInput()
         }
 
@@ -291,7 +290,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         lifecycleScope.launch {
             if (swapValueErrorType == SwapValueErrorType.NOError) {
                 if (!request.dashToCrypto && convertViewModel.dashToCrypto.value == true) {
-                    if (viewModel.getLastBalance() < (request.dashAmount ?: Coin.ZERO)) {
+                    if (viewModel.getLastBalance() < request.dashAmount) {
                         showNoAssetsError()
                     }
                 } else {
@@ -354,8 +353,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
         if (convertViewModel.dashToCrypto.value == true) {
             viewModel.dashWalletBalance.value?.let { dash ->
                 convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
-                    val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                    val fiatAmount = currencyRate.coinToFiat(dash).toFormattedString()
+                    val fiatAmount = rate.dashToFiat(dash).toFormattedString()
                     binding.limitDesc.text = "${getString(R.string.entered_amount_is_too_high)} $fiatAmount"
                 }
             }
@@ -372,8 +370,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
     private fun setMinAmountErrorMessage() {
         convertViewModel.selectedLocalExchangeRate.value?.let { rate ->
             selectedCoinBaseAccount?.currencyToDashExchangeRate?.let { currencyToDashExchangeRate ->
-                val currencyRate = ExchangeRate(Coin.COIN, rate.fiat)
-                val fiatAmount = Fiat.parseFiat(currencyRate.fiat.currencyCode, convertViewModel.minAllowedSwapAmount)
+                val fiatAmount = FiatValue.parseFiat(rate.currencyCode, convertViewModel.minAllowedSwapAmount)
                 binding.limitDesc.text = "${getString(
                     R.string.entered_amount_is_too_low
                 )} ${fiatAmount.toFormattedString()}"
@@ -412,8 +409,7 @@ class MayaConvertCryptoFragment : Fragment(R.layout.fragment_maya_convert_crypto
 
     private fun getArgAddress(): String {
         return args.paymentIntent.outputs?.first().let { output ->
-            val memoChunk = output?.script?.chunks?.get(1)!!
-            var memo = String(memoChunk.data!!)
+            var memo = output?.opReturnMessage!!
             val index = memo.indexOfLast { ch -> ch == ':' }
             memo = memo.substring(index + 1)
             memo

@@ -32,10 +32,10 @@ import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardView
+import org.dash.wallet.common.ui.enter_amount.setDashPrice
 import org.dash.wallet.common.ui.segmented_picker.PickerDisplayMode
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
@@ -43,7 +43,7 @@ import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
-import org.dash.wallet.common.util.toFiat
+import org.dash.wallet.common.util.toFiatValue
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.databinding.FragmentConvertCurrencyViewBinding
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
@@ -309,7 +309,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
                 value.append(number)
                 val formattedValue = GenericUtils.formatFiatWithoutComma(value.toString())
 
-                Coin.parseCoin(formattedValue)
+                Dash.parse(formattedValue)
             } catch (e: Exception) {
                 value.deleteCharAt(value.length - 1)
             }
@@ -380,7 +380,7 @@ class ConvertViewFragment : Fragment(R.layout.fragment_convert_currency_view) {
         } else {
             8
         }
-        binding.inputAmount.exchangeRate = ExchangeRate(Coin.COIN, rate.toFiat(currencyCodeForView.substring(0, 3)))
+        binding.inputAmount.setDashPrice(rate.toFiatValue(currencyCodeForView.substring(0, 3)))
         viewModel.enteredConvertAmount = amount
     }
 
