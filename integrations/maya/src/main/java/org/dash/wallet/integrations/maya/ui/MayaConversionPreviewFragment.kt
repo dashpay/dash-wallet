@@ -32,6 +32,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
+import org.dash.wallet.common.services.LockScreenBroadcaster
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.util.Constants
@@ -45,10 +46,12 @@ import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.model.TransactionType
 import org.dash.wallet.integrations.maya.swapkit.SwapKitConstants
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.dialogs.MayaResultDialog
 import java.math.BigDecimal
 import java.math.RoundingMode
+import javax.inject.Inject
 
 /**
  * Maya order-preview screen (Figma node 24021:11223). Hosts the Compose
@@ -69,6 +72,11 @@ class MayaConversionPreviewFragment : Fragment() {
 
     private val viewModel by viewModels<MayaConversionPreviewViewModel>()
     private val mayaViewModel by mayaViewModels<MayaViewModel>()
+    private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
+
+    @Inject
+    lateinit var lockScreenBroadcaster: LockScreenBroadcaster
+
     private lateinit var mayaCurrencyMapper: MayaCurrencyMapper
     private var isRefreshing = false
     private var transactionStateDialog: MayaResultDialog? = null
@@ -193,16 +201,32 @@ class MayaConversionPreviewFragment : Fragment() {
             } else {
                 viewModel.swapTradeUIModel.outputCurrencyName
             }
-            safeNavigate(
-                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(
-                    MayaTransactionParams(
-                        params,
-                        TransactionType.SellSwap,
-                        walletName,
-                        viewModel.swapTradeUIModel.routeName
-                    )
-                )
+            val transactionParams = MayaTransactionParams(
+                params,
+                TransactionType.SellSwap,
+                walletName,
+                viewModel.swapTradeUIModel.routeName
             )
+            // Remember the result until the user acknowledges it: the lock screen auto-dismisses
+            // the result sheet, and this lets us re-show it once the lock screen goes away.
+            convertViewModel.pendingConversionResult = transactionParams
+            safeNavigate(
+                MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(transactionParams)
+            )
+        }
+
+        // Re-show the result sheet after an unlock if it's still pending — the lock screen
+        // dismissed it (dialogs are torn down on lock), or the OS killed and restored the app
+        // while it was locked.
+        lockScreenBroadcaster.deactivatingLockScreen.observe(viewLifecycleOwner) {
+            val pending = convertViewModel.pendingConversionResult
+            if (pending != null &&
+                findNavController().currentDestination?.id == R.id.mayaConversionPreviewFragment
+            ) {
+                safeNavigate(
+                    MayaConversionPreviewFragmentDirections.mayaOrderPreviewToOrderExecution(pending)
+                )
+            }
         }
 
         observeNavigationCallBack()

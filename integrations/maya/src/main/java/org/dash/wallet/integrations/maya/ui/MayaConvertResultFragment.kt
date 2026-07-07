@@ -18,70 +18,67 @@
 package org.dash.wallet.integrations.maya.ui
 
 import android.content.ActivityNotFoundException
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.os.Bundle
-import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.addCallback
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.net.toUri
-import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
-import org.dash.wallet.common.ui.LockScreenAware
+import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integrations.maya.R
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.TransactionType
+import org.dash.wallet.integrations.maya.ui.convert_currency.ConvertViewViewModel
 
 /**
- * Maya transaction-result screen. Hosts the Compose [MayaConvertResultScreen] while keeping the
- * original behavior: translating transaction type + outcome into the displayed result, blocking
- * back navigation after success (to prevent re-submitting the transaction), the Maya support
- * link and the settlement-network explorer link.
+ * Maya transaction-result bottom sheet (Figma 34195:9065), expanded to full height. Hosts the
+ * Compose [MayaConvertResultScreen] and keeps the original behavior: translating transaction
+ * type + outcome into the displayed result, the Maya support link and the settlement-network
+ * explorer link. Dismissal is blocked after success (the swap is already sent) — the Close
+ * button is the only way out; error states can be dismissed with back/swipe, which pops back
+ * like the old screen.
+ *
+ * The wallet lock screen auto-dismisses all dialogs; the preview screen re-shows this sheet
+ * from [ConvertViewViewModel.pendingConversionResult] once the lock screen goes away, and the
+ * pending record is cleared here when the user acknowledges the result.
  */
 @AndroidEntryPoint
-class MayaConvertResultFragment : Fragment(), LockScreenAware {
+class MayaConvertResultFragment : ComposeBottomSheet() {
+
+    override val forceExpand: Boolean = true
 
     private val viewModel by viewModels<MayaConvertResultViewModel>()
-    private var onBackPressedCallback: OnBackPressedCallback? = null
+    private val convertViewModel by mayaViewModels<ConvertViewViewModel>()
     private var currentType: MayaResultType? = null
     private var explorerUrl: String? = null
 
     private var uiState by mutableStateOf(MayaConvertResultUIState())
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        return ComposeView(requireContext()).apply {
-            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
-            setContent {
-                MayaConvertResultScreen(
-                    state = uiState,
-                    onButtonClick = ::handlePositiveButtonClick,
-                    onContactSupportClick = ::openMayaHelp,
-                    onExplorerLinkClick = {
-                        explorerUrl?.let { requireActivity().openCustomTab(it) }
-                    }
-                )
+    @Composable
+    override fun Content() {
+        MayaConvertResultScreen(
+            state = uiState,
+            onButtonClick = ::handlePositiveButtonClick,
+            onContactSupportClick = ::openMayaHelp,
+            onExplorerLinkClick = {
+                explorerUrl?.let { requireActivity().openCustomTab(it) }
             }
-        }
+        )
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        handleBackPress()
+        // Not dismissable while the result is being determined; per-state below.
+        isCancelable = false
 
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
 
@@ -106,17 +103,31 @@ class MayaConvertResultFragment : Fragment(), LockScreenAware {
             }
             MayaResultType.CONVERSION_ERROR -> {
                 viewModel.logRetry(type)
+                convertViewModel.pendingConversionResult = null
                 findNavController().popBackStack()
             }
             MayaResultType.CONVERSION_SUCCESS,
             MayaResultType.DEPOSIT_SUCCESS,
             MayaResultType.TRANSFER_DASH_SUCCESS -> {
                 viewModel.logClose(type)
+                // The flow is finished: drop everything it persisted (entered amount, pending
+                // result) so nothing is restored on a later visit. The fragment-scoped saved
+                // state (entered address, order/quote time) dies with the screens popped below.
+                convertViewModel.clearSavedState()
                 val navController = findNavController()
                 navController.popBackStack(navController.graph.startDestinationId, false)
             }
             else -> {}
         }
+    }
+
+    override fun onCancel(dialog: DialogInterface) {
+        super.onCancel(dialog)
+        // The user dismissed an error state via back/swipe: the result was acknowledged, so it
+        // must not be re-shown after an unlock. (The lock screen tears the sheet down with
+        // dismissAllowingStateLoss, which doesn't come through here — the pending record
+        // survives that on purpose.)
+        convertViewModel.pendingConversionResult = null
     }
 
     private fun openMayaHelp() {
@@ -145,6 +156,11 @@ class MayaConvertResultFragment : Fragment(), LockScreenAware {
         )
         currentType = spec.resultType
 
+        // A successful swap is already sent — the sheet must not be swiped/backed away, only
+        // closed via the button (which pops home). Errors can be dismissed, popping back to the
+        // preview like the old screen's back handling.
+        isCancelable = !spec.isSuccess
+
         // Explorer link so the user can follow a successful swap on the settlement network.
         val explorer = if (spec.resultType == MayaResultType.CONVERSION_SUCCESS) {
             MayaConvertResultStateMapper.explorerFor(
@@ -170,27 +186,5 @@ class MayaConvertResultFragment : Fragment(), LockScreenAware {
             explorerDescription = explorer?.let { getString(it.descriptionRes) },
             explorerLinkText = explorer?.let { getString(it.linkTextRes) }
         )
-    }
-
-    private fun handleBackPress() {
-        // Block back navigation to prevent re-submitting the transaction
-        onBackPressedCallback = requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner) {
-            // Intentionally consume back press without navigating for success states
-            if (currentType != MayaResultType.TRANSFER_DASH_SUCCESS &&
-                currentType != MayaResultType.CONVERSION_SUCCESS &&
-                currentType != MayaResultType.DEPOSIT_SUCCESS
-            ) {
-                findNavController().popBackStack()
-            }
-        }
-    }
-
-    override fun onLockScreenActivated() {
-        findNavController().popBackStack(R.id.mayaPortalFragment, false)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        onBackPressedCallback?.remove()
     }
 }

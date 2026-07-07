@@ -45,6 +45,7 @@ import org.dash.wallet.integrations.maya.api.SwapProvider
 import org.dash.wallet.integrations.maya.model.AccountDataUIModel
 import org.dash.wallet.integrations.maya.model.Amount
 import org.dash.wallet.integrations.maya.model.CurrencyInputType
+import org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapRequest
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SwapValueErrorType
 import org.dash.wallet.integrations.maya.utils.MayaConstants
@@ -69,6 +70,29 @@ class ConvertViewViewModel @Inject constructor(
     companion object {
         private val log = LoggerFactory.getLogger(ConvertViewViewModel::class.java)
         private const val KEY_AMOUNT = "amount"
+        private const val KEY_PENDING_RESULT = "pending_conversion_result"
+    }
+
+    /**
+     * The parameters of a conversion-result sheet the user hasn't acknowledged yet. The lock
+     * screen auto-dismisses all dialogs, so the sheet is re-shown from these when the lock screen
+     * goes away; persisted via [savedStateHandle] (this ViewModel is nav-graph scoped) so it also
+     * survives the OS killing the process. Cleared when the user acts on the result.
+     */
+    var pendingConversionResult: MayaTransactionParams?
+        get() = savedStateHandle[KEY_PENDING_RESULT]
+        set(value) {
+            savedStateHandle[KEY_PENDING_RESULT] = value
+        }
+
+    /**
+     * Drops everything this flow persisted in [savedStateHandle] (entered amount, pending
+     * result). Called when the user closes a successful conversion — the flow is finished, so
+     * nothing should be restored if its screens are ever recreated.
+     */
+    fun clearSavedState() {
+        savedStateHandle.remove<Amount>(KEY_AMOUNT)
+        savedStateHandle.remove<MayaTransactionParams>(KEY_PENDING_RESULT)
     }
     var destinationCurrency: String? = null
     var destinationAddress: String? = null

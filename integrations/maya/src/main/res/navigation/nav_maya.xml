@@ -180,7 +180,7 @@
             app:argType="org.dash.wallet.common.data.PaymentIntent" />
     </fragment>
 
-    <fragment
+    <dialog
         android:id="@+id/mayaConvertResultFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertResultFragment"
         android:label="MayaConvertResultFragment">
@@ -189,5 +189,5 @@
             app:argType="org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams"
             />
 
-    </fragment>
+    </dialog>
 </navigation>
