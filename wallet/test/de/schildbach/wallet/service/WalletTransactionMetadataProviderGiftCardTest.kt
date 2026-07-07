@@ -257,9 +257,9 @@ class WalletTransactionMetadataProviderGiftCardTest {
                 merchantName = "Acme",
                 originalPrice = 25.0,
                 merchantUrl = "https://kept",
-                order = "1234",
-                index = 0,
+                order = "order-9",
                 giftCardChallenge = null,
+                index = 0,
                 cacheTimestamp = any()
             )
         }

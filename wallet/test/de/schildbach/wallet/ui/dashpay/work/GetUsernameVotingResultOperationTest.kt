@@ -29,8 +29,8 @@ import java.util.concurrent.TimeUnit
 class GetUsernameVotingResultOperationTest {
 
     companion object {
-        // Mock voting period for testing (using testnet value of 90 minutes)
-        private val BUFFER_MINUTES = TimeUnit.MINUTES.toMillis(2)
+        // must match GetUsernameVotingResultOperation.DELAY_AFTER_VOTING_PERIOD
+        private val BUFFER_MINUTES = TimeUnit.MINUTES.toMillis(1)
     }
 
     @Test
@@ -58,9 +58,9 @@ class GetUsernameVotingResultOperationTest {
         // When: Calculate delay using the calculateDelay function
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
-        // Then: Delay should be 60 minutes + 2 minutes buffer = 62 minutes
-        // Since: 90min + (currentTime - 30min) + 2min - currentTime = 90min - 30min + 2min = 62min
-        val expectedDelay = TimeUnit.MINUTES.toMillis(62)
+        // Then: Delay should be 60 minutes + 1 minute buffer = 61 minutes
+        // Since: 90min + (currentTime - 30min) + 1min - currentTime = 90min - 30min + 1min = 61min
+        val expectedDelay = TimeUnit.MINUTES.toMillis(61)
         assertEquals("Delay should account for time already elapsed in voting period", 
             expectedDelay, delay)
     }
@@ -74,9 +74,9 @@ class GetUsernameVotingResultOperationTest {
         // When: Calculate delay using the calculateDelay function
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
-        // Then: Delay should be approximately 7 minutes
-        // Since: 90min + (currentTime - 85min) + 2min - currentTime = 90min - 85min + 2min = 7min
-        val expectedDelay = TimeUnit.MINUTES.toMillis(7)
+        // Then: Delay should be approximately 6 minutes
+        // Since: 90min + (currentTime - 85min) + 1min - currentTime = 90min - 85min + 1min = 6min
+        val expectedDelay = TimeUnit.MINUTES.toMillis(6)
         assertEquals("Delay should be small when voting is near end", 
             expectedDelay, delay)
     }
@@ -91,8 +91,8 @@ class GetUsernameVotingResultOperationTest {
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
         // Then: Delay should be negative (work should run immediately)
-        // Since: 90min + (currentTime - 100min) + 2min - currentTime = 90min - 100min + 2min = -8min
-        val expectedDelay = -TimeUnit.MINUTES.toMillis(8)
+        // Since: 90min + (currentTime - 100min) + 1min - currentTime = 90min - 100min + 1min = -9min
+        val expectedDelay = -TimeUnit.MINUTES.toMillis(9)
         assertEquals("Delay should be negative when voting ended", 
             expectedDelay, delay)
     }
@@ -107,8 +107,8 @@ class GetUsernameVotingResultOperationTest {
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
         // Then: Delay should be the time until voting ends plus buffer
-        // Since: 90min + (currentTime + 60min) + 2min - currentTime = 90min + 60min + 2min = 152min
-        val expectedDelay = TimeUnit.MINUTES.toMillis(152)
+        // Since: 90min + (currentTime + 60min) + 1min - currentTime = 90min + 60min + 1min = 151min
+        val expectedDelay = TimeUnit.MINUTES.toMillis(151)
         assertEquals("Delay should account for future voting start time", 
             expectedDelay, delay)
     }
@@ -123,7 +123,7 @@ class GetUsernameVotingResultOperationTest {
         
         // Then: Verify the calculation uses actual VOTING_PERIOD_MILLIS and current time
         // Formula: UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + 2min - System.currentTimeMillis()
-        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + TimeUnit.MINUTES.toMillis(2) - currentTime
+        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS + votingStartedAt + BUFFER_MINUTES - currentTime
         assertEquals("Delay calculation should follow the exact calculateDelay formula", expectedDelay, delay)
     }
 
@@ -171,8 +171,8 @@ class GetUsernameVotingResultOperationTest {
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
 
         // Then: Should calculate correctly with actual voting period
-        // Since: UsernameRequest.VOTING_PERIOD_MILLIS + (currentTime - 10min) + 2min - currentTime = VOTING_PERIOD - 10min + 2min
-        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS - TimeUnit.MINUTES.toMillis(8)
+        // Since: UsernameRequest.VOTING_PERIOD_MILLIS + (currentTime - 10min) + 1min - currentTime = VOTING_PERIOD - 10min + 1min
+        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS - TimeUnit.MINUTES.toMillis(9)
         assertEquals("Zero voting period should be handled correctly", expectedDelay, delay)
     }
 
@@ -186,10 +186,10 @@ class GetUsernameVotingResultOperationTest {
         val delay = GetUsernameVotingResultOperation.calculateDelay(votingStartedAt, currentTime)
         
         // Then: Delay should be negative, indicating immediate execution
-        // Since: UsernameRequest.VOTING_PERIOD_MILLIS + (currentTime - 120min) + 2min - currentTime = VOTING_PERIOD - 120min + 2min
+        // Since: UsernameRequest.VOTING_PERIOD_MILLIS + (currentTime - 120min) + 1min - currentTime = VOTING_PERIOD - 120min + 1min
         assertTrue("Delay should be negative for overdue voting results", delay < 0)
         
-        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS - TimeUnit.MINUTES.toMillis(118)
+        val expectedDelay = UsernameRequest.VOTING_PERIOD_MILLIS - TimeUnit.MINUTES.toMillis(119)
         assertEquals("Delay should be correct negative value for overdue case", 
             expectedDelay, delay)
         

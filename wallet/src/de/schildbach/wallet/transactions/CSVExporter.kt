@@ -47,6 +47,7 @@ abstract class CSVExporter(
     }
 
     override suspend fun exportString(): String {
+        ensureMetadataMap()
         val history = StringBuilder()
 
         history.append(getHeader()).append(NEW_LINE)
