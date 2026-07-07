@@ -160,8 +160,7 @@
     <fragment
         android:id="@+id/mayaConversionPreviewFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConversionPreviewFragment"
-        android:label="MayaConversionPreviewFragment"
-        tools:layout="@layout/fragment_maya_conversion_preview">
+        android:label="MayaConversionPreviewFragment">
 
         <action
             android:id="@+id/mayaOrderReviewToFeeInfo"

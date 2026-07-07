@@ -344,6 +344,8 @@
 
     <!-- DashDEX sell: order preview quote expiry countdown & network explorer link -->
     <string name="button_refresh">Refresh</string>
+    <!-- Confirm button label with the quote-expiry countdown, e.g. "Confirm (10s)" -->
+    <string name="maya_confirm_countdown">Confirm (%1$ds)</string>
     <string name="maya_quote_expires_in">Quote expires in %1$s sec</string>
     <string name="maya_quote_expired">Quote expired</string>
     <string name="maya_explorer_description_maya">Explore the MayaChain network with its interactive charts, detailed tracking, and comprehensive data, ensuring you stay informed about all aspects of MayaChain.</string>

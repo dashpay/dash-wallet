@@ -52,14 +52,44 @@ class MayaConversionPreviewViewModel @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
     networkState: NetworkStateInt,
-    private val transactionMetadataProvider: TransactionMetadataProvider
+    private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(MayaConversionPreviewViewModel::class.java)
         private const val IS_LOCK_TIMEOUT_MS = 10_000L
+        private const val KEY_ORDER = "swap_trade_order"
+        private const val KEY_QUOTE_CREATED_AT = "quote_created_at"
     }
 
-    lateinit var swapTradeUIModel: SwapTradeUIModel
+    /**
+     * The quote/order currently shown. Backed by [savedStateHandle] so a refreshed quote (which
+     * replaced the original nav argument) survives the OS killing the process; the fragment
+     * restores it via [savedSwapTradeUIModel] before falling back to the nav argument.
+     */
+    var swapTradeUIModel: SwapTradeUIModel
+        get() = requireNotNull(savedStateHandle.get<SwapTradeUIModel>(KEY_ORDER)) {
+            "swapTradeUIModel accessed before it was set"
+        }
+        set(value) {
+            savedStateHandle[KEY_ORDER] = value
+        }
+
+    /** Restore-time accessor: the persisted order, or null on a fresh first launch. */
+    val savedSwapTradeUIModel: SwapTradeUIModel?
+        get() = savedStateHandle[KEY_ORDER]
+
+    /**
+     * Wall-clock time (ms) the current quote was fetched; null until the countdown first starts.
+     * Persisted so that after process death the screen resumes the remaining validity window —
+     * or goes straight to the expired/Refresh state instead of restarting a full countdown.
+     */
+    var quoteCreatedAt: Long?
+        get() = savedStateHandle[KEY_QUOTE_CREATED_AT]
+        set(value) {
+            savedStateHandle[KEY_QUOTE_CREATED_AT] = value
+        }
+
     private val _showLoading: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val showLoading: StateFlow<Boolean>
         get() = _showLoading.asStateFlow()
@@ -77,8 +107,6 @@ class MayaConversionPreviewViewModel @Inject constructor(
     val swapTradeFailureState = SingleLiveEvent<String?>()
 
     val onInsufficientMoneyCallback = SingleLiveEvent<Unit>()
-
-    var isFirstTime = true
 
     fun commitSwapTrade(tradeId: String) = viewModelScope.launch {
         analyticsService.logEvent(AnalyticsConstants.Coinbase.CONVERT_QUOTE_CONFIRM, mapOf())
