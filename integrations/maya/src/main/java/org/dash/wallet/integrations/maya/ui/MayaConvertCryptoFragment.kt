@@ -199,10 +199,23 @@ class MayaConvertCryptoFragment : Fragment() {
 
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) { swapTrade ->
             lifecycleScope.launch {
+                // The quote succeeded: the ViewModel just dropped showLoading, but this handler
+                // still refreshes inbound addresses and builds the payment intent before
+                // navigating. Keep Get quote disabled for that whole stretch (it happens in the
+                // same frame as the showLoading=false observer, so the button never flashes
+                // enabled); re-enable only on the error paths that keep the user on this screen.
+                uiState = uiState.copy(isProcessing = true)
+                updateContinueEnabled()
+                fun failToRetry() {
+                    uiState = uiState.copy(isProcessing = false)
+                    updateContinueEnabled()
+                }
+
                 val dashInbound = try {
                     mayaViewModel.refreshInboundAddresses()
                     mayaViewModel.isTradingActive()
                 } catch (e: Exception) {
+                    failToRetry()
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(R.string.error),
@@ -213,6 +226,7 @@ class MayaConvertCryptoFragment : Fragment() {
                 }
 
                 if (!dashInbound) {
+                    failToRetry()
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(R.string.error),
@@ -228,6 +242,7 @@ class MayaConvertCryptoFragment : Fragment() {
                         Address.fromBase58(viewModel.networkParameters, swapTrade.vaultAddress)
                     )
                 } catch (e: Exception) {
+                    failToRetry()
                     AdaptiveDialog.create(
                         R.drawable.ic_error,
                         getString(R.string.error),
@@ -235,7 +250,10 @@ class MayaConvertCryptoFragment : Fragment() {
                         getString(R.string.button_close)
                     ).show(requireActivity())
                     return@launch
-                } ?: return@launch
+                } ?: run {
+                    failToRetry()
+                    return@launch
+                }
 
                 safeNavigate(
                     MayaConvertCryptoFragmentDirections

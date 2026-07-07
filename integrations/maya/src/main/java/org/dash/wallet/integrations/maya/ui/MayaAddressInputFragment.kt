@@ -151,6 +151,9 @@ class MayaAddressInputFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        // Clears the isLoading kept through a successful navigation (see onContinue) when the
+        // user comes back to this screen.
+        uiState = uiState.copy(isLoading = false)
         mayaAddressInputViewModel.refreshAddressSources()
         refreshClipboardRow()
     }
@@ -214,9 +217,11 @@ class MayaAddressInputFragment : Fragment() {
 
             uiState = uiState.copy(errorMessage = null, isLoading = true)
             val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
-            uiState = uiState.copy(isLoading = false)
 
             if (quote != null && quote.error == null) {
+                // Keep isLoading (Continue disabled) through the navigation so the button doesn't
+                // flash enabled before the next screen appears; onResume resets it when the user
+                // comes back, since this fragment instance survives on the back stack.
                 safeNavigate(
                     MayaAddressInputFragmentDirections.mayaAddressInputToEnterAmount(
                         viewModel.currency,
@@ -232,6 +237,7 @@ class MayaAddressInputFragment : Fragment() {
                 // The message is resolved by the active backend's aggregator (Maya or SwapKit), so
                 // this screen doesn't need to know which error vocabulary produced it.
                 uiState = uiState.copy(
+                    isLoading = false,
                     errorMessage = getString(
                         mayaAddressInputViewModel.errorMessageRes(quote?.error),
                         viewModel.currency
