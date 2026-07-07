@@ -77,6 +77,13 @@ abstract class TransactionExporter(
         }
     }
 
+    /** exportString() implementations call this so exporting works without a prior initMetadataMap() call */
+    protected suspend fun ensureMetadataMap() {
+        if (!::metadataMap.isInitialized) {
+            initMetadataMap()
+        }
+    }
+
     protected val sortedTransactions by lazy {
         wallet.getTransactions(false).sortedBy {
             val confidence = it.getConfidence(wallet.context)
