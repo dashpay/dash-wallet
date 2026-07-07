@@ -44,11 +44,8 @@ import com.google.android.material.appbar.AppBarLayout.Behavior.DragCallback
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.data.ServiceType
-import de.schildbach.wallet.service.CoinJoinMode
-import de.schildbach.wallet.service.MixingStatus
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.compose_views.ComposeBottomSheet
 import de.schildbach.wallet.ui.dashpay.ContactsScreenMode
 import de.schildbach.wallet.ui.dashpay.NotificationsFragment
@@ -179,24 +176,6 @@ class WalletFragment : Fragment(R.layout.home_content) {
                 }
             }
         }
-        binding.composeMixingStatusPane.setViewCompositionStrategy(
-            ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
-        )
-        binding.composeMixingStatusPane.setContent {
-            MixingStatusCard(
-                viewModel.coinJoinMode,
-                viewModel.mixingState,
-                viewModel.mixingProgress,
-                viewModel.mixedBalance.asFlow(),
-                viewModel.totalBalance.asFlow(),
-                viewModel.hideBalance
-            ) {
-                startActivity(Intent(requireContext(), CoinJoinActivity::class.java).apply {
-                    putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, false)
-                })
-            }
-        }
-
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.transactionsLoaded.collect { if (it) refreshShortcutBar() }
         }

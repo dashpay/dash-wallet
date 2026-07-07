@@ -57,7 +57,7 @@ class InvitationFeeDialogFragment : OffsetDialogFragment(R.layout.dialog_invitat
                 }
             }
         }
-        viewModel.walletData.observeSpendableBalance().observe(viewLifecycleOwner) { walletBalance ->
+        viewModel.walletData.observeTotalBalance().observe(viewLifecycleOwner) { walletBalance ->
             spendableBalance = walletBalance
             binding.contestedName.isEnabled = walletBalance >= Constants.DASH_PAY_FEE_CONTESTED
             updateContinueButton()

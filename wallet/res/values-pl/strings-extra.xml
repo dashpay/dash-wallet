@@ -466,8 +466,6 @@
     <string name="masternode_key_not_used">Nie użyte</string>
     <string name="masternode_key_revoked">Unieważniony</string>
     <string name="masternode_key_private_public_base64">Prywatne / Publiczne Klucze (base64)</string>
-    <string name="timeskew_ahead">przed</string>
-    <string name="timeskew_behind">za</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Nie pobrano cen. Kursy papierowego pieniądza mogą być nieprawidłowe.</string>

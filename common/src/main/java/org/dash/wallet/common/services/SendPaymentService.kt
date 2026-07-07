@@ -56,7 +56,6 @@ interface SendPaymentService {
     )
 
     suspend fun payWithDashUrl(dashUri: String, serviceName: String?): Transaction
-    fun isFeeTooHigh(tx: Transaction): Boolean
 
     /** support manual tx creation */
     suspend fun completeTransaction(sendRequest: SendRequest)

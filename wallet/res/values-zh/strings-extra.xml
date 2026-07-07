@@ -457,8 +457,6 @@
     <string name="masternode_key_not_used">未使用</string>
     <string name="masternode_key_revoked">已撤销</string>
     <string name="masternode_key_private_public_base64">私钥 / 公钥 (base64)</string>
-    <string name="timeskew_ahead">前面</string>
-    <string name="timeskew_behind">后面</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">价格未被检索到. 法币价值或许错误.</string>

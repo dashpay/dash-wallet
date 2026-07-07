@@ -13,7 +13,6 @@
     <string name="blockchain_state_progress_stalled">Sincronización interrumpida</string>
     <string name="blockchain_state_progress_problem_storage">Sincronización: Problema de almacenamiento</string>
     <string name="blockchain_state_progress_problem_network">Sincronización: Problema de red</string>
-    <string name="mixing_state_progress_mixing">Mezclando monedas (%1$s%%)</string>
     <string name="wallet_address_fragment_clipboard_msg">Dirección de Dash copiada al portapapeles</string>
     <string name="wallet_address_dialog_fragment_hint">Para proteger tu privacidad, tu dirección cambiará una vez reciba un pago.</string>
     <string name="wallet_balance_fragment_too_much">Esta cantidad es muy grande para llevar en tu bolsillo, por favor, muévela a un lugar más seguro.</string>
@@ -43,8 +42,6 @@
     <string name="wallet_low_storage_dialog_button_apps">Gestionar aplicaciones</string>
     <string name="wallet_timeskew_dialog_title">Verifica la fecha&amp; y configuración de hora.s</string>
     <string name="wallet_timeskew_dialog_msg">Tu dispositivo se ha desconectado por %d minutos. Probablemente no podrás enviar o recibir Dash por este problema.\\n\\nDeberás revisar si es necesario corregir la configuración de fecha, hora o zona horaria.</string>
-    <string name="wallet_coinjoin_timeskew_dialog_msg">La hora de tu dispositivo es %s por %d segundos. No puedes usar CoinJoin debido a esta diferencia .\n\nLa configuración de hora en tu dispositivo debe cambiarse a “Establecer hora automáticamente” para usar CoinJoin.</string>
-    <string name="settings_coinjoin_timeskew_dialog_msg">La hora de tu dispositivo tiene un desfase de más de 5 segundos. No puedes usar CoinJoin debido a esta diferencia.\n\nLa configuración de hora de tu dispositivo debe cambiarse a “Establecer hora automáticamente” antes de usar CoinJoin.</string>
     <string name="send_coins_activity_title">Enviar Dash</string>
     <string name="send_coins_fragment_request_payment_request_progress">Adquiriendo firma de %s…</string>
     <string name="send_coins_fragment_request_payment_request_failed_title">Ha fallado la adquisición de firma</string>

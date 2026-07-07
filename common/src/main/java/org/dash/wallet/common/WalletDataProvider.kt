@@ -48,7 +48,6 @@ interface WalletDataProvider {
     fun currentReceiveAddress(): Address
 
     fun getWalletBalance(): Coin
-    fun getMixedBalance(): Coin
 
     fun observeWalletChanged(): Flow<Unit>
 
@@ -58,8 +57,6 @@ interface WalletDataProvider {
         balanceType: Wallet.BalanceType = Wallet.BalanceType.ESTIMATED,
         coinSelector: CoinSelector? = null
     ): Flow<Coin>
-
-    fun observeSpendableBalance(): Flow<Coin>
 
     fun canAffordIdentityCreation(): Boolean
 
@@ -84,7 +81,6 @@ interface WalletDataProvider {
     fun checkSendingConditions(address: Address?, amount: Coin)
 
     fun observeMostRecentTransaction(): Flow<Transaction>
-    fun observeMixedBalance(): Flow<Coin>
     fun observeTotalBalance(): Flow<Coin>
     fun lockOutput(outPoint: TransactionOutPoint): Boolean
 }

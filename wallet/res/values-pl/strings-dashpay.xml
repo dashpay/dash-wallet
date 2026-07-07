@@ -257,7 +257,6 @@
     <string name="please_note_cant_change_this_later">Pamiętaj, że nie będzie można tego później zmienić później</string>
     <string name="Intermediate_level_WIFI_Warning">Średni poziom prywatności wymaga niezawodnego połączenia internetowego</string>
     <string name="Advanced_level_WIFI_Warning">Zaawansowany poziom prywatności wymaga niezawodnego połączenia internetowego</string>
-    <string name="privcay_level_WIFI_warning_desc">Zalecane jest korzystanie z sieci Wi-Fi, aby uniknąć dodatkowych opłat za mieszanie.</string>
     <string name="continue_anyway">Kontynuuj mimo wszystko</string>
     <string name="welcome_to_dash_pay">Witaj w Dash Pay</string>
     <string name="pay_to_usernames">Prześlij fundusze za pomocą nazw użytkowników. Koniec z adresami alfanumerycznymi.</string>
@@ -403,34 +402,13 @@
     <string name="request_username_min_balance_disclaimer">Aby poprosić o nazwę użytkownika w sieci Dash, musisz mieć więcej niż %s Dash</string>
 
     <!-- CoinJoin -->
-    <string name="coinjoin">CoinJoin</string>
     <string name="turned_off">Wyłączony</string>
-    <string name="coinjoin_info_subtitle">Mieszanie monet Dash sprawi, że Twoje transakcje będą bardziej prywatne</string>
-    <string name="coinjoin_description_1">Gdy ta opcja jest włączona, będziesz mógł wydać wymieszane monety Dash. Możesz ją wyłączyć w dowolnym momencie.</string>
-    <string name="coinjoin_description_2">Nowo otrzymane monety Dash zostaną automatycznie wymieszane po otwarciu portfela.</string>
-    <string name="coinjoin_description_3">Włączenie tej funkcji spowoduje większe zużycie baterii.</string>
-    <string name="coinjoin_mixing_level_title">Wybierz poziom mieszania</string>
-    <string name="coinjoin_mixing_level_subtitle">Możesz zmienić lub zatrzymać poziom miksowania w dowolnym momencie</string>
     <string name="coinjoin_mixing_transactions">Miksowanie transakcji</string>
     <string name="coinjoin_transaction_group">Te transakcje są stworzone przez miksowanie</string>
     <string name="intermediate">Średni</string>
     <string name="advanced">Zaawansowany</string>
     <string name="intermediate_level_card_decs">Zaawansowani użytkownicy, którzy posiadają bardzo wysoki poziom wiedzy technicznej, mogą być w stanie odkryć historię twoich transakcji.</string>
     <string name="advanced_level_card_decs">Nawet użytkownicy o bardzo zaawansowanej wiedzy technicznej nie będą w stanie ustalić definitywnie historii transakcji.</string>
-    <string name="coinjoin_intermediate_time">do 30 minut</string>
-    <string name="coinjoin_advanced_time">Wiele godzin</string>
-    <string name="coinjoin_start">Zacznij Mieszanie</string>
-    <string name="coinjoin_stop">Zatrzymaj Miksowanie</string>
-    <string name="coinjoin_mixing">Miksowanie</string>
-    <string name="coinjoin_mixing_finishing">Kończę</string>
-    <string name="coinjoin_paused">Wstrzymano</string>
-    <string name="coinjoin_not_started">Nie rozpoczęto</string>
-    <string name="coinjoin_progress_balance">%1$s z %2$s</string>
-    <string name="coinjoin_progress_finished">Całkowicie wymieszane</string>
-    <string name="coinjoin_change_level_confirmation">Czy na pewno chcesz zmienić poziom prywatności\?</string>
-    <string name="coinjoin_stop_mixing_title">Czy na pewno chcesz zakończyć mieszanie\?</string>
-    <string name="coinjoin_stop_mixing_message">Wszystkie środki, które zostały zmieszane, zostaną połączone z Twoimi środkami, które nie zostały zmieszane</string>
-    <string name="coinjoin_mixed_balance">Saldo zmiksowanych funduszy</string>
 
     <!-- credit balance messages / buttons -->
     <string name="credit_balance_empty_warning_title">Twoje saldo kredytowe jest niskie</string>
@@ -459,9 +437,6 @@
     <string name="request_username_lost_vote">Żądana nazwa użytkownika została przyznana komuś innemu</string>
     <string name="request_username_blocked_message">Nazwa użytkownika %s została zablokowana przez sieć Dash. Spróbuj zażądać inną nazwę użytkownika.</string>
     <string name="request_username_lost_vote_message">Po głosowaniu sieć Dash postanowiła przypisać nazwę użytkownika %s komuś innemu. Spróbuj ponownie, prosząc o inną nazwę użytkownika.</string>
-    <string name="mix_dash_mix">Saldo wymieszanych funduszy</string>
-    <string name="mix_dash_title">Miksuj swoje fundusze Dash</string>
-    <string name="mix_dash_message">Aby uniemożliwić innym osobom śledzenie komu wysyłasz płatności, zaleca się mieszanie salda przed utworzeniem nazwy użytkownika.</string>
     <string name="tools_credits_title">Kredyty</string>
     <string name="tools_credits_buy_button">Kup</string>
     <string name="dashpay_what_are_credits_title">Czym są kredyty\?</string>
@@ -530,7 +505,6 @@
     <string name="invitation_creating_progress_wip">Tworzenie zaproszenia</string>
     <string name="invitation_fee_confirm_and_pay_button">Potwiedź i zapłać</string>
     <string name="error_sending_invite_transaction">Błąd w wysyłaniu transakcji zaproszenia</string>
-    <string name="request_username_invitation_not_mixed_message">Zaproszenie zostało stworzone z niewymieszanych środków</string>
     <string name="request_username_invitation_only_noncontested_message">Za pomocą tego zaproszenia możesz tylko utworzyć bezsporną nazwę użytkownika</string>
     <string name="username_types_title">Czym są sporne i bezsporne nazwy użytkownika\?</string>
     <string name="username_types_message">Istnieją dwa rodzaje nazw użytkowników: sporne i bezsporne.\n\nNazwy użytkowników bezsporne mają co najmniej jedną cyfrę (2-9) lub są dłuższe niż 20 znaków i zostaną automatycznie zatwierdzone.\n\nJeśli chcesz utworzyć sporną nazwę użytkownika, która jest krótsza i bez cyfr, musisz zarejestrować się w DashPay bez zaproszenia, zapłacić wymaganą opłatę i poczekać na zatwierdzenie po zakończeniu okresu głosowania.</string>

@@ -87,7 +87,6 @@
     <string name="select_currency">Währung auswählen</string>
     <string name="send_coins_error_dusty_send">Der Betrag ist zu klein zum Senden</string>
     <string name="send_coins_error_insufficient_money">Guthaben nicht ausreichend</string>
-    <string name="send_coins_error_insufficient_mixed_money">Gemixtes Guthaben nicht ausreichend. Warte bis das CoinJoin-Mixen abgeschlossen ist oder deaktiviere dieses Feature in den Einstellungen, um die Transaktion abzuschließen.</string>
     <string name="syncing">Synchronisiere</string>
     <string name="no_connection">Keine Internetverbindung</string>
     <string name="rate_not_available">Nicht verfügbar</string>

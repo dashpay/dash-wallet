@@ -460,8 +460,6 @@
     <string name="masternode_key_not_used">Δεν χρησιμοποιείται</string>
     <string name="masternode_key_revoked">Ανακλήθηκε</string>
     <string name="masternode_key_private_public_base64">Ιδιωτικά/δημόσια κλειδιά (base64)</string>
-    <string name="timeskew_ahead">μπροστά</string>
-    <string name="timeskew_behind">πίσω </string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">Οι τιμές δεν ανακτήθηκαν. Οι Fiat τιμές ενδέχεται να είναι εσφαλμένες.</string>

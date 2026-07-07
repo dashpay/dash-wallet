@@ -462,8 +462,6 @@
     <string name="masternode_key_not_used">استفاده‌نشده</string>
     <string name="masternode_key_revoked">لغوشده</string>
     <string name="masternode_key_private_public_base64">کلیدهای خصوصی/عمومی (بیش۶۴)</string>
-    <string name="timeskew_ahead">جلو</string>
-    <string name="timeskew_behind">عقب</string>
 
     <!-- stale rates messages -->
     <string name="stale_exchange_rates_error">قیمت‌ها به دست نیامد. قیمت‌های پول رسمی شاید نادرست باشد</string>

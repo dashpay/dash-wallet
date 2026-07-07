@@ -283,29 +283,6 @@
         </FrameLayout>
 
         <LinearLayout
-            android:id="@+id/invite_with_unmixed_funds"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            tools:visibility="visible"
-            android:layout_marginTop="8dp">
-
-            <ImageView
-                android:id="@+id/check_unmixed"
-                android:layout_width="22dp"
-                android:layout_height="22dp"
-                android:layout_marginEnd="12dp"
-                android:src="@drawable/ic_unmixed_funds"
-                />
-            <TextView
-                style="@style/Overline.Medium"
-                android:id="@+id/invite_not_mixed_message"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/request_username_invitation_not_mixed_message" />
-        </LinearLayout>
-
-        <LinearLayout
             android:id="@+id/invite_only_noncontested"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

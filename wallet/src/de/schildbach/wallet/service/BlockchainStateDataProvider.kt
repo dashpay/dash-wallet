@@ -44,6 +44,7 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.data.NetworkStatus
+import org.dash.wallet.common.data.SyncStage
 import org.dash.wallet.common.data.entity.BlockchainState.Impediment
 import org.dash.wallet.common.services.BlockchainStateProvider
 import java.io.IOException
@@ -89,8 +90,7 @@ class BlockchainStateDataProvider @Inject constructor(
     private val coroutineScope = CoroutineScope(Executors.newSingleThreadExecutor().asCoroutineDispatcher())
 
     private val networkStatusFlow = MutableStateFlow(NetworkStatus.UNKNOWN)
-    private val blockchainFlow = MutableStateFlow<AbstractBlockChain?>(null)
-    private val syncStageFlow = MutableStateFlow<PeerGroup.SyncStage?>(null)
+    private val syncStageFlow = MutableStateFlow<SyncStage?>(null)
 
     override suspend fun getState(): BlockchainState? {
         return blockchainStateDao.getState()
@@ -128,8 +128,17 @@ class BlockchainStateDataProvider @Inject constructor(
             blockchainState.mnlistHeight = mnListHeight
             blockchainState.percentageSync = percentageSync
             blockchainStateDao.saveState(blockchainState)
-            syncStageFlow.value = syncStage
+            syncStageFlow.value = syncStage?.toNeutral()
         }
+    }
+
+    private fun PeerGroup.SyncStage.toNeutral(): SyncStage = when (this) {
+        PeerGroup.SyncStage.OFFLINE -> SyncStage.OFFLINE
+        PeerGroup.SyncStage.HEADERS -> SyncStage.HEADERS
+        PeerGroup.SyncStage.MNLIST -> SyncStage.MNLIST
+        PeerGroup.SyncStage.PREBLOCKS -> SyncStage.PREBLOCKS
+        PeerGroup.SyncStage.BLOCKS -> SyncStage.BLOCKS
+        PeerGroup.SyncStage.COMPLETE -> SyncStage.COMPLETE
     }
 
     fun resetBlockchainState() {
@@ -179,26 +188,12 @@ class BlockchainStateDataProvider @Inject constructor(
         return networkStatusFlow
     }
 
-    fun setBlockChain(blockChain: AbstractBlockChain?) {
-        coroutineScope.launch {
-            blockchainFlow.emit(blockChain)
-        }
-    }
-
-    override fun getBlockChain(): AbstractBlockChain? {
-        return dashSystemService.system.blockChain
-    }
-
-    override fun observeBlockChain(): Flow<AbstractBlockChain?> {
-        return blockchainFlow
-    }
-
-    override fun observeSyncStage(): Flow<PeerGroup.SyncStage?> {
+    override fun observeSyncStage(): Flow<SyncStage?> {
         return syncStageFlow
     }
 
-    override fun getSyncStage(): PeerGroup.SyncStage {
-        return syncStageFlow.value ?: PeerGroup.SyncStage.OFFLINE
+    override fun getSyncStage(): SyncStage {
+        return syncStageFlow.value ?: SyncStage.OFFLINE
     }
 
     override suspend fun getMasternodeAPY(): Double {

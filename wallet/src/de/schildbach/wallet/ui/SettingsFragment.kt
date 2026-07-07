@@ -39,7 +39,6 @@ import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.WalletBalanceWidgetProvider
 import de.schildbach.wallet.service.work.BaseWorker
-import de.schildbach.wallet.ui.coinjoin.CoinJoinActivity
 import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
@@ -104,20 +103,6 @@ class SettingsFragment : Fragment() {
                         findNavController().navigate(R.id.settings_to_about)
                     },
                     onNotificationsClick = { systemActions.openNotificationSettings()  },
-                    onCoinJoinClick = {
-                        lifecycleScope.launch {
-                            val shouldShowFirstTimeInfo = viewModel.shouldShowCoinJoinInfo()
-
-                            if (shouldShowFirstTimeInfo) {
-                                viewModel.setCoinJoinInfoShown()
-                            }
-
-                            val intent = Intent(requireContext(), CoinJoinActivity::class.java)
-                            intent.putExtra(CoinJoinActivity.FIRST_TIME_EXTRA, shouldShowFirstTimeInfo)
-                            viewModel.logEvent(AnalyticsConstants.Settings.COINJOIN)
-                            startActivity(intent)
-                        }
-                    },
                     onTransactionMetadataClick = {
                         lifecycleScope.launch {
                             if (viewModel.isTransactionMetadataInfoShown()) {

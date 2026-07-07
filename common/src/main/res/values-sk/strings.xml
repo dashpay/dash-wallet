@@ -87,7 +87,6 @@
     <string name="select_currency">Vyberte menu</string>
     <string name="send_coins_error_dusty_send">Čiastka je príliš nízka pre odoslanie</string>
     <string name="send_coins_error_insufficient_money">Nedostatok prostriedkov</string>
-    <string name="send_coins_error_insufficient_mixed_money">Nedostatočné zmiešané prostriedky. Počkajte, kým sa miešanie CoinJoin dokončí, alebo túto funkciu zakážte v nastaveniach pre dokončenie tejto transakcie.</string>
     <string name="syncing">Synchronizuje sa</string>
     <string name="no_connection">Žiadne pripojenie k internetu</string>
     <string name="rate_not_available">Nie je k dispozícií</string>

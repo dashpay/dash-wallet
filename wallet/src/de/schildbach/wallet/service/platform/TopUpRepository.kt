@@ -22,7 +22,6 @@ import com.appsflyer.share.LinkGenerator.ResponseListener
 import com.appsflyer.share.ShareInviteHelper
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
-import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.DynamicLink
 import de.schildbach.wallet.data.InvitationLinkData
 import de.schildbach.wallet.database.dao.DashPayProfileDao
@@ -31,7 +30,6 @@ import de.schildbach.wallet.database.dao.TopUpsDao
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.Invitation
 import de.schildbach.wallet.database.entity.TopUp
-import de.schildbach.wallet.service.CoinJoinMode
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.work.TopupIdentityWorker
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -67,7 +65,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import org.bitcoinj.coinjoin.CoinJoin
 import org.bitcoinj.core.Address
 import org.bitcoinj.core.AddressFormatException
 import org.bitcoinj.core.InsufficientMoneyException
@@ -93,15 +90,13 @@ interface TopUpRepository {
     suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     )
 
     fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ): AssetLockTransaction
 
     fun obtainAssetLockTransaction(
@@ -154,7 +149,6 @@ interface TopUpRepository {
     fun close()
 
     fun getAssetLockTransaction(invite: InvitationLinkData): AssetLockTransaction
-    fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean
     suspend fun clearInvitation()
 }
 
@@ -166,7 +160,6 @@ class TopUpRepositoryImpl @Inject constructor(
     private val topUpsDao: TopUpsDao,
     private val dashPayProfileDao: DashPayProfileDao,
     private val invitationsDao: InvitationsDao,
-    private val coinJoinConfig: CoinJoinConfig,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService
 ) : TopUpRepository {
@@ -183,22 +176,21 @@ class TopUpRepositoryImpl @Inject constructor(
     override suspend fun createAssetLockTransaction(
         blockchainIdentity: BlockchainIdentity,
         username: String,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ) {
         val fee = if (Names.isUsernameContestable(username)) {
             Constants.DASH_PAY_FEE_CONTESTED
         } else {
             Constants.DASH_PAY_FEE
         }
-        val balance = walletDataProvider.observeSpendableBalance().first()
+        val balance = walletDataProvider.observeTotalBalance().first()
         val emptyWallet = balance == fee ||
                 (balance >= fee && balance <= (fee + Transaction.MIN_NONDUST_OUTPUT.multiply(MIN_DUST_FACTOR)))
         Context.propagate(walletDataProvider.wallet!!.context)
         val cftx = blockchainIdentity.createAssetLockTransaction(
             fee,
             keyParameter,
-            useCoinJoin,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
@@ -208,8 +200,7 @@ class TopUpRepositoryImpl @Inject constructor(
     override fun createTopupTransaction(
         blockchainIdentity: BlockchainIdentity,
         topupAmount: Coin,
-        keyParameter: KeyParameter?,
-        useCoinJoin: Boolean
+        keyParameter: KeyParameter?
     ): AssetLockTransaction {
         Context.propagate(walletDataProvider.wallet!!.context)
         val balance = walletDataProvider.wallet!!.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE)
@@ -217,7 +208,7 @@ class TopUpRepositoryImpl @Inject constructor(
         return blockchainIdentity.createTopupFundingTransaction(
             topupAmount,
             keyParameter,
-            useCoinJoin,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
@@ -242,25 +233,6 @@ class TopUpRepositoryImpl @Inject constructor(
             assetLockTx.confidence.setInstantSendLock(instantSendLock)
         }
         return assetLockTx
-    }
-
-    override fun isInvitationMixed(inviteAssetLockTx: AssetLockTransaction): Boolean {
-        val inputTxes = hashMapOf<Sha256Hash, Transaction>()
-        return inviteAssetLockTx.inputs.map { input ->
-            val tx = inputTxes[input.outpoint.hash]
-                ?: platformRepo.platform.client.getTransaction(input.outpoint.hash.toString())?.let {
-                    Transaction(Constants.NETWORK_PARAMETERS, it)
-                }
-            log.info("obtaining input tx: {}", input.outpoint.hash)
-            tx?.let {
-                log.info(" --> input tx: {}", tx.txId)
-                input.connect(it.getOutput(input.outpoint.index))
-                log.info(" --> input tx: {}", input.value)
-                input.value
-            } ?: Coin.ZERO
-        }.all { value ->
-            CoinJoin.isDenominatedAmount(value)
-        }
     }
 
     override suspend fun clearInvitation() {
@@ -594,7 +566,7 @@ class TopUpRepositoryImpl @Inject constructor(
         val cftx = blockchainIdentity.createInviteFundingTransaction(
             topupAmount,
             keyParameter,
-            useCoinJoin = coinJoinConfig.getMode() != CoinJoinMode.NONE,
+            useCoinJoin = false,
             returnChange = true,
             emptyWallet = emptyWallet
         )
