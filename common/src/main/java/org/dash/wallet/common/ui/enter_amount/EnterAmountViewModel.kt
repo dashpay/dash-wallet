@@ -31,6 +31,8 @@ import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.money.FiatValue
 import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toDash
+import org.dash.wallet.common.money.toFiatValue
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.util.Constants
 import javax.inject.Inject
@@ -87,6 +89,11 @@ class EnterAmountViewModel @Inject constructor(
     val amount: LiveData<Coin>
         get() = _amount
 
+    /** Neutral mirror of [amount] for modules that don't depend on dashj. Kept in sync in [init]. */
+    private val _amountDash = MutableLiveData<Dash>()
+    val amountDash: LiveData<Dash>
+        get() = _amountDash
+
     internal val _fiatAmount = MutableLiveData<Fiat>().apply {
         savedStateHandle.get<String>(KEY_FIAT_AMOUNT)?.let { fiatString ->
             try {
@@ -98,6 +105,11 @@ class EnterAmountViewModel @Inject constructor(
     }
     val fiatAmount: LiveData<Fiat>
         get() = _fiatAmount
+
+    /** Neutral mirror of [fiatAmount] for modules that don't depend on dashj. Kept in sync in [init]. */
+    private val _fiatAmountValue = MutableLiveData<FiatValue>()
+    val fiatAmountValue: LiveData<FiatValue>
+        get() = _fiatAmountValue
 
     private val _callerBlocksContinue = MutableLiveData(false)
     var blockContinue: Boolean
@@ -148,11 +160,13 @@ class EnterAmountViewModel @Inject constructor(
         // Save amount changes to SavedStateHandle
         _amount.observeForever { coin ->
             savedStateHandle[KEY_AMOUNT] = coin?.value
+            _amountDash.value = coin?.toDash()
         }
 
         // Save fiat amount changes to SavedStateHandle
         _fiatAmount.observeForever { fiat ->
             savedStateHandle[KEY_FIAT_AMOUNT] = fiat?.toPlainString()
+            _fiatAmountValue.value = fiat?.toFiatValue()
         }
     }
 
@@ -168,6 +182,11 @@ class EnterAmountViewModel @Inject constructor(
     fun setMinAmount(coin: Coin, isIncludedMin: Boolean = false) {
         _minAmount.value = coin
         _minIsIncluded = isIncludedMin
+    }
+
+    /** Neutral counterpart of [setMinAmount] for modules that don't depend on dashj. */
+    fun setMinAmount(amount: Dash, isIncludedMin: Boolean = false) {
+        setMinAmount(amount.toCoin(), isIncludedMin)
     }
 
     suspend fun getSelectedCurrencyCode(): String {

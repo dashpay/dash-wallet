@@ -51,3 +51,12 @@ fun ExchangeRate.dashToFiat(amount: Dash): FiatValue {
 fun ExchangeRate.fiatToDash(amount: FiatValue): Dash {
     return DashJExchangeRate(Coin.COIN, fiat).fiatToCoin(amount.toFiat()).toDash()
 }
+
+/**
+ * Treats this fiat amount as the price of one Dash and converts [amount] to fiat.
+ * Mirrors `org.bitcoinj.utils.ExchangeRate(fiat).coinToFiat(coin)` for rates that aren't
+ * backed by the app's ExchangeRate entity (e.g. rates restored from transaction metadata).
+ */
+fun FiatValue.dashToFiat(amount: Dash): FiatValue {
+    return DashJExchangeRate(Coin.COIN, toFiat()).coinToFiat(amount.toCoin()).toFiatValue()
+}

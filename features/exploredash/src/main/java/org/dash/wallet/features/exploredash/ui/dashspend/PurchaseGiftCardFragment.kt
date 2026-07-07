@@ -34,9 +34,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.ExchangeRate
-import org.bitcoinj.utils.Fiat
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.dashToFiat
+import org.dash.wallet.common.money.fiatToDash
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
 import org.dash.wallet.common.ui.enter_amount.EnterAmountViewModel
@@ -61,7 +62,7 @@ import org.slf4j.LoggerFactory
 import java.text.NumberFormat
 import java.util.Currency
 
-fun min(a: Coin, b: Coin?): Coin {
+fun min(a: Dash, b: Dash?): Dash {
     return if (b == null || a < b) a else b
 }
 
@@ -127,11 +128,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             }
         }
 
-        enterAmountViewModel.onContinueEvent.observe(viewLifecycleOwner) {
+        enterAmountViewModel.onContinueDashEvent.observe(viewLifecycleOwner) {
             PurchaseGiftCardConfirmDialog().show(requireActivity())
         }
 
-        enterAmountViewModel.fiatAmount.observe(viewLifecycleOwner) {
+        enterAmountViewModel.fiatAmountValue.observe(viewLifecycleOwner) {
             viewModel.giftCardMerchant.value?.let { merchant ->
                 if (!merchant.fixedDenomination) {
                     showCardPurchaseLimits()
@@ -175,10 +176,10 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             viewModel.balance.value?.let { balance -> updateBalanceLabel(balance, rate) }
             setCardPurchaseLimits()
             setDiscountHint()
-            enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
+            enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseDash, true)
             enterAmountViewModel.setMaxAmount(
                 min(
-                    viewModel.maxCardPurchaseCoin,
+                    viewModel.maxCardPurchaseDash,
                     viewModel.balanceWithDiscount
                 )
             )
@@ -198,7 +199,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
     }
 
     private fun setupEnterAmountFragment() {
-        val fragment = EnterAmountFragment.newInstance(
+        val fragment = EnterAmountFragment.newInstanceDash(
             dashToFiat = false,
             showCurrencySelector = false,
             isMaxButtonVisible = false,
@@ -245,8 +246,8 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
     private fun setCardPurchaseLimits() {
         viewModel.refreshMinMaxCardPurchaseValues()
-        enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseCoin, true)
-        enterAmountViewModel.setMaxAmount(min(viewModel.maxCardPurchaseCoin, viewModel.balanceWithDiscount))
+        enterAmountViewModel.setMinAmount(viewModel.minCardPurchaseDash, true)
+        enterAmountViewModel.setMaxAmount(min(viewModel.maxCardPurchaseDash, viewModel.balanceWithDiscount))
         showCardPurchaseLimits()
     }
 
@@ -261,7 +262,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
             }
         } ?: return
 
-        val amountFiat = enterAmountViewModel.fiatAmount.value
+        val amountFiat = enterAmountViewModel.fiatAmountValue.value
         amountFiat?.let {
             val isBlockchainReplaying = viewModel.isBlockchainReplaying.value
             if (!viewModel.withinLimits(amountFiat)) {
@@ -275,8 +276,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 binding.discountValue.isVisible = false
                 return
             }
-            val amountDash = enterAmountViewModel.amount.value
-            showBalanceError(amountDash?.isGreaterThan(viewModel.balance.value) == true)
+            val amountDash = enterAmountViewModel.amountDash.value
+            val balance = viewModel.balance.value
+            showBalanceError(balance != null && amountDash?.isGreaterThan(balance) == true)
         }
 
         binding.minValue.isVisible = false
@@ -370,10 +372,9 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         }
     }
 
-    private fun updateBalanceLabel(balance: Coin, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
-        val exchangeRate = rate?.let { ExchangeRate(Coin.COIN, it.fiat) }
+    private fun updateBalanceLabel(balance: Dash, rate: org.dash.wallet.common.data.entity.ExchangeRate?) {
         var balanceText = viewModel.dashFormat.format(balance).toString()
-        exchangeRate?.let { balanceText += " ~ ${exchangeRate.coinToFiat(balance).toFormattedString()}" }
+        rate?.let { balanceText += " ~ ${it.dashToFiat(balance).toFormattedString()}" }
         binding.paymentHeaderView.setBalanceValue(balanceText)
     }
 
@@ -408,12 +409,11 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
         val balanceWithDiscount = viewModel.balanceWithDiscount ?: return false
 
         var paymentValue = viewModel.getFirstCardValueAsFiat()
-        val myRate = ExchangeRate(rate.fiat)
         // this is called when the after a purchase with the user's selected currency, not USD
         if (paymentValue.currencyCode != Constants.USD_CURRENCY) {
-            paymentValue = Fiat.valueOf(Constants.USD_CURRENCY, paymentValue.value)
+            paymentValue = FiatValue.valueOf(Constants.USD_CURRENCY, paymentValue.value)
         }
-        val amountDash = myRate.fiatToCoin(paymentValue)
+        val amountDash = rate.fiatToDash(paymentValue)
 
         return amountDash.isGreaterThan(balanceWithDiscount)
     }
@@ -442,7 +442,7 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
                 selectedDenomination = selectedDenomination.value.keys.firstOrNull()?.toBigDecimal()?.toDouble(),
                 canContinue = !exceedsBalance() && !isReplaying.value,
                 onDenominationSelected = { denomination ->
-                    val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
+                    val fiat = FiatValue.parseFiat(Constants.USD_CURRENCY, denomination.toString())
                     val quantity = selectedDenomination.value.values.firstOrNull() ?: 1
                     viewModel.setGiftCardOrderInfo(fiat, quantity)
                     binding.fixedDenomText.text = fixedAmountFormat.format(denomination)

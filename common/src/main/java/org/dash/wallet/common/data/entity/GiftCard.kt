@@ -35,4 +35,59 @@ data class GiftCard(
     var note: String? = null, // holds order number
     var index: Int = 0,
     var redeemUrlChallenge: String? = null
-)
+) {
+    companion object {
+        /**
+         * Neutral (dashj-free) factory: builds a GiftCard from a hex transaction id
+         * ([Sha256Hash.toString] format), for modules that must not depend on dashj.
+         */
+        fun fromHex(
+            txId: String,
+            merchantName: String = "",
+            price: Double = 0.0,
+            number: String? = null,
+            pin: String? = null,
+            barcodeValue: String? = null,
+            barcodeFormat: BarcodeFormat? = null,
+            merchantUrl: String? = null,
+            note: String? = null,
+            index: Int = 0,
+            redeemUrlChallenge: String? = null
+        ) = GiftCard(
+            Sha256Hash.wrap(txId), merchantName, price, number, pin, barcodeValue,
+            barcodeFormat, merchantUrl, note, index, redeemUrlChallenge
+        )
+    }
+
+    /** The transaction id as a hex string ([Sha256Hash.toString]); dashj-free accessor. */
+    val txIdHex: String get() = txId.toString()
+
+    /**
+     * Neutral (dashj-free) variant of [copy]: duplicates the card (txId always preserved)
+     * with the given field overrides, for modules that must not depend on dashj.
+     */
+    fun copyCard(
+        merchantName: String = this.merchantName,
+        price: Double = this.price,
+        number: String? = this.number,
+        pin: String? = this.pin,
+        barcodeValue: String? = this.barcodeValue,
+        barcodeFormat: BarcodeFormat? = this.barcodeFormat,
+        merchantUrl: String? = this.merchantUrl,
+        note: String? = this.note,
+        index: Int = this.index,
+        redeemUrlChallenge: String? = this.redeemUrlChallenge
+    ) = copy(
+        txId = txId,
+        merchantName = merchantName,
+        price = price,
+        number = number,
+        pin = pin,
+        barcodeValue = barcodeValue,
+        barcodeFormat = barcodeFormat,
+        merchantUrl = merchantUrl,
+        note = note,
+        index = index,
+        redeemUrlChallenge = redeemUrlChallenge
+    )
+}

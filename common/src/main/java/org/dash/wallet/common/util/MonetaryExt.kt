@@ -62,6 +62,15 @@ fun FiatValue.toFormattedString(): String {
     return toFiat().toFormattedString()
 }
 
+/** Neutral counterpart of [Fiat.toFormattedStringRoundUp] for modules that don't depend on dashj. */
+fun FiatValue.toFormattedStringRoundUp(): String {
+    return toFiat().toFormattedStringRoundUp()
+}
+
+/** Neutral counterpart of [Fiat.discountBy] for modules that don't depend on dashj. */
+fun FiatValue.discountBy(fraction: Double): FiatValue =
+    FiatValue(currencyCode, (value * (1.0 - fraction)).toLong())
+
 val Fiat.currencySymbol: String
     get() = GenericUtils.currencySymbol(currencyCode)
 

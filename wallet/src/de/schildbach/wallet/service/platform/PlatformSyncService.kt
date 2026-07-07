@@ -1248,7 +1248,7 @@ class PlatformSynchronizationService @Inject constructor(
                     val previouslySavedItems = transactionMetadataDocumentDao.getTransactionMetadata(tx.txId)
                     val previouslySaved = mergeTransactionMetadataDocuments(tx.txId, previouslySavedItems)
                     val currentItem = transactionMetadataProvider.getTransactionMetadata(tx.txId)!!
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId)
+                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     if (!previouslySaved.compare(currentItem, giftCard.firstOrNull())) {
                         listOfUnsaved.add(tx)
@@ -1274,7 +1274,7 @@ class PlatformSynchronizationService @Inject constructor(
         txes?.forEachIndexed { i, tx ->
             if (tx.updateTime.time >= alreadySaved) {
                 transactionMetadataProvider.getTransactionMetadata(tx.txId)?.let { metadata ->
-                    val giftCard = giftCardDao.getCardForTransaction(tx.txId)
+                    val giftCard = giftCardDao.getCardForTransaction(tx.txId.bytes)
 
                     // make sure it is not already saved?
 

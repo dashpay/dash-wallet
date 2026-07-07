@@ -130,7 +130,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
                                 // CrowdNode) icon for non-group wrappers, so route here instead.
                                 if (ServiceName.isDashSpend(rowView.service)) {
                                     viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                    val txId = Sha256Hash.wrap(rowView.id)
+                                    val txId = rowView.id
                                     if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                         GiftCardOrderDetailsDialog.newInstance(txId)
                                     } else {
@@ -144,7 +144,7 @@ class WalletTransactionsFragment : Fragment(R.layout.wallet_transactions_fragmen
 
                             ServiceName.isDashSpend(rowView.service) -> {
                                 viewModel.logEvent(AnalyticsConstants.DashSpend.DETAILS_GIFT_CARD)
-                                val txId = Sha256Hash.wrap(rowView.id)
+                                val txId = rowView.id
                                 if (giftCardViewModel.getGiftCardCount(txId) > 1) {
                                     GiftCardOrderDetailsDialog.newInstance(txId)
                                 } else {

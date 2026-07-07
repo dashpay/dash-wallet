@@ -62,13 +62,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.core.InsufficientMoneyException
-import org.bitcoinj.core.Sha256Hash
-import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.data.ServiceName
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.payments.parsers.isPaymentUriParseError
 import org.dash.wallet.common.services.AuthenticationManager
 import org.dash.wallet.common.services.DirectPayException
+import org.dash.wallet.common.services.InsufficientFundsException
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.EnterAmount
 import org.dash.wallet.common.ui.components.MyTheme
@@ -427,10 +426,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
                 return@launch
             }
 
-            val totalAmount = Coin.valueOf(
+            val totalAmount = Dash.valueOf(
                 data.sumOf {
                     if (!it.cryptoAmount.isNullOrEmpty()) {
-                        Coin.parseCoin(it.cryptoAmount).value
+                        Dash.parse(it.cryptoAmount).duffs
                     } else {
                         0L
                     }
@@ -473,10 +472,10 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private suspend fun createSendingRequestFromDashUri(url: String): Sha256Hash? {
+    private suspend fun createSendingRequestFromDashUri(url: String): String? {
         return try {
             viewModel.createSendingRequestFromDashUri(url)
-        } catch (x: InsufficientMoneyException) {
+        } catch (x: InsufficientFundsException) {
             hideLoading()
             log.error("purchaseGiftCard InsufficientMoneyException", x)
             if (isAdded) {
@@ -518,7 +517,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
             if (isAdded) {
                 val message = getString(
                     when {
-                        ex.cause is BitcoinURIParseException &&
+                        ex.cause?.isPaymentUriParseError == true &&
                             ex.message?.contains("mismatched network") == true ->
                             R.string.gift_card_error_wrong_network
                         else -> R.string.gift_card_error
@@ -554,7 +553,7 @@ class PurchaseGiftCardConfirmDialog : ComposeBottomSheet() {
         }
     }
 
-    private fun showGiftCardDetailsDialog(txId: Sha256Hash) {
+    private fun showGiftCardDetailsDialog(txId: String) {
         if (isAdded) {
             if (viewModel.giftCardOrderInfo.value.entries.sumOf { it.value } > 1) {
                 GiftCardOrderDetailsDialog.newInstance(txId).show(requireActivity()).also {

@@ -71,9 +71,9 @@ import com.google.zxing.BarcodeFormat
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.components.DashButton
 import org.dash.wallet.common.ui.components.DashList
@@ -107,7 +107,8 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
         private const val ARG_CARD_INDEX = "cardIndex"
         private const val WAIT_LIMIT_FOR_ERROR = 60
 
-        fun newInstance(transactionId: Sha256Hash, cardIndex: Int = 0) =
+        /** [transactionId] is the hex transaction id (`Sha256Hash.toString()` format). */
+        fun newInstance(transactionId: String, cardIndex: Int = 0) =
             GiftCardDetailsDialog().apply {
                 arguments = bundleOf(
                     ARG_TRANSACTION_ID to transactionId,
@@ -139,7 +140,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
             onCloseClick = { dismiss() },
             onMaxBrightness = { enable -> setMaxBrightness(enable) },
             onViewTransaction = {
-                deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId.toString()))
+                deepLinkNavigate(DeepLinkDestination.Transaction(viewModel.transactionId))
             },
             onContactSupport = { contactSupport() },
             onErrorLogged = { error, message -> ctxSpendViewModel.logError(error, message) }
@@ -149,7 +150,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let { transactionId ->
+        requireArguments().getString(ARG_TRANSACTION_ID)?.let { transactionId ->
             val cardIndex = requireArguments().getInt(ARG_CARD_INDEX, 0)
             viewModel.init(transactionId, cardIndex)
         }
@@ -160,7 +161,7 @@ class GiftCardDetailsDialog : ComposeBottomSheet() {
     private fun contactSupport() {
         val error = viewModel.uiState.value.error as? CTXSpendException
         val intent = ctxSpendViewModel.createEmailIntent(
-            "${error?.serviceName ?: "DashSpend"} Issue with tx: ${viewModel.transactionId.toStringBase58()}",
+            "${error?.serviceName ?: "DashSpend"} Issue with tx: ${TxIds.toBase58(viewModel.transactionId)}",
             sendToService = true,
             error
         )
@@ -787,8 +788,8 @@ private fun fakeCard(
     barcode: String? = null,
     barcodeFormat: BarcodeFormat? = null,
     merchantUrl: String? = null
-) = GiftCard(
-    txId = Sha256Hash.ZERO_HASH,
+) = GiftCard.fromHex(
+    txId = TxIds.ZERO_HASH_HEX,
     merchantName = "Target",
     price = 25.00,
     number = number,

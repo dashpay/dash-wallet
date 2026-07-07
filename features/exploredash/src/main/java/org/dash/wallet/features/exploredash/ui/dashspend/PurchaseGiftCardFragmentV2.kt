@@ -42,9 +42,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.FiatValue
+import org.dash.wallet.common.money.dashToFiat
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.Constants
@@ -112,8 +113,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
             var amountText by rememberSaveable { mutableStateOf("0") }
             val denominationQuantities = remember { mutableStateMapOf<Double, Int>() }
             var showBalance by remember { mutableStateOf(false) }
-            var minFiat by remember { mutableStateOf<Fiat?>(null) }
-            var maxFiat by remember { mutableStateOf<Fiat?>(null) }
+            var minFiat by remember { mutableStateOf<FiatValue?>(null) }
+            var maxFiat by remember { mutableStateOf<FiatValue?>(null) }
 
             // Refresh min/max values whenever the exchange rate or merchant changes.
             // Keying on both is necessary because the merchant loads asynchronously after
@@ -261,7 +262,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     amountText = processAmountKeyInput(amountText, key)
                     // Update viewModel order info so confirm dialog has up-to-date amount
                     val fiatAmount = try {
-                        Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                        FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
                     } catch (e: Exception) {
                         log.debug("Failed to parse fiat amount: $amountText", e)
                         null
@@ -287,7 +288,7 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                     when (val m = mode) {
                         is GiftCardPurchaseMode.FlexibleSingle -> {
                             val fiat = try {
-                                Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                                FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
                             } catch (e: Exception) {
                                 log.debug("Failed to parse fiat amount: $amountText", e)
                                 return@PurchaseGiftCardScreenV2
@@ -430,8 +431,8 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
         amountText: String,
         totalDouble: Double,
         merchant: Merchant?,
-        minFiat: Fiat?,
-        maxFiat: Fiat?,
+        minFiat: FiatValue?,
+        maxFiat: FiatValue?,
         isBlockchainReplaying: Boolean
     ): String {
         merchant ?: return ""
@@ -441,14 +442,14 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
         val amount = when (mode) {
             GiftCardPurchaseMode.FlexibleSingle -> {
                 try {
-                    Fiat.parseFiat(Constants.USD_CURRENCY, amountText)
+                    FiatValue.parseFiat(Constants.USD_CURRENCY, amountText)
                 } catch (_: Exception) {
                     return ""
                 }
             }
             else -> {
                 try {
-                    Fiat.parseFiat(Constants.USD_CURRENCY, totalDouble.toBigDecimal().toPlainString())
+                    FiatValue.parseFiat(Constants.USD_CURRENCY, totalDouble.toBigDecimal().toPlainString())
                 } catch (_: Exception) {
                     return ""
                 }
@@ -468,23 +469,21 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
         )
     }
 
-    private fun buildFiatBalanceText(balance: Coin?, exchangeRate: ExchangeRate?): Pair<String, String> {
+    private fun buildFiatBalanceText(balance: Dash?, exchangeRate: ExchangeRate?): Pair<String, String> {
         balance ?: return Pair("", "")
         val dashText = viewModel.dashFormat.format(balance).toString()
-        val fiatRate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
-        return if (fiatRate != null) {
-            Pair(dashText, fiatRate.coinToFiat(balance).toFormattedString())
+        return if (exchangeRate != null) {
+            Pair(dashText, exchangeRate.dashToFiat(balance).toFormattedString())
         } else {
             Pair(dashText, "")
         }
     }
 
-    private fun buildFiatBalance(balance: Coin?, exchangeRate: ExchangeRate?): Fiat {
-        val defaultResult = Fiat.valueOf(exchangeRate?.currencySymbol ?: Constants.USD_CURRENCY, 0)
+    private fun buildFiatBalance(balance: Dash?, exchangeRate: ExchangeRate?): FiatValue {
+        val defaultResult = FiatValue.valueOf(exchangeRate?.currencySymbol ?: Constants.USD_CURRENCY, 0)
         balance ?: return defaultResult
-        val fiatRate = exchangeRate?.let { org.bitcoinj.utils.ExchangeRate(Coin.COIN, it.fiat) }
-        return if (fiatRate != null) {
-            fiatRate.coinToFiat(balance)
+        return if (exchangeRate != null) {
+            exchangeRate.dashToFiat(balance)
         } else {
             defaultResult
         }

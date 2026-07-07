@@ -56,7 +56,7 @@ import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.FirebaseAnalyticsServiceImpl
 import org.dash.wallet.integrations.uphold.api.UpholdClient
-import org.dash.wallet.features.exploredash.network.service.stubs.FakeDashSpendService
+import de.schildbach.wallet.payments.FakeDashSpendService
 import javax.inject.Singleton
 
 @Module

@@ -46,6 +46,9 @@ data class TransactionMetadata(
     @Ignore
     val defaultTaxCategory = TaxCategory.getDefault(value.isPositive, isTransfer)
 
+    /** [customIconId] as a hex string ([Sha256Hash.toString]); dashj-free accessor. */
+    val customIconIdHex: String? get() = customIconId?.toString()
+
     fun isNotEmpty(): Boolean {
         return timestamp != 0L || taxCategory != null || memo.isNotEmpty() || currencyCode != null ||
             rate != null || service != null || customIconId != null

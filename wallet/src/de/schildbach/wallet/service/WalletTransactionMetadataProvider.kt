@@ -348,7 +348,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
         // Room's @Update rewrites every column, so a caller passing a partially-populated
         // GiftCard would otherwise null out fields it didn't set (number/pin/note/...).
         // Merge against the stored row so we only ever fill in values, never erase them.
-        val existing = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index }
+        val existing = giftCardDao.getCardForTransaction(giftCard.txId.bytes).find { it.index == giftCard.index }
         val merged = if (existing == null) {
             giftCard
         } else {
@@ -390,7 +390,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
     }
 
     override suspend fun updateGiftCardBarcode(txId: Sha256Hash, index: Int, barcodeValue: String, barcodeFormat: BarcodeFormat) {
-        giftCardDao.updateBarcode(txId, index, barcodeValue, barcodeFormat)
+        giftCardDao.updateBarcode(txId.bytes, index, barcodeValue, barcodeFormat)
         if (index == 0) {
             transactionMetadataChangeCacheDao.insertBarcode(txId, barcodeValue, barcodeFormat.toString(), index)
         }
@@ -555,7 +555,9 @@ class WalletTransactionMetadataProvider @Inject constructor(
                 }
             }
             .flatMapLatest { bitmaps ->
-                giftCardDao.observeGiftCards().distinctUntilChanged().flatMapLatest { giftCards ->
+                giftCardDao.observeGiftCards()
+                    .map { cards -> cards.groupBy { it.txId } }
+                    .distinctUntilChanged().flatMapLatest { giftCards ->
                     transactionMetadataDao.observePresentableMetadata()
                         .distinctUntilChanged()
                         .map { metadataList ->
@@ -699,7 +701,7 @@ class WalletTransactionMetadataProvider @Inject constructor(
             return
         }
 
-        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId).find { it.index == giftCard.index}
+        val existingGiftCard = giftCardDao.getCardForTransaction(giftCard.txId.bytes).find { it.index == giftCard.index}
 
         if (existingGiftCard == null) {
             giftCardDao.insertGiftCard(giftCard)

@@ -84,7 +84,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-123",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Fulfillment writes only the newly-arrived number/pin.
         val incoming = existing.copy(
@@ -129,7 +129,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             note = "order-7",
             index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
 
         // Caller hands us defaults (merchantName="", price=0.0) without realising they would
         // clobber the stored merchant info.
@@ -163,7 +163,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
     @Test
     fun `insert path is used when no existing row matches the index`() = runTest {
         // No local row for this (txId, index) yet — e.g. the dummy row wasn't saved.
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns emptyList()
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns emptyList()
 
         val incoming = GiftCard(
             txId = txId,
@@ -208,7 +208,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://redeem/1", note = "order-multi", index = 1
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(card0, card1)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(card0, card1)
 
         // Only update card at index 1.
         val incoming = card1.copy(
@@ -239,7 +239,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 0
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         val incoming = existing.copy(number = "N", pin = "P", merchantUrl = null, note = null)
@@ -273,7 +273,7 @@ class WalletTransactionMetadataProviderGiftCardTest {
             barcodeValue = null, barcodeFormat = null,
             merchantUrl = "https://kept", note = "order-9", index = 2
         )
-        coEvery { giftCardDao.getCardForTransaction(txId) } returns listOf(existing)
+        coEvery { giftCardDao.getCardForTransaction(txId.bytes) } returns listOf(existing)
         coEvery { giftCardDao.updateGiftCard(any()) } returns 1
 
         provider.updateGiftCardMetadata(existing.copy(number = "N", pin = "P"))

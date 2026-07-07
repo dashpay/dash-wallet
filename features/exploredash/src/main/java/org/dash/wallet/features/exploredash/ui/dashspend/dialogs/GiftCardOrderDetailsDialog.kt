@@ -54,9 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.core.os.bundleOf
 import androidx.fragment.app.viewModels
 import dagger.hilt.android.AndroidEntryPoint
-import org.bitcoinj.core.Sha256Hash
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.entity.GiftCard
+import org.dash.wallet.common.money.TxIds
 import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
@@ -71,7 +71,8 @@ class GiftCardOrderDetailsDialog : ComposeBottomSheet() {
     companion object {
         private const val ARG_TRANSACTION_ID = "transactionId"
 
-        fun newInstance(transactionId: Sha256Hash) =
+        /** [transactionId] is the hex transaction id (`Sha256Hash.toString()` format). */
+        fun newInstance(transactionId: String) =
             GiftCardOrderDetailsDialog().apply {
                 arguments = bundleOf(ARG_TRANSACTION_ID to transactionId)
             }
@@ -94,14 +95,14 @@ class GiftCardOrderDetailsDialog : ComposeBottomSheet() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        (requireArguments().getSerializable(ARG_TRANSACTION_ID) as? Sha256Hash)?.let {
+        requireArguments().getString(ARG_TRANSACTION_ID)?.let {
             viewModel.init(it)
         }
     }
 
     private fun onCardClick(giftCard: GiftCard) {
         GiftCardDetailsDialog
-            .newInstance(giftCard.txId, cardIndex = giftCard.index)
+            .newInstance(giftCard.txIdHex, cardIndex = giftCard.index)
             .show(requireActivity())
     }
 }
@@ -255,8 +256,8 @@ private fun PoweredByFooter(serviceName: String?) {
 
 // ─── Previews ────────────────────────────────────────────────────────────────
 
-private fun fakeCard(index: Int, price: Double) = GiftCard(
-    txId = Sha256Hash.ZERO_HASH,
+private fun fakeCard(index: Int, price: Double) = GiftCard.fromHex(
+    txId = TxIds.ZERO_HASH_HEX,
     merchantName = "Amazon",
     price = price,
     index = index
