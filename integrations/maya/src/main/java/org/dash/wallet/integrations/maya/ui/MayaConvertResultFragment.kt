@@ -131,154 +131,44 @@ class MayaConvertResultFragment : Fragment(), LockScreenAware {
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
-        if (state.isTransactionSuccessful) {
-            when (transactionType) {
-                TransactionType.BuyDash -> setDepositSuccess()
-                TransactionType.BuySwap -> setConversionSuccess()
-                TransactionType.TransferDash -> setTransferDashSuccess()
-                TransactionType.SellSwap -> setConversionSuccess()
-            }
-        } else {
-            when (transactionType) {
-                TransactionType.BuyDash -> setDepositError(state.responseMessage)
-                TransactionType.BuySwap -> setTransferDashError(state.responseMessage)
-                TransactionType.TransferDash -> setTransferDashError(state.responseMessage)
-                TransactionType.SellSwap -> setSellSwapError(state.responseMessage)
-            }
-        }
-    }
-
-    private fun setDepositSuccess() {
-        currentType = MayaResultType.DEPOSIT_SUCCESS
-        uiState = uiState.copy(
-            isLoading = false,
-            isSuccess = true,
-            title = getString(R.string.purchase_successful),
-            message = getString(R.string.maya_it_could_take_up_to_2_3_minutes),
-            showContactSupport = false,
-            buttonText = getString(R.string.button_close)
-        )
-    }
-
-    private fun setDepositError(errorMessage: String?) {
-        currentType = MayaResultType.DEPOSIT_ERROR
-        val message = when {
-            errorMessage.isNullOrEmpty() -> getString(R.string.transfer_failed_msg)
-            errorMessage.contains(getString(R.string.send_to_wallet_error)) -> errorMessage
-            else -> getString(R.string.transfer_failed_msg)
-        }
-        uiState = uiState.copy(
-            isLoading = false,
-            isSuccess = false,
-            title = getString(R.string.transfer_failed),
-            message = message,
-            showContactSupport = true,
-            buttonText = getString(R.string.button_retry)
-        )
-    }
-
-    private fun setConversionSuccess() {
-        currentType = MayaResultType.CONVERSION_SUCCESS
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
-        val source = params?.coinbaseWalletName ?: org.dash.wallet.common.util.Constants.DASH_CURRENCY
-        val destination = params?.params?.amount?.cryptoCode ?: getString(R.string.error)
-        uiState = uiState.copy(
-            isLoading = false,
-            isSuccess = true,
-            title = getString(R.string.conversion_successful),
-            message = getString(R.string.maya_it_could_take_up_to_5_minutes, source, destination),
-            showContactSupport = false,
-            buttonText = getString(R.string.button_close)
+
+        // All the type/outcome → content decisions live in the (unit-tested) mapper; this
+        // fragment only resolves the resource IDs it returns.
+        val spec = MayaConvertResultStateMapper.buildResultSpec(
+            type = transactionType,
+            isSuccess = state.isTransactionSuccessful,
+            errorMessage = state.responseMessage,
+            sendToWalletError = getString(R.string.send_to_wallet_error),
+            conversionSource = params?.coinbaseWalletName ?: org.dash.wallet.common.util.Constants.DASH_CURRENCY,
+            conversionDestination = params?.params?.amount?.cryptoCode ?: getString(R.string.error)
         )
-        showExplorerLink(params?.routeName, params?.params?.txid, params?.params?.depositAddress)
-    }
+        currentType = spec.resultType
 
-    /**
-     * Shows a link to the settlement network's explorer so the user can follow this swap.
-     * Maya tracks a swap by its inbound (DASH) transaction hash, so with a [txid] the
-     * link opens the swap itself on mayascan.org. NEAR Intents tracks a swap by the
-     * one-time deposit address it issued, so NEAR routes link to
-     * explorer.near-intents.org/transactions/[depositAddress]. If the identifier is
-     * missing, the link falls back to the explorer's home page. Unrecognised routes show
-     * nothing. Route classification mirrors the order preview: an empty route name
-     * means Maya.
-     */
-    private fun showExplorerLink(routeName: String?, txid: String?, depositAddress: String?) {
-        val raw = routeName?.trim().orEmpty()
-        val isMayaRoute = raw.isEmpty() || raw.contains("MAYA", ignoreCase = true)
-        val isNearRoute = !isMayaRoute && raw.contains("NEAR", ignoreCase = true)
-
-        val explorer = when {
-            isMayaRoute -> Triple(
-                R.string.maya_explorer_description_maya,
-                R.string.maya_explorer_view_maya,
-                if (txid.isNullOrBlank()) {
-                    getString(R.string.maya_explorer_url_maya)
-                } else {
-                    // MAYAChain indexes inbound transactions by uppercase hash.
-                    getString(R.string.maya_explorer_tx_url_maya, txid.uppercase())
-                }
+        // Explorer link so the user can follow a successful swap on the settlement network.
+        val explorer = if (spec.resultType == MayaResultType.CONVERSION_SUCCESS) {
+            MayaConvertResultStateMapper.explorerFor(
+                routeName = params?.routeName,
+                txid = params?.params?.txid,
+                depositAddress = params?.params?.depositAddress
             )
-            isNearRoute -> Triple(
-                R.string.maya_explorer_description_near,
-                R.string.maya_explorer_view_near,
-                if (depositAddress.isNullOrBlank()) {
-                    getString(R.string.maya_explorer_url_near)
-                } else {
-                    getString(R.string.maya_explorer_tx_url_near, depositAddress)
-                }
-            )
-            else -> null
+        } else {
+            null
+        }
+        explorerUrl = explorer?.let { spec2 ->
+            spec2.urlArg?.let { getString(spec2.urlRes, it) } ?: getString(spec2.urlRes)
         }
 
-        explorerUrl = explorer?.third
-        uiState = uiState.copy(
-            explorerDescription = explorer?.let { getString(it.first) },
-            explorerLinkText = explorer?.let { getString(it.second) }
-        )
-    }
-
-    private fun setTransferDashSuccess() {
-        currentType = MayaResultType.TRANSFER_DASH_SUCCESS
         uiState = uiState.copy(
             isLoading = false,
-            isSuccess = true,
-            title = getString(R.string.transfer_dash_successful),
-            message = getString(R.string.maya_it_could_take_up_to_10_minutes),
-            showContactSupport = false,
-            buttonText = getString(R.string.button_close)
-        )
-    }
-
-    private fun setTransferDashError(errorMessage: String?) {
-        currentType = MayaResultType.TRANSFER_DASH_ERROR
-        uiState = uiState.copy(
-            isLoading = false,
-            isSuccess = false,
-            title = getString(R.string.transfer_failed),
-            message = if (errorMessage.isNullOrEmpty()) {
-                getString(R.string.transfer_dash_failed_msg)
-            } else {
-                errorMessage
-            },
-            showContactSupport = true,
-            buttonText = getString(R.string.button_retry)
-        )
-    }
-
-    private fun setSellSwapError(errorMessage: String?) {
-        currentType = MayaResultType.SWAP_ERROR
-        uiState = uiState.copy(
-            isLoading = false,
-            isSuccess = false,
-            title = getString(R.string.conversion_failed),
-            message = if (errorMessage.isNullOrEmpty()) {
-                getString(R.string.transfer_failed_msg)
-            } else {
-                errorMessage
-            },
-            showContactSupport = true,
-            buttonText = getString(R.string.button_retry)
+            isSuccess = spec.isSuccess,
+            title = getString(spec.titleRes),
+            message = spec.messageText
+                ?: getString(spec.messageRes!!, *spec.messageArgs.toTypedArray()),
+            showContactSupport = spec.showContactSupport,
+            buttonText = getString(spec.buttonTextRes),
+            explorerDescription = explorer?.let { getString(it.descriptionRes) },
+            explorerLinkText = explorer?.let { getString(it.linkTextRes) }
         )
     }
 
