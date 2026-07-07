@@ -124,6 +124,7 @@ private fun DEXRefundAddressScreenContent(
                 enabled = isOnline && !isSubmitting,
                 onScanClick = onScanClick,
                 onLongPress = onPasteClick,
+                onPasteClick = onPasteClick,
                 modifier = Modifier.padding(top = 20.dp, start = 20.dp, end = 20.dp)
             )
 
