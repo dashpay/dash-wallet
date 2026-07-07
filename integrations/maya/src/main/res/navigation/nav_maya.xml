@@ -184,8 +184,7 @@
     <fragment
         android:id="@+id/mayaConvertResultFragment"
         android:name="org.dash.wallet.integrations.maya.ui.MayaConvertResultFragment"
-        android:label="MayaConvertResultFragment"
-        tools:layout="@layout/maya_convert_result_fragment">
+        android:label="MayaConvertResultFragment">
         <argument
             android:name="transactionParams"
             app:argType="org.dash.wallet.integrations.maya.ui.convert_currency.model.MayaTransactionParams"

@@ -21,32 +21,63 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.Intent.ACTION_VIEW
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.addCallback
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.core.net.toUri
-import androidx.core.view.isGone
-import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import org.dash.wallet.common.ui.LockScreenAware
-import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.openCustomTab
 import org.dash.wallet.integrations.maya.R
-import org.dash.wallet.integrations.maya.databinding.MayaConvertResultFragmentBinding
 import org.dash.wallet.integrations.maya.model.MayaResultType
 import org.dash.wallet.integrations.maya.model.TransactionType
 
+/**
+ * Maya transaction-result screen. Hosts the Compose [MayaConvertResultScreen] while keeping the
+ * original behavior: translating transaction type + outcome into the displayed result, blocking
+ * back navigation after success (to prevent re-submitting the transaction), the Maya support
+ * link and the settlement-network explorer link.
+ */
 @AndroidEntryPoint
-class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment), LockScreenAware {
+class MayaConvertResultFragment : Fragment(), LockScreenAware {
 
-    private val binding by viewBinding(MayaConvertResultFragmentBinding::bind)
     private val viewModel by viewModels<MayaConvertResultViewModel>()
     private var onBackPressedCallback: OnBackPressedCallback? = null
     private var currentType: MayaResultType? = null
+    private var explorerUrl: String? = null
+
+    private var uiState by mutableStateOf(MayaConvertResultUIState())
+
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return ComposeView(requireContext()).apply {
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
+            setContent {
+                MayaConvertResultScreen(
+                    state = uiState,
+                    onButtonClick = ::handlePositiveButtonClick,
+                    onContactSupportClick = ::openMayaHelp,
+                    onExplorerLinkClick = {
+                        explorerUrl?.let { requireActivity().openCustomTab(it) }
+                    }
+                )
+            }
+        }
+    }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -55,19 +86,11 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
 
         viewModel.loadingState.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressRing.isVisible = isLoading
+            uiState = uiState.copy(isLoading = isLoading)
         }
 
         viewModel.transactionState.observe(viewLifecycleOwner) { state ->
             params?.let { setTransactionState(it.type, state) }
-        }
-
-        binding.contactSupport.setOnClickListener {
-            openMayaHelp()
-        }
-
-        binding.coinbaseBuyDialogPositiveButton.setOnClickListener {
-            handlePositiveButtonClick()
         }
 
         viewModel.showTransactionResult(isSuccess = true)
@@ -108,10 +131,6 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
     }
 
     private fun setTransactionState(transactionType: TransactionType, state: TransactionState) {
-        binding.progressRing.isGone = true
-        binding.resultContent.isVisible = true
-        binding.coinbaseBuyDialogPositiveButton.isVisible = true
-
         if (state.isTransactionSuccessful) {
             when (transactionType) {
                 TransactionType.BuyDash -> setDepositSuccess()
@@ -131,27 +150,31 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
 
     private fun setDepositSuccess() {
         currentType = MayaResultType.DEPOSIT_SUCCESS
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
-        binding.coinbaseBuyDialogTitle.setText(R.string.purchase_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_2_3_minutes)
-        binding.contactSupport.isGone = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = true,
+            title = getString(R.string.purchase_successful),
+            message = getString(R.string.maya_it_could_take_up_to_2_3_minutes),
+            showContactSupport = false,
+            buttonText = getString(R.string.button_close)
+        )
     }
 
     private fun setDepositError(errorMessage: String?) {
         currentType = MayaResultType.DEPOSIT_ERROR
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
-        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        when {
-            errorMessage.isNullOrEmpty() -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
-            errorMessage.contains(getString(R.string.send_to_wallet_error)) ->
-                binding.coinbaseBuyDialogMessage.text = errorMessage
-            else -> binding.coinbaseBuyDialogMessage.setText(R.string.transfer_failed_msg)
+        val message = when {
+            errorMessage.isNullOrEmpty() -> getString(R.string.transfer_failed_msg)
+            errorMessage.contains(getString(R.string.send_to_wallet_error)) -> errorMessage
+            else -> getString(R.string.transfer_failed_msg)
         }
-        binding.contactSupport.isVisible = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = false,
+            title = getString(R.string.transfer_failed),
+            message = message,
+            showContactSupport = true,
+            buttonText = getString(R.string.button_retry)
+        )
     }
 
     private fun setConversionSuccess() {
@@ -159,16 +182,14 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
         val params = arguments?.let { MayaConvertResultFragmentArgs.fromBundle(it).transactionParams }
         val source = params?.coinbaseWalletName ?: org.dash.wallet.common.util.Constants.DASH_CURRENCY
         val destination = params?.params?.amount?.cryptoCode ?: getString(R.string.error)
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
-        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.text = getString(
-            R.string.maya_it_could_take_up_to_5_minutes,
-            source,
-            destination
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = true,
+            title = getString(R.string.conversion_successful),
+            message = getString(R.string.maya_it_could_take_up_to_5_minutes, source, destination),
+            showContactSupport = false,
+            buttonText = getString(R.string.button_close)
         )
-        binding.contactSupport.isGone = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
         showExplorerLink(params?.routeName, params?.params?.txid, params?.params?.depositAddress)
     }
 
@@ -210,53 +231,55 @@ class MayaConvertResultFragment : Fragment(R.layout.maya_convert_result_fragment
             else -> null
         }
 
-        binding.explorerDescription.isVisible = explorer != null
-        binding.explorerLink.isVisible = explorer != null
-        explorer?.let { (descriptionRes, linkRes, url) ->
-            binding.explorerDescription.setText(descriptionRes)
-            binding.explorerLink.setText(linkRes)
-            binding.explorerLink.setOnClickListener {
-                requireActivity().openCustomTab(url)
-            }
-        }
+        explorerUrl = explorer?.third
+        uiState = uiState.copy(
+            explorerDescription = explorer?.let { getString(it.first) },
+            explorerLinkText = explorer?.let { getString(it.second) }
+        )
     }
 
     private fun setTransferDashSuccess() {
         currentType = MayaResultType.TRANSFER_DASH_SUCCESS
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_success_green_white_border)
-        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_dash_successful)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Green)
-        binding.coinbaseBuyDialogMessage.setText(R.string.maya_it_could_take_up_to_10_minutes)
-        binding.contactSupport.isGone = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_close)
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = true,
+            title = getString(R.string.transfer_dash_successful),
+            message = getString(R.string.maya_it_could_take_up_to_10_minutes),
+            showContactSupport = false,
+            buttonText = getString(R.string.button_close)
+        )
     }
 
     private fun setTransferDashError(errorMessage: String?) {
         currentType = MayaResultType.TRANSFER_DASH_ERROR
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
-        binding.coinbaseBuyDialogTitle.setText(R.string.transfer_failed)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.coinbaseBuyDialogMessage.text = if (errorMessage.isNullOrEmpty()) {
-            getString(R.string.transfer_dash_failed_msg)
-        } else {
-            errorMessage
-        }
-        binding.contactSupport.isVisible = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = false,
+            title = getString(R.string.transfer_failed),
+            message = if (errorMessage.isNullOrEmpty()) {
+                getString(R.string.transfer_dash_failed_msg)
+            } else {
+                errorMessage
+            },
+            showContactSupport = true,
+            buttonText = getString(R.string.button_retry)
+        )
     }
 
     private fun setSellSwapError(errorMessage: String?) {
         currentType = MayaResultType.SWAP_ERROR
-        binding.coinbaseBuyDialogIcon.setImageResource(R.drawable.ic_error)
-        binding.coinbaseBuyDialogTitle.setText(R.string.conversion_failed)
-        binding.coinbaseBuyDialogTitle.setTextAppearance(R.style.Headline5_Red)
-        binding.coinbaseBuyDialogMessage.text = if (errorMessage.isNullOrEmpty()) {
-            getString(R.string.transfer_failed_msg)
-        } else {
-            errorMessage
-        }
-        binding.contactSupport.isVisible = true
-        binding.coinbaseBuyDialogPositiveButton.setText(R.string.button_retry)
+        uiState = uiState.copy(
+            isLoading = false,
+            isSuccess = false,
+            title = getString(R.string.conversion_failed),
+            message = if (errorMessage.isNullOrEmpty()) {
+                getString(R.string.transfer_failed_msg)
+            } else {
+                errorMessage
+            },
+            showContactSupport = true,
+            buttonText = getString(R.string.button_retry)
+        )
     }
 
     private fun handleBackPress() {
