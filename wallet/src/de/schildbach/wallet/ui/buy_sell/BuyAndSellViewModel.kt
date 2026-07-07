@@ -214,7 +214,7 @@ class BuyAndSellViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val account = coinBaseRepository.getUserAccount()
-                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, account.coinBalance().value)
+                coinbaseConfig.set(CoinbaseConfig.LAST_BALANCE, account.coinBalance().duffs)
                 showRowBalance(ServiceType.COINBASE, account.availableBalance.value)
             } catch (ex: Exception) {
                 showRowBalance(ServiceType.COINBASE, coinbaseBalanceString())

@@ -25,6 +25,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.SendPaymentService
 import java.util.function.Consumer
 import java.util.function.Predicate
@@ -58,11 +59,28 @@ class FakeDashSpendService @Inject constructor(
         )
     }
 
+    override suspend fun sendCoins(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
+    ): String {
+        return realService.sendCoins(address, amount, emptyWallet, checkBalanceConditions)
+    }
+
     override suspend fun estimateNetworkFee(
         address: Address,
         amount: Coin,
         emptyWallet: Boolean
     ): SendPaymentService.TransactionDetails {
+        return realService.estimateNetworkFee(address, amount, emptyWallet)
+    }
+
+    override suspend fun estimateNetworkFee(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean
+    ): SendPaymentService.TransactionEstimate {
         return realService.estimateNetworkFee(address, amount, emptyWallet)
     }
 

@@ -31,10 +31,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
-import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.R
 import org.dash.wallet.common.data.entity.ExchangeRate
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.databinding.DialogOptionPickerBinding
 import org.dash.wallet.common.ui.decorators.ListDividerDecorator
 import org.dash.wallet.common.ui.dialogs.OffsetDialogFragment
@@ -133,8 +133,8 @@ class CryptoWalletsDialog(
                 if (accountData.availableBalance.value.isEmpty() ||
                     accountData.availableBalance.value.toDouble() == 0.0
                 ) {
-                    MonetaryFormat().withLocale(GenericUtils.getDeviceLocale())
-                        .noCode().minDecimals(2).optionalDecimals().format(Coin.ZERO).toString()
+                    MoneyFormat().withLocale(GenericUtils.getDeviceLocale())
+                        .noCode().minDecimals(2).optionalDecimals().format(Dash.ZERO).toString()
                 } else {
                     accountData.availableBalance.value
                 }
@@ -180,7 +180,7 @@ class CryptoWalletsDialog(
     private fun setLocalFaitAmount(
         currentExchangeRate: ExchangeRate?,
         coinBaseUserAccountData: CoinBaseUserAccountDataUIModel
-    ): Pair<String, Coin>? {
+    ): Pair<String, Dash>? {
         currentExchangeRate?.let {
             return coinBaseUserAccountData.getCoinBaseExchangeRateConversion(it)
         }

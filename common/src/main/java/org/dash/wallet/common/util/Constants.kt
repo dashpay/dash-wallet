@@ -27,6 +27,7 @@ import org.bitcoinj.params.MainNetParams
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.BuildConfig
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.MoneyFormat
 import org.dash.wallet.common.money.toDash
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -53,6 +54,10 @@ object Constants {
     val SEND_PAYMENT_LOCAL_FORMAT: MonetaryFormat =
         MonetaryFormat().withLocale(GenericUtils.getDeviceLocale()).minDecimals(2)
             .optionalDecimals()
+
+    /** Neutral counterpart of [SEND_PAYMENT_LOCAL_FORMAT] for modules that don't depend on dashj. */
+    val SEND_PAYMENT_LOCAL_MONEY_FORMAT: MoneyFormat
+        get() = MoneyFormat(SEND_PAYMENT_LOCAL_FORMAT)
 
     const val ANDROID_KEY_STORE = "AndroidKeyStore"
 

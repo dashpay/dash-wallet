@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.Fiat
 import org.bitcoinj.utils.MonetaryFormat
 import org.dash.wallet.common.Configuration
+import java.math.RoundingMode
 import java.util.Locale
 
 /**
@@ -38,6 +39,7 @@ class MoneyFormat internal constructor(internal val delegate: MonetaryFormat) {
     fun repeatOptionalDecimals(decimals: Int, repetitions: Int) =
         MoneyFormat(delegate.repeatOptionalDecimals(decimals, repetitions))
     fun withLocale(locale: Locale) = MoneyFormat(delegate.withLocale(locale))
+    fun roundingMode(roundingMode: RoundingMode) = MoneyFormat(delegate.roundingMode(roundingMode))
 
     fun format(amount: Dash): CharSequence = delegate.format(Coin.valueOf(amount.duffs))
     fun format(amount: FiatValue): CharSequence = delegate.format(Fiat.valueOf(amount.currencyCode, amount.value))

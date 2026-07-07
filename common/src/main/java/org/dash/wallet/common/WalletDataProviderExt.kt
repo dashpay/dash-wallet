@@ -54,6 +54,13 @@ fun WalletDataProvider.observeTransactionLocked(txId: String): Flow<String> =
     observeTransactions(true, LockedTransaction(Sha256Hash.wrap(txId))).map { it.txId.toString() }
 
 /**
+ * Whether the wallet transaction with hex id [txId] is pending (mirrors `Transaction.isPending`);
+ * false if the wallet doesn't know the transaction.
+ */
+fun WalletDataProvider.isTransactionPending(txId: String): Boolean =
+    getTransaction(Sha256Hash.wrap(txId))?.isPending ?: false
+
+/**
  * Net wallet value of the transaction with hex id [txId] (mirrors
  * `Transaction.getValue(transactionBag)`), or null if the wallet doesn't know the transaction.
  */

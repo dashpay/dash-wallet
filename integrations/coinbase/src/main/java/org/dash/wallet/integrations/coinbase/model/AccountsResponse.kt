@@ -21,8 +21,8 @@ import android.os.Parcelable
 import com.google.gson.annotations.SerializedName
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import org.bitcoinj.core.Coin
-import org.dash.wallet.common.util.toCoin
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.util.toDash
 import java.lang.Exception
 import java.lang.IllegalArgumentException
 import java.math.BigDecimal
@@ -60,14 +60,14 @@ data class CoinbaseAccount(
         )
     }
 
-    fun coinBalance(): Coin = try {
-        Coin.parseCoin(availableBalance.value)
+    fun coinBalance(): Dash = try {
+        Dash.parse(availableBalance.value)
     } catch (ex: IllegalArgumentException) {
         try {
             val rounded = BigDecimal(availableBalance.value).round(MathContext(8, RoundingMode.HALF_UP))
-            rounded.toCoin()
+            rounded.toDash()
         } catch (ex: Exception) {
-            Coin.ZERO
+            Dash.ZERO
         }
     }
 }

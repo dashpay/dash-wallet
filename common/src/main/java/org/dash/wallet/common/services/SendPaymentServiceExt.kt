@@ -18,12 +18,31 @@
 package org.dash.wallet.common.services
 
 import org.bitcoinj.core.InsufficientMoneyException
+import org.bitcoinj.wallet.Wallet
 
 /**
  * Neutral (dashj-free) counterpart of dashj's [InsufficientMoneyException] for feature/integration
  * modules: thrown by [payAndGetTxId] when the wallet balance can't cover the payment.
  */
 class InsufficientFundsException(message: String?, cause: Throwable? = null) : Exception(message, cause)
+
+// ---------------------------------------------------------------------------------------------
+// Neutral classifiers for send failures. Feature/integration modules can't reference the dashj
+// exception types thrown by SendPaymentService, so these helpers classify them instead
+// (mirroring `catch (e: <dashj type>)` blocks exactly).
+// ---------------------------------------------------------------------------------------------
+
+/** True when this is dashj's [InsufficientMoneyException] (wallet balance can't cover the payment). */
+val Throwable.isInsufficientMoney: Boolean
+    get() = this is InsufficientMoneyException
+
+/** True when this is dashj's [Wallet.DustySendRequested] or [Wallet.CouldNotAdjustDownwards] (dusty send). */
+val Throwable.isDustySend: Boolean
+    get() = this is Wallet.DustySendRequested || this is Wallet.CouldNotAdjustDownwards
+
+/** True when this is the [LeftoverBalanceException] thrown by the leftover-balance check. */
+val Throwable.isLeftoverBalanceWarning: Boolean
+    get() = this is LeftoverBalanceException
 
 /**
  * Neutral counterpart of [SendPaymentService.payWithDashUrl] for modules that must not depend

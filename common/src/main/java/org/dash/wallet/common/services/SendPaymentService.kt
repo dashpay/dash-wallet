@@ -25,6 +25,7 @@ import org.bitcoinj.core.TransactionOutput
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.wallet.CoinSelector
 import org.bitcoinj.wallet.SendRequest
+import org.dash.wallet.common.money.Dash
 import java.util.function.Consumer
 import java.util.function.Predicate
 
@@ -52,6 +53,34 @@ interface SendPaymentService {
     data class TransactionDetails(
         val fee: String,
         val amountToSend: Coin,
+        val totalAmount: String
+    )
+
+    /**
+     * Neutral (dashj-free) counterpart of [sendCoins] for feature/integration modules:
+     * sends [amount] to the base58 [address] and returns the created transaction's txId
+     * as a hex string. Behaves exactly like the dashj-typed overload, including thrown
+     * exceptions (use the neutral `Throwable.is*` helpers to classify them).
+     */
+    @Throws(LeftoverBalanceException::class)
+    suspend fun sendCoins(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean = false,
+        checkBalanceConditions: Boolean = true
+    ): String
+
+    /** Neutral (dashj-free) counterpart of [estimateNetworkFee] for feature/integration modules. */
+    suspend fun estimateNetworkFee(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean = false
+    ): TransactionEstimate
+
+    /** Neutral counterpart of [TransactionDetails] for modules that don't depend on dashj. */
+    data class TransactionEstimate(
+        val fee: String,
+        val amountToSend: Dash,
         val totalAmount: String
     )
 

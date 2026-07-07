@@ -29,7 +29,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import org.bitcoinj.core.Coin
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.fiatValue
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.ui.dialogs.AdaptiveDialog
 import org.dash.wallet.common.ui.enter_amount.EnterAmountFragment
@@ -58,7 +59,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         super.onViewCreated(view, savedInstanceState)
 
         if (savedInstanceState == null) {
-            val newFragment = EnterAmountFragment.newInstance(
+            val newFragment = EnterAmountFragment.newInstanceDash(
                 isMaxButtonVisible = false,
                 showCurrencySelector = false
             )
@@ -81,16 +82,16 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
 
         amountViewModel.selectedExchangeRate.observe(viewLifecycleOwner) { rate ->
-            rate?.let {
+            rate?.fiatValue?.let { fiatValue ->
                 binding.toolbarSubtitle.text = getString(
                     R.string.exchange_rate_template,
-                    Coin.COIN.toPlainString(),
-                    rate.fiat.toFormattedString()
+                    Dash.COIN.toPlainString(),
+                    fiatValue.toFormattedString()
                 )
             }
         }
 
-        amountViewModel.onContinueEvent.observe(viewLifecycleOwner) { pair ->
+        amountViewModel.onContinueDashEvent.observe(viewLifecycleOwner) { pair ->
             lifecycleScope.launch {
                 val validated = AdaptiveDialog.withProgress(getString(R.string.loading), requireActivity()) {
                     validate(pair.first, retryWithDeposit = false)
@@ -118,7 +119,7 @@ class CoinbaseBuyDashFragment : Fragment(R.layout.fragment_coinbase_buy_dash) {
         }
     }
 
-    private suspend fun validate(dashAmount: Coin, retryWithDeposit: Boolean): Boolean {
+    private suspend fun validate(dashAmount: Dash, retryWithDeposit: Boolean): Boolean {
         val isMoreThanLimit = sharedViewModel.isInputGreaterThanLimit(dashAmount)
         binding.authLimitBanner.root.isVisible = isMoreThanLimit
 

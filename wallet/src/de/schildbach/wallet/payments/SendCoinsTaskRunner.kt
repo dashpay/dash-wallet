@@ -48,6 +48,9 @@ import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRe
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.toCoin
+import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.dash.wallet.common.services.DirectPayException
 import org.dash.wallet.common.services.LeftoverBalanceException
@@ -107,6 +110,32 @@ class SendCoinsTaskRunner @Inject constructor(
             checkBalanceConditions = false,
             beforeSending = beforeSending
         )
+    }
+
+    @Throws(LeftoverBalanceException::class)
+    override suspend fun sendCoins(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean,
+        checkBalanceConditions: Boolean
+    ): String {
+        val dashAddress = Address.fromString(walletData.networkParameters, address)
+        return sendCoins(
+            dashAddress,
+            amount.toCoin(),
+            emptyWallet = emptyWallet,
+            checkBalanceConditions = checkBalanceConditions
+        ).txId.toString()
+    }
+
+    override suspend fun estimateNetworkFee(
+        address: String,
+        amount: Dash,
+        emptyWallet: Boolean
+    ): SendPaymentService.TransactionEstimate {
+        val dashAddress = Address.fromString(walletData.networkParameters, address)
+        val details = estimateNetworkFee(dashAddress, amount.toCoin(), emptyWallet)
+        return SendPaymentService.TransactionEstimate(details.fee, details.amountToSend.toDash(), details.totalAmount)
     }
 
     override suspend fun estimateNetworkFee(
