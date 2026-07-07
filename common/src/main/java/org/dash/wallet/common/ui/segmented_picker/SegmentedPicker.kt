@@ -70,6 +70,9 @@ fun SegmentedPicker(
     options: List<SegmentedOption>,
     modifier: Modifier = Modifier,
     selectedIndex: Int = 0,
+    // When false, no option is rendered as current: no thumb, uniform text color. For pickers
+    // whose options are alternatives to switch to rather than a persistent selection.
+    showSelection: Boolean = true,
     style: SegmentedPickerStyle = SegmentedPickerStyle(),
     onOptionSelected: (SegmentedOption, Int) -> Unit = { _, _ -> },
 ) {
@@ -155,7 +158,7 @@ fun SegmentedPicker(
         }
 
         // Draw the animated selection indicator
-        if (containerSize > 0) {
+        if (containerSize > 0 && showSelection) {
             Surface(
                 shape = RoundedCornerShape((style.cornerRadius - 2).dp),
                 color = style.thumbColor,
@@ -186,7 +189,7 @@ fun SegmentedPicker(
                 options.forEachIndexed { index, option ->
                     OptionContent(
                         option = option,
-                        isSelected = index == internalSelectedIndex,
+                        isSelected = showSelection && index == internalSelectedIndex,
                         textStyle = style.textStyle,
                         onSelect = {
                             isInitialPosition = false
@@ -205,7 +208,7 @@ fun SegmentedPicker(
                 options.forEachIndexed { index, option ->
                     OptionContent(
                         option = option,
-                        isSelected = index == internalSelectedIndex,
+                        isSelected = showSelection && index == internalSelectedIndex,
                         textStyle = style.textStyle,
                         onSelect = {
                             isInitialPosition = false
