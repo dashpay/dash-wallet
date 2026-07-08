@@ -256,6 +256,19 @@ public class WalletApplication extends MultiDexApplication
         super.onCreate();
         initLogging();
         FirebaseApp.initializeApp(this);
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            // Built without google-services.json (the Firebase config is intentionally optional,
+            // see gradle/google-services.gradle). Initialize a placeholder app so DI-provided
+            // Firebase services (auth, analytics) can be constructed; their network calls fail
+            // soft inside existing error handling instead of crashing the process.
+            log.warn("no Firebase config in this build; initializing placeholder FirebaseApp");
+            FirebaseApp.initializeApp(this, new com.google.firebase.FirebaseOptions.Builder()
+                    .setApplicationId("1:000000000000:android:0000000000000000000000")
+                    .setProjectId("dash-wallet-local-build")
+                    // must match Firebase's AIza[0-9A-Za-z\-_]{35} API-key format check
+                    .setApiKey("AIzaSyPlaceholderLocalBuild000000000000")
+                    .build());
+        }
         AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         log.info("STARTUP WalletApplication.onCreate()");
         config = new Configuration(PreferenceManager.getDefaultSharedPreferences(this));
