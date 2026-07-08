@@ -155,6 +155,24 @@ open class DashPayConfig @Inject constructor(
          * direction is instant (no restart).
          */
         val USE_KOTLIN_SDK_DASHPAY_WRITES = booleanPreferencesKey("use_kotlin_sdk_dashpay_writes")
+
+        /**
+         * Phase 4 of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): enable the SHIELDED
+         * (Orchard) balance runtime — the per-network commitment-tree
+         * store, the wallet's shielded sub-wallet binding, the background
+         * shielded sync loop, and the shielded spend operations (shield /
+         * transfer / unshield / withdraw). Default OFF: with the flag off
+         * the shielded service is provably inert (no native call, no
+         * SQLite file, no sync loop). Spends follow the
+         * [de.schildbach.wallet.service.platform.sdk.SdkWriteResult]
+         * no-double-broadcast contract — see
+         * [de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService].
+         * Re-read on every call, so toggling ON is instant; toggling OFF
+         * stops gating new work but does not tear down a running sync loop
+         * (call `ShieldedBalanceService.stop()` for that).
+         */
+        val USE_KOTLIN_SDK_SHIELDED = booleanPreferencesKey("use_kotlin_sdk_shielded")
     }
 
     init {
@@ -169,6 +187,9 @@ open class DashPayConfig @Inject constructor(
                     }
                     if (get(USE_KOTLIN_SDK_DASHPAY_WRITES) == null) {
                         set(USE_KOTLIN_SDK_DASHPAY_WRITES, true)
+                    }
+                    if (get(USE_KOTLIN_SDK_SHIELDED) == null) {
+                        set(USE_KOTLIN_SDK_SHIELDED, true)
                     }
                 } catch (e: Exception) {
                     // best-effort seeding; the flags simply stay at their OFF default

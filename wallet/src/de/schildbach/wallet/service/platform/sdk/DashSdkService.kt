@@ -124,6 +124,14 @@ interface DashSdkService {
     fun sdkOrNull(): Sdk?
 
     /**
+     * The SDK's Room database, or null if [ensureStarted] has not
+     * completed. Read-only consumers only (the shielded note/activity
+     * flows in [ShieldedBalanceService]); writes stay with the SDK's own
+     * persistence bridge.
+     */
+    fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase?
+
+    /**
      * The activated wallet manager for the app's network, or null if
      * [ensureStarted] has not completed.
      */

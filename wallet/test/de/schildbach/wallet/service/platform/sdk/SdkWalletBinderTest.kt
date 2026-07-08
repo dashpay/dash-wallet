@@ -79,6 +79,7 @@ class SdkWalletBinderTest {
         override suspend fun ensureStarted() = Unit
         override suspend fun stop() = Unit
         override fun sdkOrNull(): Sdk? = null
+        override fun databaseOrNull(): org.dashfoundation.dashsdk.persistence.DashDatabase? = null
         override fun walletManagerOrNull(): PlatformWalletManager? = null
         override suspend fun resolveUsername(name: String): String? = null
 

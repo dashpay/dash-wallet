@@ -296,6 +296,8 @@ class DashSdkServiceImpl @Inject constructor(
 
     override fun sdkOrNull(): Sdk? = runtime?.sdk
 
+    override fun databaseOrNull(): DashDatabase? = runtime?.database
+
     override fun walletManagerOrNull(): PlatformWalletManager? = runtime?.walletManager
 
     override suspend fun ensureStarted() {

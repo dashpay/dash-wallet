@@ -25,6 +25,8 @@ import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
 import de.schildbach.wallet.service.platform.sdk.SecurityGuardMnemonicProvider
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceServiceImpl
 import javax.inject.Singleton
 
 /**
@@ -55,4 +57,17 @@ abstract class PlatformSdkModule {
     abstract fun bindPlatformMnemonicProvider(
         provider: SecurityGuardMnemonicProvider
     ): PlatformMnemonicProvider
+
+    /**
+     * Phase 4 shielded-balances plumbing. Also lazy: inert until a caller
+     * invokes a method, and provably inert while
+     * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.USE_KOTLIN_SDK_SHIELDED]
+     * (default OFF) stays off. No production call sites yet — this is the
+     * API layer for the upcoming shielded UI.
+     */
+    @Singleton
+    @Binds
+    abstract fun bindShieldedBalanceService(
+        service: ShieldedBalanceServiceImpl
+    ): ShieldedBalanceService
 }

@@ -387,3 +387,17 @@ Verified on-device with the debug flags ON:
   the 30s auth-gated Keystore window) — now healed with byte-verified derivation + retry.
 - Remaining friction for full SDK-path writes: the SDK's auth-gated key alias (30s window);
   needs an SDK-side policy option or app-supplied auth gate.
+
+## Phase 4 status (updated 2026-07-08)
+
+- ✅ **Service layer DONE** (`ShieldedBalanceService` behind `USE_KOTLIN_SDK_SHIELDED`, default OFF):
+  lifecycle (configureShielded → bindShielded → sync loop + prover warm-up, single-flight,
+  inert when off), `observeShieldedBalance(): Flow<Dash>` + activity feed (neutral types),
+  all four ops (shield-from-credits / transfer / unshield / withdraw-to-L1) under the
+  SdkWriteResult no-double-broadcast contract. ShieldedSpendUnconfirmed = Ambiguous,
+  non-retryable. 42 tests. UI notes: ~30s blocking Halo2 proof with NO progress hook
+  (indeterminate progress required); prover pre-warmed; withdraw fee pinned to 1 duff/byte
+  (Fibonacci constraint); bech32m Orchard addresses (dash1…/tdash1…).
+- ⬜ **UI from the Figma designs** (links in the design-references section): requires a session
+  with the Figma dev-mode MCP connected; implement via the figma-to-compose flow on top of
+  ShieldedBalanceService.
