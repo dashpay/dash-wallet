@@ -93,15 +93,21 @@ sealed class SdkWriteResult<out T> {
  * Kept as a top-level pure function so the table is unit-testable on the
  * host JVM without any native or Android dependency.
  */
-internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when (t) {
-    is DashSdkError.InvalidParameter,
-    is DashSdkError.InvalidState,
-    is DashSdkError.NotFound,
-    is DashSdkError.NotImplemented,
-    is DashSdkError.PlatformWallet.InvalidHandle,
-    is DashSdkError.PlatformWallet.ShieldedBroadcastFailed,
-    is DashSdkError.PlatformWallet.ShieldedNoRecordedAnchor ->
+internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = when {
+    t is DashSdkError.InvalidParameter ||
+        t is DashSdkError.InvalidState ||
+        t is DashSdkError.NotFound ||
+        t is DashSdkError.NotImplemented ||
+        t is DashSdkError.PlatformWallet.InvalidHandle ||
+        t is DashSdkError.PlatformWallet.ShieldedBroadcastFailed ||
+        t is DashSdkError.PlatformWallet.ShieldedNoRecordedAnchor ->
         SdkWriteResult.NotBroadcast("pre-broadcast validation failure: ${t.javaClass.simpleName}", t)
+    // Signing happens strictly before submission, so nothing was broadcast.
+    // Surfaced as a Generic FFI error with this message (observed live on-device
+    // when identity private keys weren't derived/stored after discovery);
+    // message-matched until the SDK exposes a typed signing error.
+    t.message?.contains("no private key stored") == true ->
+        SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): no private key stored", t)
     else -> SdkWriteResult.Ambiguous(t)
 }
 
