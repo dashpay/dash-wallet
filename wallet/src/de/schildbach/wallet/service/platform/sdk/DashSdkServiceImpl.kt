@@ -56,6 +56,86 @@ internal fun toSdkNetwork(parameters: NetworkParameters): Network = when {
     else -> throw IllegalArgumentException("No SDK network mapping for ${parameters.id}")
 }
 
+// ── bindAppWallet helpers ─────────────────────────────────────────────
+//
+// Pure (no native, no Android, no I/O) so the idempotency/mapping logic of
+// [DashSdkServiceImpl.bindAppWallet] is unit-testable on the host JVM —
+// the native `createWallet` call itself cannot run there.
+
+/**
+ * Join provider-supplied BIP39 words into the single-space phrase the
+ * SDK's `createWallet` expects. Rejects empty lists and words containing
+ * whitespace (a caller passing a whole phrase as one "word"). Error
+ * messages deliberately never include the offending word.
+ */
+internal fun joinMnemonicWords(words: List<String>): String {
+    require(words.isNotEmpty()) { "seedWords is empty" }
+    val cleaned = words.map { it.trim() }
+    cleaned.forEachIndexed { index, word ->
+        require(word.isNotEmpty() && word.none { it.isWhitespace() }) {
+            "malformed seed word at index $index"
+        }
+    }
+    return cleaned.joinToString(" ")
+}
+
+/** Whitespace-normalize a phrase for comparison (never for storage). */
+internal fun normalizeMnemonic(phrase: String): String =
+    phrase.trim().split(WHITESPACE).joinToString(" ")
+
+private val WHITESPACE = Regex("\\s+")
+
+/**
+ * The `birthHeight` to hand the SDK's `createWallet` when importing the
+ * app's EXISTING seed.
+ *
+ * The SDK takes a block height (`null` = SPV tip for brand-new wallets,
+ * `0u` = full scan from genesis for imports); the app only knows a birth
+ * *time* (`Wallet.getEarliestKeyCreationTime`). Mapping time → height
+ * needs a header/checkpoint source that the Phase 3 runtime doesn't have,
+ * and guessing too high silently hides funds while 0 is merely slower —
+ * so Phase 3b is conservative: always scan from genesis. The real mainnet
+ * time→height mapping lands with the Phase 5 migration flow, which is why
+ * the birth time is already threaded through the signature.
+ */
+@Suppress("UNUSED_PARAMETER")
+internal fun sdkBirthHeightFor(birthTimeSecs: Long?): UInt = 0u
+
+/** Lowercase-hex decode of a 32-byte SDK wallet id; null if malformed. */
+internal fun walletIdFromHex(hex: String): ByteArray? {
+    if (hex.length != 64) return null
+    val out = ByteArray(32)
+    for (i in out.indices) {
+        val hi = Character.digit(hex[2 * i], 16)
+        val lo = Character.digit(hex[2 * i + 1], 16)
+        if (hi < 0 || lo < 0) return null
+        out[i] = ((hi shl 4) or lo).toByte()
+    }
+    return out
+}
+
+/**
+ * The already-bound wallet id for [mnemonic] among [loadedWalletIdsHex],
+ * or null if none matches — the dedup step that makes
+ * [DashSdkServiceImpl.bindAppWallet] idempotent. [storedMnemonicFor]
+ * resolves a loaded id to its phrase in the SDK's `WalletStorage`
+ * (null = watch-only wallet with no stored phrase, or a lookup failure —
+ * treated as "no match", falling through to `createWallet`, whose own
+ * `storeMnemonic` re-heals a missing phrase for the same derived id).
+ */
+internal suspend fun findBoundWalletId(
+    loadedWalletIdsHex: Collection<String>,
+    mnemonic: String,
+    storedMnemonicFor: suspend (String) -> String?
+): String? {
+    val candidate = normalizeMnemonic(mnemonic)
+    for (idHex in loadedWalletIdsHex) {
+        val stored = storedMnemonicFor(idHex) ?: continue
+        if (normalizeMnemonic(stored) == candidate) return idHex
+    }
+    return null
+}
+
 /**
  * Default [DashSdkService] implementation — the Phase 3 bootstrap scaffold
  * (`docs/kotlin-sdk-migration-plan.md`).
@@ -90,10 +170,12 @@ internal fun toSdkNetwork(parameters: NetworkParameters): Network = when {
  *   `startDashPaySync`) — Phase 3b/4,
  * - network-switch observer — the app's network is flavor-fixed.
  *
- * @param mnemonicProvider Phase 3b seam for bridging the PIN-encrypted
- *   dashj seed into the SDK; unused in Phase 3 (the placeholder binding
- *   throws), held here so the wallet-binding step lands as a pure
- *   implementation swap.
+ * @param mnemonicProvider the Phase 3b seed bridge
+ *   ([SecurityGuardMnemonicProvider] in production). Not called by this
+ *   service — [bindAppWallet] takes already-decrypted words so the
+ *   PIN/biometric prompt stays with the caller — but held here so Phase 3c
+ *   call sites can reach both halves of the bridge through one injection
+ *   point.
  */
 @Singleton
 class DashSdkServiceImpl @Inject constructor(
@@ -111,6 +193,9 @@ class DashSdkServiceImpl @Inject constructor(
     )
 
     private val lock = Mutex()
+
+    /** Serializes [bindAppWallet]'s dedup-then-create critical section. */
+    private val bindLock = Mutex()
 
     @Volatile
     private var runtime: SdkRuntime? = null
@@ -151,6 +236,59 @@ class DashSdkServiceImpl @Inject constructor(
         ensureStarted()
         val sdk = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }.sdk
         return sdk.dpns.resolve(name)
+    }
+
+    /**
+     * See [DashSdkService.bindAppWallet] for the contract. Serialized under
+     * [bindLock] so two concurrent binds of the same phrase can't both miss
+     * the dedup check and double-create.
+     *
+     * The phrase inevitably exists as a [String] here — the SDK's
+     * `createWallet(mnemonic: String)` and `WalletStorage.retrieveMnemonic`
+     * both traffic in strings — so there is nothing to scrub; it is never
+     * logged and no reference outlives this call.
+     */
+    override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
+        val mnemonic = joinMnemonicWords(seedWords)
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+
+        bindLock.withLock {
+            // Idempotency: bootstrap already ran loadPersistedWallets(), so
+            // every previously-bound wallet is in the manager's map with its
+            // phrase in the SDK's Keystore-backed WalletStorage.
+            val existing = findBoundWalletId(
+                loadedWalletIdsHex = current.walletManager.wallets.value.keys,
+                mnemonic = mnemonic
+            ) { idHex ->
+                val walletId = walletIdFromHex(idHex) ?: return@findBoundWalletId null
+                // Lookup failures (Keystore hiccup) fall through to
+                // createWallet rather than failing the bind.
+                runCatching { current.walletStorage.retrieveMnemonic(walletId) }.getOrNull()
+            }
+            if (existing != null) {
+                log.info("app wallet already bound to SDK wallet {}…", existing.take(8))
+                return existing
+            }
+
+            // First bind: derive + register the SDK wallet. createWallet
+            // itself persists the phrase into WalletStorage keyed by the
+            // derived id (and rolls everything back on failure), after which
+            // the manager's MnemonicResolverAndPersister serves derivations
+            // without any further seed hand-off.
+            val managed = current.walletManager.createWallet(
+                mnemonic = mnemonic,
+                name = APP_WALLET_NAME,
+                createDefaultAccounts = true,
+                birthHeight = sdkBirthHeightFor(birthTimeSecs)
+            )
+            log.info(
+                "app wallet bound to new SDK wallet {}… (full scan from genesis; " +
+                    "time→height mapping lands in Phase 5)",
+                managed.walletIdHex.take(8)
+            )
+            return managed.walletIdHex
+        }
     }
 
     /**
@@ -209,5 +347,12 @@ class DashSdkServiceImpl @Inject constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(DashSdkServiceImpl::class.java)
+
+        /**
+         * Room-row display name stamped on the one SDK wallet bound from
+         * the app's dashj seed (the SDK requires no name; this labels the
+         * row for debugging/parity with the example app's named wallets).
+         */
+        internal const val APP_WALLET_NAME = "Dash Wallet"
     }
 }

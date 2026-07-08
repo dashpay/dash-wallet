@@ -100,4 +100,46 @@ interface DashSdkService {
      * a verified end-to-end entry point (JNI → Rust → DAPI) to build on.
      */
     suspend fun resolveUsername(name: String): String?
+
+    /**
+     * Bind the app's dashj wallet to the SDK: derive an SDK wallet from the
+     * same BIP39 phrase so both stacks operate on one seed — the Phase 3b
+     * bridge (`docs/kotlin-sdk-migration-plan.md`). Internally calls
+     * [ensureStarted]. NOT called from any production code path yet; the
+     * Phase 3c `service/platform` port becomes the first caller.
+     *
+     * ## Contract
+     *
+     * - **Input**: [seedWords] straight from
+     *   [PlatformMnemonicProvider.getMnemonicWords] — i.e. the caller has
+     *   already authenticated the user and decrypted the dashj seed. Words
+     *   are never logged or persisted app-side.
+     * - **Idempotent**: the SDK's `createWallet` does NOT dedup (re-running
+     *   it re-registers the same derived wallet id), so this call first
+     *   matches the phrase against the mnemonics already persisted in the
+     *   SDK's Keystore-backed `WalletStorage` for the wallets
+     *   `loadPersistedWallets()` restored; on a match it returns the
+     *   existing id without touching native wallet creation.
+     * - **Resolver wiring**: on first bind, `createWallet` persists the
+     *   phrase into the SDK's `WalletStorage` keyed by the derived wallet
+     *   id (Kotlin-side, after the FFI returns the id — verified against
+     *   `PlatformWalletManager.createWallet`); the manager's
+     *   `MnemonicResolverAndPersister` reads from that same storage, so
+     *   every post-bind derivation resolves WITHOUT re-prompting the user.
+     * - **Birth height**: the SDK wants a block *height* to start compact-
+     *   filter scanning from, but the app only knows a birth *time*
+     *   ([org.bitcoinj.wallet.Wallet.getEarliestKeyCreationTime]), and a
+     *   too-high height silently skips funds while `0` (genesis) is merely
+     *   slower. Phase 3b therefore always requests a full scan; the
+     *   time→height mapping (via headers/checkpoints) lands with the
+     *   Phase 5 migration flow. [birthTimeSecs] is accepted now so call
+     *   sites don't change shape then.
+     *
+     * @param seedWords the wallet's BIP39 words, already decrypted.
+     * @param birthTimeSecs the dashj wallet's earliest-key time (Unix
+     *   seconds), or null if unknown. Recorded in the signature for
+     *   Phase 5; does not affect Phase 3b behavior.
+     * @return the bound SDK wallet id as lowercase hex (64 chars).
+     */
+    suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String
 }

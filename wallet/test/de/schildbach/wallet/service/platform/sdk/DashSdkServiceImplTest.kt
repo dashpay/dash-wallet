@@ -25,6 +25,7 @@ import org.bitcoinj.params.OuzoDevNetParams
 import org.bitcoinj.params.RegTestParams
 import org.bitcoinj.params.TestNet3Params
 import org.dashfoundation.dashsdk.Network
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -50,7 +51,7 @@ class DashSdkServiceImplTest {
 
     private fun newService() = DashSdkServiceImpl(
         context = mockk<Context>(relaxed = true),
-        mnemonicProvider = Phase3bPlaceholderMnemonicProvider()
+        mnemonicProvider = SecurityGuardMnemonicProvider(mockk(relaxed = true))
     )
 
     @Test
@@ -73,18 +74,93 @@ class DashSdkServiceImplTest {
     }
 
     @Test
-    fun placeholderMnemonicProvider_failsUntilPhase3b() {
-        val exception = assertThrows(UnsupportedOperationException::class.java) {
-            runBlocking { Phase3bPlaceholderMnemonicProvider().getMnemonic() }
-        }
-        assertEquals("wallet binding lands in Phase 3b", exception.message)
-    }
-
-    @Test
     fun toSdkNetwork_mapsFlavorNetworksToSdkNetworks() {
         assertEquals(Network.MAINNET, toSdkNetwork(MainNetParams.get()))
         assertEquals(Network.TESTNET, toSdkNetwork(TestNet3Params.get()))
         assertEquals(Network.DEVNET, toSdkNetwork(OuzoDevNetParams.get()))
         assertEquals(Network.REGTEST, toSdkNetwork(RegTestParams.get()))
+    }
+
+    // ── bindAppWallet helpers (the native-free logic of Phase 3b) ─────
+
+    @Test
+    fun joinMnemonicWords_joinsAndTrims() {
+        assertEquals(
+            "weapon elder job",
+            joinMnemonicWords(listOf(" weapon", "elder ", "job"))
+        )
+    }
+
+    @Test
+    fun joinMnemonicWords_rejectsEmptyAndMalformedInput() {
+        assertThrows(IllegalArgumentException::class.java) {
+            joinMnemonicWords(emptyList())
+        }
+        assertThrows(IllegalArgumentException::class.java) {
+            joinMnemonicWords(listOf("weapon", ""))
+        }
+        // A whole phrase smuggled in as one "word".
+        val exception = assertThrows(IllegalArgumentException::class.java) {
+            joinMnemonicWords(listOf("weapon elder job"))
+        }
+        // Error messages must never leak seed material.
+        assertFalse(exception.message!!.contains("weapon"))
+    }
+
+    @Test
+    fun normalizeMnemonic_collapsesWhitespaceOnly() {
+        assertEquals("weapon elder job", normalizeMnemonic("  weapon\telder  job \n"))
+        assertEquals("weapon", normalizeMnemonic("weapon"))
+    }
+
+    @Test
+    fun sdkBirthHeightFor_isConservativeFullScanUntilPhase5() {
+        // The time→height mapping lands with the Phase 5 migration flow;
+        // until then every import scans from genesis (0u) — a too-high
+        // guess would silently hide funds.
+        assertEquals(0u, sdkBirthHeightFor(null))
+        assertEquals(0u, sdkBirthHeightFor(1_231_006_505L))
+        assertEquals(0u, sdkBirthHeightFor(System.currentTimeMillis() / 1000))
+    }
+
+    @Test
+    fun walletIdFromHex_roundTripsAndRejectsMalformed() {
+        val hex = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+        val bytes = walletIdFromHex(hex)!!
+        assertEquals(32, bytes.size)
+        assertArrayEquals(
+            byteArrayOf(0x00, 0x11, 0x22, 0x33),
+            bytes.copyOfRange(0, 4)
+        )
+
+        assertNull(walletIdFromHex(""))
+        assertNull(walletIdFromHex(hex.dropLast(2))) // 31 bytes
+        assertNull(walletIdFromHex(hex.dropLast(1) + "zz".drop(1))) // non-hex
+    }
+
+    @Test
+    fun findBoundWalletId_matchesStoredMnemonicIgnoringWhitespace() = runBlocking {
+        val stored = mapOf(
+            "aa".repeat(32) to null, // watch-only: no stored phrase
+            "bb".repeat(32) to "weapon  elder\tjob ", // ragged whitespace
+            "cc".repeat(32) to "other seed phrase"
+        )
+
+        val match = findBoundWalletId(stored.keys, "weapon elder job") { stored[it] }
+
+        assertEquals("bb".repeat(32), match)
+    }
+
+    @Test
+    fun findBoundWalletId_returnsNullWhenNothingMatches() = runBlocking {
+        assertNull(
+            findBoundWalletId(listOf("aa".repeat(32)), "weapon elder job") { null }
+        )
+        assertNull(
+            findBoundWalletId(emptyList(), "weapon elder job") { "weapon elder job" }
+        )
+        assertNull(
+            findBoundWalletId(listOf("aa".repeat(32)), "weapon elder job") { "different phrase" }
+        )
     }
 }

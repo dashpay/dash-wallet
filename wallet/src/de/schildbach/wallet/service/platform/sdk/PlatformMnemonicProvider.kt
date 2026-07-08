@@ -17,46 +17,105 @@
 
 package de.schildbach.wallet.service.platform.sdk
 
-import javax.inject.Inject
-import javax.inject.Singleton
+import org.bitcoinj.wallet.DeterministicSeed
+import org.bouncycastle.crypto.params.KeyParameter
 
 /**
- * Seam through which the app's BIP39 seed will reach the Kotlin SDK —
- * Phase 3b of the dashj → Kotlin SDK migration
- * (`docs/kotlin-sdk-migration-plan.md`).
+ * Proof of an already-completed wallet unlock, passed INTO
+ * [PlatformMnemonicProvider.getMnemonicWords] — Phase 3b of the
+ * dashj → Kotlin SDK migration (`docs/kotlin-sdk-migration-plan.md`).
+ *
+ * ## Trust model (load-bearing)
+ *
+ * The provider NEVER prompts and NEVER touches `SecurityGuard` itself:
+ * authenticating the user (PIN/biometric via
+ * [org.dash.wallet.common.services.AuthenticationManager.authenticate]),
+ * recovering the wallet password
+ * ([de.schildbach.wallet.security.SecurityGuard.retrievePassword]) and
+ * deriving the AES key
+ * ([de.schildbach.wallet.security.SecurityFunctions.deriveKey]) are all the
+ * CALLER's job. Whoever constructs a [WalletUnlock] asserts that the user
+ * has already authorized this seed access.
+ */
+sealed class WalletUnlock {
+
+    /**
+     * The wallet's key-crypter AES key, derived from the PIN-protected
+     * wallet password via
+     * [de.schildbach.wallet.security.SecurityFunctions.deriveKey] — the
+     * canonical unlock for the app's encrypted production wallets.
+     */
+    class EncryptionKey(val key: KeyParameter) : WalletUnlock()
+
+    /**
+     * An already-decrypted seed (e.g. from an in-flight
+     * [de.schildbach.wallet.payments.DecryptSeedTask] result); the provider
+     * only extracts the words. Must not be encrypted.
+     */
+    class DecryptedSeed(val seed: DeterministicSeed) : WalletUnlock()
+
+    /**
+     * No credentials: only valid for wallets that were never PIN-encrypted
+     * (development/test wallets). Fails with
+     * [MnemonicBridgeException.Reason.ENCRYPTION_KEY_REQUIRED] against an
+     * encrypted wallet.
+     */
+    object Unencrypted : WalletUnlock()
+}
+
+/**
+ * Typed failure of the mnemonic bridge, so Phase 3c flows can branch on
+ * [reason] instead of string-matching dashj exceptions.
+ */
+class MnemonicBridgeException(
+    val reason: Reason,
+    cause: Throwable? = null
+) : Exception("BIP39 mnemonic unavailable: $reason", cause) {
+
+    enum class Reason {
+        /** No dashj wallet is loaded (`WalletDataProvider.wallet == null`). */
+        WALLET_UNAVAILABLE,
+
+        /** The active key chain has no seed — watch-only or corrupt wallet. */
+        SEED_MISSING,
+
+        /** A seed exists but carries no BIP39 words (raw-entropy seed). */
+        MNEMONIC_MISSING,
+
+        /** The seed is encrypted and no [WalletUnlock.EncryptionKey] was given. */
+        ENCRYPTION_KEY_REQUIRED,
+
+        /** Decryption failed — wrong PIN-derived key (or corrupt ciphertext). */
+        BAD_ENCRYPTION_KEY,
+    }
+}
+
+/**
+ * Seam through which the app's BIP39 seed reaches the Kotlin SDK — Phase 3b
+ * of the dashj → Kotlin SDK migration.
  *
  * The SDK resolves mnemonics through its own Keystore-backed
- * `WalletStorage` / `MnemonicResolverAndPersister` pair. The app's seed,
- * however, lives in the dashj wallet file, PIN-encrypted under
- * `SecurityGuard`. Phase 3b will implement this interface to decrypt the
- * dashj seed (with the user's PIN, at an explicit user action) and feed it
- * to the SDK — e.g. via `WalletStorage.storeMnemonic` or a wallet-creation
- * call — after which the SDK's resolver serves derivations on its own.
+ * `WalletStorage` / `MnemonicResolverAndPersister` pair; the app's seed
+ * lives in the dashj wallet file, PIN-encrypted under `SecurityGuard`. This
+ * interface hands the decrypted words to the ONE call that moves them
+ * across ([DashSdkService.bindAppWallet], whose `createWallet` persists
+ * them into the SDK's `WalletStorage`); after that the SDK's resolver
+ * serves all derivations on its own.
  *
- * Until then the only binding is [Phase3bPlaceholderMnemonicProvider],
- * which fails loudly so no code path can silently run against a missing
- * seed.
+ * The production binding is [SecurityGuardMnemonicProvider].
  */
 interface PlatformMnemonicProvider {
 
     /**
-     * The wallet's BIP39 mnemonic phrase, for handing to the SDK exactly
-     * once at wallet-binding time. Implementations must require explicit
-     * user authorization (PIN) — never call this on a background sync path.
+     * The wallet's BIP39 mnemonic words, for handing to
+     * [DashSdkService.bindAppWallet] exactly once at wallet-binding time.
+     *
+     * [unlock] carries the caller's proof of user authorization (see
+     * [WalletUnlock] for the trust model) — implementations never prompt.
+     * Never call this on a background sync path, and never log the result.
+     *
+     * @throws MnemonicBridgeException with a typed [MnemonicBridgeException.Reason]
+     *   for every failure mode (missing wallet/seed/words, missing or wrong key).
      */
-    suspend fun getMnemonic(): String
-}
-
-/**
- * Phase 3 placeholder: the SDK bootstrap scaffold never needs a mnemonic
- * (no SDK wallets exist yet, so `loadPersistedWallets()` restores nothing
- * and the SDK's resolver is never consulted). Any premature attempt to
- * bind the app's seed fails with a clear signal instead of undefined
- * behavior.
- */
-@Singleton
-class Phase3bPlaceholderMnemonicProvider @Inject constructor() : PlatformMnemonicProvider {
-
-    override suspend fun getMnemonic(): String =
-        throw UnsupportedOperationException("wallet binding lands in Phase 3b")
+    suspend fun getMnemonicWords(unlock: WalletUnlock): List<String>
 }

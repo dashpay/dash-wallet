@@ -23,8 +23,8 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import de.schildbach.wallet.service.platform.sdk.DashSdkService
 import de.schildbach.wallet.service.platform.sdk.DashSdkServiceImpl
-import de.schildbach.wallet.service.platform.sdk.Phase3bPlaceholderMnemonicProvider
 import de.schildbach.wallet.service.platform.sdk.PlatformMnemonicProvider
+import de.schildbach.wallet.service.platform.sdk.SecurityGuardMnemonicProvider
 import javax.inject.Singleton
 
 /**
@@ -45,10 +45,14 @@ abstract class PlatformSdkModule {
     @Binds
     abstract fun bindDashSdkService(dashSdkService: DashSdkServiceImpl): DashSdkService
 
-    /** Phase 3b swaps this for the real PIN-gated dashj seed bridge. */
+    /**
+     * The Phase 3b dashj seed bridge. Never prompts: callers pass an
+     * explicit [de.schildbach.wallet.service.platform.sdk.WalletUnlock]
+     * proving the user already authenticated.
+     */
     @Singleton
     @Binds
     abstract fun bindPlatformMnemonicProvider(
-        provider: Phase3bPlaceholderMnemonicProvider
+        provider: SecurityGuardMnemonicProvider
     ): PlatformMnemonicProvider
 }
