@@ -303,8 +303,9 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
     before enabling `USE_KOTLIN_SDK_DASHPAY_WRITES` anywhere real: an SDK-sent contact
     request whose embedded xpub dashj cannot re-derive would watch wrong friendship
     addresses.
-  - Then: accept-contact-request, identity registration/topup via the SDK asset-lock
-    bridge, and the DashPay sync loops.
+  - Then: ~~accept-contact-request~~ (3g: verified covered by the sendContactRequest
+    routing — see the Phase 3g section), identity registration/topup via the SDK
+    asset-lock bridge, and the DashPay sync loops.
 
 ## Phase 4 design references (added 2026-07-08)
 
@@ -333,6 +334,42 @@ components, vector drawables for missing icons).
   identity via `identityRegistration.discoverIdentities` (no SDK gap) at two key-in-scope call
   sites (PlatformSynchronizationService.init, PlatformDocumentBroadcastService writes),
   fire-and-forget, single-flight, provably inert with flags off. 171 tests green.
+
+## Phase 3g — accept-contact-request routing (verified 2026-07-08)
+
+- **Verdict: already covered by the 3e routing — no new seam needed.** In this app there is no
+  dedicated dashj "accept" broadcast: accepting an incoming contact request IS the reciprocal
+  `sendContactRequest`. Traced every accept entry point (NotificationsFragment `onAcceptRequest`,
+  ContactsFragment, DashPayUserActivity accept button, SendCoinsFragment) →
+  `DashPayViewModel.sendContactRequest` → `SendContactRequestOperation`/`SendContactRequestWorker`
+  → `PlatformDocumentBroadcastService.sendContactRequest(toUserId = requester)` — the method
+  already routed through `SdkDashPayWrites` (same preflight / three-valued no-double-broadcast
+  contract). Flag off ⇒ byte-identical dashj behavior.
+- **SDK's dedicated `Dashpay.acceptContactRequest`/`acceptIncomingRequest` deliberately NOT
+  used**: it requires the incoming request in the SDK wallet's LOCAL contact state (returns
+  false otherwise — the app doesn't keep that synced), and its Rust-side external-account
+  registration would duplicate/diverge from the app's dashj DIP-15 keychain bookkeeping. The
+  Platform document it broadcasts is the same reciprocal `contactRequest`.
+- **Reconciliation-tail parity review (Broadcast case, accept direction)**: complete.
+  - Incoming half (sending-to-requester DIP-15 keychain via `addPaymentKeyChainToContact` +
+    `fromContactRequest` DB row) is done by `PlatformSyncService.updateContactRequests` /
+    `checkAndAddReceivedRequest` when the incoming request syncs — independent of which stack
+    broadcasts the reciprocal.
+  - Outgoing half is `finalizeSentContactRequest`, shared verbatim by the dashj and SDK paths:
+    receiving keychain (`addPaymentKeyChainFromContact` reads xpub/accountReference back from the
+    watched document — works for the SDK-authored document too, modulo the already-documented
+    DIP-15 accountReference-slice mismatch), bloom-filter refresh, `DashPayContactRequest` DB row,
+    contact profile refresh, contacts-updated listeners. "Established" state is derived from
+    having both DB rows; the dashj path has no additional accept-only bookkeeping.
+- **Remaining unrouted DashPay-adjacent writes** (inventory of `PlatformBroadcastService` + repos):
+  - `broadcastIdentityVerify` (live via `BroadcastIdentityVerifyWorker`) — the Kotlin SDK has NO
+    identityVerify surface yet; stays on dashj. File an SDK feature request if it should route.
+  - `broadcastUsernameVotes` — masternode contested-resource votes signed with masternode voting
+    keys, not a wallet-identity DashPay write; out of the `USE_KOTLIN_SDK_DASHPAY_WRITES` scope.
+    (The SDK does expose `voting/VoteCasting.castVote` if this is ever migrated separately.)
+  - `PlatformRepo.createDashPayProfile` — `@Deprecated`, zero callers; dead code, nothing to route.
+  - Identity registration / username preorder+register / topups / invitations — identity writes,
+    tracked as their own later phase (SDK asset-lock bridge), unchanged here.
 
 ## Live testnet validation (2026-07-08, Galaxy S22 Ultra, testnet)
 

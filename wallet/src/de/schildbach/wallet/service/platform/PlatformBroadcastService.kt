@@ -106,8 +106,14 @@ class PlatformDocumentBroadcastService @Inject constructor(
         // fails this broadcast; inert unless a USE_KOTLIN_SDK_* flag is on.
         sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(encryptionKey))
 
-        // Phase 3e (docs/kotlin-sdk-migration-plan.md): DashPay write path
-        // behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off). The result is
+        // Phase 3e/3g (docs/kotlin-sdk-migration-plan.md): DashPay write path
+        // behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off). This single
+        // routing also covers ACCEPTING an incoming contact request — in this
+        // app "accept" is exactly this reciprocal sendContactRequest (all
+        // accept UI actions funnel here via SendContactRequestWorker); the
+        // direction-specific bookkeeping (sending keychain + incoming DB row)
+        // is done by PlatformSyncService when the incoming request is synced,
+        // independent of which stack broadcasts the reciprocal. The result is
         // three-valued to keep the no-double-broadcast invariant:
         // NotBroadcast → the SDK definitively submitted nothing, run the
         // dashj path below unchanged; Broadcast → the request is on

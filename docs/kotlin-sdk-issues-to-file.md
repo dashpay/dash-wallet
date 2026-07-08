@@ -64,3 +64,9 @@ hash+fingerprint fields directly.
 `dpns.resolve`/`search`/`usernames` results lack `$createdAt`, document id, alias records,
 and preorder salt. Verified no current Android caller needs them, but parity consumers
 migrating from dashj document reads will.
+
+## 9. No identityVerify surface in the Kotlin SDK
+
+The Android wallet broadcasts `identityVerify` documents (BroadcastIdentityVerifyWorker,
+username-request verification links). The SDK has no equivalent op, so this write cannot be
+migrated. Feature request: expose identityVerify document create/broadcast.

@@ -292,6 +292,47 @@ class SdkDashPayWritesTest {
         assertEquals(true, doCreate)
     }
 
+    // ── Accept direction (Phase 3g) ───────────────────────────────────────
+    //
+    // Accepting an incoming contact request in this app IS the reciprocal
+    // sendContactRequest (every accept UI action funnels into
+    // PlatformDocumentBroadcastService.sendContactRequest with
+    // toUserId = the requester), so the accept write is served by the same
+    // facade method. These tests lock in that contract: the reciprocal
+    // direction maps ids exactly like a plain send, and a pre-broadcast SDK
+    // rejection of the reciprocal still falls back cleanly to dashj.
+
+    @Test
+    fun acceptDirection_reciprocalSend_isBroadcast_withRequesterAsRecipient() = runBlocking {
+        // The accept flow calls sendContactRequest(own = us, to = requester):
+        // the original REQUESTER becomes the recipient of the reciprocal.
+        val requesterUserId = Identifier.from(ByteArray(32) { 7 }).toString()
+        val source = readySource()
+        val result = writes(source).sendContactRequest(ownUserId, requesterUserId)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        assertEquals(1, source.broadcastCalls)
+        assertArrayEquals(Identifier.from(ownUserId).toBuffer(), source.lastSender)
+        assertArrayEquals(Identifier.from(requesterUserId).toBuffer(), source.lastRecipient)
+    }
+
+    @Test
+    fun acceptDirection_preBroadcastRejection_isNotBroadcast_dashjFallbackSafe() = runBlocking {
+        // If the SDK ever rejects a reciprocal send pre-broadcast (e.g. it
+        // wants its dedicated accept API instead), the accept flow must fall
+        // back to the unchanged dashj path — not error out.
+        val requesterUserId = Identifier.from(ByteArray(32) { 7 }).toString()
+        val source = readySource().apply {
+            onSendContactRequest = { _, _, _ ->
+                throw DashSdkError.InvalidState("incoming request pending; use accept")
+            }
+        }
+        val result = writes(source).sendContactRequest(ownUserId, requesterUserId)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.broadcastCalls)
+    }
+
     @Test
     fun broadcastValidationFailure_isNotBroadcast_dashjFallbackSafe() = runBlocking {
         val source = readySource().apply {

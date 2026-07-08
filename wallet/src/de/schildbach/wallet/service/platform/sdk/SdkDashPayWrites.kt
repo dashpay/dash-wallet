@@ -290,6 +290,33 @@ internal class DashSdkDashPayWriteSource(
  * Routed call sites:
  * - [de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService.sendContactRequest]
  * - [de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService.broadcastUpdatedProfile]
+ *
+ * ## Accepting a contact request (Phase 3g — verified covered, no extra seam)
+ *
+ * In this app ACCEPTING an incoming contact request IS the reciprocal
+ * [sendContactRequest]: every accept entry point (NotificationsFragment
+ * `onAcceptRequest`, ContactsFragment, DashPayUserActivity, SendCoinsFragment)
+ * funnels through `DashPayViewModel.sendContactRequest` →
+ * `SendContactRequestOperation`/`SendContactRequestWorker` → the routed
+ * `PlatformDocumentBroadcastService.sendContactRequest(toUserId = requester)`.
+ * There is no separate dashj "accept" broadcast, so this facade already
+ * routes the accept write. The SDK's dedicated
+ * `Dashpay.acceptContactRequest` / `acceptIncomingRequest` is deliberately
+ * NOT used:
+ * - it needs the incoming request present in the SDK wallet's LOCAL contact
+ *   state (it returns false / not-found otherwise), which this app does not
+ *   keep in sync — the app's contact source of truth is its own Room DB fed
+ *   by dashj reads;
+ * - its extra Rust-side bookkeeping (external-account registration for the
+ *   new friendship) would duplicate — and could diverge from — the app's
+ *   dashj DIP-15 keychains (`PlatformSyncService.checkAndAddReceivedRequest`
+ *   for the incoming half, `finalizeSentContactRequest` for the reciprocal
+ *   half);
+ * - the Platform document it broadcasts is the same reciprocal
+ *   `contactRequest` that [sendContactRequest] sends.
+ * Direction-dependent bookkeeping (the sending-to-requester DIP-15 keychain
+ * and the incoming DB row) is handled by the sync path when the incoming
+ * request arrives, independent of which stack broadcasts the reciprocal.
  */
 @Singleton
 class SdkDashPayWrites internal constructor(
