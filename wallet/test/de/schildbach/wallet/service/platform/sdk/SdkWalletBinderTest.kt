@@ -58,15 +58,22 @@ class SdkWalletBinderTest {
     private class FakeSdkService(
         var onBind: suspend (List<String>, Long?) -> String = { _, _ -> error("unexpected bind") },
         var managed: (String, ByteArray) -> Boolean = { _, _ -> false },
-        var onDiscover: suspend (String, Int) -> List<ByteArray> = { _, _ -> emptyList() }
+        var onDiscover: suspend (String, Int) -> List<ByteArray> = { _, _ -> emptyList() },
+        /** Default: every key already signable (heal settled, latch allowed). */
+        var onHealKeys: suspend (String, ByteArray) -> IdentityKeyHealReport = { _, _ ->
+            IdentityKeyHealReport(keysChecked = 4, healthy = 4, repaired = 0, watchOnly = 0, failed = 0)
+        }
     ) : DashSdkService {
         var bindCalls = 0
         var managedCalls = 0
         var discoverCalls = 0
+        var healCalls = 0
         var lastBirthTime: Long? = null
         var lastStartIndex: Int? = null
         var lastIdentityId: ByteArray? = null
-        val totalCalls get() = bindCalls + managedCalls + discoverCalls
+        var lastHealedIdentityId: ByteArray? = null
+        var lastHealedWalletId: String? = null
+        val totalCalls get() = bindCalls + managedCalls + discoverCalls + healCalls
 
         override val isStarted = false
         override suspend fun ensureStarted() = Unit
@@ -91,6 +98,16 @@ class SdkWalletBinderTest {
             discoverCalls++
             lastStartIndex = startIndex
             return onDiscover(walletIdHex, startIndex)
+        }
+
+        override suspend fun ensureIdentityKeysSignable(
+            walletIdHex: String,
+            identityId: ByteArray
+        ): IdentityKeyHealReport {
+            healCalls++
+            lastHealedWalletId = walletIdHex
+            lastHealedIdentityId = identityId
+            return onHealKeys(walletIdHex, identityId)
         }
     }
 
@@ -437,6 +454,95 @@ class SdkWalletBinderTest {
         binder.bindIfEnabled(unlock) // must not throw
 
         assertEquals(0, sdk.totalCalls)
+    }
+
+    // ── Phase 3f-b: key healing after attach ─────────────────────────────
+
+    @Test
+    fun afterDiscoveryAttach_healsAppIdentityKeys_onBoundWallet() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.healCalls)
+        assertEquals(walletId, sdk.lastHealedWalletId)
+        assertEquals(userId, Identifier.from(sdk.lastHealedIdentityId!!).toString())
+    }
+
+    @Test
+    fun alreadyManaged_butKeysNotHealed_retriesHealNextCall_withoutRescan() = runBlocking {
+        // The live-observed state: identity attached by an earlier pass,
+        // but the private-key store is empty and the first heal fails
+        // transiently (expired Keystore auth window).
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        sdk.managed = { _, _ -> true }
+        sdk.onHealKeys = { _, _ ->
+            if (sdk.healCalls == 1) {
+                IdentityKeyHealReport(keysChecked = 4, healthy = 0, repaired = 0, watchOnly = 0, failed = 4)
+            } else {
+                IdentityKeyHealReport(keysChecked = 4, healthy = 0, repaired = 4, watchOnly = 0, failed = 0)
+            }
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock) // heal fails transiently → not latched
+        binder.bindIfEnabled(unlock) // heal repairs → latched
+        binder.bindIfEnabled(unlock) // no-op at the latch
+
+        assertEquals(2, sdk.healCalls)
+        assertEquals(1, sdk.bindCalls) // wallet bind cached across retries
+        assertEquals(0, sdk.discoverCalls) // heal retry never re-scans
+    }
+
+    @Test
+    fun healThrow_swallowed_notLatched_retriedNextCall() = runBlocking {
+        val sdk = readySdk()
+        sdk.onHealKeys = { _, _ ->
+            if (sdk.healCalls == 1) throw RuntimeException("Room read failed")
+            IdentityKeyHealReport(keysChecked = 4, healthy = 4, repaired = 0, watchOnly = 0, failed = 0)
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock) // must not throw
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(2, sdk.healCalls)
+        assertEquals(1, sdk.discoverCalls)
+    }
+
+    @Test
+    fun watchOnlyKeys_areSettled_latches_noEndlessHealRetry() = runBlocking {
+        // Deterministic outcome (keys not derivable from this seed):
+        // retrying cannot improve it, so the binder must latch.
+        val sdk = readySdk()
+        sdk.onHealKeys = { _, _ ->
+            IdentityKeyHealReport(keysChecked = 4, healthy = 3, repaired = 0, watchOnly = 1, failed = 0)
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.healCalls)
+    }
+
+    @Test
+    fun zeroPersistedKeyRows_notSettled_healRetriedNextCall() = runBlocking {
+        // Key rows may still be landing via the persistence bridge.
+        val sdk = readySdk()
+        sdk.onHealKeys = { _, _ ->
+            IdentityKeyHealReport(keysChecked = 0, healthy = 0, repaired = 0, watchOnly = 0, failed = 0)
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(2, sdk.healCalls)
+        assertEquals(1, sdk.discoverCalls) // identity stays managed; only the heal reruns
     }
 
     // ── Single-flight + background variant ───────────────────────────────

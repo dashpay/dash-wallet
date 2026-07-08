@@ -21,6 +21,43 @@ import org.dashfoundation.dashsdk.Sdk
 import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
 
 /**
+ * Result of one [DashSdkService.ensureIdentityKeysSignable] pass over an
+ * identity's persisted public keys (Phase 3f-b key healing).
+ *
+ * Counts partition the identity's key rows:
+ * - [healthy]: a private key was already stored for the pubkey
+ *   (`privkey.<pubkeyHex>` in the SDK's `WalletStorage`) — the signer can
+ *   use it as-is.
+ * - [repaired]: the private key was missing, the canonical DIP-9 slot
+ *   derive REPRODUCED the on-chain public key, and the verified scalar was
+ *   stored — signable from now on.
+ * - [watchOnly]: permanently un-repairable from this wallet's seed — the
+ *   slot derive produced a DIFFERENT public key (foreign / non-ECDSA /
+ *   externally-registered key), or the row is read-only or disabled.
+ *   Retrying cannot change this (the derivation is deterministic).
+ * - [failed]: a transient derive/store failure (Keystore auth window
+ *   expired, FFI error) — retrying on a later pass CAN succeed.
+ */
+data class IdentityKeyHealReport(
+    val keysChecked: Int,
+    val healthy: Int,
+    val repaired: Int,
+    val watchOnly: Int,
+    val failed: Int
+) {
+    /** Every persisted key of the identity is signable right now. */
+    val allSignable: Boolean get() = keysChecked > 0 && healthy + repaired == keysChecked
+
+    /**
+     * Nothing left that a retry could improve: at least one key row was
+     * seen and no TRANSIENT failures occurred (watch-only keys are
+     * permanent, so they don't block settling). `keysChecked == 0` is NOT
+     * settled — key rows may still be landing via the persistence bridge.
+     */
+    val settled: Boolean get() = keysChecked > 0 && failed == 0
+}
+
+/**
  * Lifecycle owner for the Dash Platform Kotlin SDK inside the wallet app —
  * the Phase 3 bootstrap seam of the dashj → Kotlin SDK migration
  * (see `docs/kotlin-sdk-migration-plan.md`, "Phase 3 — Introduce the SDK").
@@ -176,4 +213,60 @@ interface DashSdkService {
      * @throws Exception if the wallet is not loaded or the scan fails.
      */
     suspend fun discoverIdentities(walletIdHex: String, startIndex: Int = 0): List<ByteArray>
+
+    /**
+     * Phase 3f-b key healing: make a MANAGED identity's private keys
+     * actually signable, so [SdkDashPayWrites] doesn't die at the FFI
+     * signer with "no private key stored for <pubkeyHex>".
+     *
+     * ## Why discovery alone is not enough
+     *
+     * [discoverIdentities] attaches the identity and persists its public
+     * keys with per-key derivation breadcrumbs; the SDK's persistence
+     * bridge then auto-derives each private scalar and encrypts it into
+     * `WalletStorage` (`privkey.<pubkeyHex>`) — but that store runs under
+     * the Keystore's AUTH-GATED keys alias
+     * (`KeystoreManager.KEYS_ALIAS`, `setUserAuthenticationRequired`,
+     * 30-second window) and the persistence handler SWALLOWS a failed
+     * derive/store ("key stays watch-only"). A discovery pass running in
+     * the background more than ~30s after the last device unlock therefore
+     * attaches the identity but leaves ZERO private keys stored — the
+     * exact state observed live (Galaxy S22, testnet). The FFI signer
+     * ([org.dashfoundation.dashsdk.security.KeystoreSigner]) resolves
+     * signing keys ONLY from that `WalletStorage` store, so such an
+     * identity is managed yet unsignable.
+     *
+     * ## What this op does (the example app's key-health "Repair" flow)
+     *
+     * For every persisted public key of [identityId] (SDK Room
+     * `PublicKeyDao`): if `WalletStorage.hasPrivateKey(pubkeyHex)` is
+     * false, re-derive the canonical keypair at
+     * `(identity.identityIndex, keyId)` via the resolver-keyed FFI
+     * (`IdentityNative.deriveIdentityKeyPairWithResolver` — mnemonic never
+     * leaves Rust, scalar scrubbed after use), VERIFY the derived public
+     * half reproduces the on-chain key (the same guard Rust discovery
+     * applies — a mismatching key stays watch-only rather than poisoning
+     * the store with a wrong scalar), and store the verified scalar via
+     * `WalletStorage.storePrivateKey` — the identical call the SDK's own
+     * `PlatformWalletManager.repairIdentityKey` lands on, plus the
+     * verification it omits.
+     *
+     * Idempotent (already-stored keys are left untouched) and prompt-free:
+     * a store hitting an expired Keystore auth window is counted in
+     * [IdentityKeyHealReport.failed] for a later retry, never surfaced as
+     * a prompt. Local I/O only (Room + Keystore + in-process FFI derive);
+     * no network. Internally calls [ensureStarted].
+     *
+     * @param walletIdHex the bound wallet ([bindAppWallet]'s return).
+     * @param identityId the 32-byte identity id (must already be managed —
+     *   its key rows come from the discovery/persist bridge).
+     * @return per-key outcome counts; see [IdentityKeyHealReport].
+     * @throws Exception on wiring failures (SDK not started, malformed
+     *   wallet id, Room read failure) — per-key derive/store failures are
+     *   contained in the report instead.
+     */
+    suspend fun ensureIdentityKeysSignable(
+        walletIdHex: String,
+        identityId: ByteArray
+    ): IdentityKeyHealReport
 }

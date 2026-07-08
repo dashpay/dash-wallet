@@ -51,7 +51,13 @@ import javax.inject.Singleton
  *    is attached to that wallet's Rust `IdentityManager` via the DIP-9
  *    gap-limit discovery scan — after which
  *    [DashSdkService.isIdentityManaged] is true, `dashpay.syncState(id)`
- *    is non-null, and the [SdkDashPayWrites] preflight can pass.
+ *    is non-null, and the [SdkDashPayWrites] preflight can pass; and
+ * 3. the identity's PRIVATE keys are derived from the seed and stored in
+ *    the SDK's Keystore-backed key store
+ *    ([DashSdkService.ensureIdentityKeysSignable], Phase 3f-b) so the FFI
+ *    signer can actually sign — discovery alone leaves this store empty
+ *    when its auto-derive hits an expired Keystore auth window ("no
+ *    private key stored for <pubkeyHex>" observed live on-device).
  *
  * ## Eligibility gate (checked in order, cheapest first)
  *
@@ -134,7 +140,12 @@ class SdkWalletBinder internal constructor(
     @Volatile
     private var boundWalletIdHex: String? = null
 
-    /** Success latch: wallet bound and identity attached (or provably nothing to attach). */
+    /**
+     * Success latch: wallet bound, identity attached AND its keys healed
+     * to a settled state (or provably nothing to attach). Deliberately NOT
+     * set while a transient key-heal failure is outstanding, so the next
+     * trigger retries the heal (cheap: bind + discovery are both skipped).
+     */
     @Volatile
     private var completed = false
 
@@ -236,7 +247,12 @@ class SdkWalletBinder internal constructor(
 
         if (sdkService.isIdentityManaged(walletId, identityId)) {
             log.info("SDK wallet {}… already manages the app identity", walletId.take(8))
-            completed = true
+            // Managed is necessary but NOT sufficient: an earlier discovery
+            // pass may have attached the identity while the Keystore auth
+            // window was expired, leaving zero stored private keys (the
+            // "no private key stored" FFI signing failure seen live). Heal
+            // before latching so a later pass retries a transient failure.
+            completed = healIdentityKeys(walletId, identityId)
             return
         }
 
@@ -245,10 +261,13 @@ class SdkWalletBinder internal constructor(
         if (sdkService.isIdentityManaged(walletId, identityId)) {
             log.info(
                 "SDK identity discovery attached the app identity to wallet {}… " +
-                    "({} identity(ies) discovered); SDK write preflight can now pass",
+                    "({} identity(ies) discovered)",
                 walletId.take(8), found.size
             )
-            completed = true
+            // Discovery persists the PUBLIC keys; the private halves only
+            // become signable once derived+stored (Phase 3f-b). Latch only
+            // when nothing retryable is left.
+            completed = healIdentityKeys(walletId, identityId)
         } else {
             // Scan ran but our identity wasn't on the probed keys — e.g. a
             // dashj identity whose registered master key doesn't match the
@@ -261,6 +280,44 @@ class SdkWalletBinder internal constructor(
             )
             completed = true
         }
+    }
+
+    /**
+     * Phase 3f-b: make the attached identity's private keys signable
+     * ([DashSdkService.ensureIdentityKeysSignable] — the example app's
+     * key-health Repair flow, run automatically). Returns whether the
+     * binder may latch: true when the heal is settled (every key signable
+     * or provably watch-only — deterministic, so retrying is pointless),
+     * false on transient failures (expired Keystore auth window, FFI or
+     * Room hiccup) so the NEXT trigger — e.g. the broadcast-service rebind
+     * that runs right before a DashPay write — retries the heal without
+     * re-running discovery. Never throws (binding stays non-fatal).
+     */
+    private suspend fun healIdentityKeys(walletId: String, identityId: ByteArray): Boolean = try {
+        val report = sdkService.ensureIdentityKeysSignable(walletId, identityId)
+        when {
+            report.allSignable -> log.info(
+                "app identity keys signable on SDK wallet {}… ({} healthy, {} repaired); " +
+                    "SDK write preflight can now pass",
+                walletId.take(8), report.healthy, report.repaired
+            )
+            report.settled -> log.warn(
+                "app identity attached to SDK wallet {}… but {} of {} key(s) are watch-only " +
+                    "(not derivable from this seed); SDK writes signing with those keys will " +
+                    "fall back to dashj",
+                walletId.take(8), report.watchOnly, report.keysChecked
+            )
+            else -> log.warn(
+                "app identity key heal incomplete on SDK wallet {}… " +
+                    "({} checked, {} failed transiently); will retry on the next binding trigger",
+                walletId.take(8), report.keysChecked, report.failed
+            )
+        }
+        report.settled
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        log.warn("app identity key heal failed; will retry on the next binding trigger", t)
+        false
     }
 
     private suspend fun anyFlagEnabled(): Boolean = try {

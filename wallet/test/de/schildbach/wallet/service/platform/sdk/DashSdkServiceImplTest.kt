@@ -30,6 +30,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -162,5 +163,138 @@ class DashSdkServiceImplTest {
         assertNull(
             findBoundWalletId(listOf("aa".repeat(32)), "weapon elder job") { "different phrase" }
         )
+    }
+
+    // ── healIdentityKeys (the native-free logic of Phase 3f-b) ─────────
+
+    private fun key(id: Int, byte: Byte = id.toByte()) =
+        IdentityKeyCandidate(keyId = id, publicKeyData = ByteArray(33) { byte })
+
+    @Test
+    fun healIdentityKeys_alreadyStoredKeys_areHealthy_neverRederived() = runBlocking {
+        var derives = 0
+        val report = healIdentityKeys(
+            candidates = listOf(key(0), key(1)),
+            hasPrivateKey = { true },
+            deriveKeyPair = { derives++; error("must not derive") },
+            storePrivateKey = { _, _ -> error("must not store") }
+        )
+
+        assertEquals(0, derives)
+        assertEquals(
+            IdentityKeyHealReport(2, healthy = 2, repaired = 0, watchOnly = 0, failed = 0),
+            report
+        )
+        assertTrue(report.allSignable)
+        assertTrue(report.settled)
+    }
+
+    @Test
+    fun healIdentityKeys_missingKey_derivedVerifiedAndStored_scalarScrubbed() = runBlocking {
+        val candidate = key(2)
+        val scalar = ByteArray(32) { 9 }
+        var storedHex: String? = null
+        var storedKey: ByteArray? = null
+
+        val report = healIdentityKeys(
+            candidates = listOf(candidate),
+            hasPrivateKey = { false },
+            deriveKeyPair = { keyIndex ->
+                assertEquals(2, keyIndex) // slot = the on-chain key id
+                scalar to candidate.publicKeyData.copyOf()
+            },
+            storePrivateKey = { hex, priv ->
+                storedHex = hex
+                storedKey = priv.copyOf() // snapshot before the scrub
+            }
+        )
+
+        assertEquals(candidate.publicKeyHex, storedHex)
+        assertArrayEquals(ByteArray(32) { 9 }, storedKey)
+        // The only scalar copy that escaped the derive is zero-filled.
+        assertArrayEquals(ByteArray(32), scalar)
+        assertEquals(
+            IdentityKeyHealReport(1, healthy = 0, repaired = 1, watchOnly = 0, failed = 0),
+            report
+        )
+        assertTrue(report.allSignable)
+    }
+
+    @Test
+    fun healIdentityKeys_deriveMismatch_staysWatchOnly_nothingStored_scalarScrubbed() = runBlocking {
+        val scalar = ByteArray(32) { 9 }
+        var stored = false
+
+        val report = healIdentityKeys(
+            candidates = listOf(key(0)),
+            hasPrivateKey = { false },
+            // Derived public key differs from the on-chain key: foreign key.
+            deriveKeyPair = { scalar to ByteArray(33) { 0x7F } },
+            storePrivateKey = { _, _ -> stored = true }
+        )
+
+        assertFalse(stored)
+        assertArrayEquals(ByteArray(32), scalar)
+        assertEquals(
+            IdentityKeyHealReport(1, healthy = 0, repaired = 0, watchOnly = 1, failed = 0),
+            report
+        )
+        assertFalse(report.allSignable)
+        assertTrue(report.settled) // deterministic — no retry can fix it
+    }
+
+    @Test
+    fun healIdentityKeys_readOnlyAndDisabledRows_watchOnly_neverDerived() = runBlocking {
+        val report = healIdentityKeys(
+            candidates = listOf(
+                key(0).copy(readOnly = true),
+                key(1).copy(disabled = true)
+            ),
+            hasPrivateKey = { false },
+            deriveKeyPair = { error("must not derive") },
+            storePrivateKey = { _, _ -> error("must not store") }
+        )
+
+        assertEquals(
+            IdentityKeyHealReport(2, healthy = 0, repaired = 0, watchOnly = 2, failed = 0),
+            report
+        )
+        assertTrue(report.settled)
+    }
+
+    @Test
+    fun healIdentityKeys_transientFailure_isContained_otherKeysStillHealed() = runBlocking {
+        // Key 1's store dies (e.g. Keystore auth window expired); keys 0/2
+        // must still be processed and the report must stay unsettled so the
+        // binder retries.
+        val report = healIdentityKeys(
+            candidates = listOf(key(0), key(1), key(2)),
+            hasPrivateKey = { false },
+            deriveKeyPair = { keyIndex -> ByteArray(32) to ByteArray(33) { keyIndex.toByte() } },
+            storePrivateKey = { hex, _ ->
+                if (hex == key(1).publicKeyHex) throw RuntimeException("UserNotAuthenticated")
+            }
+        )
+
+        assertEquals(
+            IdentityKeyHealReport(3, healthy = 0, repaired = 2, watchOnly = 0, failed = 1),
+            report
+        )
+        assertFalse(report.allSignable)
+        assertFalse(report.settled)
+    }
+
+    @Test
+    fun healIdentityKeys_emptyCandidateList_isNotSettled() = runBlocking {
+        val report = healIdentityKeys(
+            candidates = emptyList(),
+            hasPrivateKey = { false },
+            deriveKeyPair = { error("must not derive") },
+            storePrivateKey = { _, _ -> error("must not store") }
+        )
+
+        assertEquals(IdentityKeyHealReport(0, 0, 0, 0, 0), report)
+        assertFalse(report.allSignable)
+        assertFalse(report.settled)
     }
 }

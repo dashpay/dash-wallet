@@ -21,6 +21,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.bitcoinj.core.NetworkParameters
@@ -134,6 +135,96 @@ internal suspend fun findBoundWalletId(
         if (normalizeMnemonic(stored) == candidate) return idHex
     }
     return null
+}
+
+// ── ensureIdentityKeysSignable helpers ────────────────────────────────
+//
+// Pure (no native, no Android, no I/O of their own) so the per-key
+// heal/verify/store decision table is unit-testable on the host JVM —
+// the collaborators (Room DAO reads, the FFI derive, Keystore-backed
+// storage) are passed in as suspend lambdas.
+
+/** One persisted identity public-key row, reduced to what healing needs. */
+internal data class IdentityKeyCandidate(
+    val keyId: Int,
+    val publicKeyData: ByteArray,
+    val readOnly: Boolean = false,
+    val disabled: Boolean = false
+) {
+    val publicKeyHex: String get() = publicKeyData.joinToString("") { "%02x".format(it) }
+}
+
+/**
+ * Walk an identity's persisted public keys and make each one signable if
+ * the wallet's seed can reproduce it — the [DashSdkService
+ * .ensureIdentityKeysSignable] decision table (see that KDoc for the
+ * why). Per key:
+ *
+ * 1. already stored ([hasPrivateKey]) → healthy, untouched (idempotency);
+ * 2. read-only / disabled → watch-only (permanently not signable);
+ * 3. derive the canonical keypair at the key's slot ([deriveKeyPair],
+ *    `(private, public)` — the resolver-keyed Rust derive), VERIFY the
+ *    public half byte-equals the on-chain key, then [storePrivateKey]
+ *    the scalar keyed by the pubkey hex. A mismatch → watch-only WITHOUT
+ *    storing (never poison the signer's store with a wrong scalar); a
+ *    derive/store throw → failed (transient, retryable).
+ *
+ * The derived private scalar is zero-filled on every exit path. Nothing
+ * key-derived is logged.
+ */
+internal suspend fun healIdentityKeys(
+    candidates: List<IdentityKeyCandidate>,
+    hasPrivateKey: suspend (pubkeyHex: String) -> Boolean,
+    deriveKeyPair: suspend (keyIndex: Int) -> Pair<ByteArray, ByteArray>,
+    storePrivateKey: suspend (pubkeyHex: String, privateKey: ByteArray) -> Unit,
+    onKeyOutcome: (keyId: Int, outcome: String) -> Unit = { _, _ -> }
+): IdentityKeyHealReport {
+    var healthy = 0
+    var repaired = 0
+    var watchOnly = 0
+    var failed = 0
+    for (candidate in candidates) {
+        try {
+            if (hasPrivateKey(candidate.publicKeyHex)) {
+                healthy++
+                continue
+            }
+            if (candidate.readOnly || candidate.disabled) {
+                watchOnly++
+                onKeyOutcome(candidate.keyId, "watch-only (read-only/disabled row)")
+                continue
+            }
+            val (privateKey, publicKey) = deriveKeyPair(candidate.keyId)
+            try {
+                if (!publicKey.contentEquals(candidate.publicKeyData)) {
+                    // The load-bearing guard (mirrors Rust discovery's
+                    // validate_private_key_bytes check): this seed does not
+                    // own the key — storing the scalar anyway would make the
+                    // signer produce protocol-invalid signatures.
+                    watchOnly++
+                    onKeyOutcome(candidate.keyId, "watch-only (slot derive does not reproduce key)")
+                    continue
+                }
+                storePrivateKey(candidate.publicKeyHex, privateKey)
+                repaired++
+                onKeyOutcome(candidate.keyId, "repaired")
+            } finally {
+                privateKey.fill(0)
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            failed++
+            onKeyOutcome(candidate.keyId, "failed (${e.javaClass.simpleName})")
+        }
+    }
+    return IdentityKeyHealReport(
+        keysChecked = candidates.size,
+        healthy = healthy,
+        repaired = repaired,
+        watchOnly = watchOnly,
+        failed = failed
+    )
 }
 
 /**
@@ -333,6 +424,72 @@ class DashSdkServiceImpl @Inject constructor(
             walletIdHex.take(8), startIndex, found.size
         )
         return found
+    }
+
+    /**
+     * See [DashSdkService.ensureIdentityKeysSignable] for the full
+     * contract. Wiring: key rows from the SDK's Room `PublicKeyDao`
+     * (keyed by the identity's base58 id — the persistence bridge's row
+     * key), identity slot from `IdentityDao.identityIndex` (0 for the
+     * dashj-registered app identity), derive via
+     * [PlatformWalletManager.deriveIdentityKeyPair] (the resolver-keyed
+     * FFI `IdentityNative.deriveIdentityKeyPairWithResolver`, returning
+     * `(private, public)`), store via `WalletStorage.storePrivateKey` —
+     * the same call the SDK's own `repairIdentityKey` /
+     * `IdentityKeyPrivateKeyDeriver` lands on, with the derived-pubkey
+     * verification they omit.
+     */
+    override suspend fun ensureIdentityKeysSignable(
+        walletIdHex: String,
+        identityId: ByteArray
+    ): IdentityKeyHealReport {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val manager = current.walletManager
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+
+        // The dashj-registered app identity lives at identity index 0; a
+        // missing Room row (persist race) falls back to that same slot.
+        val identityIndex = current.database.identityDao()
+            .getByIdentityId(identityId)?.identityIndex ?: 0
+
+        // PublicKeyEntity rows are keyed by the identity's base58 id
+        // (bitcoin/bs58 alphabet — same encoding as dashj's Identifier).
+        val identityBase58 = org.bitcoinj.core.Base58.encode(identityId)
+        val rows = current.database.publicKeyDao()
+            .observeByIdentityId(identityBase58)
+            .first()
+
+        val report = healIdentityKeys(
+            candidates = rows.map {
+                IdentityKeyCandidate(
+                    keyId = it.keyId,
+                    publicKeyData = it.publicKeyData,
+                    readOnly = it.readOnly,
+                    disabled = it.disabledAt != null
+                )
+            },
+            hasPrivateKey = { pubkeyHex -> current.walletStorage.hasPrivateKey(pubkeyHex) },
+            deriveKeyPair = { keyIndex ->
+                manager.deriveIdentityKeyPair(walletId, identityIndex, keyIndex)
+            },
+            storePrivateKey = { pubkeyHex, privateKey ->
+                current.walletStorage.storePrivateKey(pubkeyHex, privateKey)
+            },
+            onKeyOutcome = { keyId, outcome ->
+                log.info(
+                    "identity {}… key #{} (slot {}/{}): {}",
+                    identityBase58.take(8), keyId, identityIndex, keyId, outcome
+                )
+            }
+        )
+        log.info(
+            "identity key heal for {}… on wallet {}…: {} checked, {} healthy, " +
+                "{} repaired, {} watch-only, {} failed",
+            identityBase58.take(8), walletIdHex.take(8), report.keysChecked,
+            report.healthy, report.repaired, report.watchOnly, report.failed
+        )
+        return report
     }
 
     /**
