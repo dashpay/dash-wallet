@@ -293,7 +293,7 @@ object MainActivityExt {
                 val position = getString(if (diffSeconds > 0) R.string.timeskew_ahead else R.string.timeskew_behind)
                 getString(R.string.wallet_coinjoin_timeskew_dialog_msg, position, abs(diffSeconds))
             } else {
-                getString(R.string.wallet_timeskew_dialog_msg, diffSeconds / 1000)
+                getString(R.string.wallet_timeskew_dialog_msg, abs(diffSeconds) / 60)
             },
             getString(R.string.button_dismiss),
             if (hasSettings) getString(R.string.button_settings) else null
