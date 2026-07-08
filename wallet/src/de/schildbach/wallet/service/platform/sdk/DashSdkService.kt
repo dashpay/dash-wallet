@@ -142,4 +142,38 @@ interface DashSdkService {
      * @return the bound SDK wallet id as lowercase hex (64 chars).
      */
     suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String
+
+    /**
+     * True when [identityId] (32 bytes) is a *managed* identity of the SDK
+     * wallet [walletIdHex] — i.e. the Rust `IdentityManager` holds its slot
+     * and can derive/sign with its keys (the precondition every
+     * [SdkDashPayWrites] preflight probes). Local snapshot read
+     * (`dashpay.syncState`), no network. Internally calls [ensureStarted].
+     * Returns false when the wallet id is not loaded.
+     */
+    suspend fun isIdentityManaged(walletIdHex: String, identityId: ByteArray): Boolean
+
+    /**
+     * Phase 3f identity discovery: scan the bound SDK wallet's DIP-9
+     * identity-authentication tree (`m/9'/coin'/5'/0'/0'/identity_index'`)
+     * and ATTACH every identity registered on Platform for one of those
+     * keys to the wallet's Rust `IdentityManager` (persisted via Room), so
+     * [isIdentityManaged] turns true and the SDK can derive its keys.
+     *
+     * This is the op that adopts the app's EXISTING dashj-registered
+     * identity (registered at identity index 0 — see the [SdkDashPayWrites]
+     * key-derivation parity note) into the SDK wallet: the FFI
+     * (`platform_wallet_discover_identities`) derives consecutive MASTER
+     * keys, queries Platform by unique pubkey hash, and stops after the
+     * gap limit. Network I/O — one Platform query per probed slot.
+     *
+     * @param walletIdHex the bound wallet ([bindAppWallet]'s return).
+     * @param startIndex first identity index to probe; 0 forces a full
+     *   rescan (the app identity lives at index 0), negative resumes from
+     *   the wallet's cached scan cursor.
+     * @return the NEWLY-discovered 32-byte identity ids (already-managed
+     *   identities are not re-reported).
+     * @throws Exception if the wallet is not loaded or the scan fails.
+     */
+    suspend fun discoverIdentities(walletIdHex: String, startIndex: Int = 0): List<ByteArray>
 }

@@ -1,0 +1,494 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.every
+import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import org.dash.wallet.common.WalletDataProvider
+import org.dashfoundation.dashsdk.Sdk
+import org.dashfoundation.dashsdk.wallet.PlatformWalletManager
+import org.dashj.platform.dpp.identifier.Identifier
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+/**
+ * Host-JVM tests for the Phase 3f production wiring: the
+ * [SdkWalletBinder] eligibility decision table, single-flight /
+ * idempotency semantics, partial-progress retries, and — most importantly
+ * — the inertness contract: with both `USE_KOTLIN_SDK_*` flags off the
+ * binder performs ZERO interactions with the SDK service, the mnemonic
+ * provider, and the identity config. No native calls; [DashSdkService]
+ * and [PlatformMnemonicProvider] are faked.
+ */
+class SdkWalletBinderTest {
+
+    private val walletId = "cd".repeat(32)
+    private val userId = Identifier.from(ByteArray(32) { 7 }).toString()
+    private val words = listOf("abandon", "abandon", "about")
+    private val unlock = WalletUnlock.Unencrypted
+
+    /** Programmable [DashSdkService] fake with interaction counters. */
+    private class FakeSdkService(
+        var onBind: suspend (List<String>, Long?) -> String = { _, _ -> error("unexpected bind") },
+        var managed: (String, ByteArray) -> Boolean = { _, _ -> false },
+        var onDiscover: suspend (String, Int) -> List<ByteArray> = { _, _ -> emptyList() }
+    ) : DashSdkService {
+        var bindCalls = 0
+        var managedCalls = 0
+        var discoverCalls = 0
+        var lastBirthTime: Long? = null
+        var lastStartIndex: Int? = null
+        var lastIdentityId: ByteArray? = null
+        val totalCalls get() = bindCalls + managedCalls + discoverCalls
+
+        override val isStarted = false
+        override suspend fun ensureStarted() = Unit
+        override suspend fun stop() = Unit
+        override fun sdkOrNull(): Sdk? = null
+        override fun walletManagerOrNull(): PlatformWalletManager? = null
+        override suspend fun resolveUsername(name: String): String? = null
+
+        override suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String {
+            bindCalls++
+            lastBirthTime = birthTimeSecs
+            return onBind(seedWords, birthTimeSecs)
+        }
+
+        override suspend fun isIdentityManaged(walletIdHex: String, identityId: ByteArray): Boolean {
+            managedCalls++
+            lastIdentityId = identityId
+            return managed(walletIdHex, identityId)
+        }
+
+        override suspend fun discoverIdentities(walletIdHex: String, startIndex: Int): List<ByteArray> {
+            discoverCalls++
+            lastStartIndex = startIndex
+            return onDiscover(walletIdHex, startIndex)
+        }
+    }
+
+    private class FakeMnemonicProvider(
+        var onGet: suspend (WalletUnlock) -> List<String>
+    ) : PlatformMnemonicProvider {
+        var calls = 0
+        var lastUnlock: WalletUnlock? = null
+        override suspend fun getMnemonicWords(unlock: WalletUnlock): List<String> {
+            calls++
+            lastUnlock = unlock
+            return onGet(unlock)
+        }
+    }
+
+    private fun identityBase(
+        creationState: IdentityCreationState = IdentityCreationState.DONE,
+        userId: String? = this.userId
+    ) = BlockchainIdentityBaseData(
+        creationState = creationState,
+        creationStateErrorMessage = null,
+        username = null,
+        usernameSecondary = null,
+        userId = userId,
+        restoring = false
+    )
+
+    private fun identityConfig(base: BlockchainIdentityBaseData): BlockchainIdentityConfig =
+        mockk { coEvery { loadBase() } returns base }
+
+    private fun dashPayConfig(readsFlag: Boolean?, writesFlag: Boolean? = false): DashPayConfig = mockk {
+        if (readsFlag == null) {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } throws
+                IllegalStateException("datastore unavailable")
+        } else {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } returns readsFlag
+        }
+        if (writesFlag == null) {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } throws
+                IllegalStateException("datastore unavailable")
+        } else {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns writesFlag
+        }
+    }
+
+    private fun walletData(): WalletDataProvider = mockk { every { wallet } returns null }
+
+    /** A binder whose collaborators are all in the happy-path state. */
+    private fun binder(
+        sdk: FakeSdkService,
+        mnemonic: FakeMnemonicProvider = FakeMnemonicProvider { words },
+        identity: BlockchainIdentityConfig = identityConfig(identityBase()),
+        config: DashPayConfig = dashPayConfig(readsFlag = true),
+        supportsPlatform: Boolean = true,
+        scope: CoroutineScope
+    ) = SdkWalletBinder(
+        sdkService = sdk,
+        mnemonicProvider = mnemonic,
+        identityConfig = identity,
+        dashPayConfig = config,
+        walletData = walletData(),
+        scope = scope,
+        supportsPlatform = { supportsPlatform }
+    )
+
+    /** SDK fake in the first-bind happy path: bind ok, discovery attaches. */
+    private fun readySdk(): FakeSdkService {
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        // Not managed until a discovery scan has run.
+        sdk.managed = { _, _ -> sdk.discoverCalls > 0 }
+        sdk.onDiscover = { _, _ -> listOf(Identifier.from(userId).toBuffer()) }
+        return sdk
+    }
+
+    // ── Inertness: the default-off contract ──────────────────────────────
+
+    @Test
+    fun bothFlagsOff_zeroInteractions() = runBlocking {
+        val sdk = FakeSdkService()
+        val mnemonic = FakeMnemonicProvider { error("must not be called") }
+        val identity = identityConfig(identityBase())
+        val binder = binder(
+            sdk, mnemonic, identity,
+            config = dashPayConfig(readsFlag = false, writesFlag = false),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.totalCalls)
+        assertEquals(0, mnemonic.calls)
+        coVerify(exactly = 0) { identity.loadBase() }
+    }
+
+    @Test
+    fun flagReadFailure_treatedAsOff_zeroInteractions() = runBlocking {
+        val sdk = FakeSdkService()
+        val mnemonic = FakeMnemonicProvider { error("must not be called") }
+        val binder = binder(
+            sdk, mnemonic,
+            config = dashPayConfig(readsFlag = null, writesFlag = null),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.totalCalls)
+        assertEquals(0, mnemonic.calls)
+    }
+
+    @Test
+    fun platformNotSupported_zeroSdkInteractions() = runBlocking {
+        val sdk = FakeSdkService()
+        val mnemonic = FakeMnemonicProvider { error("must not be called") }
+        val binder = binder(sdk, mnemonic, supportsPlatform = false, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(0, sdk.totalCalls)
+        assertEquals(0, mnemonic.calls)
+    }
+
+    @Test
+    fun noPlatformIdentity_zeroSdkInteractions_unlockNeverRequested() = runBlocking {
+        val sdk = FakeSdkService()
+        val mnemonic = FakeMnemonicProvider { error("must not be called") }
+        var unlockRequested = false
+        val binder = binder(
+            sdk, mnemonic,
+            identity = identityConfig(identityBase(IdentityCreationState.NONE, userId = null)),
+            scope = this
+        )
+
+        binder.bindIfEnabled {
+            unlockRequested = true
+            unlock
+        }
+
+        assertEquals(0, sdk.totalCalls)
+        assertEquals(0, mnemonic.calls)
+        assertTrue(!unlockRequested)
+    }
+
+    // ── The happy path: bind + discover + attach ─────────────────────────
+
+    @Test
+    fun eligible_bindsWallet_discoversFromIndexZero_attachesIdentity() = runBlocking {
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+        assertEquals(unlock, mnemonic.lastUnlock)
+        assertEquals(1, sdk.discoverCalls)
+        assertEquals(0, sdk.lastStartIndex)
+        // No dashj wallet in the fake → unknown birth time.
+        assertNull(sdk.lastBirthTime)
+        // The identity probed is the one from BlockchainIdentityConfig.
+        assertEquals(userId, Identifier.from(sdk.lastIdentityId!!).toString())
+    }
+
+    @Test
+    fun writesFlagAloneIsSufficient() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            config = dashPayConfig(readsFlag = false, writesFlag = true),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+    }
+
+    @Test
+    fun successLatch_secondCallIsNoOp() = runBlocking {
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        val callsAfterFirst = sdk.totalCalls
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(callsAfterFirst, sdk.totalCalls)
+        assertEquals(1, mnemonic.calls)
+    }
+
+    @Test
+    fun identityAlreadyManaged_skipsDiscovery_andLatches() = runBlocking {
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        sdk.managed = { _, _ -> true }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls)
+        assertEquals(1, sdk.managedCalls)
+    }
+
+    @Test
+    fun identityNotYetRegistered_bindsWalletOnly_retriesAttachNextCall() = runBlocking {
+        // Identity creation in flight: creationState != NONE but no id yet.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            identity = identityConfig(
+                identityBase(IdentityCreationState.IDENTITY_REGISTERING, userId = null)
+            ),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls)
+
+        // Not latched: once the id lands a later trigger completes the attach.
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls) // wallet bind is cached
+    }
+
+    @Test
+    fun malformedStoredIdentityId_bindsWalletOnly_noThrow() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            identity = identityConfig(identityBase(userId = "not-base58!!")),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls)
+    }
+
+    @Test
+    fun discoveryDoesNotFindIdentity_latches_noEndlessRescan() = runBlocking {
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        sdk.managed = { _, _ -> false } // never becomes managed
+        sdk.onDiscover = { _, _ -> emptyList() }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        binder.bindIfEnabled(unlock)
+
+        // The deterministic scan ran once; not repeated in-process.
+        assertEquals(1, sdk.discoverCalls)
+    }
+
+    // ── Failure containment + partial-progress retry ─────────────────────
+
+    @Test
+    fun nullUnlock_skipsQuietly_retriesNextCall() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled { null }
+        assertEquals(0, sdk.totalCalls)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+    }
+
+    @Test
+    fun mnemonicFailure_swallowed_noBind() = runBlocking {
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider {
+            throw MnemonicBridgeException(MnemonicBridgeException.Reason.BAD_ENCRYPTION_KEY)
+        }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock) // must not throw
+
+        assertEquals(0, sdk.bindCalls)
+    }
+
+    @Test
+    fun bindFailure_swallowed_retriedOnNextCall() = runBlocking {
+        val sdk = readySdk()
+        var failFirst = true
+        sdk.onBind = { _, _ ->
+            if (failFirst) {
+                failFirst = false
+                throw RuntimeException("SDK bootstrap failed")
+            }
+            walletId
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock) // must not throw
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(2, sdk.bindCalls)
+        assertEquals(1, sdk.discoverCalls)
+    }
+
+    @Test
+    fun discoveryFailure_swallowed_retryReusesBoundWallet_withoutSeedHandOff() = runBlocking {
+        val sdk = readySdk()
+        var failDiscovery = true
+        sdk.onDiscover = { _, _ ->
+            if (failDiscovery) {
+                failDiscovery = false
+                throw RuntimeException("network error")
+            }
+            listOf(Identifier.from(userId).toBuffer())
+        }
+        // managed only after a SUCCESSFUL scan (the second one).
+        sdk.managed = { _, _ -> sdk.discoverCalls >= 2 && !failDiscovery }
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock) // discovery throws; swallowed
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+
+        binder.bindIfEnabled(unlock) // retries discovery only
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls) // the seed is NOT re-requested
+        assertEquals(2, sdk.discoverCalls)
+    }
+
+    @Test
+    fun identityConfigFailure_swallowed_zeroSdkInteractions() = runBlocking {
+        val sdk = FakeSdkService()
+        val identity: BlockchainIdentityConfig = mockk {
+            coEvery { loadBase() } throws IllegalStateException("datastore unavailable")
+        }
+        val binder = binder(sdk, identity = identity, scope = this)
+
+        binder.bindIfEnabled(unlock) // must not throw
+
+        assertEquals(0, sdk.totalCalls)
+    }
+
+    // ── Single-flight + background variant ───────────────────────────────
+
+    @Test
+    fun concurrentCalls_singleFlight_bindRunsOnce() = runBlocking {
+        val sdk = readySdk()
+        val baseBind = sdk.onBind
+        sdk.onBind = { w, b ->
+            delay(50) // hold the mutex so the second caller queues behind
+            baseBind(w, b)
+        }
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        val first = launch { binder.bindIfEnabled(unlock) }
+        val second = launch { binder.bindIfEnabled(unlock) }
+        first.join()
+        second.join()
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+        assertEquals(1, sdk.discoverCalls)
+    }
+
+    @Test
+    fun bindInBackground_runsTheSamePass_andNeverThrowsIntoCaller() = runBlocking {
+        val sdk = readySdk()
+        val binder = binder(sdk, scope = this)
+
+        binder.bindInBackground(unlock).join()
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, sdk.discoverCalls)
+    }
+
+    @Test
+    fun bindInBackground_lazyProvider_notInvokedWhenIneligible() = runBlocking {
+        val sdk = FakeSdkService()
+        var unlockRequested = false
+        val binder = binder(
+            sdk,
+            config = dashPayConfig(readsFlag = false, writesFlag = false),
+            scope = this
+        )
+
+        binder.bindInBackground {
+            unlockRequested = true
+            unlock
+        }.join()
+
+        assertEquals(0, sdk.totalCalls)
+        assertTrue(!unlockRequested)
+    }
+}

@@ -49,6 +49,8 @@ import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
+import de.schildbach.wallet.service.platform.sdk.WalletUnlock
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -154,6 +156,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkWalletBinder: SdkWalletBinder,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -187,6 +190,22 @@ class PlatformSynchronizationService @Inject constructor(
         syncScope.launch {
             identityRepository.init()
             initializeStateRepository()
+        }
+        // Phase 3f (docs/kotlin-sdk-migration-plan.md): bind the app wallet
+        // into the Kotlin SDK and attach its identity — fire-and-forget so
+        // platform-sync startup latency is unaffected, and provably inert
+        // unless a USE_KOTLIN_SDK_* flag is on. The unlock provider runs
+        // only after the binder's eligibility gate passes: it recovers the
+        // wallet-crypter key the same non-interactive way the sync loops
+        // below already do (PlatformRepo.getWalletEncryptionKey — the
+        // SecurityGuard-stored password, no user prompt).
+        sdkWalletBinder.bindInBackground {
+            val wallet = walletDataProvider.wallet
+            when {
+                wallet == null -> null
+                !wallet.isEncrypted -> WalletUnlock.Unencrypted
+                else -> platformRepo.getWalletEncryptionKey()?.let { WalletUnlock.EncryptionKey(it) }
+            }
         }
         log.info("Starting the platform sync job")
     }

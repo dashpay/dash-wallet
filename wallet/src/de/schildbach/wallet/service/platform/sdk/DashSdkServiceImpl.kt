@@ -291,6 +291,38 @@ class DashSdkServiceImpl @Inject constructor(
         }
     }
 
+    override suspend fun isIdentityManaged(walletIdHex: String, identityId: ByteArray): Boolean {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val wallet = current.walletManager.wallets.value[walletIdHex] ?: return false
+        // syncState is a local managed-identity snapshot read; null means
+        // the identity is not managed by this wallet.
+        return wallet.dashpay.syncState(identityId) != null
+    }
+
+    override suspend fun discoverIdentities(walletIdHex: String, startIndex: Int): List<ByteArray> {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val manager = current.walletManager
+        val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        // Gap-limit walk over the DIP-9 identity-authentication tree
+        // (Rust default gap limit). The app wallet was created from its
+        // mnemonic (resident private keys), so the FFI derives in-process
+        // and never consults the resolver — the handle is passed for
+        // signature completeness only. Discovered identities are folded
+        // into Rust's IdentityManager and persisted via the Room bridge.
+        val found = manager.identityRegistration.discoverIdentities(
+            walletHandle = wallet.handle,
+            mnemonicResolverHandle = manager.mnemonicResolverHandle,
+            startIndex = startIndex
+        )
+        log.info(
+            "identity discovery on SDK wallet {}… (startIndex={}): {} newly-discovered identity(ies)",
+            walletIdHex.take(8), startIndex, found.size
+        )
+        return found
+    }
+
     /**
      * One-shot bring-up; caller holds [lock]. On any failure every
      * partially-created resource is torn down and the exception rethrown,

@@ -23,7 +23,9 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites
+import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.WalletUnlock
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
@@ -70,7 +72,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
     val platformSyncService: PlatformSyncService,
-    val sdkDashPayWrites: SdkDashPayWrites
+    val sdkDashPayWrites: SdkDashPayWrites,
+    val sdkWalletBinder: SdkWalletBinder
 ) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
@@ -95,6 +98,13 @@ class PlatformDocumentBroadcastService @Inject constructor(
         log.info("potential contact identity: $potentialContactIdentity")
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")
+
+        // Phase 3f: opportunistic background (re)bind — this call site
+        // already holds the wallet decrypt key, so a bind that failed (or
+        // never ran) at platform-sync start is healed here and the NEXT
+        // write can take the SDK path. Fire-and-forget: never blocks or
+        // fails this broadcast; inert unless a USE_KOTLIN_SDK_* flag is on.
+        sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(encryptionKey))
 
         // Phase 3e (docs/kotlin-sdk-migration-plan.md): DashPay write path
         // behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off). The result is
@@ -258,6 +268,11 @@ class PlatformDocumentBroadcastService @Inject constructor(
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
+
+        // Phase 3f: opportunistic background (re)bind while the decrypt key
+        // is in scope — see sendContactRequest. Fire-and-forget; inert
+        // unless a USE_KOTLIN_SDK_* flag is on.
+        sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(encryptionKey))
 
         // Phase 3e (docs/kotlin-sdk-migration-plan.md): profile write via
         // the Kotlin SDK behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off).

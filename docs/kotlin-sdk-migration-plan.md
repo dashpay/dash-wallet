@@ -316,3 +316,20 @@ appropriate, mapping to the app's existing design system and Common Components):
 - https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1746-18478&m=dev
 Implementation should go through the figma-to-compose flow (fetch design context, map to existing
 components, vector drawables for missing icons).
+
+## Phase 3e/3f verdicts (updated 2026-07-08)
+
+- **DIP-13 identity-key parity: VERIFIED byte-identical** for identity index 0 (the only chain
+  dashj creates) — the SDK can derive and sign with dashj-registered identity keys.
+- **DIP-15 friendship-key parity: FUNDS-SAFE (PARTIAL).** The friendship xpub a contact request
+  carries and the derived/watched payment addresses are byte-identical across dashj and the SDK
+  (same path m/9'/coin'/15'/0'/idA/idB, same 69-byte compact xpub, same ECDH+AES-256-CBC).
+  One non-funds mismatch: `accountReference` extracts a different 28-bit HMAC slice
+  (dashj: u32_LE(hmac[0..4])>>4; SDK rs-platform-encryption: u32_BE(hmac[28..32])>>4, "iOS
+  convention"). Impact: possible duplicate contact-request documents / rotation-detection noise if
+  both stacks author for the same channel — file an SDK issue to reconcile
+  rs-platform-encryption/src/account_reference.rs (confirm iOS's deployed convention first).
+- **3f production wiring done**: `SdkWalletBinder` binds the app wallet + attaches the existing
+  identity via `identityRegistration.discoverIdentities` (no SDK gap) at two key-in-scope call
+  sites (PlatformSynchronizationService.init, PlatformDocumentBroadcastService writes),
+  fire-and-forget, single-flight, provably inert with flags off. 171 tests green.

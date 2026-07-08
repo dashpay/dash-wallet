@@ -1,0 +1,277 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.service.platform.sdk
+
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import org.dash.wallet.common.WalletDataProvider
+import org.dashj.platform.dpp.identifier.Identifier
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
+ * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
+ * identity discovery ([DashSdkService.discoverIdentities]) actually happen
+ * for platform users, so the flag-gated read/write paths (Phases 3c–3e)
+ * become live-testable — with both flags OFF (the default) this class is
+ * provably inert.
+ *
+ * ## What one successful pass establishes
+ *
+ * 1. The app's BIP39 seed is bound into the SDK
+ *    ([DashSdkService.bindAppWallet] — idempotent, phrase persisted in the
+ *    SDK's Keystore-backed `WalletStorage`), and
+ * 2. the app's EXISTING on-chain identity (id from
+ *    [BlockchainIdentityConfig], registered by dashj at identity index 0)
+ *    is attached to that wallet's Rust `IdentityManager` via the DIP-9
+ *    gap-limit discovery scan — after which
+ *    [DashSdkService.isIdentityManaged] is true, `dashpay.syncState(id)`
+ *    is non-null, and the [SdkDashPayWrites] preflight can pass.
+ *
+ * ## Eligibility gate (checked in order, cheapest first)
+ *
+ * 1. Either [DashPayConfig.USE_KOTLIN_SDK_DPNS_READS] or
+ *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES] is ON (re-read every
+ *    call; both OFF → return before touching the SDK, the mnemonic
+ *    provider, or the identity config — the inertness contract).
+ * 2. [Constants.SUPPORTS_PLATFORM] (64-bit builds only).
+ * 3. The app actually has (or is creating) a platform identity:
+ *    [BlockchainIdentityConfig.loadBase] reports `creationState != NONE`
+ *    or a stored identity id. No identity → nothing to wire.
+ *
+ * ## Trust model / seed hygiene
+ *
+ * The binder NEVER prompts and never touches `SecurityGuard`: call sites
+ * pass a [WalletUnlock] (or a lazy provider of one) proving the user
+ * already authorized seed access — the same contract as
+ * [PlatformMnemonicProvider]. The unlock provider is invoked only AFTER
+ * the eligibility gate passes (so the scrypt key derivation some
+ * providers perform is never paid while the flags are off), the decrypted
+ * words go straight to [DashSdkService.bindAppWallet], and no reference
+ * outlives the call. Nothing seed-derived is ever logged.
+ *
+ * ## Concurrency / failure contract
+ *
+ * - **Single-flight**: a [Mutex] serializes passes; concurrent callers
+ *   wait, then see the success latch and no-op.
+ * - **Idempotent**: after a fully successful pass (wallet bound AND
+ *   identity attached, or bound with provably nothing to attach) every
+ *   later call returns at the latch. Partial progress is kept — if the
+ *   bind succeeded but discovery failed (network), the next call retries
+ *   discovery WITHOUT re-requesting the seed.
+ * - **Never throws** (except [CancellationException]): binding is
+ *   opportunistic; any failure is logged and swallowed so the calling
+ *   flow (platform sync start, a DashPay broadcast) is never broken by
+ *   it. dashj behavior is unchanged either way — the SDK write preflight
+ *   simply keeps reporting "not bound / not managed" and falls back.
+ *
+ * Call sites (Phase 3f):
+ * - [de.schildbach.wallet.service.platform.PlatformSynchronizationService.init]
+ *   — platform work already starts here and the wallet encryption key is
+ *   obtainable non-interactively (`PlatformRepo.getWalletEncryptionKey`).
+ * - [de.schildbach.wallet.service.platform.PlatformDocumentBroadcastService]
+ *   — the DashPay writes already hold the decrypt key; an opportunistic
+ *   background (re)bind there heals a failed startup bind so the NEXT
+ *   write can take the SDK path.
+ */
+@Singleton
+class SdkWalletBinder internal constructor(
+    private val sdkService: DashSdkService,
+    private val mnemonicProvider: PlatformMnemonicProvider,
+    private val identityConfig: BlockchainIdentityConfig,
+    private val dashPayConfig: DashPayConfig,
+    private val walletData: WalletDataProvider,
+    private val scope: CoroutineScope,
+    private val supportsPlatform: () -> Boolean
+) {
+    @Inject
+    constructor(
+        sdkService: DashSdkService,
+        mnemonicProvider: PlatformMnemonicProvider,
+        identityConfig: BlockchainIdentityConfig,
+        dashPayConfig: DashPayConfig,
+        walletData: WalletDataProvider,
+        scope: CoroutineScope
+    ) : this(
+        sdkService = sdkService,
+        mnemonicProvider = mnemonicProvider,
+        identityConfig = identityConfig,
+        dashPayConfig = dashPayConfig,
+        walletData = walletData,
+        scope = scope,
+        supportsPlatform = { Constants.SUPPORTS_PLATFORM }
+    )
+
+    /** Serializes passes — the single-flight guarantee. */
+    private val mutex = Mutex()
+
+    /** Bound SDK wallet id (hex); survives a failed discovery so the retry skips the seed hand-off. */
+    @Volatile
+    private var boundWalletIdHex: String? = null
+
+    /** Success latch: wallet bound and identity attached (or provably nothing to attach). */
+    @Volatile
+    private var completed = false
+
+    /**
+     * Fire-and-forget variant for call sites that must not wait (the
+     * calling flow's latency is unaffected; failures are logged inside).
+     * The [unlock] proof is captured until the background pass finishes —
+     * pass the wallet-crypter [WalletUnlock.EncryptionKey] (which the app
+     * already keeps in scope for the duration of any platform broadcast),
+     * never raw seed material.
+     */
+    fun bindInBackground(unlock: WalletUnlock): Job = bindInBackground { unlock }
+
+    /** Lazy fire-and-forget variant: [unlockProvider] runs only if the eligibility gate passes. */
+    fun bindInBackground(unlockProvider: suspend () -> WalletUnlock?): Job =
+        scope.launch { bindIfEnabled(unlockProvider) }
+
+    /**
+     * Bind the app wallet into the SDK and attach its identity, if (and
+     * only if) the eligibility gate passes. Never throws (see class KDoc).
+     *
+     * @param unlock proof of an already-completed wallet unlock; the
+     *   caller owns authentication ([WalletUnlock] trust model).
+     */
+    suspend fun bindIfEnabled(unlock: WalletUnlock) = bindIfEnabled { unlock }
+
+    /**
+     * As [bindIfEnabled], but the unlock is produced lazily — only after
+     * the flag/platform/identity eligibility checks pass — so providers
+     * that derive the wallet key (scrypt, ~seconds) cost nothing while
+     * the feature flags are off. A null from [unlockProvider] means "no
+     * unlock available right now"; the pass is skipped and retried on the
+     * next trigger.
+     */
+    suspend fun bindIfEnabled(unlockProvider: suspend () -> WalletUnlock?) {
+        try {
+            mutex.withLock {
+                if (completed) return
+                bindLocked(unlockProvider)
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            // Opportunistic by contract: never break the calling flow.
+            log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
+        }
+    }
+
+    /** One pass; caller holds [mutex]. Throws freely — [bindIfEnabled] contains the fallout. */
+    private suspend fun bindLocked(unlockProvider: suspend () -> WalletUnlock?) {
+        // 1. Flags (both default OFF). Read failure = off.
+        if (!anyFlagEnabled()) return
+
+        // 2. Platform support is fixed per device/build.
+        if (!supportsPlatform()) {
+            log.info("SDK binding skipped: platform not supported on this device")
+            return
+        }
+
+        // 3. Platform-user check: only wire wallets that have (or are
+        //    creating) an identity.
+        val identity = identityConfig.loadBase()
+        val hasPlatformIdentity =
+            identity.creationState != IdentityCreationState.NONE || identity.userId != null
+        if (!hasPlatformIdentity) {
+            log.info("SDK binding skipped: no platform identity on this wallet")
+            return
+        }
+
+        // 4. Bind the seed (skipped when a previous pass already bound it).
+        val walletId = boundWalletIdHex ?: run {
+            val unlock = unlockProvider()
+            if (unlock == null) {
+                log.info("SDK binding skipped: no wallet unlock available at this call site")
+                return
+            }
+            // Decrypt + hand off; the words are function-local and the
+            // reference dies with this call (see PlatformMnemonicProvider).
+            val words = mnemonicProvider.getMnemonicWords(unlock)
+            val birthTimeSecs = walletData.wallet?.earliestKeyCreationTime
+            sdkService.bindAppWallet(words, birthTimeSecs).also { boundWalletIdHex = it }
+        }
+
+        // 5. Attach the existing on-chain identity so the SDK can derive
+        //    its keys (identity index 0 — key-parity note in SdkDashPayWrites).
+        val userId = identity.userId
+        if (userId == null) {
+            // Identity creation in flight but nothing registered on chain
+            // yet — binding-only for now; a later pass (creation sets the
+            // id) completes the attach. Deliberately NOT latched.
+            log.info("SDK wallet bound; identity not yet registered — discovery deferred")
+            return
+        }
+        val identityId = try {
+            Identifier.from(userId).toBuffer()
+        } catch (e: Exception) {
+            log.warn("SDK identity discovery skipped: stored identity id is malformed")
+            return
+        }
+
+        if (sdkService.isIdentityManaged(walletId, identityId)) {
+            log.info("SDK wallet {}… already manages the app identity", walletId.take(8))
+            completed = true
+            return
+        }
+
+        // Full rescan from identity index 0 — the only index dashj creates.
+        val found = sdkService.discoverIdentities(walletId, startIndex = 0)
+        if (sdkService.isIdentityManaged(walletId, identityId)) {
+            log.info(
+                "SDK identity discovery attached the app identity to wallet {}… " +
+                    "({} identity(ies) discovered); SDK write preflight can now pass",
+                walletId.take(8), found.size
+            )
+            completed = true
+        } else {
+            // Scan ran but our identity wasn't on the probed keys — e.g. a
+            // dashj identity whose registered master key doesn't match the
+            // DIP-9 slot-0 derivation. Not retried in-process (the scan is
+            // deterministic); logged for the Phase 3f live-test report.
+            log.warn(
+                "SDK identity discovery did NOT find the app identity {}… on wallet {}… " +
+                    "({} other identity(ies) discovered); SDK writes will keep falling back to dashj",
+                userId.take(8), walletId.take(8), found.size
+            )
+            completed = true
+        }
+    }
+
+    private suspend fun anyFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true
+    } catch (e: Exception) {
+        log.warn("failed to read Kotlin-SDK flags; treating as off", e)
+        false
+    }
+
+    companion object {
+        private val log = LoggerFactory.getLogger(SdkWalletBinder::class.java)
+    }
+}

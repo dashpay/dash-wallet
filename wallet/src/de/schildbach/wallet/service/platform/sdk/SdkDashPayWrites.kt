@@ -260,12 +260,13 @@ internal class DashSdkDashPayWriteSource(
  * from one local DataStore flag read per write; the flag is re-read every
  * call.
  *
- * ## Preconditions that currently make this path inert
+ * ## Preconditions (established by the Phase 3f binder)
  *
- * As of Phase 3e nothing in the app calls `bindAppWallet` in production
- * and the SDK wallet manages no identities (identity discovery is a Phase
- * 3f work item), so even with the flag ON every write short-circuits to
- * [SdkWriteResult.NotBroadcast] and dashj behavior is unchanged.
+ * The preflight requires the app wallet bound to the SDK AND our identity
+ * managed by it — both are wired by [SdkWalletBinder] (platform-sync start
+ * + the broadcast call sites), which is itself gated on the same flags. If
+ * the binder has not completed yet (or failed), every write short-circuits
+ * to [SdkWriteResult.NotBroadcast] and dashj behavior is unchanged.
  *
  * ## Known gaps (deliberate, documented for Phase 3f)
  *
