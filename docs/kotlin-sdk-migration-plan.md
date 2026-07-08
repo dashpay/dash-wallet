@@ -10,12 +10,19 @@
   funds remain visible and spendable via the standard coin selector; historical mixing transactions
   keep their grouped display. Verified: `assemble_testNet3Debug` builds and the full wallet unit-test
   suite passes.
-- 🔄 **Phase 1 — seam neutralization: STARTED.** Done so far: neutral `SyncStage` enum in common
-  (`BlockchainStateProvider` no longer exposes `PeerGroup.SyncStage`/`AbstractBlockChain`); dead
-  `SendPaymentService.isFeeTooHigh` removed; duplicate `observeSpendableBalance` consolidated into
-  `observeTotalBalance`. Remaining (large): neutral money types to replace `Coin`/`Fiat`/
-  `MonetaryFormat`/`ExchangeRate.fiat` across integrations; `WalletDataProvider`/`SendPaymentService`
-  money-typed methods; crowdnode transaction-model redesign. See Phase 1 section for the full list.
+- ✅ **Phase 1 — seam neutralization: SUBSTANTIALLY DONE.** Neutral `SyncStage`;
+  `BlockchainStateProvider` dashj-free; dead APIs removed. New neutral money kit in
+  `org.dash.wallet.common.money` (`Dash`, `FiatValue`, `MoneyFormat`, `DashAddressValidator`,
+  `TxIds`, `DashUri`, entity-`ExchangeRate` conversions) mirroring the dashj APIs and delegating to
+  dashj internally, so behavior is identical. **uphold, exploredash, maya, and coinbase no longer
+  depend on dashj-core at all** (their dashj-transaction internals — Maya swap builder,
+  FakeDashSpendService — moved into the wallet module behind neutral interfaces).
+  `SendPaymentService` has neutral send/estimate overloads. **crowdnode:** UI/ViewModel/API surface
+  fully neutral; only its transaction-protocol layer (tx filters, confirmation handshake — the code
+  that moves real funds and will be rewritten against the SDK in Phase 5) keeps dashj deliberately.
+  dashj-file counts: uphold/exploredash/maya/coinbase 0 (was 3/15/20/22), crowdnode 25→protocol-only
+  (was 33 incl. UI), wallet 209 (expected — it keeps dashj until Phase 5), common 65 (kit adapters,
+  by design). Verified: full `assemble_testNet3Debug` + unit tests of every module green.
 - ⬜ Phases 0, 3–6: not started (Phase 0 lives in the platform repo).
 
 ---
