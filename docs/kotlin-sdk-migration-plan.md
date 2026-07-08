@@ -262,3 +262,14 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
 - **3d next**: vote-contenders mapping behind the same flag; profile reads (`profiles.get/getList`)
   → SDK dashpay queries; then the write side (identity registration via asset-lock bridge,
   contact requests) and sync services.
+
+## Phase 4 design references (added 2026-07-08)
+
+Shielded-balances UX designs (iOS Figma, "DashPay – iOS" file — convert to Android/Compose as
+appropriate, mapping to the app's existing design system and Common Components):
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1693-15911&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=231-200&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1746-18462&m=dev
+- https://www.figma.com/design/O6RLY0jppyI1SSMY6kttS1/DashPay---iOS?node-id=1746-18478&m=dev
+Implementation should go through the figma-to-compose flow (fetch design context, map to existing
+components, vector drawables for missing icons).
