@@ -152,11 +152,14 @@ class SdkUsernameQueriesTest {
 
     private class FakeSource(
         var resolveResult: () -> String? = { null },
-        var searchResult: () -> String? = { null }
+        var searchResult: () -> String? = { null },
+        var usernamesResult: (String) -> String? = { null }
     ) : SdkDpnsSource {
         var resolvedName: String? = null
         var searchedPrefix: String? = null
         var searchedLimit: Int? = null
+        var usernamesIds = mutableListOf<String>()
+        var usernamesLimit: Int? = null
         var calls = 0
 
         override suspend fun resolve(name: String): String? {
@@ -170,6 +173,13 @@ class SdkUsernameQueriesTest {
             searchedPrefix = prefix
             searchedLimit = limit
             return searchResult()
+        }
+
+        override suspend fun usernames(identityId: String, limit: Int): String? {
+            calls++
+            usernamesIds.add(identityId)
+            usernamesLimit = limit
+            return usernamesResult(identityId)
         }
     }
 
@@ -190,6 +200,12 @@ class SdkUsernameQueriesTest {
 
         assertNull(queries.getUsernameOrNull("alice"))
         assertNull(runBlocking { queries.searchDomainDocumentsOrNull("ali", false, 100) })
+        assertNull(runBlocking { queries.getDomainDocumentsByOwnerOrNull(identityId) })
+        assertNull(
+            runBlocking {
+                queries.getDomainDocumentsForIdentitiesOrNull(listOf(Identifier.from(identityId)))
+            }
+        )
         assertEquals(0, source.calls)
     }
 
@@ -308,5 +324,134 @@ class SdkUsernameQueriesTest {
 
         val malformed = FakeSource(searchResult = { """{"not":"an array"}""" })
         assertNull(queries(malformed).searchDomainDocumentsOrNull("bob", false, 100))
+    }
+
+    // ── Phase 3e: domain documents by owner (names.getByOwnerId parity) ───
+
+    @Test
+    fun byOwner_mapsUsernamesPayload_andPassesExplicitLimit() = runBlocking {
+        val source = FakeSource(
+            usernamesResult = {
+                """[{"label":"bob","normalizedLabel":"b0b","fullName":"bob.dash",
+                     "ownerId":"$identityId","recordsIdentityId":"$identityId"}]"""
+            }
+        )
+
+        val documents = queries(source).getDomainDocumentsByOwnerOrNull(identityId)
+
+        assertNotNull(documents)
+        assertEquals(1, documents!!.size)
+        val domain = DomainDocument(documents[0])
+        assertEquals("bob", domain.label)
+        assertEquals(Identifier.from(identityId), domain.dashUniqueIdentityId)
+        assertEquals(listOf(identityId), source.usernamesIds)
+        // dashj queries run with the 100-document DAPI cap, not the FFI's
+        // default of 10.
+        assertEquals(100, source.usernamesLimit)
+    }
+
+    @Test
+    fun byOwner_notFoundOrNoPayload_returnsEmptyList_likeDashj() = runBlocking {
+        val notFound = FakeSource(
+            usernamesResult = { throw DashSdkError.InternalError("Identity not found") }
+        )
+        val documents = queries(notFound).getDomainDocumentsByOwnerOrNull(identityId)
+        assertNotNull(documents)
+        assertTrue(documents!!.isEmpty())
+
+        val noPayload = FakeSource(usernamesResult = { null })
+        val empty = queries(noPayload).getDomainDocumentsByOwnerOrNull(identityId)
+        assertNotNull(empty)
+        assertTrue(empty!!.isEmpty())
+    }
+
+    @Test
+    fun byOwner_sdkFailure_returnsNull_forDashjFallback() = runBlocking {
+        val failing = FakeSource(usernamesResult = { throw DashSdkError.NetworkError("no quorum") })
+        assertNull(queries(failing).getDomainDocumentsByOwnerOrNull(identityId))
+
+        val malformed = FakeSource(usernamesResult = { """{"not":"an array"}""" })
+        assertNull(queries(malformed).getDomainDocumentsByOwnerOrNull(identityId))
+
+        val missingContract = FakeSource(usernamesResult = { "[]" })
+        assertNull(
+            queries(missingContract, contractId = null).getDomainDocumentsByOwnerOrNull(identityId)
+        )
+    }
+
+    // ── Phase 3e: domain documents for id list (names.getList parity) ─────
+
+    @Test
+    fun forIdentities_queriesEachId_andAggregatesInOrder() = runBlocking {
+        val source = FakeSource(
+            usernamesResult = { id ->
+                when (id) {
+                    identityId ->
+                        """[{"label":"alice","normalizedLabel":"a11ce","fullName":"alice.dash",
+                             "ownerId":"$identityId"}]"""
+                    otherIdentityId ->
+                        """[{"label":"bob","normalizedLabel":"b0b","fullName":"bob.dash",
+                             "ownerId":"$otherIdentityId"}]"""
+                    else -> "[]"
+                }
+            }
+        )
+
+        val ids = listOf(Identifier.from(identityId), Identifier.from(otherIdentityId))
+        val documents = queries(source).getDomainDocumentsForIdentitiesOrNull(ids)
+
+        assertNotNull(documents)
+        assertEquals(2, documents!!.size)
+        assertEquals("a11ce", DomainDocument(documents[0]).normalizedLabel)
+        assertEquals("b0b", DomainDocument(documents[1]).normalizedLabel)
+        assertEquals(listOf(identityId, otherIdentityId), source.usernamesIds)
+    }
+
+    @Test
+    fun forIdentities_idWithoutNames_contributesNothing() = runBlocking {
+        val source = FakeSource(
+            usernamesResult = { id ->
+                if (id == identityId) {
+                    """[{"label":"alice","normalizedLabel":"a11ce","fullName":"alice.dash",
+                         "ownerId":"$identityId"}]"""
+                } else {
+                    throw DashSdkError.InternalError("Identity not found")
+                }
+            }
+        )
+
+        val ids = listOf(Identifier.from(identityId), Identifier.from(otherIdentityId))
+        val documents = queries(source).getDomainDocumentsForIdentitiesOrNull(ids)
+
+        assertNotNull(documents)
+        assertEquals(1, documents!!.size)
+        assertEquals("alice", DomainDocument(documents[0]).label)
+    }
+
+    @Test
+    fun forIdentities_anyIdFailing_failsWholeBatch_forDashjFallback() = runBlocking {
+        // Partial results would read as deleted usernames downstream, so one
+        // bad id must invalidate the whole SDK batch.
+        val failing = FakeSource(
+            usernamesResult = { id ->
+                if (id == identityId) "[]" else throw DashSdkError.Timeout("dapi timeout")
+            }
+        )
+        val ids = listOf(Identifier.from(identityId), Identifier.from(otherIdentityId))
+        assertNull(queries(failing).getDomainDocumentsForIdentitiesOrNull(ids))
+
+        val malformed = FakeSource(
+            usernamesResult = { id -> if (id == identityId) "[]" else """{"not":"an array"}""" }
+        )
+        assertNull(queries(malformed).getDomainDocumentsForIdentitiesOrNull(ids))
+    }
+
+    @Test
+    fun forIdentities_emptyInput_returnsEmpty_withoutSdkCalls() = runBlocking {
+        val source = FakeSource()
+        val documents = queries(source).getDomainDocumentsForIdentitiesOrNull(emptyList())
+        assertNotNull(documents)
+        assertTrue(documents!!.isEmpty())
+        assertEquals(0, source.calls)
     }
 }

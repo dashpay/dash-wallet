@@ -137,6 +137,21 @@ open class DashPayConfig @Inject constructor(
          * See [de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries].
          */
         val USE_KOTLIN_SDK_DPNS_READS = booleanPreferencesKey("use_kotlin_sdk_dpns_reads")
+
+        /**
+         * Phase 3e of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the DashPay WRITE
+         * operations (send contact request, create/update profile) through
+         * the Dash Platform Kotlin SDK instead of dashj-platform. Default
+         * OFF. Unlike the read flag, a failed SDK write only falls back to
+         * dashj when the SDK path DEFINITIVELY did not broadcast (see
+         * [de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites] for
+         * the decision table) — an ambiguous failure surfaces as an error
+         * exactly like a dashj broadcast failure would, never as a silent
+         * second broadcast. Re-read on every write, so toggling either
+         * direction is instant (no restart).
+         */
+        val USE_KOTLIN_SDK_DASHPAY_WRITES = booleanPreferencesKey("use_kotlin_sdk_dashpay_writes")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

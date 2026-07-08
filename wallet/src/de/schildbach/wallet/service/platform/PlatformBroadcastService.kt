@@ -22,6 +22,8 @@ import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import org.bitcoinj.core.Context
 import org.bitcoinj.core.ECKey
@@ -33,6 +35,8 @@ import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.services.analytics.AnalyticsTimer
+import org.dashj.platform.dashpay.ContactRequest
+import org.dashj.platform.dashpay.RetryDelayType
 import org.dashj.platform.dashpay.callback.SimpleSignerCallback
 import org.dashj.platform.dashpay.callback.WalletSignerCallback
 import org.dashj.platform.dpp.identifier.Identifier
@@ -65,7 +69,8 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletDataProvider: WalletDataProvider,
-    val platformSyncService: PlatformSyncService
+    val platformSyncService: PlatformSyncService,
+    val sdkDashPayWrites: SdkDashPayWrites
 ) : PlatformBroadcastService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformDocumentBroadcastService::class.java)
@@ -91,12 +96,72 @@ class PlatformDocumentBroadcastService @Inject constructor(
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")
 
+        // Phase 3e (docs/kotlin-sdk-migration-plan.md): DashPay write path
+        // behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off). The result is
+        // three-valued to keep the no-double-broadcast invariant:
+        // NotBroadcast → the SDK definitively submitted nothing, run the
+        // dashj path below unchanged; Broadcast → the request is on
+        // Platform, reconcile local state from it and do NOT run dashj;
+        // Ambiguous → surface the failure exactly like a dashj broadcast
+        // failure — never retry via dashj in the same call.
+        when (val sdkResult = sdkDashPayWrites.sendContactRequest(blockchainIdentity.uniqueIdString, toUserId)) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("contact request sent via Kotlin SDK; reconciling from platform")
+                // The SDK confirmed the broadcast, so the document is
+                // committed; watch fetches it (with retries for propagation).
+                val document = platform.contactRequests.watchContactRequest(
+                    Identifier.from(blockchainIdentity.uniqueIdString),
+                    Identifier.from(toUserId),
+                    10,
+                    1000,
+                    RetryDelayType.LINEAR
+                ) ?: throw IllegalStateException(
+                    "contact request was broadcast via the Kotlin SDK but could not be retrieved " +
+                        "from platform; local state will reconcile on the next contact sync"
+                )
+                return finalizeSentContactRequest(
+                    ContactRequest(document),
+                    blockchainIdentity,
+                    potentialContactIdentity!!,
+                    toUserId,
+                    encryptionKey
+                )
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK contact request outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
+
         // Create Contact Request
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
         val cr = platform.contactRequests.create(blockchainIdentity, potentialContactIdentity!!, encryptionKey)
         timer.logTiming()
         log.info("contact request sent")
 
+        return finalizeSentContactRequest(cr, blockchainIdentity, potentialContactIdentity, toUserId, encryptionKey)
+    }
+
+    /**
+     * Post-broadcast bookkeeping shared by the dashj and Kotlin-SDK contact
+     * request paths (extracted unchanged from the dashj flow): add the
+     * DIP-15 receiving friendship keychain for this contact if missing,
+     * refresh bloom filters, persist the request + contact profile, and
+     * notify listeners.
+     */
+    private suspend fun finalizeSentContactRequest(
+        cr: ContactRequest,
+        blockchainIdentity: org.dashj.platform.dashpay.BlockchainIdentity,
+        potentialContactIdentity: org.dashj.platform.dpp.identity.Identity,
+        toUserId: String,
+        encryptionKey: KeyParameter
+    ): DashPayContactRequest {
         // add our receiving from this contact keychain if it doesn't exist
         val contact = EvolutionContact(blockchainIdentity.uniqueIdString, toUserId)
 
@@ -193,6 +258,48 @@ class PlatformDocumentBroadcastService @Inject constructor(
         val displayName = if (dashPayProfile.displayName.isNotEmpty()) dashPayProfile.displayName else null
         val publicMessage = if (dashPayProfile.publicMessage.isNotEmpty()) dashPayProfile.publicMessage else null
         val avatarUrl = if (dashPayProfile.avatarUrl.isNotEmpty()) dashPayProfile.avatarUrl else null
+
+        // Phase 3e (docs/kotlin-sdk-migration-plan.md): profile write via
+        // the Kotlin SDK behind USE_KOTLIN_SDK_DASHPAY_WRITES (default off).
+        // NotBroadcast → run the dashj path below unchanged; Broadcast →
+        // fetch the committed document and update the database, do NOT run
+        // dashj; Ambiguous → surface like a dashj broadcast failure, never
+        // retry via dashj in the same call. Profiles carrying an avatar
+        // hash/fingerprint always come back NotBroadcast (SDK gap — it
+        // recomputes both from raw avatar bytes the app no longer has).
+        val sdkResult = sdkDashPayWrites.createOrUpdateProfile(
+            ownUserId = blockchainIdentity.uniqueIdString,
+            displayName = displayName,
+            publicMessage = publicMessage,
+            avatarUrl = avatarUrl,
+            hasAvatarDigest = dashPayProfile.avatarHash != null || dashPayProfile.avatarFingerprint != null,
+            doCreate = dashPayProfile.createdAt == 0L
+        )
+        when (sdkResult) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("profile broadcast via Kotlin SDK; reconciling from platform")
+                // The SDK write waits for platform confirmation, so the new
+                // revision is committed and a plain read returns it.
+                val document = platform.profiles.get(blockchainIdentity.uniqueIdString)
+                    ?: throw IllegalStateException(
+                        "profile was broadcast via the Kotlin SDK but could not be retrieved from " +
+                            "platform; local state will reconcile on the next profile sync"
+                    )
+                val updatedDashPayProfile = DashPayProfile.fromDocument(document, dashPayProfile.username)
+                platformRepo.updateDashPayProfile(updatedDashPayProfile)
+                return updatedDashPayProfile
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK profile broadcast outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
 
         //Create Contact Request
         val timer: AnalyticsTimer

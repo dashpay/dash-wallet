@@ -53,6 +53,15 @@ interface SdkDpnsSource {
      * objects, or null if the SDK returned no payload. limit 0 = server default.
      */
     suspend fun search(prefix: String, limit: Int): String?
+
+    /**
+     * DPNS names held by an identity (owner of the domain document OR listed
+     * in `records.dashUniqueIdentityId` / `records.dashAliasIdentityId` —
+     * `rs-sdk-ffi/src/dpns/queries/usernames.rs`). Same JSON array shape as
+     * [search], or null if the SDK returned no payload. limit 0 = server
+     * default (10 — always pass an explicit limit for dashj parity).
+     */
+    suspend fun usernames(identityId: String, limit: Int): String?
 }
 
 /** Production [SdkDpnsSource]: boots the SDK on demand and queries `sdk.dpns`. */
@@ -67,6 +76,9 @@ internal class DashSdkDpnsSource(private val service: DashSdkService) : SdkDpnsS
 
     override suspend fun search(prefix: String, limit: Int): String? =
         sdk().dpns.search(prefix, limit)
+
+    override suspend fun usernames(identityId: String, limit: Int): String? =
+        sdk().dpns.usernames(identityId, limit)
 }
 
 /**
@@ -239,9 +251,23 @@ object SdkDpnsMapping {
  *
  * Routed by Phase 3d under the same flag: `getVoteContenders` (contested-name
  * vote state, [SdkVotingQueries]) and profile document queries
- * ([SdkProfileQueries]). Still NOT routed (dashj-only, by design):
- * `names.getByOwnerId` (profile refresh) and `names.getList` (batch domain
- * documents by owner).
+ * ([SdkProfileQueries]).
+ *
+ * Routed by Phase 3e under the same flag (domain documents by owner, via
+ * `sdk.dpns.usernames`):
+ * - [de.schildbach.wallet.ui.dashpay.PlatformRepo.updateDashPayProfile] —
+ *   `names.getByOwnerId(userId)` → [getDomainDocumentsByOwnerOrNull];
+ * - [de.schildbach.wallet.service.platform.PlatformSynchronizationService.updateContactProfiles]
+ *   — `names.getList(ids)` → [getDomainDocumentsForIdentitiesOrNull].
+ *
+ * dashj parity note for those two: dashj resolves by
+ * `records.identity == id` (`Names.getByOwnerId` → `resolveByRecord`;
+ * `Names.getList` → `getListHelper` `whereIn(records.identity)`, verified
+ * against dashj-platform 4.0.0-RC2 bytecode), while the SDK's usernames op
+ * also matches documents the identity merely *owns*. For standard
+ * registrations (owner == records.identity) the results are identical; the
+ * superset only adds names the routed callers would associate with the same
+ * identity anyway.
  */
 @Singleton
 class SdkUsernameQueries internal constructor(
@@ -318,6 +344,77 @@ class SdkUsernameQueries internal constructor(
         }
     }
 
+    /**
+     * SDK-path replacement for `platform.names.getByOwnerId(userId)` in
+     * `PlatformRepo.updateDashPayProfile` (the profile-refresh username
+     * lookup).
+     *
+     * @return the (possibly empty) synthetic domain-document list, or
+     *   **null** when the caller must fall back to dashj.
+     */
+    suspend fun getDomainDocumentsByOwnerOrNull(userId: String): List<Document>? {
+        if (!isEnabled()) return null
+        return try {
+            val contract = contractOrNull() ?: return null
+            usernamesDocuments(userId, contract)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK DPNS usernames failed; falling back to dashj for names.getByOwnerId", t)
+            null
+        }
+    }
+
+    /**
+     * SDK-path replacement for `platform.names.getList(userIds)` in
+     * `PlatformSyncService.updateContactProfiles` (batch domain documents for
+     * the contact list). dashj batches one `whereIn(records.identity)` query
+     * per 100 ids; the SDK's usernames op is per-identity, so this loops —
+     * one native query per id, acceptable for a flag-gated path whose caller
+     * already runs on a background sync loop.
+     *
+     * @return the (possibly empty) synthetic domain-document list, or
+     *   **null** when the caller must fall back to dashj (any per-id failure
+     *   fails the whole batch — partial results would look like deleted
+     *   usernames to the caller's reconciliation logic).
+     */
+    suspend fun getDomainDocumentsForIdentitiesOrNull(userIds: List<Identifier>): List<Document>? {
+        if (!isEnabled()) return null
+        if (userIds.isEmpty()) return emptyList()
+        return try {
+            val contract = contractOrNull() ?: return null
+            val documents = ArrayList<Document>()
+            for (id in userIds) {
+                val mapped = usernamesDocuments(id.toString(), contract) ?: return null
+                documents.addAll(mapped)
+            }
+            documents
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("SDK DPNS usernames failed; falling back to dashj for names.getList", t)
+            null
+        }
+    }
+
+    /**
+     * One `sdk.dpns.usernames` call mapped to synthetic domain documents.
+     * NotFound / no payload = identity holds no names (empty list, dashj
+     * parity); malformed payload = null (caller falls back to dashj); other
+     * SDK errors propagate to the caller's catch.
+     */
+    private suspend fun usernamesDocuments(identityId: String, contract: DataContract): List<Document>? {
+        val json = try {
+            source.usernames(identityId, USERNAMES_LIMIT)
+        } catch (e: Exception) {
+            if (SdkDpnsMapping.isNotFound(e)) return emptyList()
+            throw e
+        } ?: return emptyList()
+        return SdkDpnsMapping.documentsFromSearchJson(json, contract).also {
+            if (it == null) {
+                log.warn("SDK DPNS usernames returned malformed payload; falling back to dashj")
+            }
+        }
+    }
+
     private suspend fun resolveAsResource(username: String): Resource<Document>? {
         if (!isEnabled()) return null
         val contract = contractOrNull() ?: return null
@@ -375,5 +472,12 @@ class SdkUsernameQueries internal constructor(
 
     companion object {
         private val log = LoggerFactory.getLogger(SdkUsernameQueries::class.java)
+
+        /**
+         * Explicit per-identity limit for `sdk.dpns.usernames` — the FFI's
+         * `limit = 0` default is 10, while dashj's `resolveByRecord` /
+         * `getListHelper` run with the DAPI document-query cap of 100.
+         */
+        private const val USERNAMES_LIMIT = 100
     }
 }

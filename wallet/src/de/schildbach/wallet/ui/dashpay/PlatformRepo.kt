@@ -382,7 +382,11 @@ class PlatformRepo @Inject constructor(
                     return false
                 }
             }
-            val nameDocuments = platform.names.getByOwnerId(userId)
+            // Phase 3e: domain documents by owner via the Kotlin SDK behind
+            // the same read flag. Null = flag off or SDK path failed — fall
+            // through to the unchanged dashj-platform query.
+            val nameDocuments = sdkUsernameQueries.getDomainDocumentsByOwnerOrNull(userId)
+                ?: platform.names.getByOwnerId(userId)
 
             if (nameDocuments.isNotEmpty()) {
                 val username = DomainDocument(nameDocuments[0]).label

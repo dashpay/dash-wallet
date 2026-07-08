@@ -255,13 +255,56 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
   `IdentityRepository.searchUsernames` prefix/exact) routed through `SdkUsernameQueries` behind
   `DashPayConfig.USE_KOTLIN_SDK_DPNS_READS` (default OFF; re-read per lookup; any SDK failure
   falls back to the dashj path automatically).
+- ✅ **3d — contested-name vote state + profile reads**: `SdkVotingQueries`
+  (`getVoteContenders` via `sdk.voting.contestedResourceVoteState`) and `SdkProfileQueries`
+  (`profiles.get`/`getList` via `sdk.documents.search` on the DashPay contract), same flag,
+  same auto-fallback.
+- ✅ **3e — key-derivation parity gate + remaining DPNS reads + first WRITE seam**:
+  - **Task A verdict — CONDITIONAL PARITY.** dashj (dashj-core 22.0.3 bytecode:
+    `DerivationPathFactory`, `AuthenticationGroupExtension`, `BlockchainIdentity`) registers
+    identity auth key `i` at `m/9'/coin'/5'/0'/0'/0'/i'` (ECDSA secp256k1, all hardened;
+    coin 5' main / 1' test; 4 keys at i=0–3: MASTER/AUTH, HIGH/AUTH, MEDIUM/ENCRYPTION,
+    CRITICAL/TRANSFER; funding `m/9'/coin'/5'/1'`, topup `…/2'`, invitations `…/3'`).
+    The Kotlin SDK (rust-dashcore @647fa982 `key-wallet/src/dip9.rs`,
+    `rs-platform-wallet .../identity_handle.rs`) derives
+    `m/9'/coin'/5'/0'(auth)/0'(ECDSA)/identity_index'/key_index'` — identical trees for
+    `identity_index = 0`, the only chain dashj creates. So the SDK CAN sign for a
+    dashj-registered identity once that identity is discovered/managed by the SDK wallet.
+    Registration ROLE tables differ (SDK: MASTER/CRITICAL/HIGH/TRANSFER at 0–3) — irrelevant
+    for signing existing identities, relevant if the SDK ever registers new ones.
+    NOT yet verified: DIP-15 friendship/payment derivation parity (see 3e gaps below).
+  - `names.getByOwnerId`/`names.getList` routed via `sdk.dpns.usernames` in
+    `SdkUsernameQueries` (same read flag, same fallback; per-identity loop replaces dashj's
+    100-id `whereIn(records.identity)` batches).
+  - **Write seam** `SdkDashPayWrites` behind NEW flag `USE_KOTLIN_SDK_DASHPAY_WRITES`
+    (default OFF): `PlatformBroadcastService.sendContactRequest` + `broadcastUpdatedProfile`
+    route through the SDK's wallet-bound dashpay ops with a three-valued
+    no-double-broadcast contract (`Broadcast` / `NotBroadcast` = provably nothing submitted →
+    dashj fallback / `Ambiguous` = may have landed → surface error, NEVER dashj retry).
+    Preflights (wallet bound via `bindAppWallet`, identity managed by SDK wallet) fail fast
+    to `NotBroadcast`; since nothing binds the wallet in production yet, the path is inert
+    even with the flag on. On SDK success, local state reconciles from Platform via dashj
+    reads (`watchContactRequest` / `profiles.get`) and the unchanged bookkeeping tail
+    (DIP-15 keychain add, DB rows, listeners).
 - **SDK issues to file**: (1) `dpns.resolve` returns InternalError with a message instead of a
-  NotFound code/null for unregistered names; (2) no `dpns` vote-contenders equivalent —
-  `sdk.voting.contestedResourceVoteState` needs mapping for contested-name UX; (3) DPNS
-  projections lack `$createdAt`/document id/alias records.
-- **3d next**: vote-contenders mapping behind the same flag; profile reads (`profiles.get/getList`)
-  → SDK dashpay queries; then the write side (identity registration via asset-lock bridge,
-  contact requests) and sync services.
+  NotFound code/null for unregistered names; (2) DPNS projections lack `$createdAt`/document
+  id/alias records; (3) `dpns.usernames(limit=0)` defaults to 10 — callers must pass an
+  explicit limit for dashj parity; (4) `Dashpay.createOrUpdateProfile` takes raw
+  `avatarBytes` only (recomputes hash+fingerprint Rust-side) — profiles that carry
+  `avatarHash`/`avatarFingerprint` without raw bytes cannot be routed; (5) no public
+  "is identity managed" probe (Phase 3e uses `dashpay.syncState(id) != null`).
+- **3e gaps / 3f next**:
+  - Wire `bindAppWallet` + SDK **identity discovery** into a production flow so the app's
+    dashj-registered identity becomes a managed identity (the write path's preflight
+    currently always falls back). `PlatformWalletManager.identityRegistration` has the
+    discovery bridge.
+  - **Verify DIP-15 parity** (friendship xpub + accountReference derivation, dashj
+    `FEATURE_PURPOSE_DASHPAY 15'` vs rust-dashcore dip9.rs `FEATURE_PURPOSE_DASHPAY = 15`)
+    before enabling `USE_KOTLIN_SDK_DASHPAY_WRITES` anywhere real: an SDK-sent contact
+    request whose embedded xpub dashj cannot re-derive would watch wrong friendship
+    addresses.
+  - Then: accept-contact-request, identity registration/topup via the SDK asset-lock
+    bridge, and the DashPay sync loops.
 
 ## Phase 4 design references (added 2026-07-08)
 

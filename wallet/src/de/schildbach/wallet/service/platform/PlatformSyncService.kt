@@ -48,6 +48,7 @@ import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -152,6 +153,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletDataProvider,
     private val sdkProfileQueries: SdkProfileQueries,
+    private val sdkUsernameQueries: SdkUsernameQueries,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -695,7 +697,13 @@ class PlatformSynchronizationService @Inject constructor(
                     )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
-                val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
+                // Phase 3e: domain documents for the contact ids via the
+                // Kotlin SDK behind the same read flag; null = flag off or
+                // SDK path failed — fall through to the dashj query.
+                val nameDocuments = (
+                    sdkUsernameQueries.getDomainDocumentsForIdentitiesOrNull(identifierList)
+                        ?: platform.names.getList(identifierList)
+                    ).map { DomainDocument(it) }
                 val documentsByName = nameDocuments.associateBy({ it.normalizedLabel }, { it })
                 val idByNameMap = nameDocuments.associateBy({ it.normalizedLabel }, { it.ownerId })
 
