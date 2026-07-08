@@ -17,9 +17,11 @@
 
 package org.dash.wallet.common.payments.parsers
 
+import org.bitcoinj.core.Address
 import org.bitcoinj.uri.BitcoinURI
 import org.bitcoinj.uri.BitcoinURIParseException
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.money.toDash
 import org.dash.wallet.common.util.Constants
 
@@ -45,6 +47,20 @@ data class DashUri(val address: String?, val amount: Dash?, val message: String?
                 throw DashUriParseException(e.message, e)
             }
             return DashUri(parsed.address?.toBase58(), parsed.amount?.toDash(), parsed.message)
+        }
+
+        /**
+         * Builds a `dash:` payment-request URI for [address] (base58, wallet's network) with an
+         * optional [amount]. Mirrors [BitcoinURI.convertToBitcoinURI]; null and empty [label]/[message]
+         * are both omitted, exactly like the dashj original.
+         */
+        fun toUri(address: String, amount: Dash? = null, label: String? = null, message: String? = null): String {
+            return BitcoinURI.convertToBitcoinURI(
+                Address.fromString(Constants.NETWORK_PARAMETERS, address),
+                amount?.toCoin(),
+                label,
+                message
+            )
         }
     }
 }

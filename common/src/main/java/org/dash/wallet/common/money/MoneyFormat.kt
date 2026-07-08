@@ -31,9 +31,15 @@ import java.util.Locale
  */
 class MoneyFormat internal constructor(internal val delegate: MonetaryFormat) {
 
+    companion object {
+        /** Mirrors [MonetaryFormat.BTC]: standard Dash denomination format. */
+        val BTC = MoneyFormat(MonetaryFormat.BTC)
+    }
+
     constructor() : this(MonetaryFormat())
 
     fun noCode() = MoneyFormat(delegate.noCode())
+    fun postfixCode() = MoneyFormat(delegate.postfixCode())
     fun minDecimals(minDecimals: Int) = MoneyFormat(delegate.minDecimals(minDecimals))
     fun optionalDecimals(vararg groups: Int) = MoneyFormat(delegate.optionalDecimals(*groups))
     fun repeatOptionalDecimals(decimals: Int, repetitions: Int) =

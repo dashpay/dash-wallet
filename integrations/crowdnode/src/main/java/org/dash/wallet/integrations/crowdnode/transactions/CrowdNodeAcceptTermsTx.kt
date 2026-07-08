@@ -20,6 +20,7 @@ package org.dash.wallet.integrations.crowdnode.transactions
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.transactions.filters.CoinsToAddressTxFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -30,7 +31,7 @@ class CrowdNodeAcceptTermsTx(networkParams: NetworkParameters) : CoinsToAddressT
 ) {
     companion object {
         val ACCEPT_TERMS_REQUEST_CODE: Coin =
-            CrowdNodeConstants.API_OFFSET + Coin.valueOf(ApiCode.AcceptTerms.code)
+            CrowdNodeConstants.API_OFFSET.toCoin() + Coin.valueOf(ApiCode.AcceptTerms.code)
     }
 
     override fun matches(tx: Transaction): Boolean {

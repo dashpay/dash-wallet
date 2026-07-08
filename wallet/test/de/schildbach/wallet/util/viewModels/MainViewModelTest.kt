@@ -65,6 +65,7 @@ import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.params.TestNet3Params
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.Resource
@@ -209,7 +210,7 @@ class MainViewModelTest {
     private val txDisplayCacheService = mockk<TxDisplayCacheService>(relaxed = true)
     private val crowdNodeApi = mockk<CrowdNodeApi> {
         every { signUpStatus } returns MutableStateFlow(SignUpStatus.NotStarted)
-        every { balance } returns MutableStateFlow(Resource.success(Coin.ZERO))
+        every { balance } returns MutableStateFlow(Resource.success(Dash.ZERO))
     }
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()

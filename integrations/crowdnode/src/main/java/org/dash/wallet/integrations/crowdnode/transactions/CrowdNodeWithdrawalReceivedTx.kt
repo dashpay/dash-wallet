@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin
 import org.bitcoinj.core.NetworkParameters
 import org.bitcoinj.core.Transaction
 import org.bitcoinj.script.ScriptPattern
+import org.dash.wallet.common.money.toCoin
 import org.dash.wallet.common.transactions.filters.TransactionFilter
 import org.dash.wallet.integrations.crowdnode.model.ApiCode
 import org.dash.wallet.integrations.crowdnode.utils.CrowdNodeConstants
@@ -58,7 +59,7 @@ class CrowdNodeWithdrawalReceivedTx(
     }
 
     private fun isApiResponse(coin: Coin): Boolean {
-        val toCheck = (coin - CrowdNodeConstants.API_OFFSET).value
+        val toCheck = (coin - CrowdNodeConstants.API_OFFSET.toCoin()).value
 
         return toCheck in 1..1024 || (toCheck <= ApiCode.MaxCode.code && isPowerOfTwo(coin.value))
     }
