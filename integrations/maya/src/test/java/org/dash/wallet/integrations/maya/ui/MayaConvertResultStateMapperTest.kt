@@ -165,8 +165,8 @@ class MayaConvertResultStateMapperTest {
         val fromNull = MayaConvertResultStateMapper.explorerFor(null, null, null)
         val fromBlank = MayaConvertResultStateMapper.explorerFor("  ", null, null)
 
-        assertEquals(R.string.maya_explorer_description_maya, fromNull?.descriptionRes)
-        assertEquals(R.string.maya_explorer_description_maya, fromBlank?.descriptionRes)
+        assertEquals(R.string.maya_explorer_view_maya, fromNull?.linkTextRes)
+        assertEquals(R.string.maya_explorer_view_maya, fromBlank?.linkTextRes)
     }
 
     @Test
@@ -190,7 +190,6 @@ class MayaConvertResultStateMapperTest {
     fun explorer_nearRoute_withDepositAddress_linksToTransaction() {
         val spec = MayaConvertResultStateMapper.explorerFor("NEAR Intents", "ignored-txid", "deposit.near")
 
-        assertEquals(R.string.maya_explorer_description_near, spec?.descriptionRes)
         assertEquals(R.string.maya_explorer_view_near, spec?.linkTextRes)
         assertEquals(R.string.maya_explorer_tx_url_near, spec?.urlRes)
         assertEquals("deposit.near", spec?.urlArg)
@@ -209,7 +208,7 @@ class MayaConvertResultStateMapperTest {
         // Classification mirrors the order preview: MAYA is checked first.
         val spec = MayaConvertResultStateMapper.explorerFor("MAYA via NEAR", "tx", "addr")
 
-        assertEquals(R.string.maya_explorer_description_maya, spec?.descriptionRes)
+        assertEquals(R.string.maya_explorer_view_maya, spec?.linkTextRes)
     }
 
     @Test

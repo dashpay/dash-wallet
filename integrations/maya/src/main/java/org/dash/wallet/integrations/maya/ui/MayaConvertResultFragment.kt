@@ -161,8 +161,15 @@ class MayaConvertResultFragment : ComposeBottomSheet() {
         // preview like the old screen's back handling.
         isCancelable = !spec.isSuccess
 
-        // Explorer link so the user can follow a successful swap on the settlement network.
-        val explorer = if (spec.resultType == MayaResultType.CONVERSION_SUCCESS) {
+        // Explorer link so the user can follow the swap on the settlement network (mayascan
+        // for Maya routes, nearintents.org for NEAR routes). Shown for successful conversions,
+        // and for error states where a transaction was actually generated — the funds left the
+        // wallet, so the user needs a way to follow what happened to them.
+        val hasTransaction = !params?.params?.txid.isNullOrBlank() ||
+            !params?.params?.depositAddress.isNullOrBlank()
+        val explorer = if (spec.resultType == MayaResultType.CONVERSION_SUCCESS ||
+            (!spec.isSuccess && hasTransaction)
+        ) {
             MayaConvertResultStateMapper.explorerFor(
                 routeName = params?.routeName,
                 txid = params?.params?.txid,
@@ -182,9 +189,8 @@ class MayaConvertResultFragment : ComposeBottomSheet() {
             message = spec.messageText
                 ?: getString(spec.messageRes!!, *spec.messageArgs.toTypedArray()),
             showContactSupport = spec.showContactSupport,
-            buttonText = getString(spec.buttonTextRes),
-            explorerDescription = explorer?.let { getString(it.descriptionRes) },
-            explorerLinkText = explorer?.let { getString(it.linkTextRes) }
+            explorerLinkText = explorer?.let { getString(it.linkTextRes) },
+            buttonText = getString(spec.buttonTextRes)
         )
     }
 }

@@ -62,8 +62,8 @@ data class MayaConvertResultUIState(
     val message: String = "",
     /** Shows the "Contact Maya support" button (error states). */
     val showContactSupport: Boolean = false,
-    /** Explorer section under the result (successful swaps); null hides it. */
-    val explorerDescription: String? = null,
+    /** Explorer link under the result (successful swaps, and errors where a transaction
+     *  was generated); null hides it. */
     val explorerLinkText: String? = null,
     /** Bottom button label: Close (success) or Retry (failure). */
     val buttonText: String = ""
@@ -143,19 +143,6 @@ fun MayaConvertResultScreen(
                     )
                 }
 
-                if (state.explorerDescription != null) {
-                    Text(
-                        text = state.explorerDescription,
-                        style = MyTheme.Caption,
-                        color = MyTheme.Colors.textSecondary,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 20.dp)
-                            .padding(horizontal = 36.dp)
-                    )
-                }
-
                 if (state.explorerLinkText != null) {
                     Text(
                         text = state.explorerLinkText,
@@ -195,9 +182,6 @@ private fun MayaConvertResultSuccessPreview() {
             isLoading = false,
             isSuccess = true,
             title = "You successfully converted DASH to BTC",
-            message = "It can take up to a few minutes for your Bitcoin to arrive " +
-                "at the destination address using Maya Protocol",
-            explorerDescription = "You can follow this swap on the Maya explorer",
             explorerLinkText = "View on mayascan.org",
             buttonText = "Done"
         ),

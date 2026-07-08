@@ -42,7 +42,6 @@ data class ResultSpec(
 
 /** Explorer link for a successful swap: which explorer, and the URL template + its argument. */
 data class ExplorerSpec(
-    @StringRes val descriptionRes: Int,
     @StringRes val linkTextRes: Int,
     /** URL string resource; a plain URL when [urlArg] is null, a format template otherwise. */
     @StringRes val urlRes: Int,
@@ -151,7 +150,6 @@ object MayaConvertResultStateMapper {
 
         return when {
             isMayaRoute -> ExplorerSpec(
-                descriptionRes = R.string.maya_explorer_description_maya,
                 linkTextRes = R.string.maya_explorer_view_maya,
                 urlRes = if (txid.isNullOrBlank()) {
                     R.string.maya_explorer_url_maya
@@ -161,7 +159,6 @@ object MayaConvertResultStateMapper {
                 urlArg = txid?.takeIf { it.isNotBlank() }?.uppercase()
             )
             isNearRoute -> ExplorerSpec(
-                descriptionRes = R.string.maya_explorer_description_near,
                 linkTextRes = R.string.maya_explorer_view_near,
                 urlRes = if (depositAddress.isNullOrBlank()) {
                     R.string.maya_explorer_url_near
