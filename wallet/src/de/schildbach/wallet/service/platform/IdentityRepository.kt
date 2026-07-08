@@ -17,6 +17,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TOP_CONTACT_COUNT
@@ -117,6 +118,7 @@ class IdentityRepositoryImpl @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
+    private val sdkUsernameQueries: SdkUsernameQueries,
 ) : IdentityRepository {
     companion object {
         private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
@@ -439,16 +441,23 @@ class IdentityRepositoryImpl @Inject constructor(
             //TODO: Maybe add pagination later? Is very unlikely that a user will scroll past 100 search results
             // Sometimes when onlyExactUsername = true, an exception is thrown here and that results in a crash
             // it is not clear why a search for an existing username results in a failure to find it again.
-            val nameDocuments = if (!onlyExactUsername) {
-                platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
-            } else {
-                val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
-                if (nameDocument != null) {
-                    listOf(nameDocument)
+            // Phase 3c (docs/kotlin-sdk-migration-plan.md): name-document
+            // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+            // (default off). Null means "flag off or SDK path failed" —
+            // fall through to the unchanged dashj-platform queries. The rest
+            // of this pipeline (profiles, contacts, contested filtering) is
+            // dashj either way.
+            val nameDocuments = sdkUsernameQueries.searchDomainDocumentsOrNull(text, onlyExactUsername, limit)
+                ?: if (!onlyExactUsername) {
+                    platform.names.search(text, Names.DEFAULT_PARENT_DOMAIN, retrieveAll = false, limit = limit)
                 } else {
-                    listOf()
+                    val nameDocument = platform.names.get(text, Names.DEFAULT_PARENT_DOMAIN)
+                    if (nameDocument != null) {
+                        listOf(nameDocument)
+                    } else {
+                        listOf()
+                    }
                 }
-            }
             // determine if multiple names belong to the same identity. If so, don't show any non-contested names
             val identifierDocumentMap = hashMapOf<Identifier, ArrayList<DomainDocument>>()
             nameDocuments.forEach { document ->

@@ -41,6 +41,7 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -86,7 +87,8 @@ class PlatformRepo @Inject constructor(
     val walletApplication: WalletApplication,
     val appDatabase: AppDatabase,
     val platform: PlatformService,
-    val dashPayConfig: DashPayConfig
+    val dashPayConfig: DashPayConfig,
+    private val sdkUsernameQueries: SdkUsernameQueries
 ) {
 
     @EntryPoint
@@ -169,6 +171,11 @@ class PlatformRepo @Inject constructor(
     }
 
     fun getUsername(username: String): Resource<Document> {
+        // Phase 3c (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
+        // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
+        // the flag is off or on ANY SDK-path failure, falling through to the
+        // unchanged dashj-platform path below.
+        sdkUsernameQueries.getUsernameOrNull(username)?.let { return it }
         return try {
             val nameDocument = platform.names.get(Names.normalizeString(username))
             Resource.success(nameDocument)

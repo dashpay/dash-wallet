@@ -125,6 +125,18 @@ open class DashPayConfig @Inject constructor(
         val TRANSACTION_METADATA_LAST_PAST_SAVE = longPreferencesKey("transaction_metadata_last_save_work_timestamp")
         val INVITATION_LINK = stringPreferencesKey("invitation_link")
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
+
+        /**
+         * Phase 3c of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
+         * username resolution/search through the Dash Platform Kotlin SDK
+         * instead of dashj-platform. Default OFF — the dashj path is
+         * untouched unless this is explicitly enabled, and any SDK-path
+         * failure falls back to dashj per call. Re-read on every lookup, so
+         * toggling either direction is instant (no restart).
+         * See [de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries].
+         */
+        val USE_KOTLIN_SDK_DPNS_READS = booleanPreferencesKey("use_kotlin_sdk_dpns_reads")
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {

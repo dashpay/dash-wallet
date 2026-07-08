@@ -242,3 +242,23 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
   (all usages repointed; 15 BIP70 tests green).
 - 🔄 **Native SDK build** (cargo-ndk, NDK r28, both ABIs) running locally; on completion:
   `:sdk:publishToMavenLocal`, then Phase 3 wiring can begin against the local artifact.
+
+## Phase 3 status (updated 2026-07-08)
+
+- ✅ **3a — SDK bootstrap scaffold**: `DashSdkService` (lazy `ensureStarted()`: Sdk init → Room →
+  WalletStorage → WalletManagerStore.activate → loadPersistedWallets, mirroring the example app's
+  AppContainer). No production invocation by default.
+- ✅ **3b — seed bridge**: `SecurityGuardMnemonicProvider` over the canonical
+  `SecurityFunctions.decryptSeed` path (caller owns auth); `bindAppWallet` idempotently
+  creates/rehydrates the SDK wallet (birthHeight=0 until Phase 5 maps creation time → height).
+- ✅ **3c — first production flow on the SDK**: DPNS reads (`PlatformRepo.getUsername` resolve;
+  `IdentityRepository.searchUsernames` prefix/exact) routed through `SdkUsernameQueries` behind
+  `DashPayConfig.USE_KOTLIN_SDK_DPNS_READS` (default OFF; re-read per lookup; any SDK failure
+  falls back to the dashj path automatically).
+- **SDK issues to file**: (1) `dpns.resolve` returns InternalError with a message instead of a
+  NotFound code/null for unregistered names; (2) no `dpns` vote-contenders equivalent —
+  `sdk.voting.contestedResourceVoteState` needs mapping for contested-name UX; (3) DPNS
+  projections lack `$createdAt`/document id/alias records.
+- **3d next**: vote-contenders mapping behind the same flag; profile reads (`profiles.get/getList`)
+  → SDK dashpay queries; then the write side (identity registration via asset-lock bridge,
+  contact requests) and sync services.
