@@ -17,9 +17,9 @@ ext {
     // prod uses the stable release; all other flavors use the latest snapshot.
     dppVersions = [
         prod      : dppVersion,
-        _testNet3 : "4.0.0-RC2-SNAPSHOT",
-        staging   : "4.0.0-RC2-SNAPSHOT",
-        devnet    : "4.0.0-RC2-SNAPSHOT",
+        _testNet3 : dppVersion,
+        staging   : dppVersion,
+        devnet    : dppVersion,
     ]
 }
 repositories {
