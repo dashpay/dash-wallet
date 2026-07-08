@@ -39,7 +39,7 @@ import de.schildbach.wallet_test.databinding.ActivitySendCoinsBinding
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import org.bitcoinj.core.Coin
-import org.bitcoinj.protocols.payments.PaymentProtocol
+import org.dash.wallet.common.payments.bip70.PaymentProtocol
 import org.dash.wallet.common.data.PaymentIntent
 import org.dash.wallet.common.payments.parsers.DashPaymentIntentParser
 import org.bitcoinj.script.ScriptBuilder

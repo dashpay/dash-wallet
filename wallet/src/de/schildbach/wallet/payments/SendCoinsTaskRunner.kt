@@ -38,13 +38,13 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okio.BufferedSink
 import okio.IOException
-import org.bitcoin.protocols.payments.Protos
-import org.bitcoin.protocols.payments.Protos.Payment
+import org.dash.wallet.common.payments.bip70.Protos
+import org.dash.wallet.common.payments.bip70.Protos.Payment
 import org.bitcoinj.core.*
 import org.bitcoinj.crypto.IKey
 import org.bitcoinj.crypto.KeyCrypterException
-import org.bitcoinj.protocols.payments.PaymentProtocol
-import org.bitcoinj.protocols.payments.PaymentProtocolException.InvalidPaymentRequestURL
+import org.dash.wallet.common.payments.bip70.PaymentProtocol
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException.InvalidPaymentRequestURL
 import org.bitcoinj.script.ScriptException
 import org.bitcoinj.wallet.*
 import org.dash.wallet.common.WalletDataProvider

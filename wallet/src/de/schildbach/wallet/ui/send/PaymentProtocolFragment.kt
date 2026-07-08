@@ -35,7 +35,7 @@ import kotlinx.coroutines.launch
 import org.bitcoinj.core.Coin
 import org.bitcoinj.core.InsufficientMoneyException
 import org.bitcoinj.core.Transaction
-import org.bitcoinj.protocols.payments.PaymentProtocolException
+import org.dash.wallet.common.payments.bip70.PaymentProtocolException
 import org.bitcoinj.utils.MonetaryFormat
 import org.bitcoinj.wallet.SendRequest
 import org.dash.wallet.common.Configuration
