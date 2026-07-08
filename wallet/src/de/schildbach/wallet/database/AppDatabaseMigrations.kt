@@ -189,6 +189,40 @@ class AppDatabaseMigrations {
             }
         }
 
+        val migration18to19 = object : Migration(18, 19) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Tracking of DEX sell swaps (Maya / SwapKit) by the DASH tx that funded them.
+                database.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `swap_orders` (
+                        `txId` BLOB NOT NULL,
+                        `service` TEXT NOT NULL,
+                        `provider` TEXT,
+                        `fromAsset` TEXT NOT NULL,
+                        `toAsset` TEXT NOT NULL,
+                        `toAddress` TEXT NOT NULL,
+                        `expectedToAmount` TEXT,
+                        `actualToAmount` TEXT,
+                        `status` TEXT NOT NULL,
+                        `outboundTxHash` TEXT,
+                        `timestamp` INTEGER NOT NULL,
+                        `finalisedAt` INTEGER,
+                        `lastChecked` INTEGER NOT NULL,
+                        PRIMARY KEY(`txId`)
+                    )
+                    """
+                )
+                database.execSQL("ALTER TABLE `tx_display_cache` ADD COLUMN `swapStatus` TEXT")
+            }
+        }
+
+        val migration19to20 = object : Migration(19, 20) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // NEAR Intents swaps are tracked by deposit channel address, not tx hash.
+                database.execSQL("ALTER TABLE `swap_orders` ADD COLUMN `depositAddress` TEXT")
+            }
+        }
+
         val migration15to16 = object : Migration(15, 16) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // previous versions have no data in invitations table, so do this

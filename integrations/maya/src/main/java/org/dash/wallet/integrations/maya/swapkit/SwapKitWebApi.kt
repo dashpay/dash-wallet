@@ -28,6 +28,8 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitToken
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackRequest
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackResponse
 import org.slf4j.LoggerFactory
 import java.io.IOException
 import javax.inject.Inject
@@ -124,6 +126,24 @@ open class SwapKitWebApi @Inject constructor(
                 )
             )
             if (response.isSuccessful) response.body().orEmpty() else emptyList()
+        }
+    }
+
+    suspend fun track(request: SwapKitTrackRequest): SwapKitTrackResponse? {
+        return safeCall("track(${request.hash ?: request.depositAddress})", null) {
+            val response = endpoint.postTrack(request)
+            if (response.isSuccessful) {
+                response.body()
+            } else {
+                // e.g. {"message":"Internal Server Error","error":"internalServerError",
+                // "data":{"code":"..."}} — log the code so stuck swaps are diagnosable
+                // without verbose OkHttp logging; the tracker retries on the next tick.
+                log.warn(
+                    "swapkit track({}) HTTP {}: {}",
+                    request.hash ?: request.depositAddress, response.code(), response.errorBody()?.string()
+                )
+                null
+            }
         }
     }
 

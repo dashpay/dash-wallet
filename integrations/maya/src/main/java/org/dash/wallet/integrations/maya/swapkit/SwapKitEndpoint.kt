@@ -24,6 +24,8 @@ import org.dash.wallet.integrations.maya.swapkit.model.SwapKitQuoteResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapRequest
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitSwapResponse
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTokenListResponse
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackRequest
+import org.dash.wallet.integrations.maya.swapkit.model.SwapKitTrackResponse
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -54,4 +56,8 @@ interface SwapKitEndpoint {
 
     @POST("price")
     suspend fun postPrice(@Body request: SwapKitPriceRequest): Response<List<SwapKitPriceItem>>
+
+    /** Swap status by broadcast tx hash + chain id. */
+    @POST("track")
+    suspend fun postTrack(@Body request: SwapKitTrackRequest): Response<SwapKitTrackResponse>
 }

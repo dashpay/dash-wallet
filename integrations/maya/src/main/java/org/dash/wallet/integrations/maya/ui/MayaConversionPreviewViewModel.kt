@@ -31,28 +31,34 @@ import org.dash.wallet.common.data.ResponseResource
 import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.data.TaxCategory
+import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.services.NetworkStateInt
 import org.dash.wallet.common.services.TransactionMetadataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.transactions.filters.LockedTransaction
+import org.dash.wallet.integrations.maya.api.DispatchingSwapProvider
 import org.dash.wallet.integrations.maya.api.SwapProvider
+import org.dash.wallet.integrations.maya.data.SwapOrderDao
 import org.dash.wallet.integrations.maya.model.MayaErrorResponse
 import org.dash.wallet.integrations.maya.model.SwapQuoteRequest
 import org.dash.wallet.integrations.maya.model.SwapTradeResponse
 import org.dash.wallet.integrations.maya.model.SwapTradeUIModel
 import org.dash.wallet.integrations.maya.ui.convert_currency.model.SendTransactionToWalletParams
 import org.dash.wallet.integrations.maya.utils.MayaConstants
+import org.dash.wallet.integrations.maya.utils.SwapBackend
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 
 @HiltViewModel
 class MayaConversionPreviewViewModel @Inject constructor(
     private val swapProvider: SwapProvider,
+    private val dispatchingSwapProvider: DispatchingSwapProvider,
     private val walletDataProvider: WalletDataProvider,
     private val analyticsService: AnalyticsService,
     networkState: NetworkStateInt,
     private val transactionMetadataProvider: TransactionMetadataProvider,
+    private val swapOrderDao: SwapOrderDao,
     private val savedStateHandle: SavedStateHandle
 ) : ViewModel() {
     companion object {
@@ -145,12 +151,33 @@ class MayaConversionPreviewViewModel @Inject constructor(
                         txid = txId.takeIf { it != Sha256Hash.ZERO_HASH }?.toString(),
                         depositAddress = swapTradeUIModel.vaultAddress
                     )
+                    val service = when (dispatchingSwapProvider.currentBackend()) {
+                        SwapBackend.SWAPKIT -> ServiceName.Swapkit
+                        SwapBackend.MAYA -> ServiceName.Maya
+                    }
+                    if (txId != Sha256Hash.ZERO_HASH) {
+                        swapOrderDao.insertOrder(
+                            SwapOrder(
+                                txId = txId,
+                                service = service,
+                                provider = swapTradeUIModel.routeName?.takeIf { it.isNotEmpty() },
+                                fromAsset = swapTradeUIModel.inputCurrency,
+                                toAsset = swapTradeUIModel.outputCurrency,
+                                toAddress = swapTradeUIModel.destinationAddress,
+                                depositAddress = swapTradeUIModel.vaultAddress.takeIf { it.isNotEmpty() },
+                                expectedToAmount = swapTradeUIModel.expectedOutputAmount
+                                    .takeIf { it.signum() > 0 }?.toPlainString(),
+                                timestamp = System.currentTimeMillis()
+                            )
+                        )
+                        transactionMetadataProvider.setTransactionService(txId, service)
+                    }
                     // TODO add more information about the transaction to metadata.  it is a trade
                     transactionMetadataProvider.markAddressAsync(
                         swapTradeUIModel.vaultAddress,
                         false,
                         TaxCategory.Expense, // TODO: this should be a Trade
-                        ServiceName.Maya
+                        service
                     )
                 }
             }
