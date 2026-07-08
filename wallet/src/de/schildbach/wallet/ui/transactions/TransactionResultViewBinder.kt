@@ -325,6 +325,7 @@ class TransactionResultViewBinder(
             binding.feeContainer.isVisible = false
             binding.dateContainer.isVisible = false
             binding.openExplorerCard.isVisible = false
+            binding.openProviderExplorerCard.isVisible = false
             binding.openTaxCategoryCard.isVisible = false
             binding.dashAmount.setStrikeThru(true)
             binding.fiatValue.setStrikeThru(true)
