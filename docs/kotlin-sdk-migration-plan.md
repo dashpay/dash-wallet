@@ -333,3 +333,20 @@ components, vector drawables for missing icons).
   identity via `identityRegistration.discoverIdentities` (no SDK gap) at two key-in-scope call
   sites (PlatformSynchronizationService.init, PlatformDocumentBroadcastService writes),
   fire-and-forget, single-flight, provably inert with flags off. 171 tests green.
+
+## Live testnet validation (2026-07-08, Galaxy S22 Ultra, testnet)
+
+Verified on-device with the debug flags ON:
+- SDK bootstrap + native lib load + Room/Keystore storage + wallet persistence across restarts.
+- Seed bridge: PIN-derived key → bindAppWallet → SDK wallet from the app's mnemonic (idempotent).
+- **Identity discovery found and attached the dashj-registered identity — empirical DIP-13 parity.**
+- Phase 2 regression: correct balance incl. previously-mixed funds; grouped mixing history intact.
+- DashPay flows: username search, profile view, contact request sent → received → accepted.
+- Write fallback contract validated live: SDK attempt → pre-broadcast signing rejection →
+  clean dashj fallback (request delivered), no double-broadcast.
+- Bugs found live and fixed: Firebase-less builds crashed at startup (3 spots); `syncState`
+  throws on not-managed identity; signing failure misclassified as ambiguous; discovered
+  identities lacked signable keys (SDK persistence bridge silently skips key storage outside
+  the 30s auth-gated Keystore window) — now healed with byte-verified derivation + retry.
+- Remaining friction for full SDK-path writes: the SDK's auth-gated key alias (30s window);
+  needs an SDK-side policy option or app-supplied auth gate.
