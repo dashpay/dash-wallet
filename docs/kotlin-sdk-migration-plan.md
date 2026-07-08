@@ -220,3 +220,25 @@ Phases 1 and 2 are pure app work and can ship to production on dashj long before
 - Keep historical mixing-tx grouping UI or flatten old mixing txs to plain rows?
 - Fleet stats: 32-bit devices, API 24–28 devices, pre-BIP39 wallets.
 - Where does the app's PIN sit relative to SDK Keystore/biometric gating (one gate or two)?
+
+## Phase 0 status (updated 2026-07-08)
+
+- ✅ **CoinJoin-restore verdict: SAFE at the pinned rust-dashcore rev (`647fa982`, 2026-07-06), with
+  conditions.** Restore-from-mnemonic auto-creates the CoinJoin account at the dashj-matching DIP-9
+  path `m/9'/coin_type'/4'/account'` (external + internal branches, gap limit 30) and its addresses
+  are in the SPV compact-filter watch set from registration — no explicit binding needed.
+  **Conditions:** (1) never regress the rust-dashcore pin below `647fa982` — the March rev derived
+  the WRONG CoinJoin path (`m/9'/coin'/account'`, missing `4'`) and would silently lose funds; add a
+  CI pin guard + a dashj-vs-SDK address-derivation test vector. (2) The migration must pass
+  `birthHeight = 0` (or the wallet's creation height) to `createWallet` — default resolves to the
+  SPV tip and scans nothing historical. (3) Verify heavy mixers don't exceed the 30-address CoinJoin
+  gap limit; raise it for migration scans if needed.
+- ✅ **Maven publishing added** to `packages/kotlin-sdk/sdk/build.gradle.kts` on platform branch
+  `feat/kotlin-sdk-maven-publish` (local worktree): `org.dashfoundation:dash-sdk-android`,
+  release AAR + sources + POM; `publishToMavenLocal` verified resolving. Remote repo block pending a
+  hosting decision.
+- ✅ **App prerequisites applied:** minSdk 29 (all modules), 64-bit-only ABIs (arm64-v8a + x86_64),
+  BIP70 vendored from dashj-core 22.0.3 sources into `org.dash.wallet.common.payments.bip70`
+  (all usages repointed; 15 BIP70 tests green).
+- 🔄 **Native SDK build** (cargo-ndk, NDK r28, both ABIs) running locally; on completion:
+  `:sdk:publishToMavenLocal`, then Phase 3 wiring can begin against the local artifact.
