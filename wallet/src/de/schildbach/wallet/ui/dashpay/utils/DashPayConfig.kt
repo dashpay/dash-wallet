@@ -25,9 +25,12 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import de.schildbach.wallet.ui.more.TxMetadataSaveFrequency
+import de.schildbach.wallet_test.BuildConfig
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
@@ -152,6 +155,26 @@ open class DashPayConfig @Inject constructor(
          * direction is instant (no restart).
          */
         val USE_KOTLIN_SDK_DASHPAY_WRITES = booleanPreferencesKey("use_kotlin_sdk_dashpay_writes")
+    }
+
+    init {
+        // Debug builds seed the Kotlin SDK migration flags ON (once, only if unset) so
+        // flag-gated SDK paths get exercised during testnet verification; release/prod
+        // builds keep them OFF until rollout. QA can still toggle them afterwards.
+        if (BuildConfig.DEBUG) {
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    if (get(USE_KOTLIN_SDK_DPNS_READS) == null) {
+                        set(USE_KOTLIN_SDK_DPNS_READS, true)
+                    }
+                    if (get(USE_KOTLIN_SDK_DASHPAY_WRITES) == null) {
+                        set(USE_KOTLIN_SDK_DASHPAY_WRITES, true)
+                    }
+                } catch (e: Exception) {
+                    // best-effort seeding; the flags simply stay at their OFF default
+                }
+            }
+        }
     }
 
     open suspend fun areNotificationsDisabled(): Boolean {
