@@ -295,9 +295,21 @@ class DashSdkServiceImpl @Inject constructor(
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
         val wallet = current.walletManager.wallets.value[walletIdHex] ?: return false
-        // syncState is a local managed-identity snapshot read; null means
-        // the identity is not managed by this wallet.
-        return wallet.dashpay.syncState(identityId) != null
+        // syncState is a local managed-identity snapshot read. The FFI throws
+        // "ManagedIdentity not found" for identities this wallet doesn't manage
+        // (observed live on-device; SDK issue: should be null / typed NotFound),
+        // so that error means "not managed" — anything else is a real failure.
+        return try {
+            wallet.dashpay.syncState(identityId) != null
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (e.message?.contains("ManagedIdentity not found") == true) {
+                false
+            } else {
+                throw e
+            }
+        }
     }
 
     override suspend fun discoverIdentities(walletIdHex: String, startIndex: Int): List<ByteArray> {
