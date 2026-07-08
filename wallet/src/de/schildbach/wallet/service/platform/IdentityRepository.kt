@@ -17,6 +17,7 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.livedata.Resource
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.PlatformRepo.Companion.TIMESPAN
@@ -119,6 +120,7 @@ class IdentityRepositoryImpl @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val dashSystemService: DashSystemService,
     private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkProfileQueries: SdkProfileQueries,
 ) : IdentityRepository {
     companion object {
         private val log = LoggerFactory.getLogger(IdentityRepository::class.java)
@@ -487,7 +489,12 @@ class IdentityRepositoryImpl @Inject constructor(
             }.toSet().toList()
 
             val profileById: Map<Identifier, Document> = if (userIds.isNotEmpty()) {
-                val profileDocuments = platform.profiles.getList(userIds)
+                // Phase 3d (docs/kotlin-sdk-migration-plan.md): profile
+                // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+                // (default off). Null means "flag off or SDK path failed" —
+                // fall through to the unchanged dashj-platform query.
+                val profileDocuments = sdkProfileQueries.getProfileDocumentsOrNull(userIds)
+                    ?: platform.profiles.getList(userIds)
                 profileDocuments.associateBy({ it.ownerId }, { it })
             } else {
                 log.warn("search usernames: userIdList is empty, though nameDocuments has ${nameDocuments.size} items")

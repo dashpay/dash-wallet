@@ -41,7 +41,9 @@ import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.platform.PlatformService
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
+import de.schildbach.wallet.service.platform.sdk.SdkVotingQueries
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.grpc.StatusRuntimeException
 import kotlinx.coroutines.*
@@ -88,7 +90,9 @@ class PlatformRepo @Inject constructor(
     val appDatabase: AppDatabase,
     val platform: PlatformService,
     val dashPayConfig: DashPayConfig,
-    private val sdkUsernameQueries: SdkUsernameQueries
+    private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkVotingQueries: SdkVotingQueries,
+    private val sdkProfileQueries: SdkProfileQueries
 ) {
 
     @EntryPoint
@@ -185,6 +189,11 @@ class PlatformRepo @Inject constructor(
     }
 
     fun getVoteContenders(username: String): Contenders {
+        // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read path
+        // behind USE_KOTLIN_SDK_DPNS_READS (default off). Returns null when
+        // the flag is off or on ANY SDK-path failure, falling through to the
+        // unchanged dashj-platform path below.
+        sdkVotingQueries.getVoteContendersOrNull(username)?.let { return it }
         return try {
             val watch = Stopwatch.createStarted()
             val contenders = platform.names.getVoteContenders(Names.normalizeString(username))
@@ -352,7 +361,17 @@ class PlatformRepo @Inject constructor(
      */
     suspend fun updateDashPayProfile(userId: String): Boolean {
         try {
-            var profileDocument = platform.profiles.get(userId)
+            // Phase 3d (docs/kotlin-sdk-migration-plan.md): Kotlin-SDK read
+            // path behind USE_KOTLIN_SDK_DPNS_READS (default off). A null
+            // result means "flag off or SDK path failed" — fall through to
+            // the unchanged dashj-platform query; Optional.empty() is the
+            // SDK's definitive "no profile" (dashj parity: get returns null).
+            val sdkProfileDocument = sdkProfileQueries.getProfileDocumentOrNull(userId)
+            var profileDocument = if (sdkProfileDocument != null) {
+                sdkProfileDocument.orElse(null)
+            } else {
+                platform.profiles.get(userId)
+            }
             if (profileDocument == null) {
                 val identity = platform.identities.get(userId)
                 if (identity != null) {

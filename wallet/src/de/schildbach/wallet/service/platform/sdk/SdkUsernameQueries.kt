@@ -237,10 +237,11 @@ object SdkDpnsMapping {
  *   — the username search screens' prefix search via `sdk.dpns.search`, and
  *   its exact-match mode via `sdk.dpns.resolve`.
  *
- * NOT routed (dashj-only, by design — see the Phase 3c report):
- * `getVoteContenders` (contested-name vote state; needs
- * `sdk.voting.contestedResourceVoteState` mapping to dashj `Contenders`),
- * `names.getByOwnerId` (profile refresh), and profile document queries.
+ * Routed by Phase 3d under the same flag: `getVoteContenders` (contested-name
+ * vote state, [SdkVotingQueries]) and profile document queries
+ * ([SdkProfileQueries]). Still NOT routed (dashj-only, by design):
+ * `names.getByOwnerId` (profile refresh) and `names.getList` (batch domain
+ * documents by owner).
  */
 @Singleton
 class SdkUsernameQueries internal constructor(

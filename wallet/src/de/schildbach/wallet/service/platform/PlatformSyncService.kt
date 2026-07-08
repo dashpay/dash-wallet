@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -150,6 +151,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val topUpRepository: TopUpRepository,
     private val identityRepository: IdentityRepository,
     private val walletDataProvider: WalletDataProvider,
+    private val sdkProfileQueries: SdkProfileQueries,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -679,10 +681,18 @@ class PlatformSynchronizationService @Inject constructor(
         try {
             if (userIdList.isNotEmpty()) {
                 val identifierList = userIdList.map { Identifier.from(it) }
-                val profileDocuments = platform.profiles.getList(
-                    identifierList,
-                    lastContactRequestTime
-                )
+                // Phase 3d (docs/kotlin-sdk-migration-plan.md): profile
+                // retrieval via the Kotlin SDK behind USE_KOTLIN_SDK_DPNS_READS
+                // (default off). Null means "flag off or SDK path failed" —
+                // fall through to the unchanged dashj-platform query. dashj's
+                // getList ignores lastContactRequestTime (getListHelper builds
+                // only whereIn($ownerId) + orderBy), so parity needs no
+                // $updatedAt clause on the SDK path.
+                val profileDocuments = sdkProfileQueries.getProfileDocumentsOrNull(identifierList)
+                    ?: platform.profiles.getList(
+                        identifierList,
+                        lastContactRequestTime
+                    )
                 val profileById = profileDocuments.associateBy({ it.ownerId }, { it })
 
                 val nameDocuments = platform.names.getList(identifierList).map { DomainDocument(it) }
