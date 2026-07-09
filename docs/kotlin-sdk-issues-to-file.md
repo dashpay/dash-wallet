@@ -70,3 +70,35 @@ migrating from dashj document reads will.
 The Android wallet broadcasts `identityVerify` documents (BroadcastIdentityVerifyWorker,
 username-request verification links). The SDK has no equivalent op, so this write cannot be
 migrated. Feature request: expose identityVerify document create/broadcast.
+
+## 10. No external asset-lock intake via the unified JNI (blocks flagless L1 → shielded)
+
+`shieldedFundFromAssetLock` only builds the asset lock from the SDK wallet's OWN Core UTXOs and
+broadcasts it over the SDK's own SPV peers (`AssetLockFunding::FromWalletBalance`;
+`FromExistingAssetLock` requires the lock to already be tracked by the AssetLockManager). The
+only external-transaction entry (`asset_lock_manager_recover`, rs-platform-wallet-ffi
+`asset_lock/sync.rs`) is not exposed through the unified JNI the Kotlin SDK uses. A host app
+whose synced L1 wallet is dashj therefore cannot hand over a dashj-built lock — the Android
+wallet ships an evidence-gated SDK-built pipeline instead (the shadow-SPV parity gate in
+`ShieldedBalanceServiceImpl.shieldFromWallet`). Request: expose external asset-lock intake
+(transaction bytes + IS/CL proof) through the JNI. **Live-verified (architecture).**
+
+## 11. `createWallet` is not idempotent — no lookup-by-mnemonic; already-exists is an error, not the id
+
+Re-binding the same mnemonic requires the host app to dedup by reading every stored phrase back
+from `WalletStorage` (Keystore) and comparing. When that read transiently fails, `createWallet`
+(same seed → same derived id) throws
+`DashSdkError…Generic("Wallet already exists: <hex id>")` instead of returning the existing id.
+The Android wallet now message-matches and extracts the 64-hex id from the error
+(`walletIdFromAlreadyExistsError`). Requests: (a) a `findWalletByMnemonic`/lookup op, or
+(b) make `createWallet` return the existing id (or a typed AlreadyExists carrying it).
+**Live-verified.**
+
+## 12. `shieldedFundFromAssetLock` lacks a chainlocked-only input constraint
+
+The Rust side selects funding UTXOs from the SDK wallet's whole spendable balance. The Android
+wallet's product rule is that only ChainLocked funds may be shielded — enforceable app-side for
+display/amount validation (a chainlocked-only `CoinSelector` caps the amount), but the SDK's
+internal coin selection can still pick a non-chainlocked UTXO for the lock itself. Request: an
+input-selection constraint (e.g. `chainLockedOnly: Boolean` or a min-conf/locked filter) on
+`shieldedFundFromAssetLock`.

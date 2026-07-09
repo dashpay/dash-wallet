@@ -169,6 +169,38 @@ class DashSdkServiceImplTest {
         )
     }
 
+    // ── the "Wallet already exists" bind recovery (SDK issue #11) ──────
+
+    @Test
+    fun walletIdFromAlreadyExistsError_extractsTheHexId() {
+        val id = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+
+        // bare message and the full live error string both extract
+        assertEquals(id, walletIdFromAlreadyExistsError("Wallet already exists: $id"))
+        assertEquals(
+            id,
+            walletIdFromAlreadyExistsError(
+                "DashSdkError\$PlatformWallet\$Generic: SDK error: Wallet already exists: $id"
+            )
+        )
+
+        // mixed-case hex is normalized to the manager's lowercase keys
+        assertEquals(id, walletIdFromAlreadyExistsError("Wallet already exists: ${id.uppercase()}"))
+    }
+
+    @Test
+    fun walletIdFromAlreadyExistsError_rejectsEverythingElse() {
+        val id = "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff"
+
+        assertNull(walletIdFromAlreadyExistsError(null))
+        assertNull(walletIdFromAlreadyExistsError("some other failure: $id"))
+        assertNull(walletIdFromAlreadyExistsError("Wallet already exists"))
+        // too short / too long / non-hex ids never extract
+        assertNull(walletIdFromAlreadyExistsError("Wallet already exists: ${id.dropLast(1)}"))
+        assertNull(walletIdFromAlreadyExistsError("Wallet already exists: ${id}0"))
+        assertNull(walletIdFromAlreadyExistsError("Wallet already exists: ${id.dropLast(1)}z"))
+    }
+
     // ── healIdentityKeys (the native-free logic of Phase 3f-b) ─────────
 
     private fun key(id: Int, byte: Byte = id.toByte()) =

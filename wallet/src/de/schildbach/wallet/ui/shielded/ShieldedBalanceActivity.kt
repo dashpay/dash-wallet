@@ -26,10 +26,13 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.core.os.bundleOf
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.more.MoreFragment
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.services.AuthenticationManager
@@ -111,7 +114,8 @@ class ShieldedBalanceActivity : LockScreenActivity() {
                         viewModel = transferViewModel,
                         onBackClick = { finish() },
                         onFinished = { finish() },
-                        onConfirm = ::authenticateAndConfirmTransfer
+                        onConfirm = ::authenticateAndConfirmTransfer,
+                        onSuccess = ::navigateToMoreAfterTransfer
                     )
                 }
             }
@@ -129,6 +133,24 @@ class ShieldedBalanceActivity : LockScreenActivity() {
             securityFunctions.authenticate(this@ShieldedBalanceActivity) ?: return@launch
             transferViewModel.onConfirm()
         }
+    }
+
+    /**
+     * AC12: a completed transfer leaves the flow entirely — land the user
+     * on the More screen (its balance cards show the moved funds) with the
+     * "Transfer completed" toast (Figma 1691:15460). SINGLE_TOP|CLEAR_TOP
+     * delivers the destination to the existing MainActivity beneath this
+     * one and pops everything above it; finish() covers the cold-start case.
+     */
+    private fun navigateToMoreAfterTransfer() {
+        startActivity(
+            MainActivity.createIntent(
+                this,
+                R.id.moreFragment,
+                bundleOf(MoreFragment.ARG_SHOW_TRANSFER_COMPLETED_TOAST to true)
+            )
+        )
+        finish()
     }
 
     private fun copyAddress(address: String) {

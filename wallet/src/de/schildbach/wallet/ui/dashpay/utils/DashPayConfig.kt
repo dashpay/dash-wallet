@@ -130,6 +130,15 @@ open class DashPayConfig @Inject constructor(
         val INVITATION_FROM_ONBOARDING = booleanPreferencesKey("invitation_link_from_onboarding")
 
         /**
+         * Whether the "Transfers take different times" sheet (Figma
+         * 1740:16412) has been shown on the shielded internal-transfer
+         * screen. It auto-opens once on the user's first visit and is set
+         * on dismissal; the nav-bar info icon re-opens it manually any
+         * time. Follows the *_INFO_SHOWN precedents above.
+         */
+        val SHIELDED_TIMING_INFO_SHOWN = booleanPreferencesKey("shielded_timing_info_shown")
+
+        /**
          * Phase 3c of the dashj → Kotlin SDK migration
          * (`docs/kotlin-sdk-migration-plan.md`): route read-only DPNS
          * username resolution/search through the Dash Platform Kotlin SDK

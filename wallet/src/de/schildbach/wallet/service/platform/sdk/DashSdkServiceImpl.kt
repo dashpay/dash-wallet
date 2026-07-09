@@ -128,6 +128,33 @@ internal fun walletIdFromHex(hex: String): ByteArray? {
 }
 
 /**
+ * The message prefix of the SDK's `createWallet` rejection when the
+ * derived wallet id is already registered
+ * (`DashSdkError…Generic("Wallet already exists: <hex id>")`). Hit live
+ * when the mnemonic-dedup read misses on a transient Keystore failure —
+ * `bindAppWallet` recovers the id from the message instead of failing the
+ * bind (SDK issue #11: createWallet is not idempotent and offers no
+ * lookup-by-mnemonic).
+ */
+internal const val WALLET_ALREADY_EXISTS_MESSAGE = "Wallet already exists"
+
+private val WALLET_ALREADY_EXISTS_ID = Regex(
+    Regex.escape(WALLET_ALREADY_EXISTS_MESSAGE) + """:\s*([0-9a-fA-F]{64})(?![0-9a-fA-F])"""
+)
+
+/**
+ * Extract the 64-hex wallet id from a [WALLET_ALREADY_EXISTS_MESSAGE]
+ * error message, lowercased, or null when the message is not that error
+ * or carries no well-formed id. Pure — host-testable.
+ */
+internal fun walletIdFromAlreadyExistsError(message: String?): String? {
+    message ?: return null
+    val hex = WALLET_ALREADY_EXISTS_ID.find(message)?.groupValues?.get(1)?.lowercase()
+        ?: return null
+    return hex.takeIf { walletIdFromHex(it) != null }
+}
+
+/**
  * The already-bound wallet id for [mnemonic] among [loadedWalletIdsHex],
  * or null if none matches — the dedup step that makes
  * [DashSdkServiceImpl.bindAppWallet] idempotent. [storedMnemonicFor]
@@ -389,12 +416,32 @@ class DashSdkServiceImpl @Inject constructor(
                     openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
                 ).resolve(time)
             }
-            val managed = current.walletManager.createWallet(
-                mnemonic = mnemonic,
-                name = APP_WALLET_NAME,
-                createDefaultAccounts = true,
-                birthHeight = birthHeight
-            )
+            val managed = try {
+                current.walletManager.createWallet(
+                    mnemonic = mnemonic,
+                    name = APP_WALLET_NAME,
+                    createDefaultAccounts = true,
+                    birthHeight = birthHeight
+                )
+            } catch (t: Throwable) {
+                if (t is kotlinx.coroutines.CancellationException) throw t
+                // Live bug: a transient Keystore failure makes the dedup
+                // read above miss, and createWallet (same seed → same
+                // derived id) rejects with "Wallet already exists: <id>".
+                // The wallet IS bound — recover the id from the message,
+                // verify it is actually loaded, and bind to it.
+                val existingId = walletIdFromAlreadyExistsError(t.message)
+                if (existingId != null && current.walletManager.wallets.value.containsKey(existingId)) {
+                    log.warn(
+                        "createWallet says the wallet already exists ({}…) though the mnemonic " +
+                            "dedup read missed (transient Keystore failure?) — binding to the " +
+                            "loaded SDK wallet",
+                        existingId.take(8)
+                    )
+                    return existingId
+                }
+                throw t
+            }
             log.info(
                 "app wallet bound to new SDK wallet {}… (birthHeight={} via checkpoint mapping; " +
                     "0 = full scan from genesis)",

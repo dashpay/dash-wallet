@@ -20,18 +20,23 @@ package de.schildbach.wallet.ui.shielded
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.payments.ChainLockedCoinSelector
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -39,6 +44,7 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.toFiat
@@ -59,11 +65,34 @@ data class ShieldedTransferUIState(
     val fiatCode: String = "USD",
     /** Fiat value of 1 DASH; null while no exchange rate is known. */
     val rate: Fiat? = null,
+    /**
+     * ChainLocked-only L1 balance (via [ChainLockedCoinSelector]) — the
+     * "From: Dash Wallet" display AND the transferable/Max limit. Funds
+     * a reorg could still take back are never offered for shielding.
+     */
     val walletBalance: Dash = Dash.ZERO,
+    /**
+     * The wallet's TOTAL (estimated) L1 balance — only used to derive
+     * [pendingWalletBalance]; never transferable.
+     */
+    val totalWalletBalance: Dash = Dash.ZERO,
     val shieldedBalance: Dash = Dash.ZERO,
     /** True once the shielded runtime bring-up succeeded. */
     val ready: Boolean = false,
     val readyCheckDone: Boolean = false,
+    /**
+     * True while the dashj L1 chain is fully synced
+     * ([org.dash.wallet.common.data.entity.BlockchainState.isSynced]).
+     * Both transfer directions are blocked until then — conservative
+     * `false` default until the first state emission.
+     */
+    val chainSynced: Boolean = false,
+    /**
+     * True while the "Transfers take different times" sheet is open. Auto
+     * set once on the user's first visit ([DashPayConfig
+     * .SHIELDED_TIMING_INFO_SHOWN]); the info icon re-opens it manually.
+     */
+    val showTimingInfo: Boolean = false,
     /**
      * True when the Dash Wallet → Shielded direction can fund from the
      * L1 balance ([ShieldedBalanceService.isWalletShieldingAvailable]'s
@@ -88,6 +117,17 @@ data class ShieldedTransferUIState(
             ShieldedTransferDirection.FromShielded -> shieldedBalance
         }
 
+    /**
+     * The not-yet-ChainLocked part of the wallet's L1 balance
+     * (total − chainlocked, clamped at zero — the selector universes can
+     * transiently disagree while flows race). Shown as "<amount> pending"
+     * under the From "Dash Wallet" row so a freshly funded user
+     * understands why the transferable number is smaller: waiting for the
+     * chainlock resolves it.
+     */
+    val pendingWalletBalance: Dash
+        get() = Dash((totalWalletBalance.duffs - walletBalance.duffs).coerceAtLeast(0))
+
     val insufficientFunds: Boolean
         get() = amount.isGreaterThan(availableBalance)
 
@@ -96,7 +136,7 @@ data class ShieldedTransferUIState(
         get() = direction == ShieldedTransferDirection.FromShielded || walletShieldingAvailable
 
     val canContinue: Boolean
-        get() = ready && directionAvailable && amount.isPositive && !insufficientFunds &&
+        get() = ready && chainSynced && directionAvailable && amount.isPositive && !insufficientFunds &&
             (dashMode || rate != null) &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
@@ -107,6 +147,8 @@ data class ShieldedTransferUIState(
 class ShieldedTransferViewModel @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
     private val walletDataProvider: WalletDataProvider,
+    private val dashPayConfig: DashPayConfig,
+    blockchainStateProvider: BlockchainStateProvider,
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesProvider
 ) : ViewModel() {
@@ -132,12 +174,51 @@ class ShieldedTransferViewModel @Inject constructor(
             )
         }
 
+        // First visit: auto-open the "Transfers take different times"
+        // sheet once; dismissal latches the flag (onTimingInfoDismissed).
+        viewModelScope.launch {
+            val shown = try {
+                dashPayConfig.get(DashPayConfig.SHIELDED_TIMING_INFO_SHOWN) == true
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.warn("failed to read the timing-info flag; not auto-showing the sheet", e)
+                true
+            }
+            if (!shown) {
+                _uiState.value = _uiState.value.copy(showTimingInfo = true)
+            }
+        }
+
+        // L1 sync gate: both directions stay blocked until dashj reports
+        // a fully synced chain (the canonical BlockchainState.isSynced()).
+        blockchainStateProvider.observeState()
+            .onEach { state ->
+                _uiState.value = _uiState.value.copy(chainSynced = state?.isSynced() == true)
+            }
+            .launchIn(viewModelScope)
+
         shieldedBalanceService.observeShieldedBalance()
             .onEach { _uiState.value = _uiState.value.copy(shieldedBalance = it) }
             .launchIn(viewModelScope)
 
-        walletDataProvider.observeTotalBalance()
+        // ChainLocked-only wallet balance: re-select whenever the
+        // chainlock/best heights move (Room state) or the wallet changes
+        // (the observeBalance listener) — see ChainLockedCoinSelector for
+        // the fallback decision when no chainlock height is known yet.
+        blockchainStateProvider.observeState()
+            .map { state -> (state?.chainlockHeight ?: 0) to (state?.bestChainHeight ?: 0) }
+            .distinctUntilChanged()
+            .flatMapLatest { (chainLockHeight, bestChainHeight) ->
+                walletDataProvider.observeBalance(
+                    coinSelector = ChainLockedCoinSelector(chainLockHeight, bestChainHeight)
+                )
+            }
             .onEach { _uiState.value = _uiState.value.copy(walletBalance = Dash(it.value)) }
+            .launchIn(viewModelScope)
+
+        // Total balance only feeds the "<amount> pending" explainer line.
+        walletDataProvider.observeTotalBalance()
+            .onEach { _uiState.value = _uiState.value.copy(totalWalletBalance = Dash(it.value)) }
             .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
@@ -216,6 +297,27 @@ class ShieldedTransferViewModel @Inject constructor(
 
     fun onDismissConfirm() {
         _uiState.value = _uiState.value.copy(showConfirm = false)
+    }
+
+    /** Manual re-open of the timing sheet (nav-bar info icon). */
+    fun onShowTimingInfo() {
+        _uiState.value = _uiState.value.copy(showTimingInfo = true)
+    }
+
+    /**
+     * Timing sheet dismissed — latch [DashPayConfig.SHIELDED_TIMING_INFO_SHOWN]
+     * so the auto-show never happens again (idempotent on manual re-opens).
+     */
+    fun onTimingInfoDismissed() {
+        _uiState.value = _uiState.value.copy(showTimingInfo = false)
+        viewModelScope.launch {
+            try {
+                dashPayConfig.set(DashPayConfig.SHIELDED_TIMING_INFO_SHOWN, true)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                log.warn("failed to persist the timing-info flag", e)
+            }
+        }
     }
 
     /**

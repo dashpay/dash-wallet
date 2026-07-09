@@ -21,7 +21,20 @@ import android.content.Intent
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.text.format.DateFormat
+import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import androidx.core.view.isVisible
@@ -54,12 +67,15 @@ import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentMoreBinding
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.ui.avatar.ProfilePictureDisplay
+import org.dash.wallet.common.ui.components.ComposeHostFrameLayout
+import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.viewBinding
 import org.dash.wallet.common.util.observe
 import org.dash.wallet.common.util.safeNavigate
@@ -75,11 +91,22 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         const val UPDATE_PROFILE_ERROR_VIEW = 2
         const val UPDATE_PROFILE_NETWORK_ERROR_VIEW = 3
 
+        /**
+         * One-shot navigation argument: show the "Transfer completed"
+         * toast (Figma 1691:15460) — set by
+         * [de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity] after
+         * a successful shielded internal transfer (AC12).
+         */
+        const val ARG_SHOW_TRANSFER_COMPLETED_TOAST = "show_transfer_completed_toast"
+
+        private const val TRANSFER_TOAST_DURATION_MS = 3000L
+
         private val log = LoggerFactory.getLogger(MoreFragment::class.java)
     }
 
     private val binding by viewBinding(FragmentMoreBinding::bind)
     private var showInviteSection = false
+    private var transferToastHost: ComposeHostFrameLayout? = null
 
     private val mainActivityViewModel: MainViewModel by activityViewModels()
     private val editProfileViewModel: EditProfileViewModel by viewModels()
@@ -308,6 +335,64 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
         }
+
+        // One-shot: arriving from a completed shielded internal transfer
+        // (AC12). The argument is consumed so returning to this screen
+        // never re-shows the toast.
+        if (arguments?.getBoolean(ARG_SHOW_TRANSFER_COMPLETED_TOAST) == true) {
+            arguments?.remove(ARG_SHOW_TRANSFER_COMPLETED_TOAST)
+            showTransferCompletedToast()
+        }
+    }
+
+    /**
+     * "Transfer completed" toast (Figma 1691:15460) using the
+     * design-system Compose [org.dash.wallet.common.ui.components.Toast]
+     * hosted over the activity content (the `MainActivityExt.showToast`
+     * pattern) — this XML screen has no compose root of its own, and the
+     * design-system toast beats a themed Snackbar for design parity.
+     * Auto-dismisses; torn down with the view either way.
+     */
+    private fun showTransferCompletedToast() {
+        val host = ComposeHostFrameLayout(requireContext()).apply {
+            layoutParams = FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                gravity = Gravity.BOTTOM
+                bottomMargin = resources.getDimensionPixelSize(R.dimen.bottom_nav_bar_height)
+            }
+        }
+        requireActivity().findViewById<ViewGroup>(android.R.id.content).addView(host)
+        transferToastHost = host
+        host.setContent {
+            var visible by remember { mutableStateOf(true) }
+            if (visible) {
+                LaunchedEffect(Unit) {
+                    delay(TRANSFER_TOAST_DURATION_MS)
+                    visible = false
+                }
+                Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp)) {
+                    org.dash.wallet.common.ui.components.Toast(
+                        text = stringResource(R.string.shielded_transfer_completed),
+                        imageResource = ToastImageResource.Success.resourceId,
+                        onActionClick = { visible = false }
+                    )
+                }
+            }
+        }
+    }
+
+    private fun removeTransferCompletedToast() {
+        transferToastHost?.let { host ->
+            (host.parent as? ViewGroup)?.removeView(host)
+        }
+        transferToastHost = null
+    }
+
+    override fun onDestroyView() {
+        removeTransferCompletedToast()
+        super.onDestroyView()
     }
 
     /**

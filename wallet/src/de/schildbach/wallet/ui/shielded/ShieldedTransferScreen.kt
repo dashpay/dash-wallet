@@ -44,9 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +57,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import de.schildbach.wallet_test.R
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.money.Dash
@@ -73,7 +70,6 @@ import org.dash.wallet.common.ui.components.Size
 import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
-import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.common.util.toFormattedString
@@ -96,12 +92,20 @@ fun ShieldedTransferScreen(
      * user authentication (PIN/biometric) BEFORE [ShieldedTransferViewModel.onConfirm]
      * — the Dash Wallet → Shielded direction is a real L1 spend.
      */
-    onConfirm: () -> Unit = viewModel::onConfirm
+    onConfirm: () -> Unit = viewModel::onConfirm,
+    /**
+     * Invoked on a successful transfer (Broadcast → Success) INSTEAD of
+     * an in-screen overlay: the host leaves the flow and lands the user
+     * on the More screen with the "Transfer completed" toast (Figma
+     * 1691:15460). Defaults to [onFinished].
+     */
+    onSuccess: () -> Unit = onFinished
 ) {
     ShieldedTransferScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
         onFinished = onFinished,
+        onSuccess = onSuccess,
         onKeyInput = viewModel::onKeyInput,
         onMaxClick = viewModel::onMaxClick,
         onCurrencySelected = viewModel::onCurrencySelected,
@@ -109,7 +113,9 @@ fun ShieldedTransferScreen(
         onContinue = viewModel::onContinue,
         onDismissConfirm = viewModel::onDismissConfirm,
         onConfirm = onConfirm,
-        onResultHandled = viewModel::onResultHandled
+        onResultHandled = viewModel::onResultHandled,
+        onShowTimingInfo = viewModel::onShowTimingInfo,
+        onTimingInfoDismissed = viewModel::onTimingInfoDismissed
     )
 }
 
@@ -118,6 +124,7 @@ fun ShieldedTransferScreen(
     uiStateFlow: StateFlow<ShieldedTransferUIState>,
     onBackClick: () -> Unit = {},
     onFinished: () -> Unit = {},
+    onSuccess: () -> Unit = onFinished,
     onKeyInput: (String) -> Unit = {},
     onMaxClick: () -> Unit = {},
     onCurrencySelected: (Boolean) -> Unit = {},
@@ -125,13 +132,16 @@ fun ShieldedTransferScreen(
     onContinue: () -> Unit = {},
     onDismissConfirm: () -> Unit = {},
     onConfirm: () -> Unit = {},
-    onResultHandled: () -> Unit = {}
+    onResultHandled: () -> Unit = {},
+    onShowTimingInfo: () -> Unit = {},
+    onTimingInfoDismissed: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
     ShieldedTransferScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
         onFinished = onFinished,
+        onSuccess = onSuccess,
         onKeyInput = onKeyInput,
         onMaxClick = onMaxClick,
         onCurrencySelected = onCurrencySelected,
@@ -139,7 +149,9 @@ fun ShieldedTransferScreen(
         onContinue = onContinue,
         onDismissConfirm = onDismissConfirm,
         onConfirm = onConfirm,
-        onResultHandled = onResultHandled
+        onResultHandled = onResultHandled,
+        onShowTimingInfo = onShowTimingInfo,
+        onTimingInfoDismissed = onTimingInfoDismissed
     )
 }
 
@@ -148,6 +160,7 @@ private fun ShieldedTransferScreenContent(
     uiState: ShieldedTransferUIState,
     onBackClick: () -> Unit = {},
     onFinished: () -> Unit = {},
+    onSuccess: () -> Unit = onFinished,
     onKeyInput: (String) -> Unit = {},
     onMaxClick: () -> Unit = {},
     onCurrencySelected: (Boolean) -> Unit = {},
@@ -155,9 +168,10 @@ private fun ShieldedTransferScreenContent(
     onContinue: () -> Unit = {},
     onDismissConfirm: () -> Unit = {},
     onConfirm: () -> Unit = {},
-    onResultHandled: () -> Unit = {}
+    onResultHandled: () -> Unit = {},
+    onShowTimingInfo: () -> Unit = {},
+    onTimingInfoDismissed: () -> Unit = {}
 ) {
-    var showTimingSheet by remember { mutableStateOf(false) }
     val proving = uiState.submitState == ShieldedSubmitState.Proving
 
     // The proof cannot be cancelled once started — swallow back presses.
@@ -174,17 +188,30 @@ private fun ShieldedTransferScreenContent(
                 onLeadingClick = { if (!proving) onBackClick() },
                 centralPart = false,
                 trailingIcon = MyImages.NavBarInfo,
-                onTrailingClick = { showTimingSheet = true }
+                onTrailingClick = onShowTimingInfo
             )
 
-            TopIntro(heading = stringResource(R.string.shielded_internal_transfer))
-
+            // Heading + amount + from/to cards + hint share one weighted
+            // scrollable region above the fixed keyboard panel (the
+            // PurchaseGiftCardScreenV2 pattern), with compact 10dp gaps,
+            // so everything fits above the keyboard on ~780dp-tall
+            // devices (S22-class 2340×1080 @ 480dpi) — and scrolls rather
+            // than clips anywhere smaller.
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
             ) {
+                Text(
+                    text = stringResource(R.string.shielded_internal_transfer),
+                    style = MyTheme.Typography.HeadlineMediumBold,
+                    color = MyTheme.Colors.textPrimary,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 5.dp, bottom = 5.dp)
+                )
+
                 val secondaryText = if (uiState.dashMode) {
                     uiState.amount.toFiatAt(uiState.rate)?.toPlainString() ?: "0"
                 } else {
@@ -204,18 +231,21 @@ private fun ShieldedTransferScreenContent(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 DirectionCard(
                     direction = uiState.direction,
                     walletBalance = uiState.walletBalance,
+                    pendingWalletBalance = uiState.pendingWalletBalance,
                     shieldedBalance = uiState.shieldedBalance,
                     onSwapDirection = onSwapDirection
                 )
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 TransferHintOrError(uiState = uiState)
+
+                Spacer(modifier = Modifier.height(5.dp))
             }
 
             NumericKeyboardCompose(
@@ -235,15 +265,17 @@ private fun ShieldedTransferScreenContent(
             )
         }
 
-        // "Wait until the chain is fully synced…" (Figma 1733:16190).
-        // The second variant covers a ready runtime whose Dash Wallet →
+        // "Wait until the chain is fully synced…" (Figma 1733:16190) —
+        // covers a not-ready runtime AND an L1 chain that is still
+        // syncing (both directions are blocked until isSynced). The
+        // second variant covers a ready runtime whose Dash Wallet →
         // Shielded direction is still blocked by the L1 funding gate.
         if (uiState.readyCheckDone &&
-            (!uiState.ready || !uiState.directionAvailable)
+            (!uiState.ready || !uiState.chainSynced || !uiState.directionAvailable)
         ) {
             Toast(
                 text = stringResource(
-                    if (!uiState.ready) {
+                    if (!uiState.ready || !uiState.chainSynced) {
                         R.string.shielded_error_not_ready
                     } else {
                         R.string.shielded_error_wallet_funding_unavailable
@@ -267,18 +299,18 @@ private fun ShieldedTransferScreenContent(
             )
         }
 
-        if (showTimingSheet) {
-            TransferTimingSheet(onDismiss = { showTimingSheet = false })
+        if (uiState.showTimingInfo) {
+            TransferTimingSheet(onDismiss = onTimingInfoDismissed)
         }
 
         when (uiState.submitState) {
             ShieldedSubmitState.Proving -> ProvingOverlay()
             ShieldedSubmitState.Success -> {
-                SuccessToastOverlay()
+                // No in-screen overlay: the host leaves the flow and shows
+                // the "Transfer completed" toast on the More screen (AC12).
                 LaunchedEffect(Unit) {
-                    delay(2000)
                     onResultHandled()
-                    onFinished()
+                    onSuccess()
                 }
             }
             ShieldedSubmitState.MayHaveGoneThrough -> AmbiguousOverlay(
@@ -303,6 +335,7 @@ private fun ShieldedTransferScreenContent(
 private fun DirectionCard(
     direction: ShieldedTransferDirection,
     walletBalance: Dash,
+    pendingWalletBalance: Dash,
     shieldedBalance: Dash,
     onSwapDirection: () -> Unit
 ) {
@@ -314,7 +347,18 @@ private fun DirectionCard(
                     name = stringResource(R.string.shielded_wallet_name),
                     icon = R.drawable.ic_dash_blue_filled,
                     balanceText = walletBalance.toDisplayString(),
-                    balanceIsCredits = false
+                    balanceIsCredits = false,
+                    // "<amount> pending": the not-yet-chainlocked part of
+                    // the total balance — explains why the transferable
+                    // number can be smaller than the wallet's total.
+                    secondaryBalanceText = if (pendingWalletBalance.isPositive) {
+                        stringResource(
+                            R.string.shielded_pending_funds,
+                            pendingWalletBalance.toDisplayString()
+                        )
+                    } else {
+                        null
+                    }
                 )
             }
             val shieldedRow: @Composable (String) -> Unit = { label ->
@@ -364,13 +408,14 @@ private fun DirectionRow(
     name: String,
     icon: Int,
     balanceText: String,
-    balanceIsCredits: Boolean
+    balanceIsCredits: Boolean,
+    secondaryBalanceText: String? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(16.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -391,7 +436,16 @@ private fun DirectionRow(
                 color = MyTheme.Colors.textPrimary
             )
         }
-        BalanceWithSymbol(text = balanceText, isCredits = balanceIsCredits)
+        Column(horizontalAlignment = Alignment.End) {
+            BalanceWithSymbol(text = balanceText, isCredits = balanceIsCredits)
+            secondaryBalanceText?.let {
+                Text(
+                    text = it,
+                    style = MyTheme.Typography.BodySmall,
+                    color = MyTheme.Colors.textTertiary
+                )
+            }
+        }
     }
 }
 
@@ -915,7 +969,8 @@ private fun previewState(
     direction: ShieldedTransferDirection = ShieldedTransferDirection.ToShielded,
     amountText: String = "1",
     submitState: ShieldedSubmitState = ShieldedSubmitState.Idle,
-    showConfirm: Boolean = false
+    showConfirm: Boolean = false,
+    totalWalletBalance: Dash = Dash.parse("3.00")
 ) = ShieldedTransferUIState(
     direction = direction,
     amountText = amountText,
@@ -923,9 +978,11 @@ private fun previewState(
     fiatCode = "USD",
     rate = Fiat.parseFiat("USD", "50.00"),
     walletBalance = Dash.parse("3.00"),
+    totalWalletBalance = totalWalletBalance,
     shieldedBalance = Dash.parse("15.5"),
     ready = true,
     readyCheckDone = true,
+    chainSynced = true,
     walletShieldingAvailable = true,
     showConfirm = showConfirm,
     submitState = submitState
@@ -949,6 +1006,22 @@ private fun TransferFromShieldedPreview() {
 @Composable
 private fun TransferInsufficientPreview() {
     ShieldedTransferScreenContent(uiState = previewState(amountText = "100"))
+}
+
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – pending funds")
+@Composable
+private fun TransferPendingFundsPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState(totalWalletBalance = Dash.parse("4.25"))
+    )
+}
+
+// S22-class portrait (2340×1080 @ 480dpi ⇒ 780×360dp): amount, both
+// cards and the hint must all be visible above the keyboard (Gap 7).
+@Preview(showBackground = true, widthDp = 360, heightDp = 780, name = "Transfer – compact 1080p device")
+@Composable
+private fun TransferCompactDevicePreview() {
+    ShieldedTransferScreenContent(uiState = previewState())
 }
 
 @Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – confirm sheet")
