@@ -73,6 +73,25 @@ private const val CREDITS_PER_DUFF = 1_000L
 fun Dash.toCreditsString(): String =
     NumberFormat.getIntegerInstance().format(duffs * CREDITS_PER_DUFF)
 
+/**
+ * Compact credits amount with a magnitude suffix, e.g. `115.5B` — used on the
+ * More-screen "Shielded" balance card (Figma 1693:15853 shows "115.5ᴮ C").
+ * One decimal, trailing ".0" trimmed.
+ */
+fun Dash.toCompactCreditsString(): String {
+    val credits = duffs * CREDITS_PER_DUFF
+    val (divisor, suffix) = when {
+        credits >= 1_000_000_000_000L -> 1_000_000_000_000L to "T"
+        credits >= 1_000_000_000L -> 1_000_000_000L to "B"
+        credits >= 1_000_000L -> 1_000_000L to "M"
+        credits >= 1_000L -> 1_000L to "K"
+        else -> 1L to ""
+    }
+    val scaled = credits.toDouble() / divisor
+    val text = String.format(java.util.Locale.US, "%.1f", scaled).removeSuffix(".0")
+    return "$text$suffix"
+}
+
 private val DASH_FORMAT: MonetaryFormat = MonetaryFormat.BTC
     .minDecimals(2)
     .repeatOptionalDecimals(1, 6)

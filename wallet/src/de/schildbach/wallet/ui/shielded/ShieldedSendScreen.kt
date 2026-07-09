@@ -63,8 +63,9 @@ import org.dash.wallet.common.ui.components.TopNavBase
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 
 /**
- * Shielded "Send to address" flow — reached from the Send tab of the hub
- * (Figma 1684:12990). Address + amount entry for a shielded → shielded
+ * Shielded "Send to address" flow — parked (no UI entry point yet; launch
+ * via [ShieldedBalanceActivity.SCREEN_SEND], Figma 1684:12990). Address +
+ * amount entry for a shielded → shielded
  * transfer; layout follows the internal-transfer screen's structure since
  * the detailed send frames were not part of the fetched designs.
  */

@@ -43,9 +43,13 @@ import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.ui.dashpay.utils.display
+import de.schildbach.wallet.ui.shielded.toCompactCreditsString
+import de.schildbach.wallet.ui.shielded.toDisplayString
 import de.schildbach.wallet.ui.invite.CreateInviteViewModel
 import de.schildbach.wallet.ui.main.MainViewModel
 import de.schildbach.wallet_test.R
@@ -87,6 +91,8 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     @Inject lateinit var walletData: WalletDataProvider
     @Inject lateinit var walletApplication: WalletApplication
     @Inject lateinit var analytics: AnalyticsService
+    @Inject lateinit var dashPayConfig: DashPayConfig
+    @Inject lateinit var shieldedBalanceService: ShieldedBalanceService
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -297,9 +303,38 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
 
         initViewModel()
+        setupBalanceCards()
 
         if (!Constants.SUPPORTS_PLATFORM) {
             binding.usernameVoting.isVisible = false
+        }
+    }
+
+    /**
+     * Dash Wallet / Shielded balance cards at the top (Figma 1691:15460),
+     * flag-gated: with `SUPPORTS_PLATFORM` or `USE_KOTLIN_SDK_SHIELDED` off
+     * the container stays GONE and the screen is unchanged.
+     */
+    private fun setupBalanceCards() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            val shieldedEnabled = Constants.SUPPORTS_PLATFORM &&
+                dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+
+            if (!shieldedEnabled) {
+                binding.balanceCardsContainer.isVisible = false
+                return@launch
+            }
+
+            binding.balanceCardsContainer.isVisible = true
+
+            walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
+                binding.walletBalanceCardAmount.text =
+                    org.dash.wallet.common.money.Dash(balance.value).toDisplayString()
+            }
+
+            shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
+                binding.shieldedBalanceCardAmount.text = balance.toCompactCreditsString()
+            }
         }
     }
 

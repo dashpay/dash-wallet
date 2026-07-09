@@ -43,7 +43,6 @@ import de.schildbach.wallet.ui.main.MainActivity
 import de.schildbach.wallet.ui.more.RescanBlockchainDialogFragment
 import de.schildbach.wallet.ui.more.SettingsScreen
 import de.schildbach.wallet.ui.more.SettingsViewModel
-import de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity
 import de.schildbach.wallet.ui.more.TransactionMetadataSettingsViewModel
 import de.schildbach.wallet_test.R
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -123,10 +122,7 @@ class SettingsFragment : Fragment() {
                             }
                         }
                     },
-                    onBatteryOptimizationClick = { batteryOptimization() },
-                    onShieldedBalanceClick = {
-                        startActivity(ShieldedBalanceActivity.createIntent(requireContext()))
-                    }
+                    onBatteryOptimizationClick = { batteryOptimization() }
                 )
             }
         }

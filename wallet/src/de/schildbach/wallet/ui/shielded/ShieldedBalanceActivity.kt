@@ -17,63 +17,51 @@
 
 package de.schildbach.wallet.ui.shielded
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
-import org.dash.wallet.common.ui.scan.ScanActivity
 
 /**
- * Host of the flag-gated shielded-balances UI (Figma canvas 231:200
- * "Payments"): the Receive/Internal/Send hub, the internal-transfer flow
- * and the send-to-address flow. Entry point: the "Shielded balance" row in
- * Settings, visible only when `Constants.SUPPORTS_PLATFORM` and the
- * `USE_KOTLIN_SDK_SHIELDED` flag are both on.
+ * Host of the flag-gated shielded-balances flows (Figma canvas 231:200
+ * "Payments"): the internal-transfer flow (the default, opened from the
+ * payments screen's "Internal" tab), plus the parked send-to-address and
+ * receive screens, selected via [EXTRA_SCREEN]. Entry points require
+ * `Constants.SUPPORTS_PLATFORM` and the `USE_KOTLIN_SDK_SHIELDED` flag.
  */
 @AndroidEntryPoint
 class ShieldedBalanceActivity : LockScreenActivity() {
 
     companion object {
-        @JvmStatic
-        fun createIntent(context: Context): Intent =
-            Intent(context, ShieldedBalanceActivity::class.java)
-    }
+        private const val EXTRA_SCREEN = "screen"
 
-    private enum class Screen { Home, Transfer, Send }
+        /** "Internal transfer" flow (Figma 1746:18462 / 1746:18478). */
+        const val SCREEN_TRANSFER = 0
+
+        /** "Send to shielded address" flow (parked; no UI entry point yet). */
+        const val SCREEN_SEND = 1
+
+        /** Shielded receive QR (parked; no UI entry point yet). */
+        const val SCREEN_RECEIVE = 2
+
+        @JvmStatic
+        @JvmOverloads
+        fun createIntent(context: Context, screen: Int = SCREEN_TRANSFER): Intent =
+            Intent(context, ShieldedBalanceActivity::class.java)
+                .putExtra(EXTRA_SCREEN, screen)
+    }
 
     private val transferViewModel: ShieldedTransferViewModel by viewModels()
     private val sendViewModel: ShieldedSendViewModel by viewModels()
-
-    /** Compose reads this to prefill the send screen after a QR scan. */
-    private var scannedAddress by mutableStateOf<String?>(null)
-
-    private val scanLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val scanned = result.data?.getStringExtra(ScanActivity.INTENT_EXTRA_RESULT)?.trim()
-            if (!scanned.isNullOrEmpty()) {
-                sendViewModel.reset(prefillAddress = scanned)
-                scannedAddress = scanned
-            }
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -83,48 +71,32 @@ class ShieldedBalanceActivity : LockScreenActivity() {
             return
         }
 
+        val screen = intent.getIntExtra(EXTRA_SCREEN, SCREEN_TRANSFER)
+        if (savedInstanceState == null) {
+            when (screen) {
+                SCREEN_TRANSFER -> transferViewModel.reset()
+                SCREEN_SEND -> sendViewModel.reset()
+            }
+        }
+
         val composeView = ComposeView(this).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
             setContent {
-                var screen by rememberSaveable { mutableStateOf(Screen.Home) }
-
-                // A completed QR scan jumps to the (pre-filled) send screen.
-                val scanned = scannedAddress
-                androidx.compose.runtime.LaunchedEffect(scanned) {
-                    if (scanned != null) {
-                        screen = Screen.Send
-                        scannedAddress = null
-                    }
-                }
-
-                BackHandler(enabled = screen != Screen.Home) { screen = Screen.Home }
-
                 when (screen) {
-                    Screen.Home -> ShieldedHomeScreen(
+                    SCREEN_SEND -> ShieldedSendScreen(
+                        viewModel = sendViewModel,
                         onBackClick = { finish() },
-                        onInternalTransferClick = {
-                            transferViewModel.reset()
-                            screen = Screen.Transfer
-                        },
-                        onScanQrClick = {
-                            scanLauncher.launch(ScanActivity.getIntent(this@ShieldedBalanceActivity))
-                        },
-                        onSendToAddressClick = {
-                            sendViewModel.reset()
-                            screen = Screen.Send
-                        },
+                        onFinished = { finish() }
+                    )
+                    SCREEN_RECEIVE -> ShieldedReceiveScreen(
+                        onBackClick = { finish() },
                         onCopyAddress = ::copyAddress,
                         onShareAddress = ::shareAddress
                     )
-                    Screen.Transfer -> ShieldedTransferScreen(
+                    else -> ShieldedTransferScreen(
                         viewModel = transferViewModel,
-                        onBackClick = { screen = Screen.Home },
-                        onFinished = { screen = Screen.Home }
-                    )
-                    Screen.Send -> ShieldedSendScreen(
-                        viewModel = sendViewModel,
-                        onBackClick = { screen = Screen.Home },
-                        onFinished = { screen = Screen.Home }
+                        onBackClick = { finish() },
+                        onFinished = { finish() }
                     )
                 }
             }

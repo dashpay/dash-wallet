@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.compose.ui.unit.dp
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.transition.Fade
 import androidx.transition.Slide
@@ -37,13 +38,17 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentPaymentsBinding
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.ui.observeOnDestroy
 import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
 import androidx.core.content.edit
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class PaymentsFragment : Fragment(R.layout.fragment_payments) {
@@ -53,9 +58,25 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         const val ARG_ACTIVE_TAB = "active_tab"
         const val ARG_SOURCE = "source"
 
+        // Logical tab ids — stable regardless of whether the flag-gated
+        // "Internal" tab is inserted between Receive and Send.
         const val ACTIVE_TAB_RECEIVE = 0
         const val ACTIVE_TAB_PAY = 1
+        const val ACTIVE_TAB_INTERNAL = 2
+
+        /**
+         * Tab ids in display order. With [showInternalTab] off this is exactly
+         * the pre-shielded two-tab layout (Receive | Send); with it on, the
+         * "Internal" tab sits between them (Figma 1693:15911).
+         */
+        fun tabIdsFor(showInternalTab: Boolean): List<Int> = if (showInternalTab) {
+            listOf(ACTIVE_TAB_RECEIVE, ACTIVE_TAB_INTERNAL, ACTIVE_TAB_PAY)
+        } else {
+            listOf(ACTIVE_TAB_RECEIVE, ACTIVE_TAB_PAY)
+        }
     }
+
+    @Inject lateinit var dashPayConfig: DashPayConfig
 
     private val binding by viewBinding(FragmentPaymentsBinding::bind)
     private var selectedTab by mutableIntStateOf(0)
@@ -74,10 +95,32 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
             findNavController().popBackStack()
         }
 
-        val options = listOf(
-            SegmentedOption(getString(R.string.payments_tab_receive_label), R.drawable.ic_arrow_down),
-            SegmentedOption(getString(R.string.payments_tab_pay_label), R.drawable.ic_arrow_up)
-        )
+        // The shielded "Internal" tab is flag-gated; the flag is read once at
+        // screen build. Flags off ⇒ exactly the two pre-existing tabs.
+        viewLifecycleOwner.lifecycleScope.launch {
+            val showInternalTab = Constants.SUPPORTS_PLATFORM &&
+                dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+            setupTabs(tabIdsFor(showInternalTab))
+        }
+    }
+
+    private fun setupTabs(tabIds: List<Int>) {
+        val options = tabIds.map { tabId ->
+            when (tabId) {
+                ACTIVE_TAB_RECEIVE -> SegmentedOption(
+                    getString(R.string.payments_tab_receive_label),
+                    R.drawable.ic_arrow_down
+                )
+                ACTIVE_TAB_INTERNAL -> SegmentedOption(
+                    getString(R.string.shielded_tab_internal),
+                    R.drawable.ic_arrows_internal
+                )
+                else -> SegmentedOption(
+                    getString(R.string.payments_tab_pay_label),
+                    R.drawable.ic_arrow_up
+                )
+            }
+        }
 
         val binding = this.binding
         binding.tabs.setViewCompositionStrategy(
@@ -95,11 +138,12 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         }
 
         val adapter = object : FragmentStateAdapter(this) {
-            override fun getItemCount(): Int = 2
+            override fun getItemCount(): Int = tabIds.size
 
             override fun createFragment(position: Int): Fragment {
-                val fragment = when (position) {
+                val fragment = when (tabIds[position]) {
                     ACTIVE_TAB_RECEIVE -> PaymentsReceiveFragment.newInstance()
+                    ACTIVE_TAB_INTERNAL -> PaymentsInternalFragment.newInstance()
                     else -> PaymentsPayFragment.newInstance(source = arguments?.getString(ARG_SOURCE) ?: "")
                 }
                 return fragment
@@ -115,23 +159,25 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
 
                 if (arguments?.containsKey(ARG_ACTIVE_TAB) != true) {
                     val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
-                    preferences.edit { putInt(PREFS_RECENT_TAB, position) }
+                    // store the logical tab id — stays valid if the flag flips
+                    preferences.edit { putInt(PREFS_RECENT_TAB, tabIds[position]) }
                 }
             }
         })
 
-        activateTab()
+        activateTab(tabIds)
     }
 
-    private fun activateTab() {
-        val activeTab = if (arguments?.containsKey(ARG_ACTIVE_TAB) == true) {
+    private fun activateTab(tabIds: List<Int>) {
+        val activeTabId = if (arguments?.containsKey(ARG_ACTIVE_TAB) == true) {
             requireArguments().getInt(ARG_ACTIVE_TAB, ACTIVE_TAB_RECEIVE)
         } else {
             val preferences = requireActivity().getPreferences(Context.MODE_PRIVATE)
             preferences.getInt(PREFS_RECENT_TAB, ACTIVE_TAB_RECEIVE)
         }
 
-        selectedTab = activeTab
-        binding.pager.setCurrentItem(activeTab, false)
+        val position = tabIds.indexOf(activeTabId).takeIf { it >= 0 } ?: 0
+        selectedTab = position
+        binding.pager.setCurrentItem(position, false)
     }
 }

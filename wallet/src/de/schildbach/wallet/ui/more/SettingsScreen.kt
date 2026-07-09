@@ -51,11 +51,10 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {},
-    onShieldedBalanceClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
-
+    
     SettingsScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
@@ -64,8 +63,7 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onShieldedBalanceClick = onShieldedBalanceClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick
     )
 }
 
@@ -78,11 +76,10 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {},
-    onShieldedBalanceClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
-
+    
     SettingsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -91,8 +88,7 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onShieldedBalanceClick = onShieldedBalanceClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick
     )
 }
 
@@ -105,8 +101,7 @@ private fun SettingsScreenContent(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {},
-    onShieldedBalanceClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -162,16 +157,6 @@ private fun SettingsScreenContent(
                     icon = R.drawable.ic_notification,
                     action = onNotificationsClick
                 )
-
-                // Shielded balance (Kotlin SDK migration Phase 4, flag-gated —
-                // hidden entirely while USE_KOTLIN_SDK_SHIELDED is off)
-                if (Constants.SUPPORTS_PLATFORM && uiState.shieldedBalanceVisible) {
-                    MenuItem(
-                        title = stringResource(R.string.shielded_balance_title),
-                        icon = R.drawable.ic_shielded_balance,
-                        action = onShieldedBalanceClick
-                    )
-                }
 
                 // Transaction Metadata
                 if (Constants.SUPPORTS_TXMETADATA && uiState.transactionMetadataVisible) {
