@@ -50,6 +50,7 @@ fun ToolsScreen(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -65,6 +66,7 @@ fun ToolsScreen(
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
+        onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
@@ -81,6 +83,7 @@ fun ToolsScreen(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -96,6 +99,7 @@ fun ToolsScreen(
         onExtendPublicKeyClick = onExtendPublicKeyClick,
         onMasternodeKeysClick = onMasternodeKeysClick,
         onCsvExportClick = onCsvExportClick,
+        onConnectionsClick = onConnectionsClick,
         onZenLedgerExport = onZenLedgerExport,
         onCreditsInfoClick = onCreditsInfoClick,
         onBuyCredits = onBuyCredits
@@ -112,6 +116,7 @@ private fun ToolsScreenContent(
     onExtendPublicKeyClick: () -> Unit = {},
     onMasternodeKeysClick: () -> Unit = {},
     onCsvExportClick: () -> Unit = {},
+    onConnectionsClick: () -> Unit = {},
     onZenLedgerExport: () -> Unit = {},
     onCreditsInfoClick: () -> Unit = {},
     onBuyCredits: () -> Unit = {}
@@ -177,6 +182,13 @@ private fun ToolsScreenContent(
                     title = stringResource(R.string.report_transaction_history_title),
                     icon = R.drawable.ic_menu_csv_export,
                     action = onCsvExportClick
+                )
+
+                // Connections (DashConnect)
+                MenuItem(
+                    title = stringResource(R.string.dash_connect_connections_title),
+                    icon = R.drawable.ic_menu_connections,
+                    action = onConnectionsClick
                 )
                 if (uiState.hasUsername) {
                     // Credits (only shown when user has a username)

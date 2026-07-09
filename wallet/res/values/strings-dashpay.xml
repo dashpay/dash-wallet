@@ -549,4 +549,27 @@
     <string name="create_instant_username_button">Create instant username</string>
     <string name="create_instant_username_cancel">Cancel</string>
 
+    <!-- DashConnect (Connections) -->
+    <string name="dash_connect_connections_title">Connections</string>
+    <string name="dash_connect_empty_heading">No apps connected yet</string>
+    <string name="dash_connect_empty_message">Connect your DashPay username to apps on the Dash network to sign in without passwords or accounts</string>
+    <string name="dash_connect_scan_qr">Scan QR</string>
+    <string name="dash_connect_status_approved">Approved</string>
+    <string name="dash_connect_status_active">Active</string>
+    <string name="dash_connect_status_disconnected">Disconnected</string>
+    <string name="dash_connect_hint_complete_login">Scan the %1$s QR code to complete your login</string>
+    <string name="dash_connect_hint_active">Touch to disconnect at any time</string>
+    <string name="dash_connect_hint_log_back_in">Scan the %1$s QR code to log back in</string>
+    <string name="dash_connect_approve_title">Approve connection to %1$s?</string>
+    <string name="dash_connect_approve_will_be_able">This app will be able to:</string>
+    <string name="dash_connect_approve_see_username">See your username</string>
+    <string name="dash_connect_approve_verify_identity">Verify your identity</string>
+    <string name="dash_connect_username">Username</string>
+    <string name="dash_connect_identity">Identity</string>
+    <string name="dash_connect_approve_no_access">This app will NOT have access to:</string>
+    <string name="dash_connect_approve_no_private_keys">Your private keys</string>
+    <string name="dash_connect_approve_no_withdraw_funds">Withdraw funds</string>
+    <string name="dash_connect_approve">Approve</string>
+    <string name="dash_connect_deny">Deny</string>
+
 </resources>

@@ -355,7 +355,19 @@
             app:exitAnim="@anim/activity_stay"
             app:popExitAnim="@anim/slide_out_left" />
 
+        <action
+            android:id="@+id/tools_to_connections"
+            app:destination="@id/connectionsFragment"
+            app:enterAnim="@anim/slide_in_right"
+            app:exitAnim="@anim/activity_stay"
+            app:popExitAnim="@anim/slide_out_left" />
+
     </fragment>
+
+    <fragment
+        android:id="@+id/connectionsFragment"
+        android:name="de.schildbach.wallet.ui.more.connections.ConnectionsFragment"
+        android:label="Connections" />
 
     <fragment
         android:id="@+id/settingsFragment"
