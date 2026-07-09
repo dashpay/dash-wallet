@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Rikthe kuletën</string>
+    <string name="dialog_confirm_fee">Tarifa e rrjetit</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Dërgo</string>
+    <string name="pay_title">Dërgo</string>
+    <string name="settings_title">Rregullat</string>
+    <string name="payments_tab_pay_label">Dërgo</string>
+    <string name="options_paste_from_clipboard_title">Fute nga klipbordi</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Kjo pages nuk është transmetuar akoma.</string>
+    <string name="preferences_report_issue_summary">Mbledh informatat rreth këtij problemi dhe dergo raportin me e-mail tek programerët.</string>
+    <string name="request_coins_clipboard_address_msg">Adresa juaj e Dash u kopjua</string>
+    <string name="wallet_lock_reset">Reseto</string>
+    <string name="notification_transactions_channel_name">transaksionet</string>
+    <string name="menu_settings_title">Rregullat</string>
+    <string name="tools_address_book">Libri i adresave</string>
+    <string name="tools_network_monitor">Monitorimi i rrjetit</string>
+    <string name="masternode_key_address">Adresa</string>
+    </resources>

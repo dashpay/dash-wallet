@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Pošalji</string>
+    <string name="pay_title">Pošalji</string>
+    <string name="payments_tab_pay_label">Pošalji</string>
+    <string name="options_paste_from_clipboard_title">Zalijepi iz međuspremnika</string>
+
+    <string name="request_coins_clipboard_address_msg">Dash adresa je kopirana u međuspremnik</string>
+    <string name="masternode_key_address">Adresa</string>
+    </resources>

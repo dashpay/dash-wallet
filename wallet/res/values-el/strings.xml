@@ -417,6 +417,8 @@
     <string name="reason">Λόγος</string>
     <string name="link_account">Σύνδεση του λογαριασμού σας</string>
     <string name="buy_no_account_needed">Αγοράστε Dash - Δεν απαιτείται λογαριασμός</string>
+    <string name="convert_no_account_needed">Ανταλλαγή Dash · Δεν απαιτείται λογαριασμός</string>
+
     <string name="recipient_address">Διεύθυνση παραλήπτη</string>
     <string name="not_dash_address">Δεν είναι μια έγκυρη διεύθυνση Dash ή URL</string>
     <string name="send_to_address">Αποστολή στη διεύθυνση</string>
@@ -444,4 +446,5 @@
     <string name="upgrade_pin_title">Πρέπει να αναβαθμίσετε τον PIN σας</string>
     <string name="upgrade_pin_description">Ορίστε ένα νέο PIN</string>
     <string name="upgrade_pin_continue">Συνέχεια</string>
-</resources>
+
+    </resources>

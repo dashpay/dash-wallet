@@ -257,6 +257,9 @@ class WalletTransactionMetadataProviderGiftCardTest {
                 merchantName = "Acme",
                 originalPrice = 25.0,
                 merchantUrl = "https://kept",
+                order = "1234",
+                index = 0,
+                giftCardChallenge = null,
                 cacheTimestamp = any()
             )
         }
@@ -275,6 +278,8 @@ class WalletTransactionMetadataProviderGiftCardTest {
 
         provider.updateGiftCardMetadata(existing.copy(number = "N", pin = "P"))
 
-        coVerify(exactly = 0) { cacheDao.insertGiftCardData(any(), any(), any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) {
+            cacheDao.insertGiftCardData(any(), any(), any(), any(), any(), any(), any(), any(), any(), any())
+        }
     }
 }

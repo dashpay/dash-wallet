@@ -1,0 +1,35 @@
+<!--
+  ~ Copyright 2021 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="close">Zavřít</string>
+    <string name="retry">Opakovat</string>
+    <string name="connected">Připojeno</string>
+    <string name="buy_dash">Nákup Dash</string>
+    <string name="sending_to">Odesílání</string>
+    <string name="total">Celkem</string>
+    <string name="cancel">Zrušit</string>
+    <string name="confirm">Potvrdit</string>
+    <string name="error">Chyba</string>
+    <string name="learn_more">Více informací</string>
+    <string name="insufficient_money_title">Nemáte dostatečný zůstatek</string>
+    <string name="insufficient_money_msg">Zústaek v peněžence je příliš nízký pro načtení.</string>
+    <string name="send_coins_error_msg">Problém při zasílání!</string>
+    <string name="verify_continue">Ověřit</string>
+    <string name="verify_code">Ověřit</string>
+    <string name="transfer_amount">Transakce</string>
+    <string name="transaction_row_rate_not_available">Není dostupný</string>
+    </resources>

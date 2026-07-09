@@ -111,6 +111,8 @@
     <string name="maya_error_invalid_destination_address">Di-wastong address ng patutunguhan</string>
     <string name="maya_error_below_recommended_minimum">Ang inilagay na halaga ay mas mababa kaysa sa inirerekomendang minimum</string>
     <string name="maya_error_trading_halted">Ang kalakalan ay itinigil sa %s.</string>
+    <string name="maya_error_below_allowed_minimum">Ang inilagay na halaga ay mas mababa kaysa sa pinapayagang minimum</string>
+    <string name="maya_error_quote">Hindi makakuha ng quote mula kay Maya para sa palitan na ito</string>
     <string name="maya_halted_label">Nahinto</string>
     <string name="maya_halted_coins_toast">Ang ilang mga barya ay pansamantalang itinigil at hindi magagamit para sa pangangalakal</string>
 

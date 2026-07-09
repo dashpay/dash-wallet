@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="error">Грешка</string>
+    <string name="request_coins_share_dialog_title">Сподели го побарувањето за Биткоини…</string>
+    <!-- Generic buttons -->
+    <string name="button_dismiss">Отфрли</string>
+    <string name="button_cancel">Откажи</string>
+    <string name="button_share">Сподели</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Испрати извештај со…</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Извини</string>
+    <string name="scan_camera_problem_dialog_message">Камерата јавува проблем. Најверојатно треба да го рестартираш уредот.</string>
+    <!-- address input -->
+    <string name="address_input_title">Испрати Биткоини</string>
+    <string name="input_parser_cannot_classify">Не може да се класифицира внесот:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Невалидно Биткоин URI:\n%s</string>
+    <string name="input_parser_invalid_address">Невалидна биткоин адреса!\n(Згреши со Mainnet/Testnet?)</string>
+    <string name="input_parser_invalid_transaction">Невалидна трансакција:\n%s</string>
+    <string name="send_coins_error_msg">Проблем при праќање на Биткоини!</string>
+    </resources>
