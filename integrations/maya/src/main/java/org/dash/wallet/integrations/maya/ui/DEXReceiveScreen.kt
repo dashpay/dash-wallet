@@ -267,7 +267,7 @@ private fun QrArea(content: String, isLoading: Boolean) {
             modifier = Modifier.size(200.dp),
             contentAlignment = Alignment.Center
         ) {
-            val bitmap = remember(content) {
+            val bitmap = remember(content, isLoading) {
                 if (isLoading || content.isBlank()) null else Qr.qrBitmap(content)
             }
 

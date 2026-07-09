@@ -139,7 +139,9 @@ class SwapKitApiAggregator @Inject constructor(
     private var classificationLastUpdated: Long = 0L
 
     // asset → when its preferred network was last resolved; gates PREFERRED_ROUTE_TTL_MS.
-    private val preferredRouteResolvedAt = mutableMapOf<String, Long>()
+    // Concurrent because it is written/read on responseScope but cleared from the
+    // caller thread via setSwapDirection/reset.
+    private val preferredRouteResolvedAt = ConcurrentHashMap<String, Long>()
 
     // Asset → USD price, captured at refresh time. applyPoolPrices re-seeds from
     // this cache so it stays idempotent across re-emissions AND handles

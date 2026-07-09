@@ -19,6 +19,7 @@ package org.dash.wallet.integrations.maya.swapkit
 
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
+import kotlinx.coroutines.CancellationException
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceItem
 import org.dash.wallet.integrations.maya.swapkit.model.SwapKitPriceRequest
@@ -150,6 +151,8 @@ open class SwapKitWebApi @Inject constructor(
     private inline fun <T> safeCall(label: String, fallback: T, block: () -> T): T {
         return try {
             block()
+        } catch (ex: CancellationException) {
+            throw ex
         } catch (ex: Exception) {
             log.error("swapkit $label: $ex")
             if (ex !is IOException) {
