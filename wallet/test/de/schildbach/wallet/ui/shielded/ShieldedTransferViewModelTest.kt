@@ -92,15 +92,21 @@ class ShieldedTransferViewModelTest {
     private fun blockchainState(
         synced: Boolean,
         bestChainHeight: Int = 1_000,
-        chainlockHeight: Int = 990
+        chainlockHeight: Int = 990,
+        // a mid-sync wallet's chain tip is in the past; a synced one is current
+        bestChainDate: Date = if (synced) Date() else Date(System.currentTimeMillis() - 2 * 60 * 60 * 1000L),
+        percentageSync: Int = if (synced) 100 else 42,
+        replaying: Boolean = false,
+        impediments: EnumSet<BlockchainState.Impediment> =
+            EnumSet.noneOf(BlockchainState.Impediment::class.java)
     ) = BlockchainState(
-        Date(),
+        bestChainDate,
         bestChainHeight,
-        false,
-        EnumSet.noneOf(BlockchainState.Impediment::class.java),
+        replaying,
+        impediments,
         chainlockHeight,
         chainlockHeight,
-        if (synced) 100 else 42
+        percentageSync
     )
 
     @Before
@@ -294,6 +300,67 @@ class ShieldedTransferViewModelTest {
         assertFalse(vm.uiState.value.canContinue)
     }
 
+    @Test
+    fun idleSyncedAfterRestart_passesSyncGate() = runTest(dispatcher) {
+        // The realistic post-restart state of an already-synced wallet:
+        // WalletApplication.onCreate resets the persisted percentageSync
+        // to 0, and only a fresh peer connection (the download tracker's
+        // progress/doneDownload) ever sets it back to 100 — but the chain
+        // tip itself is current. The gate must not lock this wallet out.
+        every { blockchainStateProvider.observeState() } returns flowOf(
+            blockchainState(synced = true, percentageSync = 0, bestChainDate = Date())
+        )
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        assertTrue(vm.uiState.value.chainSynced)
+        assertTrue(vm.uiState.value.canContinue)
+    }
+
+    // isChainSyncedForTransfer is the pure gate predicate — pin its edges
+    // with an explicit clock.
+    @Test
+    fun chainSyncGatePredicate_edges() {
+        val now = 1_800_000_000_000L
+        val fresh = Date(now - 5 * 60 * 1000L) // tip 5 min old
+        val stale = Date(now - 2 * 60 * 60 * 1000L) // tip 2 h old
+
+        // canonical isSynced() passes regardless of tip age
+        assertTrue(blockchainState(synced = true, bestChainDate = stale).isChainSyncedForTransfer(now))
+
+        // idle-synced after restart: percentage reset to 0, fresh tip → passes
+        assertTrue(
+            blockchainState(synced = true, percentageSync = 0, bestChainDate = fresh)
+                .isChainSyncedForTransfer(now)
+        )
+
+        // genuinely mid-sync: stale tip, partial percentage → blocked
+        assertFalse(
+            blockchainState(synced = false, percentageSync = 42, bestChainDate = stale)
+                .isChainSyncedForTransfer(now)
+        )
+
+        // fresh tip does NOT excuse replaying or a network impediment
+        assertFalse(
+            blockchainState(synced = true, percentageSync = 0, bestChainDate = fresh, replaying = true)
+                .isChainSyncedForTransfer(now)
+        )
+        assertFalse(
+            blockchainState(
+                synced = true,
+                percentageSync = 0,
+                bestChainDate = fresh,
+                impediments = EnumSet.of(BlockchainState.Impediment.NETWORK)
+            ).isChainSyncedForTransfer(now)
+        )
+
+        // no persisted state / no tip date yet → conservatively blocked
+        assertFalse((null as BlockchainState?).isChainSyncedForTransfer(now))
+        assertFalse(
+            BlockchainState(/* replaying = */ false).isChainSyncedForTransfer(now)
+        )
+    }
+
     // ── AC4/AC6: chainlocked-only wallet balance ────────────────────────
 
     @Test
@@ -338,6 +405,32 @@ class ShieldedTransferViewModelTest {
             Dash.ZERO,
             base.copy(totalWalletBalance = Dash.parse("1.00")).pendingWalletBalance
         )
+    }
+
+    // ── "You will transfer ~" hint units (Figma 1746:18462 / 1746:18478) ──
+
+    @Test
+    fun transferHint_toShielded_isCredits_grossConversion() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        val state = vm.uiState.value
+        // 1 DASH = 1e8 duffs = 1e11 credits — the design shows
+        // "~ 100,000,000,000 C" for a 1 DASH entry.
+        assertEquals("~ ${java.text.NumberFormat.getIntegerInstance().format(100_000_000_000L)}", state.transferHintText)
+        assertTrue(state.transferHintIsCredits)
+    }
+
+    @Test
+    fun transferHint_fromShielded_isDash() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        vm.onSwapDirection()
+        vm.onKeyInput("1")
+        val state = vm.uiState.value
+        // the design shows "~ 1.00 Đ" for a 1 DASH entry
+        assertEquals("~ 1.00", state.transferHintText)
+        assertFalse(state.transferHintIsCredits)
     }
 
     // ── AC2: first-visit timing sheet ───────────────────────────────────

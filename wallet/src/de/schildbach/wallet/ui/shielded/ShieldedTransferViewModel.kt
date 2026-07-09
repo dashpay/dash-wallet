@@ -43,6 +43,7 @@ import kotlinx.coroutines.withContext
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
@@ -81,8 +82,10 @@ data class ShieldedTransferUIState(
     val ready: Boolean = false,
     val readyCheckDone: Boolean = false,
     /**
-     * True while the dashj L1 chain is fully synced
-     * ([org.dash.wallet.common.data.entity.BlockchainState.isSynced]).
+     * True while the dashj L1 chain is synced ([isChainSyncedForTransfer]:
+     * the canonical [org.dash.wallet.common.data.entity.BlockchainState
+     * .isSynced], OR an idle-synced wallet whose chain tip is current but
+     * whose persisted sync percentage was reset by the app restart).
      * Both transfer directions are blocked until then — conservative
      * `false` default until the first state emission.
      */
@@ -130,6 +133,23 @@ data class ShieldedTransferUIState(
 
     val insufficientFunds: Boolean
         get() = amount.isGreaterThan(availableBalance)
+
+    /**
+     * "You will transfer ~" hint, denominated in what ARRIVES (Figma
+     * 1746:18462 / 1746:18478): Dash Wallet → Shielded lands as Platform
+     * credits ("~ 100,000,000,000 C" for 1 DASH — gross 1 duff = 1000
+     * credits conversion, per the design); Shielded → Dash Wallet lands
+     * as Dash ("~ 1.00 Đ").
+     */
+    val transferHintText: String
+        get() = when (direction) {
+            ShieldedTransferDirection.ToShielded -> "~ ${amount.toCreditsString()}"
+            ShieldedTransferDirection.FromShielded -> "~ ${amount.toDisplayString()}"
+        }
+
+    /** True when [transferHintText] is credits-denominated (trailing "C" symbol). */
+    val transferHintIsCredits: Boolean
+        get() = direction == ShieldedTransferDirection.ToShielded
 
     /** The L1-funding gate only applies to the Dash Wallet → Shielded direction. */
     val directionAvailable: Boolean
@@ -189,11 +209,18 @@ class ShieldedTransferViewModel @Inject constructor(
             }
         }
 
-        // L1 sync gate: both directions stay blocked until dashj reports
-        // a fully synced chain (the canonical BlockchainState.isSynced()).
+        // L1 sync gate: both directions stay blocked until the chain is
+        // synced. isChainSyncedForTransfer, not the raw isSynced(): on
+        // every app start WalletApplication.resetBlockchainSyncProgress()
+        // zeroes percentageSync and it only returns to 100 once the
+        // service's download tracker fires on a fresh peer connection —
+        // an idle-synced wallet (current tip, nothing to download) must
+        // not be locked out in the meantime.
         blockchainStateProvider.observeState()
             .onEach { state ->
-                _uiState.value = _uiState.value.copy(chainSynced = state?.isSynced() == true)
+                _uiState.value = _uiState.value.copy(
+                    chainSynced = state.isChainSyncedForTransfer()
+                )
             }
             .launchIn(viewModelScope)
 
@@ -383,4 +410,35 @@ class ShieldedTransferViewModel @Inject constructor(
             amountText = "0"
         )
     }
+}
+
+/**
+ * The chain-tip freshness window that counts as "synced" when the recorded
+ * sync percentage is stale — the same 1-hour rule BlockchainServiceImpl
+ * applies when deciding whether to show its "syncing" notification
+ * (blocks target ~2.5 min, so a current tip is always well inside it).
+ */
+internal const val CHAIN_TIP_FRESHNESS_MS = 60L * 60 * 1000
+/**
+ * The transfer screens' L1 sync gate.
+ *
+ * [BlockchainState.isSynced] alone (`!replaying && percentageSync == 100 &&
+ * !syncFailed()`) is NOT reliable for an idle-synced wallet:
+ * `WalletApplication.onCreate` calls `resetBlockchainSyncProgress()` on every
+ * app start, zeroing the persisted `percentageSync`, and only the blockchain
+ * service's download tracker (`progress`/`doneDownload`, which need a fresh
+ * peer connection to fire) ever sets it back to 100. Until that happens a
+ * fully synced wallet sits at `percentageSync == 0` and `isSynced()` returns
+ * false. So a state whose chain tip is current (best-chain date within
+ * [CHAIN_TIP_FRESHNESS_MS], not replaying, no network impediment) also
+ * passes — mirroring the freshness rule the service itself uses for its
+ * sync notification. `null` (no persisted state yet) stays blocked.
+ */
+internal fun BlockchainState?.isChainSyncedForTransfer(
+    nowMillis: Long = System.currentTimeMillis()
+): Boolean {
+    if (this == null) return false
+    if (isSynced()) return true
+    val tipTime = bestChainDate?.time ?: return false
+    return !replaying && !syncFailed() && nowMillis - tipTime < CHAIN_TIP_FRESHNESS_MS
 }

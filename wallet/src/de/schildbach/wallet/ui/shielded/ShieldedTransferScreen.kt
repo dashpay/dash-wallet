@@ -188,6 +188,10 @@ private fun ShieldedTransferScreenContent(
                 onLeadingClick = { if (!proving) onBackClick() },
                 centralPart = false,
                 trailingIcon = MyImages.NavBarInfo,
+                // Bare info glyph (the NavBarBackTitleInfo pattern): the
+                // circle Template tints the whole multi-colour vector with
+                // textPrimary, which renders it as a solid filled circle.
+                trailingIconCircle = false,
                 onTrailingClick = onShowTimingInfo
             )
 
@@ -516,12 +520,12 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                // Both directions arrive as Dash: To Shielded shields the
-                // L1 amount (minus the small pool fee), From Shielded
-                // withdraws to Core — hence the "~" in both.
+                // Denominated in what arrives (Figma 1746:18462/18478):
+                // To Shielded lands as credits, From Shielded as Dash —
+                // the "~" covers the small pool/withdraw fees.
                 BalanceWithSymbol(
-                    text = "~ ${uiState.amount.toDisplayString()}",
-                    isCredits = false,
+                    text = uiState.transferHintText,
+                    isCredits = uiState.transferHintIsCredits,
                     big = true
                 )
             }
@@ -755,13 +759,13 @@ private fun TransferTimingSheet(onDismiss: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
 
             TimingFeatureRow(
-                icon = R.drawable.ic_blue_bolt,
+                icon = R.drawable.ic_transfer_instant,
                 heading = stringResource(R.string.shielded_timing_to_title),
                 text = stringResource(R.string.shielded_timing_to_message)
             )
             Spacer(modifier = Modifier.height(16.dp))
             TimingFeatureRow(
-                icon = org.dash.wallet.common.R.drawable.ic_clock,
+                icon = R.drawable.ic_transfer_stopwatch,
                 heading = stringResource(R.string.shielded_timing_from_title),
                 text = stringResource(R.string.shielded_timing_from_message)
             )
@@ -782,11 +786,12 @@ private fun TransferTimingSheet(onDismiss: () -> Unit) {
 private fun TimingFeatureRow(icon: Int, heading: String, text: String) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
         Box(modifier = Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+            // Intrinsic size: the design's glyphs are non-square (20×24 bolt,
+            // 19×23 stopwatch) — forcing a square would distort them.
             Icon(
                 painter = painterResource(icon),
                 contentDescription = null,
-                tint = Color.Unspecified,
-                modifier = Modifier.size(24.dp)
+                tint = Color.Unspecified
             )
         }
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -1028,6 +1033,14 @@ private fun TransferCompactDevicePreview() {
 @Composable
 private fun TransferConfirmPreview() {
     ShieldedTransferScreenContent(uiState = previewState(showConfirm = true))
+}
+
+// Verifies the nav-bar info glyph (bare, untinted — no black circle) and
+// the timing sheet's yellow-bolt/blue-stopwatch icons + copy (Figma 1740:16412).
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – timing sheet")
+@Composable
+private fun TransferTimingSheetPreview() {
+    ShieldedTransferScreenContent(uiState = previewState().copy(showTimingInfo = true))
 }
 
 @Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – proving")

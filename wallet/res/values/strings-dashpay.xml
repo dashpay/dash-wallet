@@ -550,7 +550,7 @@
     <string name="shielded_delay_tip_message">After this transfer, it can take up to 10 minutes before you can use your Dash. This delay is part of how your privacy is protected.</string>
     <string name="shielded_timing_title">Transfers take different times</string>
     <string name="shielded_timing_to_title">From Dash Wallet to Shielded balance</string>
-    <string name="shielded_timing_to_message">The transfer usually takes under a minute</string>
+    <string name="shielded_timing_to_message">The transfer is instant</string>
     <string name="shielded_timing_from_title">From Shielded balance to Dash Wallet</string>
     <string name="shielded_timing_from_message">The transfer could take up to 10 minutes</string>
     <string name="shielded_timing_got_it">I got it</string>
