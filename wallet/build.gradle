@@ -522,3 +522,35 @@ dependencies {
 }
 
 apply from: file("../gradle/google-services.gradle")
+
+// Generate a SHA-256 checksum file next to each assembled APK.
+// For every APK output, a "<apk-name>.sha256" file is written in the same folder,
+// in sha256sum format ("<hex>  <apk-name>"), so it can be verified with:
+//   sha256sum -c dash-wallet-<variant>.apk.sha256
+// This runs automatically as a finalizer of each assemble<Variant> task.
+android.applicationVariants.all { variant ->
+    variant.outputs.all { output ->
+        def apkFile = output.outputFile
+        def taskName = "generate${variant.name.capitalize()}ApkSha256"
+        def sha256Task = tasks.register(taskName) {
+            description = "Writes a SHA-256 checksum file next to the ${variant.name} APK"
+            onlyIf { apkFile.exists() }
+            doLast {
+                def digest = java.security.MessageDigest.getInstance("SHA-256")
+                apkFile.withInputStream { stream ->
+                    def buffer = new byte[8192]
+                    int read
+                    while ((read = stream.read(buffer)) != -1) {
+                        digest.update(buffer, 0, read)
+                    }
+                }
+                def hex = digest.digest().encodeHex().toString()
+                def shaFile = new File(apkFile.parentFile, "${apkFile.name}.sha256")
+                shaFile.text = "${hex}  ${apkFile.name}\n"
+                logger.lifecycle("SHA-256 (${apkFile.name}): ${hex}")
+                logger.lifecycle("Wrote checksum to ${shaFile}")
+            }
+        }
+        variant.assembleProvider.configure { finalizedBy(sha256Task) }
+    }
+}
