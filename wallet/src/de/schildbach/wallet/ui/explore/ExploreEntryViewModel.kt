@@ -7,6 +7,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.asLiveData
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -48,6 +50,14 @@ class ExploreEntryViewModel @Inject constructor(
     val hasCrowdNodeAccount: LiveData<Boolean> = crowdNodeApi.signUpStatus
         .map { it != SignUpStatus.NotStarted }
         .asLiveData()
+
+    // Persistent banner: shown whenever the wallet still has a CrowdNode balance to withdraw.
+    val showWithdrawalBanner: LiveData<Boolean> = combine(
+        crowdNodeApi.signUpStatus,
+        crowdNodeApi.balance
+    ) { status, balance ->
+        status != SignUpStatus.NotStarted && (balance.data?.isPositive == true)
+    }.asLiveData()
 
     init {
         blockchainStateProvider.observeState()
@@ -92,10 +102,14 @@ class ExploreEntryViewModel @Inject constructor(
             _isBlockchainSynced.value = state.isSynced()
 
             if (state.isSynced()) {
-                // the sign up status might be restorable from the blockchain now
-                crowdNodeApi.restoreStatus()
-                val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
-                _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
+                // the sign up status might be restorable from the blockchain now.
+                // restoreStatus() scans the entire wallet history and acquires the
+                // wallet keychain lock, so it must not run on the main thread.
+                withContext(Dispatchers.IO) {
+                    crowdNodeApi.restoreStatus()
+                    val withoutFees = (100.0 - crowdNodeApi.getFee()) / 100
+                    _stakingAPY.postValue(withoutFees * blockchainStateProvider.getMasternodeAPY())
+                }
             }
         }
     }
