@@ -31,6 +31,8 @@
 
     <string-array name="sort_by_options_names">
         <item>Tên</item>
+        <item>Khoảng cách</item>
+        <item>Giảm giá</item>
     </string-array>
 
     <string name="purchase_confirm_transaction">Xác nhận</string>
