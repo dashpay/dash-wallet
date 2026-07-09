@@ -201,6 +201,17 @@ open class DashPayConfig @Inject constructor(
          * See [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService].
          */
         val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
+
+        /**
+         * Wall-clock ms of the last L1 shadow reset
+         * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.resetShadowState]).
+         * Persisted (not in-memory) so a reset survives a process death:
+         * the reset-aftermath deficit detector uses it to distinguish
+         * "the previous reset broke the shadow state" (recover with one
+         * hard reset) from an organic SDK scan deficit (stand down) —
+         * see `ShadowResetDecider`'s decision table.
+         */
+        val L1_SHADOW_LAST_RESET = longPreferencesKey("l1_shadow_last_reset")
     }
 
     init {

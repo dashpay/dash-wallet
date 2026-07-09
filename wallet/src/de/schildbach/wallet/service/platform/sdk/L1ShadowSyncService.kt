@@ -73,6 +73,19 @@ data class ShadowSyncProgress(
     /** The shadow chain is fully synced — parity mismatches count as real from here. */
     val synced: Boolean get() = phase == ShadowSyncPhase.SYNCED
 
+    /**
+     * The header chain AND the wallet-relevant compact-filter scan both
+     * report a non-zero target that has been reached — the "nothing left
+     * to scan" signal the reset-aftermath detector requires (see
+     * [ShadowResetDecider]). Deliberately stricter than [synced]: a SYNCED
+     * snapshot whose sub-progress blocks are absent (all-zero heights)
+     * does NOT count, because it cannot prove the filter scan actually
+     * covered the chain.
+     */
+    val scanLooksComplete: Boolean get() =
+        headerTarget > 0 && headerHeight >= headerTarget &&
+            filterTarget > 0 && filterHeight >= filterTarget
+
     companion object {
         val IDLE = ShadowSyncProgress(ShadowSyncPhase.IDLE, 0.0, 0, 0, 0, 0)
     }
@@ -309,11 +322,12 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
 // ── Auto-reset decision (pure) ────────────────────────────────────────
 
 /**
- * Decides when a persistent INFLATED-SDK parity mismatch warrants an
- * automatic [L1ShadowSyncService.resetShadowState], from the probe stream
- * alone.
+ * Decides when a persistent parity mismatch warrants an automatic
+ * [L1ShadowSyncService.resetShadowState], from the probe stream plus two
+ * context bits ([scanLooksComplete][ShadowSyncProgress.scanLooksComplete]
+ * and the recent-reset DataStore marker).
  *
- * ## Why `sdk > dashj` only
+ * ## Why `sdk > dashj` always resets and `sdk < dashj` (almost) never does
  *
  * During the migration transition dashj is the source of truth for L1 —
  * it is the engine users spend from, and its view survives every release
@@ -322,60 +336,146 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
  * (e.g. unreconciled TXO rows after an SPV re-scan following an unclean
  * shutdown). A DEFICIT (`sdk < dashj`), by contrast, can be a real SDK
  * scan gap (e.g. a derivation path the SDK misses) — exactly the bug
- * class the harness must SURFACE, not erase — so it never auto-resets.
+ * class the harness must SURFACE, not erase — so it stands down instead
+ * of resetting, with ONE exception:
  *
- * ## Decision table (evaluated per probe, in order)
+ * ## The reset-aftermath exception (the broken-reset recovery path)
  *
- * | synced | balancesMatch | sdk vs dashj | consecutive | resetDone | decision |
- * |--------|---------------|--------------|-------------|-----------|----------|
- * | no     | —             | —            | reset to 0  | —         | NONE     |
- * | yes    | yes           | —            | reset to 0  | —         | NONE     |
- * | yes    | no            | sdk < dashj  | reset to 0  | —         | NONE     |
- * | yes    | no            | sdk > dashj  | < threshold | —         | NONE     |
- * | yes    | no            | sdk > dashj  | ≥ threshold | no        | RESET    |
- * | yes    | no            | sdk > dashj  | ≥ threshold | yes       | CORRUPT_AFTER_RESET (once), then NONE |
+ * A live incident showed a reset itself can MANUFACTURE a deficit: the
+ * pre-hard-reset flow deleted the Room TXO/tx rows but the SDK's
+ * `clearSpvStorage` no-oped (it only clears a RUNNING client's storage —
+ * see [L1ShadowSource.clearSpvStorage]), so on restart the SPV resumed
+ * from the surviving header store + scan watermark, reported a "complete"
+ * scan within seconds, and never repopulated the rows: `sdk=0` vs a real
+ * dashj balance, stuck forever. That state has an unmistakable signature —
+ * deficit AND `sdkTxCount == 0` AND headers+filters report complete AND a
+ * reset ran recently (this or the previous process, per the persisted
+ * marker) — and is recovered with ONE filesystem-level hard reset
+ * ([Decision.HARD_RESET_AFTERMATH]). The same signature WITHOUT a recent
+ * reset marker is an organic total scan failure: stand down with an ERROR
+ * ([Decision.DEFICIT_STAND_DOWN]), never reset.
  *
- * RESET fires at most once per process (per decider instance). After a
- * reset the shadow chain re-scans, so `synced=false` probes zero the
- * streak; only a FULL post-reset resync that still shows an inflated
- * mismatch for [requiredConsecutiveProbes] probes reaches
- * CORRUPT_AFTER_RESET — the "shadow state corrupt after reset, stand
- * down" signal.
+ * ## Decision table (evaluated per probe; `empty deficit` = synced
+ * mismatch with sdk < dashj AND sdkTxCount == 0 AND scanLooksComplete)
+ *
+ * | probe state                     | consecutive | prior action this process | decision |
+ * |---------------------------------|-------------|----------------------------|----------|
+ * | not synced                      | streaks → 0 | —                          | NONE |
+ * | synced, balances match          | streaks → 0 | —                          | NONE |
+ * | inflated (sdk > dashj)          | < threshold | —                          | NONE |
+ * | inflated                        | ≥ threshold | no reset yet               | RESET (once) |
+ * | inflated                        | ≥ threshold | reset already ran          | CORRUPT_AFTER_RESET (once), then NONE |
+ * | deficit, sdkTx > 0 or scan open | streaks → 0 | —                          | NONE (MISMATCH log only) |
+ * | empty deficit                   | < threshold | —                          | NONE |
+ * | empty deficit + recent reset    | ≥ threshold | no aftermath reset yet     | HARD_RESET_AFTERMATH (once) |
+ * | empty deficit + recent reset    | ≥ threshold | aftermath reset ran        | DEFICIT_STAND_DOWN (once), then NONE |
+ * | empty deficit, NO recent reset  | ≥ threshold | —                          | DEFICIT_STAND_DOWN (once), then NONE |
+ *
+ * Each acting decision fires at most once per process (per decider
+ * instance): one inflated RESET, one aftermath HARD reset, one
+ * CORRUPT_AFTER_RESET report, one DEFICIT_STAND_DOWN report. After any
+ * reset the shadow chain re-scans, so `synced=false` probes zero both
+ * streaks; only a FULL post-reset resync that still shows the mismatch
+ * for [requiredConsecutiveProbes] probes reaches the stand-down rows.
  */
 internal class ShadowResetDecider(
     private val requiredConsecutiveProbes: Int = RESET_CONSECUTIVE_PROBES
 ) {
-    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET }
+    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET, HARD_RESET_AFTERMATH, DEFICIT_STAND_DOWN }
 
     private var consecutiveInflated = 0
+    private var consecutiveEmptyDeficit = 0
     private var resetIssued = false
     private var corruptReported = false
+    private var aftermathResetIssued = false
+    private var deficitStandDownReported = false
 
-    fun onProbe(report: ParityReport): Decision {
-        val inflated = report.sdkSynced && !report.balancesMatch && report.sdkDuffs > report.dashjDuffs
-        if (!inflated) {
-            consecutiveInflated = 0
-            return Decision.NONE
-        }
-        consecutiveInflated++
-        if (consecutiveInflated < requiredConsecutiveProbes) return Decision.NONE
-        return when {
-            !resetIssued -> {
-                resetIssued = true
-                consecutiveInflated = 0
-                Decision.RESET
+    fun onProbe(
+        report: ParityReport,
+        scanLooksComplete: Boolean = false,
+        recentResetMarker: Boolean = false
+    ): Decision {
+        val mismatch = report.sdkSynced && !report.balancesMatch
+        val inflated = mismatch && report.sdkDuffs > report.dashjDuffs
+        val emptyDeficit = mismatch && report.sdkDuffs < report.dashjDuffs &&
+            report.sdkTxCount == 0 && scanLooksComplete
+
+        if (!inflated) consecutiveInflated = 0
+        if (!emptyDeficit) consecutiveEmptyDeficit = 0
+
+        if (inflated) {
+            consecutiveInflated++
+            if (consecutiveInflated < requiredConsecutiveProbes) return Decision.NONE
+            return when {
+                !resetIssued -> {
+                    resetIssued = true
+                    consecutiveInflated = 0
+                    Decision.RESET
+                }
+                !corruptReported -> {
+                    corruptReported = true
+                    Decision.CORRUPT_AFTER_RESET
+                }
+                else -> Decision.NONE
             }
-            !corruptReported -> {
-                corruptReported = true
-                Decision.CORRUPT_AFTER_RESET
-            }
-            else -> Decision.NONE
         }
+        if (emptyDeficit) {
+            consecutiveEmptyDeficit++
+            if (consecutiveEmptyDeficit < requiredConsecutiveProbes) return Decision.NONE
+            return when {
+                recentResetMarker && !aftermathResetIssued -> {
+                    aftermathResetIssued = true
+                    consecutiveEmptyDeficit = 0
+                    Decision.HARD_RESET_AFTERMATH
+                }
+                !deficitStandDownReported -> {
+                    deficitStandDownReported = true
+                    Decision.DEFICIT_STAND_DOWN
+                }
+                else -> Decision.NONE
+            }
+        }
+        return Decision.NONE
     }
 
     companion object {
-        /** Synced inflated-mismatch probes required before acting. */
+        /** Synced mismatch probes required before acting (either direction). */
         internal const val RESET_CONSECUTIVE_PROBES = 3
+    }
+}
+
+/**
+ * Once-per-process restart decision for the parity-probe watchdog: the
+ * probe loop was observed dying silently in the field (no `L1Parity` log
+ * for an hour — an uncaught loop error or a cancelled scope). If the
+ * heartbeat ([lastHeartbeatMs], stamped at the top of every probe-loop
+ * iteration) goes stale for [stallThresholdMs] while the service believes
+ * it is running, the watchdog restarts the loop ONCE per process
+ * ([Decision.RESTART]); a second stall reports [Decision.EXHAUSTED] once
+ * (ERROR, stand down) and everything after that is silent. Pure, so the
+ * restart-once semantics are host-JVM unit-testable.
+ */
+internal class ProbeWatchdogDecider(
+    private val stallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS
+) {
+    enum class Decision { NONE, RESTART, EXHAUSTED }
+
+    private var restartIssued = false
+    private var exhaustedReported = false
+
+    fun onCheck(nowMs: Long, lastHeartbeatMs: Long): Decision {
+        if (nowMs - lastHeartbeatMs < stallThresholdMs) return Decision.NONE
+        return when {
+            !restartIssued -> {
+                restartIssued = true
+                Decision.RESTART
+            }
+            !exhaustedReported -> {
+                exhaustedReported = true
+                Decision.EXHAUSTED
+            }
+            else -> Decision.NONE
+        }
     }
 }
 
@@ -447,7 +547,29 @@ interface L1ShadowSource {
      */
     suspend fun dashjUnspentUtxos(): List<L1Utxo>?
 
-    /** Clear the Rust SPV client's persisted storage (headers, filters, state). */
+    /**
+     * Clear the Rust SPV client's persisted storage (headers, filters,
+     * state) via the SDK.
+     *
+     * ## KNOWN SDK LIMITATION — do not rely on this for a reset
+     *
+     * Traced through the SDK/Rust sources (`PlatformWalletManager.clearSpvStorage`
+     * → `platform_wallet_manager_spv_clear_storage` →
+     * `rs-platform-wallet/src/spv/runtime.rs SpvRuntime::clear_storage`):
+     * the storage manager that knows the [startSpv] `dataDir` lives INSIDE
+     * the running `DashSpvClient`, and `SpvRuntime::stop()` drops that
+     * client (`self.client.take()`). `clear_storage()` then errors with
+     * "SPV Client not started" and touches NO files — the runtime does not
+     * remember the configured dataDir once stopped. So the natural
+     * stop→clear→restart sequence is guaranteed to leave the on-disk
+     * header store and scan watermark intact (the live incident: a
+     * post-reset "full rescan" that went IDLE→SYNCED in six seconds and
+     * left `sdk=0`). Clearing while RUNNING instead races the client's 5s
+     * persistence worker. SDK-issue material: `clearSpvStorage` should
+     * honor the configured dataDir when the client is stopped. Until then
+     * [L1ShadowSyncService.resetShadowState] hard-deletes the dataDir at
+     * the filesystem level and only the legacy soft path calls this.
+     */
     suspend fun clearSpvStorage()
 
     /**
@@ -636,7 +758,9 @@ class L1ShadowSyncService internal constructor(
     private val spvDataDirPath: () -> String,
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val parityIntervalMs: Long = PARITY_INTERVAL_MS,
-    private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS
+    private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
+    private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
+    private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS
 ) {
     @Inject
     constructor(
@@ -664,6 +788,18 @@ class L1ShadowSyncService internal constructor(
 
     private var monitorJob: Job? = null
     private var parityJob: Job? = null
+    private var watchdogJob: Job? = null
+
+    /**
+     * Heartbeat: wall-clock time of the last parity-loop iteration START
+     * (stamped even when the probe itself fails — the watchdog measures
+     * loop LIVENESS, not probe success).
+     */
+    @Volatile
+    private var lastProbeHeartbeatMs = 0L
+
+    /** The once-per-process probe-loop restart state (see [ProbeWatchdogDecider]). */
+    private val watchdogDecider = ProbeWatchdogDecider(probeStallThresholdMs)
 
     private val _progress = MutableStateFlow(ShadowSyncProgress.IDLE)
 
@@ -710,8 +846,10 @@ class L1ShadowSyncService internal constructor(
                     source.startSpv(dataDir.absolutePath)
                 }
                 runningWalletIdHex.value = walletIdHex
-                monitorJob = scope.launch { monitorProgress() }
-                parityJob = scope.launch { parityLoop(walletIdHex) }
+                lastProbeHeartbeatMs = nowMs()
+                monitorJob = scope.launch { monitorProgress() }.logCompletion("progress monitor")
+                parityJob = scope.launch { parityLoop(walletIdHex) }.logCompletion("parity probe loop")
+                watchdogJob = scope.launch { watchdogLoop() }.logCompletion("probe watchdog")
                 log.info(
                     "L1 shadow SPV started for SDK wallet {}… (dataDir={}, default peer discovery); " +
                         "debug-only instrumentation — two SPV engines are now running",
@@ -738,6 +876,8 @@ class L1ShadowSyncService internal constructor(
             monitorJob = null
             parityJob?.cancel()
             parityJob = null
+            watchdogJob?.cancel()
+            watchdogJob = null
             runCatching { source.stopSpv() }
                 .onFailure { log.warn("failed to stop the shadow SPV client", it) }
             _progress.value = ShadowSyncProgress.IDLE
@@ -750,26 +890,40 @@ class L1ShadowSyncService internal constructor(
      * one-line summary at most every [progressLogIntervalMs] — except the
      * one-time transitions into SYNCED/ERROR, which always log (they are
      * the events the harness exists to observe).
+     *
+     * Never dies silently: a failing upstream flow is logged and
+     * re-collected after [LOOP_RETRY_DELAY_MS] (the probe/scan loops were
+     * observed going dark for an hour in the field — see [watchdogLoop]).
      */
     private suspend fun monitorProgress() {
         var lastLogMs = 0L
         var lastPhase = ShadowSyncPhase.IDLE
-        source.spvProgress().collect { data ->
-            val mapped = toShadowSyncProgress(data)
-            _progress.value = mapped
-            val now = nowMs()
-            val terminalTransition = mapped.phase != lastPhase &&
-                (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
-            if (terminalTransition || now - lastLogMs >= progressLogIntervalMs) {
-                log.info(shadowProgressLine(mapped))
-                lastLogMs = now
+        while (currentCoroutineContext().isActive) {
+            try {
+                source.spvProgress().collect { data ->
+                    val mapped = toShadowSyncProgress(data)
+                    _progress.value = mapped
+                    val now = nowMs()
+                    val terminalTransition = mapped.phase != lastPhase &&
+                        (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
+                    if (terminalTransition || now - lastLogMs >= progressLogIntervalMs) {
+                        log.info(shadowProgressLine(mapped))
+                        lastLogMs = now
+                    }
+                    lastPhase = mapped.phase
+                }
+                return // upstream flow completed normally
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("L1Shadow progress monitor failed; re-collecting in ${LOOP_RETRY_DELAY_MS}ms", t)
+                delay(LOOP_RETRY_DELAY_MS)
             }
-            lastPhase = mapped.phase
         }
     }
 
     private suspend fun parityLoop(walletIdHex: String) {
         while (currentCoroutineContext().isActive) {
+            lastProbeHeartbeatMs = nowMs()
             try {
                 probeParity(walletIdHex)
             } catch (t: Throwable) {
@@ -777,6 +931,76 @@ class L1ShadowSyncService internal constructor(
                 log.warn("L1Parity probe failed; will retry on the next tick", t)
             }
             delay(parityIntervalMs)
+        }
+    }
+
+    /**
+     * The probe-loop watchdog. The parity loop died silently in the field
+     * (no `L1Parity` line for an hour; cause unknown — an uncaught error
+     * or a cancelled scope). Every [watchdogIntervalMs] this loop checks
+     * the heartbeat [lastProbeHeartbeatMs] the parity loop stamps at each
+     * iteration; if it goes stale for [probeStallThresholdMs] while the
+     * service believes it is running, it logs ERROR and relaunches the
+     * probe loop — ONCE per process ([ProbeWatchdogDecider]). A stall is
+     * possible without the loop being dead (a probe call hung inside the
+     * SDK); cancelling the old job before relaunching covers both.
+     */
+    private suspend fun watchdogLoop() {
+        while (currentCoroutineContext().isActive) {
+            delay(watchdogIntervalMs)
+            try {
+                checkProbeHeartbeat()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("L1Shadow watchdog check failed; will retry on the next tick", t)
+            }
+        }
+    }
+
+    private suspend fun checkProbeHeartbeat() {
+        if (runningWalletIdHex.value == null) return
+        val decision = watchdogDecider.onCheck(nowMs(), lastProbeHeartbeatMs)
+        if (decision == ProbeWatchdogDecider.Decision.NONE) return
+        mutex.withLock {
+            val walletIdHex = runningWalletIdHex.value ?: return
+            when (decision) {
+                ProbeWatchdogDecider.Decision.RESTART -> {
+                    log.error(
+                        "L1Shadow watchdog: no parity probe for {}ms while the shadow is " +
+                            "supposedly running — the probe loop died or hung silently; " +
+                            "restarting it (once per process)",
+                        nowMs() - lastProbeHeartbeatMs
+                    )
+                    parityJob?.cancel()
+                    lastProbeHeartbeatMs = nowMs()
+                    parityJob = scope.launch { parityLoop(walletIdHex) }
+                        .logCompletion("parity probe loop (watchdog restart)")
+                }
+                ProbeWatchdogDecider.Decision.EXHAUSTED ->
+                    log.error(
+                        "L1Shadow watchdog: the probe loop stalled again after its one " +
+                            "watchdog restart — standing down (no further automatic " +
+                            "restarts this process)"
+                    )
+                ProbeWatchdogDecider.Decision.NONE -> Unit
+            }
+        }
+    }
+
+    /**
+     * Attach a completion logger so no shadow loop ever dies silently:
+     * normal completion and cancellation log at INFO, an escaped failure
+     * logs the cause at WARN (loop bodies catch-and-continue, so a WARN
+     * here means the loop machinery itself broke).
+     */
+    private fun Job.logCompletion(name: String): Job = apply {
+        invokeOnCompletion { cause ->
+            when (cause) {
+                null -> log.info("L1Shadow {} completed", name)
+                is CancellationException ->
+                    log.info("L1Shadow {} cancelled ({})", name, cause.message ?: "no reason given")
+                else -> log.warn("L1Shadow $name DIED with an escaped failure", cause)
+            }
         }
     }
 
@@ -810,15 +1034,20 @@ class L1ShadowSyncService internal constructor(
         if (report.sdkSynced && !report.balancesMatch) {
             maybeLogOutpointDiff(walletIdHex, report)
         }
-        when (resetDecider.onProbe(report)) {
+        val decision = resetDecider.onProbe(
+            report,
+            scanLooksComplete = _progress.value.scanLooksComplete,
+            recentResetMarker = hasRecentResetMarker()
+        )
+        when (decision) {
             ShadowResetDecider.Decision.RESET -> {
                 log.warn(
                     "L1Parity inflated MISMATCH persisted for {} consecutive synced probes " +
                         "(sdk={} > dashj={} duffs) — an inflated SDK view is never legitimate " +
-                        "(dashj is the L1 source of truth); resetting the shadow state",
+                        "(dashj is the L1 source of truth); hard-resetting the shadow state",
                     ShadowResetDecider.RESET_CONSECUTIVE_PROBES, report.sdkDuffs, report.dashjDuffs
                 )
-                resetShadowState()
+                resetShadowState(hard = true)
             }
             ShadowResetDecider.Decision.CORRUPT_AFTER_RESET ->
                 log.error(
@@ -828,9 +1057,45 @@ class L1ShadowSyncService internal constructor(
                         "wallet state is only fully rebuilt on the next app start)",
                     report.sdkDuffs, report.dashjDuffs
                 )
+            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH -> {
+                log.warn(
+                    "L1Parity reset-aftermath deficit: sdk=0 txs / {} duffs vs dashj={} duffs " +
+                        "with a complete header+filter scan and a recent shadow reset — the " +
+                        "previous reset's clearSpvStorage no-oped (the SDK only clears a " +
+                        "RUNNING client's storage) and the surviving scan watermark suppressed " +
+                        "the rescan; running ONE filesystem-level hard reset",
+                    report.sdkDuffs, report.dashjDuffs
+                )
+                resetShadowState(hard = true)
+            }
+            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN ->
+                log.error(
+                    "L1Parity DEFICIT stand-down: sdk={} < dashj={} duffs with sdkTx=0 and a " +
+                        "complete scan but no recent-reset explanation (marker absent/stale, or " +
+                        "the one aftermath hard reset already ran) — a deficit is the bug class " +
+                        "this harness must surface, not erase; no automatic reset",
+                    report.sdkDuffs, report.dashjDuffs
+                )
             ShadowResetDecider.Decision.NONE -> Unit
         }
         return report
+    }
+
+    /**
+     * Whether a shadow reset ran recently — this process or (via the
+     * persisted [DashPayConfig.L1_SHADOW_LAST_RESET] marker) a previous
+     * one, within [RESET_MARKER_MAX_AGE_MS]. This is the bit that
+     * distinguishes a reset-aftermath deficit (recoverable — the reset
+     * itself manufactured it) from an organic one (must stand down).
+     * Read failures count as "no marker" so a broken DataStore can never
+     * cause an unwarranted reset.
+     */
+    private suspend fun hasRecentResetMarker(): Boolean = try {
+        val lastResetMs = dashPayConfig.get(DashPayConfig.L1_SHADOW_LAST_RESET)
+        lastResetMs != null && nowMs() - lastResetMs <= RESET_MARKER_MAX_AGE_MS
+    } catch (e: Exception) {
+        log.warn("failed to read the L1 shadow reset marker; treating as absent", e)
+        false
     }
 
     /**
@@ -854,26 +1119,49 @@ class L1ShadowSyncService internal constructor(
     }
 
     /**
-     * Tear down and rebuild the shadow SPV's PERSISTED state: stop the
-     * Rust client, delete the SDK wallet's L1 TXO/transaction rows (see
-     * [L1ShadowSource.clearSdkL1Rows] for why raw Room deletes are the
-     * only SDK surface for this), clear the SPV header/filter storage,
-     * then restart SPV for a fresh full scan (the scan start comes from
-     * the wallet's stored birth height Rust-side — no height override).
+     * Tear down and rebuild the shadow SPV's PERSISTED state, then restart
+     * SPV for a fresh full scan (the scan start comes from the wallet's
+     * stored birth height Rust-side — no height override). Sequencing:
      *
-     * Called automatically by the probe when an inflated-SDK mismatch
-     * persists (see [ShadowResetDecider] for the decision table and the
-     * once-per-process guarantee) and callable directly for a future
-     * debug screen. NOTE: the live Rust wallet's in-memory TXO view is
-     * NOT rebuilt by this call (the SDK offers no in-process reload short
-     * of `removeWallet`'s destructive cascade); the persisted rows are
-     * clean immediately and the in-memory view is rebuilt from them on
-     * the next app start.
+     * 1. stop the Rust client;
+     * 2. destroy the SPV storage —
+     *    - `hard = true` (the default and the only reliable mode): delete
+     *      the shadow dataDir (`filesDir/l1_shadow_spv/<network>`)
+     *      RECURSIVELY at the filesystem level, logging the directory and
+     *      deleted file count. This is app-owned storage nothing else
+     *      touches, and the client was just stopped (Rust unlocks the dir
+     *      on stop), so the delete is safe;
+     *    - `hard = false` (legacy): the SDK's `clearSpvStorage`, which is
+     *      a GUARANTEED no-op at this point in the sequence — the Rust
+     *      runtime drops the client (and with it the only reference to
+     *      the dataDir) on stop, so the call errors without touching a
+     *      file and the surviving header store + scan watermark suppress
+     *      the rescan (the live sdk=0 deficit incident; full trace on
+     *      [L1ShadowSource.clearSpvStorage]). Kept only so a future fixed
+     *      SDK can be exercised;
+     * 3. delete the SDK wallet's L1 TXO/transaction rows (see
+     *    [L1ShadowSource.clearSdkL1Rows] for why raw Room deletes are the
+     *    only SDK surface for this);
+     * 4. stamp the persisted reset marker
+     *    ([DashPayConfig.L1_SHADOW_LAST_RESET]) so a post-reset sdk=0
+     *    deficit is recognizable as reset-aftermath, even across a
+     *    process death ([ShadowResetDecider]);
+     * 5. restart SPV.
+     *
+     * Called automatically by the probe (inflated mismatch or
+     * reset-aftermath deficit — see [ShadowResetDecider] for the decision
+     * table and the once-per-process guarantees), by the debug broadcast
+     * ([L1ShadowDebugReset]), and callable directly for a future debug
+     * screen. NOTE: the live Rust wallet's in-memory TXO view is NOT
+     * rebuilt by this call (the SDK offers no in-process reload short of
+     * `removeWallet`'s destructive cascade); the persisted rows are clean
+     * immediately and the in-memory view is rebuilt from them on the next
+     * app start.
      *
      * Returns whether the reset ran (false when the shadow isn't running
      * or a step failed; failures are logged, never thrown).
      */
-    suspend fun resetShadowState(): Boolean {
+    suspend fun resetShadowState(hard: Boolean = true): Boolean {
         return try {
             mutex.withLock {
                 val walletIdHex = runningWalletIdHex.value
@@ -881,12 +1169,23 @@ class L1ShadowSyncService internal constructor(
                     log.info("L1 shadow reset skipped: shadow sync not running")
                     return false
                 }
-                log.warn("L1 shadow reset: stopping SPV, clearing L1 rows + SPV storage, rescanning")
+                log.warn(
+                    "L1 shadow {} reset: stopping SPV, {}, clearing L1 rows, rescanning",
+                    if (hard) "HARD" else "soft",
+                    if (hard) "deleting the SPV dataDir" else "clearing SPV storage via the SDK"
+                )
                 runCatching { source.stopSpv() }
                     .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
                 _progress.value = ShadowSyncProgress.IDLE
+                if (hard) {
+                    deleteSpvDataDir()
+                }
                 source.clearSdkL1Rows(walletIdHex)
-                source.clearSpvStorage()
+                if (!hard) {
+                    source.clearSpvStorage()
+                }
+                runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
+                    .onFailure { log.warn("shadow reset: failed to persist the reset marker", it) }
                 val dataDir = File(spvDataDirPath()).apply { mkdirs() }
                 source.startSpv(dataDir.absolutePath)
                 log.info(
@@ -900,6 +1199,40 @@ class L1ShadowSyncService internal constructor(
             if (t is CancellationException) throw t
             log.error("L1 shadow reset failed; the shadow may need a manual restart", t)
             false
+        }
+    }
+
+    /** Fire-and-forget hard [resetShadowState], for the debug broadcast trigger. */
+    fun hardResetInBackground(): Job = scope.launch { resetShadowState(hard = true) }
+
+    /**
+     * The hard-reset destroy step: recursively delete the shadow SPV
+     * dataDir at the filesystem level — the only reset that provably
+     * removes the Rust header store and scan watermark (the SDK's
+     * `clearSpvStorage` cannot once the client is stopped; see
+     * [L1ShadowSource.clearSpvStorage]). Logs the directory and the file
+     * count it held.
+     */
+    private fun deleteSpvDataDir() {
+        val dir = File(spvDataDirPath())
+        if (!dir.exists()) {
+            log.info("L1 shadow hard reset: dataDir {} already absent", dir.absolutePath)
+            return
+        }
+        val fileCount = dir.walkBottomUp().count { it.isFile }
+        val deleted = dir.deleteRecursively()
+        if (deleted) {
+            log.warn(
+                "L1 shadow hard reset: deleted SPV dataDir {} ({} files) — header store and " +
+                    "scan watermark gone; the restart re-scans from the wallet's birth height",
+                dir.absolutePath, fileCount
+            )
+        } else {
+            log.error(
+                "L1 shadow hard reset: FAILED to fully delete SPV dataDir {} ({} files before " +
+                    "the attempt) — leftover scan state may again suppress the rescan",
+                dir.absolutePath, fileCount
+            )
         }
     }
 
@@ -918,5 +1251,27 @@ class L1ShadowSyncService internal constructor(
 
         /** Progress one-liner throttle (the SDK feed itself ticks at 1 Hz). */
         internal const val PROGRESS_LOG_INTERVAL_MS = 30_000L
+
+        /** Watchdog heartbeat-check cadence. */
+        internal const val WATCHDOG_INTERVAL_MS = 60_000L
+
+        /**
+         * A probe-loop heartbeat older than this while the service claims
+         * to be running means the loop died/hung: 5 minutes = five missed
+         * 60s probes.
+         */
+        internal const val PROBE_STALL_THRESHOLD_MS = 5 * 60_000L
+
+        /** Retry backoff for a failed progress-monitor collection. */
+        internal const val LOOP_RETRY_DELAY_MS = 5_000L
+
+        /**
+         * How long the persisted reset marker counts as "recent" for the
+         * reset-aftermath deficit recovery ([ShadowResetDecider]) — long
+         * enough to span "this or the last process" across a typical
+         * debug/QA day, short enough that an ancient marker cannot
+         * legitimize resetting an organic deficit weeks later.
+         */
+        internal const val RESET_MARKER_MAX_AGE_MS = 24 * 60 * 60_000L
     }
 }

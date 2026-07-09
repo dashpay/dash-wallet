@@ -23,16 +23,20 @@ import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.dashfoundation.dashsdk.wallet.SpvSubProgress
 import org.dashfoundation.dashsdk.wallet.SpvSyncProgressData
 import org.dashfoundation.dashsdk.wallet.SpvSyncState
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -70,6 +74,8 @@ class L1ShadowSyncServiceTest {
         var stopCalls = 0
         var lastDataDir: String? = null
         var onStart: () -> Unit = {}
+        var onClearRows: () -> Unit = {}
+        var onProbe: suspend () -> Unit = {}
 
         var sdkConfirmed = 0L
         var sdkUnconfirmed = 0L
@@ -109,8 +115,10 @@ class L1ShadowSyncServiceTest {
 
         override fun spvProgress(): Flow<SpvSyncProgressData> = progressFlow
 
-        override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> =
-            sdkConfirmed to sdkUnconfirmed
+        override suspend fun sdkBalanceDuffs(walletIdHex: String): Pair<Long, Long> {
+            onProbe()
+            return sdkConfirmed to sdkUnconfirmed
+        }
 
         override suspend fun sdkTxCount(walletIdHex: String): Int = sdkTxs
 
@@ -131,23 +139,48 @@ class L1ShadowSyncServiceTest {
 
         override suspend fun clearSdkL1Rows(walletIdHex: String) {
             clearL1RowsCalls++
+            onClearRows()
         }
     }
 
-    private fun config(flag: Boolean?): DashPayConfig = mockk<DashPayConfig>().also {
+    /**
+     * DashPayConfig fake: the flag plus a persisted reset marker whose
+     * reads see the writes ([markerWrites] doubles as the assertion
+     * surface and the simulated DataStore).
+     */
+    private fun config(
+        flag: Boolean?,
+        lastResetMs: Long? = null,
+        markerWrites: MutableList<Long> = mutableListOf()
+    ): DashPayConfig = mockk<DashPayConfig>().also {
         coEvery { it.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns flag
+        coEvery { it.get(DashPayConfig.L1_SHADOW_LAST_RESET) } answers {
+            markerWrites.lastOrNull() ?: lastResetMs
+        }
+        coEvery { it.set(DashPayConfig.L1_SHADOW_LAST_RESET, any()) } answers {
+            markerWrites.add(secondArg())
+            Unit
+        }
     }
 
     private fun service(
         source: FakeSource,
         flag: Boolean? = true,
-        nowMs: () -> Long = { 1_000_000L }
+        nowMs: () -> Long = { 1_000_000L },
+        lastResetMs: Long? = null,
+        markerWrites: MutableList<Long> = mutableListOf(),
+        parityIntervalMs: Long = L1ShadowSyncService.PARITY_INTERVAL_MS,
+        watchdogIntervalMs: Long = L1ShadowSyncService.WATCHDOG_INTERVAL_MS,
+        probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS
     ) = L1ShadowSyncService(
         source = source,
-        dashPayConfig = config(flag),
+        dashPayConfig = config(flag, lastResetMs, markerWrites),
         scope = scope,
         spvDataDirPath = { dataDir.resolve("spv").absolutePath },
-        nowMs = nowMs
+        nowMs = nowMs,
+        parityIntervalMs = parityIntervalMs,
+        watchdogIntervalMs = watchdogIntervalMs,
+        probeStallThresholdMs = probeStallThresholdMs
     )
 
     // ── Lifecycle / inertness ─────────────────────────────────────────
@@ -490,6 +523,119 @@ class L1ShadowSyncServiceTest {
         }
     }
 
+    // ── Reset-aftermath deficit recovery (pure decision table) ────────
+
+    /** The live incident's signature: sdk=0 duffs AND 0 txs vs a real dashj balance. */
+    private fun emptyDeficit() = buildParityReport(
+        sdkConfirmedDuffs = 0, sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 154_427_919, dashjAvailableDuffs = 154_427_919,
+        sdkTxCount = 0, dashjTxCount = 12, sdkSynced = true, timestampMs = 1L
+    )
+
+    @Test
+    fun resetDecider_resetAftermathDeficit_hardResetsOnce_thenStandsDownOnce() {
+        val decider = ShadowResetDecider()
+        // Three consecutive qualifying probes required, like the inflated path.
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+        )
+        // The aftermath reset is once-per-process: if the rescan STILL comes
+        // back empty, stand down with the ERROR (once), then silence.
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+        )
+        repeat(4) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            )
+        }
+    }
+
+    @Test
+    fun resetDecider_organicEmptyDeficit_standsDownWithError_neverResets() {
+        val decider = ShadowResetDecider()
+        // Same empty-deficit signature but NO recent reset marker: this is
+        // an organic scan failure — surface it, never erase it.
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+        )
+        repeat(4) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+            )
+        }
+    }
+
+    @Test
+    fun resetDecider_deficitWithTxsOrOpenScan_neverQualifiesForAftermath() {
+        val decider = ShadowResetDecider()
+        repeat(5) {
+            // A deficit with SDK transactions present is a partial scan gap
+            // (the CoinJoin-derivation bug class) — MISMATCH log only.
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(deficit(), scanLooksComplete = true, recentResetMarker = true)
+            )
+            // And an empty deficit while the filter scan is still open is
+            // just a scan in progress.
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = false, recentResetMarker = true)
+            )
+        }
+    }
+
+    @Test
+    fun resetDecider_aftermathStreakIsBrokenByAnyOtherProbe() {
+        val decider = ShadowResetDecider()
+        repeat(2) {
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+        }
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(matching())) // streak reset
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH,
+            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
+        )
+    }
+
+    @Test
+    fun scanLooksComplete_requiresNonZeroTargetsReachedOnBothAxes() {
+        assertFalse(ShadowSyncProgress.IDLE.scanLooksComplete) // all-zero SYNCED-shaped snapshots don't count
+        val complete = ShadowSyncProgress(ShadowSyncPhase.SYNCED, 100.0, 100, 100, 100, 100)
+        assertTrue(complete.scanLooksComplete)
+        assertFalse(complete.copy(filterHeight = 99).scanLooksComplete)
+        assertFalse(complete.copy(headerTarget = 0, headerHeight = 0).scanLooksComplete)
+    }
+
     // ── Service-level reset + diff orchestration ──────────────────────
 
     private val synced = SpvSyncProgressData(
@@ -514,10 +660,10 @@ class L1ShadowSyncServiceTest {
         repeat(2) { service.probeParity(walletIdHex) }
         assertEquals(0, source.clearL1RowsCalls) // below the threshold
 
-        service.probeParity(walletIdHex) // third consecutive → reset
+        service.probeParity(walletIdHex) // third consecutive → HARD reset
         assertEquals(1, source.stopCalls)
         assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(0, source.clearSpvStorageCalls) // fs-level delete, not the broken SDK call
         assertEquals(2, source.startCalls) // initial + post-reset restart
 
         // The reset marks the progress un-synced until the rescan reports in.
@@ -539,7 +685,7 @@ class L1ShadowSyncServiceTest {
         // Mismatch persists through a full resync: ERROR + stand down, no 2nd reset.
         repeat(6) { service.probeParity(walletIdHex) }
         assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
         assertEquals(2, source.startCalls)
     }
 
@@ -567,11 +713,200 @@ class L1ShadowSyncServiceTest {
         assertEquals(0, source.clearL1RowsCalls)
 
         assertTrue(service.startIfEnabled())
-        assertTrue(service.resetShadowState()) // future debug-screen entry point
+        assertTrue(service.resetShadowState()) // debug-broadcast / debug-screen entry point
         assertEquals(1, source.stopCalls)
         assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(0, source.clearSpvStorageCalls) // hard by default
         assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun resetShadowState_hard_deletesDataDirBeforeRowsBeforeRestart_andStampsTheMarker() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val markerWrites = mutableListOf<Long>()
+        val service = service(source, nowMs = { 777_000L }, markerWrites = markerWrites)
+        val spvDir = dataDir.resolve("spv")
+        assertTrue(service.startIfEnabled())
+
+        // Simulate the persisted Rust scan state a stopped-client
+        // clearSpvStorage can never remove: header store + watermark files.
+        spvDir.resolve("headers").mkdirs()
+        spvDir.resolve("headers/block_headers.dat").writeText("stale header store")
+        spvDir.resolve("metadata.dat").writeText("scan watermark")
+
+        var dirExistedWhenRowsCleared: Boolean? = null
+        source.onClearRows = { dirExistedWhenRowsCleared = spvDir.exists() }
+        var dirExistedWhenRestarted: Boolean? = null
+        var rowsClearedBeforeRestart = -1
+        source.onStart = {
+            dirExistedWhenRestarted = spvDir.exists()
+            rowsClearedBeforeRestart = source.clearL1RowsCalls
+        }
+
+        assertTrue(service.resetShadowState(hard = true))
+        assertEquals(1, source.stopCalls)
+        // Sequencing: fs delete BEFORE the Room row delete...
+        assertEquals(false, dirExistedWhenRowsCleared)
+        // ...row delete BEFORE the restart, dir recreated for the restart.
+        assertEquals(1, rowsClearedBeforeRestart)
+        assertEquals(true, dirExistedWhenRestarted)
+        assertTrue(spvDir.isDirectory) // fresh empty dir for the rescan
+        assertNull(spvDir.resolve("metadata.dat").takeIf { it.exists() })
+        assertEquals(0, source.clearSpvStorageCalls) // the broken SDK call is not used
+        assertEquals(2, source.startCalls)
+        assertEquals(listOf(777_000L), markerWrites) // reset marker persisted
+    }
+
+    @Test
+    fun resetShadowState_soft_usesTheLegacySdkClearCall() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        assertTrue(service.resetShadowState(hard = false))
+        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    // ── Reset-aftermath deficit recovery (service-level) ──────────────
+
+    /**
+     * A SYNCED snapshot whose header AND filter scans report a reached
+     * non-zero target — the live incident's "instant SYNCED from surviving
+     * scan state" shape (headers=filters=1511575/1511575).
+     */
+    private val syncedComplete = SpvSyncProgressData(
+        overallState = SpvSyncState.SYNCED,
+        overallPercentage = 100.0,
+        headers = sub(SpvSyncState.SYNCED, 1_511_575, 1_511_575),
+        filterHeaders = sub(SpvSyncState.SYNCED, 1_511_575, 1_511_575),
+        filters = sub(SpvSyncState.SYNCED, 1_511_575, 1_511_575),
+        masternodes = sub(SpvSyncState.SYNCED, 1_511_575, 1_511_575)
+    )
+
+    /** The stuck post-broken-reset state: SDK sees NOTHING, dashj holds funds. */
+    private fun emptyDeficitSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        sdkConfirmed = 0
+        sdkTxs = 0
+        dashjBalances = 154_427_919L to 154_427_919L
+        dashjTxs = 12
+    }
+
+    @Test
+    fun probeParity_recoversAResetAftermathDeficit_withOneHardReset() = runBlocking {
+        val source = emptyDeficitSource()
+        val markerWrites = mutableListOf<Long>()
+        // A reset ran recently (this or the previous process): marker set.
+        val service = service(source, lastResetMs = 900_000L, markerWrites = markerWrites)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncedComplete
+
+        repeat(2) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls) // below the threshold
+
+        service.probeParity(walletIdHex) // third consecutive → ONE hard reset
+        assertEquals(1, source.stopCalls)
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls) // filesystem-level, not the SDK no-op
+        assertEquals(2, source.startCalls)
+        assertEquals(listOf(1_000_000L), markerWrites) // the new reset re-stamped the marker
+
+        // The post-reset rescan completes but the SDK view is STILL empty:
+        // stand down with the ERROR — no second reset this process.
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        source.progressFlow.value = syncedComplete
+        repeat(6) { service.probeParity(walletIdHex) }
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun probeParity_organicEmptyDeficit_neverResets() = runBlocking {
+        val source = emptyDeficitSource()
+        // No reset marker at all: the same stuck shape is an organic scan
+        // failure — surface it (ERROR), never reset.
+        val service = service(source, lastResetMs = null)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncedComplete
+        repeat(6) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    @Test
+    fun probeParity_staleResetMarker_countsAsOrganic() = runBlocking {
+        val source = emptyDeficitSource()
+        // Marker exists but is far older than the recency window (>24h).
+        val service = service(
+            source,
+            nowMs = { 200_000_000L },
+            lastResetMs = 100_000_000L
+        )
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncedComplete
+        repeat(6) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    @Test
+    fun probeParity_incompleteScanDeficit_isNotTreatedAsAftermath() = runBlocking {
+        val source = emptyDeficitSource()
+        val service = service(source, lastResetMs = 900_000L)
+        assertTrue(service.startIfEnabled())
+        // SYNCED overall but WITHOUT provable header+filter completion
+        // (no sub-progress blocks) — must not qualify.
+        source.progressFlow.value = synced
+        repeat(6) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    // ── Probe watchdog ────────────────────────────────────────────────
+
+    @Test
+    fun probeWatchdogDecider_restartsOnce_reportsExhaustionOnce_thenStaysSilent() {
+        val decider = ProbeWatchdogDecider(stallThresholdMs = 100)
+        // Fresh heartbeat: nothing to do.
+        assertEquals(ProbeWatchdogDecider.Decision.NONE, decider.onCheck(nowMs = 50, lastHeartbeatMs = 0))
+        // Stale heartbeat: restart, exactly once per process.
+        assertEquals(ProbeWatchdogDecider.Decision.RESTART, decider.onCheck(nowMs = 150, lastHeartbeatMs = 0))
+        // The restarted loop heartbeats again: healthy.
+        assertEquals(ProbeWatchdogDecider.Decision.NONE, decider.onCheck(nowMs = 200, lastHeartbeatMs = 160))
+        // It stalls AGAIN: the one restart is spent — exhausted (once)...
+        assertEquals(ProbeWatchdogDecider.Decision.EXHAUSTED, decider.onCheck(nowMs = 400, lastHeartbeatMs = 160))
+        // ...then silence.
+        repeat(3) {
+            assertEquals(ProbeWatchdogDecider.Decision.NONE, decider.onCheck(nowMs = 600, lastHeartbeatMs = 160))
+        }
+    }
+
+    @Test
+    fun watchdog_restartsAStuckProbeLoop() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        var hangProbes = true
+        // The first probe hangs forever inside the source — the field
+        // failure shape (loop alive but silent, or dead scope).
+        source.onProbe = { if (hangProbes) awaitCancellation() }
+        val service = service(
+            source,
+            nowMs = System::currentTimeMillis,
+            parityIntervalMs = 20,
+            watchdogIntervalMs = 10,
+            probeStallThresholdMs = 80
+        )
+        assertTrue(service.startIfEnabled())
+        assertNull(service.latestParity.value) // stuck inside the first probe
+
+        hangProbes = false // the restarted loop's probes succeed
+        withTimeout(5_000) {
+            while (service.latestParity.value == null) delay(10)
+        }
+        // The watchdog cancelled the stuck loop and relaunched it exactly
+        // once; the relaunched loop published a report.
+        assertNotNull(service.latestParity.value)
+        service.stop()
     }
 
     @Test

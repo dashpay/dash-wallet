@@ -100,6 +100,8 @@ import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
 import de.schildbach.wallet.transactions.MasternodeObserver;
 import de.schildbach.wallet.transactions.WalletBalanceObserver;
 import de.schildbach.wallet.ui.buy_sell.LiquidClient;
@@ -237,6 +239,8 @@ public class WalletApplication extends MultiDexApplication
     SecurityInitializer securityInitializer;
     @Inject
     TxDisplayCacheService txDisplayCacheService;
+    @Inject
+    L1ShadowSyncService l1ShadowSyncService;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -301,6 +305,10 @@ public class WalletApplication extends MultiDexApplication
         resetBlockchainSyncProgress();
         anrSupervisor = new AnrSupervisor();
         anrSupervisor.start();
+
+        // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
+        // no-op in release builds (the method returns before registering).
+        L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default
