@@ -26,11 +26,15 @@ import de.schildbach.wallet_test.BuildConfig
 import org.slf4j.LoggerFactory
 
 /**
- * DEBUG-BUILDS-ONLY adb trigger for a filesystem-level L1 shadow hard
- * reset ([L1ShadowSyncService.resetShadowState] with `hard = true`):
+ * DEBUG-BUILDS-ONLY adb trigger for the two L1 shadow recovery levels:
  *
  * ```
+ * # filesystem-level hard reset (resetShadowState(hard = true)):
  * adb shell am broadcast -a hashengineering.darkcoin.wallet_test.action.RESET_L1_SHADOW
+ *
+ * # DEFINITIVE recovery — full SDK-wallet re-creation
+ * # (L1ShadowSyncService.recoverByRecreatingWallet):
+ * adb shell am broadcast -a hashengineering.darkcoin.wallet_test.action.RESET_L1_SHADOW --ez recreate true
  * ```
  *
  * Registered DYNAMICALLY from [de.schildbach.wallet.WalletApplication]
@@ -39,13 +43,19 @@ import org.slf4j.LoggerFactory
  * surface ships to production. The receiver must be exported
  * ([ContextCompat.RECEIVER_EXPORTED]) because `adb shell am broadcast`
  * runs as the `shell` user, which cannot deliver to a non-exported
- * receiver; the debug-only registration is the guard. The reset itself is
- * fire-and-forget ([L1ShadowSyncService.hardResetInBackground]) and
- * safely no-ops when the shadow sync isn't running.
+ * receiver; the debug-only registration is the guard. Both triggers are
+ * fire-and-forget ([L1ShadowSyncService.hardResetInBackground] /
+ * [L1ShadowSyncService.recreateWalletInBackground]) and safely no-op when
+ * the shadow sync isn't running (reset) / no SDK wallet is bound
+ * (recreate). Either path touches ONLY SDK-side state — the dashj wallet
+ * is untouched (see the recovery KDoc's safety contract).
  */
 object L1ShadowDebugReset {
     /** Deliberately flavor-independent (a fixed string, not `applicationId`-derived). */
     const val ACTION_RESET_L1_SHADOW = "hashengineering.darkcoin.wallet_test.action.RESET_L1_SHADOW"
+
+    /** Boolean extra: true routes to the full SDK-wallet re-creation recovery. */
+    const val EXTRA_RECREATE = "recreate"
 
     private val log = LoggerFactory.getLogger(L1ShadowDebugReset::class.java)
 
@@ -58,6 +68,16 @@ object L1ShadowDebugReset {
         if (!BuildConfig.DEBUG) return
         val receiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context, intent: Intent) {
+                if (intent.getBooleanExtra(EXTRA_RECREATE, false)) {
+                    log.warn(
+                        "debug broadcast {} (recreate=true) received — launching a " +
+                            "fire-and-forget FULL SDK-WALLET RE-CREATION (removeWallet cascade " +
+                            "+ dataDir wipe + rebind + rescan; SDK-side state only)",
+                        intent.action
+                    )
+                    service.recreateWalletInBackground()
+                    return
+                }
                 log.warn(
                     "debug broadcast {} received — launching a fire-and-forget L1 shadow " +
                         "HARD reset (filesystem-level dataDir wipe + Room row purge + rescan)",

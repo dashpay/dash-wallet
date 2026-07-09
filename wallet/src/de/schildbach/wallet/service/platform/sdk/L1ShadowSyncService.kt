@@ -350,9 +350,18 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
  * dashj balance, stuck forever. That state has an unmistakable signature —
  * deficit AND `sdkTxCount == 0` AND headers+filters report complete AND a
  * reset ran recently (this or the previous process, per the persisted
- * marker) — and is recovered with ONE filesystem-level hard reset
- * ([Decision.HARD_RESET_AFTERMATH]). The same signature WITHOUT a recent
- * reset marker is an organic total scan failure: stand down with an ERROR
+ * marker). The first-generation recovery (one filesystem-level hard
+ * reset) proved INSUFFICIENT live: even after the dataDir was provably
+ * deleted and a full header/filter re-download completed, the wallet
+ * re-discovered nothing — the per-wallet scan watermark survives in the
+ * WALLET's own persisted state (see
+ * [L1ShadowSyncService.recoverByRecreatingWallet] for the SDK-source
+ * trace), which no combination of dataDir + row deletion can clear. The
+ * escalation is therefore full SDK-wallet RE-CREATION
+ * ([Decision.RECREATE_WALLET]): destroy the SDK wallet (removeWallet
+ * cascade), re-bind it from the app seed, and re-scan into genuinely
+ * fresh wallet state. The same signature WITHOUT a recent reset marker is
+ * an organic total scan failure: stand down with an ERROR
  * ([Decision.DEFICIT_STAND_DOWN]), never reset.
  *
  * ## Decision table (evaluated per probe; `empty deficit` = synced
@@ -367,27 +376,28 @@ internal const val DIFF_LOG_MAX_ENTRIES = 50
  * | inflated                        | ≥ threshold | reset already ran          | CORRUPT_AFTER_RESET (once), then NONE |
  * | deficit, sdkTx > 0 or scan open | streaks → 0 | —                          | NONE (MISMATCH log only) |
  * | empty deficit                   | < threshold | —                          | NONE |
- * | empty deficit + recent reset    | ≥ threshold | no aftermath reset yet     | HARD_RESET_AFTERMATH (once) |
- * | empty deficit + recent reset    | ≥ threshold | aftermath reset ran        | DEFICIT_STAND_DOWN (once), then NONE |
+ * | empty deficit + recent reset    | ≥ threshold | no re-creation yet         | RECREATE_WALLET (once) |
+ * | empty deficit + recent reset    | ≥ threshold | re-creation ran            | DEFICIT_STAND_DOWN (once), then NONE |
  * | empty deficit, NO recent reset  | ≥ threshold | —                          | DEFICIT_STAND_DOWN (once), then NONE |
  *
  * Each acting decision fires at most once per process (per decider
- * instance): one inflated RESET, one aftermath HARD reset, one
+ * instance): one inflated RESET, one wallet RE-CREATION, one
  * CORRUPT_AFTER_RESET report, one DEFICIT_STAND_DOWN report. After any
- * reset the shadow chain re-scans, so `synced=false` probes zero both
- * streaks; only a FULL post-reset resync that still shows the mismatch
- * for [requiredConsecutiveProbes] probes reaches the stand-down rows.
+ * reset/re-creation the shadow chain re-scans, so `synced=false` probes
+ * zero both streaks; only a FULL post-recovery resync that still shows
+ * the mismatch for [requiredConsecutiveProbes] probes reaches the
+ * stand-down rows.
  */
 internal class ShadowResetDecider(
     private val requiredConsecutiveProbes: Int = RESET_CONSECUTIVE_PROBES
 ) {
-    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET, HARD_RESET_AFTERMATH, DEFICIT_STAND_DOWN }
+    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET, RECREATE_WALLET, DEFICIT_STAND_DOWN }
 
     private var consecutiveInflated = 0
     private var consecutiveEmptyDeficit = 0
     private var resetIssued = false
     private var corruptReported = false
-    private var aftermathResetIssued = false
+    private var recreateIssued = false
     private var deficitStandDownReported = false
 
     fun onProbe(
@@ -423,10 +433,10 @@ internal class ShadowResetDecider(
             consecutiveEmptyDeficit++
             if (consecutiveEmptyDeficit < requiredConsecutiveProbes) return Decision.NONE
             return when {
-                recentResetMarker && !aftermathResetIssued -> {
-                    aftermathResetIssued = true
+                recentResetMarker && !recreateIssued -> {
+                    recreateIssued = true
                     consecutiveEmptyDeficit = 0
-                    Decision.HARD_RESET_AFTERMATH
+                    Decision.RECREATE_WALLET
                 }
                 !deficitStandDownReported -> {
                     deficitStandDownReported = true
@@ -696,6 +706,62 @@ internal class DashSdkL1ShadowSource(
     }
 }
 
+// ── Wallet-recreation seam ────────────────────────────────────────────
+
+/**
+ * Seam over the collaborators of the DEFINITIVE shadow recovery —
+ * full SDK-wallet re-creation
+ * ([L1ShadowSyncService.recoverByRecreatingWallet]) — so the recovery
+ * orchestration is host-JVM unit-testable. Everything here is SDK-side
+ * only; no implementation can reach dashj state (see the recovery KDoc's
+ * safety contract).
+ */
+interface ShadowWalletRecreator {
+    /**
+     * Stop the shielded-balance runtime (no-op when not running) so
+     * nothing touches the wallet's shielded rows mid-removal — the
+     * removal cascade deletes them ([DashSdkService.removeAppWallet]).
+     */
+    suspend fun stopShieldedSync()
+
+    /** The full wallet-removal cascade — [DashSdkService.removeAppWallet]. */
+    suspend fun removeSdkWallet(walletIdHex: String)
+
+    /**
+     * Clear the binder's success latch + bound-id cache
+     * ([SdkWalletBinder.resetForWalletRecreation]) so the next bind pass
+     * re-creates instead of latching on stale state.
+     */
+    suspend fun resetBinderLatch()
+
+    /**
+     * Fire-and-forget full bind pass — `createWallet` (now with the
+     * checkpoint-mapped birth height) + identity discovery + key heal —
+     * using the same non-interactive unlock recipe as the startup bind
+     * ([NonInteractiveWalletUnlock]). Never throws; failures are logged
+     * inside the binder.
+     */
+    fun rebindInBackground(): Job
+}
+
+/** Production [ShadowWalletRecreator]: the real SDK service, binder and shielded runtime. */
+internal class DashSdkShadowWalletRecreator(
+    private val sdkService: DashSdkService,
+    private val binder: SdkWalletBinder,
+    /** Lazy: breaks the Dagger cycle (ShieldedBalanceServiceImpl injects L1ShadowSyncService). */
+    private val shielded: () -> ShieldedBalanceService,
+    private val unlock: NonInteractiveWalletUnlock
+) : ShadowWalletRecreator {
+    override suspend fun stopShieldedSync() = shielded().stop()
+
+    override suspend fun removeSdkWallet(walletIdHex: String) =
+        sdkService.removeAppWallet(walletIdHex)
+
+    override suspend fun resetBinderLatch() = binder.resetForWalletRecreation()
+
+    override fun rebindInBackground(): Job = binder.bindInBackground(unlock::unlockOrNull)
+}
+
 // ── The shadow-sync service ───────────────────────────────────────────
 
 /**
@@ -760,7 +826,9 @@ class L1ShadowSyncService internal constructor(
     private val parityIntervalMs: Long = PARITY_INTERVAL_MS,
     private val progressLogIntervalMs: Long = PROGRESS_LOG_INTERVAL_MS,
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
-    private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS
+    private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
+    /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
+    private val recreator: ShadowWalletRecreator? = null
 ) {
     @Inject
     constructor(
@@ -768,7 +836,12 @@ class L1ShadowSyncService internal constructor(
         sdkService: DashSdkService,
         walletData: WalletDataProvider,
         dashPayConfig: DashPayConfig,
-        scope: CoroutineScope
+        scope: CoroutineScope,
+        sdkWalletBinder: SdkWalletBinder,
+        // Provider breaks the Dagger cycle: ShieldedBalanceServiceImpl's
+        // @Inject constructor takes L1ShadowSyncService (funding gate).
+        shieldedBalanceService: javax.inject.Provider<ShieldedBalanceService>,
+        nonInteractiveWalletUnlock: NonInteractiveWalletUnlock
     ) : this(
         source = DashSdkL1ShadowSource(sdkService, walletData),
         dashPayConfig = dashPayConfig,
@@ -777,11 +850,24 @@ class L1ShadowSyncService internal constructor(
         spvDataDirPath = {
             val network = toSdkNetwork(Constants.NETWORK_PARAMETERS)
             File(context.filesDir, "l1_shadow_spv/${network.networkName}").absolutePath
-        }
+        },
+        recreator = DashSdkShadowWalletRecreator(
+            sdkService = sdkService,
+            binder = sdkWalletBinder,
+            shielded = { shieldedBalanceService.get() },
+            unlock = nonInteractiveWalletUnlock
+        )
     )
 
     /** Serializes [startIfEnabled]/[stop] — the single-flight guarantee. */
     private val mutex = Mutex()
+
+    /**
+     * Serializes [recoverByRecreatingWallet] passes. Separate from [mutex]
+     * (which is NOT reentrant and is taken by the [stop] and locked steps
+     * INSIDE a recovery pass); lock order is always recoveryMutex → mutex.
+     */
+    private val recoveryMutex = Mutex()
 
     /** Running latch: the wallet id the probe compares, null when stopped. */
     private val runningWalletIdHex = MutableStateFlow<String?>(null)
@@ -1057,22 +1143,23 @@ class L1ShadowSyncService internal constructor(
                         "wallet state is only fully rebuilt on the next app start)",
                     report.sdkDuffs, report.dashjDuffs
                 )
-            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH -> {
+            ShadowResetDecider.Decision.RECREATE_WALLET -> {
                 log.warn(
                     "L1Parity reset-aftermath deficit: sdk=0 txs / {} duffs vs dashj={} duffs " +
                         "with a complete header+filter scan and a recent shadow reset — the " +
-                        "previous reset's clearSpvStorage no-oped (the SDK only clears a " +
-                        "RUNNING client's storage) and the surviving scan watermark suppressed " +
-                        "the rescan; running ONE filesystem-level hard reset",
+                        "per-wallet scan watermark (WalletEntity.syncedHeight, rehydrated into " +
+                        "the Rust wallet) survives every dataDir/row deletion and suppresses " +
+                        "re-matching; escalating to ONE full SDK-wallet re-creation " +
+                        "(fire-and-forget — it stops this probe loop)",
                     report.sdkDuffs, report.dashjDuffs
                 )
-                resetShadowState(hard = true)
+                recreateWalletInBackground()
             }
             ShadowResetDecider.Decision.DEFICIT_STAND_DOWN ->
                 log.error(
                     "L1Parity DEFICIT stand-down: sdk={} < dashj={} duffs with sdkTx=0 and a " +
                         "complete scan but no recent-reset explanation (marker absent/stale, or " +
-                        "the one aftermath hard reset already ran) — a deficit is the bug class " +
+                        "the one wallet re-creation already ran) — a deficit is the bug class " +
                         "this harness must surface, not erase; no automatic reset",
                     report.sdkDuffs, report.dashjDuffs
                 )
@@ -1148,15 +1235,18 @@ class L1ShadowSyncService internal constructor(
      *    process death ([ShadowResetDecider]);
      * 5. restart SPV.
      *
-     * Called automatically by the probe (inflated mismatch or
-     * reset-aftermath deficit — see [ShadowResetDecider] for the decision
-     * table and the once-per-process guarantees), by the debug broadcast
-     * ([L1ShadowDebugReset]), and callable directly for a future debug
-     * screen. NOTE: the live Rust wallet's in-memory TXO view is NOT
-     * rebuilt by this call (the SDK offers no in-process reload short of
-     * `removeWallet`'s destructive cascade); the persisted rows are clean
-     * immediately and the in-memory view is rebuilt from them on the next
-     * app start.
+     * Called automatically by the probe (inflated mismatch — see
+     * [ShadowResetDecider] for the decision table and the
+     * once-per-process guarantees; the reset-aftermath deficit escalates
+     * past this to [recoverByRecreatingWallet] instead, because the
+     * per-wallet scan watermark survives everything this reset deletes),
+     * by the debug broadcast ([L1ShadowDebugReset]), and callable
+     * directly for a future debug screen. NOTE: the live Rust wallet's
+     * in-memory TXO view is NOT rebuilt by this call (the SDK offers no
+     * in-process reload short of `removeWallet`'s destructive cascade —
+     * which is exactly what [recoverByRecreatingWallet] runs); the
+     * persisted rows are clean immediately and the in-memory view is
+     * rebuilt from them on the next app start.
      *
      * Returns whether the reset ran (false when the shadow isn't running
      * or a step failed; failures are logged, never thrown).
@@ -1204,6 +1294,165 @@ class L1ShadowSyncService internal constructor(
 
     /** Fire-and-forget hard [resetShadowState], for the debug broadcast trigger. */
     fun hardResetInBackground(): Job = scope.launch { resetShadowState(hard = true) }
+
+    /**
+     * Fire-and-forget [recoverByRecreatingWallet] — the entry point for
+     * the probe decision (which must not await it: the recovery cancels
+     * the very parity loop the decision fires from) and for the debug
+     * broadcast trigger (`--ez recreate true`, [L1ShadowDebugReset]).
+     */
+    fun recreateWalletInBackground(): Job = scope.launch { recoverByRecreatingWallet() }
+
+    /**
+     * The DEFINITIVE shadow-state recovery: full SDK-wallet RE-CREATION.
+     *
+     * ## Why the hard reset is not enough — where the watermark really lives
+     *
+     * Live evidence (third failure mode): after a hard reset (shadow SPV
+     * dataDir recursively deleted AND the wallet's Room TXO/tx rows
+     * deleted) a full header/filter re-download completed but the wallet
+     * re-discovered NOTHING — sdk=0 duffs / 0 TXOs / 0 txs vs dashj
+     * 154427919 / 128 / 436. Traced through the SDK sources: the
+     * per-wallet filter-scan watermark is `WalletEntity.syncedHeight`
+     * (`kotlin-sdk/.../persistence/entities/WalletEntity.kt:50`), written
+     * back on every changeset header
+     * (`PlatformWalletPersistenceHandler.onWalletChangesetHeader`, :424)
+     * and rehydrated on `loadPersistedWallets` into the Rust wallet's
+     * `WalletMetadata.synced_height`
+     * (`onLoadWalletList` → `buildUtxoRestoreData`, handler :1312/:1405 →
+     * `rs-platform-wallet-ffi/src/persistence.rs:2914`, overriding the
+     * `from_wallet` default; struct field `key-wallet/src/wallet/
+     * metadata.rs:21`). The SPV filter scanner then starts at
+     * `synced_height + 1` (`dash-spv/src/sync/filters/manager.rs:187`)
+     * and drops any wallet with `synced_height >= batch_end` before its
+     * scripts are ever matched (`manager.rs:739-752`) — so the re-download
+     * re-fetches every filter and MATCHES NONE of them. The watermark
+     * lives in the WALLET's persisted state (the Room `wallets` row +
+     * the rehydrated Rust wallet object), NOT in the SPV dataDir (which
+     * holds only chain data — headers/filters/masternodes/peers and one
+     * chain-global `last_target_height`, `dash-spv/src/storage/
+     * metadata.rs:11`). No combination of dataDir + TXO/tx row deletion
+     * can ever clear it; destroying and re-creating the wallet is the
+     * only SDK surface that does.
+     *
+     * ## Sequence
+     *
+     * 1. [stop] the shadow (probe loops cancelled, Rust SPV client
+     *    stopped) and stop the shielded runtime — nothing may touch the
+     *    wallet's rows mid-removal;
+     * 2. [DashSdkService.removeAppWallet]: the SDK's full removal cascade
+     *    (Room wallet/identity/TXO/address/shielded rows — including the
+     *    `wallets` row carrying `syncedHeight` — plus the Keystore-backed
+     *    identity keys and mnemonic, and the native wallet handle; full
+     *    trace on that KDoc);
+     * 3. delete the shadow SPV dataDir (same filesystem-level wipe as the
+     *    hard reset — the chain data is per-wallet-cheap and this
+     *    guarantees the fresh wallet's first scan starts from a clean
+     *    filter store);
+     * 4. stamp the persisted reset marker
+     *    ([DashPayConfig.L1_SHADOW_LAST_RESET]) so a still-empty deficit
+     *    after the re-creation remains recognizable as recovery aftermath
+     *    across a process death;
+     * 5. clear the binder latch ([SdkWalletBinder.resetForWalletRecreation])
+     *    and fire the full bind pass with the same non-interactive unlock
+     *    recipe as startup ([NonInteractiveWalletUnlock]): `createWallet`
+     *    re-derives the SAME deterministic wallet id from the same seed —
+     *    this time with the checkpoint-mapped birth height — then identity
+     *    discovery + key heal re-attach the app identity;
+     * 6. once the bind pass finishes, restart the shadow SPV
+     *    ([startIfEnabled]) — the fresh wallet's `synced_height` starts at
+     *    `birth_height - 1`, so the filter scan actually re-matches and
+     *    repopulates every TXO/tx row.
+     *
+     * ## Safety: SDK-side state ONLY — dashj is untouchable from here
+     *
+     * Every step operates exclusively on SDK-owned state: the SDK's Room
+     * database, the SDK's Keystore-backed `WalletStorage`, the app-owned
+     * shadow SPV dataDir (`filesDir/l1_shadow_spv/<network>`), and the
+     * SDK shielded runtime. The dashj wallet — the L1 source of truth
+     * holding user funds — its wallet file, block store and keys are not
+     * reachable through ANY collaborator on this path
+     * ([ShadowWalletRecreator] exposes no dashj surface; [L1ShadowSource]
+     * only READS dashj balances). The user's seed is never destroyed: the
+     * canonical copy lives encrypted in the dashj wallet; only the SDK's
+     * `WalletStorage` COPY is deleted by the cascade, and the rebind
+     * re-stores it from freshly-decrypted words. The wallet's SHIELDED
+     * note state IS wiped by the cascade (all four `shielded_*` tables —
+     * wallet-scoped, deleted explicitly by `deleteWalletData`), so any
+     * shielded balance needs a full shielded re-sync afterwards —
+     * acceptable (0 on the incident device), and the shielded runtime's
+     * next `ensureShieldedReady` pass rebuilds from the network.
+     *
+     * Once-per-process automation is the DECIDER's job
+     * ([ShadowResetDecider.Decision.RECREATE_WALLET]); this method itself
+     * is re-runnable (debug trigger). Returns whether the destructive
+     * phase completed and the rebind was launched (false when no wallet
+     * is bound, the recreator isn't wired, or a step failed — failures
+     * are logged, never thrown).
+     */
+    suspend fun recoverByRecreatingWallet(): Boolean {
+        val recreator = this.recreator ?: run {
+            log.warn("L1 shadow wallet re-creation skipped: no recreator wired (test construction?)")
+            return false
+        }
+        return try {
+            recoveryMutex.withLock {
+                val walletIdHex = runningWalletIdHex.value ?: source.boundWalletIdOrNull()
+                if (walletIdHex == null) {
+                    log.info("L1 shadow wallet re-creation skipped: no SDK wallet bound")
+                    return false
+                }
+                log.warn(
+                    "L1 shadow RECOVERY BY WALLET RE-CREATION for SDK wallet {}…: stopping " +
+                        "shadow + shielded sync, removing the SDK wallet (full cascade — this " +
+                        "destroys the persisted scan watermark row deletion cannot reach), " +
+                        "deleting the SPV dataDir, re-binding from the app seed, re-scanning. " +
+                        "SDK-side state only; dashj is untouched",
+                    walletIdHex.take(8)
+                )
+                stop() // takes the main mutex itself; cancels loops + stops the Rust client
+                runCatching { recreator.stopShieldedSync() }
+                    .onFailure { log.warn("wallet re-creation: shielded stop failed; continuing", it) }
+                mutex.withLock {
+                    if (runningWalletIdHex.value != null) {
+                        log.warn("wallet re-creation aborted: the shadow was restarted concurrently")
+                        return false
+                    }
+                    recreator.removeSdkWallet(walletIdHex)
+                    deleteSpvDataDir()
+                    runCatching { dashPayConfig.set(DashPayConfig.L1_SHADOW_LAST_RESET, nowMs()) }
+                        .onFailure { log.warn("wallet re-creation: failed to persist the reset marker", it) }
+                    recreator.resetBinderLatch()
+                }
+                val bindJob = recreator.rebindInBackground()
+                scope.launch {
+                    bindJob.join()
+                    val started = startIfEnabled()
+                    log.info(
+                        "post-re-creation shadow restart: started={} (false = bind pass did not " +
+                            "complete a wallet bind yet; the next binding trigger retries and the " +
+                            "shadow starts on the next start trigger)",
+                        started
+                    )
+                }.logCompletion("post-re-creation restart")
+                log.info(
+                    "L1 shadow wallet re-creation: destructive phase complete for wallet {}…; " +
+                        "rebind launched in the background",
+                    walletIdHex.take(8)
+                )
+                true
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error(
+                "L1 shadow wallet re-creation FAILED — the SDK wallet may be partially removed; " +
+                    "the next binding trigger re-creates it (createWallet is deterministic on the " +
+                    "seed), and dashj state is unaffected either way",
+                t
+            )
+            false
+        }
+    }
 
     /**
      * The hard-reset destroy step: recursively delete the shadow SPV

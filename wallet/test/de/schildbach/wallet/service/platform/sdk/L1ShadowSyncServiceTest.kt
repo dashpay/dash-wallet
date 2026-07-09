@@ -163,6 +163,43 @@ class L1ShadowSyncServiceTest {
         }
     }
 
+    /**
+     * [ShadowWalletRecreator] fake: records the recovery orchestration
+     * as an ordered event log (the sequencing assertion surface) and
+     * exposes a controllable bind [Job] so tests can verify the shadow
+     * restart WAITS for the rebind pass.
+     */
+    private class FakeRecreator : ShadowWalletRecreator {
+        val events = mutableListOf<String>()
+        val removedWalletIds = mutableListOf<String>()
+
+        /** The job [rebindInBackground] returns; completed by default. */
+        var bindJob: kotlinx.coroutines.CompletableJob =
+            kotlinx.coroutines.Job().apply { complete() }
+        var onRemove: () -> Unit = {}
+        var onBinderReset: () -> Unit = {}
+
+        override suspend fun stopShieldedSync() {
+            events += "stopShielded"
+        }
+
+        override suspend fun removeSdkWallet(walletIdHex: String) {
+            events += "removeWallet"
+            removedWalletIds += walletIdHex
+            onRemove()
+        }
+
+        override suspend fun resetBinderLatch() {
+            events += "resetBinderLatch"
+            onBinderReset()
+        }
+
+        override fun rebindInBackground(): kotlinx.coroutines.Job {
+            events += "rebind"
+            return bindJob
+        }
+    }
+
     private fun service(
         source: FakeSource,
         flag: Boolean? = true,
@@ -171,7 +208,8 @@ class L1ShadowSyncServiceTest {
         markerWrites: MutableList<Long> = mutableListOf(),
         parityIntervalMs: Long = L1ShadowSyncService.PARITY_INTERVAL_MS,
         watchdogIntervalMs: Long = L1ShadowSyncService.WATCHDOG_INTERVAL_MS,
-        probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS
+        probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
+        recreator: ShadowWalletRecreator? = null
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites),
@@ -180,7 +218,8 @@ class L1ShadowSyncServiceTest {
         nowMs = nowMs,
         parityIntervalMs = parityIntervalMs,
         watchdogIntervalMs = watchdogIntervalMs,
-        probeStallThresholdMs = probeStallThresholdMs
+        probeStallThresholdMs = probeStallThresholdMs,
+        recreator = recreator
     )
 
     // ── Lifecycle / inertness ─────────────────────────────────────────
@@ -533,9 +572,11 @@ class L1ShadowSyncServiceTest {
     )
 
     @Test
-    fun resetDecider_resetAftermathDeficit_hardResetsOnce_thenStandsDownOnce() {
+    fun resetDecider_resetAftermathDeficit_escalatesToRecreateWalletOnce_thenStandsDownOnce() {
         val decider = ShadowResetDecider()
-        // Three consecutive qualifying probes required, like the inflated path.
+        // Three consecutive qualifying probes required, like the inflated
+        // path — the live device state (deficit + marker present) must
+        // trigger on the THIRD synced probe after install.
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
@@ -543,11 +584,12 @@ class L1ShadowSyncServiceTest {
             )
         }
         assertEquals(
-            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH,
+            ShadowResetDecider.Decision.RECREATE_WALLET,
             decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
         )
-        // The aftermath reset is once-per-process: if the rescan STILL comes
-        // back empty, stand down with the ERROR (once), then silence.
+        // The wallet re-creation is once-per-process: if the re-created
+        // wallet's rescan STILL comes back empty, stand down with the
+        // ERROR (once), then silence.
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
@@ -622,7 +664,7 @@ class L1ShadowSyncServiceTest {
             )
         }
         assertEquals(
-            ShadowResetDecider.Decision.HARD_RESET_AFTERMATH,
+            ShadowResetDecider.Decision.RECREATE_WALLET,
             decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = true)
         )
     }
@@ -793,45 +835,62 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
-    fun probeParity_recoversAResetAftermathDeficit_withOneHardReset() = runBlocking {
+    fun probeParity_escalatesAResetAftermathDeficit_toOneWalletRecreation() = runBlocking {
         val source = emptyDeficitSource()
+        val recreator = FakeRecreator()
         val markerWrites = mutableListOf<Long>()
         // A reset ran recently (this or the previous process): marker set.
-        val service = service(source, lastResetMs = 900_000L, markerWrites = markerWrites)
+        // This is the live device state — deficit + marker — which must
+        // trigger the re-creation on the THIRD synced probe after install.
+        val service = service(
+            source, lastResetMs = 900_000L, markerWrites = markerWrites, recreator = recreator
+        )
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
 
         repeat(2) { service.probeParity(walletIdHex) }
-        assertEquals(0, source.clearL1RowsCalls) // below the threshold
+        assertTrue(recreator.events.isEmpty()) // below the threshold
 
-        service.probeParity(walletIdHex) // third consecutive → ONE hard reset
-        assertEquals(1, source.stopCalls)
-        assertEquals(1, source.clearL1RowsCalls)
-        assertEquals(0, source.clearSpvStorageCalls) // filesystem-level, not the SDK no-op
+        service.probeParity(walletIdHex) // third consecutive → ONE re-creation
+        assertEquals(1, source.stopCalls) // shadow SPV stopped
+        assertEquals(
+            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
+            recreator.events
+        )
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        // removeWallet's cascade replaces row deletion — the recovery must
+        // NOT run the old row purge (nothing left to purge) nor the broken
+        // SDK clearSpvStorage call.
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
+        // The bind job completed immediately → the shadow restarted fresh.
         assertEquals(2, source.startCalls)
-        assertEquals(listOf(1_000_000L), markerWrites) // the new reset re-stamped the marker
+        assertEquals(listOf(1_000_000L), markerWrites) // recovery stamped the marker
 
-        // The post-reset rescan completes but the SDK view is STILL empty:
-        // stand down with the ERROR — no second reset this process.
+        // The re-created wallet's rescan completes but the SDK view is
+        // STILL empty: stand down with the ERROR — no second re-creation
+        // this process.
         source.progressFlow.value = SpvSyncProgressData.EMPTY
         source.progressFlow.value = syncedComplete
         repeat(6) { service.probeParity(walletIdHex) }
-        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(1, recreator.removedWalletIds.size)
         assertEquals(2, source.startCalls)
     }
 
     @Test
-    fun probeParity_organicEmptyDeficit_neverResets() = runBlocking {
+    fun probeParity_organicEmptyDeficit_neverResetsNorRecreates() = runBlocking {
         val source = emptyDeficitSource()
+        val recreator = FakeRecreator()
         // No reset marker at all: the same stuck shape is an organic scan
-        // failure — surface it (ERROR), never reset.
-        val service = service(source, lastResetMs = null)
+        // failure — surface it (ERROR), never reset, never recreate.
+        val service = service(source, lastResetMs = null, recreator = recreator)
         assertTrue(service.startIfEnabled())
         source.progressFlow.value = syncedComplete
         repeat(6) { service.probeParity(walletIdHex) }
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
         assertEquals(1, source.startCalls)
+        assertTrue(recreator.events.isEmpty())
     }
 
     @Test
@@ -853,7 +912,8 @@ class L1ShadowSyncServiceTest {
     @Test
     fun probeParity_incompleteScanDeficit_isNotTreatedAsAftermath() = runBlocking {
         val source = emptyDeficitSource()
-        val service = service(source, lastResetMs = 900_000L)
+        val recreator = FakeRecreator()
+        val service = service(source, lastResetMs = 900_000L, recreator = recreator)
         assertTrue(service.startIfEnabled())
         // SYNCED overall but WITHOUT provable header+filter completion
         // (no sub-progress blocks) — must not qualify.
@@ -861,6 +921,130 @@ class L1ShadowSyncServiceTest {
         repeat(6) { service.probeParity(walletIdHex) }
         assertEquals(0, source.clearL1RowsCalls)
         assertEquals(1, source.startCalls)
+        assertTrue(recreator.events.isEmpty())
+    }
+
+    // ── Wallet re-creation recovery (orchestration) ───────────────────
+
+    @Test
+    fun recoverByRecreatingWallet_runsTheFullSequenceInOrder() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val markerWrites = mutableListOf<Long>()
+        val service = service(
+            source, nowMs = { 888_000L }, markerWrites = markerWrites, recreator = recreator
+        )
+        val spvDir = dataDir.resolve("spv")
+        assertTrue(service.startIfEnabled())
+
+        // Simulate surviving chain data; the WATERMARK itself lives in the
+        // wallet's Room row (WalletEntity.syncedHeight) — destroyed by the
+        // removeWallet step, which is the whole point of this recovery.
+        spvDir.resolve("headers").mkdirs()
+        spvDir.resolve("headers/block_headers.dat").writeText("chain data")
+
+        // The restart must WAIT for the rebind: hold the bind job open.
+        recreator.bindJob = kotlinx.coroutines.Job()
+
+        var spvStoppedWhenRemoved = -1
+        var dirExistedWhenRemoved: Boolean? = null
+        recreator.onRemove = {
+            spvStoppedWhenRemoved = source.stopCalls
+            dirExistedWhenRemoved = spvDir.resolve("headers/block_headers.dat").exists()
+        }
+        var dirExistedAtBinderReset: Boolean? = null
+        var markerStampedAtBinderReset: Int? = null
+        recreator.onBinderReset = {
+            dirExistedAtBinderReset = spvDir.exists()
+            markerStampedAtBinderReset = markerWrites.size
+        }
+
+        assertTrue(service.recoverByRecreatingWallet())
+
+        // 1. shadow SPV + shielded stopped BEFORE the destructive steps…
+        assertEquals(1, spvStoppedWhenRemoved)
+        assertEquals(
+            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
+            recreator.events
+        )
+        assertEquals(listOf(walletIdHex), recreator.removedWalletIds)
+        // 2. …removeWallet ran with the dataDir still present, then the
+        //    dataDir was deleted and the marker stamped BEFORE the binder
+        //    latch cleared (so a rebind can never see half-torn-down state).
+        assertEquals(true, dirExistedWhenRemoved)
+        assertEquals(false, dirExistedAtBinderReset)
+        assertEquals(1, markerStampedAtBinderReset)
+        assertEquals(listOf(888_000L), markerWrites)
+        // 3. the legacy row purge / SDK storage clear are NOT part of this
+        //    path (the cascade already removed every row).
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
+        // 4. the shadow does NOT restart until the bind pass finishes…
+        assertEquals(1, source.startCalls)
+        assertEquals(ShadowSyncProgress.IDLE, service.progress.value)
+
+        // 5. …and restarts fresh once it does.
+        recreator.bindJob.complete()
+        withTimeout(5_000) {
+            while (source.startCalls < 2) delay(5)
+        }
+        assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_worksWhenTheShadowIsNotRunning() = runBlocking {
+        // The debug-broadcast case: shadow never started this process, but
+        // the SDK holds a bound wallet — recovery still runs (the wallet id
+        // comes from the source, and stop() is a no-op).
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+
+        assertTrue(service.recoverByRecreatingWallet())
+        assertEquals(
+            listOf("stopShielded", "removeWallet", "resetBinderLatch", "rebind"),
+            recreator.events
+        )
+        assertEquals(0, source.stopCalls) // nothing was running to stop
+        // Bind job is completed by default → restart attempt happens and
+        // succeeds (the fake still reports a bound wallet).
+        assertEquals(1, source.startCalls)
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_skipsWhenNoWalletIsBound() = runBlocking {
+        val source = FakeSource(boundWalletId = null)
+        val recreator = FakeRecreator()
+        val service = service(source, recreator = recreator)
+
+        assertFalse(service.recoverByRecreatingWallet())
+        assertTrue(recreator.events.isEmpty())
+        assertEquals(0, source.startCalls)
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_skipsWithoutARecreatorWired() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source) // recreator = null (test default)
+        assertTrue(service.startIfEnabled())
+        assertFalse(service.recoverByRecreatingWallet())
+        assertEquals(0, source.stopCalls) // nothing torn down
+    }
+
+    @Test
+    fun recoverByRecreatingWallet_swallowsARemoveFailure_andSkipsTheRebind() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val recreator = FakeRecreator()
+        recreator.onRemove = { throw IllegalStateException("native removeWallet failed") }
+        val service = service(source, recreator = recreator)
+        assertTrue(service.startIfEnabled())
+
+        assertFalse(service.recoverByRecreatingWallet())
+        // The teardown ran, but neither the binder latch nor the rebind may
+        // fire against a wallet whose removal state is unknown.
+        assertEquals(listOf("stopShielded", "removeWallet"), recreator.events)
+        assertEquals(1, source.stopCalls)
+        assertEquals(1, source.startCalls) // no restart launched
     }
 
     // ── Probe watchdog ────────────────────────────────────────────────

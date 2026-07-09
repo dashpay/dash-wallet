@@ -20,6 +20,7 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.database.entity.IdentityCreationState
+import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -32,6 +33,45 @@ import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/**
+ * The NON-INTERACTIVE wallet-unlock recipe shared by every background
+ * binding trigger — originally inlined at
+ * [de.schildbach.wallet.service.platform.PlatformSynchronizationService.init],
+ * extracted so the shadow-state recovery path
+ * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+ * .recoverByRecreatingWallet]) reuses the exact same recipe instead of
+ * duplicating it.
+ *
+ * Recovers the wallet-crypter key the same way the platform sync loops do
+ * ([PlatformRepo.getWalletEncryptionKey] — the SecurityGuard-stored
+ * password, scrypt-derived, NO user prompt ever). Returns null when no
+ * unlock is obtainable right now (wallet not loaded, or the password
+ * retrieval failed) — callers treat that as "skip this pass, retry on the
+ * next trigger". The [WalletUnlock] trust model holds: this class asserts
+ * the user already authorized background platform work by setting up
+ * DashPay (the same assertion the pre-extraction call sites made).
+ */
+@Singleton
+class NonInteractiveWalletUnlock @Inject constructor(
+    private val walletData: WalletDataProvider,
+    private val platformRepo: PlatformRepo
+) {
+    /**
+     * The current unlock proof, or null when unavailable. Potentially
+     * expensive (scrypt key derivation) — call from a background
+     * dispatcher only, and only after cheap eligibility gates have passed
+     * (the [SdkWalletBinder.bindInBackground] lazy-provider contract).
+     */
+    suspend fun unlockOrNull(): WalletUnlock? {
+        val wallet = walletData.wallet
+        return when {
+            wallet == null -> null
+            !wallet.isEncrypted -> WalletUnlock.Unencrypted
+            else -> platformRepo.getWalletEncryptionKey()?.let { WalletUnlock.EncryptionKey(it) }
+        }
+    }
+}
 
 /**
  * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
@@ -148,6 +188,34 @@ class SdkWalletBinder internal constructor(
      */
     @Volatile
     private var completed = false
+
+    /**
+     * Forget everything a previous pass established — the shadow-state
+     * recovery hook ([L1ShadowSyncService.recoverByRecreatingWallet])
+     * calls this right after [DashSdkService.removeAppWallet] destroyed
+     * the bound SDK wallet, so the NEXT [bindIfEnabled] pass runs the
+     * full first-bind path again: the mnemonic dedup finds nothing (the
+     * manager holds no wallets and the phrase was deleted from
+     * `WalletStorage` by the removal cascade), `createWallet` re-derives
+     * the SAME deterministic wallet id from the same seed — this time
+     * with the checkpoint-mapped birth height — and identity discovery +
+     * key healing re-attach the app identity to the fresh wallet rows.
+     *
+     * Serialized under the binder [mutex] so an in-flight pass finishes
+     * (against the doomed wallet — harmless, it is removed after) before
+     * the latch clears; the reset itself can never interleave with a
+     * half-done pass.
+     */
+    internal suspend fun resetForWalletRecreation() {
+        mutex.withLock {
+            log.warn(
+                "binder state reset for SDK wallet re-creation: bound wallet id and success " +
+                    "latch cleared — the next binding trigger runs a full bind + discovery pass"
+            )
+            boundWalletIdHex = null
+            completed = false
+        }
+    }
 
     /**
      * Fire-and-forget variant for call sites that must not wait (the

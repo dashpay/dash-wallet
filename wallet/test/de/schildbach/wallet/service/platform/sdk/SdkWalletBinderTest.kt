@@ -110,6 +110,11 @@ class SdkWalletBinderTest {
             lastHealedIdentityId = identityId
             return onHealKeys(walletIdHex, identityId)
         }
+
+        var removeCalls = 0
+        override suspend fun removeAppWallet(walletIdHex: String) {
+            removeCalls++
+        }
     }
 
     private class FakeMnemonicProvider(
@@ -300,6 +305,40 @@ class SdkWalletBinderTest {
 
         assertEquals(callsAfterFirst, sdk.totalCalls)
         assertEquals(1, mnemonic.calls)
+    }
+
+    @Test
+    fun resetForWalletRecreation_clearsTheLatch_andTheNextPassRebindsFromTheSeed() = runBlocking {
+        // The shadow-recovery hook: after removeAppWallet destroyed the SDK
+        // wallet, the reset must force the next pass through the FULL
+        // first-bind path (seed hand-off + createWallet + discovery) rather
+        // than latching on the stale bound id.
+        val sdk = FakeSdkService()
+        sdk.onBind = { _, _ -> walletId }
+        var identityAttached = false // removeWallet's cascade detaches it
+        sdk.managed = { _, _ -> identityAttached }
+        sdk.onDiscover = { _, _ ->
+            identityAttached = true
+            listOf(Identifier.from(userId).toBuffer())
+        }
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, mnemonic.calls)
+
+        identityAttached = false // the wallet (and its identity rows) got removed
+        binder.resetForWalletRecreation()
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(2, sdk.bindCalls) // re-bound: the seed was re-requested…
+        assertEquals(2, mnemonic.calls)
+        assertEquals(2, sdk.discoverCalls) // …and discovery re-ran on the fresh wallet
+
+        // And the re-bound state latches again.
+        binder.bindIfEnabled(unlock)
+        assertEquals(2, sdk.bindCalls)
     }
 
     @Test

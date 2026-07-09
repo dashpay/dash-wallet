@@ -190,6 +190,53 @@ interface DashSdkService {
     suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String
 
     /**
+     * Destroy the bound SDK wallet and its ENTIRE persisted SDK-side
+     * state — the definitive shadow-state recovery step
+     * ([L1ShadowSyncService.recoverByRecreatingWallet]): when per-wallet
+     * scan state is corrupt beyond what row deletion can heal, the only
+     * SDK surface that provably discards it is the full wallet-removal
+     * cascade, after which a fresh [bindAppWallet] re-creates the wallet
+     * from the same seed (same deterministic id) with a clean slate.
+     *
+     * ## What the SDK's `PlatformWalletManager.removeWallet` deletes
+     * (traced through the SDK sources — `PlatformWalletManager.kt:521`,
+     * `PlatformWalletPersistenceHandler.deleteWalletData`, line 2087, one
+     * Room transaction):
+     *
+     * 1. every identity private key of the wallet's identities from the
+     *    Keystore-backed `WalletStorage` (`privkey.<pubkeyHex>` entries);
+     * 2. the Rust wallet (native unregister + in-memory manager map entry
+     *    + native handle close) — including the in-Rust sync/scan state
+     *    rehydration source;
+     * 3. the Room cascade: identity rows (+ their CASCADE children:
+     *    public keys, DPNS names, DashPay profiles/contact requests/
+     *    payments, documents), `txos`, `pending_inputs`, `asset_locks`,
+     *    `platform_addresses`, all four shielded tables
+     *    (`shielded_notes`, `shielded_outgoing_notes`,
+     *    `shielded_activities`, `shielded_sync_states` — the shielded
+     *    balance therefore needs a full re-sync after re-creation), the
+     *    `wallets` row itself (CASCADE → accounts → core/platform
+     *    addresses), and an orphaned-`transactions` sweep;
+     * 4. LAST, the wallet's mnemonic from `WalletStorage`
+     *    (`mnemonic.<walletIdHex>`).
+     *
+     * The mnemonic deletion is safe for re-creation: the app's canonical
+     * seed lives in the (untouched) dashj wallet, and the next
+     * [bindAppWallet] hands freshly-decrypted words to `createWallet`,
+     * which re-derives the SAME network-scoped wallet id (deterministic
+     * from the seed — `rs-platform-wallet/src/manager/wallet_lifecycle.rs`)
+     * and re-stores the phrase keyed by it.
+     *
+     * Does NOT touch: any dashj state (wallet file, block store, keys),
+     * the app's own Room database, or the shadow SPV dataDir (chain data
+     * — deleted separately by the recovery path). Internally calls
+     * [ensureStarted]. No-op (logged) when the wallet id is not loaded.
+     *
+     * @param walletIdHex the bound wallet id ([bindAppWallet]'s return).
+     */
+    suspend fun removeAppWallet(walletIdHex: String)
+
+    /**
      * True when [identityId] (32 bytes) is a *managed* identity of the SDK
      * wallet [walletIdHex] — i.e. the Rust `IdentityManager` holds its slot
      * and can derive/sign with its keys (the precondition every

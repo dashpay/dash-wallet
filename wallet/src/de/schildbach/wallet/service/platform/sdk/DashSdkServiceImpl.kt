@@ -451,6 +451,37 @@ class DashSdkServiceImpl @Inject constructor(
         }
     }
 
+    /**
+     * See [DashSdkService.removeAppWallet] for the cascade contract.
+     * Serialized under [bindLock] so a removal can never interleave with
+     * a concurrent [bindAppWallet]'s dedup-then-create critical section
+     * (a bind racing the removal either finishes first against the doomed
+     * wallet — harmless — or runs after and re-creates cleanly).
+     */
+    override suspend fun removeAppWallet(walletIdHex: String) {
+        ensureStarted()
+        val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        bindLock.withLock {
+            if (!current.walletManager.wallets.value.containsKey(walletIdHex)) {
+                log.warn(
+                    "removeAppWallet skipped: SDK wallet {}… is not loaded (already removed?)",
+                    walletIdHex.take(8)
+                )
+                return
+            }
+            log.warn(
+                "removing SDK wallet {}… — full persistence cascade (Room wallet/identity/TXO/" +
+                    "address/shielded rows, Keystore-backed identity keys and mnemonic, native " +
+                    "wallet handle); dashj state is untouched and the next bind re-creates the " +
+                    "same deterministic wallet id from the app seed",
+                walletIdHex.take(8)
+            )
+            current.walletManager.removeWallet(walletId)
+            log.info("SDK wallet {}… removed", walletIdHex.take(8))
+        }
+    }
+
     override suspend fun isIdentityManaged(walletIdHex: String, identityId: ByteArray): Boolean {
         ensureStarted()
         val current = checkNotNull(runtime) { "SDK runtime missing after ensureStarted()" }

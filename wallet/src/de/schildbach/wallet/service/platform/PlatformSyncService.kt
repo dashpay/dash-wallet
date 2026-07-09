@@ -48,11 +48,11 @@ import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
-import de.schildbach.wallet.service.platform.sdk.WalletUnlock
 import de.schildbach.wallet.service.platform.work.RestoreIdentityOperation
 import de.schildbach.wallet.ui.dashpay.OnContactsUpdated
 import de.schildbach.wallet.ui.dashpay.OnPreBlockProgressListener
@@ -159,6 +159,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkWalletBinder: SdkWalletBinder,
+    private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
     private val l1ShadowSyncService: L1ShadowSyncService,
     private val shieldedBalanceService: ShieldedBalanceService,
 ) : PlatformSyncService {
@@ -200,17 +201,10 @@ class PlatformSynchronizationService @Inject constructor(
         // platform-sync startup latency is unaffected, and provably inert
         // unless a USE_KOTLIN_SDK_* flag is on. The unlock provider runs
         // only after the binder's eligibility gate passes: it recovers the
-        // wallet-crypter key the same non-interactive way the sync loops
-        // below already do (PlatformRepo.getWalletEncryptionKey — the
-        // SecurityGuard-stored password, no user prompt).
-        val bindJob = sdkWalletBinder.bindInBackground {
-            val wallet = walletDataProvider.wallet
-            when {
-                wallet == null -> null
-                !wallet.isEncrypted -> WalletUnlock.Unencrypted
-                else -> platformRepo.getWalletEncryptionKey()?.let { WalletUnlock.EncryptionKey(it) }
-            }
-        }
+        // wallet-crypter key non-interactively ([NonInteractiveWalletUnlock]
+        // — the SecurityGuard-stored password, no user prompt; extracted so
+        // the L1 shadow recovery path reuses the identical recipe).
+        val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
         // Phase 5a (docs/kotlin-sdk-migration-plan.md): after the bind pass
         // finishes (success or not — the service re-checks the bound state
         // itself), kick the L1 shadow-sync parity harness. Fire-and-forget,
