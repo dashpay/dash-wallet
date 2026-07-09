@@ -520,4 +520,52 @@
     <string name="create_instant_username_button">Create instant username</string>
     <string name="create_instant_username_cancel">Cancel</string>
 
+    <!-- Shielded balance (Kotlin SDK migration Phase 4, gated by USE_KOTLIN_SDK_SHIELDED) -->
+    <string name="shielded_balance_title">Shielded balance</string>
+    <string name="shielded_balance_card_title">Shielded</string>
+    <string name="shielded_wallet_name">Dash Wallet</string>
+    <string name="shielded_credits_symbol">C</string>
+    <string name="shielded_tab_receive">Receive</string>
+    <string name="shielded_tab_internal">Internal</string>
+    <string name="shielded_tab_send">Send</string>
+    <string name="shielded_your_address">Your shielded address</string>
+    <string name="shielded_address_unavailable">Your shielded address will appear here once the shielded balance is ready</string>
+    <string name="shielded_share_address">Share address</string>
+    <string name="shielded_copy_address">Copy address</string>
+    <string name="shielded_address_copied">Address copied</string>
+    <string name="shielded_internal_transfer_to_from">Internal transfer to/from</string>
+    <string name="shielded_scan_qr">Scan QR</string>
+    <string name="shielded_send_to_address">Send to address</string>
+    <string name="shielded_internal_transfer">Internal transfer</string>
+    <string name="shielded_from">From</string>
+    <string name="shielded_to">To</string>
+    <string name="shielded_swap_direction">Reverse transfer direction</string>
+    <string name="shielded_you_will_transfer">You will transfer</string>
+    <string name="shielded_confirm">Confirm</string>
+    <string name="shielded_total_credits">Total credits</string>
+    <string name="shielded_total">Total</string>
+    <string name="shielded_privacy_tip_title">Privacy tip</string>
+    <string name="shielded_privacy_tip_message">For best privacy, wait at least 2 hours before using these credits.</string>
+    <string name="shielded_delay_tip_title">Up to 10 minutes to spend</string>
+    <string name="shielded_delay_tip_message">After this transfer, it can take up to 10 minutes before you can use your Dash. This delay is part of how your privacy is protected.</string>
+    <string name="shielded_timing_title">Transfers take different times</string>
+    <string name="shielded_timing_to_title">From Dash Wallet to Shielded balance</string>
+    <string name="shielded_timing_to_message">The transfer is instant</string>
+    <string name="shielded_timing_from_title">From Shielded balance to Dash Wallet</string>
+    <string name="shielded_timing_from_message">The transfer could take up to 10 minutes</string>
+    <string name="shielded_timing_got_it">I got it</string>
+    <string name="shielded_proving_title">Sending your transfer…</string>
+    <string name="shielded_proving_message">Building the privacy proof can take about 30 seconds. Keep the app open — this can’t be cancelled once it starts.</string>
+    <string name="shielded_transfer_completed">Transfer completed</string>
+    <string name="shielded_transfer_failed">This transfer was not sent</string>
+    <string name="shielded_transfer_failed_message">Nothing left your balance. Check the details and try again.</string>
+    <string name="shielded_transfer_ambiguous_title">Transfer status unknown</string>
+    <string name="shielded_transfer_ambiguous_message">Your transfer may have gone through. Do not send it again — your balances will update after the next sync.</string>
+    <string name="shielded_error_insufficient_funds">Insufficient funds</string>
+    <string name="shielded_error_not_ready">Wait until the chain is fully synced to make transfers</string>
+    <string name="shielded_send_title">Send to shielded address</string>
+    <string name="shielded_send_address_hint">Shielded address</string>
+    <string name="shielded_paste">Paste</string>
+    <string name="shielded_close">Close</string>
+
 </resources>

@@ -46,6 +46,8 @@ data class SettingsUIState(
     val localCurrencySymbol: String = Constants.USD_CURRENCY,
     val transactionMetadataVisible: Boolean = false,
     val transactionMetadataSubtitle: String? = null,
+    /** Kotlin SDK migration Phase 4: `USE_KOTLIN_SDK_SHIELDED` is on. */
+    val shieldedBalanceVisible: Boolean = false,
 )
 
 @HiltViewModel
@@ -96,6 +98,14 @@ class SettingsViewModel @Inject constructor(
             .distinctUntilChanged()
             .onEach { isVisible ->
                 _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
+            }.launchIn(viewModelScope)
+
+        // Shielded balance entry point (flag-gated; the screen additionally
+        // requires Constants.SUPPORTS_PLATFORM)
+        dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_SHIELDED)
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                _uiState.value = _uiState.value.copy(shieldedBalanceVisible = enabled == true)
             }.launchIn(viewModelScope)
     }
 
