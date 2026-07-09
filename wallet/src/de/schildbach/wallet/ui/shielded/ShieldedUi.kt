@@ -34,7 +34,11 @@ import java.text.NumberFormat
 
 /** Direction of the "Internal transfer" flow (Figma 1746:18463 / 1746:18480). */
 enum class ShieldedTransferDirection {
-    /** Dash Wallet → Shielded balance (instant; Type 15 shield). */
+    /**
+     * Dash Wallet → Shielded balance: spends the L1 balance via an asset
+     * lock + Type 18 `ShieldFromAssetLock`
+     * ([de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService.shieldFromWallet]).
+     */
     ToShielded,
 
     /** Shielded balance → Dash Wallet (up to ~10 min; Type 19 withdraw to Core). */
@@ -61,6 +65,15 @@ sealed class ShieldedSubmitState {
 
     /** `SdkWriteResult.Ambiguous` — terminal "may have gone through, do NOT retry". */
     object MayHaveGoneThrough : ShieldedSubmitState()
+
+    /**
+     * Dash Wallet → Shielded only: the L1 asset lock is out (the Dash
+     * left the spendable balance) but the shield transition needs an
+     * automatic retry (`ShieldFromWalletOutcome.SHIELD_PENDING_RETRY`).
+     * TERMINAL like [MayHaveGoneThrough] — the funds are committed, so
+     * the UI must never offer a manual "send again".
+     */
+    object LockedPendingShield : ShieldedSubmitState()
 }
 
 /** Platform credits per duff (1 DASH = 1e8 duffs = 1e11 credits). */

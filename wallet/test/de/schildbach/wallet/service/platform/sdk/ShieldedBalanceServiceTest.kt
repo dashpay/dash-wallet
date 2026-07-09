@@ -188,15 +188,65 @@ class ShieldedBalanceServiceTest {
             lastCoreFeePerByte = coreFeePerByte
             onWithdraw()
         }
+
+        // ── shieldFromWallet / staged-retry surface ────────────────────
+
+        var fundCalls = 0
+        var resumeCalls = 0
+        var lockQueries = 0
+        var lastFundRecipient: ByteArray? = null
+        var lastFundAmountDuffs: Long? = null
+        val resumedOutPoints = mutableListOf<Pair<ByteArray, Int>>()
+        var lastResumeRecipient: ByteArray? = null
+        var onFund: () -> Unit = {}
+        var onResume: (ByteArray, Int) -> Unit = { _, _ -> }
+        var shieldLocks: () -> List<PendingWalletShieldLock> = { emptyList() }
+
+        /** 10k duffs of flat shielded fee by default. */
+        var feeCredits: () -> Long = { 10_000_000L }
+
+        override suspend fun fundFromAssetLock(
+            walletId: ByteArray,
+            recipientRaw43: ByteArray,
+            amountDuffs: Long
+        ) {
+            fundCalls++
+            broadcastCalls++
+            lastFundRecipient = recipientRaw43
+            lastFundAmountDuffs = amountDuffs
+            onFund()
+        }
+
+        override suspend fun resumeFundFromAssetLock(
+            walletId: ByteArray,
+            outPointTxid: ByteArray,
+            outPointVout: Int,
+            recipientRaw43: ByteArray
+        ) {
+            resumeCalls++
+            broadcastCalls++
+            resumedOutPoints += outPointTxid to outPointVout
+            lastResumeRecipient = recipientRaw43
+            onResume(outPointTxid, outPointVout)
+        }
+
+        override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> {
+            lockQueries++
+            events += "locks"
+            return shieldLocks()
+        }
+
+        override suspend fun estimateShieldFeeCredits(): Long = feeCredits()
     }
 
-    private fun config(enabled: Boolean?): DashPayConfig = mockk {
+    private fun config(enabled: Boolean?, l1ShadowEnabled: Boolean = true): DashPayConfig = mockk {
         if (enabled == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws
                 IllegalStateException("datastore unavailable")
         } else {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns enabled
         }
+        coEvery { get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) } returns l1ShadowEnabled
     }
 
     /** A source in the fully-ready state: shielded build, wallet bound. */
@@ -205,13 +255,29 @@ class ShieldedBalanceServiceTest {
         boundWalletId = { walletIdHex }
     )
 
-    private fun service(source: FakeSource, enabled: Boolean? = true) =
-        ShieldedBalanceServiceImpl(
-            source = source,
-            dashPayConfig = config(enabled),
-            shieldedDbPath = { dbPath },
-            displayHrp = { hrp }
-        )
+    private val now = 1_000_000_000L
+
+    /** A fresh full-MATCH parity report — the open L1 funding gate. */
+    private fun matchParity(ageMs: Long = 0L) = buildParityReport(
+        sdkConfirmedDuffs = 100, sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 100, dashjAvailableDuffs = 100,
+        sdkTxCount = 3, dashjTxCount = 3,
+        sdkSynced = true, timestampMs = now - ageMs
+    )
+
+    private fun service(
+        source: FakeSource,
+        enabled: Boolean? = true,
+        l1ShadowEnabled: Boolean = true,
+        parity: () -> ParityReport? = { null }
+    ) = ShieldedBalanceServiceImpl(
+        source = source,
+        dashPayConfig = config(enabled, l1ShadowEnabled),
+        shieldedDbPath = { dbPath },
+        displayHrp = { hrp },
+        l1Parity = parity,
+        nowMs = { now }
+    )
 
     // ── Inertness: flag off means NOTHING touches the SDK ─────────────────
 
@@ -230,6 +296,9 @@ class ShieldedBalanceServiceTest {
         )
         assertTrue(service.unshieldToCredits(Dash.COIN) is SdkWriteResult.NotBroadcast)
         assertTrue(service.withdrawToCore("XyZ", Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertFalse(service.isWalletShieldingAvailable())
+        assertEquals(0, service.resumePendingWalletShields())
         service.stop()
 
         assertEquals(0, source.interactions())
@@ -729,6 +798,250 @@ class ShieldedBalanceServiceTest {
         // Right HRP and length but a non-Orchard type byte.
         val wrongType = Bech32m.encode(hrp, ByteArray(44) { if (it == 0) 0x11 else 1 })!!
         assertNull(decodeOrchardAddress(wrongType, hrp))
+    }
+
+    // ── shieldFromWallet: the L1 funding gate ─────────────────────────────
+
+    @Test
+    fun fundingGate_pure_decisionTable() {
+        val fresh = matchParity()
+        assertTrue(evaluateWalletFundingGate(fresh, now, 300_000).allowed)
+
+        // No report — shadow not running.
+        assertFalse(evaluateWalletFundingGate(null, now, 300_000).allowed)
+        // Stale report — probe loop stopped.
+        assertFalse(evaluateWalletFundingGate(matchParity(ageMs = 300_001), now, 300_000).allowed)
+        // Not synced — MISMATCH-PRESYNC is not evidence.
+        assertFalse(
+            evaluateWalletFundingGate(fresh.copy(sdkSynced = false), now, 300_000).allowed
+        )
+        // Any parity mismatch closes the gate.
+        assertFalse(
+            evaluateWalletFundingGate(fresh.copy(balancesMatch = false), now, 300_000).allowed
+        )
+        assertFalse(
+            evaluateWalletFundingGate(fresh.copy(confirmedBalancesMatch = false), now, 300_000).allowed
+        )
+        assertFalse(
+            evaluateWalletFundingGate(fresh.copy(sdkTxCount = 4), now, 300_000).allowed
+        )
+    }
+
+    @Test
+    fun shieldFromWallet_gateClosed_isNotBroadcast_beforeAnySpend() = runBlocking {
+        val source = readySource()
+        // No parity report at all — the funds-safe default.
+        val service = service(source, parity = { null })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+        assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    @Test
+    fun shieldFromWallet_l1FlagOff_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        val service = service(source, l1ShadowEnabled = false, parity = { matchParity() })
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+        assertFalse(service.isWalletShieldingAvailable())
+    }
+
+    @Test
+    fun shieldFromWallet_belowPoolFee_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        // Fee floor: 10k duffs shielded fee + 50k duffs asset-lock base cost.
+        assertTrue(service.shieldFromWallet(Dash(60_000)) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+
+        // Just above the floor goes through.
+        assertTrue(service.shieldFromWallet(Dash(60_001)) is SdkWriteResult.Broadcast)
+        assertEquals(1, source.fundCalls)
+    }
+
+    @Test
+    fun shieldFromWallet_happyPath_fundsWithDuffsAndOwnAddress() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertEquals(
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED),
+            result
+        )
+        assertEquals(1, source.fundCalls)
+        // L1 duffs, NOT credits — the SDK converts internally.
+        assertEquals(Dash.COIN.duffs, source.lastFundAmountDuffs)
+        // Shield-to-self: the wallet's own default Orchard address.
+        assertArrayEquals(source.defaultAddress, source.lastFundRecipient)
+    }
+
+    // ── shieldFromWallet: staged-failure classification ───────────────────
+
+    @Test
+    fun shieldFromWallet_failureWithNewTrackedLock_isLockPendingRetry() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        // Before the attempt: no locks. After: the lock the failed attempt
+        // broadcast (the Rust side tracks it before broadcasting).
+        var funded = false
+        source.shieldLocks = {
+            if (funded) listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 100_000)) else emptyList()
+        }
+        source.onFund = { funded = true; throw RuntimeException("transition timed out") }
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertEquals(
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY),
+            result
+        )
+    }
+
+    @Test
+    fun shieldFromWallet_definitiveRejection_noNewLock_isNotBroadcast() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+        source.onFund = { throw DashSdkError.InvalidParameter("insufficient funds") }
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+    }
+
+    @Test
+    fun shieldFromWallet_unknownFailure_noNewLock_isAmbiguous() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+        source.onFund = { throw RuntimeException("connection reset") }
+
+        // The persistence bridge is async: no row is NOT proof of no
+        // broadcast — must stay Ambiguous, never NotBroadcast.
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Ambiguous)
+    }
+
+    @Test
+    fun shieldFromWallet_preexistingLock_doesNotMaskDefinitiveRejection() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        // A lock from an EARLIER interrupted attempt exists before this
+        // call — it must not be misread as this call's evidence.
+        source.shieldLocks = { listOf(PendingWalletShieldLock("bb".repeat(32) + ":1", 2, 5_000)) }
+        source.onFund = { throw DashSdkError.InvalidParameter("bad params") }
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+    }
+
+    @Test
+    fun shieldFromWallet_unreadableLockStateBefore_refusesToSpend() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+        source.shieldLocks = { throw RuntimeException("db closed") }
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertEquals(0, source.fundCalls)
+    }
+
+    // ── The staged-retry sweep ────────────────────────────────────────────
+
+    @Test
+    fun resumeSweep_resumesOnlyUnconsumedLocks_withReversedTxid() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        val txidDisplayHex = (1..32).joinToString("") { "%02x".format(it) }
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock("$txidDisplayHex:2", 1, 100_000), // Broadcast → resumable
+                PendingWalletShieldLock("cc".repeat(32) + ":0", 4, 100_000) // Consumed → skipped
+            )
+        }
+
+        assertEquals(1, service.resumePendingWalletShields())
+        assertEquals(1, source.resumeCalls)
+
+        val (txid, vout) = source.resumedOutPoints.single()
+        assertEquals(2, vout)
+        // Display hex is byte-reversed from the raw wire-order txid.
+        assertArrayEquals(ByteArray(32) { (32 - it).toByte() }, txid)
+        assertArrayEquals(source.defaultAddress, source.lastResumeRecipient)
+    }
+
+    @Test
+    fun resumeSweep_isolatesPerLockFailures() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+        source.shieldLocks = {
+            listOf(
+                PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1),
+                PendingWalletShieldLock("bb".repeat(32) + ":0", 2, 1)
+            )
+        }
+        source.onResume = { txid, _ ->
+            if (txid[0] == 0xaa.toByte()) throw RuntimeException("still no chainlock")
+        }
+
+        // The first lock fails, the second still resumes.
+        assertEquals(1, service.resumePendingWalletShields())
+        assertEquals(2, source.resumeCalls)
+    }
+
+    @Test
+    fun resumeSweep_capsAttemptsPerOutpointPerProcess() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+        source.shieldLocks = { listOf(PendingWalletShieldLock("aa".repeat(32) + ":0", 1, 1)) }
+        source.onResume = { _, _ -> throw RuntimeException("permanently stuck") }
+
+        repeat(5) { assertEquals(0, service.resumePendingWalletShields()) }
+
+        // 3 attempts max per process, later sweeps skip the outpoint.
+        assertEquals(3, source.resumeCalls)
+    }
+
+    @Test
+    fun resumeSweep_nothingPending_isCheap() = runBlocking {
+        val source = readySource()
+        val service = service(source, parity = { matchParity() })
+
+        assertEquals(0, service.resumePendingWalletShields())
+        assertEquals(1, source.lockQueries)
+        assertEquals(0, source.resumeCalls)
+    }
+
+    // ── Pure helpers ──────────────────────────────────────────────────────
+
+    @Test
+    fun parseOutPointHex_parsesAndReversesToWireOrder() {
+        val displayHex = (1..32).joinToString("") { "%02x".format(it) }
+        val parsed = parseOutPointHex("$displayHex:7")
+        assertNotNull(parsed)
+        assertEquals(7, parsed!!.second)
+        assertArrayEquals(ByteArray(32) { (32 - it).toByte() }, parsed.first)
+    }
+
+    @Test
+    fun parseOutPointHex_rejectsMalformedInput() {
+        assertNull(parseOutPointHex(""))
+        assertNull(parseOutPointHex("aa:0"))
+        assertNull(parseOutPointHex("zz".repeat(32) + ":0")) // not hex
+        assertNull(parseOutPointHex("aa".repeat(32))) // no vout
+        assertNull(parseOutPointHex("aa".repeat(32) + ":x"))
+        assertNull(parseOutPointHex("aa".repeat(32) + ":-1"))
+    }
+
+    @Test
+    fun ceilCreditsToDuffs_roundsUp() {
+        assertEquals(0L, ceilCreditsToDuffs(0))
+        assertEquals(1L, ceilCreditsToDuffs(1))
+        assertEquals(1L, ceilCreditsToDuffs(1_000))
+        assertEquals(2L, ceilCreditsToDuffs(1_001))
     }
 
     // ── Fixtures ──────────────────────────────────────────────────────────

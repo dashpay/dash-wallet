@@ -18,6 +18,7 @@
 package de.schildbach.wallet.ui.shielded
 
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import io.mockk.coEvery
 import io.mockk.every
@@ -54,6 +55,7 @@ class ShieldedTransferViewModelTest {
 
     private val shieldedService = mockk<ShieldedBalanceService> {
         coEvery { ensureShieldedReady() } returns true
+        coEvery { isWalletShieldingAvailable() } returns true
         every { observeShieldedBalance() } returns flowOf(Dash.parse("15.5"))
     }
     private val walletData = mockk<WalletDataProvider> {
@@ -116,18 +118,39 @@ class ShieldedTransferViewModelTest {
     }
 
     @Test
-    fun broadcast_mapsToSuccess() = runTest(dispatcher) {
-        coEvery { shieldedService.shieldFromCredits(any()) } returns SdkWriteResult.Broadcast(Unit)
+    fun toShielded_usesShieldFromWallet_andMapsToSuccess() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
         val vm = viewModel()
 
         vm.typeAmountAndConfirm()
 
         assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        // "Dash Wallet → Shielded" spends the L1 balance via the asset-lock
+        // pipeline — never the credits-based Type 15.
+        io.mockk.coVerify { shieldedService.shieldFromWallet(Dash.parse("1")) }
+        io.mockk.coVerify(exactly = 0) { shieldedService.shieldFromCredits(any()) }
+    }
+
+    @Test
+    fun toShielded_lockPendingRetry_mapsToTerminalLockedPendingShield() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        val vm = viewModel()
+
+        vm.typeAmountAndConfirm()
+
+        val state = vm.uiState.value
+        assertEquals(ShieldedSubmitState.LockedPendingShield, state.submitState)
+        // terminal: the L1 lock is out, so no manual retry is ever offered
+        assertFalse(state.canContinue)
+        vm.onKeyInput("9")
+        assertEquals("1", vm.uiState.value.amountText)
     }
 
     @Test
     fun notBroadcast_mapsToNotSent_andAllowsRetry() = runTest(dispatcher) {
-        coEvery { shieldedService.shieldFromCredits(any()) } returns
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
             SdkWriteResult.NotBroadcast("preflight failed")
         val vm = viewModel()
 
@@ -141,7 +164,7 @@ class ShieldedTransferViewModelTest {
 
     @Test
     fun ambiguous_mapsToTerminalMayHaveGoneThrough() = runTest(dispatcher) {
-        coEvery { shieldedService.shieldFromCredits(any()) } returns
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
             SdkWriteResult.Ambiguous(RuntimeException("timeout"))
         val vm = viewModel()
 
@@ -153,6 +176,20 @@ class ShieldedTransferViewModelTest {
         assertFalse(state.canContinue)
         vm.onKeyInput("9")
         assertEquals("1", vm.uiState.value.amountText)
+    }
+
+    @Test
+    fun walletShieldingUnavailable_blocksToShielded_butNotFromShielded() = runTest(dispatcher) {
+        coEvery { shieldedService.isWalletShieldingAvailable() } returns false
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        // The L1 funding gate is closed: Dash Wallet → Shielded is blocked…
+        assertFalse(vm.uiState.value.canContinue)
+
+        // …but Shielded → Dash Wallet does not need the gate.
+        vm.onSwapDirection()
+        assertTrue(vm.uiState.value.canContinue)
     }
 
     @Test

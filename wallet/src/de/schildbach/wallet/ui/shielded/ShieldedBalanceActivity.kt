@@ -26,10 +26,14 @@ import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet_test.R
+import kotlinx.coroutines.launch
+import org.dash.wallet.common.services.AuthenticationManager
+import javax.inject.Inject
 
 /**
  * Host of the flag-gated shielded-balances flows (Figma canvas 231:200
@@ -62,6 +66,16 @@ class ShieldedBalanceActivity : LockScreenActivity() {
 
     private val transferViewModel: ShieldedTransferViewModel by viewModels()
     private val sendViewModel: ShieldedSendViewModel by viewModels()
+
+    /**
+     * The same PIN/biometric gate the send flows use (CrowdNode deposit,
+     * gift-card purchase pattern: `securityFunctions.authenticate(activity)
+     * ?: return`). The internal transfer moves real funds — the
+     * Dash Wallet → Shielded direction spends the L1 balance via an
+     * asset lock — so confirming requires the send-flow authentication.
+     */
+    @Inject
+    lateinit var securityFunctions: AuthenticationManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,12 +110,25 @@ class ShieldedBalanceActivity : LockScreenActivity() {
                     else -> ShieldedTransferScreen(
                         viewModel = transferViewModel,
                         onBackClick = { finish() },
-                        onFinished = { finish() }
+                        onFinished = { finish() },
+                        onConfirm = ::authenticateAndConfirmTransfer
                     )
                 }
             }
         }
         setContentView(composeView)
+    }
+
+    /**
+     * PIN/biometric first, then the spend. A dismissed or failed
+     * authentication simply returns — the confirm sheet stays open and
+     * nothing is submitted.
+     */
+    private fun authenticateAndConfirmTransfer() {
+        lifecycleScope.launch {
+            securityFunctions.authenticate(this@ShieldedBalanceActivity) ?: return@launch
+            transferViewModel.onConfirm()
+        }
     }
 
     private fun copyAddress(address: String) {

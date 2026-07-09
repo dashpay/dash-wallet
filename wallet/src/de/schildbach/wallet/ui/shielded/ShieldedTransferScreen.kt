@@ -90,7 +90,13 @@ private const val DASH_CODE = "DASH"
 fun ShieldedTransferScreen(
     viewModel: ShieldedTransferViewModel = hiltViewModel(),
     onBackClick: () -> Unit,
-    onFinished: () -> Unit
+    onFinished: () -> Unit,
+    /**
+     * Confirm-sheet action. The host overrides this to run the send-flow
+     * user authentication (PIN/biometric) BEFORE [ShieldedTransferViewModel.onConfirm]
+     * — the Dash Wallet → Shielded direction is a real L1 spend.
+     */
+    onConfirm: () -> Unit = viewModel::onConfirm
 ) {
     ShieldedTransferScreen(
         uiStateFlow = viewModel.uiState,
@@ -102,7 +108,7 @@ fun ShieldedTransferScreen(
         onSwapDirection = viewModel::onSwapDirection,
         onContinue = viewModel::onContinue,
         onDismissConfirm = viewModel::onDismissConfirm,
-        onConfirm = viewModel::onConfirm,
+        onConfirm = onConfirm,
         onResultHandled = viewModel::onResultHandled
     )
 }
@@ -229,10 +235,20 @@ private fun ShieldedTransferScreenContent(
             )
         }
 
-        // "Wait until the chain is fully synced…" (Figma 1733:16190)
-        if (uiState.readyCheckDone && !uiState.ready) {
+        // "Wait until the chain is fully synced…" (Figma 1733:16190).
+        // The second variant covers a ready runtime whose Dash Wallet →
+        // Shielded direction is still blocked by the L1 funding gate.
+        if (uiState.readyCheckDone &&
+            (!uiState.ready || !uiState.directionAvailable)
+        ) {
             Toast(
-                text = stringResource(R.string.shielded_error_not_ready),
+                text = stringResource(
+                    if (!uiState.ready) {
+                        R.string.shielded_error_not_ready
+                    } else {
+                        R.string.shielded_error_wallet_funding_unavailable
+                    }
+                ),
                 imageResource = ToastImageResource.Loading.resourceId,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -266,6 +282,12 @@ private fun ShieldedTransferScreenContent(
                 }
             }
             ShieldedSubmitState.MayHaveGoneThrough -> AmbiguousOverlay(
+                onClose = {
+                    onResultHandled()
+                    onFinished()
+                }
+            )
+            ShieldedSubmitState.LockedPendingShield -> LockedPendingShieldOverlay(
                 onClose = {
                     onResultHandled()
                     onFinished()
@@ -440,20 +462,14 @@ private fun TransferHintOrError(uiState: ShieldedTransferUIState) {
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(2.dp))
-                when (uiState.direction) {
-                    // arriving side is credits (Figma 1689:13965)
-                    ShieldedTransferDirection.ToShielded -> BalanceWithSymbol(
-                        text = "~ ${uiState.amount.toCreditsString()}",
-                        isCredits = true,
-                        big = true
-                    )
-                    // arriving side is Dash (Figma 1741:16738)
-                    ShieldedTransferDirection.FromShielded -> BalanceWithSymbol(
-                        text = "~ ${uiState.amount.toDisplayString()}",
-                        isCredits = false,
-                        big = true
-                    )
-                }
+                // Both directions arrive as Dash: To Shielded shields the
+                // L1 amount (minus the small pool fee), From Shielded
+                // withdraws to Core — hence the "~" in both.
+                BalanceWithSymbol(
+                    text = "~ ${uiState.amount.toDisplayString()}",
+                    isCredits = false,
+                    big = true
+                )
             }
         }
     }
@@ -531,13 +547,17 @@ private fun ShieldedConfirmSheet(
                     modifier = Modifier.size(20.dp)
                 )
             }
-            val fiatPart = amount.toFiatAt(rate)?.toFormattedString()?.let { " / $it" } ?: ""
-            Text(
-                text = "~ ${amount.toCreditsString()} ${stringResource(R.string.shielded_credits_symbol)}$fiatPart",
-                style = MyTheme.Typography.BodyMedium,
-                color = MyTheme.Colors.textSecondary,
-                modifier = Modifier.padding(top = 4.dp)
-            )
+            // Both directions move Dash (To Shielded spends the L1
+            // balance via an asset lock) — only the fiat approximation
+            // is shown under the amount; no credits denomination.
+            amount.toFiatAt(rate)?.toFormattedString()?.let { fiat ->
+                Text(
+                    text = "~ $fiat",
+                    style = MyTheme.Typography.BodyMedium,
+                    color = MyTheme.Colors.textSecondary,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
@@ -545,12 +565,14 @@ private fun ShieldedConfirmSheet(
             val shieldedName = stringResource(R.string.shielded_balance_title)
             Menu {
                 when (direction) {
+                    // To Shielded spends the L1 balance (asset lock), so
+                    // the total is denominated in Dash — not credits.
                     ShieldedTransferDirection.ToShielded -> {
                         ConfirmRow(stringResource(R.string.shielded_from), walletName)
                         ConfirmRow(stringResource(R.string.shielded_to), shieldedName)
                         ConfirmRow(
-                            stringResource(R.string.shielded_total_credits),
-                            "~ ${amount.toCreditsString()} ${stringResource(R.string.shielded_credits_symbol)}"
+                            stringResource(R.string.shielded_total),
+                            "${amount.toDisplayString()} Đ"
                         )
                     }
                     ShieldedTransferDirection.FromShielded -> {
@@ -833,6 +855,60 @@ internal fun AmbiguousOverlay(onClose: () -> Unit) {
     }
 }
 
+/**
+ * Terminal LockedPendingShield state (Dash Wallet → Shielded): the L1
+ * asset lock is out — the Dash left the spendable balance — but the
+ * shield transition still needs its automatic retry. Must be
+ * acknowledged; no manual retry is offered (the funds are committed).
+ */
+@Composable
+internal fun LockedPendingShieldOverlay(onClose: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x800A0B0D))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* consume — must be acknowledged */ },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 40.dp)
+                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .padding(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(org.dash.wallet.common.R.drawable.ic_toast_info_warning),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(40.dp)
+            )
+            Text(
+                text = stringResource(R.string.shielded_locked_pending_title),
+                style = MyTheme.Typography.TitleMediumSemibold,
+                color = MyTheme.Colors.textPrimary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(R.string.shielded_locked_pending_message),
+                style = MyTheme.Typography.BodyMedium,
+                color = MyTheme.Colors.textSecondary,
+                textAlign = TextAlign.Center
+            )
+            DashButton(
+                text = stringResource(R.string.shielded_close),
+                style = Style.TintedGray,
+                size = Size.Large,
+                onClick = onClose
+            )
+        }
+    }
+}
+
 // ── Previews ────────────────────────────────────────────────────────────────
 
 private fun previewState(
@@ -850,6 +926,7 @@ private fun previewState(
     shieldedBalance = Dash.parse("15.5"),
     ready = true,
     readyCheckDone = true,
+    walletShieldingAvailable = true,
     showConfirm = showConfirm,
     submitState = submitState
 )

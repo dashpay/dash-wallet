@@ -55,6 +55,30 @@ data class ShieldedActivityEntry(
 )
 
 /**
+ * Outcome payload of [ShieldedBalanceService.shieldFromWallet] on the
+ * [SdkWriteResult.Broadcast] arm. The operation is TWO-staged Rust-side
+ * (see the method KDoc): (a) an L1 asset-lock transaction is built from
+ * the SDK wallet's Core UTXOs and broadcast, then (b) the Type 18
+ * `ShieldFromAssetLock` transition consumes the lock into the shielded
+ * pool. Stage (a) is the real L1 spend — once it happened the result is
+ * `Broadcast` even if (b) still needs a retry.
+ */
+enum class ShieldFromWalletOutcome {
+    /** Both stages done: lock broadcast AND the shield transition submitted. */
+    COMPLETED,
+
+    /**
+     * The L1 asset lock was broadcast (funds left the spendable balance)
+     * but the shield transition did not complete. The lock is tracked in
+     * the SDK's persistence and [ShieldedBalanceService.resumePendingWalletShields]
+     * retries stage (b) idempotently — the UI should tell the user the
+     * transfer will finish automatically, and must NOT offer a manual
+     * "send again".
+     */
+    SHIELD_PENDING_RETRY
+}
+
+/**
  * Phase 4 service layer (`docs/kotlin-sdk-migration-plan.md`): the wallet's
  * SHIELDED (Orchard) balance runtime on the Dash Platform Kotlin SDK,
  * behind the runtime flag [de.schildbach.wallet.ui.dashpay.utils
@@ -166,6 +190,69 @@ interface ShieldedBalanceService {
      * proof; the note arrives on the next shielded sync pass.
      */
     suspend fun shieldFromCredits(amount: Dash): SdkWriteResult<Unit>
+
+    /**
+     * Shield [amount] of the wallet's L1 (Core) balance into its own
+     * shielded pool via a fresh asset lock + Type 18 `ShieldFromAssetLock`
+     * — the "Dash Wallet → Shielded" direction. Self-shield only (the
+     * recipient is the wallet's own default Orchard address).
+     *
+     * ## Architecture (decided from SDK sources — see the impl KDoc)
+     *
+     * The Kotlin SDK's `shieldedFundFromAssetLock` accepts NO externally
+     * built transaction: the Rust side builds the asset lock from the SDK
+     * wallet's OWN Core UTXOs and broadcasts it over the SDK's OWN SPV
+     * peers. A dashj-built lock cannot be handed over. This op therefore
+     * runs entirely on the SDK stack and is hard-gated on runtime
+     * evidence that the SDK's L1 view matches dashj's:
+     * [DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW] on, the shadow SPV
+     * SYNCED, and the latest [L1ShadowSyncService] parity probe a fresh
+     * full MATCH. Any gate failure returns
+     * [SdkWriteResult.NotBroadcast] BEFORE anything is spent.
+     *
+     * ## Funds safety / the staged contract
+     *
+     * - [SdkWriteResult.NotBroadcast] — provably nothing spent (flag off,
+     *   gate refused, fee-floor preflight, or a definitive pre-broadcast
+     *   SDK rejection with no tracked lock recorded).
+     * - [SdkWriteResult.Broadcast] with [ShieldFromWalletOutcome.COMPLETED]
+     *   — full pipeline done; the note arrives on the next shielded sync.
+     * - [SdkWriteResult.Broadcast] with
+     *   [ShieldFromWalletOutcome.SHIELD_PENDING_RETRY] — the L1 lock is
+     *   out (evidenced by a new tracked-asset-lock row in the SDK's
+     *   store) but the shield transition failed; it is retried
+     *   idempotently by [resumePendingWalletShields].
+     * - [SdkWriteResult.Ambiguous] — the call failed AND the tracked-lock
+     *   evidence could not be read; the retry sweep still recovers any
+     *   lock once the SDK's persistence catches up.
+     *
+     * The recipient receives `amount − pool fee` (the flat shielded fee
+     * plus the protocol's asset-lock base cost come out of the locked
+     * amount). Blocks for the ~30s Halo 2 proof.
+     */
+    suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome>
+
+    /**
+     * Whether [shieldFromWallet]'s L1 funding gate would currently pass
+     * (flag on + shadow SPV parity MATCH). Cheap local read for UI
+     * gating; the write path re-checks. Never throws.
+     */
+    suspend fun isWalletShieldingAvailable(): Boolean
+
+    /**
+     * Retry stage (b) of any interrupted [shieldFromWallet]: resume every
+     * shielded-top-up asset lock (`fundingTypeRaw == 5`) still tracked
+     * un-consumed in the SDK's persistence via the SDK's
+     * resume-by-outpoint FFI. Idempotent — the Rust side re-derives the
+     * same shield amount from the on-chain lock value, rebroadcasts of a
+     * `Built` lock reuse the identical txid, and a consumed lock simply
+     * fails that row. Runs automatically after a successful
+     * [ensureShieldedReady] pass; safe to call any time.
+     *
+     * @return the number of locks successfully resumed (0 when the flag
+     *   is off, the runtime is not ready, or nothing was pending).
+     */
+    suspend fun resumePendingWalletShields(): Int
 
     /**
      * Shielded → shielded transfer (Type 16) to [toAddress] (a bech32m

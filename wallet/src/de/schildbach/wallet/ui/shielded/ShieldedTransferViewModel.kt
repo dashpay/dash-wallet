@@ -21,6 +21,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +64,12 @@ data class ShieldedTransferUIState(
     /** True once the shielded runtime bring-up succeeded. */
     val ready: Boolean = false,
     val readyCheckDone: Boolean = false,
+    /**
+     * True when the Dash Wallet → Shielded direction can fund from the
+     * L1 balance ([ShieldedBalanceService.isWalletShieldingAvailable]'s
+     * shadow-SPV parity gate). Gates [canContinue] for that direction.
+     */
+    val walletShieldingAvailable: Boolean = false,
     val showConfirm: Boolean = false,
     val submitState: ShieldedSubmitState = ShieldedSubmitState.Idle
 ) {
@@ -84,8 +91,12 @@ data class ShieldedTransferUIState(
     val insufficientFunds: Boolean
         get() = amount.isGreaterThan(availableBalance)
 
+    /** The L1-funding gate only applies to the Dash Wallet → Shielded direction. */
+    val directionAvailable: Boolean
+        get() = direction == ShieldedTransferDirection.FromShielded || walletShieldingAvailable
+
     val canContinue: Boolean
-        get() = ready && amount.isPositive && !insufficientFunds &&
+        get() = ready && directionAvailable && amount.isPositive && !insufficientFunds &&
             (dashMode || rate != null) &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
@@ -113,7 +124,12 @@ class ShieldedTransferViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val ready = shieldedBalanceService.ensureShieldedReady()
-            _uiState.value = _uiState.value.copy(ready = ready, readyCheckDone = true)
+            val walletShielding = ready && shieldedBalanceService.isWalletShieldingAvailable()
+            _uiState.value = _uiState.value.copy(
+                ready = ready,
+                readyCheckDone = true,
+                walletShieldingAvailable = walletShielding
+            )
         }
 
         shieldedBalanceService.observeShieldedBalance()
@@ -203,9 +219,13 @@ class ShieldedTransferViewModel @Inject constructor(
     }
 
     /**
-     * Runs the spend. Maps the SdkWriteResult contract onto the UI:
-     * Broadcast → [ShieldedSubmitState.Success]; NotBroadcast →
-     * [ShieldedSubmitState.NotSent] (retry allowed); Ambiguous →
+     * Runs the spend. "Dash Wallet → Shielded" is the L1 asset-lock
+     * pipeline ([ShieldedBalanceService.shieldFromWallet]); "Shielded →
+     * Dash Wallet" is the Type 19 withdraw. Maps the SdkWriteResult
+     * contract onto the UI: Broadcast → [ShieldedSubmitState.Success]
+     * (or [ShieldedSubmitState.LockedPendingShield] when the lock is out
+     * but the shield transition awaits its automatic retry); NotBroadcast
+     * → [ShieldedSubmitState.NotSent] (retry allowed); Ambiguous →
      * [ShieldedSubmitState.MayHaveGoneThrough] (terminal — never retried).
      */
     fun onConfirm() {
@@ -220,7 +240,7 @@ class ShieldedTransferViewModel @Inject constructor(
                 try {
                     when (direction) {
                         ShieldedTransferDirection.ToShielded ->
-                            shieldedBalanceService.shieldFromCredits(amount)
+                            shieldedBalanceService.shieldFromWallet(amount)
                         ShieldedTransferDirection.FromShielded ->
                             shieldedBalanceService.withdrawToCore(
                                 walletDataProvider.freshReceiveAddressString(),
@@ -234,7 +254,13 @@ class ShieldedTransferViewModel @Inject constructor(
             }
             _uiState.value = _uiState.value.copy(
                 submitState = when (result) {
-                    is SdkWriteResult.Broadcast -> ShieldedSubmitState.Success
+                    is SdkWriteResult.Broadcast -> when (result.value) {
+                        ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
+                            log.warn("wallet shield locked but pending — surfacing auto-retry state")
+                            ShieldedSubmitState.LockedPendingShield
+                        }
+                        else -> ShieldedSubmitState.Success
+                    }
                     is SdkWriteResult.NotBroadcast -> {
                         log.info("shielded transfer not sent: {}", result.reason)
                         ShieldedSubmitState.NotSent(result.reason)

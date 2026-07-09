@@ -22,6 +22,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.dash.wallet.common.money.Dash
@@ -158,6 +160,82 @@ internal fun decodeOrchardAddress(input: String, hrp: String): ByteArray? {
     return data.copyOfRange(1, 44)
 }
 
+/**
+ * Parse an SDK `asset_locks` row key (`"<txid display hex>:<vout>"`, see
+ * [org.dashfoundation.dashsdk.persistence.entities.AssetLockEntity]) into
+ * the (raw txid, vout) pair the resume FFI wants. Display txid hex is
+ * byte-REVERSED from wire order, and
+ * `PlatformWalletManager.shieldedResumeFundFromAssetLock` documents its
+ * `outPointTxid` as "32-byte raw txid (little-endian wire order)" — so the
+ * decoded bytes are reversed here. Null for malformed input.
+ */
+internal fun parseOutPointHex(outPointHex: String): Pair<ByteArray, Int>? {
+    val sep = outPointHex.lastIndexOf(':')
+    if (sep != 64) return null
+    val vout = outPointHex.substring(sep + 1).toIntOrNull() ?: return null
+    if (vout < 0) return null
+    val displayBytes = walletIdFromHex(outPointHex.substring(0, sep)) ?: return null
+    return displayBytes.reversedArray() to vout
+}
+
+/** Ceil-convert a non-negative credit amount to duffs (1 duff = 1000 credits). */
+internal fun ceilCreditsToDuffs(credits: Long): Long {
+    require(credits >= 0) { "credits must be non-negative" }
+    return (credits + CREDITS_PER_DUFF - 1) / CREDITS_PER_DUFF
+}
+
+/**
+ * Decision of the [ShieldedBalanceService.shieldFromWallet] L1 funding
+ * gate. [allowed] only when runtime evidence shows the SDK's Core wallet
+ * sees exactly the funds dashj sees.
+ */
+internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
+
+/**
+ * Evaluate the L1 funding gate from the latest shadow-sync parity probe —
+ * pure, host-testable. The SDK builds the asset lock from its OWN SPV
+ * wallet, so spending is only allowed when the shadow SPV is SYNCED and
+ * the most recent [ParityReport] is a fresh (≤ [maxAgeMs]) full MATCH
+ * (estimated + confirmed balances and tx counts all equal dashj's).
+ */
+internal fun evaluateWalletFundingGate(
+    report: ParityReport?,
+    nowMs: Long,
+    maxAgeMs: Long
+): WalletFundingGate = when {
+    report == null ->
+        WalletFundingGate(false, "no L1 parity measurement (shadow sync not running?)")
+    nowMs - report.timestampMs > maxAgeMs ->
+        WalletFundingGate(false, "L1 parity measurement is stale")
+    !report.sdkSynced ->
+        WalletFundingGate(false, "SDK shadow SPV not synced yet")
+    !report.fullMatch ->
+        WalletFundingGate(false, "SDK/dashj L1 parity mismatch")
+    else -> WalletFundingGate(true, "parity MATCH")
+}
+
+/**
+ * App-neutral view of one tracked shielded-top-up asset lock
+ * (`asset_locks` row with `fundingTypeRaw == 5`).
+ * [statusRaw]: 0 Built, 1 Broadcast, 2 InstantSendLocked, 3 ChainLocked,
+ * 4 Consumed.
+ */
+data class PendingWalletShieldLock(
+    val outPointHex: String,
+    val statusRaw: Int,
+    val amountDuffs: Long
+) {
+    /**
+     * Resumable = not yet consumed. Includes `Built` (0): a persisted
+     * Built row only survives an AMBIGUOUS broadcast or a crash
+     * mid-operation (a definitively rejected broadcast untracks the row
+     * Rust-side), and resuming re-broadcasts the SAME persisted
+     * transaction bytes — same txid, so it completes the user-authorized
+     * spend rather than creating a new one.
+     */
+    val resumable: Boolean get() = statusRaw in 0..3
+}
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /**
@@ -214,6 +292,37 @@ interface ShieldedSource {
 
     /** Type 15: shield credits into the wallet's own pool. Blocks for the proof. */
     suspend fun shield(walletId: ByteArray, amountCredits: Long)
+
+    /**
+     * Type 18: build an L1 asset lock of [amountDuffs] from the SDK
+     * wallet's OWN Core UTXOs, broadcast it over the SDK's SPV peers,
+     * then shield the lock (minus the pool fee) to [recipientRaw43].
+     * Blocks for the IS/CL proof AND the ~30s Halo 2 proof.
+     */
+    suspend fun fundFromAssetLock(walletId: ByteArray, recipientRaw43: ByteArray, amountDuffs: Long)
+
+    /**
+     * Resume a stuck Type 18 from an already-tracked lock outpoint.
+     * [outPointTxid] is the 32-byte RAW txid (little-endian wire order).
+     */
+    suspend fun resumeFundFromAssetLock(
+        walletId: ByteArray,
+        outPointTxid: ByteArray,
+        outPointVout: Int,
+        recipientRaw43: ByteArray
+    )
+
+    /**
+     * Every tracked shielded-top-up asset lock (`fundingTypeRaw == 5`)
+     * of the wallet, ANY status, from the SDK's Room store.
+     */
+    suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock>
+
+    /**
+     * The flat shielded fee in credits for a 2-action Shield bundle
+     * (consensus-pinned; the asset-lock base cost is NOT included).
+     */
+    suspend fun estimateShieldFeeCredits(): Long
 
     /** Type 16: shielded → shielded transfer. Blocks for the proof. */
     suspend fun transfer(walletId: ByteArray, recipientRaw43: ByteArray, amountCredits: Long, memo: String?)
@@ -290,6 +399,45 @@ internal class DashSdkShieldedSource(
     override suspend fun shield(walletId: ByteArray, amountCredits: Long) =
         manager().shieldedShield(walletId = walletId, amount = amountCredits)
 
+    override suspend fun fundFromAssetLock(
+        walletId: ByteArray,
+        recipientRaw43: ByteArray,
+        amountDuffs: Long
+    ) = manager().shieldedFundFromAssetLock(
+        walletId = walletId,
+        recipientRaw43 = recipientRaw43,
+        amountDuffs = amountDuffs
+    )
+
+    override suspend fun resumeFundFromAssetLock(
+        walletId: ByteArray,
+        outPointTxid: ByteArray,
+        outPointVout: Int,
+        recipientRaw43: ByteArray
+    ) = manager().shieldedResumeFundFromAssetLock(
+        walletId = walletId,
+        outPointTxid = outPointTxid,
+        outPointVout = outPointVout,
+        recipientRaw43 = recipientRaw43
+    )
+
+    override suspend fun walletShieldLocks(walletId: ByteArray): List<PendingWalletShieldLock> =
+        database().assetLockDao()
+            .observeByWalletAndFundingType(walletId, SHIELDED_TOPUP_FUNDING_TYPE)
+            .first()
+            .map { PendingWalletShieldLock(it.outPointHex, it.statusRaw, it.amountDuffs) }
+
+    override suspend fun estimateShieldFeeCredits(): Long =
+        ShieldedProver.estimateFee(ShieldedProver.FeeKind.TransferOrShield, SHIELD_NUM_ACTIONS)
+
+    private companion object {
+        /** `AssetLockFundingType::AssetLockShieldedAddressTopUp` discriminant. */
+        const val SHIELDED_TOPUP_FUNDING_TYPE = 5
+
+        /** On-wire Orchard action count of a single-output Shield bundle. */
+        const val SHIELD_NUM_ACTIONS = 2
+    }
+
     override suspend fun transfer(
         walletId: ByteArray,
         recipientRaw43: ByteArray,
@@ -341,20 +489,71 @@ internal class DashSdkShieldedSource(
  *   [classifyBroadcastFailure] (shared with [SdkDashPayWrites]); local
  *   preflight failures (malformed address, over-long memo, missing
  *   platform address) are [SdkWriteResult.NotBroadcast] by construction.
+ *
+ * ## The [shieldFromWallet] architecture decision (from SDK sources)
+ *
+ * "Dash Wallet → Shielded" should ideally have dashj (which owns the
+ * synced L1 today) build and broadcast the asset lock, with the SDK only
+ * consuming it. The SDK does not support that: **there is no external
+ * asset-lock intake** in the Kotlin SDK.
+ *
+ * - `PlatformWalletManager.shieldedFundFromAssetLock` takes only
+ *   `(walletId, recipientRaw43, amountDuffs, fundingAccountIndex,
+ *   surplusOutput)` — no transaction bytes, no proof. The FFI doc says
+ *   the lock is "built from the wallet balance"
+ *   (kotlin-sdk `ffi/FundingNative.kt`, `shieldedFundFromAssetLock`).
+ * - Rust-side, `AssetLockFunding::FromWalletBalance` "builds an asset
+ *   lock from wallet UTXOs" of the SDK's own key-wallet, and
+ *   `FromExistingAssetLock` requires the lock to "already be tracked by
+ *   the AssetLockManager" (rs-platform-wallet
+ *   `wallet/asset_lock/orchestration.rs`, `AssetLockFunding`). The lock
+ *   is broadcast via `SpvBroadcaster` over the SDK's OWN SPV peers
+ *   (rs-platform-wallet `manager/wallet_lifecycle.rs` / `broadcaster.rs`).
+ * - The only external-transaction entry (`asset_lock_manager_recover`,
+ *   rs-platform-wallet-ffi `asset_lock/sync.rs`) is NOT exposed through
+ *   the unified JNI the Kotlin SDK uses.
+ *
+ * So [shieldFromWallet] runs the SDK's own pipeline and is hard-gated on
+ * the L1 shadow-sync parity harness ([L1ShadowSyncService]): the SDK SPV
+ * wallet must be SYNCED with a fresh full-MATCH parity report before the
+ * SDK is allowed to spend the (shared-seed) L1 funds. The lock pays to
+ * the SDK's own `AssetLockShieldedAddressTopUp` DIP-9 family and is
+ * claimed by the same Rust wallet that derived it, so no dashj↔SDK
+ * lock-key derivation parity is required; the UTXO/balance parity that
+ * IS required is exactly what the gate measures. Stage-(b) recovery
+ * state lives in the SDK's own Room `asset_locks` table (written before
+ * broadcast Rust-side) rather than a parallel app-side record — one
+ * source of truth for [resumePendingWalletShields].
  */
 @Singleton
 class ShieldedBalanceServiceImpl internal constructor(
     private val source: ShieldedSource,
     private val dashPayConfig: DashPayConfig,
     private val shieldedDbPath: () -> String,
-    private val displayHrp: () -> String
+    private val displayHrp: () -> String,
+    /**
+     * Latest L1 shadow-sync parity probe, or null when the shadow is not
+     * running — the [shieldFromWallet] funding-gate evidence. Prod wires
+     * [L1ShadowSyncService.latestParity]; the default keeps the gate
+     * CLOSED (funds-safe) for constructions that don't provide it.
+     */
+    private val l1Parity: () -> ParityReport? = { null },
+    /**
+     * Scope for the post-[ensureShieldedReady] pending-shield retry sweep
+     * ([resumePendingWalletShields]); null (tests' default) disables the
+     * automatic trigger — the method itself stays callable.
+     */
+    private val sweepScope: CoroutineScope? = null,
+    private val nowMs: () -> Long = System::currentTimeMillis
 ) : ShieldedBalanceService {
 
     @Inject
     constructor(
         @ApplicationContext context: Context,
         sdkService: DashSdkService,
-        dashPayConfig: DashPayConfig
+        dashPayConfig: DashPayConfig,
+        l1ShadowSyncService: L1ShadowSyncService,
+        applicationScope: CoroutineScope
     ) : this(
         source = DashSdkShieldedSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -365,7 +564,9 @@ class ShieldedBalanceServiceImpl internal constructor(
             val network = toSdkNetwork(Constants.NETWORK_PARAMETERS)
             File(context.filesDir, "shielded_tree_${network.networkName}.sqlite").absolutePath
         },
-        displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) }
+        displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
+        l1Parity = { l1ShadowSyncService.latestParity.value },
+        sweepScope = applicationScope
     )
 
     /** Serializes [ensureShieldedReady]/[stop] — the single-flight guarantee. */
@@ -379,6 +580,24 @@ class ShieldedBalanceServiceImpl internal constructor(
 
     override suspend fun ensureShieldedReady(): Boolean {
         if (!isEnabled()) return false
+        val ready = ensureShieldedReadyInner()
+        if (ready) {
+            // Staged-retry hook: finish any interrupted shieldFromWallet
+            // (stage (b) after the L1 lock broadcast) in the background.
+            // Cheap when nothing is pending (one Room query); serialized
+            // with new wallet-shield writes by [walletShieldMutex].
+            sweepScope?.launch {
+                runCatching { resumePendingWalletShieldsInner() }
+                    .onFailure {
+                        if (it is CancellationException) throw it
+                        log.warn("pending wallet-shield sweep failed; will retry on the next trigger", it)
+                    }
+            }
+        }
+        return ready
+    }
+
+    private suspend fun ensureShieldedReadyInner(): Boolean {
         return try {
             lock.withLock {
                 if (readyWalletIdHex.value != null) return true
@@ -475,6 +694,221 @@ class ShieldedBalanceServiceImpl internal constructor(
         runShieldedWrite("shieldFromCredits", amount) { walletId, credits ->
             source.shield(walletId, credits)
         }
+
+    // ── Dash Wallet → Shielded (Type 18, staged) ──────────────────────
+
+    /**
+     * Serializes [shieldFromWallet] and the retry sweep so a resume can't
+     * race a fresh fund (mirrors the Rust-side per-wallet `shield_guard`,
+     * but also keeps our before/after tracked-lock evidence coherent).
+     */
+    private val walletShieldMutex = Mutex()
+
+    /** Per-process resume attempts per outpoint (each costs a ~30s proof). */
+    private val resumeAttempts = HashMap<String, Int>()
+
+    override suspend fun isWalletShieldingAvailable(): Boolean =
+        isEnabled() && isL1FundingFlagOn() &&
+            evaluateWalletFundingGate(safeParity(), nowMs(), PARITY_MAX_AGE_MS).allowed
+
+    override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> {
+        val operation = "shieldFromWallet"
+        if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
+        if (!isL1FundingFlagOn()) {
+            return notBroadcast(operation, "L1 shadow flag off", null)
+        }
+        if (!amount.isPositive) {
+            return notBroadcast(operation, "non-positive amount", null)
+        }
+
+        // Preflights — nothing has been submitted if any of this fails.
+        if (!ensureShieldedReadyInner()) {
+            return notBroadcast(operation, "shielded runtime not ready", null)
+        }
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex)
+            ?: return notBroadcast(operation, "shielded runtime not ready", null)
+
+        // Funding gate: the SDK builds the lock from its OWN SPV wallet,
+        // so require fresh evidence that its L1 view matches dashj's.
+        val gate = evaluateWalletFundingGate(safeParity(), nowMs(), PARITY_MAX_AGE_MS)
+        if (!gate.allowed) {
+            return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
+        }
+
+        // Fee-floor preflight: the recipient receives `lock − pool fee`
+        // (pool fee = flat shielded fee + the protocol's asset-lock base
+        // cost); Rust refuses a lock at or below the fee, but only AFTER
+        // our own gate — reject here so that path is never exercised.
+        val poolFeeDuffs = try {
+            ceilCreditsToDuffs(source.estimateShieldFeeCredits()) + ASSET_LOCK_BASE_COST_DUFFS
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast(operation, "shield fee estimate failed", t)
+        }
+        if (amount.duffs <= poolFeeDuffs) {
+            return notBroadcast(
+                operation, "amount does not cover the shield pool fee ($poolFeeDuffs duffs)", null
+            )
+        }
+
+        val recipient = try {
+            source.shieldedDefaultAddress(walletId)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast(operation, "shielded address lookup failed", t)
+        } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
+
+        return walletShieldMutex.withLock {
+            // Evidence baseline: the tracked shielded-top-up locks BEFORE
+            // the attempt. Refuse to spend if it cannot be read — the
+            // post-failure classification below depends on it.
+            val lockedBefore = try {
+                source.walletShieldLocks(walletId).map { it.outPointHex }.toHashSet()
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                return notBroadcast(operation, "cannot read the tracked asset-lock state", t)
+            }
+
+            // The single staged attempt: (a) build+broadcast the L1 asset
+            // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
+            try {
+                source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                classifyWalletShieldFailure(operation, walletId, lockedBefore, t)
+            }
+        }
+    }
+
+    /**
+     * Post-failure classification of a [shieldFromWallet] attempt, by
+     * EVIDENCE first: a new tracked lock row proves stage (a) happened
+     * (the row is written before broadcast Rust-side), so the failure is
+     * stage (b) and the sweep will finish it. Only when no new row exists
+     * does the shared error decision table decide, and its definitive
+     * pre-broadcast codes map to NotBroadcast; everything else stays
+     * Ambiguous because the SDK's persistence bridge is asynchronous —
+     * the absence of a row is NOT proof that no lock was broadcast.
+     */
+    private suspend fun classifyWalletShieldFailure(
+        operation: String,
+        walletId: ByteArray,
+        lockedBefore: Set<String>,
+        failure: Throwable
+    ): SdkWriteResult<ShieldFromWalletOutcome> {
+        val newLocks = try {
+            source.walletShieldLocks(walletId).filter { it.outPointHex !in lockedBefore && it.resumable }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error("shielded {} failed and the tracked-lock evidence is unreadable", operation, failure)
+            return SdkWriteResult.Ambiguous(failure)
+        }
+        if (newLocks.isNotEmpty()) {
+            log.error(
+                "shielded {}: the L1 asset lock is out ({} tracked outpoint(s)) but the shield " +
+                    "transition did not complete — it will be resumed automatically",
+                operation, newLocks.size, failure
+            )
+            return SdkWriteResult.Broadcast(ShieldFromWalletOutcome.SHIELD_PENDING_RETRY)
+        }
+        return when (val classified = classifyBroadcastFailure(failure)) {
+            is SdkWriteResult.NotBroadcast -> {
+                log.warn("shielded {} rejected pre-broadcast (no lock tracked)", operation, failure)
+                classified
+            }
+            else -> {
+                log.error(
+                    "shielded {} outcome unconfirmed and no lock tracked (yet) — the pending-shield " +
+                        "sweep recovers any lock once the SDK persists it",
+                    operation, failure
+                )
+                SdkWriteResult.Ambiguous(failure)
+            }
+        }
+    }
+
+    override suspend fun resumePendingWalletShields(): Int {
+        if (!isEnabled()) return 0
+        if (!ensureShieldedReadyInner()) return 0
+        return resumePendingWalletShieldsInner()
+    }
+
+    /**
+     * The sweep body: resume every resumable ([PendingWalletShieldLock.resumable])
+     * shielded-top-up lock, sequentially, isolating per-lock failures and
+     * capping attempts per outpoint per process (each attempt costs a
+     * ~30s proof). Requires the ready latch; does NOT require the L1
+     * funding gate — the lock already exists, so completing the shield
+     * spends nothing new and strands nothing.
+     */
+    private suspend fun resumePendingWalletShieldsInner(): Int {
+        val walletId = readyWalletIdHex.value?.let(::walletIdFromHex) ?: return 0
+        return walletShieldMutex.withLock {
+            val pending = try {
+                source.walletShieldLocks(walletId).filter { it.resumable }
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("pending wallet-shield sweep: cannot read the tracked asset locks", t)
+                return 0
+            }
+            if (pending.isEmpty()) return 0
+
+            val recipient = try {
+                source.shieldedDefaultAddress(walletId)
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("pending wallet-shield sweep: shielded address lookup failed", t)
+                null
+            } ?: return 0
+
+            var resumed = 0
+            for (lock in pending) {
+                val attempts = resumeAttempts.getOrDefault(lock.outPointHex, 0)
+                if (attempts >= MAX_RESUME_ATTEMPTS_PER_PROCESS) {
+                    log.warn(
+                        "pending wallet-shield lock {} skipped after {} failed attempts this " +
+                            "process (retries resume on the next app start)",
+                        lock.outPointHex, attempts
+                    )
+                    continue
+                }
+                val outPoint = parseOutPointHex(lock.outPointHex)
+                if (outPoint == null) {
+                    log.warn("pending wallet-shield lock has a malformed outpoint key; skipping")
+                    continue
+                }
+                try {
+                    resumeAttempts[lock.outPointHex] = attempts + 1
+                    source.resumeFundFromAssetLock(walletId, outPoint.first, outPoint.second, recipient)
+                    resumed++
+                    log.info("pending wallet-shield lock {} resumed and consumed", lock.outPointHex)
+                } catch (t: Throwable) {
+                    if (t is CancellationException) throw t
+                    log.warn(
+                        "pending wallet-shield lock {} resume failed (attempt {}); the lock stays " +
+                            "tracked and is retried later",
+                        lock.outPointHex, attempts + 1, t
+                    )
+                }
+            }
+            resumed
+        }
+    }
+
+    private fun safeParity(): ParityReport? = try {
+        l1Parity()
+    } catch (e: Exception) {
+        log.warn("failed to read the L1 parity report; funding gate stays closed", e)
+        null
+    }
+
+    private suspend fun isL1FundingFlagOn(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SHADOW) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_L1_SHADOW; treating as off", e)
+        false
+    }
 
     override suspend fun transferShielded(
         toAddress: String,
@@ -613,5 +1047,29 @@ class ShieldedBalanceServiceImpl internal constructor(
          * its example apps use.
          */
         internal const val WITHDRAW_CORE_FEE_PER_BYTE = 1
+
+        /**
+         * Max age of the L1 parity report the [shieldFromWallet] gate
+         * accepts. The probe ticks every 60s
+         * ([L1ShadowSyncService.PARITY_INTERVAL_MS]) while the shadow
+         * runs, so a report older than this means the harness stopped.
+         */
+        internal const val PARITY_MAX_AGE_MS = 5 * 60_000L
+
+        /**
+         * The protocol's asset-lock base cost in duffs
+         * (`required_asset_lock_duff_balance_for_processing_start_for_address_funding`,
+         * rs-platform-version `dpp_state_transition_versions` v1–v3: 50000).
+         * Used ONLY as a preflight fee floor — Rust re-derives the exact
+         * consensus value pre-broadcast.
+         */
+        internal const val ASSET_LOCK_BASE_COST_DUFFS = 50_000L
+
+        /**
+         * Resume attempts per stuck lock per process — each attempt costs
+         * a ~30s Halo 2 proof, so a permanently failing lock must not be
+         * re-proved on every screen open. The counter resets on app start.
+         */
+        internal const val MAX_RESUME_ATTEMPTS_PER_PROCESS = 3
     }
 }
