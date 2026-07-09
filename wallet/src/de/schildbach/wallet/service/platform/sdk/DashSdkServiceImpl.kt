@@ -92,15 +92,27 @@ private val WHITESPACE = Regex("\\s+")
  *
  * The SDK takes a block height (`null` = SPV tip for brand-new wallets,
  * `0u` = full scan from genesis for imports); the app only knows a birth
- * *time* (`Wallet.getEarliestKeyCreationTime`). Mapping time → height
- * needs a header/checkpoint source that the Phase 3 runtime doesn't have,
- * and guessing too high silently hides funds while 0 is merely slower —
- * so Phase 3b is conservative: always scan from genesis. The real mainnet
- * time→height mapping lands with the Phase 5 migration flow, which is why
- * the birth time is already threaded through the signature.
+ * *time* (`Wallet.getEarliestKeyCreationTime`). Phase 5a closes the gap
+ * Phase 3b left open: [resolveHeight] maps time → a SAFE height via the
+ * app's dashj checkpoint files ([BirthHeightResolver] — checkpoint
+ * at-or-before the birth time minus a ~1-week margin), and anything
+ * unresolvable (null time, resolver failure) stays at the conservative
+ * `0u` full scan. Guessing too high silently hides funds; 0 is merely
+ * slower.
+ *
+ * NOTE: this only affects FUTURE first-time binds. A wallet already bound
+ * with `birthHeight = 0` keeps that stored height — re-binding dedups on
+ * the persisted mnemonic and never re-runs `createWallet` (see
+ * [BirthHeightResolver]'s "Already-bound wallets" note).
  */
-@Suppress("UNUSED_PARAMETER")
-internal fun sdkBirthHeightFor(birthTimeSecs: Long?): UInt = 0u
+internal fun sdkBirthHeightFor(birthTimeSecs: Long?, resolveHeight: (Long) -> UInt): UInt =
+    birthTimeSecs?.takeIf { it > 0 }?.let { time ->
+        try {
+            resolveHeight(time)
+        } catch (e: Exception) {
+            0u // resolver contract is never-throw, but the bind must not die on a mapping bug
+        }
+    } ?: 0u
 
 /** Lowercase-hex decode of a 32-byte SDK wallet id; null if malformed. */
 internal fun walletIdFromHex(hex: String): ByteArray? {
@@ -369,16 +381,24 @@ class DashSdkServiceImpl @Inject constructor(
             // derived id (and rolls everything back on failure), after which
             // the manager's MnemonicResolverAndPersister serves derivations
             // without any further seed hand-off.
+            val birthHeight = sdkBirthHeightFor(birthTimeSecs) { time ->
+                // Phase 5a: dashj-checkpoint time→height mapping; the
+                // resolver contains its own failures (→ 0u / genesis).
+                BirthHeightResolver(
+                    networkParameters = Constants.NETWORK_PARAMETERS,
+                    openCheckpoints = { context.assets.open(Constants.Files.CHECKPOINTS_FILENAME) }
+                ).resolve(time)
+            }
             val managed = current.walletManager.createWallet(
                 mnemonic = mnemonic,
                 name = APP_WALLET_NAME,
                 createDefaultAccounts = true,
-                birthHeight = sdkBirthHeightFor(birthTimeSecs)
+                birthHeight = birthHeight
             )
             log.info(
-                "app wallet bound to new SDK wallet {}… (full scan from genesis; " +
-                    "time→height mapping lands in Phase 5)",
-                managed.walletIdHex.take(8)
+                "app wallet bound to new SDK wallet {}… (birthHeight={} via checkpoint mapping; " +
+                    "0 = full scan from genesis)",
+                managed.walletIdHex.take(8), birthHeight
             )
             return managed.walletIdHex
         }

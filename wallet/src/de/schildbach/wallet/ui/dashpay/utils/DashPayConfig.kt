@@ -173,6 +173,25 @@ open class DashPayConfig @Inject constructor(
          * (call `ShieldedBalanceService.stop()` for that).
          */
         val USE_KOTLIN_SDK_SHIELDED = booleanPreferencesKey("use_kotlin_sdk_shielded")
+
+        /**
+         * Phase 5a of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): run the Kotlin SDK's Rust
+         * SPV client ALONGSIDE dashj as a shadow — a verification harness
+         * for the eventual L1 cutover, changing nothing user-facing. While
+         * on (and the app wallet is bound to the SDK), the shadow service
+         * starts the SDK's compact-filter sync into its own storage
+         * directory and probes balance/tx-count parity against the dashj
+         * wallet every minute, logging `L1Parity` one-liners. Default OFF:
+         * with the flag off the service is provably inert (no native call,
+         * no SPV storage, no probe loop).
+         *
+         * DEBUG-ONLY INSTRUMENTATION: shadow mode runs TWO SPV engines
+         * (dashj + Rust) — double network and battery cost. It is seeded ON
+         * only in debug builds (below) and must never ship enabled to prod.
+         * See [de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService].
+         */
+        val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
     }
 
     init {
@@ -190,6 +209,9 @@ open class DashPayConfig @Inject constructor(
                     }
                     if (get(USE_KOTLIN_SDK_SHIELDED) == null) {
                         set(USE_KOTLIN_SDK_SHIELDED, true)
+                    }
+                    if (get(USE_KOTLIN_SDK_L1_SHADOW) == null) {
+                        set(USE_KOTLIN_SDK_L1_SHADOW, true)
                     }
                 } catch (e: Exception) {
                     // best-effort seeding; the flags simply stay at their OFF default

@@ -31,6 +31,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 /**
@@ -115,13 +116,16 @@ class DashSdkServiceImplTest {
     }
 
     @Test
-    fun sdkBirthHeightFor_isConservativeFullScanUntilPhase5() {
-        // The time→height mapping lands with the Phase 5 migration flow;
-        // until then every import scans from genesis (0u) — a too-high
-        // guess would silently hide funds.
-        assertEquals(0u, sdkBirthHeightFor(null))
-        assertEquals(0u, sdkBirthHeightFor(1_231_006_505L))
-        assertEquals(0u, sdkBirthHeightFor(System.currentTimeMillis() / 1000))
+    fun sdkBirthHeightFor_delegatesToTheResolverAndStaysConservative() {
+        // Phase 5a: a known birth time maps through the resolver…
+        assertEquals(571_968u, sdkBirthHeightFor(1_650_000_000L) { 571_968u })
+        // …but anything unresolvable stays at the genesis full scan — a
+        // too-high guess would silently hide funds.
+        assertEquals(0u, sdkBirthHeightFor(null) { fail("resolver must not run for a null birth time"); 1u })
+        assertEquals(0u, sdkBirthHeightFor(0L) { fail("resolver must not run for a non-positive birth time"); 1u })
+        assertEquals(0u, sdkBirthHeightFor(-5L) { 1u })
+        // A resolver bug (the contract is never-throw) must not kill the bind.
+        assertEquals(0u, sdkBirthHeightFor(1_650_000_000L) { throw IllegalStateException("boom") })
     }
 
     @Test

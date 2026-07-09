@@ -175,15 +175,16 @@ interface DashSdkService {
      *   filter scanning from, but the app only knows a birth *time*
      *   ([org.bitcoinj.wallet.Wallet.getEarliestKeyCreationTime]), and a
      *   too-high height silently skips funds while `0` (genesis) is merely
-     *   slower. Phase 3b therefore always requests a full scan; the
-     *   time→height mapping (via headers/checkpoints) lands with the
-     *   Phase 5 migration flow. [birthTimeSecs] is accepted now so call
-     *   sites don't change shape then.
+     *   slower. Phase 5a maps time → height via the app's dashj checkpoint
+     *   files ([BirthHeightResolver]: checkpoint at-or-before the birth
+     *   time minus a ~1-week safety margin; `0` when unresolvable). The
+     *   height only applies to a FIRST-time bind — a wallet bound before
+     *   the mapping landed keeps its stored `birthHeight = 0`, because
+     *   re-binding dedups on the persisted mnemonic and never re-creates.
      *
      * @param seedWords the wallet's BIP39 words, already decrypted.
      * @param birthTimeSecs the dashj wallet's earliest-key time (Unix
-     *   seconds), or null if unknown. Recorded in the signature for
-     *   Phase 5; does not affect Phase 3b behavior.
+     *   seconds), or null if unknown (null → full scan from genesis).
      * @return the bound SDK wallet id as lowercase hex (64 chars).
      */
     suspend fun bindAppWallet(seedWords: List<String>, birthTimeSecs: Long?): String

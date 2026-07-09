@@ -47,6 +47,7 @@ import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
@@ -157,6 +158,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkWalletBinder: SdkWalletBinder,
+    private val l1ShadowSyncService: L1ShadowSyncService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -199,13 +201,23 @@ class PlatformSynchronizationService @Inject constructor(
         // wallet-crypter key the same non-interactive way the sync loops
         // below already do (PlatformRepo.getWalletEncryptionKey — the
         // SecurityGuard-stored password, no user prompt).
-        sdkWalletBinder.bindInBackground {
+        val bindJob = sdkWalletBinder.bindInBackground {
             val wallet = walletDataProvider.wallet
             when {
                 wallet == null -> null
                 !wallet.isEncrypted -> WalletUnlock.Unencrypted
                 else -> platformRepo.getWalletEncryptionKey()?.let { WalletUnlock.EncryptionKey(it) }
             }
+        }
+        // Phase 5a (docs/kotlin-sdk-migration-plan.md): after the bind pass
+        // finishes (success or not — the service re-checks the bound state
+        // itself), kick the L1 shadow-sync parity harness. Fire-and-forget,
+        // provably inert unless USE_KOTLIN_SDK_L1_SHADOW is on (debug-only
+        // instrumentation — it runs a second SPV engine), and failures are
+        // logged+swallowed inside startIfEnabled().
+        syncScope.launch {
+            bindJob.join()
+            l1ShadowSyncService.startIfEnabled()
         }
         log.info("Starting the platform sync job")
     }
