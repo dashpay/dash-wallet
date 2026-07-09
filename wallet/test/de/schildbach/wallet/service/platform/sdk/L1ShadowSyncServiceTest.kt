@@ -209,7 +209,8 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs: Long = L1ShadowSyncService.PARITY_INTERVAL_MS,
         watchdogIntervalMs: Long = L1ShadowSyncService.WATCHDOG_INTERVAL_MS,
         probeStallThresholdMs: Long = L1ShadowSyncService.PROBE_STALL_THRESHOLD_MS,
-        recreator: ShadowWalletRecreator? = null
+        recreator: ShadowWalletRecreator? = null,
+        alwaysRecreateOnEmptyDeficit: Boolean? = false
     ) = L1ShadowSyncService(
         source = source,
         dashPayConfig = config(flag, lastResetMs, markerWrites),
@@ -219,7 +220,8 @@ class L1ShadowSyncServiceTest {
         parityIntervalMs = parityIntervalMs,
         watchdogIntervalMs = watchdogIntervalMs,
         probeStallThresholdMs = probeStallThresholdMs,
-        recreator = recreator
+        recreator = recreator,
+        alwaysRecreateOnEmptyDeficitOverride = alwaysRecreateOnEmptyDeficit
     )
 
     // ── Lifecycle / inertness ─────────────────────────────────────────
@@ -616,19 +618,51 @@ class L1ShadowSyncServiceTest {
         repeat(2) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+                decider.onProbe(
+                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
+                    alwaysRecreateOnEmptyDeficit = false
+                )
             )
         }
         assertEquals(
             ShadowResetDecider.Decision.DEFICIT_STAND_DOWN,
-            decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+            decider.onProbe(
+                emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
+                alwaysRecreateOnEmptyDeficit = false
+            )
         )
         repeat(4) {
             assertEquals(
                 ShadowResetDecider.Decision.NONE,
-                decider.onProbe(emptyDeficit(), scanLooksComplete = true, recentResetMarker = false)
+                decider.onProbe(
+                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
+                    alwaysRecreateOnEmptyDeficit = false
+                )
             )
         }
+    }
+
+    @Test
+    fun resetDecider_debugDefault_recreatesOnOrganicEmptyDeficit() {
+        val decider = ShadowResetDecider()
+        // Debug builds treat any persistent empty deficit as recoverable by
+        // re-creation, marker or not (remote testers have no adb lever).
+        repeat(2) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(
+                    emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
+                    alwaysRecreateOnEmptyDeficit = true
+                )
+            )
+        }
+        assertEquals(
+            ShadowResetDecider.Decision.RECREATE_WALLET,
+            decider.onProbe(
+                emptyDeficit(), scanLooksComplete = true, recentResetMarker = false,
+                alwaysRecreateOnEmptyDeficit = true
+            )
+        )
     }
 
     @Test

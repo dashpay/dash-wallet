@@ -834,7 +834,12 @@ class L1ShadowSyncService internal constructor(
     private val watchdogIntervalMs: Long = WATCHDOG_INTERVAL_MS,
     private val probeStallThresholdMs: Long = PROBE_STALL_THRESHOLD_MS,
     /** Wallet-recreation collaborators; null (tests' default) disables [recoverByRecreatingWallet]. */
-    private val recreator: ShadowWalletRecreator? = null
+    private val recreator: ShadowWalletRecreator? = null,
+    /**
+     * Test override for the debug-build always-recreate-on-empty-deficit
+     * behavior; null (production) resolves to [BuildConfig.DEBUG].
+     */
+    internal val alwaysRecreateOnEmptyDeficitOverride: Boolean? = null
 ) {
     @Inject
     constructor(
@@ -1129,7 +1134,8 @@ class L1ShadowSyncService internal constructor(
         val decision = resetDecider.onProbe(
             report,
             scanLooksComplete = _progress.value.scanLooksComplete,
-            recentResetMarker = hasRecentResetMarker()
+            recentResetMarker = hasRecentResetMarker(),
+            alwaysRecreateOnEmptyDeficit = alwaysRecreateOnEmptyDeficitOverride ?: BuildConfig.DEBUG
         )
         when (decision) {
             ShadowResetDecider.Decision.RESET -> {
