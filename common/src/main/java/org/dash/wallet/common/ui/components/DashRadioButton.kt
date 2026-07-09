@@ -21,6 +21,9 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.dash.wallet.common.R
+import org.dash.wallet.common.ui.components.MyTheme
+import org.dash.wallet.common.ui.components.MyTheme.Typography
+
 /**
  * Custom radio button component with text and optional helper text
  * Matches the design system from Figma
@@ -231,7 +234,7 @@ private fun RadioButtonPreviewContent() {
         // Text on the left, radio button on the right
 
         HorizontalDivider()
-        Text("RadioGroup (simple)", style = MyTheme.OverlineSemibold)
+        Text("RadioGroup (simple)", style = Typography.LabelMediumSemibold)
         HorizontalDivider()
         val selectedFrequency = remember { mutableStateOf("Once per month") }
         RadioGroup(
@@ -240,7 +243,7 @@ private fun RadioButtonPreviewContent() {
             { selectedFrequency.value = it }
         )
         HorizontalDivider()
-        Text("RadioGroup (local currencies)", style = MyTheme.OverlineSemibold)
+        Text("RadioGroup (local currencies)", style = Typography.LabelMediumSemibold)
         HorizontalDivider()
         val selectedCurrency = remember { mutableIntStateOf(1) }
         RadioGroup(

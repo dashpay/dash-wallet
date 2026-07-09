@@ -86,8 +86,8 @@ private fun ExtendedPublicKeyContent(
         )
         Text(
             text = xpub,
-            style = MyTheme.Body2Regular,
-                color = colors.textSecondary,
+            style = MyTheme.Typography.BodyMedium,
+            color = colors.textSecondary,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()

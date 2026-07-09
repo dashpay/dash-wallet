@@ -44,9 +44,7 @@ import org.dash.wallet.common.ui.segmented_picker.SegmentedOption
 import org.dash.wallet.common.ui.viewBinding
 import androidx.core.content.edit
 import org.dash.wallet.common.ui.components.DashWalletTheme
-import org.dash.wallet.common.ui.components.LocalDashColors
 import org.dash.wallet.common.ui.segmented_picker.SegmentedPicker
-import org.dash.wallet.common.ui.segmented_picker.SegmentedPickerStyle
 
 @AndroidEntryPoint
 class PaymentsFragment : Fragment(R.layout.fragment_payments) {
@@ -88,15 +86,10 @@ class PaymentsFragment : Fragment(R.layout.fragment_payments) {
         )
         binding.tabs.setContent {
             DashWalletTheme {
-                val colors = LocalDashColors.current
                 SegmentedPicker(
                     options,
                     modifier = Modifier.height(32.dp),
-                    selectedIndex = selectedTab,
-                    style = SegmentedPickerStyle(
-                        backgroundColor = colors.gray400.copy(alpha = 0.1f),
-                        thumbColor = colors.backgroundSecondary
-                    )
+                    selectedIndex = selectedTab
                 ) { option, index ->
                     selectedTab = index
                     binding.pager.currentItem = index

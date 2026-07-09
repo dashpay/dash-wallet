@@ -70,7 +70,7 @@ object MyTheme {
         fontWeight = FontWeight(500),
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.LabelMediumSemibold"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.LabelMediumSemibold"))
     val OverlineSemibold = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -78,7 +78,7 @@ object MyTheme {
         fontWeight = FontWeight(600),
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.LabelMediumMedium"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.LabelMediumMedium"))
     val OverlineMedium = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -86,7 +86,7 @@ object MyTheme {
         fontWeight = FontWeight(500)
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.LabelMediumMedium"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.LabelMediumMedium"))
     val OverlineCaptionRegular = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
@@ -94,14 +94,14 @@ object MyTheme {
         fontWeight = FontWeight(500)
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.LabelMedium"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.LabelMedium"))
     val OverlineCaptionMedium = TextStyle(
         fontSize = 12.sp,
         lineHeight = 16.sp,
         fontFamily = interRegular,
         fontWeight = FontWeight(400)
     )
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.BodyMedium"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.BodyMedium"))
     val Body2Regular = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -109,7 +109,7 @@ object MyTheme {
         fontWeight = FontWeight(400)
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.BodyMediumMedium"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.BodyMediumMedium"))
     val Body2Medium = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,
@@ -117,7 +117,7 @@ object MyTheme {
         fontWeight = FontWeight(500)
     )
 
-    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("Typography.TitleSmallSemibold"))
+    @Deprecated(message = "obsolete font", replaceWith = ReplaceWith("MyTheme.Typography.TitleSmallSemibold"))
     val Subtitle2Semibold = TextStyle(
         fontSize = 14.sp,
         lineHeight = 20.sp,

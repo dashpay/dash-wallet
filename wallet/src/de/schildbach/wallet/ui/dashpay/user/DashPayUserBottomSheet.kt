@@ -62,6 +62,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.os.BundleCompat
 import androidx.core.os.bundleOf
 import androidx.fragment.app.setFragmentResult
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -147,10 +148,9 @@ class DashPayUserBottomSheet : ComposeBottomSheet() {
 
     private fun resolveInitialUserData(args: Bundle?): UsernameSearchResult? {
         if (args == null) return null
-        @Suppress("DEPRECATION")
-        args.getParcelable<UsernameSearchResult>(ARG_USERNAME_SEARCH_RESULT)?.let { return it }
-        @Suppress("DEPRECATION")
-        args.getParcelable<DashPayProfile>(ARG_DASHPAY_PROFILE)?.let { profile ->
+        BundleCompat.getParcelable(args, ARG_USERNAME_SEARCH_RESULT, UsernameSearchResult::class.java)
+            ?.let { return it }
+        BundleCompat.getParcelable(args, ARG_DASHPAY_PROFILE, DashPayProfile::class.java)?.let { profile ->
             return UsernameSearchResult(profile.username, profile, null, null)
         }
         return null

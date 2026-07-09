@@ -429,35 +429,35 @@ class PurchaseGiftCardFragment : Fragment(R.layout.fragment_purchase_ctxspend_gi
 
         val colors = LocalDashColors.current
         Box(
-                modifier = Modifier.background(
-                    color = colors.backgroundSecondary,
-                    shape = RoundedCornerShape(
-                        topStart = 16.dp,
-                        topEnd = 16.dp,
-                        bottomStart = 0.dp,
-                        bottomEnd = 0.dp
-                    )
+            modifier = Modifier.background(
+                color = colors.backgroundSecondary,
+                shape = RoundedCornerShape(
+                    topStart = 16.dp,
+                    topEnd = 16.dp,
+                    bottomStart = 0.dp,
+                    bottomEnd = 0.dp
                 )
-            ) {
+            )
+        ) {
             val selectedDenomination = viewModel.giftCardOrderInfo.collectAsStateWithLifecycle()
-                MerchantDenominations(
-                    modifier = Modifier.padding(20.dp),
-                    denominations = merchant.denominations,
-                    currency = Currency.getInstance(Constants.USD_CURRENCY),
+            MerchantDenominations(
+                modifier = Modifier.padding(20.dp),
+                denominations = merchant.denominations,
+                currency = Currency.getInstance(Constants.USD_CURRENCY),
                 selectedDenomination = selectedDenomination.value.keys.firstOrNull()?.toBigDecimal()?.toDouble(),
-                    canContinue = !exceedsBalance() && !isReplaying.value,
-                    onDenominationSelected = { denomination ->
-                        val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
+                canContinue = !exceedsBalance() && !isReplaying.value,
+                onDenominationSelected = { denomination ->
+                    val fiat = Fiat.parseFiat(Constants.USD_CURRENCY, denomination.toString())
                     val quantity = selectedDenomination.value.values.firstOrNull() ?: 1
                     viewModel.setGiftCardOrderInfo(fiat, quantity)
-                        binding.fixedDenomText.text = fixedAmountFormat.format(denomination)
-                        setDiscountHint()
-                    },
-                    onContinue = {
-                        PurchaseGiftCardConfirmDialog().show(requireActivity())
-                    }
-                )
-            }
+                    binding.fixedDenomText.text = fixedAmountFormat.format(denomination)
+                    setDiscountHint()
+                },
+                onContinue = {
+                    PurchaseGiftCardConfirmDialog().show(requireActivity())
+                }
+            )
+        }
     }
 
     // taken from SendCoinsFragment.updateView

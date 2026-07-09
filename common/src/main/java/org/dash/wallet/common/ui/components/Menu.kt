@@ -28,9 +28,8 @@ fun Menu(
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
-                .padding(6.dp)
-            .background(colors.backgroundSecondary, RoundedCornerShape(20.dp)),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
+                .padding(6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             menuItems.invoke()
         }

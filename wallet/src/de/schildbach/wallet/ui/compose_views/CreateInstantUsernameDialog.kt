@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,7 +52,7 @@ private fun CreateInstantUsernameContent(
         modifier = Modifier
             .fillMaxWidth()
             .verticalScroll(rememberScrollState())
-            .background(Color.White)
+            .background(colors.backgroundSecondary)
             .padding(top = 60.dp) // Space for the drag indicator and close button
     ) {
         // Content wrapper
@@ -70,7 +69,7 @@ private fun CreateInstantUsernameContent(
                 text = stringResource(R.string.create_instant_username_title),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = colors.textPrimary, //Color(0xFF191C1F),
+                color = colors.textPrimary,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -82,7 +81,7 @@ private fun CreateInstantUsernameContent(
                 text = stringResource(R.string.create_instant_username_description),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Normal,
-                color = colors.extraDarkGray, // Color(0xFF525C66),
+                color = colors.extraDarkGray,
                 textAlign = TextAlign.Center,
                 lineHeight = 20.sp,
                 modifier = Modifier.fillMaxWidth()

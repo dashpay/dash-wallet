@@ -53,10 +53,10 @@ fun Grabber(modifier: Modifier = Modifier) {
     }
 }
 
-@Preview(name = "Grapper Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Preview(name = "Grapper Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(name = "Grabber Light", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_NO)
+@Preview(name = "Grabber Dark", showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
-private fun GrapperPreview() {
+private fun GrabberPreview() {
     DashWalletTheme {
         Grabber()
     }

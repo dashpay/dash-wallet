@@ -187,15 +187,7 @@ private fun ToolsScreenContent(
                 )
             }
 
-            Menu {
-                // ZenLedger Export
-                MenuItem(
-                    title = stringResource(R.string.zenledger_export_title),
-                    icon = R.drawable.ic_zenledger,
-                    action = onZenLedgerExport
-                )
-            }
-                if (uiState.hasUsername) {
+            if (uiState.hasUsername) {
                 Menu {
                     // Credits (only shown when user has a username)
                     MenuItem(

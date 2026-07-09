@@ -62,8 +62,8 @@ fun ModalDialog(
     horizontalPadding: androidx.compose.ui.unit.Dp = 15.dp
 ) {
     if (showDialog) {
-        val colors = LocalDashColors.current
         DashWalletTheme {
+            val colors = LocalDashColors.current
             Dialog(
                 onDismissRequest = onDismissRequest,
                 properties = DialogProperties(

@@ -17,6 +17,7 @@
 
 package org.dash.wallet.features.exploredash.ui.explore
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -31,7 +32,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFontLoader
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -41,7 +41,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
-import android.content.res.Configuration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -502,7 +501,7 @@ private fun UserLoginStatus(
         pushStringAnnotation(tag = "logout", annotation = "logout")
         withStyle(
             SpanStyle(
-                color = colors.dashBlue, //Color(0xFF008DE4),
+                color = colors.dashBlue,
                 textDecoration = TextDecoration.Underline
             )
         ) {
@@ -514,7 +513,7 @@ private fun UserLoginStatus(
     Text(
         text = annotatedText,
         fontSize = 13.sp,
-        color = colors.extraDarkGray, //Color(0xFF525C66),
+        color = colors.extraDarkGray,
         textAlign = TextAlign.Center,
         modifier = Modifier
             .fillMaxWidth()
@@ -684,7 +683,7 @@ private fun ShowAllLocationsItem(
             text = stringResource(R.string.explore_show_all_locations, count),
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            color = colors.textPrimary, //Color(0xFF191C1F),
+            color = colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
         Icon(
@@ -735,7 +734,7 @@ private fun AtmDetailsContent(
                         text = atm.manufacturer?.replaceFirstChar { it.uppercase() } ?: "",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
-                        color = colors.textPrimary //Color(0xFF191C1F)
+                        color = colors.textPrimary
                     )
                 }
 
@@ -775,7 +774,7 @@ private fun AtmDetailsContent(
                                 .height(48.dp),
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = colors.dashBlue //Color(0xFF008DE4)
+                                containerColor = colors.dashBlue
                             )
                         ) {
                             Text(

@@ -295,6 +295,18 @@ private fun BalanceRow(
 
 // ── Previews ────────────────────────────────────────────────────────────────────
 
+@Composable
+private fun TopIntroSendPreviewScaffold(content: @Composable () -> Unit) {
+    val colors = LocalDashColors.current
+    Column(
+        modifier = Modifier
+            .background(colors.backgroundPrimary)
+            .padding(vertical = 8.dp)
+    ) {
+        content()
+    }
+}
+
 @Preview(name = "Send Visible Light", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Preview(name = "Send Visible Dark", showBackground = true, widthDp = 393, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
@@ -306,12 +318,7 @@ private fun TopIntroSendVisiblePreview() {
 
 @Composable
 private fun TopIntroSendVisiblePreviewContent() {
-    val colors = LocalDashColors.current
-    Column(
-        modifier = Modifier
-            .background(colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -332,12 +339,7 @@ private fun TopIntroSendHiddenPreview() {
 
 @Composable
 private fun TopIntroSendHiddenPreviewContent() {
-    val colors = LocalDashColors.current
-    Column(
-        modifier = Modifier
-            .background(colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -360,12 +362,7 @@ private fun TopIntroSendNoFiatPreview() {
 
 @Composable
 private fun TopIntroSendNoFiatPreviewContent() {
-    val colors = LocalDashColors.current
-    Column(
-        modifier = Modifier
-            .background(colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Send",
             toAddress = "XqP9vKtSgMnBr7LjN3FcDwYeZh4Ao8uQ1",
@@ -385,12 +382,7 @@ private fun TopIntroSendIconPreview() {
 
 @Composable
 private fun TopIntroSendIconPreviewContent() {
-    val colors = LocalDashColors.current
-    Column(
-        modifier = Modifier
-            .background(colors.backgroundPrimary)
-            .padding(vertical = 8.dp)
-    ) {
+    TopIntroSendPreviewScaffold {
         TopIntroSend(
             heading = "Buy gift card",
             preposition = "at",

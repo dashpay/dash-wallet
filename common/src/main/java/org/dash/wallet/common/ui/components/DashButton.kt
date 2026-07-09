@@ -55,7 +55,7 @@ fun DashButton(
         style == Style.FilledBlue -> colors.dashBlue
         style == Style.FilledOrange -> colors.orange
         style == Style.FilledRed -> colors.red
-        style == Style.FilledGreen -> Color(0xFF3EB489)
+        style == Style.FilledGreen -> colors.green
         style == Style.TintedBlue -> colors.dashBlue5
         style == Style.TintedGray -> colors.gray.copy(alpha = 0.10f)
         style == Style.TintedRed -> colors.red5

@@ -437,7 +437,7 @@ private fun NavBarPreview() {
             NavBarTitleClose(title = "Label", onCloseClick = {})
             NavBarBackTitlePlus(title = "Label", onBackClick = {}, onPlusClick = {})
             NavBarBackPlus(onBackClick = {}, onPlusClick = {})
-        NavBarTitle(title = "Title Only")
+            NavBarTitle(title = "Title Only")
             NavBarClose(onCloseClick = {})
             NavBarActionTitleAction(
                 title = "Label",

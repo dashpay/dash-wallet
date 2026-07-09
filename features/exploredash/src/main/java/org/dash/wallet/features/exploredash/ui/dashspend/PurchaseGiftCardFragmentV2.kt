@@ -47,7 +47,6 @@ import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.data.entity.ExchangeRate
 import org.dash.wallet.common.ui.components.DashWalletTheme
 import org.dash.wallet.common.ui.components.LocalDashColors
-import org.dash.wallet.common.ui.components.MyTheme
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.common.util.GenericUtils
@@ -160,10 +159,10 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         val max = maxFiat?.toBigDecimal() ?: BigDecimal.valueOf(Double.MAX_VALUE)
                         val balanceMax = fiatBalance.toBigDecimal()
                         amount > BigDecimal.ZERO &&
-                                amount >= min &&
-                                amount <= max &&
-                                amount < balanceMax &&
-                                !isBlockchainReplaying
+                            amount >= min &&
+                            amount <= max &&
+                            amount < balanceMax &&
+                            !isBlockchainReplaying
                     }
 
                     is GiftCardPurchaseMode.FlexibleMultiple,
@@ -173,12 +172,12 @@ class PurchaseGiftCardFragmentV2 : Fragment() {
                         }
                         val min = minFiat?.toBigDecimal()?.toDouble() ?: 0.00
                         denominationQuantities.isNotEmpty() &&
-                                totalDouble > 0.0 &&
-                                totalDouble >= min &&
-                                totalDouble < fiatBalance.toBigDecimal().toDouble() &&
-                                !isBlockchainReplaying &&
-                                totalDouble < 2500 &&
-                                !exceedsInventory
+                            totalDouble > 0.0 &&
+                            totalDouble >= min &&
+                            totalDouble < fiatBalance.toBigDecimal().toDouble() &&
+                            !isBlockchainReplaying &&
+                            totalDouble < 2500 &&
+                            !exceedsInventory
                     }
                 }
 

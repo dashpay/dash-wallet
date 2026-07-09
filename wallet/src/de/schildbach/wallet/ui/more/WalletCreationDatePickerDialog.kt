@@ -58,8 +58,11 @@ fun WalletCreationDatePickerDialog(
     val colors = LocalDashColors.current
     val earliestMillis = de.schildbach.wallet.Constants.EARLIEST_HD_SEED_CREATION_TIME * 1000L
     val nowMillis = System.currentTimeMillis()
-    val minYear = remember { Calendar.getInstance().apply { timeInMillis = earliestMillis }.get(Calendar.YEAR) }
-    val maxYear = remember { Calendar.getInstance().apply { timeInMillis = nowMillis }.get(Calendar.YEAR) }
+    // The picker works in UTC, so derive the year bounds in UTC too — deriving the current year from
+    // the device's local calendar can be off by one around UTC New Year and misclassify selectable years.
+    val utc = TimeZone.getTimeZone("UTC")
+    val minYear = remember { Calendar.getInstance(utc).apply { timeInMillis = earliestMillis }.get(Calendar.YEAR) }
+    val maxYear = remember { Calendar.getInstance(utc).apply { timeInMillis = nowMillis }.get(Calendar.YEAR) }
 
     val datePickerState = rememberDatePickerState(
         // The picker works in UTC; convert the stored local-midnight seconds to a UTC-midnight instant.

@@ -620,8 +620,20 @@ private fun CircleButton(
 }
 
 // ── Previews ──────────────────────────────────────────────────────────────────
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Single - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Single - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Single - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFlexibleSingle() {
     DashWalletTheme {
@@ -652,8 +664,20 @@ private fun PreviewFlexibleSingle() {
         )
     }
 }
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Flexible – Multiple - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Multiple - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Flexible – Multiple - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFlexibleMultiple() {
     DashWalletTheme {
@@ -685,8 +709,20 @@ private fun PreviewFlexibleMultiple() {
         )
     }
 }
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations - Light", uiMode = Configuration.UI_MODE_NIGHT_NO)
-@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Fixed Denominations - Dark", uiMode = Configuration.UI_MODE_NIGHT_YES)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Fixed Denominations - Light",
+    uiMode = Configuration.UI_MODE_NIGHT_NO
+)
+@Preview(
+    showBackground = true,
+    widthDp = 393,
+    heightDp = 852,
+    name = "Fixed Denominations - Dark",
+    uiMode = Configuration.UI_MODE_NIGHT_YES
+)
 @Composable
 private fun PreviewFixed() {
     DashWalletTheme {
