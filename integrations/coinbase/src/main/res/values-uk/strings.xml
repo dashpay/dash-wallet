@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Між Dash Wallet і вашим Coinbase акаунтом</string>
     <string name="coinbase_dash_wallet_error_title">Ми не знайшли Dash Wallet у вашому обліковому записі Coinbase.</string>
     <string name="coinbase_dash_wallet_error_message">Щоб продовжити, створіть гаманець Dash на Coinbase.</string>
+    <string name="coinbase_usd_wallet_error_message">Ваш аккаунт Coinbase не підтримує USD.</string>
     <string name="create_dash_account">Створити обліковий запис Dash</string>
     <string name="close">Закрити</string>
     <string name="retry">Повторити</string>

@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
@@ -74,12 +75,12 @@ fun MenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 56.dp)
-            .background(Color.Transparent, RoundedCornerShape(20.dp))
+            .background(Color.Transparent, RoundedCornerShape(10.dp))
             .then(if (action != null) Modifier.clickable { action() } else Modifier)
             .semantics { if (action != null) role = Role.Button }
-            .padding(horizontal = 10.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp)
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
             // Icon with direction indicator
             Box(modifier = Modifier.size(26.dp)) {
@@ -119,14 +120,14 @@ fun MenuItem(
             // Main content
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(1.dp)
             ) {
                 // Help text above (if provided) - aligned with title
                 helpTextAbove?.let {
                     Text(
                         text = it,
-                        style = MyTheme.OverlineMedium,
-                        color = MyTheme.Colors.textTertiary,
+                        style = MyTheme.Typography.BodyMedium,
+                        color = MyTheme.Colors.textSecondary,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -138,15 +139,15 @@ fun MenuItem(
                 ) {
                     Text(
                         text = title,
-                        style = MyTheme.Body2Medium,//.copy(fontWeight = W600),
+                        style = MyTheme.Typography.LabelLargeMedium,
                         color = MyTheme.Colors.textPrimary
                     )
 
                     if (showInfo) {
                         Icon(
-                            painter = painterResource(id = android.R.drawable.ic_dialog_info),
-                            contentDescription = "Info",
-                            tint = MyTheme.Colors.textTertiary,
+                            painter = painterResource(id = R.drawable.ic_menu_info),
+                            contentDescription = stringResource(id = R.string.info),
+                            tint = Color.Unspecified,
                             modifier = Modifier
                                 .size(15.dp)
                                 .then(

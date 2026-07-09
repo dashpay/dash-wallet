@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
 
     <string name="transaction_row_message_own_instantx_lock_request_notsent">Instantno plačilo še ni bilo poslano.</string>
     <string name="wallet_options_disconnect">Odjava</string>
@@ -59,7 +59,7 @@
         <item quantity="other">ur</item>
     </plurals>
 
-	<string name="encrypt_new_key_chain_upgrade_button">Posodobitev</string>
+    <string name="encrypt_new_key_chain_upgrade_button">Posodobitev</string>
     <string name="encrypt_new_key_chain_dialog_title">Posodobite vašo denarnico</string>
     <string name="encrypt_new_key_chain_dialog_message">Vaša denarnica bo posodobljena v verzijo, ki omogoča povezavo z drugimi aplikacijami. </string>
     <string name="encrypt_new_key_chain_enter_pin_dialog_message">Za nadaljevanje posodobitve, morate vpisati vašo PIN številko. </string>

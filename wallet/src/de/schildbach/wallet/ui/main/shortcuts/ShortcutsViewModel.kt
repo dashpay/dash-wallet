@@ -24,14 +24,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.service.DeviceInfoProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.integrations.coinbase.repository.CoinBaseRepositoryInt
+import org.dash.wallet.integrations.crowdnode.api.CrowdNodeApi
+import org.dash.wallet.integrations.crowdnode.model.SignUpStatus
 import org.dash.wallet.integrations.uphold.api.TopperClient
 import javax.inject.Inject
 
@@ -43,10 +48,14 @@ class ShortcutsViewModel @Inject constructor(
     private val shortcutProvider: ShortcutProvider,
     private val deviceInfo: DeviceInfoProvider,
     private val topperClient: TopperClient,
-    private val coinBaseRepository: CoinBaseRepositoryInt
+    private val coinBaseRepository: CoinBaseRepositoryInt,
+    private val crowdNodeApi: CrowdNodeApi
 ): ViewModel() {
     private val maxShortcuts = if (deviceInfo.isSmallScreen) 3 else 4
     private var isPassphraseVerified = true
+    // CrowdNode functionality is limited: the staking shortcut is only available
+    // if the active wallet is already associated with a CrowdNode account
+    private var hasCrowdNodeAccount = false
     private val hasCustomShortcuts: Boolean
         get() = shortcutProvider.customShortcuts.value.isNotEmpty()
 
@@ -82,8 +91,21 @@ class ShortcutsViewModel @Inject constructor(
         shortcutProvider.customShortcuts
             .onEach { Log.i("SHORTCUTS", "size: ${it.size}") }
             .filterNot { it.isEmpty() }
-            .onEach { shortcuts = it.take(maxShortcuts) }
+            .onEach { shortcuts = filterUnavailable(it).take(maxShortcuts) }
             .launchIn(viewModelScope)
+
+        crowdNodeApi.signUpStatus
+            .map { it != SignUpStatus.NotStarted }
+            .distinctUntilChanged()
+            .onEach { hasAccount ->
+                hasCrowdNodeAccount = hasAccount
+                refreshShortcuts()
+            }
+            .launchIn(viewModelScope)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            crowdNodeApi.restoreStatus()
+        }
 
         // Check if need to show the shortcut info panel
         viewModelScope.launch {
@@ -104,7 +126,9 @@ class ShortcutsViewModel @Inject constructor(
     }
 
     fun getAllShortcutOptions(replacingShortcut: ShortcutOption): List<ShortcutOption> {
-        return ShortcutOption.entries.filterNot { it == replacingShortcut || it == ShortcutOption.SECURE_NOW }
+        return filterUnavailable(
+            ShortcutOption.entries.filterNot { it == replacingShortcut || it == ShortcutOption.SECURE_NOW }
+        )
     }
 
     fun refreshIsPassphraseVerified() {
@@ -160,12 +184,27 @@ class ShortcutsViewModel @Inject constructor(
     }
 
     private fun getPresetShortcuts(): List<ShortcutOption> {
-        return shortcutProvider.getFilteredShortcuts(
-            isPassphraseVerified = isPassphraseVerified,
-            userHasBalance = userHasBalance,
-            userHasContacts = userHasContacts,
-            prioritizeSpend = true
+        return filterUnavailable(
+            shortcutProvider.getFilteredShortcuts(
+                isPassphraseVerified = isPassphraseVerified,
+                userHasBalance = userHasBalance,
+                userHasContacts = userHasContacts,
+                prioritizeSpend = true
+            )
         )
+    }
+
+    private fun filterUnavailable(shortcuts: List<ShortcutOption>): List<ShortcutOption> {
+        return shortcuts.filterNot { it == ShortcutOption.STAKING && !hasCrowdNodeAccount }
+    }
+
+    private fun refreshShortcuts() {
+        val customShortcuts = shortcutProvider.customShortcuts.value
+        shortcuts = if (customShortcuts.isNotEmpty()) {
+            filterUnavailable(customShortcuts).take(maxShortcuts)
+        } else {
+            getPresetShortcuts().take(maxShortcuts)
+        }
     }
 
     suspend fun getTopperUrl(walletName: String): String {

@@ -7,8 +7,28 @@
     <string name="button_dismiss">Avsluta</string>
     <string name="button_continue">Fortsätt</string>
     <string name="button_close">Stäng</string>
+    <string name="button_cancel">Avbryt</string>
+    <string name="button_confirm">Bekräfta</string>
     <string name="button_retry">Försök igen</string>
     <string name="button_share">Dela</string>
     <string name="dash">Dash</string>
+    <string name="exchange_rate_not_found">Kunde inte hitta växlingskurs</string>
     <string name="enter_amount_available">tillgängligt</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Skicka rapport med…</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Ursäkta</string>
+    <string name="scan_camera_problem_dialog_message">Kameran har ett problem. Du behöver antagligen starta om enheten.</string>
+    <!-- address input -->
+    <string name="address_input_title">Skicka Dash</string>
+    <!-- input parser -->
+    <string name="input_parser_io_error">Kan inte läsa av data:\n%s</string>
+    <string name="input_parser_cannot_classify">Kan inte känna igen inmatning:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Ogiltig Dash URI:\n%s</string>
+    <string name="input_parser_invalid_address">Fick en ogiltig bitcoinadress!\n(Blandar du ihop Mainnet/Testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Kan inte verifiera betalningsförfrågant:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Ogiltig betalningsförffrågan:\n%s</string>
+    <string name="input_parser_invalid_transaction">Ogiltig transaktion:\n%s</string>
+    <string name="insufficient_money_title">Du saknar tillräckliga medel</string>
+    <string name="send_coins_error_msg">Problem att skicka Dash!</string>
     </resources>

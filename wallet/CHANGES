@@ -1,4 +1,55 @@
 DashPay Wallet
+v11.8.2
+  New features & redesigns
+  - Redesigned the About screen (#1498)
+  - DashSpend: support for CTX gift card redeem URLs (#1495)
+
+  DashSpend
+  - Fixed DashSpend login and token-refresh authentication (#1492)
+  - Restored gift card merchant icons on the home transaction list
+  - Show a generated merchant-name icon for gift cards without a logo
+  - Fixed a crash caused by the SearchFragment animation on destroy
+
+  CrowdNode
+  - Cache whether signup is finished to avoid repeated checks
+
+  Stability & performance fixes
+  - New attempt to prevent TransactionTooLargeException
+  - Fixed a crash in the Merchant filter dialog when sort-by option translations are missing
+  - Improved Blockchain Service shutdown
+  - Avoid saving the wallet when a transaction receives an exchange rate
+  - Moved location determination off the main thread
+  - Handle crashes related to RegTestParams and the rescan blockchain dialog
+  - Resolved an ANR for Topper queries by using Dispatchers.IO
+
+  Maintenance
+  - Updated to dpp 4.0.0
+  - Translation updates
+  - Test fixes and CodeRabbit review feedback
+
+v11.8.1
+  Crowdnode
+  - Restricted CrowdNode to withdrawals only — deposits, account linking, and the online account button are disabled for existing accounts (#1490, and the follow-up fix to hide the online account button, which addresses the v11.8.1 getAccountUrl NPE)
+v11.8.0
+  New features & redesigns
+  - DashSpend: support for gift card quantities for PiggyCards (#1483)
+  - Tools menu: redesigned and aligned the tools dialogs (#1479)
+  - CSV export / ZenLedger: updated designs (#1475)
+
+  Maya integration
+  - Added the full Maya swap integration
+
+  Stability & performance fixes
+  - Eliminated screen-switch crashes (#1477)
+  - Improved Blockchain Service shutdown and the TxDisplayCache (#1482)
+  - Optimized home-screen display using a transaction cache (#1473)
+  - Explore Dash: prevent DB crash by restoring the database if corrupted (#1485)
+  - Coinbase: prevent crash and show an error when there's no USD account (#1481)
+
+  Maintenance
+  - Translated ScanActivity to Kotlin (#1250)
+  - translation updates and minor bug fixes (#1488)
+
 v11.7.1
 * Fix issues with instantsend
 

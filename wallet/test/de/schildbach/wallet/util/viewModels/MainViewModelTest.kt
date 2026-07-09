@@ -32,6 +32,7 @@ import de.schildbach.wallet.database.dao.InvitationsDao
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import de.schildbach.wallet.transactions.TxFilterType
 import androidx.datastore.preferences.core.Preferences
+import androidx.lifecycle.viewModelScope
 import de.schildbach.wallet.data.CoinJoinConfig
 import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
@@ -45,6 +46,8 @@ import de.schildbach.wallet.database.entity.DashPayContactRequest
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.BiometricHelper
 import de.schildbach.wallet.service.CoinJoinService
+import de.schildbach.wallet.service.TxDisplayCacheService
+import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformService
 import de.schildbach.wallet.service.platform.PlatformSyncService
 import de.schildbach.wallet.ui.main.MainViewModel
@@ -183,7 +186,7 @@ class MainViewModelTest {
         every { observe(WalletUIConfig.SELECTED_CURRENCY) } returns MutableStateFlow("USD")
     }
 
-    private val platformRepo = mockk<PlatformRepo>() {
+    private val identityRepository = mockk<IdentityRepository>() {
         every { observeContacts("", UsernameSortOrderBy.LAST_ACTIVITY, false) } returns MutableStateFlow(
             listOf(
                 UsernameSearchResult(
@@ -196,6 +199,11 @@ class MainViewModelTest {
         )
     }
 
+    private val platformRepo = mockk<PlatformRepo>() {
+
+    }
+
+    private val txDisplayCacheService = mockk<TxDisplayCacheService>()
     private val biometricHelper = mockk<BiometricHelper>()
     private val deviceInfoProvider = mockk<DeviceInfoProvider>()
     private val coinJoinConfig = mockk<CoinJoinConfig>()
@@ -269,12 +277,12 @@ class MainViewModelTest {
                 exchangeRatesMock,
                 walletDataMock,
                 walletApp,
+                identityRepository,
                 platformRepo,
                 platformService,
                 platformSyncService,
                 blockchainIdentityConfigMock,
                 savedStateMock,
-                transactionMetadataMock,
                 blockchainStateMock,
                 biometricHelper,
                 deviceInfoProvider,
@@ -284,11 +292,12 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 coinJoinConfig,
-                coinJoinService
+                coinJoinService,
+                txDisplayCacheService
             )
         )
 
-        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+        runBlocking(viewModel.viewModelScope.coroutineContext) {
             assertEquals(false, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
         }
@@ -307,12 +316,12 @@ class MainViewModelTest {
                 exchangeRatesMock,
                 walletDataMock,
                 walletApp,
+                identityRepository,
                 platformRepo,
                 platformService,
                 platformSyncService,
                 blockchainIdentityConfigMock,
                 savedStateMock,
-                transactionMetadataMock,
                 blockchainStateMock,
                 biometricHelper,
                 deviceInfoProvider,
@@ -322,11 +331,12 @@ class MainViewModelTest {
                 mockDashPayConfig,
                 dashPayContactRequestDao,
                 coinJoinConfig,
-                coinJoinService
+                coinJoinService,
+                txDisplayCacheService
             )
         )
 
-        runBlocking(viewModel.viewModelWorkerScope.coroutineContext) {
+        runBlocking(viewModel.viewModelScope.coroutineContext) {
             assertEquals(true, viewModel.isBlockchainSynced.value)
             assertEquals(false, viewModel.isBlockchainSyncFailed.value)
         }

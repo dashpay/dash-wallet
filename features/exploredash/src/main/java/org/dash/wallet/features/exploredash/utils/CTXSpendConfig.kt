@@ -20,6 +20,8 @@ package org.dash.wallet.features.exploredash.utils
 import android.content.Context
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BaseConfig
 import org.dash.wallet.common.util.security.EncryptionProvider
@@ -42,5 +44,26 @@ class CTXSpendConfig @Inject constructor(
         val PREFS_KEY_CTX_PAY_EMAIL = stringPreferencesKey("ctx_spend_email")
         val PREFS_DEVICE_UUID = stringPreferencesKey("device_uuid")
         val PREFS_LAST_PURCHASE_START = longPreferencesKey("last_purchase_start")
+    }
+
+    suspend fun saveTokenState(
+        accessToken: String,
+        refreshToken: String? = null,
+        now: Long = System.currentTimeMillis()
+    ) = withContext(NonCancellable) {
+        setSecuredData(PREFS_KEY_ACCESS_TOKEN, accessToken)
+        set(PREFS_KEY_ACCESS_TOKEN_TIME, now)
+
+        if (!refreshToken.isNullOrBlank()) {
+            setSecuredData(PREFS_KEY_REFRESH_TOKEN, refreshToken)
+            set(PREFS_KEY_REFRESH_TOKEN_TIME, now)
+        }
+    }
+
+    suspend fun clearTokenState() = withContext(NonCancellable) {
+        setSecuredData(PREFS_KEY_ACCESS_TOKEN, "")
+        setSecuredData(PREFS_KEY_REFRESH_TOKEN, "")
+        set(PREFS_KEY_ACCESS_TOKEN_TIME, 0L)
+        set(PREFS_KEY_REFRESH_TOKEN_TIME, 0L)
     }
 }

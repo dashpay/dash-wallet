@@ -155,15 +155,6 @@
     <string name="encrypt_keys_dialog_show">Mostra el PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Encriptant…</string>
     <string name="encrypt_keys_dialog_state_decrypting">Desencriptant…</string>
-    <string name="scan_camera_problem_dialog_title">Disculpes</string>
-    <string name="scan_camera_problem_dialog_message">La càmera té un problema. Probablement necessites reiniciar el dispositiu.</string>
-    <string name="input_parser_io_error">No es poden llegir les dades:\n%s</string>
-    <string name="input_parser_cannot_classify">No es pot reconèixer l\'entrada:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Adreça de Dash no vàlida:\n%s</string>
-    <string name="input_parser_invalid_address">Direcció rebuda de Dash no vàlida.!\n(Mixing up mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">No es pot verificar la petició de pagament:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Petició de pagament no vàlida:\n%s</string>
-    <string name="input_parser_invalid_transaction">Transacció no vàlida:\n%s</string>
     <string name="preferences_activity_title">Ajustaments</string>
     <string name="preferences_category_diagnostics">Diagnosis</string>
     <string name="preferences_category_labs">Laboratoris</string>
@@ -181,7 +172,6 @@
     <string name="preferences_extended_public_key_title">Mostra xpub</string>
     <string name="preferences_extended_public_key_summary">Visualitza la clau pública extesa de la teva butxaca, per poder ser importades per altes aplicacions o serveis. Tingues cuidado: Si ho fa, revelar la seva privacitat monetària per a aquesta aplicació.</string>
     <string name="bitmap_fragment_share">Compartir…</string>
-    <string name="extended_public_key_fragment_title">Clau pública extesa</string>
     <string name="extended_public_key_fragment_share">Comparteix xpub</string>
     <string name="report_issue_dialog_title_issue">Reportar problema</string>
     <string name="report_issue_dialog_title_crash">Bloqueig previ detectat.</string>

@@ -40,7 +40,10 @@ interface CTXSpendApi {
     suspend fun purchaseGiftCard(@Body purchaseGiftCardRequest: PurchaseGiftCardRequest): GiftCardResponse
 
     @GET("gift-cards")
-    suspend fun getGiftCard(@Query("txid") txid: String): GiftCardResponse?
+    suspend fun getGiftCardByTxId(@Query("txid") txid: String): GiftCardResponse?
+
+    @GET("gift-cards/{id}")
+    suspend fun getGiftCardByOrderId(@Path("id") id: String): GiftCardResponse?
 
     @GET("merchants/{id}")
     suspend fun getMerchant(@Path("id") id: String): GetMerchantResponse?

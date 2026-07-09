@@ -54,10 +54,8 @@ class EntryPointFragment : Fragment(R.layout.fragment_entry_point) {
             safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(false))
         }
 
-        binding.existingAccountBtn.setOnClickListener {
-            viewModel.logEvent(AnalyticsConstants.CrowdNode.LINK_EXISTING)
-            safeNavigate(EntryPointFragmentDirections.entryPointToNewAccount(true))
-        }
+        // CrowdNode functionality is limited: linking an existing account isn't supported
+        binding.existingAccountBtn.isVisible = false
 
         binding.backupPassphraseHint.setOnClickListener {
             val dialog = AdaptiveDialog.create(

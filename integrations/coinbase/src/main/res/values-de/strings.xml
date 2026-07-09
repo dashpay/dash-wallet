@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">Zwischen Dash Wallet und deinem Coinbase Konto</string>
     <string name="coinbase_dash_wallet_error_title">Wir konnten keine Dash Wallet in deinem Coinbase Konto finden.</string>
     <string name="coinbase_dash_wallet_error_message">Um fortzufahren, erstelle bitte eine Dash Wallet auf Coinbase.</string>
+    <string name="coinbase_usd_wallet_error_message">Dein Coinbase-Konto bietet kein USD an.</string>
     <string name="create_dash_account">Dash Konto erstellen</string>
     <string name="close">Schließen</string>
     <string name="retry">Wiederholen</string>

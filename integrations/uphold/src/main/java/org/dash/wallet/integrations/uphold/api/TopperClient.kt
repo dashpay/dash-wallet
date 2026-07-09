@@ -22,6 +22,8 @@ import com.google.gson.Gson
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.SignatureAlgorithm
 import io.jsonwebtoken.io.Decoders
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import org.bitcoinj.core.Address
 import org.dash.wallet.common.util.Constants
@@ -96,7 +98,7 @@ class TopperClient @Inject constructor(
         return "${if (isSandbox) SANDBOX_URL else BASE_URL}?bt=$token"
     }
 
-    suspend fun refreshSupportedAssets() {
+    suspend fun refreshSupportedAssets() = withContext(Dispatchers.IO) {
         supportedAssets = try {
             val response = httpClient.get(SUPPORTED_ASSETS_URL)
             val root = Gson().fromJson(response.body?.string(), SupportedTopperAssets::class.java)
@@ -107,7 +109,7 @@ class TopperClient @Inject constructor(
         }
     }
 
-    suspend fun refreshPaymentMethods() {
+    suspend fun refreshPaymentMethods() = withContext(Dispatchers.IO) {
         supportedPaymentMethods = try {
             val response = httpClient.get(SUPPORTED_PAYMENT_METHODS_URL)
             val root = Gson().fromJson(response.body?.string(), SupportedTopperPaymentMethods::class.java)

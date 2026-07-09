@@ -164,15 +164,6 @@
     <string name="encrypt_keys_dialog_show">Vis PIN</string>
     <string name="encrypt_keys_dialog_state_encrypting">Krypterer …</string>
     <string name="encrypt_keys_dialog_state_decrypting">Afkrypterer …</string>
-    <string name="scan_camera_problem_dialog_title">Beklager</string>
-    <string name="scan_camera_problem_dialog_message">Der er et problem med kameraet. En gentstart af enheden er sandsynligvis nødvendig.</string>
-    <string name="input_parser_io_error">Kan ikke læse data:\n%s</string>
-    <string name="input_parser_cannot_classify">Kan ikke genkende input:\n%s</string>
-    <string name="input_parser_invalid_bitcoin_uri">Ugyldig Dash-URI:\n%s</string>
-    <string name="input_parser_invalid_address">Modtog ugyldig Dash-adresse!\n(Forveksler du mainnet/testnet?)</string>
-    <string name="input_parser_unverifyable_paymentrequest">Kan ikke verificere betalingsforespørgsel:\n%s</string>
-    <string name="input_parser_invalid_paymentrequest">Ugyldig betalingsforespørgsel:\n%s</string>
-    <string name="input_parser_invalid_transaction">Ugyldig overførsel:\n%s</string>
     <string name="preferences_activity_title">Opsætning</string>
     <string name="preferences_category_diagnostics">Diagnostik</string>
     <string name="preferences_category_labs">Laboratoriet</string>
@@ -197,7 +188,6 @@
     <string name="preferences_extended_public_key_title">Vis xpub</string>
     <string name="preferences_extended_public_key_summary">Vis din tegnebogs udvidede offentlige nøgle så den kan importeres til andre apps og tjenester. Vær forsigtig: Du vil afsløre dit økonomiske privatliv til pågældende app, hvis du gør dette.</string>
     <string name="bitmap_fragment_share">Del …</string>
-    <string name="extended_public_key_fragment_title">Udvidet offentlig nøgle</string>
     <string name="extended_public_key_fragment_share">Del xpub …</string>
     <string name="report_issue_dialog_title_issue">Rapportér problem</string>
     <string name="report_issue_dialog_title_crash">Tidligere programnedbrud opfanget</string>

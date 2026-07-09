@@ -23,6 +23,7 @@ data class GiftCardInfo(
     val percentDiscount: String? = "",
     val rate: String? = "",
     val redeemUrl: String? = "",
+    val redeemUrlChallenge: String? = "",
     val fiatAmount: String? = "",
     val fiatCurrency: String? = "",
     val paymentUrls: Map<String, String>? = buildMap { }
@@ -36,6 +37,7 @@ data class GiftCardInfo(
             "paymentUrls=$paymentUrls, barcodeUrl=${if (barcodeUrl != null) "[REDACTED]" else null}, " +
             "cardNumber=${if (cardNumber != null) "[REDACTED]" else null}, " +
             "cardPin=${if (cardPin != null) "[REDACTED]" else null}, " +
-            "redeemUrl=${if (redeemUrl != null) "[REDACTED]" else null})"
+            "redeemUrl=${if (redeemUrl != null) "[REDACTED]" else null}, " +
+            "redeemUrlChallenge=${if (redeemUrlChallenge != null) "[REDACTED]" else null})"
     }
 }

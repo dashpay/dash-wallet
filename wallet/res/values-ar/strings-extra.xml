@@ -272,11 +272,9 @@
     <string name="menu_contact_support_title">اتصل بالدعم</string>
     <string name="menu_contact_support_subtitle">بلغ عن خطأ</string>
     <string name="menu_explore_title">اكتشف </string>
-    <string name="tools_address_book">دليل العناوين</string>
-    <string name="tools_import_private_key">استيراد مفتاح خاص</string>
+    <string name="tools_address_book">دفتر عناوين</string>
+    <string name="tools_import_private_key">استيراد المفتاح الخاص</string>
     <string name="tools_network_monitor">مراقب الشبكة</string>
-    <string name="tools_show_xpub">مفتاح عام ممتد</string>
-
     <string name="about_help_us_improve">ساعدنا على تحسين تجربتك</string>
     <string name="about_review_and_rate">مراجعة وتقييم التطبيق</string>
     <string name="about_contact_support">اتصل بالدعم</string>
@@ -284,6 +282,8 @@
     <string name="about_license">رخصة GNUالعمومية العامة الإصدار 3.0</string>
     <string name="about_last_explore_device_sync">آخر استكشاف مزامنة الجهاز</string>
     <string name="about_last_explore_server_update">آخر تحديث لاستكشاف الخادم</string>
+    <string name="about_explore_section">اكتشف داش</string>
+    <string name="about_value_not_available">غير متاح</string>
     <string name="about_firebase_installation_id">معرّف تثبيت Firebase</string>
     <string name="about_fcm_token">رمز Firebase للرسائل السحابية</string>
     <string name="about_last_explore_dash_update_error">لا يمكن جلبه</string>

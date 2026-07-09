@@ -282,11 +282,6 @@
             android:theme="@style/LockScreenActivity.Child.Theme" />
 
         <activity
-            android:name="de.schildbach.wallet.ui.more.AboutActivity"
-            android:screenOrientation="portrait"
-            android:theme="@style/LockScreenActivity.Child.Theme" />
-
-        <activity
             android:name="de.schildbach.wallet.ui.payments.QuickReceiveActivity"
             android:screenOrientation="portrait"
             android:theme="@style/LockScreenActivity.Child.Theme" />
