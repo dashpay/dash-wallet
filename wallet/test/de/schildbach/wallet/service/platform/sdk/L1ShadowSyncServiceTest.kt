@@ -77,6 +77,12 @@ class L1ShadowSyncServiceTest {
         var dashjBalances: Pair<Long, Long>? = 0L to 0L
         var dashjTxs: Int? = 0
 
+        var sdkUtxos: List<L1Utxo> = emptyList()
+        var dashjUtxos: List<L1Utxo>? = emptyList()
+        var sdkUtxoFetches = 0
+        var clearSpvStorageCalls = 0
+        var clearL1RowsCalls = 0
+
         val progressFlow = MutableStateFlow(SpvSyncProgressData.EMPTY)
 
         fun interactions() = boundCalls + isRunningCalls + startCalls + stopCalls
@@ -111,6 +117,21 @@ class L1ShadowSyncServiceTest {
         override suspend fun dashjBalanceDuffs(): Pair<Long, Long>? = dashjBalances
 
         override suspend fun dashjTxCount(): Int? = dashjTxs
+
+        override suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo> {
+            sdkUtxoFetches++
+            return sdkUtxos
+        }
+
+        override suspend fun dashjUnspentUtxos(): List<L1Utxo>? = dashjUtxos
+
+        override suspend fun clearSpvStorage() {
+            clearSpvStorageCalls++
+        }
+
+        override suspend fun clearSdkL1Rows(walletIdHex: String) {
+            clearL1RowsCalls++
+        }
     }
 
     private fun config(flag: Boolean?): DashPayConfig = mockk<DashPayConfig>().also {
@@ -333,6 +354,281 @@ class L1ShadowSyncServiceTest {
             )
         )
         assertEquals(0, distinctTxCount(emptyList(), emptyList()))
+    }
+
+    // ── Outpoint-level diff (pure) ────────────────────────────────────
+
+    private fun utxo(txidByte: Int, vout: Int, value: Long) =
+        L1Utxo("%02x".format(txidByte).repeat(32), vout, value)
+
+    @Test
+    fun computeL1OutpointDiff_symmetricDifferenceAndTotals() {
+        val shared = utxo(1, 0, 100)
+        val sdkExtra = utxo(2, 1, 40)
+        val dashjExtra = utxo(3, 0, 25)
+        val diff = computeL1OutpointDiff(
+            sdk = listOf(shared, sdkExtra),
+            dashj = listOf(shared, dashjExtra)
+        )
+        assertEquals(2, diff.sdkCount)
+        assertEquals(2, diff.dashjCount)
+        assertEquals(140, diff.sdkTotalDuffs)
+        assertEquals(125, diff.dashjTotalDuffs)
+        assertEquals(listOf(sdkExtra), diff.sdkOnly)
+        assertEquals(listOf(dashjExtra), diff.dashjOnly)
+        assertTrue(diff.valueMismatched.isEmpty())
+        assertTrue(diff.duplicateSdkOutpoints.isEmpty())
+    }
+
+    @Test
+    fun computeL1OutpointDiff_flagsDuplicateSdkRows() {
+        // The suspected corruption: the same outpoint appearing twice on
+        // the SDK side. It must be flagged AND surface as an inflated
+        // value mismatch against dashj's single copy.
+        val original = utxo(7, 0, 100)
+        val diff = computeL1OutpointDiff(
+            sdk = listOf(original, original.copy()),
+            dashj = listOf(original)
+        )
+        assertEquals(listOf("${original.outpoint} x2"), diff.duplicateSdkOutpoints)
+        assertEquals(200, diff.sdkTotalDuffs)
+        assertEquals(100, diff.dashjTotalDuffs)
+        assertEquals(listOf(Triple(original.outpoint, 200L, 100L)), diff.valueMismatched)
+        assertTrue(diff.sdkOnly.isEmpty())
+        assertTrue(diff.dashjOnly.isEmpty())
+    }
+
+    @Test
+    fun computeL1OutpointDiff_reportsValueMismatchOnSharedOutpoints() {
+        val diff = computeL1OutpointDiff(
+            sdk = listOf(utxo(1, 0, 150)),
+            dashj = listOf(utxo(1, 0, 100))
+        )
+        assertEquals(listOf(Triple(utxo(1, 0, 0).outpoint, 150L, 100L)), diff.valueMismatched)
+        assertTrue(diff.sdkOnly.isEmpty() && diff.dashjOnly.isEmpty())
+    }
+
+    @Test
+    fun l1OutpointDiffLog_capsEntriesButKeepsFullTotals() {
+        val sdk = (0 until 60).map { utxo(1, it, 10) }
+        val diff = computeL1OutpointDiff(sdk, emptyList())
+        val logged = l1OutpointDiffLog(diff, maxEntries = 50)
+        assertTrue(logged.contains("sdk=60 (600 duffs)"))
+        assertTrue(logged.contains("sdk-only (60)"))
+        assertTrue(logged.contains("(+10 more)"))
+        assertTrue(logged.contains("DUPLICATE sdk rows: none"))
+        assertTrue(logged.contains("delta=600"))
+    }
+
+    // ── Auto-reset decision table (pure) ──────────────────────────────
+
+    private fun inflated(synced: Boolean = true) = buildParityReport(
+        sdkConfirmedDuffs = 200, sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 100, dashjAvailableDuffs = 100,
+        sdkTxCount = 1, dashjTxCount = 1, sdkSynced = synced, timestampMs = 1L
+    )
+
+    private fun deficit() = buildParityReport(
+        sdkConfirmedDuffs = 50, sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 100, dashjAvailableDuffs = 100,
+        sdkTxCount = 1, dashjTxCount = 1, sdkSynced = true, timestampMs = 1L
+    )
+
+    private fun matching() = buildParityReport(
+        sdkConfirmedDuffs = 100, sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 100, dashjAvailableDuffs = 100,
+        sdkTxCount = 1, dashjTxCount = 1, sdkSynced = true, timestampMs = 1L
+    )
+
+    @Test
+    fun resetDecider_neverActsPreSyncOrOnMatchOrOnDeficit() {
+        val decider = ShadowResetDecider()
+        repeat(5) {
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated(synced = false)))
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(matching()))
+            // A deficit (sdk < dashj) is exactly the bug class the harness
+            // must surface, never erase — no reset, ever.
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(deficit()))
+        }
+    }
+
+    @Test
+    fun resetDecider_requiresThreeConsecutiveInflatedProbes() {
+        val decider = ShadowResetDecider()
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+    }
+
+    @Test
+    fun resetDecider_anyNonInflatedProbeBreaksTheStreak() {
+        val decider = ShadowResetDecider()
+        decider.onProbe(inflated())
+        decider.onProbe(inflated())
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(matching())) // streak reset
+        decider.onProbe(inflated())
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
+        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+    }
+
+    @Test
+    fun resetDecider_resetsOncePerProcess_thenReportsCorruptOnce_thenStandsDown() {
+        val decider = ShadowResetDecider()
+        repeat(2) { decider.onProbe(inflated()) }
+        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+
+        // Post-reset rescan: un-synced probes zero the streak.
+        assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated(synced = false)))
+
+        // A FULL post-reset resync still inflated → corrupt, exactly once.
+        repeat(2) {
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
+        }
+        assertEquals(ShadowResetDecider.Decision.CORRUPT_AFTER_RESET, decider.onProbe(inflated()))
+        repeat(4) {
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated()))
+        }
+    }
+
+    // ── Service-level reset + diff orchestration ──────────────────────
+
+    private val synced = SpvSyncProgressData(
+        overallState = SpvSyncState.SYNCED,
+        overallPercentage = 100.0,
+        headers = null, filterHeaders = null, filters = null, masternodes = null
+    )
+
+    /** An inflated synced mismatch: sdk sees 200k duffs, dashj 100k. */
+    private fun inflatedSource() = FakeSource(boundWalletId = walletIdHex).apply {
+        sdkConfirmed = 200_000
+        dashjBalances = 100_000L to 100_000L
+    }
+
+    @Test
+    fun probeParity_autoResetsAfterThreeConsecutiveInflatedSyncedProbes() = runBlocking {
+        val source = inflatedSource()
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+
+        repeat(2) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls) // below the threshold
+
+        service.probeParity(walletIdHex) // third consecutive → reset
+        assertEquals(1, source.stopCalls)
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(2, source.startCalls) // initial + post-reset restart
+
+        // The reset marks the progress un-synced until the rescan reports in.
+        assertEquals(ShadowSyncPhase.IDLE, service.progress.value.phase)
+    }
+
+    @Test
+    fun probeParity_neverResetsTwicePerProcess_evenIfTheMismatchSurvivesResync() = runBlocking {
+        val source = inflatedSource()
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+        repeat(3) { service.probeParity(walletIdHex) } // → the one reset
+
+        // Simulate the post-reset resync completing (flow change re-emits).
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        source.progressFlow.value = synced
+
+        // Mismatch persists through a full resync: ERROR + stand down, no 2nd reset.
+        repeat(6) { service.probeParity(walletIdHex) }
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun probeParity_neverResetsOnADeficitMismatch() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 50_000 // sdk BELOW dashj — a real scan-gap candidate
+            dashjBalances = 100_000L to 100_000L
+        }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+        repeat(5) { service.probeParity(walletIdHex) }
+        assertEquals(0, source.clearL1RowsCalls)
+        assertEquals(0, source.clearSpvStorageCalls)
+        assertEquals(1, source.startCalls)
+    }
+
+    @Test
+    fun resetShadowState_isDirectlyCallable_andRequiresARunningShadow() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        val service = service(source)
+
+        assertFalse(service.resetShadowState()) // not running yet
+        assertEquals(0, source.clearL1RowsCalls)
+
+        assertTrue(service.startIfEnabled())
+        assertTrue(service.resetShadowState()) // future debug-screen entry point
+        assertEquals(1, source.stopCalls)
+        assertEquals(1, source.clearL1RowsCalls)
+        assertEquals(1, source.clearSpvStorageCalls)
+        assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun outpointDiff_isLoggedOncePerDistinctMismatchState() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 50_000 // deficit → diff logging without auto-reset
+            dashjBalances = 100_000L to 100_000L
+            sdkUtxos = listOf(L1Utxo("aa".repeat(32), 0, 50_000))
+            dashjUtxos = listOf(L1Utxo("bb".repeat(32), 0, 100_000))
+        }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+
+        repeat(3) { service.probeParity(walletIdHex) }
+        assertEquals(1, source.sdkUtxoFetches) // same state → one diff dump
+
+        source.sdkConfirmed = 60_000 // the mismatch changed shape → dump again
+        service.probeParity(walletIdHex)
+        assertEquals(2, source.sdkUtxoFetches)
+    }
+
+    @Test
+    fun outpointDiff_notComputedPreSyncOrOnMatch() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 50_000
+            dashjBalances = 100_000L to 100_000L
+        }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+
+        service.probeParity(walletIdHex) // pre-sync mismatch: expected, no diff
+        assertEquals(0, source.sdkUtxoFetches)
+
+        source.progressFlow.value = synced
+        source.sdkConfirmed = 100_000
+        service.probeParity(walletIdHex) // synced MATCH: no diff
+        assertEquals(0, source.sdkUtxoFetches)
+    }
+
+    @Test
+    fun outpointDiff_retriesWhenDashjIsUnavailableForTheDiff() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 50_000
+            dashjBalances = 100_000L to 100_000L
+            dashjUtxos = null // balance probe works, UTXO listing does not (yet)
+        }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+
+        service.probeParity(walletIdHex)
+        assertEquals(0, source.sdkUtxoFetches)
+
+        source.dashjUtxos = emptyList() // becomes available → same state retried
+        service.probeParity(walletIdHex)
+        assertEquals(1, source.sdkUtxoFetches)
     }
 
     // ── Pure SPV-progress mapping ─────────────────────────────────────

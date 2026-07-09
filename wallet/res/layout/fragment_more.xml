@@ -27,13 +27,18 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-        <!-- Dash Wallet / Shielded balance cards (Figma 1691:15460), flag-gated:
-             GONE unless SUPPORTS_PLATFORM and USE_KOTLIN_SDK_SHIELDED are both on. -->
+        <!-- Dash Wallet / Shielded balance cards (Figma 1691:15460, card
+             component 1693:15852/15853 "balancePrev"), flag-gated: GONE
+             unless SUPPORTS_PLATFORM and USE_KOTLIN_SDK_SHIELDED are both
+             on. Design spec: 20px screen margin + 20px card gap (equal
+             weights), card = white/rounded-20/p-6, title 15px semibold
+             (pt-4 px-4), pill = primary-bg/rounded-14/px-16/py-10 with the
+             amount at 20px semibold + a trailing currency symbol. -->
         <LinearLayout
             android:id="@+id/balance_cards_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginHorizontal="15dp"
+            android:layout_marginHorizontal="20dp"
             android:layout_marginTop="20dp"
             android:baselineAligned="false"
             android:orientation="horizontal"
@@ -43,7 +48,7 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
+                android:layout_marginEnd="10dp"
                 android:layout_weight="1"
                 app:cardBackgroundColor="@color/background_secondary"
                 app:cardCornerRadius="20dp"
@@ -61,9 +66,18 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
+                        android:paddingHorizontal="4dp"
                         android:paddingTop="4dp"
-                        android:text="@string/shielded_wallet_name" />
+                        android:text="@string/shielded_wallet_name"
+                        android:textSize="15sp" />
 
+                    <!-- The Đ is rendered as an Inter font glyph inside the
+                         amount string (the convention of the shielded Compose
+                         screens) instead of a trailing ImageView: an ImageView
+                         after a long wrap_content amount gets pushed past the
+                         pill edge and clips (the "≡" artifact). Uniform
+                         auto-size shrinks long balances (e.g. 1.54427919 Đ)
+                         to fit one line, so the symbol can never clip. -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -77,18 +91,15 @@
                         <TextView
                             android:id="@+id/wallet_balance_card_amount"
                             style="@style/Subtitle2"
-                            android:layout_width="wrap_content"
+                            android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:textSize="20sp"
-                            tools:text="2.00" />
-
-                        <ImageView
-                            android:layout_width="14dp"
-                            android:layout_height="14dp"
-                            android:layout_gravity="center_vertical"
-                            android:layout_marginStart="6dp"
-                            android:importantForAccessibility="no"
-                            android:src="@drawable/ic_dash_d_black" />
+                            android:gravity="center"
+                            android:maxLines="1"
+                            app:autoSizeMaxTextSize="20sp"
+                            app:autoSizeMinTextSize="10sp"
+                            app:autoSizeStepGranularity="1sp"
+                            app:autoSizeTextType="uniform"
+                            tools:text="2.00 Đ" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
@@ -96,7 +107,7 @@
             <androidx.cardview.widget.CardView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="10dp"
                 android:layout_weight="1"
                 app:cardBackgroundColor="@color/background_secondary"
                 app:cardCornerRadius="20dp"
@@ -114,8 +125,10 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
+                        android:paddingHorizontal="4dp"
                         android:paddingTop="4dp"
-                        android:text="@string/shielded_balance_card_title" />
+                        android:text="@string/shielded_balance_card_title"
+                        android:textSize="15sp" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -127,25 +140,30 @@
                         android:paddingHorizontal="16dp"
                         android:paddingVertical="10dp">
 
+                        <!-- The compact credits string is short by construction
+                             (toCompactCreditsString caps at "999.9B"-shaped
+                             values), so the wrap_content amount + symbol group
+                             centers as a unit like the design; maxLines guards
+                             the pathological case. -->
                         <TextView
                             android:id="@+id/shielded_balance_card_amount"
                             style="@style/Subtitle2"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
                             android:textSize="20sp"
                             tools:text="115.5B" />
 
-                        <!-- The design's slanted-C credits glyph (Figma 1693:15853
-                             "115.5ᴮ C"): drawable-tinted to content_primary — the
-                             same color Subtitle2 gave the old letter "C" — and
-                             scaled with the 20sp amount text (10:20 design ratio
-                             of glyph height to text line, adjustViewBounds keeps
-                             the 10.496:10 aspect). The string stays as the
-                             contentDescription fallback. -->
+                        <!-- The design's slanted-C credits glyph (Figma
+                             1693:15853, 12.595×12px against the 20px amount):
+                             12dp tall at the design's 12:20 ratio,
+                             adjustViewBounds keeps the glyph aspect. The
+                             string stays as the contentDescription fallback. -->
                         <ImageView
                             android:id="@+id/shielded_balance_card_symbol"
                             android:layout_width="wrap_content"
-                            android:layout_height="14dp"
+                            android:layout_height="12dp"
                             android:layout_gravity="center_vertical"
                             android:layout_marginStart="6dp"
                             android:adjustViewBounds="true"

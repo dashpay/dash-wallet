@@ -205,6 +205,180 @@ internal fun parityLogLine(r: ParityReport): String {
         " tx sdk=${r.sdkTxCount} dashj=${r.dashjTxCount}"
 }
 
+// ── Outpoint-level diff (the MISMATCH evidence instrument) ────────────
+
+/**
+ * One unspent L1 output, normalized for cross-stack comparison:
+ * [txidHex] is the DISPLAY-order (byte-reversed) transaction hash hex —
+ * dashj's `Sha256Hash.toString()` convention — so both sides key
+ * identically. The SDK's Room rows store wire-order bytes and are
+ * reversed on read (see [DashSdkL1ShadowSource.sdkUnspentUtxos]).
+ */
+data class L1Utxo(val txidHex: String, val vout: Int, val valueDuffs: Long) {
+    val outpoint: String get() = "$txidHex:$vout"
+}
+
+/**
+ * Outpoint-level difference between the SDK's unspent TXO rows and
+ * dashj's unspent outputs, computed by [computeL1OutpointDiff] when a
+ * synced-state balance MISMATCH needs explaining. [duplicateSdkOutpoints]
+ * is the suspected-bug detector: the same outpoint appearing more than
+ * once in the SDK set (impossible at the Room layer — `outpoint` is the
+ * primary key — so a hit means the list was assembled from a corrupt
+ * upstream source and is hard evidence for the SDK bug report).
+ */
+internal data class L1OutpointDiff(
+    val sdkCount: Int,
+    val dashjCount: Int,
+    val sdkTotalDuffs: Long,
+    val dashjTotalDuffs: Long,
+    /** Outpoints only the SDK considers unspent (deduped; duffs summed over duplicates). */
+    val sdkOnly: List<L1Utxo>,
+    /** Outpoints only dashj considers unspent. */
+    val dashjOnly: List<L1Utxo>,
+    /** Outpoints both sides hold but at different values: (outpoint, sdkDuffs, dashjDuffs). */
+    val valueMismatched: List<Triple<String, Long, Long>>,
+    /** SDK outpoints appearing more than once, as "outpoint xN". */
+    val duplicateSdkOutpoints: List<String>
+)
+
+/**
+ * Pure symmetric difference of the two unspent sets, keyed by outpoint.
+ * Duplicated SDK rows are flagged AND collapsed (values summed) before
+ * diffing, so a duplicate shows up both in [L1OutpointDiff.duplicateSdkOutpoints]
+ * and — via its doubled value — in [L1OutpointDiff.valueMismatched].
+ */
+internal fun computeL1OutpointDiff(sdk: List<L1Utxo>, dashj: List<L1Utxo>): L1OutpointDiff {
+    val duplicates = sdk.groupingBy { it.outpoint }.eachCount()
+        .filterValues { it > 1 }
+        .map { (outpoint, n) -> "$outpoint x$n" }
+        .sorted()
+    val sdkByOutpoint = LinkedHashMap<String, L1Utxo>()
+    for (utxo in sdk) {
+        sdkByOutpoint.merge(utxo.outpoint, utxo) { a, b -> a.copy(valueDuffs = a.valueDuffs + b.valueDuffs) }
+    }
+    val dashjByOutpoint = dashj.associateBy { it.outpoint }
+    val sdkOnly = sdkByOutpoint.values.filter { it.outpoint !in dashjByOutpoint }
+    val dashjOnly = dashj.filter { it.outpoint !in sdkByOutpoint }
+    val valueMismatched = sdkByOutpoint.values.mapNotNull { s ->
+        val d = dashjByOutpoint[s.outpoint] ?: return@mapNotNull null
+        if (s.valueDuffs != d.valueDuffs) Triple(s.outpoint, s.valueDuffs, d.valueDuffs) else null
+    }
+    return L1OutpointDiff(
+        sdkCount = sdk.size,
+        dashjCount = dashj.size,
+        sdkTotalDuffs = sdk.sumOf { it.valueDuffs },
+        dashjTotalDuffs = dashj.sumOf { it.valueDuffs },
+        sdkOnly = sdkOnly,
+        dashjOnly = dashjOnly,
+        valueMismatched = valueMismatched,
+        duplicateSdkOutpoints = duplicates
+    )
+}
+
+/**
+ * Multi-line `L1ParityDiff` log body for a computed diff — the evidence
+ * block for the SDK bug report. Each list is capped at [maxEntries]
+ * entries (the totals always cover the full sets).
+ */
+internal fun l1OutpointDiffLog(diff: L1OutpointDiff, maxEntries: Int = DIFF_LOG_MAX_ENTRIES): String {
+    fun capped(items: List<String>): String =
+        if (items.isEmpty()) {
+            "none"
+        } else {
+            val shown = items.take(maxEntries).joinToString(", ")
+            if (items.size > maxEntries) "$shown … (+${items.size - maxEntries} more)" else shown
+        }
+    return buildString {
+        append("L1ParityDiff unspent sdk=${diff.sdkCount} (${diff.sdkTotalDuffs} duffs)")
+        append(" dashj=${diff.dashjCount} (${diff.dashjTotalDuffs} duffs)")
+        append(" delta=${diff.sdkTotalDuffs - diff.dashjTotalDuffs}")
+        append("\n  DUPLICATE sdk rows: ${capped(diff.duplicateSdkOutpoints)}")
+        append("\n  sdk-only (${diff.sdkOnly.size}): ")
+        append(capped(diff.sdkOnly.map { "${it.outpoint}=${it.valueDuffs}" }))
+        append("\n  dashj-only (${diff.dashjOnly.size}): ")
+        append(capped(diff.dashjOnly.map { "${it.outpoint}=${it.valueDuffs}" }))
+        append("\n  value-mismatch (${diff.valueMismatched.size}): ")
+        append(capped(diff.valueMismatched.map { (o, s, d) -> "$o sdk=$s dashj=$d" }))
+    }
+}
+
+/** Per-list cap of [l1OutpointDiffLog] (the totals still cover everything). */
+internal const val DIFF_LOG_MAX_ENTRIES = 50
+
+// ── Auto-reset decision (pure) ────────────────────────────────────────
+
+/**
+ * Decides when a persistent INFLATED-SDK parity mismatch warrants an
+ * automatic [L1ShadowSyncService.resetShadowState], from the probe stream
+ * alone.
+ *
+ * ## Why `sdk > dashj` only
+ *
+ * During the migration transition dashj is the source of truth for L1 —
+ * it is the engine users spend from, and its view survives every release
+ * to date. An SDK view showing MORE funds than dashj is therefore never
+ * legitimate: the extra duffs can only be stale/duplicated shadow state
+ * (e.g. unreconciled TXO rows after an SPV re-scan following an unclean
+ * shutdown). A DEFICIT (`sdk < dashj`), by contrast, can be a real SDK
+ * scan gap (e.g. a derivation path the SDK misses) — exactly the bug
+ * class the harness must SURFACE, not erase — so it never auto-resets.
+ *
+ * ## Decision table (evaluated per probe, in order)
+ *
+ * | synced | balancesMatch | sdk vs dashj | consecutive | resetDone | decision |
+ * |--------|---------------|--------------|-------------|-----------|----------|
+ * | no     | —             | —            | reset to 0  | —         | NONE     |
+ * | yes    | yes           | —            | reset to 0  | —         | NONE     |
+ * | yes    | no            | sdk < dashj  | reset to 0  | —         | NONE     |
+ * | yes    | no            | sdk > dashj  | < threshold | —         | NONE     |
+ * | yes    | no            | sdk > dashj  | ≥ threshold | no        | RESET    |
+ * | yes    | no            | sdk > dashj  | ≥ threshold | yes       | CORRUPT_AFTER_RESET (once), then NONE |
+ *
+ * RESET fires at most once per process (per decider instance). After a
+ * reset the shadow chain re-scans, so `synced=false` probes zero the
+ * streak; only a FULL post-reset resync that still shows an inflated
+ * mismatch for [requiredConsecutiveProbes] probes reaches
+ * CORRUPT_AFTER_RESET — the "shadow state corrupt after reset, stand
+ * down" signal.
+ */
+internal class ShadowResetDecider(
+    private val requiredConsecutiveProbes: Int = RESET_CONSECUTIVE_PROBES
+) {
+    enum class Decision { NONE, RESET, CORRUPT_AFTER_RESET }
+
+    private var consecutiveInflated = 0
+    private var resetIssued = false
+    private var corruptReported = false
+
+    fun onProbe(report: ParityReport): Decision {
+        val inflated = report.sdkSynced && !report.balancesMatch && report.sdkDuffs > report.dashjDuffs
+        if (!inflated) {
+            consecutiveInflated = 0
+            return Decision.NONE
+        }
+        consecutiveInflated++
+        if (consecutiveInflated < requiredConsecutiveProbes) return Decision.NONE
+        return when {
+            !resetIssued -> {
+                resetIssued = true
+                consecutiveInflated = 0
+                Decision.RESET
+            }
+            !corruptReported -> {
+                corruptReported = true
+                Decision.CORRUPT_AFTER_RESET
+            }
+            else -> Decision.NONE
+        }
+    }
+
+    companion object {
+        /** Synced inflated-mismatch probes required before acting. */
+        internal const val RESET_CONSECUTIVE_PROBES = 3
+    }
+}
+
 /**
  * Distinct wallet-relevant transaction count from the SDK's TXO rows:
  * every tx that FUNDED one of the wallet's TXOs plus every tx that SPENT
@@ -261,6 +435,26 @@ interface L1ShadowSource {
 
     /** dashj wallet tx count (`getTransactions(false)`), or null when it isn't loaded. */
     suspend fun dashjTxCount(): Int?
+
+    /** Every unspent TXO row of the wallet from the SDK's Room store, normalized. */
+    suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo>
+
+    /**
+     * dashj's unspent outputs — `calculateAllSpendCandidates(false, false)`,
+     * the exact set `getBalance(ESTIMATED)` sums (all keychains, including
+     * legacy CoinJoin-derivation funds) — or null when the wallet isn't
+     * loaded.
+     */
+    suspend fun dashjUnspentUtxos(): List<L1Utxo>?
+
+    /** Clear the Rust SPV client's persisted storage (headers, filters, state). */
+    suspend fun clearSpvStorage()
+
+    /**
+     * Delete the SDK wallet's persisted L1 view — its TXO rows and the
+     * transaction rows they reference — so the next scan rebuilds them.
+     */
+    suspend fun clearSdkL1Rows(walletIdHex: String)
 }
 
 /** Production [L1ShadowSource]: boots the SDK on demand; reads dashj via [WalletDataProvider]. */
@@ -319,6 +513,65 @@ internal class DashSdkL1ShadowSource(
 
     override suspend fun dashjTxCount(): Int? =
         walletData.wallet?.getTransactions(false)?.size
+
+    override suspend fun sdkUnspentUtxos(walletIdHex: String): List<L1Utxo> {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        val rows = database().txoDao().observeUnspentByWallet(walletId).first()
+        return rows.map { row ->
+            // Room stores wire-order (little-endian) txid bytes; the row's
+            // 36-byte outpoint PK is txid + vout-LE, the fallback when the
+            // txid FK is still null (brief insert window).
+            val rawTxid = row.txid ?: row.outpoint.copyOfRange(0, minOf(32, row.outpoint.size))
+            L1Utxo(
+                txidHex = rawTxid.reversedArray().joinToString("") { "%02x".format(it) },
+                vout = row.vout,
+                valueDuffs = row.amount
+            )
+        }
+    }
+
+    override suspend fun dashjUnspentUtxos(): List<L1Utxo>? =
+        // The exact output set getBalance(ESTIMATED) sums — see the seam doc.
+        walletData.wallet?.calculateAllSpendCandidates(false, false)?.map { output ->
+            L1Utxo(
+                txidHex = output.parentTransactionHash?.toString() ?: "detached",
+                vout = output.index,
+                valueDuffs = output.value.value
+            )
+        }
+
+    override suspend fun clearSpvStorage() = manager().clearSpvStorage()
+
+    /**
+     * Raw Room deletes, because the SDK exposes NO narrower reset op (survey
+     * of `PlatformWalletManager` / `WalletManagerNative`): `clearSpvStorage`
+     * covers only headers/filters/SPV state; `platformAddressSyncReset` is
+     * the Platform-address loop; `shieldedClear` is the shielded store; and
+     * `removeWallet` runs the FULL persistence cascade (wallet row, keys,
+     * addresses — a teardown, not a rescan). So the L1 view is cleared at
+     * the persistence layer the SDK itself rehydrates wallets from
+     * (`onLoadWalletList` → `buildUtxoRestoreData` reads exactly these
+     * rows): delete the wallet's `txos` rows plus the `transactions` rows
+     * they reference (tx rows are not wallet-scoped; membership is the txo
+     * join — this app binds a single wallet). Deleting a transaction row
+     * CASCADEs its txos, and `deleteByWallet` sweeps any rows whose tx FK
+     * was still null.
+     */
+    override suspend fun clearSdkL1Rows(walletIdHex: String) {
+        val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+        val db = database()
+        val txos = db.txoDao().observeByWallet(walletId).first()
+        val txids = HashMap<String, ByteArray>()
+        for (row in txos) {
+            for (id in listOfNotNull(row.txid, row.spendingTxid)) {
+                txids[id.joinToString("") { "%02x".format(it) }] = id
+            }
+        }
+        for (txid in txids.values) {
+            db.transactionDao().deleteByTxid(txid)
+        }
+        db.txoDao().deleteByWallet(walletId)
+    }
 }
 
 // ── The shadow-sync service ───────────────────────────────────────────
@@ -421,6 +674,16 @@ class L1ShadowSyncService internal constructor(
 
     /** The most recent parity measurement, for a future debug UI. */
     val latestParity: StateFlow<ParityReport?> = _latestParity.asStateFlow()
+
+    /**
+     * Fingerprints of synced-MISMATCH states whose outpoint diff was
+     * already logged — once per process per distinct state, so a stable
+     * mismatch doesn't re-dump the diff every 60s probe.
+     */
+    private val loggedDiffFingerprints = HashSet<String>()
+
+    /** The auto-reset decision state (see [ShadowResetDecider] for the table). */
+    private val resetDecider = ShadowResetDecider()
 
     /** Fire-and-forget [startIfEnabled] for call sites that must not wait. */
     fun startInBackground(): Job = scope.launch { startIfEnabled() }
@@ -543,7 +806,101 @@ class L1ShadowSyncService internal constructor(
         )
         _latestParity.value = report
         log.info(parityLogLine(report))
+
+        if (report.sdkSynced && !report.balancesMatch) {
+            maybeLogOutpointDiff(walletIdHex, report)
+        }
+        when (resetDecider.onProbe(report)) {
+            ShadowResetDecider.Decision.RESET -> {
+                log.warn(
+                    "L1Parity inflated MISMATCH persisted for {} consecutive synced probes " +
+                        "(sdk={} > dashj={} duffs) — an inflated SDK view is never legitimate " +
+                        "(dashj is the L1 source of truth); resetting the shadow state",
+                    ShadowResetDecider.RESET_CONSECUTIVE_PROBES, report.sdkDuffs, report.dashjDuffs
+                )
+                resetShadowState()
+            }
+            ShadowResetDecider.Decision.CORRUPT_AFTER_RESET ->
+                log.error(
+                    "shadow state corrupt after reset — SDK bug: the inflated L1 mismatch " +
+                        "(sdk={} > dashj={} duffs) survived a full post-reset resync; standing " +
+                        "down (no further automatic resets this process; the in-memory Rust " +
+                        "wallet state is only fully rebuilt on the next app start)",
+                    report.sdkDuffs, report.dashjDuffs
+                )
+            ShadowResetDecider.Decision.NONE -> Unit
+        }
         return report
+    }
+
+    /**
+     * Log the outpoint-level SDK-vs-dashj diff for a synced MISMATCH, once
+     * per process per distinct (balances, tx counts) state — the evidence
+     * block for the SDK bug report. Failures propagate to [parityLoop]'s
+     * catch (best-effort diagnostics must not kill the probe).
+     */
+    private suspend fun maybeLogOutpointDiff(walletIdHex: String, report: ParityReport) {
+        val fingerprint =
+            "${report.sdkDuffs}:${report.dashjDuffs}:${report.sdkTxCount}:${report.dashjTxCount}"
+        if (!loggedDiffFingerprints.add(fingerprint)) return
+        val dashjUtxos = source.dashjUnspentUtxos()
+        if (dashjUtxos == null) {
+            log.info("L1ParityDiff skipped: dashj wallet not available")
+            loggedDiffFingerprints.remove(fingerprint) // retry next probe
+            return
+        }
+        val sdkUtxos = source.sdkUnspentUtxos(walletIdHex)
+        log.warn(l1OutpointDiffLog(computeL1OutpointDiff(sdkUtxos, dashjUtxos)))
+    }
+
+    /**
+     * Tear down and rebuild the shadow SPV's PERSISTED state: stop the
+     * Rust client, delete the SDK wallet's L1 TXO/transaction rows (see
+     * [L1ShadowSource.clearSdkL1Rows] for why raw Room deletes are the
+     * only SDK surface for this), clear the SPV header/filter storage,
+     * then restart SPV for a fresh full scan (the scan start comes from
+     * the wallet's stored birth height Rust-side — no height override).
+     *
+     * Called automatically by the probe when an inflated-SDK mismatch
+     * persists (see [ShadowResetDecider] for the decision table and the
+     * once-per-process guarantee) and callable directly for a future
+     * debug screen. NOTE: the live Rust wallet's in-memory TXO view is
+     * NOT rebuilt by this call (the SDK offers no in-process reload short
+     * of `removeWallet`'s destructive cascade); the persisted rows are
+     * clean immediately and the in-memory view is rebuilt from them on
+     * the next app start.
+     *
+     * Returns whether the reset ran (false when the shadow isn't running
+     * or a step failed; failures are logged, never thrown).
+     */
+    suspend fun resetShadowState(): Boolean {
+        return try {
+            mutex.withLock {
+                val walletIdHex = runningWalletIdHex.value
+                if (walletIdHex == null) {
+                    log.info("L1 shadow reset skipped: shadow sync not running")
+                    return false
+                }
+                log.warn("L1 shadow reset: stopping SPV, clearing L1 rows + SPV storage, rescanning")
+                runCatching { source.stopSpv() }
+                    .onFailure { log.warn("shadow reset: SPV stop failed; continuing", it) }
+                _progress.value = ShadowSyncProgress.IDLE
+                source.clearSdkL1Rows(walletIdHex)
+                source.clearSpvStorage()
+                val dataDir = File(spvDataDirPath()).apply { mkdirs() }
+                source.startSpv(dataDir.absolutePath)
+                log.info(
+                    "L1 shadow SPV restarted after reset (dataDir={}, fresh full scan from the " +
+                        "wallet's stored birth height)",
+                    dataDir.absolutePath
+                )
+                true
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.error("L1 shadow reset failed; the shadow may need a manual restart", t)
+            false
+        }
     }
 
     private suspend fun isEnabled(): Boolean = try {

@@ -413,8 +413,11 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
             binding.balanceCardsContainer.isVisible = true
 
             walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
+                // Đ as an Inter font glyph inside the string (the shielded
+                // Compose screens' convention) — see the layout comment: a
+                // trailing ImageView clips on long balances.
                 binding.walletBalanceCardAmount.text =
-                    org.dash.wallet.common.money.Dash(balance.value).toDisplayString()
+                    "${org.dash.wallet.common.money.Dash(balance.value).toDisplayString()} Đ"
             }
 
             shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->

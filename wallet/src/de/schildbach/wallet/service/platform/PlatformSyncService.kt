@@ -48,6 +48,7 @@ import de.schildbach.wallet.security.SecurityGuardException
 import de.schildbach.wallet.service.BlockchainService
 import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
@@ -159,6 +160,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val sdkUsernameQueries: SdkUsernameQueries,
     private val sdkWalletBinder: SdkWalletBinder,
     private val l1ShadowSyncService: L1ShadowSyncService,
+    private val shieldedBalanceService: ShieldedBalanceService,
 ) : PlatformSyncService {
     companion object {
         private val log: Logger = LoggerFactory.getLogger(PlatformSynchronizationService::class.java)
@@ -292,6 +294,18 @@ class PlatformSynchronizationService @Inject constructor(
     }
 
     override suspend fun shutdown() {
+        // Best-effort teardown of the Kotlin-SDK background engines. The
+        // shadow SPV service had NO stop path before this (its Rust header
+        // store was observed regressing after unclean kills — the suspected
+        // trigger of the inflated-SDK parity corruption), so stop both it
+        // and the shielded sync loop whenever the blockchain service is
+        // torn down. Both stops are no-ops when not running and must never
+        // block the rest of the cleanup.
+        runCatching { l1ShadowSyncService.stop() }
+            .onFailure { log.warn("failed to stop the L1 shadow sync on shutdown", it) }
+        runCatching { shieldedBalanceService.stop() }
+            .onFailure { log.warn("failed to stop the shielded runtime on shutdown", it) }
+
         if (platformSyncJob != null && identityRepository.hasBlockchainIdentity) {
             Preconditions.checkState(platformSyncJob!!.isActive)
             log.info("Shutting down the platform sync job")
