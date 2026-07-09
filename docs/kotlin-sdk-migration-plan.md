@@ -401,3 +401,18 @@ Verified on-device with the debug flags ON:
 - ⬜ **UI from the Figma designs** (links in the design-references section): requires a session
   with the Figma dev-mode MCP connected; implement via the figma-to-compose flow on top of
   ShieldedBalanceService.
+
+## Phase 4 UI + SDK fixes status (updated 2026-07-08 late)
+
+- ✅ **Phase 4 UI implemented from the Figma designs** (`ui/shielded/`): hub (balance cards,
+  Receive QR / Internal / Send tabs), internal-transfer with confirm/timing sheets, send-to-
+  address; proving/Ambiguous write-contract UX; Settings entry point gated by
+  SUPPORTS_PLATFORM + USE_KOTLIN_SDK_SHIELDED. Polish backlog: activity timeline,
+  unshield-to-credits + memo surfaces, on-device visual pass, QR URI-scheme parsing.
+  Product review needed: "Dash Wallet → Shielded" currently maps to shield-from-credits
+  (service has no L1 asset-lock→shielded wrapper yet); "Shielded → Dash Wallet" = withdraw.
+- ✅ **SDK issues filed**: dashpay/platform#4051–#4059 (assigned quantumexplorer).
+- ✅ **Blocking SDK fixes PR'd**: dashpay/platform#4060 (KeySecurityPolicy AUTH_GATED/
+  DEVICE_BOUND + pendingIdentityKeys, typed SigningKeyUnavailable, syncState→null).
+  Wallet follow-up once merged/published: adopt DEVICE_BOUND at bootstrap, replace the
+  message-matching in classifyBroadcastFailure/isIdentityManaged with the typed paths.
