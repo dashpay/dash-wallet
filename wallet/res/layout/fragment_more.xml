@@ -135,14 +135,22 @@
                             android:textSize="20sp"
                             tools:text="115.5B" />
 
-                        <TextView
+                        <!-- The design's slanted-C credits glyph (Figma 1693:15853
+                             "115.5ᴮ C"): drawable-tinted to content_primary — the
+                             same color Subtitle2 gave the old letter "C" — and
+                             scaled with the 20sp amount text (10:20 design ratio
+                             of glyph height to text line, adjustViewBounds keeps
+                             the 10.496:10 aspect). The string stays as the
+                             contentDescription fallback. -->
+                        <ImageView
                             android:id="@+id/shielded_balance_card_symbol"
-                            style="@style/Subtitle2"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="14dp"
                             android:layout_gravity="center_vertical"
                             android:layout_marginStart="6dp"
-                            android:text="@string/shielded_credits_symbol" />
+                            android:adjustViewBounds="true"
+                            android:contentDescription="@string/shielded_credits_symbol"
+                            android:src="@drawable/ic_credits_symbol" />
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>

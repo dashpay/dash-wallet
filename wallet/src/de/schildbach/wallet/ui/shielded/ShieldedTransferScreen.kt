@@ -269,11 +269,15 @@ private fun ShieldedTransferScreenContent(
             )
         }
 
-        // "Wait until the chain is fully synced…" (Figma 1733:16190) —
-        // covers a not-ready runtime AND an L1 chain that is still
-        // syncing (both directions are blocked until isSynced). The
-        // second variant covers a ready runtime whose Dash Wallet →
-        // Shielded direction is still blocked by the L1 funding gate.
+        // Blocked-state toast, split by the REAL reason:
+        // (a) "Wait until the chain is fully synced…" (Figma 1733:16190)
+        //     for a not-ready runtime or an L1 chain that is still syncing
+        //     (both directions are blocked until isSynced);
+        // (b) "Verifying your balance…" for a ready runtime on a synced
+        //     chain whose Dash Wallet → Shielded direction is still
+        //     blocked by the L1 funding-evidence gate (shadow-SPV balance
+        //     parity pending) — NOT a sync problem, so it must not reuse
+        //     the sync-flavored string.
         if (uiState.readyCheckDone &&
             (!uiState.ready || !uiState.chainSynced || !uiState.directionAvailable)
         ) {
@@ -282,7 +286,7 @@ private fun ShieldedTransferScreenContent(
                     if (!uiState.ready || !uiState.chainSynced) {
                         R.string.shielded_error_not_ready
                     } else {
-                        R.string.shielded_error_wallet_funding_unavailable
+                        R.string.shielded_error_wallet_funding_pending
                     }
                 ),
                 imageResource = ToastImageResource.Loading.resourceId,
@@ -466,10 +470,16 @@ private fun BalanceWithSymbol(text: String, isCredits: Boolean, big: Boolean = f
             color = MyTheme.Colors.textPrimary
         )
         if (isCredits) {
-            Text(
-                text = stringResource(R.string.shielded_credits_symbol),
-                style = MyTheme.Typography.BodyMediumSemibold,
-                color = MyTheme.Colors.textPrimary
+            // The design's slanted-C credits glyph, NOT the letter "C"
+            // (Figma 1746:18435: 10.496×10 px vector centered on the
+            // 20px amount line — both credits texts here are 14sp/20
+            // line height, so the design ratio maps 1:1 to dp). The
+            // string stays as the accessibility fallback.
+            Icon(
+                painter = painterResource(R.drawable.ic_credits_symbol),
+                contentDescription = stringResource(R.string.shielded_credits_symbol),
+                tint = MyTheme.Colors.textPrimary,
+                modifier = Modifier.size(width = 10.5.dp, height = 10.dp)
             )
         } else {
             Image(
@@ -1047,6 +1057,17 @@ private fun TransferTimingSheetPreview() {
 @Composable
 private fun TransferProvingPreview() {
     ShieldedTransferScreenContent(uiState = previewState(submitState = ShieldedSubmitState.Proving))
+}
+
+// Chain synced + runtime ready but the L1 funding-evidence gate hasn't
+// passed: the toast must show the "Verifying your balance…" variant, not
+// the sync-flavored one.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – funding verification pending")
+@Composable
+private fun TransferFundingPendingPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState().copy(walletShieldingAvailable = false)
+    )
 }
 
 @Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – ambiguous")

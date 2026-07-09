@@ -565,7 +565,10 @@
     <!-- Secondary line under the From "Dash Wallet" balance: the not-yet-ChainLocked part of the total balance, e.g. "0.25 pending" -->
     <string name="shielded_pending_funds">%s pending</string>
     <string name="shielded_error_not_ready">Wait until the chain is fully synced to make transfers</string>
-    <string name="shielded_error_wallet_funding_unavailable">Transfers from your Dash Wallet aren’t available until sync completes</string>
+    <!-- Funding verification pending: the chain IS synced, but the L1 balance-evidence
+         gate (shadow-SPV parity) hasn't passed yet — deliberately NOT sync-flavored,
+         unlike shielded_error_not_ready. -->
+    <string name="shielded_error_wallet_funding_pending">Verifying your balance — transfers from Dash Wallet will be available shortly</string>
     <string name="shielded_locked_pending_title">Transfer in progress</string>
     <string name="shielded_locked_pending_message">Your Dash was reserved on the network, but the shielded transfer hasn’t finished yet. It will finish automatically the next time the app syncs — do not send it again.</string>
     <string name="shielded_send_title">Send to shielded address</string>

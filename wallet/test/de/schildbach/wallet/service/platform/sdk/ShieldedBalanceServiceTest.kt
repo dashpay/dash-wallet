@@ -815,15 +815,23 @@ class ShieldedBalanceServiceTest {
         assertFalse(
             evaluateWalletFundingGate(fresh.copy(sdkSynced = false), now, 300_000).allowed
         )
-        // Any parity mismatch closes the gate.
+        // Either balance-variant mismatch closes the gate.
         assertFalse(
             evaluateWalletFundingGate(fresh.copy(balancesMatch = false), now, 300_000).allowed
         )
         assertFalse(
             evaluateWalletFundingGate(fresh.copy(confirmedBalancesMatch = false), now, 300_000).allowed
         )
-        assertFalse(
+        // Balance match + tx-count mismatch stays ALLOWED: the two stacks
+        // count on different semantics (SDK: distinct txids over TXO rows;
+        // dashj: all wallet txs incl. zero-net mixing rounds), so count
+        // parity can be permanently unreachable on a healthy wallet. The
+        // funds evidence is the balances; the count delta is diagnostic.
+        assertTrue(
             evaluateWalletFundingGate(fresh.copy(sdkTxCount = 4), now, 300_000).allowed
+        )
+        assertTrue(
+            evaluateWalletFundingGate(fresh.copy(dashjTxCount = 436, sdkTxCount = 370), now, 300_000).allowed
         )
     }
 
@@ -880,6 +888,29 @@ class ShieldedBalanceServiceTest {
         assertEquals(Dash.COIN.duffs, source.lastFundAmountDuffs)
         // Shield-to-self: the wallet's own default Orchard address.
         assertArrayEquals(source.defaultAddress, source.lastFundRecipient)
+    }
+
+    /**
+     * The live-wallet regression: balances MATCH exactly on both variants
+     * but the tx counts differ (known counting-semantics delta — SDK
+     * counts distinct txids over TXO rows, dashj counts all wallet txs).
+     * The gate must stay OPEN: the count delta is diagnostic, not funds
+     * evidence.
+     */
+    @Test
+    fun shieldFromWallet_balanceMatchWithTxCountMismatch_isAllowed() = runBlocking {
+        val source = readySource()
+        val countMismatch = buildParityReport(
+            sdkConfirmedDuffs = 154_427_919, sdkUnconfirmedDuffs = 0,
+            dashjEstimatedDuffs = 154_427_919, dashjAvailableDuffs = 154_427_919,
+            sdkTxCount = 370, dashjTxCount = 436,
+            sdkSynced = true, timestampMs = now
+        )
+        val service = service(source, parity = { countMismatch })
+
+        assertTrue(service.isWalletShieldingAvailable())
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
+        assertEquals(1, source.fundCalls)
     }
 
     // ── shieldFromWallet: staged-failure classification ───────────────────

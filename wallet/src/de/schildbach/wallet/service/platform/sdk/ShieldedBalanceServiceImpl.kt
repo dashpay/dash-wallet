@@ -195,8 +195,17 @@ internal data class WalletFundingGate(val allowed: Boolean, val reason: String)
  * Evaluate the L1 funding gate from the latest shadow-sync parity probe —
  * pure, host-testable. The SDK builds the asset lock from its OWN SPV
  * wallet, so spending is only allowed when the shadow SPV is SYNCED and
- * the most recent [ParityReport] is a fresh (≤ [maxAgeMs]) full MATCH
- * (estimated + confirmed balances and tx counts all equal dashj's).
+ * the most recent [ParityReport] is fresh (≤ [maxAgeMs]) with BOTH
+ * balance comparisons matching dashj's ([ParityReport.balancesMatch]
+ * estimated AND [ParityReport.confirmedBalancesMatch] confirmed).
+ *
+ * Tx-count equality ([ParityReport.txCountsMatch]) is deliberately NOT
+ * required: the two stacks count on different semantics (the SDK counts
+ * distinct txids over its TXO rows; dashj counts every wallet tx,
+ * including zero-net entries such as old mixing rounds — see
+ * [distinctTxCount]), so a synced wallet with exactly matching balances
+ * can legitimately never reach count parity. Funds safety is the
+ * balance/UTXO evidence; the count delta stays a logged diagnostic.
  */
 internal fun evaluateWalletFundingGate(
     report: ParityReport?,
@@ -209,9 +218,9 @@ internal fun evaluateWalletFundingGate(
         WalletFundingGate(false, "L1 parity measurement is stale")
     !report.sdkSynced ->
         WalletFundingGate(false, "SDK shadow SPV not synced yet")
-    !report.fullMatch ->
-        WalletFundingGate(false, "SDK/dashj L1 parity mismatch")
-    else -> WalletFundingGate(true, "parity MATCH")
+    !report.balancesMatch || !report.confirmedBalancesMatch ->
+        WalletFundingGate(false, "SDK/dashj L1 balance mismatch")
+    else -> WalletFundingGate(true, "balance parity MATCH")
 }
 
 /**
@@ -515,8 +524,10 @@ internal class DashSdkShieldedSource(
  *
  * So [shieldFromWallet] runs the SDK's own pipeline and is hard-gated on
  * the L1 shadow-sync parity harness ([L1ShadowSyncService]): the SDK SPV
- * wallet must be SYNCED with a fresh full-MATCH parity report before the
- * SDK is allowed to spend the (shared-seed) L1 funds. The lock pays to
+ * wallet must be SYNCED with a fresh balance-parity report (estimated AND
+ * confirmed both matching dashj — see [evaluateWalletFundingGate] for why
+ * tx-count parity is NOT required) before the SDK is allowed to spend the
+ * (shared-seed) L1 funds. The lock pays to
  * the SDK's own `AssetLockShieldedAddressTopUp` DIP-9 family and is
  * claimed by the same Rust wallet that derived it, so no dashj↔SDK
  * lock-key derivation parity is required; the UTXO/balance parity that
