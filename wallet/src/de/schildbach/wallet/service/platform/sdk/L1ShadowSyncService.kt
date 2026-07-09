@@ -21,6 +21,7 @@ import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -403,7 +404,12 @@ internal class ShadowResetDecider(
     fun onProbe(
         report: ParityReport,
         scanLooksComplete: Boolean = false,
-        recentResetMarker: Boolean = false
+        recentResetMarker: Boolean = false,
+        // Debug builds always treat a persistent empty deficit as recoverable by wallet
+        // re-creation: this harness only runs on debug builds, an empty-and-scanned SDK view
+        // is never a legitimate steady state for a funded wallet, and remote testers have no
+        // adb to trigger recovery manually when the reset marker has aged out.
+        alwaysRecreateOnEmptyDeficit: Boolean = BuildConfig.DEBUG
     ): Decision {
         val mismatch = report.sdkSynced && !report.balancesMatch
         val inflated = mismatch && report.sdkDuffs > report.dashjDuffs
@@ -433,7 +439,7 @@ internal class ShadowResetDecider(
             consecutiveEmptyDeficit++
             if (consecutiveEmptyDeficit < requiredConsecutiveProbes) return Decision.NONE
             return when {
-                recentResetMarker && !recreateIssued -> {
+                (recentResetMarker || alwaysRecreateOnEmptyDeficit) && !recreateIssued -> {
                     recreateIssued = true
                     consecutiveEmptyDeficit = 0
                     Decision.RECREATE_WALLET
