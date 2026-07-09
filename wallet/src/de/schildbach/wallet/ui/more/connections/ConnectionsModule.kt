@@ -27,6 +27,6 @@ import dagger.hilt.components.SingletonComponent
 abstract class ConnectionsModule {
     @Binds
     abstract fun bindDashConnectRepository(
-        repository: MockDashConnectRepository
+        repository: PlatformDashConnectRepository
     ): DashConnectRepository
 }

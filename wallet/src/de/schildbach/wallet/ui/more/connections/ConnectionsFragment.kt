@@ -22,6 +22,8 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
+import de.schildbach.wallet_test.R
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -75,9 +77,28 @@ class ConnectionsFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 viewModel.scanOutcome.collect { outcome ->
-                    if (outcome is ConnectionsViewModel.ScanOutcome.ConnectionRequested) {
-                        showApproveConnectionDialog()
-                        viewModel.resetScanOutcome()
+                    when (outcome) {
+                        is ConnectionsViewModel.ScanOutcome.ConnectionRequested -> {
+                            showApproveConnectionDialog()
+                            viewModel.resetScanOutcome()
+                        }
+                        is ConnectionsViewModel.ScanOutcome.LoginCompleted -> {
+                            Toast.makeText(
+                                requireContext(),
+                                R.string.dash_connect_login_completed,
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            viewModel.resetScanOutcome()
+                        }
+                        is ConnectionsViewModel.ScanOutcome.Error -> {
+                            Toast.makeText(
+                                requireContext(),
+                                getString(R.string.dash_connect_error, outcome.message ?: ""),
+                                Toast.LENGTH_LONG
+                            ).show()
+                            viewModel.resetScanOutcome()
+                        }
+                        is ConnectionsViewModel.ScanOutcome.Idle -> Unit
                     }
                 }
             }

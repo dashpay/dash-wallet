@@ -20,6 +20,9 @@ package de.schildbach.wallet.ui.more.connections
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,18 +30,22 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.bitcoinj.core.Base58
 import javax.inject.Inject
 
 data class ConnectionsUIState(
     val connections: List<DAppConnection> = emptyList(),
     val pendingRequest: ConnectionRequest? = null,
+    /** True on mainnet where the key-exchange contract is not deployed. */
+    val featureUnavailable: Boolean = !Constants.IS_TESTNET_BUILD,
     val isLoading: Boolean = false,
     val error: String? = null
 )
 
 @HiltViewModel
 class ConnectionsViewModel @Inject constructor(
-    private val repository: DashConnectRepository
+    private val repository: DashConnectRepository,
+    private val identityRepository: IdentityRepository
 ) : ViewModel() {
 
     sealed class ApproveResult {
@@ -51,11 +58,13 @@ class ConnectionsViewModel @Inject constructor(
     sealed class ScanOutcome {
         object Idle : ScanOutcome()
 
-        /** The QR was a connection request — the approve sheet should be shown. */
+        /** The QR was a login request — the approve sheet should be shown. */
         object ConnectionRequested : ScanOutcome()
 
-        /** The QR was a login request and the session is now active. */
+        /** The QR was a key-registration (dash-st) request and it completed. */
         object LoginCompleted : ScanOutcome()
+
+        data class Error(val message: String?) : ScanOutcome()
     }
 
     private val _uiState = MutableStateFlow(ConnectionsUIState())
@@ -67,6 +76,9 @@ class ConnectionsViewModel @Inject constructor(
     private val _scanOutcome = MutableStateFlow<ScanOutcome>(ScanOutcome.Idle)
     val scanOutcome: StateFlow<ScanOutcome> = _scanOutcome.asStateFlow()
 
+    /** The validated login request awaiting approval; retained separately from the UI claim. */
+    private var pendingLoginRequest: DashKeyRequest? = null
+
     init {
         repository.observeConnections()
             .onEach { connections ->
@@ -76,26 +88,42 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     /**
-     * Decodes a scanned DashConnect QR code: a connection request becomes the
-     * pending request for the approve sheet, a login request completes the login.
+     * Decodes a scanned DashConnect QR code. A `dash-key:` login request builds the pending request
+     * for the approve sheet (with the wallet's OWN verified identity for display); a `dash-st:`
+     * key-registration completes immediately.
      */
     fun onQrScanned(qrContent: String) {
         viewModelScope.launch {
             try {
                 when (val payload = repository.parseQr(qrContent)) {
-                    is DashConnectQr.Connect -> {
-                        _uiState.update { it.copy(pendingRequest = payload.request) }
+                    is DashConnectQr.Login -> {
+                        pendingLoginRequest = payload.request
+                        _uiState.update {
+                            it.copy(pendingRequest = toConnectionRequest(payload.request))
+                        }
                         _scanOutcome.value = ScanOutcome.ConnectionRequested
                     }
-                    is DashConnectQr.Login -> {
-                        repository.completeLogin(payload.connectionId)
+                    is DashConnectQr.KeyRegistration -> {
+                        repository.completeKeyRegistration(payload.request)
                         _scanOutcome.value = ScanOutcome.LoginCompleted
                     }
                 }
             } catch (ex: Exception) {
+                _scanOutcome.value = ScanOutcome.Error(ex.message)
                 _uiState.update { it.copy(error = ex.message) }
             }
         }
+    }
+
+    private suspend fun toConnectionRequest(request: DashKeyRequest): ConnectionRequest {
+        val username = identityRepository.getUsername().orEmpty()
+        val identityId = identityRepository.blockchainIdentity?.uniqueIdString.orEmpty()
+        return ConnectionRequest(
+            appLabel = request.label,
+            appContractId = Base58.encode(request.contractId),
+            walletUsername = username,
+            walletIdentityId = identityId
+        )
     }
 
     fun resetScanOutcome() {
@@ -103,11 +131,12 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun approvePendingRequest() {
-        val request = _uiState.value.pendingRequest ?: return
+        val request = pendingLoginRequest ?: return
         viewModelScope.launch {
             _approveResult.value = ApproveResult.Loading
             try {
-                val connection = repository.approveConnection(request)
+                val connection = repository.approveLogin(request)
+                pendingLoginRequest = null
                 _uiState.update { it.copy(pendingRequest = null) }
                 _approveResult.value = ApproveResult.Success(connection)
             } catch (ex: Exception) {
@@ -117,6 +146,7 @@ class ConnectionsViewModel @Inject constructor(
     }
 
     fun denyPendingRequest() {
+        pendingLoginRequest = null
         _uiState.update { it.copy(pendingRequest = null) }
     }
 
@@ -124,15 +154,12 @@ class ConnectionsViewModel @Inject constructor(
         _approveResult.value = ApproveResult.Idle
     }
 
-    /**
-     * Placeholder interaction until the Dash Platform integration lands:
-     * an approved connection completes its login, an active one disconnects.
-     */
+    /** An active connection can be disconnected; other states require scanning a QR again. */
     fun onConnectionClick(connection: DAppConnection) {
         viewModelScope.launch {
             when (connection.status) {
-                ConnectionStatus.APPROVED -> repository.completeLogin(connection.id)
                 ConnectionStatus.ACTIVE -> repository.disconnect(connection.id)
+                ConnectionStatus.APPROVED,
                 ConnectionStatus.DISCONNECTED -> Unit // requires scanning the QR code again
             }
         }

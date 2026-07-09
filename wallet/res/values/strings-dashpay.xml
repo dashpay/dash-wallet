@@ -571,5 +571,10 @@
     <string name="dash_connect_approve_no_withdraw_funds">Withdraw funds</string>
     <string name="dash_connect_approve">Approve</string>
     <string name="dash_connect_deny">Deny</string>
+    <string name="dash_connect_unknown_app">Unknown app</string>
+    <string name="dash_connect_login_completed">Login completed</string>
+    <string name="dash_connect_error">Could not complete the DashConnect request: %1$s</string>
+    <string name="dash_connect_testnet_only_heading">Available on testnet only</string>
+    <string name="dash_connect_testnet_only_message">DashConnect login is not yet available on mainnet</string>
 
 </resources>

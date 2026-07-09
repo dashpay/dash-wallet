@@ -17,10 +17,11 @@
 
 package de.schildbach.wallet.ui.more.connections
 
+import de.schildbach.wallet.ui.more.connections.protocol.DashKeyRequest
+import de.schildbach.wallet.ui.more.connections.protocol.DashStRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -37,8 +38,12 @@ enum class ConnectionStatus {
     DISCONNECTED
 }
 
-/** An app on the Dash network connected (or previously connected) to this wallet. */
+/**
+ * An app on the Dash network connected (or previously connected) to this wallet. Identified by
+ * the app's data-contract id (Base58), which is stable across logins.
+ */
 data class DAppConnection(
+    /** The app's data-contract id, Base58-encoded. Stable identity of the connection. */
     val id: String,
     val name: String,
     val url: String,
@@ -47,42 +52,62 @@ data class DAppConnection(
     val updatedAt: Long
 )
 
-/** A pending connection request decoded from a scanned DashConnect QR code. */
+/**
+ * A pending connection request derived from a scanned `dash-key:` login QR (QR #1).
+ *
+ * Note: [appLabel] is UNAUTHENTICATED — it is a claim carried in the QR by the app and is
+ * spoofable. The [walletUsername] / [walletIdentityId] shown to the user are the wallet's OWN
+ * verified identity, resolved locally, and are what the app will actually learn on login.
+ */
 data class ConnectionRequest(
-    val appName: String,
-    val appUrl: String,
-    val username: String,
-    val identity: String
+    /** Unauthenticated label claimed by the app (may be blank). */
+    val appLabel: String,
+    /** The app's data-contract id, Base58-encoded. */
+    val appContractId: String,
+    /** The wallet user's own DashPay username (verified, resolved locally). */
+    val walletUsername: String,
+    /** The wallet user's own identity id, Base58-encoded (verified). */
+    val walletIdentityId: String
 )
 
 /** The decoded payload of a scanned DashConnect QR code. */
 sealed class DashConnectQr {
-    /** First QR: an app requests a connection, which the user must approve. */
-    data class Connect(val request: ConnectionRequest) : DashConnectQr()
+    /** First QR (`dash-key:`): an app requests a login the user must approve. */
+    data class Login(val request: DashKeyRequest) : DashConnectQr()
 
-    /** Second QR: an already-approved app requests a login. */
-    data class Login(val connectionId: String) : DashConnectQr()
+    /** Second QR (`dash-st:`): first-login key registration on the identity. */
+    data class KeyRegistration(val request: DashStRequest) : DashConnectQr()
 }
 
 /**
- * Boundary for DashConnect data. The real implementation will be backed by a
- * Dash Platform data contract; [MockDashConnectRepository] provides placeholder
- * data until that integration lands.
+ * Boundary for DashConnect data, backed by Dash Platform. [MockDashConnectRepository] provides
+ * placeholder data for tests and Compose previews.
  */
 interface DashConnectRepository {
     fun observeConnections(): Flow<List<DAppConnection>>
 
-    /** Decodes a scanned QR code into a connection request or a login request. */
+    /** Decodes and validates a scanned QR into a login request or a key-registration request. */
     suspend fun parseQr(qrContent: String): DashConnectQr
 
-    suspend fun approveConnection(request: ConnectionRequest): DAppConnection
+    /**
+     * Approves a `dash-key:` login request: derives the login key, encrypts it against the app's
+     * ephemeral key, and publishes (or replaces) the `loginKeyResponse` document on the
+     * key-exchange contract. Returns the resulting connection.
+     */
+    suspend fun approveLogin(request: DashKeyRequest): DAppConnection
 
-    /** Marks the connection as logged in / session active. */
-    suspend fun completeLogin(connectionId: String)
+    /**
+     * Completes a `dash-st:` first-login key registration: validates the transition end-to-end,
+     * signs it with the identity master key and broadcasts it.
+     */
+    suspend fun completeKeyRegistration(request: DashStRequest)
 
     suspend fun disconnect(connectionId: String)
 }
 
+/**
+ * In-memory mock used by tests and previews. Treats the app contract id as the connection id.
+ */
 @Singleton
 class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     private val connections = MutableStateFlow<List<DAppConnection>>(emptyList())
@@ -90,51 +115,28 @@ class MockDashConnectRepository @Inject constructor() : DashConnectRepository {
     override fun observeConnections(): Flow<List<DAppConnection>> = connections.asStateFlow()
 
     override suspend fun parseQr(qrContent: String): DashConnectQr {
-        // Placeholder: a real implementation will decode the QR payload and
-        // resolve the requesting app via a Dash Platform data contract. Until
-        // then, a scan is a login request if a connection is awaiting one,
-        // otherwise a new connection request.
-        val awaitingLogin = connections.value.firstOrNull {
-            it.status == ConnectionStatus.APPROVED || it.status == ConnectionStatus.DISCONNECTED
-        }
-        return if (awaitingLogin != null) {
-            DashConnectQr.Login(awaitingLogin.id)
-        } else {
-            DashConnectQr.Connect(
-                ConnectionRequest(
-                    appName = "Yappr",
-                    appUrl = "yappr.io",
-                    username = "john.doe",
-                    identity = "5DbLwAx…zUo8"
-                )
-            )
-        }
+        throw UnsupportedOperationException("MockDashConnectRepository does not parse real QR codes")
     }
 
-    override suspend fun approveConnection(request: ConnectionRequest): DAppConnection {
+    override suspend fun approveLogin(request: DashKeyRequest): DAppConnection {
+        val id = org.bitcoinj.core.Base58.encode(request.contractId)
         val connection = DAppConnection(
-            id = UUID.randomUUID().toString(),
-            name = request.appName,
-            url = request.appUrl,
-            status = ConnectionStatus.APPROVED,
+            id = id,
+            name = request.label.ifBlank { "Unknown app" },
+            url = "",
+            status = ConnectionStatus.ACTIVE,
             updatedAt = System.currentTimeMillis()
         )
-        connections.value = connections.value.filter { it.name != connection.name } + connection
+        connections.value = connections.value.filter { it.id != id } + connection
         return connection
     }
 
-    override suspend fun completeLogin(connectionId: String) {
-        setStatus(connectionId, ConnectionStatus.ACTIVE)
-    }
+    override suspend fun completeKeyRegistration(request: DashStRequest) = Unit
 
     override suspend fun disconnect(connectionId: String) {
-        setStatus(connectionId, ConnectionStatus.DISCONNECTED)
-    }
-
-    private fun setStatus(connectionId: String, status: ConnectionStatus) {
         connections.value = connections.value.map {
             if (it.id == connectionId) {
-                it.copy(status = status, updatedAt = System.currentTimeMillis())
+                it.copy(status = ConnectionStatus.DISCONNECTED, updatedAt = System.currentTimeMillis())
             } else {
                 it
             }

@@ -133,16 +133,21 @@ internal fun ApproveConnectionContent(
                 .padding(horizontal = 60.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Heading and app url — left-aligned per Figma 5799:51163
+            // Heading and app contract id — left-aligned per Figma 5799:51163.
+            // The label is an UNAUTHENTICATED claim by the app; the contract id below it is the
+            // app's verifiable on-chain identity.
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = stringResource(R.string.dash_connect_approve_title, request.appName),
+                    text = stringResource(
+                        R.string.dash_connect_approve_title,
+                        request.appLabel.ifBlank { stringResource(R.string.dash_connect_unknown_app) }
+                    ),
                     style = MyTheme.Typography.HeadlineMediumBold,
                     color = MyTheme.Colors.textPrimary,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    text = request.appUrl,
+                    text = request.appContractId,
                     style = MyTheme.Typography.BodyMedium,
                     color = MyTheme.Colors.textSecondary,
                     modifier = Modifier.fillMaxWidth()
@@ -180,11 +185,11 @@ internal fun ApproveConnectionContent(
             ) {
                 DetailRow(
                     label = stringResource(R.string.dash_connect_username),
-                    value = request.username
+                    value = request.walletUsername
                 )
                 DetailRow(
                     label = stringResource(R.string.dash_connect_identity),
-                    value = request.identity
+                    value = request.walletIdentityId
                 )
             }
 
@@ -278,10 +283,10 @@ private fun DetailRow(
 }
 
 private val previewRequest = ConnectionRequest(
-    appName = "Yappr",
-    appUrl = "yappr.io",
-    username = "john.doe",
-    identity = "5DbLwAx…zUo8"
+    appLabel = "Login to Yappr",
+    appContractId = "EWR695MsqPUuW8EnTbYzD4KybNQD5n7CUDWydJYNg63F",
+    walletUsername = "john.doe",
+    walletIdentityId = "5DbLwAx…zUo8"
 )
 
 @Preview(showBackground = true)

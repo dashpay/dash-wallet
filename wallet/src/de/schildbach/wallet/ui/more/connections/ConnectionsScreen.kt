@@ -119,7 +119,9 @@ private fun ConnectionsScreenContent(
             heading = stringResource(R.string.dash_connect_connections_title)
         )
 
-        if (uiState.connections.isEmpty()) {
+        if (uiState.featureUnavailable) {
+            ConnectionsUnavailableState(modifier = Modifier.weight(1f))
+        } else if (uiState.connections.isEmpty()) {
             ConnectionsEmptyState(
                 onScanClick = onScanClick,
                 modifier = Modifier.weight(1f)
@@ -153,6 +155,32 @@ private fun ConnectionsScreenContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ConnectionsUnavailableState(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        ListEmptyState(
+            icon = {
+                Image(
+                    painter = painterResource(R.drawable.ic_connections_empty),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .size(80.dp)
+                )
+            },
+            heading = stringResource(R.string.dash_connect_testnet_only_heading),
+            body = stringResource(R.string.dash_connect_testnet_only_message)
+        )
     }
 }
 
