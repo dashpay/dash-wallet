@@ -87,9 +87,11 @@ class MayaConvertCryptoFragment : Fragment() {
     private var maxAmountSelected: Boolean = false
     private var canContinue: Boolean = false
 
-    // Hard gate on Get quote independent of the entered value — set false when the wallet has no
-    // DASH to convert, so the button stays disabled no matter what the user types.
-    private var inputEnabled: Boolean = true
+    // Hard gate on Get quote independent of the entered value — false when the wallet has no
+    // DASH to convert, so the button stays disabled no matter what the user types. Derived
+    // from the ViewModel so the gate survives a configuration change.
+    private val inputEnabled: Boolean
+        get() = !convertViewModel.userDashAccountEmpty
     private var currencyOptions: List<String> = emptyList()
     private var pickedCurrencyIndex: Int = 0
     private val pickedCurrencyOption: String
@@ -143,7 +145,9 @@ class MayaConvertCryptoFragment : Fragment() {
             title = getString(R.string.maya_address_input_title, displayCode),
             toCurrencyName = currencyMapper.getCurrencyName(args.currency),
             toAddress = getArgAddress(),
-            toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset)
+            toIconUrls = GenericUtils.getCoinIconUrls(args.currency.lowercase(), args.asset),
+            // Restores the inline error shown before a configuration change.
+            errorMessage = viewModel.inlineErrorMessage
         )
 
         convertViewModel.setOnSwapDashFromToCryptoClicked(true)
@@ -281,7 +285,7 @@ class MayaConvertCryptoFragment : Fragment() {
             // minimum" copy, while SwapKit's noRoutesFound — which can also mean the route is
             // briefly unavailable — gets the same neutral no-route message the DEX buy screens show.
             if (!it.isNullOrBlank() && viewModel.isAmountTooLowError(it)) {
-                uiState = uiState.copy(errorMessage = getString(viewModel.errorMessageRes(it)))
+                setInlineError(getString(viewModel.errorMessageRes(it)))
                 return@observe
             }
 
@@ -294,10 +298,9 @@ class MayaConvertCryptoFragment : Fragment() {
         }
 
         convertViewModel.userDashAccountEmptyError.observe(viewLifecycleOwner) {
-            // No DASH to convert: surface it as a toast (not a blocking dialog) and keep Get quote
-            // disabled so the user can't proceed regardless of what they type.
+            // No DASH to convert: surface it as a toast (not a blocking dialog); the disabled
+            // Get quote gate itself is derived from the ViewModel (see inputEnabled).
             Toast.makeText(requireContext(), R.string.dont_have_any_dash, Toast.LENGTH_LONG).show()
-            inputEnabled = false
             updateContinueEnabled()
         }
 
@@ -323,8 +326,14 @@ class MayaConvertCryptoFragment : Fragment() {
         }
 
         convertViewModel.validSwapValue.observe(viewLifecycleOwner) {
-            uiState = uiState.copy(errorMessage = null)
+            setInlineError(null)
         }
+    }
+
+    /** Shows/clears the inline amount error, mirroring it into the ViewModel so it survives rotation. */
+    private fun setInlineError(message: String?) {
+        viewModel.inlineErrorMessage = message
+        uiState = uiState.copy(errorMessage = message)
     }
 
     // ── Amount display (ported from ConvertViewFragment / ConverterView) ──────────
@@ -624,7 +633,7 @@ class MayaConvertCryptoFragment : Fragment() {
             }
             else -> null
         }
-        uiState = uiState.copy(errorMessage = errorMessage)
+        setInlineError(errorMessage)
     }
 
     private fun showMinimumBalanceWarning() {

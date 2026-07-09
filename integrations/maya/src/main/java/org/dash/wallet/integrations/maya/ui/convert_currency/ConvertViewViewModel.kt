@@ -161,6 +161,12 @@ class ConvertViewViewModel @Inject constructor(
 
     val userDashAccountEmptyError = SingleLiveEvent<Unit>()
 
+    // Persistent companion to the one-shot [userDashAccountEmptyError] event: the fragment's
+    // Get-quote gate is derived from this so it survives a configuration change, while the
+    // event itself only drives the toast.
+    var userDashAccountEmpty = false
+        private set
+
     val validSwapValue = SingleLiveEvent<String>()
 
     init {
@@ -306,11 +312,10 @@ class ConvertViewViewModel @Inject constructor(
     }
 
     fun setOnSwapDashFromToCryptoClicked(dashToCrypto: Boolean) {
-        if (dashToCrypto) {
-            if (walletDataProvider.getWalletBalance().isZero) {
-                userDashAccountEmptyError.call()
-                return
-            }
+        userDashAccountEmpty = dashToCrypto && walletDataProvider.getWalletBalance().isZero
+        if (userDashAccountEmpty) {
+            userDashAccountEmptyError.call()
+            return
         }
         _dashToCrypto.value = dashToCrypto
     }

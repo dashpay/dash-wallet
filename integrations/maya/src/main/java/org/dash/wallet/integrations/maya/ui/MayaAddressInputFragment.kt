@@ -98,7 +98,12 @@ class MayaAddressInputFragment : Fragment() {
 
         // The nav-arg title ("Convert DASH to %s") is intentionally not used here — the design
         // (Figma 24007:13081) titles this screen generically.
-        uiState = uiState.copy(title = getString(R.string.maya_enter_address_title), fieldLabel = args.hint)
+        uiState = uiState.copy(
+            title = getString(R.string.maya_enter_address_title),
+            fieldLabel = args.hint,
+            // Restores the inline error shown before a configuration change.
+            errorMessage = mayaAddressInputViewModel.inlineErrorMessage
+        )
 
         return ComposeView(requireContext()).apply {
             setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed)
@@ -121,12 +126,18 @@ class MayaAddressInputFragment : Fragment() {
 
         viewModel.uiState.observe(viewLifecycleOwner) { state ->
             // Any change of the entered address invalidates a previously shown error, exactly
-            // like the old doOnTextChanged listener did.
-            val addressChanged = state.addressInput != uiState.address
+            // like the old doOnTextChanged listener did. The comparison is against the
+            // ViewModel-held last seen address (not the fragment's recreated uiState) so the
+            // replay of the persisted address after a configuration change isn't mistaken
+            // for an edit.
+            if (state.addressInput != mayaAddressInputViewModel.lastSeenAddress) {
+                mayaAddressInputViewModel.lastSeenAddress = state.addressInput
+                mayaAddressInputViewModel.inlineErrorMessage = null
+            }
             uiState = uiState.copy(
                 address = state.addressInput,
                 continueEnabled = state.addressInput.isNotEmpty(),
-                errorMessage = if (addressChanged) null else uiState.errorMessage
+                errorMessage = mayaAddressInputViewModel.inlineErrorMessage
             )
 
             if (hadClipboardText != state.hasClipboardText) {
@@ -209,13 +220,12 @@ class MayaAddressInputFragment : Fragment() {
                 log.error("problem processing $input", ex)
                 // Address-format error: also restores the correct copy after a previous,
                 // valid-format attempt replaced it with a swap-specific message.
-                uiState = uiState.copy(
-                    errorMessage = getString(CommonR.string.not_valid_address, viewModel.currency)
-                )
+                setInlineError(getString(CommonR.string.not_valid_address, viewModel.currency))
                 return@launch
             }
 
-            uiState = uiState.copy(errorMessage = null, isLoading = true)
+            setInlineError(null)
+            uiState = uiState.copy(isLoading = true)
             val quote = mayaAddressInputViewModel.getDefaultQuote(viewModel.addressResult.addressInputWithoutPrefix)
 
             if (quote != null && quote.error == null) {
@@ -236,14 +246,20 @@ class MayaAddressInputFragment : Fragment() {
                 // dialog, so the user can fix the address and retry without dismissing anything.
                 // The message is resolved by the active backend's aggregator (Maya or SwapKit), so
                 // this screen doesn't need to know which error vocabulary produced it.
-                uiState = uiState.copy(
-                    isLoading = false,
-                    errorMessage = getString(
+                uiState = uiState.copy(isLoading = false)
+                setInlineError(
+                    getString(
                         mayaAddressInputViewModel.errorMessageRes(quote?.error),
                         viewModel.currency
                     )
                 )
             }
         }
+    }
+
+    /** Shows/clears the inline validation error, mirroring it into the ViewModel so it survives rotation. */
+    private fun setInlineError(message: String?) {
+        mayaAddressInputViewModel.inlineErrorMessage = message
+        uiState = uiState.copy(errorMessage = message)
     }
 }

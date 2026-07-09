@@ -33,6 +33,15 @@ class MayaAddressInputViewModel @Inject constructor(
     }
 
     lateinit var asset: String
+
+    // Source of truth for the inline validation error and the address it was shown for:
+    // the Compose UIState lives in the fragment and is recreated with the view, so they
+    // are kept here to survive configuration changes. lastSeenAddress lets the fragment
+    // distinguish a real address edit (which invalidates the error) from the replay of
+    // the persisted address right after recreation.
+    var inlineErrorMessage: String? = null
+    var lastSeenAddress: String? = null
+
     private val inputCurrency = MutableStateFlow<String?>(null)
     private val _addressSources = MutableStateFlow(listOf<AddressSource>())
     val addressSources: Flow<List<AddressSource>>
