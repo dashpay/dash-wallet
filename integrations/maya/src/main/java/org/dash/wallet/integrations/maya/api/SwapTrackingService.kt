@@ -45,8 +45,9 @@ import kotlin.time.Duration.Companion.seconds
  * Tracking is by on-chain hash + chain id, so it works for swaps built by either backend
  * (native Maya or SwapKit). [start] is called once at app start and resumes any swaps
  * that were still in flight when the process last died; the poll loop runs only while
- * active orders exist and stops on its own once the last one settles or exceeds
- * [MAX_TRACKING_AGE_MS].
+ * active orders exist and stops on its own once the last one settles. An order still
+ * unresolved after [MAX_TRACKING_AGE_MS] is aged out to [SwapOrderStatus.FAILED] so the
+ * UI never shows a stale in-flight swap.
  */
 @Singleton
 class SwapTrackingService @Inject constructor(
@@ -71,10 +72,23 @@ class SwapTrackingService @Inject constructor(
                 .distinctUntilChanged()
                 .collectLatest { orders ->
                     while (isActive) {
-                        val trackable = orders.filter {
+                        val (trackable, expired) = orders.partition {
                             System.currentTimeMillis() - it.timestamp < MAX_TRACKING_AGE_MS
                         }
-                        if (trackable.isEmpty()) {
+                        // An order the tracker never resolved within MAX_TRACKING_AGE_MS is
+                        // aged out to FAILED so the UI stops showing an in-flight swap.
+                        // FAILED is terminal, so the write drops it from the observed query
+                        // and this collect restarts with only the remaining live orders.
+                        expired.forEach { order ->
+                            log.info("swap {}: still {} after 24h, aging out to FAILED", order.txId, order.status)
+                            swapOrderDao.updateOrder(
+                                order.copy(
+                                    status = SwapOrderStatus.FAILED,
+                                    lastChecked = System.currentTimeMillis()
+                                )
+                            )
+                        }
+                        if (expired.isNotEmpty() || trackable.isEmpty()) {
                             break
                         }
                         trackable.forEach { checkOrder(it) }
