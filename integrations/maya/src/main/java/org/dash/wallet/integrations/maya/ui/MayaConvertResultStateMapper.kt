@@ -140,11 +140,25 @@ object MayaConvertResultStateMapper {
      * Classifies the settlement route and picks the explorer link for a successful swap.
      * Maya tracks a swap by its inbound (DASH) transaction hash — MAYAChain indexes them by
      * uppercase hash. NEAR Intents tracks a swap by the one-time deposit address it issued.
-     * A missing identifier falls back to the explorer's home page; an empty route name means
-     * Maya; unrecognised routes show nothing.
+     * A missing identifier falls back to the explorer's home page; unrecognised routes show
+     * nothing.
+     *
+     * An empty route name means Maya only when [emptyRouteIsMaya] holds: the native Maya
+     * backend stores no route name, but SwapKit orders always carry one — so callers that
+     * know the order's service (e.g. from [org.dash.wallet.common.data.entity.SwapOrder])
+     * should pass `service == ServiceName.Maya` to avoid linking a provider-less SwapKit
+     * order to the wrong explorer.
      */
-    fun explorerFor(routeName: String?, txid: String?, depositAddress: String?): ExplorerSpec? {
+    fun explorerFor(
+        routeName: String?,
+        txid: String?,
+        depositAddress: String?,
+        emptyRouteIsMaya: Boolean = true
+    ): ExplorerSpec? {
         val raw = routeName?.trim().orEmpty()
+        if (raw.isEmpty() && !emptyRouteIsMaya) {
+            return null
+        }
         val isMayaRoute = raw.isEmpty() || raw.contains("MAYA", ignoreCase = true)
         val isNearRoute = !isMayaRoute && raw.contains("NEAR", ignoreCase = true)
 

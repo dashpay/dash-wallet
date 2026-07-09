@@ -191,7 +191,10 @@ class MayaConversionPreviewFragment : Fragment() {
         viewModel.swapTradeOrder.observe(viewLifecycleOwner) {
             newSwapOrderId = it.swapTradeId
             viewModel.swapTradeUIModel = it
-            startQuoteExpiryCountdown()
+            // The fetch time was stamped by the ViewModel when the quote arrived, so the sticky
+            // re-delivery of this LiveData after a configuration change resumes the remaining
+            // validity window instead of restarting a full countdown.
+            resumeQuoteCountdown()
             it.updateConversionPreviewUI()
         }
 
@@ -447,20 +450,25 @@ class MayaConversionPreviewFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
-        val createdAt = viewModel.quoteCreatedAt
-        if (createdAt == null) {
+        if (viewModel.quoteCreatedAt == null) {
             // First display of this quote: start the full countdown (and stamp the fetch time).
             startQuoteExpiryCountdown()
         } else {
             // Coming back to the screen (pause/resume, config change or process death): resume
             // whatever is left of the quote's validity window, or mark it expired so the
             // Refresh button shows.
-            val remaining = quoteExpiryMillis() - (System.currentTimeMillis() - createdAt)
-            if (remaining > 0) {
-                startCountdown(remaining)
-            } else {
-                setRefreshStatus()
-            }
+            resumeQuoteCountdown()
+        }
+    }
+
+    /** Resumes what is left of the current quote's validity window, or shows Refresh if it's gone. */
+    private fun resumeQuoteCountdown() {
+        val createdAt = viewModel.quoteCreatedAt ?: return
+        val remaining = quoteExpiryMillis() - (System.currentTimeMillis() - createdAt)
+        if (remaining > 0) {
+            startCountdown(remaining)
+        } else {
+            setRefreshStatus()
         }
     }
 

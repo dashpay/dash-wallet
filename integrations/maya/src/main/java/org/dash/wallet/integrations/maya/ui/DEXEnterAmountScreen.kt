@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -45,6 +46,7 @@ import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.components.TopIntro
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
 import org.dash.wallet.integrations.maya.R
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 @Composable
@@ -89,6 +91,11 @@ private fun DEXEnterAmountScreenContent(
     // Overridable so previews can force a specific locale (symbol position, separators).
     locale: Locale = Locale.getDefault()
 ) {
+    // The ViewModel keeps the amount as a plain '.'-separated string (it round-trips through
+    // BigDecimal parsing and persistence); the locale's decimal separator is applied here,
+    // at the display boundary, and on the keypad's separator key label.
+    val decimalSeparator = remember(locale) { DecimalFormatSymbols.getInstance(locale).decimalSeparator }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -111,7 +118,7 @@ private fun DEXEnterAmountScreenContent(
             ) {
                 TopIntro(heading = stringResource(R.string.dex_enter_amount_title, assetDisplayCode))
                 EnterAmount(
-                    primaryAmount = amount,
+                    primaryAmount = amount.replace('.', decimalSeparator),
                     currencyCodes = currencyCodes,
                     selectedCurrencyIndex = selectedCurrencyIndex,
                     locale = locale,
@@ -146,6 +153,7 @@ private fun DEXEnterAmountScreenContent(
                 // without a connection — and while the entered amount is being validated, so the
                 // validated amount can't change mid-flight.
                 enabled = isOnline && !isValidating,
+                decimalSeparator = decimalSeparator,
                 onKeyInput = onKeyInput,
                 bottomSlot = {
                     DashButton(
@@ -221,9 +229,9 @@ private fun DEXEnterAmountScreenEnabledPreview() {
 @Composable
 private fun DEXEnterAmountScreenGermanPreview() {
     DEXEnterAmountScreenContent(
-        // The amount string arrives pre-formatted by the ViewModel; under a German device
-        // locale it uses the decimal comma.
-        amount = "125,50",
+        // The amount string arrives from the ViewModel as a plain '.'-separated string;
+        // the screen renders it (and the keypad's separator key) with the decimal comma.
+        amount = "125.50",
         currencyCodes = listOf("EUR", DASH_CURRENCY_CODE, "BTC"),
         selectedCurrencyIndex = 0,
         continueEnabled = true,

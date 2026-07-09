@@ -354,6 +354,9 @@
     <!-- NEAR explorer description copy is placeholder until QA provides the final wording (was TBC) -->
     <string name="maya_explorer_view_near">View NEAR Intents explorer</string>
     <string name="maya_explorer_url_near" translatable="false">https://explorer.near-intents.org/</string>
+    <!-- Despite the /transactions/ path, this route accepts a deposit address as well as a tx
+         hash (the explorer's search filters by "wallet address, deposit address or tx hash");
+         the app substitutes the swap's one-time deposit address here. -->
     <string name="maya_explorer_tx_url_near" translatable="false">https://explorer.near-intents.org/transactions/%1$s</string>
 
     <string name="maya_error_information">%s%nCryptocurrency: %s</string>

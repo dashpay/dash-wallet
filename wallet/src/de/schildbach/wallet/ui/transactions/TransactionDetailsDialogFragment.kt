@@ -41,6 +41,7 @@ import kotlinx.coroutines.flow.filterNotNull
 import org.bitcoinj.core.Sha256Hash
 import org.bitcoinj.core.Transaction
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.data.ServiceName
 import org.dash.wallet.common.data.Status
 import org.dash.wallet.common.data.entity.SwapOrder
 import org.dash.wallet.common.util.openCustomTab
@@ -225,7 +226,10 @@ class TransactionDetailsDialogFragment : OffsetDialogFragment(R.layout.transacti
         val spec = MayaConvertResultStateMapper.explorerFor(
             swapOrder.provider,
             swapOrder.txId.toString(),
-            swapOrder.depositAddress
+            swapOrder.depositAddress,
+            // Only the native Maya backend persists orders without a route name; a
+            // provider-less SwapKit order gets no link rather than a guessed one.
+            emptyRouteIsMaya = swapOrder.service == ServiceName.Maya
         ) ?: return
 
         contentBinding.viewOnProviderExplorer.setText(spec.linkTextRes)

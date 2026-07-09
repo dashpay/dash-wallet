@@ -215,4 +215,19 @@ class MayaConvertResultStateMapperTest {
     fun explorer_unknownRoute_showsNothing() {
         assertNull(MayaConvertResultStateMapper.explorerFor("THORChain", "tx", "addr"))
     }
+
+    @Test
+    fun explorer_emptyRoute_whenNotMayaService_showsNothing() {
+        // A provider-less order from a non-Maya service (e.g. SwapKit) must not be
+        // guessed onto the Maya explorer.
+        assertNull(MayaConvertResultStateMapper.explorerFor(null, "tx", "addr", emptyRouteIsMaya = false))
+        assertNull(MayaConvertResultStateMapper.explorerFor("  ", "tx", "addr", emptyRouteIsMaya = false))
+    }
+
+    @Test
+    fun explorer_namedRoute_ignoresEmptyRouteIsMaya() {
+        val spec = MayaConvertResultStateMapper.explorerFor("MAYAChain", "tx", null, emptyRouteIsMaya = false)
+
+        assertEquals(R.string.maya_explorer_view_maya, spec?.linkTextRes)
+    }
 }

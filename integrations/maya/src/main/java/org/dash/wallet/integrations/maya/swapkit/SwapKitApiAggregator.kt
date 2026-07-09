@@ -126,6 +126,10 @@ class SwapKitApiAggregator @Inject constructor(
         Executors.newSingleThreadExecutor().asCoroutineDispatcher()
     )
     private val gson = Gson()
+
+    // Volatile: written on responseScope (refresh) and reset from the caller thread
+    // (setSwapDirection/reset); a stale read would skip or duplicate a refresh cycle.
+    @Volatile
     private var poolListLastUpdated: Long = 0L
 
     // Latest fiat rate handed to [observePoolList], remembered so a direction switch can trigger
@@ -135,7 +139,9 @@ class SwapKitApiAggregator @Inject constructor(
     private var lastFiatExchangeRate: Fiat? = null
 
     // When the Maya/NEAR classification was last fetched from /tokens; gates the
-    // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch).
+    // CLASSIFICATION_TTL_MS reuse window. 0 = never (forces a fetch). Volatile for the
+    // same reason as [poolListLastUpdated].
+    @Volatile
     private var classificationLastUpdated: Long = 0L
 
     // asset → when its preferred network was last resolved; gates PREFERRED_ROUTE_TTL_MS.

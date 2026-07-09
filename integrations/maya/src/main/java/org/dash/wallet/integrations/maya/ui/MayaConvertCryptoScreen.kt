@@ -57,7 +57,9 @@ import org.dash.wallet.common.ui.components.Style
 import org.dash.wallet.common.ui.components.Toast
 import org.dash.wallet.common.ui.components.ToastImageResource
 import org.dash.wallet.common.ui.enter_amount.NumericKeyboardCompose
+import org.dash.wallet.common.util.GenericUtils
 import org.dash.wallet.integrations.maya.R
+import java.text.DecimalFormatSymbols
 import java.util.Locale
 
 /**
@@ -208,6 +210,10 @@ fun MayaConvertCryptoScreen(
                 // Inert (dimmed) while offline — a quote can't be fetched without a connection —
                 // and while a quote is in flight, so the submitted amount can't drift.
                 enabled = state.isOnline && !state.isProcessing,
+                // Matches the separator the fragment inserts for the "." key (device locale).
+                decimalSeparator = remember {
+                    DecimalFormatSymbols.getInstance(GenericUtils.getDeviceLocale()).decimalSeparator
+                },
                 onKeyInput = onKeyInput,
                 bottomSlot = {
                     DashButton(

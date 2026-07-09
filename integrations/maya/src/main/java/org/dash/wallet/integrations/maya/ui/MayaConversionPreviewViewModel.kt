@@ -223,6 +223,10 @@ class MayaConversionPreviewViewModel @Inject constructor(
                             swapTradeUIModel.inputCurrencyName
                         this.outputCurrencyName = swapTradeUIModel.outputCurrencyName
                     }
+                    // Stamp the fetch time here, not in the fragment observer: _swapTradeOrder
+                    // is a plain (sticky) LiveData, so the observer re-fires after a
+                    // configuration change and must not treat the re-delivery as a fresh quote.
+                    quoteCreatedAt = System.currentTimeMillis()
                     _swapTradeOrder.value = result.value
                 }
             }

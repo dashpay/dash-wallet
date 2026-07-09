@@ -244,20 +244,23 @@ class DEXEnterAmountViewModel @Inject constructor(
         // and while a validation quote is in flight, so its Success can never navigate forward
         // with an amount other than the one that was validated. Input re-enables when validation
         // fails (on success the screen navigates away).
-        if (!_uiState.value.isOnline || _uiState.value.isValidating) return
-        _uiState.update { state ->
-            val type = currencyTypeFor(state, state.selectedCurrencyIndex)
-            val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
-            amount.setAnchored(type, updated.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-            // Reject input that would push the DASH-equivalent past the protocol maximum, mirroring
-            // the common EnterAmountFragment which rejects amounts greater than Constants.MAX_MONEY.
-            // Uses the Amount model's own conversion so it caps fiat / DASH / asset entry alike.
-            if (amount.dash > maxMoneyDash()) {
-                amount.setAnchored(type, state.amount.toBigDecimalOrNull() ?: BigDecimal.ZERO)
-                return@update state
-            }
-            // Editing the amount clears any stale rejection from a previous validation attempt.
-            state.copy(
+        // Snapshot-then-update: [amount] is mutated outside the update lambda, which must stay
+        // free of side effects because it can re-run on CAS contention. Safe because this
+        // ViewModel's state is only written from the main thread.
+        val state = _uiState.value
+        val type = currencyTypeFor(state, state.selectedCurrencyIndex)
+        val updated = processAmountKeyInput(state.amount, key, maxDecimalsFor(type))
+        amount.setAnchored(type, updated.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+        // Reject input that would push the DASH-equivalent past the protocol maximum, mirroring
+        // the common EnterAmountFragment which rejects amounts greater than Constants.MAX_MONEY.
+        // Uses the Amount model's own conversion so it caps fiat / DASH / asset entry alike.
+        if (amount.dash > maxMoneyDash()) {
+            amount.setAnchored(type, state.amount.toBigDecimalOrNull() ?: BigDecimal.ZERO)
+            return
+        }
+        // Editing the amount clears any stale rejection from a previous validation attempt.
+        _uiState.update {
+            it.copy(
                 amount = updated,
                 continueEnabled = isPositive(updated),
                 validationFailed = false
@@ -270,13 +273,14 @@ class DEXEnterAmountViewModel @Inject constructor(
     /** Switch the active display currency, re-deriving the shown amount from the tracked value. */
     fun onCurrencySelected(index: Int) {
         // Same guards as onKeyInput: no changes while offline or mid-validation.
-        if (!_uiState.value.isOnline || _uiState.value.isValidating) return
-        _uiState.update { state ->
-            val newIndex = index.coerceIn(0, state.currencyCodes.lastIndex.coerceAtLeast(0))
-            val type = currencyTypeFor(state, newIndex)
-            val value = amount.getValue(type)
-            amount.anchoredType = type
-            state.copy(
+        // Snapshot-then-update for the same reason as onKeyInput: keep the update lambda pure.
+        val state = _uiState.value
+        val newIndex = index.coerceIn(0, state.currencyCodes.lastIndex.coerceAtLeast(0))
+        val type = currencyTypeFor(state, newIndex)
+        val value = amount.getValue(type)
+        amount.anchoredType = type
+        _uiState.update {
+            it.copy(
                 selectedCurrencyIndex = newIndex,
                 amount = formatForDisplay(value, maxDecimalsFor(type)),
                 continueEnabled = value.signum() > 0

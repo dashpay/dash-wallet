@@ -41,6 +41,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -155,6 +156,9 @@ private fun AddressFieldContent(
     } else {
         Color.Transparent
     }
+    // pointerInput(Unit) never restarts, so the gesture detector would otherwise keep the
+    // lambda captured on first composition; this keeps it current across recompositions.
+    val currentOnLongPress by rememberUpdatedState(onLongPress)
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -180,7 +184,7 @@ private fun AddressFieldContent(
                 .then(
                     if (onLongPress != null) {
                         Modifier.pointerInput(Unit) {
-                            detectTapGestures(onLongPress = { onLongPress() })
+                            detectTapGestures(onLongPress = { currentOnLongPress?.invoke() })
                         }
                     } else {
                         Modifier
