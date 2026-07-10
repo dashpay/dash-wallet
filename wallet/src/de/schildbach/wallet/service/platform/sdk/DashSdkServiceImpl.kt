@@ -176,6 +176,47 @@ internal suspend fun findBoundWalletId(
     return null
 }
 
+/**
+ * Ensure the phrase behind an ALREADY-REGISTERED SDK wallet is persisted
+ * in the SDK's `WalletStorage` — the missing half of the already-exists
+ * recovery in [DashSdkServiceImpl.bindAppWallet].
+ *
+ * Live incident: a bind pass ran while the device was locked/dozing and
+ * died AFTER `createWallet` registered the wallet but BEFORE its phrase
+ * landed in `WalletStorage`. Every later bind then hit the already-exists
+ * recovery, which returned the wallet id WITHOUT the phrase — so identity
+ * discovery failed permanently with "mnemonic resolver: no mnemonic
+ * stored for the supplied wallet_id" until a manual wallet re-create.
+ *
+ * Probe-then-store: [hasMnemonic] is existence-only (a DataStore key
+ * check, no Keystore), so the healthy case costs one read; a probe
+ * failure falls through to the store, which is naturally idempotent
+ * (same phrase, same entry). [storeMnemonic] needs the Keystore and is
+ * allowed to throw (device still locked) — the caller fails the bind
+ * pass retryable so the NEXT trigger (screen-on) heals it.
+ *
+ * @return true when the missing phrase was re-stored, false when it was
+ *   already present. Pure wiring (collaborators injected) — host-testable.
+ */
+internal suspend fun ensureRecoveredMnemonicStored(
+    walletIdHex: String,
+    mnemonic: String,
+    hasMnemonic: suspend (ByteArray) -> Boolean,
+    storeMnemonic: suspend (ByteArray, String) -> Unit
+): Boolean {
+    val walletId = requireNotNull(walletIdFromHex(walletIdHex)) { "malformed SDK wallet id" }
+    val present = try {
+        hasMnemonic(walletId)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        false // probe failure → attempt the (idempotent) store anyway
+    }
+    if (present) return false
+    storeMnemonic(walletId, mnemonic)
+    return true
+}
+
 // ── ensureIdentityKeysSignable helpers ────────────────────────────────
 //
 // Pure (no native, no Android, no I/O of their own) so the per-key
@@ -438,6 +479,41 @@ class DashSdkServiceImpl @Inject constructor(
                             "loaded SDK wallet",
                         existingId.take(8)
                     )
+                    // Live incident: an earlier bind died AFTER createWallet
+                    // registered the wallet but BEFORE the phrase persist, so
+                    // "already exists" does NOT prove the mnemonic is stored —
+                    // returning the id without it wedges identity discovery
+                    // permanently ("no mnemonic stored for the supplied
+                    // wallet_id"). Verify/re-store before binding to it.
+                    val restored = try {
+                        ensureRecoveredMnemonicStored(
+                            walletIdHex = existingId,
+                            mnemonic = mnemonic,
+                            hasMnemonic = { current.walletStorage.hasMnemonic(it) },
+                            storeMnemonic = { id, phrase ->
+                                current.walletStorage.storeMnemonic(id, phrase)
+                            }
+                        )
+                    } catch (storeFailure: Throwable) {
+                        if (storeFailure is kotlinx.coroutines.CancellationException) throw storeFailure
+                        // Storing needs the Keystore; a locked device fails here.
+                        // Fail the pass (retryable, never latched) instead of
+                        // binding without a phrase — the next bind trigger
+                        // (screen-on) re-runs this recovery and heals it.
+                        log.warn(
+                            "mnemonic re-store deferred: keystore unavailable; will retry on " +
+                                "the next bind trigger",
+                            storeFailure
+                        )
+                        throw storeFailure
+                    }
+                    if (restored) {
+                        log.warn(
+                            "re-stored the missing mnemonic for SDK wallet {}… (an earlier bind " +
+                                "registered the wallet but failed before persisting its phrase)",
+                            existingId.take(8)
+                        )
+                    }
                     return existingId
                 }
                 throw t

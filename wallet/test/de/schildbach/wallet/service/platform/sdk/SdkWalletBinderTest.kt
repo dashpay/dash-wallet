@@ -483,6 +483,89 @@ class SdkWalletBinderTest {
         assertEquals(2, sdk.discoverCalls)
     }
 
+    // ── the missing-mnemonic wedge (already-exists recovery incident) ─────
+
+    /** The live error text from discoverIdentities on a phrase-less wallet. */
+    private val missingMnemonicError =
+        RuntimeException("mnemonic resolver: no mnemonic stored for the supplied wallet_id")
+
+    @Test
+    fun isMissingMnemonicError_matchesTheLiveMessage_directAndInTheCauseChain() {
+        assertTrue(isMissingMnemonicError(missingMnemonicError))
+        assertTrue(isMissingMnemonicError(RuntimeException("wrapped", missingMnemonicError)))
+        assertTrue(!isMissingMnemonicError(RuntimeException("network error")))
+        assertTrue(!isMissingMnemonicError(RuntimeException("no private key stored for abc")))
+    }
+
+    @Test
+    fun discoveryMissingMnemonic_retryable_nextPassRunsTheFullBind_andHeals() = runBlocking {
+        // The permanent-wedge incident: a bound wallet with no stored phrase.
+        // The first pass fails at discovery; the binder must NOT keep the
+        // cached bound id (retrying discovery can never succeed) — the next
+        // trigger re-runs the FULL bind, whose already-exists recovery
+        // re-stores the phrase, and then discovery proceeds.
+        val sdk = FakeSdkService()
+        var mnemonicStored = false
+        sdk.onBind = { _, _ ->
+            // The FIRST bind returned the id WITHOUT persisting the phrase
+            // (the incident); a RE-bind lands in bindAppWallet's
+            // already-exists recovery, which re-stores it.
+            if (sdk.bindCalls > 1) mnemonicStored = true
+            walletId
+        }
+        var identityAttached = false // only a SUCCESSFUL scan attaches it
+        sdk.onDiscover = { _, _ ->
+            if (!mnemonicStored) throw missingMnemonicError
+            identityAttached = true
+            listOf(Identifier.from(userId).toBuffer())
+        }
+        sdk.managed = { _, _ -> identityAttached }
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(sdk, mnemonic, scope = this)
+
+        binder.bindIfEnabled(unlock) // pass 1: bind, then discovery throws
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, sdk.discoverCalls)
+
+        binder.bindIfEnabled(unlock) // pass 2: FULL rebind (re-store) + discovery
+        assertEquals(2, sdk.bindCalls) // the cached bound id was dropped…
+        assertEquals(2, mnemonic.calls) // …and the seed re-requested for the re-store
+        assertEquals(2, sdk.discoverCalls)
+        assertEquals(1, sdk.healCalls)
+
+        binder.bindIfEnabled(unlock) // pass 3: healed state latches
+        assertEquals(2, sdk.bindCalls)
+    }
+
+    @Test
+    fun healMissingMnemonic_alsoTriggersTheFullRebind() = runBlocking {
+        // Same wedge surfacing from the key heal (it derives via the
+        // resolver too) on an already-managed identity.
+        val sdk = FakeSdkService()
+        var mnemonicStored = false
+        sdk.onBind = { _, _ ->
+            if (sdk.bindCalls > 1) mnemonicStored = true // re-bind recovery re-stores
+            walletId
+        }
+        sdk.managed = { _, _ -> true }
+        sdk.onHealKeys = { _, _ ->
+            if (!mnemonicStored) throw missingMnemonicError
+            IdentityKeyHealReport(keysChecked = 4, healthy = 0, repaired = 4, watchOnly = 0, failed = 0)
+        }
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock) // heal throws; swallowed
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(1, sdk.healCalls)
+
+        binder.bindIfEnabled(unlock) // full rebind re-stores, heal succeeds, latches
+        assertEquals(2, sdk.bindCalls)
+        assertEquals(2, sdk.healCalls)
+
+        binder.bindIfEnabled(unlock)
+        assertEquals(2, sdk.bindCalls) // latched
+    }
+
     @Test
     fun identityConfigFailure_swallowed_zeroSdkInteractions() = runBlocking {
         val sdk = FakeSdkService()

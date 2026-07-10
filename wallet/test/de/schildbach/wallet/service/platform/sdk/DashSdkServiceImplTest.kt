@@ -201,6 +201,84 @@ class DashSdkServiceImplTest {
         assertNull(walletIdFromAlreadyExistsError("Wallet already exists: ${id.dropLast(1)}z"))
     }
 
+    // ── ensureRecoveredMnemonicStored (the already-exists mnemonic heal) ──
+
+    @Test
+    fun ensureRecoveredMnemonicStored_phrasePresent_probesOnly_neverStores() = runBlocking {
+        val idHex = "ab".repeat(32)
+        var probedId: ByteArray? = null
+
+        val restored = ensureRecoveredMnemonicStored(
+            walletIdHex = idHex,
+            mnemonic = "weapon elder job",
+            hasMnemonic = { probedId = it; true },
+            storeMnemonic = { _, _ -> error("must not store") }
+        )
+
+        assertTrue(!restored)
+        assertTrue(walletIdFromHex(idHex).contentEquals(probedId))
+    }
+
+    @Test
+    fun ensureRecoveredMnemonicStored_phraseMissing_storesItForTheDecodedId() = runBlocking {
+        // The live incident: the wallet is registered but an earlier bind
+        // died before persisting the phrase — the recovery must re-store it.
+        val idHex = "cd".repeat(32)
+        var storedId: ByteArray? = null
+        var storedPhrase: String? = null
+
+        val restored = ensureRecoveredMnemonicStored(
+            walletIdHex = idHex,
+            mnemonic = "weapon elder job",
+            hasMnemonic = { false },
+            storeMnemonic = { id, phrase ->
+                storedId = id
+                storedPhrase = phrase
+            }
+        )
+
+        assertTrue(restored)
+        assertTrue(walletIdFromHex(idHex).contentEquals(storedId))
+        assertEquals("weapon elder job", storedPhrase)
+    }
+
+    @Test
+    fun ensureRecoveredMnemonicStored_probeFailure_fallsThroughToTheIdempotentStore() = runBlocking {
+        var stored = false
+
+        val restored = ensureRecoveredMnemonicStored(
+            walletIdHex = "ef".repeat(32),
+            mnemonic = "weapon elder job",
+            hasMnemonic = { throw IllegalStateException("datastore unavailable") },
+            storeMnemonic = { _, _ -> stored = true }
+        )
+
+        assertTrue(restored)
+        assertTrue(stored)
+    }
+
+    @Test
+    fun ensureRecoveredMnemonicStored_storeFailure_propagates_soTheBindPassFailsRetryable() {
+        // Keystore unavailable (locked/dozing device): the store throw must
+        // reach bindAppWallet's caller so the pass fails WITHOUT binding to
+        // a wallet that cannot derive — the next trigger retries the heal.
+        val thrown = try {
+            runBlocking {
+                ensureRecoveredMnemonicStored(
+                    walletIdHex = "12".repeat(32),
+                    mnemonic = "weapon elder job",
+                    hasMnemonic = { false },
+                    storeMnemonic = { _, _ -> throw IllegalStateException("Keystore unavailable") }
+                )
+            }
+            null
+        } catch (e: IllegalStateException) {
+            e
+        }
+
+        assertEquals("Keystore unavailable", thrown?.message)
+    }
+
     // ── healIdentityKeys (the native-free logic of Phase 3f-b) ─────────
 
     private fun key(id: Int, byte: Byte = id.toByte()) =

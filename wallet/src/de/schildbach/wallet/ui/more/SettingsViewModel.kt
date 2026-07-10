@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainServiceConfig
@@ -46,6 +47,8 @@ data class SettingsUIState(
     val localCurrencySymbol: String = Constants.USD_CURRENCY,
     val transactionMetadataVisible: Boolean = false,
     val transactionMetadataSubtitle: String? = null,
+    /** Debug-only Phase 5b soak switch ([DashPayConfig.USE_KOTLIN_SDK_L1_SEND]). */
+    val useKotlinSdkL1Send: Boolean = false,
 )
 
 @HiltViewModel
@@ -97,6 +100,15 @@ class SettingsViewModel @Inject constructor(
             .onEach { isVisible ->
                 _uiState.value = _uiState.value.copy(transactionMetadataVisible = isVisible)
             }.launchIn(viewModelScope)
+
+        // Observe the debug-only Kotlin-SDK L1 send flag (Phase 5b soak
+        // toggle) so the switch reflects the current value on every screen
+        // entry — including flips made via adb while the app was running.
+        dashPayConfig.observe(DashPayConfig.USE_KOTLIN_SDK_L1_SEND)
+            .distinctUntilChanged()
+            .onEach { enabled ->
+                _uiState.value = _uiState.value.copy(useKotlinSdkL1Send = enabled == true)
+            }.launchIn(viewModelScope)
     }
 
     private fun isIgnoringBatteryOptimizations(): Boolean {
@@ -132,6 +144,24 @@ class SettingsViewModel @Inject constructor(
 
     fun updateTransactionMetadataSubtitle(subtitle: String?) {
         _uiState.value = _uiState.value.copy(transactionMetadataSubtitle = subtitle)
+    }
+
+    /**
+     * Flip the debug-only Phase 5b soak flag
+     * ([DashPayConfig.USE_KOTLIN_SDK_L1_SEND] — routes real L1 sends
+     * through the Kotlin SDK; deliberately never debug-seeded, opt-in
+     * only). The state flows back through the observer above, so the
+     * switch always shows the persisted value.
+     */
+    fun setUseKotlinSdkL1Send(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                dashPayConfig.set(DashPayConfig.USE_KOTLIN_SDK_L1_SEND, enabled)
+                log.info("debug toggle: USE_KOTLIN_SDK_L1_SEND set to {}", enabled)
+            } catch (e: Exception) {
+                log.error("failed to set USE_KOTLIN_SDK_L1_SEND", e)
+            }
+        }
     }
 
     suspend fun setWalletCreationDate(creationDate: Long?) {

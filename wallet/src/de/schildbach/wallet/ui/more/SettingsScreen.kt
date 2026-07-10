@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.flow.StateFlow
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet_test.R
 import org.dash.wallet.common.ui.components.Menu
 import org.dash.wallet.common.ui.components.MenuItem
@@ -54,7 +55,7 @@ fun SettingsScreen(
     onBatteryOptimizationClick: () -> Unit = {}
 ) {
     val viewModel: SettingsViewModel = hiltViewModel()
-    
+
     SettingsScreen(
         uiStateFlow = viewModel.uiState,
         onBackClick = onBackClick,
@@ -63,7 +64,8 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onUseKotlinSdkL1SendChanged = viewModel::setUseKotlinSdkL1Send
     )
 }
 
@@ -76,10 +78,11 @@ fun SettingsScreen(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
-    
+
     SettingsScreenContent(
         uiState = uiState,
         onBackClick = onBackClick,
@@ -88,7 +91,8 @@ fun SettingsScreen(
         onAboutDashClick = onAboutDashClick,
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
-        onBatteryOptimizationClick = onBatteryOptimizationClick
+        onBatteryOptimizationClick = onBatteryOptimizationClick,
+        onUseKotlinSdkL1SendChanged = onUseKotlinSdkL1SendChanged
     )
 }
 
@@ -101,7 +105,8 @@ private fun SettingsScreenContent(
     onAboutDashClick: () -> Unit = {},
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
-    onBatteryOptimizationClick: () -> Unit = {}
+    onBatteryOptimizationClick: () -> Unit = {},
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -181,6 +186,22 @@ private fun SettingsScreenContent(
                     icon = R.drawable.ic_battery,
                     action = onBatteryOptimizationClick
                 )
+
+                // Debug-only Phase 5b soak switch: routes real L1 sends
+                // through the Kotlin SDK (DashPayConfig.USE_KOTLIN_SDK_L1_SEND
+                // — deliberately never debug-seeded, opt-in only).
+                // BuildConfig.DEBUG is a compile-time constant, so this block
+                // does not exist in release builds; strings are deliberately
+                // hardcoded (never shipped, never translated).
+                if (BuildConfig.DEBUG) {
+                    MenuItem(
+                        title = "Use Kotlin SDK for L1 sends",
+                        subtitle = "Debug only: routes real sends through the new SDK engine " +
+                            "instead of dashj. Leave off unless soak-testing Phase 5b.",
+                        checked = uiState.useKotlinSdkL1Send,
+                        onCheckedChange = onUseKotlinSdkL1SendChanged
+                    )
+                }
             }
         }
     }

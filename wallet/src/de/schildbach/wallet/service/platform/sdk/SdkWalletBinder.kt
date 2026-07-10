@@ -74,6 +74,31 @@ class NonInteractiveWalletUnlock @Inject constructor(
 }
 
 /**
+ * Message fragment of the SDK's mnemonic-resolver failure when a bound
+ * wallet has no phrase in the Keystore-backed `WalletStorage`
+ * (`DashSdkError… "mnemonic resolver: no mnemonic stored for the supplied
+ * wallet_id"`, observed live from [DashSdkService.discoverIdentities]).
+ * Hit when an earlier bind pass died between `createWallet` and the
+ * phrase persist (locked/dozing Keystore) — message-matched until the SDK
+ * exposes a typed resolver error.
+ */
+internal const val NO_MNEMONIC_STORED_MESSAGE = "no mnemonic stored"
+
+/**
+ * Whether [t] (or a cause within a bounded chain walk) is the
+ * missing-mnemonic resolver failure — pure, host-testable.
+ */
+internal fun isMissingMnemonicError(t: Throwable): Boolean {
+    var current: Throwable? = t
+    repeat(8) {
+        val cause = current ?: return false
+        if (cause.message?.contains(NO_MNEMONIC_STORED_MESSAGE) == true) return true
+        current = cause.cause
+    }
+    return false
+}
+
+/**
  * Phase 3f production wiring (`docs/kotlin-sdk-migration-plan.md`): make
  * the Kotlin-SDK wallet binding ([DashSdkService.bindAppWallet]) and
  * identity discovery ([DashSdkService.discoverIdentities]) actually happen
@@ -252,13 +277,40 @@ class SdkWalletBinder internal constructor(
         try {
             mutex.withLock {
                 if (completed) return
-                bindLocked(unlockProvider)
+                try {
+                    bindLocked(unlockProvider)
+                } catch (t: Throwable) {
+                    if (t !is CancellationException) noteMissingMnemonic(t)
+                    throw t
+                }
             }
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             // Opportunistic by contract: never break the calling flow.
             log.warn("SDK wallet binding pass failed; dashj behavior unchanged", t)
         }
+    }
+
+    /**
+     * "no mnemonic stored" from any post-bind step means the bound SDK
+     * wallet has no phrase in `WalletStorage` (an earlier bind pass died
+     * between `createWallet` and the phrase persist). Retrying discovery
+     * against that wallet can never succeed — the re-store lives in
+     * [DashSdkService.bindAppWallet]'s already-exists recovery — so drop
+     * the cached bound id, forcing the NEXT trigger through the full bind
+     * pass (seed hand-off + mnemonic re-store) instead of re-failing
+     * forever. The pass itself stays failed-but-retryable, never latched.
+     * Caller holds [mutex].
+     */
+    private fun noteMissingMnemonic(t: Throwable) {
+        if (!isMissingMnemonicError(t)) return
+        val bound = boundWalletIdHex ?: return
+        boundWalletIdHex = null
+        log.warn(
+            "SDK wallet {}… has no stored mnemonic — clearing the cached bind so the next " +
+                "binding trigger re-runs the full bind pass (which re-stores the phrase)",
+            bound.take(8)
+        )
     }
 
     /** One pass; caller holds [mutex]. Throws freely — [bindIfEnabled] contains the fallout. */
@@ -384,6 +436,9 @@ class SdkWalletBinder internal constructor(
         report.settled
     } catch (t: Throwable) {
         if (t is CancellationException) throw t
+        // A missing-mnemonic failure here needs the same full-rebind
+        // treatment as one from discovery (heal derives via the resolver).
+        noteMissingMnemonic(t)
         log.warn("app identity key heal failed; will retry on the next binding trigger", t)
         false
     }
