@@ -242,6 +242,20 @@ try {
     commitYear = new Date().format('yyyy')
 }
 
+// Short commit hash of HEAD, shown on the About screen in debug builds so
+// testers can verify exactly which build is installed. Same
+// configuration-cache-safe pattern as commitYear; falls back to "unknown".
+def gitCommit
+try {
+    def out = providers.exec {
+        workingDir = rootDir
+        commandLine 'git', 'rev-parse', '--short', 'HEAD'
+    }.standardOutput.asText.get().trim()
+    gitCommit = (out ==~ /[0-9a-f]{7,12}/) ? out : "unknown"
+} catch (Exception ignored) {
+    gitCommit = "unknown"
+}
+
 android {
     android.ndkVersion '21.3.6528147'
     namespace "de.schildbach.wallet_test"
@@ -280,6 +294,7 @@ android {
         }
         buildConfigField("String", "DASHJ_VERSION", "\"$dashjVersion\"")
         buildConfigField("int", "COMMIT_YEAR", "$commitYear")
+        buildConfigField("String", "GIT_COMMIT", "\"$gitCommit\"")
     }
 
     buildTypes {

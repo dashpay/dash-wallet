@@ -73,8 +73,11 @@ class AboutFragment : Fragment() {
                     NetworkParameters.ID_REGTEST -> " - regtest"
                     else -> " - ${Constants.NETWORK_PARAMETERS.devNetName}"
                 }
+                // Debug builds append the git commit so testers can verify exactly
+                // which build is installed (VERSION_NAME is identical across test builds).
+                val buildStamp = if (BuildConfig.DEBUG) " @${BuildConfig.GIT_COMMIT}" else ""
                 val appVersion = "${BuildConfig.VERSION_NAME} " +
-                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network
+                    getString(R.string.about_build_number, BuildConfig.VERSION_CODE % 100) + network + buildStamp
 
                 AboutScreen(
                     uiState = AboutUIState(
