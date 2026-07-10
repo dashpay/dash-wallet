@@ -46,6 +46,8 @@
     <string name="explore_no_atms">没有自动提款机</string>
     <string name="distance_miles">%s 英里</string>
     <string name="distance_kilometers">%s 公里</string>
+    <string name="explore_fee">费用 %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="other">%d 商户</item>
     </plurals>
@@ -176,14 +178,22 @@
     <string name="purchase_gift_card_at">在</string>
     <string name="purchase_gift_card_min">最少: %s</string>
     <string name="purchase_gift_card_max">最多: %s</string>
+    <string name="gift_card_tab_single">一张</string>
+    <string name="gift_card_tab_multiple">多张</string>
     <string name="gift_card_buy_title">购买礼品卡</string>
     <string name="purchase_gift_card_discount_hint">您正在以 %s 购买 %s 礼品卡 (%s 折扣)</string>
     <string name="button_next">下一个</string>
     <string name="purchase_gift_card_from">来自</string>
     <string name="purchase_gift_card_to">到</string>
     <string name="purchase_confirm_transaction">确认</string>
+    <string name="purchase_gift_card_total_label">礼品卡价值</string>
     <string name="purchase_gift_card_discount">折扣</string>
     <string name="purchase_gift_card_you_pay">您支付</string>
+    <string name="purchase_gift_card_quantity_label">数量</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="other">%d 卡片</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">卡片价值</string>
     <string name="purchase_gift_card_confirm">确认</string>
     <string name="purchase_gift_card_details">礼品卡详情</string>
     <string name="purchase_original_purchase">原始购买</string>
@@ -199,6 +209,9 @@
     <string name="purchase_tell_the_cashier">告诉收银员您正在使用数字礼品卡付款. 收银员: 在银行卡信息栏中输入总金额, 然后在账户信息栏中输入礼品卡号码并按 Enter 键.</string>
     <string name="purchase_in_the_payment_section">在付款环节, 在礼品卡信息栏中输入您的数字礼品卡号码.</string>
     <string name="purchase_powered_by">提供方</string>
+    <string name="purchase_cashier_instructions">收银员提示</string>
+    <string name="purchase_cashier_instructions_body">在结账时接受礼品卡或电子礼品卡并作为付款处理.</string>
+    <string name="purchase_gift_card_date_format">%1$s 在 %2$s</string>
     <string name="insufficient_money_title">Dash不足</string>
     <string name="insufficient_money_msg">资金不足</string>
     <string name="send_coins_error_msg">支付Dash时出现了问题!</string>
@@ -206,6 +219,11 @@
     <string name="gift_card_tx_title">礼品卡 · %s</string>
     <string name="select_amount">选择面额</string>
     <string name="select_fixed_amount">此商户以固定价格出售礼品卡</string>
+    <string name="purchase_gift_card_max_multiple_error">每次下单您最多可以购买 %s 张礼品卡</string>
+    <string name="purchase_gift_card_insufficient_money_error">Dash 余额不足以购买这些礼品卡</string>
+    <string name="purchase_gift_card_insufficient_inventory">库存不足, %s 无法购买%dx%s礼品卡</string>
+    <string name="purchase_gift_card_inventory_toast">商家只有 %d 卡片可用</string>
+    <string name="purchase_gift_card_single_card_only_toast">您只能选择一种礼品卡金额</string>
     <string name="purchase_gift_card_reset">重置</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">输入验证码</string>
@@ -240,6 +258,7 @@
     <string name="accept_to_proceed">要在 DashSpend 创建账户, 您必须接受 DashSpend 条款和条件</string>
     <string name="view_terms_conditions">条款和条件</string>
     <string name="barcode_placeholder">请等待礼品卡详细信息发送给您.</string>
+    <string name="purchase_order_number">订单号</string>
     <string name="gift_card_contact_ctx">联系CTX客服</string>
     <string name="gift_card_contact_piggycards">联系 PiggyCards 客服</string>
     <string name="gift_card_contact_support">联系支持</string>

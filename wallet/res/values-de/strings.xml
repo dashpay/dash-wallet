@@ -416,6 +416,8 @@
     <string name="reason">Ursache</string>
     <string name="link_account">Konto verknüpfen</string>
     <string name="buy_no_account_needed">Dash kaufen. Es wird kein Konto benötigt.</string>
+    <string name="convert_no_account_needed">Dash swappen · Kein Konto notwendig</string>
+
     <string name="recipient_address">Adresse des Empfängers</string>
     <string name="not_dash_address">Keine gültige Dash Adresse oder URL-Anfrage</string>
     <string name="send_to_address">An Adresse senden</string>
@@ -443,4 +445,9 @@
     <string name="upgrade_pin_title">Du musst deinen PIN aktualisieren</string>
     <string name="upgrade_pin_description">Neue PIN einrichten</string>
     <string name="upgrade_pin_continue">Fortfahren</string>
+
+    <!-- CrowdNode withdrawal reminder -->
+    <string name="crowdnode_withdrawal_reminder_title">Du besitzt noch Guthaben auf CrowdNode</string>
+    <string name="crowdnode_withdrawal_reminder_message">Du solltest dein Guthaben von CrowdNode abziehen. Das Guthaben kannst du in diese Wallet oder über dein Online-Konto auf ein anderes Gerät auszahlen lassen.</string>
+    <string name="crowdnode_withdraw_funds">Guthaben auszahlen</string>
 </resources>

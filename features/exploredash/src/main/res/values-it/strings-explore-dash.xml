@@ -208,6 +208,7 @@
     <string name="purchase_gift_card_details">Dettagli della carta regalo</string>
     <string name="purchase_original_purchase">Acquisto originale</string>
     <string name="purchase_check_current_balance">Vedi i dettagli della carta</string>
+    <string name="purchase_redeem_url_challange">Contesta</string>
     <string name="purchase_card_number">Numero della carta</string>
     <string name="purchase_card_pin">PIN della carta</string>
     <string name="purchase_view_transaction">Visualizza i dettagli della transazione</string>

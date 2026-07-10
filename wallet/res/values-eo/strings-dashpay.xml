@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- overrides default TextInputLayout value. Do not change the name -->
+    <string name="save">Savi</string>
+    <string name="yes">Jes</string>
+    <string name="error_updating_profile_cancel">Nuligi</string>
+    <string name="platform_credits_error">Eraro</string>
+    <string name="create_instant_username_cancel">Nuligi</string>
+
+</resources>

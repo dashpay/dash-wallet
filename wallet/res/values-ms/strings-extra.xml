@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="dialog_confirm_confirm">Terima</string>
+    <string name="settings_title">Tetapan</string>
+    <string name="menu_settings_title">Tetapan</string>
+    <string name="confirm">Terima</string>
+
+    </resources>

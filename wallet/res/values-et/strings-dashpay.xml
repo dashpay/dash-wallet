@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources  xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="invitation_confirm_button_text">Kinnita</string>
+    <string name="profile_picture_delete_title">Oled kindel\?</string>
+    <string name="error_updating_profile_cancel">Katkesta</string>
+    <string name="create_instant_username_cancel">Katkesta</string>
+
+</resources>

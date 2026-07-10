@@ -308,10 +308,18 @@
     <string name="report_issue_dialog_status_background_traces">background traces</string>
     <string name="report_issue_dialog_status_stack_trace">stack traces</string>
     <string name="report_issue_dialog_status_finishing">penyelesaian</string>
+    <string name="report_transaction_history_export">Ekspor transaksi</string>
+    <string name="report_transaction_history_title">Ekspor CSV</string>
+    <string name="report_transaction_history_dialog_title">Riwayat transaksi lengkap akan diekspor sebagai file CSV.</string>
+    <string name="report_transaction_history_not_synced_title">Ekspor CSV</string>
     <string name="report_transaction_history_not_synced_message">Harap tunggu hingga dompet disinkronkan sepenuhnya sebelum mengekspor riwayat transaksi Anda.</string>
     <string name="report_transaction_history_message">Riwayat transaksi lengkap akan diekspor.\n\nSemua pembayaran akan dianggap sebagai pengeluaran dan semua transaksi yang masuk akan menjadi pendapatan. Pemilik dompet ini bertanggung jawab untuk membuat penyesuaian dasar biaya dalam sistem pelaporan pajak yang mereka pilih.</string>
+    <string name="report_transaction_history_body_1">Semua pembayaran akan dianggap sebagai pengeluaran dan semua transaksi masuk akan dianggap sebagai pendapatan.</string>
+    <string name="report_transaction_history_body_2">Pemilik dompet ini bertanggung jawab untuk melakukan penyesuaian biaya dasar dalam sistem pelaporan pajak yang mereka pilih.</string>
     <string name="report_transaction_history_mail_intent_chooser">Kirim riwayat transaksi menggunakan…</string>
     <string name="report_transaction_history_dialog_mail_intent_failed">Gagal mengirim riwayat transaksi.</string>
+    <string name="report_transaction_history_dialog_export_csv_failed">Gagal Mengekspor riwayat transaksi.</string>
+
     <!-- ZenLedger -->
     <string name="zenledger_export_title">ZenLedger</string>
     <string name="zenledger_export_subtitle">Sederhanakan pajak kripto Anda</string>
@@ -407,6 +415,8 @@
     <string name="reason">Alasan</string>
     <string name="link_account">Tautkan akun Anda</string>
     <string name="buy_no_account_needed">Beli Dash · Tidak memerlukan akun</string>
+    <string name="convert_no_account_needed">Tukar Dash · Tidak perlu akun</string>
+
     <string name="recipient_address">Alamat penerima</string>
     <string name="not_dash_address">Bukan Alamat Dash atau permintaan URL yang valid.</string>
     <string name="send_to_address">Kirim ke alamat</string>
@@ -434,4 +444,5 @@
     <string name="upgrade_pin_title">Anda perlu memperbarui PIN Anda.</string>
     <string name="upgrade_pin_description">Siapkan PIN baru</string>
     <string name="upgrade_pin_continue">Teruskan</string>
-</resources>
+
+    </resources>

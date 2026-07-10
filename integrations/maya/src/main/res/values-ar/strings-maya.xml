@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+  ~ Copyright 2023 Dash Core Group.
+  ~
+  ~ This program is free software: you can redistribute it and/or modify
+  ~ it under the terms of the GNU General Public License as published by
+  ~ the Free Software Foundation, either version 3 of the License, or
+  ~ (at your option) any later version.
+  ~
+  ~ This program is distributed in the hope that it will be useful,
+  ~ but WITHOUT ANY WARRANTY; without even the implied warranty of
+  ~ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  ~ GNU General Public License for more details.
+  ~
+  ~ You should have received a copy of the GNU General Public License
+  ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  -->
+<resources>
+    <string name="maya_crypto_convert_order_preview_title">معاينة الطلب</string>
+
+    <string name="cryptocurrency_bitcoin_network">بيتكوين</string>
+    <string name="cryptocurrency_dash_network">داش</string>
+    <!-- taken from Coinbase -->
+    <string name="entered_amount_is_too_low">الحد الأدنى لمبلغ الصفقة هو</string>
+    <string name="entered_amount_is_too_high">الحد الأقصى لمبلغ الصفقة هو</string>
+    <string name="something_wrong_title">هناك خطأ ما</string>
+    <string name="dont_have_any_dash">ليس لديك أي داش في محفظة داش الخاصة بك.</string>
+    <string name="you_dont_have_enough_balance">ليس لديك رصيد كافي</string>
+    <string name="buy_crypto_on_coinbase">شراء عملات على كوين بيس</string>
+    <string name="purchase_failed">الشراء لم ينجح</string>
+    <string name="transfer_failed">فشل التحويل</string>
+    <string name="send_to_wallet_error">لا يمكن إرسال هذا المبلغ دون تجاوز حد التطبيق</string>
+    <string name="purchase_successful">تم الشراء بنجاح</string>
+    <string name="maya_it_could_take_up_to_2_3_minutes">قد يستغرق الأمر ما يصل إلى 2-3 دقائق حتى يتم نقل داش إلى محفظة داش على هذا الجهاز.</string>
+    <string name="conversion_failed">فشل تحويل</string>
+    <string name="transfer_dash_successful">تم التحويل بنجاح</string>
+    <string name="maya_it_could_take_up_to_10_minutes">قد يستغرق نقل داش من كوين بيس إلى محفظة داش لهذا الجهاز ما يصل إلى 10 دقائق.</string>
+    <string name="maya_it_could_take_up_to_10_minutes_to_coinbase">قد يستغرق الأمر ما يصل إلى 10 دقائق لنقل داش من محفظة داش على هذا الجهاز إلى حساب كوين بيس الخاص بك.</string>
+    <string name="conversion_successful">التحويل ناجح</string>
+    <string name="auth_limit_description">لقد تجاوزت حد التفويض على كوين بيس.</string>
+    <string name="learn_more">اعرف المزيد</string>
+    <string name="debit_money">خصم الأموال من حسابك</string>
+    <string name="change_limit">قم بتغيير هذا الحد</string>
+    <string name="set_auth_limit">تأكد من إعداد حد التفويض الصحيح على كوين بيس</string>
+    <string name="change_withdrawal_limit">يمكنك تغييره في أي وقت عن طريق تسجيل الخروج من حساب كوين بيس الخاص بك في محفظة داش وإعادة تسجيل الدخول.</string>
+    <string name="got_it">حصلت عليه</string>
+    <string name="conversion_preview">معاينة التحويل</string>
+    <string name="you_send">انت ارسل</string>
+    <string name="from_your_coinbase_account">من حساب كوين بيس الخاص بك</string>
+    <string name="you_receive">انت تستقبل</string>
+    <string name="purchase">شراء</string>
+    <string name="total">المجموع</string>
+    </resources>

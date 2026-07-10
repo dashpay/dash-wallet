@@ -111,6 +111,8 @@
     <string name="maya_error_invalid_destination_address">Neplatná cieľová adresa</string>
     <string name="maya_error_below_recommended_minimum">Zadaná suma je nižšia ako odporúčané minimum</string>
     <string name="maya_error_trading_halted">Obchodovanie na %s bolo pozastavené.</string>
+    <string name="maya_error_below_allowed_minimum">Zadaná suma je nižšia ako povolené minimum</string>
+    <string name="maya_error_quote">Pre túto konverziu sa nepodarilo získať cenovú ponuku od Maya</string>
     <string name="maya_halted_label">Pozastavené</string>
     <string name="maya_halted_coins_toast">Niektoré mince sú dočasne pozastavené a nie sú k dispozícii na obchodovanie</string>
 

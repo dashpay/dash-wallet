@@ -21,6 +21,7 @@
     <string name="coinbase_transfer_details">대시 지갑과 코인베이스 계정간</string>
     <string name="coinbase_dash_wallet_error_title">당신의 코인베이스 계정에 대시 지갑을 찾지 못했습니다.</string>
     <string name="coinbase_dash_wallet_error_message">계속하시려면 코인베이스에 대시 지갑을 생성해주세요.</string>
+    <string name="coinbase_usd_wallet_error_message">당신의 코인베이스 계정이 USD를 지원하지 않습니다.</string>
     <string name="create_dash_account">대시 계정 생성하기</string>
     <string name="close">닫기</string>
     <string name="retry">재시도</string>
