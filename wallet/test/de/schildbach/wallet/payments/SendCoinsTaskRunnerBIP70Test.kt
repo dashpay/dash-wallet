@@ -146,6 +146,9 @@ class SendCoinsTaskRunnerBIP70Test {
                 mockk(relaxed = true),
                 // Self-spend grace arming is exercised in
                 // SendCoinsTaskRunnerSelfSpendGraceTest.
+                mockk(relaxed = true),
+                // 5c.0/5c.1 debug probes (L1SendProbeServiceTest): these
+                // BIP70 flows never touch the neutral overload.
                 mockk(relaxed = true)
             )
         )

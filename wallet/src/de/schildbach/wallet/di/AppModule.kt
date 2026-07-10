@@ -38,6 +38,7 @@ import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -118,9 +119,10 @@ abstract class AppModule {
             platformRepo: PlatformRepo,
             transactionMetadataProvider: TransactionMetadataProvider,
             sdkL1SendService: SdkL1SendService,
-            l1ShadowSyncService: L1ShadowSyncService
+            l1ShadowSyncService: L1ShadowSyncService,
+            l1SendProbeService: L1SendProbeService
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService, l1SendProbeService)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

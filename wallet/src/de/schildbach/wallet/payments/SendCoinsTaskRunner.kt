@@ -28,9 +28,11 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1SendProbeService
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet_test.BuildConfig
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.*
@@ -82,7 +84,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private val platformRepo: PlatformRepo,
     private val metadataProvider: TransactionMetadataProvider,
     private val sdkL1SendService: SdkL1SendService,
-    private val l1ShadowSyncService: L1ShadowSyncService
+    private val l1ShadowSyncService: L1ShadowSyncService,
+    private val l1SendProbeService: L1SendProbeService
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -161,19 +164,71 @@ class SendCoinsTaskRunner @Inject constructor(
             }
         }
         when (sdkResult) {
-            is SdkWriteResult.Broadcast -> return sdkResult.value
+            is SdkWriteResult.Broadcast -> {
+                // Phase 5c.0/5c.1 fee-parity + bridge-feasibility probes
+                // (L1SendProbeService): DEBUG-only, fire-and-forget, contains
+                // every failure — the send result is already decided here.
+                if (BuildConfig.DEBUG) {
+                    l1SendProbeService.probeSdkSendInBackground(
+                        txidHex = sdkResult.value,
+                        addressBase58 = address,
+                        amountDuffs = amount.duffs,
+                        emptyWallet = emptyWallet
+                    ) { dashjDryRunFeeDuffs(address, amount, emptyWallet) }
+                }
+                return sdkResult.value
+            }
             is SdkWriteResult.Ambiguous ->
                 throw (sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause))
             is SdkWriteResult.NotBroadcast -> Unit // dashj path below, unchanged
         }
 
         val dashAddress = Address.fromString(walletData.networkParameters, address)
-        return sendCoins(
-            dashAddress,
+        // Phase 5c.0 dashj-route baseline (DEBUG-only): capture the dry-run
+        // estimate starting BEFORE the send commits its spend, then log the
+        // actual-vs-estimated comparison after; detached, never blocks or
+        // fails the send.
+        val baselineEstimate = if (BuildConfig.DEBUG) {
+            l1SendProbeService.dryRunEstimateAsync { dashjDryRunFeeDuffs(address, amount, emptyWallet) }
+        } else {
+            null
+        }
+        val transaction = try {
+            sendCoins(
+                dashAddress,
+                amount.toCoin(),
+                emptyWallet = emptyWallet,
+                checkBalanceConditions = checkBalanceConditions
+            )
+        } catch (t: Throwable) {
+            baselineEstimate?.cancel()
+            throw t
+        }
+        if (baselineEstimate != null) {
+            l1SendProbeService.probeDashjSendInBackground(
+                tx = transaction,
+                addressBase58 = address,
+                amountDuffs = amount.duffs,
+                emptyWallet = emptyWallet,
+                estimatedFeeDuffs = baselineEstimate
+            )
+        }
+        return transaction.txId.toString()
+    }
+
+    /**
+     * The 5c.0 probe's dashj dry-run: the EXISTING [estimateNetworkFee]
+     * path for the same `{address, amount, emptyWallet}`, reduced to the
+     * fee in duffs (null when the completed request reports no fee).
+     * Debug-probe-only; throws propagate to the probe's containment.
+     */
+    private suspend fun dashjDryRunFeeDuffs(address: String, amount: Dash, emptyWallet: Boolean): Long? {
+        val details = estimateNetworkFee(
+            Address.fromString(walletData.networkParameters, address),
             amount.toCoin(),
-            emptyWallet = emptyWallet,
-            checkBalanceConditions = checkBalanceConditions
-        ).txId.toString()
+            emptyWallet
+        )
+        return details.fee.takeIf { it.isNotEmpty() }?.let { Coin.parseCoin(it).value }
     }
 
     override suspend fun estimateNetworkFee(

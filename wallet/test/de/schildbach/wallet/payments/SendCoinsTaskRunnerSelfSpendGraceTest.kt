@@ -107,7 +107,9 @@ class SendCoinsTaskRunnerSelfSpendGraceTest {
                 mockk<PlatformRepo>(relaxed = true),
                 mockk<TransactionMetadataProvider>(relaxed = true),
                 mockk(relaxed = true),
-                l1ShadowSyncService
+                l1ShadowSyncService,
+                // 5c.0/5c.1 debug probes: relaxed — observation only.
+                mockk(relaxed = true)
             )
         )
         coEvery { runner.logSendTxEvent(any(), any()) } returns Unit

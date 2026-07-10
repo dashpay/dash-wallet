@@ -110,6 +110,9 @@ class SendCoinsTaskRunnerSdkRoutingTest {
                 mockk<PlatformRepo>(relaxed = true),
                 mockk<TransactionMetadataProvider>(relaxed = true),
                 sdkL1SendService,
+                mockk(relaxed = true),
+                // 5c.0/5c.1 debug probes: relaxed — fire-and-forget observation
+                // that must never affect routing.
                 mockk(relaxed = true)
             )
         )
