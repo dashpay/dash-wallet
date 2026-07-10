@@ -440,3 +440,12 @@ Verified on-device with the debug flags ON:
   off the transfer screen.
 - ⬜ **Next**: full-balance (Max) shield retest on the router-fixed native lib, then the
   Phase 5b SDK L1-send soak (needs an in-app debug toggle for USE_KOTLIN_SDK_L1_SEND).
+
+### 2026-07-10 addendum: CoinJoin gap-limit finding (Phase-0 risk confirmed live)
+
+The Phase-0 "check 30-address coinjoin gap limit for heavy mixers" risk materialized on the
+test device: key-wallet's DEFAULT_COINJOIN_GAP_LIMIT of 30 (vs dashj DeterministicKeyChain
+lookahead 100) skipped mixing txs beyond the window — outputs never became UTXOs AND their
+spent inputs were never debited. Fixed 30→100 in the PR #4074 vendored key-wallet (+ upstream
+patch coinjoin-gap-limit.patch). Note for cutover: wallets persisted under the old gap keep
+it in pool state — migration must bump via set_gap_limit or re-create.
