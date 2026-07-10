@@ -280,6 +280,13 @@ interface ShieldedSource {
 
     suspend fun stopShieldedSync()
 
+    /**
+     * Trigger an immediate shielded sync pass (instead of waiting for the
+     * ~60s background loop tick) so a just-completed op's balance change
+     * shows up right away. Best-effort — callers swallow failures.
+     */
+    suspend fun syncShieldedNow()
+
     /** Kick the ~30s Halo 2 proving-key build onto a background thread. Idempotent. */
     suspend fun warmUpProver()
 
@@ -382,6 +389,8 @@ internal class DashSdkShieldedSource(
     override suspend fun startShieldedSync() = manager().startShieldedSync()
 
     override suspend fun stopShieldedSync() = manager().stopShieldedSync()
+
+    override suspend fun syncShieldedNow() = manager().syncShieldedNow()
 
     override suspend fun warmUpProver() = ShieldedProver.warmUp()
 
@@ -784,6 +793,7 @@ class ShieldedBalanceServiceImpl internal constructor(
             // lock from the SDK wallet, (b) Halo 2 proof + Type 18 submit.
             try {
                 source.fundFromAssetLock(walletId, recipient, amount.duffs)
+                kickImmediateShieldedSync()
                 SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
             } catch (t: Throwable) {
                 if (t is CancellationException) throw t
@@ -1004,6 +1014,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         // indeterminate progress; there is no per-proof progress callback).
         return try {
             block(walletId, amountCredits)
+            kickImmediateShieldedSync()
             SdkWriteResult.Broadcast(Unit)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
@@ -1024,6 +1035,23 @@ class ShieldedBalanceServiceImpl internal constructor(
                 is SdkWriteResult.Broadcast -> Unit // unreachable
             }
             classified
+        }
+    }
+
+    /**
+     * Best-effort immediate shielded sync pass after a successful op so the
+     * balance/activity flows update right away instead of on the next ~60s
+     * background tick (user-reported: credits took a minute to appear on
+     * the More card after the first successful shield). Never affects the
+     * op result — failures are logged and swallowed; the background loop
+     * remains the source of truth.
+     */
+    private suspend fun kickImmediateShieldedSync() {
+        try {
+            source.syncShieldedNow()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("post-op immediate shielded sync failed; the 60s loop will catch up", t)
         }
     }
 

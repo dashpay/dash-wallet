@@ -137,6 +137,12 @@ class ShieldedBalanceServiceTest {
             events += "stop"
         }
 
+        var syncNowCalls = 0
+        override suspend fun syncShieldedNow() {
+            syncNowCalls++
+            events += "syncNow"
+        }
+
         override suspend fun warmUpProver() {
             warmUpCalls++
             events += "warmUp"

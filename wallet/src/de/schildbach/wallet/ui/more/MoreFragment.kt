@@ -412,12 +412,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             binding.balanceCardsContainer.isVisible = true
 
+            // Design 1691:15460 shows the card amount at two decimals ("2.00 Đ") —
+            // rounded DOWN so the card never overstates the balance. Đ stays an
+            // Inter font glyph inside the string (a trailing ImageView clips).
+            val cardFormat = org.dash.wallet.common.money.MoneyFormat()
+                .noCode()
+                .minDecimals(2)
+                .optionalDecimals()
+                .roundingMode(java.math.RoundingMode.DOWN)
             walletData.observeTotalBalance().observe(viewLifecycleOwner) { balance ->
-                // Đ as an Inter font glyph inside the string (the shielded
-                // Compose screens' convention) — see the layout comment: a
-                // trailing ImageView clips on long balances.
                 binding.walletBalanceCardAmount.text =
-                    "${org.dash.wallet.common.money.Dash(balance.value).toDisplayString()} Đ"
+                    "${cardFormat.format(org.dash.wallet.common.money.Dash(balance.value))} Đ"
             }
 
             shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
