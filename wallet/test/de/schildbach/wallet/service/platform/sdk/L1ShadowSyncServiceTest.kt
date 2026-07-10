@@ -546,6 +546,46 @@ class L1ShadowSyncServiceTest {
     }
 
     @Test
+    fun resetDecider_recentSelfSpend_suppressesInflatedStreaks() {
+        // A Phase 5b SDK self-spend legitimately inflates the SDK view until
+        // the tx is mined and filter-scanned (dashj drops its balance at
+        // mempool time, the compact-filter scan only at the next block) —
+        // marked probes must never feed the reset streak.
+        val decider = ShadowResetDecider()
+        repeat(5) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(inflated(), recentSelfSpendMarker = true)
+            )
+        }
+        // The marker also ZEROES the streak: two unmarked + one marked +
+        // two unmarked never reaches the three-consecutive threshold…
+        repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
+        assertEquals(
+            ShadowResetDecider.Decision.NONE,
+            decider.onProbe(inflated(), recentSelfSpendMarker = true)
+        )
+        repeat(2) { assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(inflated())) }
+        // …and a genuine post-grace inflation still resets after three.
+        assertEquals(ShadowResetDecider.Decision.RESET, decider.onProbe(inflated()))
+    }
+
+    @Test
+    fun resetDecider_selfSpendMarker_doesNotDisturbTheDeficitRows() {
+        // The deficit direction needs no self-spend guard (a post-send
+        // wallet always has sdkTxCount > 0, so the empty-deficit signature
+        // cannot form); the marker must not change deficit handling.
+        val decider = ShadowResetDecider()
+        repeat(5) {
+            assertEquals(
+                ShadowResetDecider.Decision.NONE,
+                decider.onProbe(deficit(), recentSelfSpendMarker = true)
+            )
+            assertEquals(ShadowResetDecider.Decision.NONE, decider.onProbe(deficit()))
+        }
+    }
+
+    @Test
     fun resetDecider_resetsOncePerProcess_thenReportsCorruptOnce_thenStandsDown() {
         val decider = ShadowResetDecider()
         repeat(2) { decider.onProbe(inflated()) }
@@ -763,6 +803,30 @@ class L1ShadowSyncServiceTest {
         assertEquals(1, source.clearL1RowsCalls)
         assertEquals(0, source.clearSpvStorageCalls)
         assertEquals(2, source.startCalls)
+    }
+
+    @Test
+    fun probeParity_recentSelfSpendBroadcast_suppressesTheInflatedAutoReset() = runBlocking {
+        // Phase 5b wiring: SdkL1SendService calls noteSelfSpendBroadcast()
+        // after a successful SDK L1 send; the legitimate inflation window
+        // (mempool → mined → filter-scanned) must never trigger a reset.
+        var now = 1_000_000L
+        val source = inflatedSource()
+        val service = service(source, nowMs = { now })
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+
+        service.noteSelfSpendBroadcast()
+        repeat(5) {
+            now += 60_000 // probe cadence, still inside the grace window
+            service.probeParity(walletIdHex)
+        }
+        assertEquals(0, source.clearL1RowsCalls)
+
+        // Past the grace window the mismatch counts as real again.
+        now += L1ShadowSyncService.SELF_SPEND_GRACE_MS + 1
+        repeat(3) { service.probeParity(walletIdHex) }
+        assertEquals(1, source.clearL1RowsCalls)
     }
 
     @Test

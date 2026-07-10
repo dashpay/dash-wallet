@@ -28,6 +28,8 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.util.AnrException
 import kotlinx.coroutines.*
@@ -77,7 +79,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private val identityConfig: BlockchainIdentityConfig,
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
-    private val metadataProvider: TransactionMetadataProvider
+    private val metadataProvider: TransactionMetadataProvider,
+    private val sdkL1SendService: SdkL1SendService
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -112,6 +115,32 @@ class SendCoinsTaskRunner @Inject constructor(
         )
     }
 
+    /**
+     * Phase 5b (`docs/kotlin-sdk-migration-plan.md`): this NEUTRAL overload —
+     * the integrations path (Coinbase / Maya / feature modules) — is the ONLY
+     * send routed through the Kotlin SDK, behind
+     * [de.schildbach.wallet.ui.dashpay.utils.DashPayConfig.USE_KOTLIN_SDK_L1_SEND]
+     * (default OFF ⇒ this method is byte-for-byte the old dashj path apart
+     * from one DataStore flag read). The dashj-typed overload above — the
+     * main send UI, CrowdNode's selector/locked-output sends, BIP70 — stays
+     * untouched this phase: those call sites depend on dashj-specific
+     * machinery (custom [CoinSelector]s, `canSendLockedOutput` predicates,
+     * the returned [Transaction] object for listeners/metadata) that the
+     * SDK send surface has no equivalent for yet; they cut over in Phase 5c
+     * after this narrow path has soak-validated on real funds.
+     *
+     * Routing contract (same as [SdkDashPayWrites]):
+     * - `Broadcast(txid)` → return the txid; the dashj send MUST NOT run
+     *   (callers only consume the returned txid hex — identical either way).
+     * - `NotBroadcast` → fall through to the unchanged dashj path.
+     * - `Ambiguous` → rethrow like a dashj broadcast failure; NEVER retry
+     *   via dashj (its coin selection may pick different UTXOs — a dashj
+     *   retry after a maybe-sent SDK tx is a potential double PAY).
+     *
+     * The SDK route replicates this path's only pre-send condition (the
+     * leftover-balance check) via `beforeBroadcast`, so
+     * [LeftoverBalanceException] surfaces identically on both routes.
+     */
     @Throws(LeftoverBalanceException::class)
     override suspend fun sendCoins(
         address: String,
@@ -119,6 +148,23 @@ class SendCoinsTaskRunner @Inject constructor(
         emptyWallet: Boolean,
         checkBalanceConditions: Boolean
     ): String {
+        val sdkResult = sdkL1SendService.sendToAddress(address, amount, emptyWallet) {
+            // Same conditions the dashj-typed overload enforces before its
+            // broadcast; throws (e.g. LeftoverBalanceException) propagate
+            // to the caller exactly as they do on the dashj path.
+            val wallet = walletData.wallet ?: throw RuntimeException(WALLET_EXCEPTION_MESSAGE)
+            val dashAddress = Address.fromString(walletData.networkParameters, address)
+            if (checkBalanceConditions && !wallet.isAddressMine(dashAddress)) {
+                walletData.checkSendingConditions(dashAddress, amount.toCoin())
+            }
+        }
+        when (sdkResult) {
+            is SdkWriteResult.Broadcast -> return sdkResult.value
+            is SdkWriteResult.Ambiguous ->
+                throw (sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause))
+            is SdkWriteResult.NotBroadcast -> Unit // dashj path below, unchanged
+        }
+
         val dashAddress = Address.fromString(walletData.networkParameters, address)
         return sendCoins(
             dashAddress,

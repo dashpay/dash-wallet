@@ -429,6 +429,17 @@ internal class ShadowResetDecider(
         report: ParityReport,
         scanLooksComplete: Boolean = false,
         recentResetMarker: Boolean = false,
+        // A flag-gated SDK L1 send (Phase 5b, SdkL1SendService) was broadcast recently.
+        // A self-spend legitimately INFLATES the SDK view for minutes: the SDK's
+        // compact-filter SPV only applies the spend once it is MINED and filter-scanned,
+        // while dashj's bloom filters see the mempool tx within seconds and drop its
+        // ESTIMATED balance immediately — so sdk > dashj until the next block lands.
+        // Resetting healthy shadow state on that evidence would be wrong, so inflated
+        // streaks are zeroed while the marker is fresh. The DEFICIT direction needs no
+        // guard: a plain deficit never resets, and the empty-deficit signature requires
+        // sdkTxCount == 0, which is impossible right after a send from a wallet whose
+        // parity-gated (non-zero, TXO-backed) balance just funded the spend.
+        recentSelfSpendMarker: Boolean = false,
         // Debug builds always treat a persistent empty deficit as recoverable by wallet
         // re-creation: this harness only runs on debug builds, an empty-and-scanned SDK view
         // is never a legitimate steady state for a funded wallet, and remote testers have no
@@ -436,7 +447,8 @@ internal class ShadowResetDecider(
         alwaysRecreateOnEmptyDeficit: Boolean = BuildConfig.DEBUG
     ): Decision {
         val mismatch = report.sdkSynced && !report.balancesMatch
-        val inflated = mismatch && report.sdkDuffs > report.dashjDuffs
+        val inflated = mismatch && report.sdkDuffs > report.dashjDuffs &&
+            !recentSelfSpendMarker
         val emptyDeficit = mismatch && report.sdkDuffs < report.dashjDuffs &&
             report.sdkTxCount == 0 && scanLooksComplete
 
@@ -922,6 +934,27 @@ class L1ShadowSyncService internal constructor(
     /** The once-per-process probe-loop restart state (see [ProbeWatchdogDecider]). */
     private val watchdogDecider = ProbeWatchdogDecider(probeStallThresholdMs)
 
+    /**
+     * Wall-clock ms of the last app-initiated SDK L1 SELF-SPEND broadcast
+     * ([SdkL1SendService], Phase 5b), 0 when none. While fresh
+     * ([SELF_SPEND_GRACE_MS]) the reset decider must not act on an
+     * INFLATED parity mismatch — the spend legitimately inflates the SDK
+     * view until it is mined and filter-scanned (see the
+     * [ShadowResetDecider.onProbe] `recentSelfSpendMarker` doc).
+     */
+    @Volatile
+    private var lastSelfSpendMs = 0L
+
+    /**
+     * Record that the app just broadcast an L1 transaction THROUGH THE SDK
+     * spending the shared wallet's UTXOs ([SdkL1SendService]). In-memory
+     * only: after a process death the SDK's own state already reflects the
+     * spend, so no cross-process marker is needed.
+     */
+    fun noteSelfSpendBroadcast() {
+        lastSelfSpendMs = nowMs()
+    }
+
     private val _progress = MutableStateFlow(ShadowSyncProgress.IDLE)
 
     /** Live shadow SPV progress ([ShadowSyncProgress.IDLE] while stopped). */
@@ -1201,6 +1234,8 @@ class L1ShadowSyncService internal constructor(
             report,
             scanLooksComplete = _progress.value.scanLooksComplete,
             recentResetMarker = hasRecentResetMarker(),
+            recentSelfSpendMarker =
+                lastSelfSpendMs != 0L && nowMs() - lastSelfSpendMs <= SELF_SPEND_GRACE_MS,
             alwaysRecreateOnEmptyDeficit = alwaysRecreateOnEmptyDeficitOverride ?: BuildConfig.DEBUG
         )
         when (decision) {
@@ -1595,6 +1630,17 @@ class L1ShadowSyncService internal constructor(
 
         /** Retry backoff for a failed progress-monitor collection. */
         internal const val LOOP_RETRY_DELAY_MS = 5_000L
+
+        /**
+         * How long a [noteSelfSpendBroadcast] marker suppresses the
+         * INFLATED auto-reset. Sized to comfortably cover the legitimate
+         * inflation window of a Phase 5b self-spend — mempool broadcast →
+         * next mined block (~2.5 min target, occasionally much longer) →
+         * the SDK's filter scan applying it — while staying far shorter
+         * than any organic corruption timescale. At the 60s probe cadence
+         * this masks at most ~15 mismatch probes.
+         */
+        internal const val SELF_SPEND_GRACE_MS = 15 * 60_000L
 
         /**
          * How long the persisted reset marker counts as "recent" for the

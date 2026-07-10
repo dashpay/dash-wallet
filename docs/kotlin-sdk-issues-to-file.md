@@ -102,3 +102,10 @@ display/amount validation (a chainlocked-only `CoinSelector` caps the amount), b
 internal coin selection can still pick a non-chainlocked UTXO for the lock itself. Request: an
 input-selection constraint (e.g. `chainLockedOnly: Boolean` or a min-conf/locked filter) on
 `shieldedFundFromAssetLock`.
+
+## 14. Core-send broadcast rejection flattens to ErrorUnknown(99)
+
+`PlatformWalletError::TransactionBroadcast` (the broadcaster's definitive "never reached any
+peer" rejection, reservation released) reaches Kotlin as `Generic(nativeCode=99)` with a message
+prefix, forcing integrators to message-match to classify it as safely-not-broadcast. A dedicated
+error code would make the no-double-pay classification robust.

@@ -203,6 +203,29 @@ open class DashPayConfig @Inject constructor(
         val USE_KOTLIN_SDK_L1_SHADOW = booleanPreferencesKey("use_kotlin_sdk_l1_shadow")
 
         /**
+         * Phase 5b of the dashj → Kotlin SDK migration
+         * (`docs/kotlin-sdk-migration-plan.md`): route the NORMAL L1 send —
+         * a plain Dash payment to a base58 address — through the Kotlin
+         * SDK's Core send pipeline (build + sign + broadcast over the SDK's
+         * SPV peers) instead of dashj. Scope: ONLY the neutral
+         * `SendPaymentService.sendCoins(String, Dash)` overload (the
+         * integrations path — Coinbase/Maya); the dashj-typed main-UI send
+         * stays on dashj until Phase 5c. Every send is hard-gated on the
+         * same shadow-sync parity evidence as the shielded funding pipeline
+         * (see `SdkL1SendService`), and any outcome where the SDK provably
+         * broadcast nothing falls back to the unchanged dashj path.
+         *
+         * Default OFF and — unlike the other migration flags —
+         * DELIBERATELY NOT seeded ON by the debug-build init block below:
+         * this flag moves real user funds through the SDK's own
+         * build/sign/broadcast stack, so it stays opt-in even for testers
+         * (adb/debug-screen toggle) until the shadow-parity harness has
+         * soak-validated the SDK's L1 view across enough devices. Re-read
+         * on every send, so toggling either direction is instant.
+         */
+        val USE_KOTLIN_SDK_L1_SEND = booleanPreferencesKey("use_kotlin_sdk_l1_send")
+
+        /**
          * Wall-clock ms of the last L1 shadow reset
          * ([de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService.resetShadowState]).
          * Persisted (not in-memory) so a reset survives a process death:

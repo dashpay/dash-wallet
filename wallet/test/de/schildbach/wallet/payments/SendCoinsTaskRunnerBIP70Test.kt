@@ -140,7 +140,10 @@ class SendCoinsTaskRunnerBIP70Test {
                 identityConfig,
                 identityRepo,
                 platformRepo,
-                metadataProvider
+                metadataProvider,
+                // Phase 5b routing is exercised in SendCoinsTaskRunnerSdkRoutingTest;
+                // these BIP70 flows never touch the neutral overload.
+                mockk(relaxed = true)
             )
         )
 
