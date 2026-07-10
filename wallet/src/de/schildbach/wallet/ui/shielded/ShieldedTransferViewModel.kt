@@ -23,16 +23,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
-import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
-import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -45,7 +41,6 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.bitcoinj.utils.Fiat
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.WalletUIConfig
@@ -206,7 +201,21 @@ data class ShieldedTransferUIState(
      */
     val verificationStatus: ShieldedVerificationStatus? = null,
     val showConfirm: Boolean = false,
-    val submitState: ShieldedSubmitState = ShieldedSubmitState.Idle
+    /**
+     * Mirrored LIVE from [ShieldedTransferExecutor.submitState] — the
+     * spend runs on the application scope so it survives this screen,
+     * and a recreated ViewModel re-attaches to an in-flight Proving or
+     * an unacknowledged terminal result. Never written directly.
+     */
+    val submitState: ShieldedSubmitState = ShieldedSubmitState.Idle,
+    /**
+     * True once the user dismissed the proving dialog for the current
+     * in-flight operation: the spend keeps running on the app scope and
+     * the screen shows the inline in-progress state (the Continue button
+     * becomes "Sending your transfer…") instead of the modal. Auto-reset
+     * whenever [submitState] leaves Proving.
+     */
+    val provingDismissed: Boolean = false
 ) {
     /** The entered amount as Dash, or ZERO when unparseable. */
     val amount: Dash
@@ -291,6 +300,27 @@ data class ShieldedTransferUIState(
             else -> null
         }
 
+    /**
+     * True while a transfer operation is in flight ([ShieldedSubmitState
+     * .Proving]) — regardless of whether the proving dialog is up or was
+     * dismissed. The Continue button shows the in-progress state and a
+     * second submit is impossible ([canContinue] excludes Proving, and
+     * [ShieldedTransferExecutor.submit] refuses atomically anyway).
+     */
+    val transferInFlight: Boolean
+        get() = submitState == ShieldedSubmitState.Proving
+
+    /**
+     * True while the blocked-state status toast must be hidden: a modal
+     * overlay is up (confirm/timing sheet, proving dialog, terminal
+     * result overlays) or a submit is in flight. A live-updating status
+     * line behind the dimmed modal reads as glitchy (live user feedback),
+     * and the modals/in-progress button carry their own messaging.
+     */
+    val blockedToastSuppressed: Boolean
+        get() = showConfirm || showTimingInfo ||
+            (submitState != ShieldedSubmitState.Idle && submitState !is ShieldedSubmitState.NotSent)
+
     val canContinue: Boolean
         get() = ready && chainSynced && shieldedPoolReady && directionAvailable &&
             amount.isPositive && !insufficientFunds &&
@@ -303,25 +333,46 @@ data class ShieldedTransferUIState(
 @HiltViewModel
 class ShieldedTransferViewModel @Inject constructor(
     private val shieldedBalanceService: ShieldedBalanceService,
-    private val walletDataProvider: WalletDataProvider,
+    walletDataProvider: WalletDataProvider,
     private val dashPayConfig: DashPayConfig,
     blockchainStateProvider: BlockchainStateProvider,
     walletUIConfig: WalletUIConfig,
     exchangeRates: ExchangeRatesProvider,
-    l1ShadowSyncService: L1ShadowSyncService
+    l1ShadowSyncService: L1ShadowSyncService,
+    private val transferExecutor: ShieldedTransferExecutor
 ) : ViewModel() {
 
     companion object {
         private val log = LoggerFactory.getLogger(ShieldedTransferViewModel::class.java)
     }
 
-    /** Test seam: spends block for a ~30s Halo 2 proof and must stay off main. */
-    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-
     private val _uiState = MutableStateFlow(ShieldedTransferUIState())
     val uiState: StateFlow<ShieldedTransferUIState> = _uiState.asStateFlow()
 
     init {
+        // The spend itself lives in the app-scoped ShieldedTransferExecutor
+        // so it survives this ViewModel/screen: this mirror re-attaches a
+        // recreated screen to an in-flight op (the proving dialog / inline
+        // in-progress button shows again instead of a blank form) or to an
+        // unacknowledged terminal result. Observation only — re-attaching
+        // can NEVER re-submit: submission happens exclusively through
+        // onConfirm (a user gesture) and the executor atomically refuses
+        // while an operation is in flight or a terminal no-retry state is
+        // held. The proving-dialog dismissal is per-operation: it resets
+        // whenever the state leaves Proving.
+        transferExecutor.submitState
+            .onEach { submitState ->
+                _uiState.value = _uiState.value.copy(
+                    submitState = submitState,
+                    provingDismissed = if (submitState == ShieldedSubmitState.Proving) {
+                        _uiState.value.provingDismissed
+                    } else {
+                        false
+                    }
+                )
+            }
+            .launchIn(viewModelScope)
+
         viewModelScope.launch {
             val ready = shieldedBalanceService.ensureShieldedReady()
             _uiState.value = _uiState.value.copy(
@@ -423,14 +474,19 @@ class ShieldedTransferViewModel @Inject constructor(
             .launchIn(viewModelScope)
     }
 
-    /** Clears per-visit state; called when the screen is (re)entered. */
+    /**
+     * Clears per-visit state; called when the screen is (re)entered.
+     * The executor decides what a fresh visit may drop: an in-flight
+     * Proving and the funds-critical terminal states survive (the mirror
+     * re-attaches to them), only stale Success/NotSent leftovers reset.
+     */
     fun reset(direction: ShieldedTransferDirection = ShieldedTransferDirection.ToShielded) {
+        transferExecutor.clearForNewVisit()
         _uiState.value = _uiState.value.copy(
             direction = direction,
             amountText = "0",
             dashMode = true,
-            showConfirm = false,
-            submitState = ShieldedSubmitState.Idle
+            showConfirm = false
         )
     }
 
@@ -443,10 +499,10 @@ class ShieldedTransferViewModel @Inject constructor(
         }
         val maxDecimals = if (state.dashMode) 8 else 2
         _uiState.value = state.copy(
-            amountText = processAmountKeyInput(state.amountText, key, maxDecimals),
-            // typing again clears an inline "not sent" error
-            submitState = ShieldedSubmitState.Idle
+            amountText = processAmountKeyInput(state.amountText, key, maxDecimals)
         )
+        // typing again clears an inline "not sent" error
+        transferExecutor.clearRetryableResult()
     }
 
     fun onMaxClick() {
@@ -457,7 +513,8 @@ class ShieldedTransferViewModel @Inject constructor(
         } else {
             max.toFiatAt(state.rate)?.toPlainString() ?: return
         }
-        _uiState.value = state.copy(amountText = text, submitState = ShieldedSubmitState.Idle)
+        _uiState.value = state.copy(amountText = text)
+        transferExecutor.clearRetryableResult()
     }
 
     /** Toggle DASH ↔ fiat entry, converting the current amount (Figma "Enter in fiat"). */
@@ -480,7 +537,8 @@ class ShieldedTransferViewModel @Inject constructor(
             ShieldedTransferDirection.ToShielded -> ShieldedTransferDirection.FromShielded
             ShieldedTransferDirection.FromShielded -> ShieldedTransferDirection.ToShielded
         }
-        _uiState.value = state.copy(direction = direction, submitState = ShieldedSubmitState.Idle)
+        _uiState.value = state.copy(direction = direction)
+        transferExecutor.clearRetryableResult()
     }
 
     fun onContinue() {
@@ -515,67 +573,39 @@ class ShieldedTransferViewModel @Inject constructor(
     }
 
     /**
-     * Runs the spend. "Dash Wallet → Shielded" is the L1 asset-lock
+     * Hands the spend to the app-scoped [ShieldedTransferExecutor] so it
+     * survives this screen: "Dash Wallet → Shielded" is the L1 asset-lock
      * pipeline ([ShieldedBalanceService.shieldFromWallet]); "Shielded →
-     * Dash Wallet" is the Type 19 withdraw. Maps the SdkWriteResult
-     * contract onto the UI: Broadcast → [ShieldedSubmitState.Success]
-     * (or [ShieldedSubmitState.LockedPendingShield] when the lock is out
-     * but the shield transition awaits its automatic retry); NotBroadcast
-     * → [ShieldedSubmitState.NotSent] (retry allowed); Ambiguous →
-     * [ShieldedSubmitState.MayHaveGoneThrough] (terminal — never retried).
+     * Dash Wallet" is the Type 19 withdraw. The executor maps the
+     * SdkWriteResult contract onto [ShieldedSubmitState] (mirrored here)
+     * and announces terminal outcomes to a user who left the screen —
+     * see the executor KDoc. Single-attempt semantics unchanged: the
+     * executor atomically refuses unless it is Idle/NotSent.
      */
     fun onConfirm() {
         val state = _uiState.value
         if (!state.canContinue || !state.showConfirm) return
-        val amount = state.amount
-        val direction = state.direction
-        _uiState.value = state.copy(showConfirm = false, submitState = ShieldedSubmitState.Proving)
+        _uiState.value = state.copy(showConfirm = false)
+        if (!transferExecutor.submit(state.direction, state.amount)) {
+            log.warn("shielded transfer submit refused — an operation is already in flight")
+        }
+    }
 
-        viewModelScope.launch {
-            val result = withContext(ioDispatcher) {
-                try {
-                    when (direction) {
-                        ShieldedTransferDirection.ToShielded ->
-                            shieldedBalanceService.shieldFromWallet(amount)
-                        ShieldedTransferDirection.FromShielded ->
-                            shieldedBalanceService.withdrawToCore(
-                                walletDataProvider.freshReceiveAddressString(),
-                                amount
-                            )
-                    }
-                } catch (e: Exception) {
-                    // freshReceiveAddress failures happen strictly pre-broadcast
-                    SdkWriteResult.NotBroadcast("failed to prepare transfer", e)
-                }
-            }
-            _uiState.value = _uiState.value.copy(
-                submitState = when (result) {
-                    is SdkWriteResult.Broadcast -> when (result.value) {
-                        ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
-                            log.warn("wallet shield locked but pending — surfacing auto-retry state")
-                            ShieldedSubmitState.LockedPendingShield
-                        }
-                        else -> ShieldedSubmitState.Success
-                    }
-                    is SdkWriteResult.NotBroadcast -> {
-                        log.info("shielded transfer not sent: {}", result.reason)
-                        ShieldedSubmitState.NotSent(result.reason)
-                    }
-                    is SdkWriteResult.Ambiguous -> {
-                        log.warn("shielded transfer ambiguous — surfacing terminal state")
-                        ShieldedSubmitState.MayHaveGoneThrough
-                    }
-                }
-            )
+    /**
+     * The proving dialog's dismiss action: hides the modal only — the
+     * spend keeps running on the app scope and the screen shows the
+     * inline in-progress state until the operation finishes.
+     */
+    fun onDismissProving() {
+        if (_uiState.value.submitState == ShieldedSubmitState.Proving) {
+            _uiState.value = _uiState.value.copy(provingDismissed = true)
         }
     }
 
     /** Dismisses a terminal result overlay (Success / MayHaveGoneThrough). */
     fun onResultHandled() {
-        _uiState.value = _uiState.value.copy(
-            submitState = ShieldedSubmitState.Idle,
-            amountText = "0"
-        )
+        transferExecutor.acknowledge()
+        _uiState.value = _uiState.value.copy(amountText = "0")
     }
 }
 

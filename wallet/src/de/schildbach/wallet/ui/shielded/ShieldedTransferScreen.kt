@@ -115,7 +115,8 @@ fun ShieldedTransferScreen(
         onConfirm = onConfirm,
         onResultHandled = viewModel::onResultHandled,
         onShowTimingInfo = viewModel::onShowTimingInfo,
-        onTimingInfoDismissed = viewModel::onTimingInfoDismissed
+        onTimingInfoDismissed = viewModel::onTimingInfoDismissed,
+        onDismissProving = viewModel::onDismissProving
     )
 }
 
@@ -134,7 +135,8 @@ fun ShieldedTransferScreen(
     onConfirm: () -> Unit = {},
     onResultHandled: () -> Unit = {},
     onShowTimingInfo: () -> Unit = {},
-    onTimingInfoDismissed: () -> Unit = {}
+    onTimingInfoDismissed: () -> Unit = {},
+    onDismissProving: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
     ShieldedTransferScreenContent(
@@ -151,7 +153,8 @@ fun ShieldedTransferScreen(
         onConfirm = onConfirm,
         onResultHandled = onResultHandled,
         onShowTimingInfo = onShowTimingInfo,
-        onTimingInfoDismissed = onTimingInfoDismissed
+        onTimingInfoDismissed = onTimingInfoDismissed,
+        onDismissProving = onDismissProving
     )
 }
 
@@ -170,12 +173,16 @@ private fun ShieldedTransferScreenContent(
     onConfirm: () -> Unit = {},
     onResultHandled: () -> Unit = {},
     onShowTimingInfo: () -> Unit = {},
-    onTimingInfoDismissed: () -> Unit = {}
+    onTimingInfoDismissed: () -> Unit = {},
+    onDismissProving: () -> Unit = {}
 ) {
-    val proving = uiState.submitState == ShieldedSubmitState.Proving
+    val proving = uiState.transferInFlight
+    val provingDialogShowing = proving && !uiState.provingDismissed
 
-    // The proof cannot be cancelled once started — swallow back presses.
-    BackHandler(enabled = proving) { }
+    // The dialog is dismissable (the spend keeps running on the app
+    // scope): back hides the modal first; a second back leaves the
+    // screen normally while the inline in-progress state takes over.
+    BackHandler(enabled = provingDialogShowing) { onDismissProving() }
 
     Box(
         modifier = Modifier
@@ -185,7 +192,12 @@ private fun ShieldedTransferScreenContent(
         Column(modifier = Modifier.fillMaxSize()) {
             TopNavBase(
                 leadingIcon = MyImages.MenuChevron,
-                onLeadingClick = { if (!proving) onBackClick() },
+                // While the proving dialog is up, back-chevron dismisses
+                // the dialog (like back); once dismissed, leaving the
+                // screen is fine — the spend runs on the app scope.
+                onLeadingClick = {
+                    if (provingDialogShowing) onDismissProving() else onBackClick()
+                },
                 centralPart = false,
                 trailingIcon = MyImages.NavBarInfo,
                 // Bare info glyph (the NavBarBackTitleInfo pattern): the
@@ -257,10 +269,19 @@ private fun ShieldedTransferScreenContent(
                 onKeyInput = onKeyInput,
                 bottomSlot = {
                     Spacer(modifier = Modifier.height(8.dp))
+                    // While the spend is in flight (dialog up or
+                    // dismissed) the button IS the in-progress state:
+                    // disabled with the proving title — tied to the same
+                    // in-flight StateFlow, so a second submit is
+                    // impossible from a dismissed dialog.
                     DashButton(
                         onClick = onContinue,
                         modifier = Modifier.fillMaxWidth(),
-                        text = stringResource(org.dash.wallet.common.R.string.button_continue),
+                        text = if (proving) {
+                            stringResource(R.string.shielded_proving_title)
+                        } else {
+                            stringResource(org.dash.wallet.common.R.string.button_continue)
+                        },
                         style = Style.FilledBlue,
                         size = Size.Large,
                         isEnabled = uiState.canContinue
@@ -287,8 +308,12 @@ private fun ShieldedTransferScreenContent(
         //     shows it: scanning block counts, "almost done" while parity
         //     is being probed, or the terminal verification failure
         //     (export logs); null keeps the static fallback copy.
+        // Suppressed entirely (uiState.blockedToastSuppressed) while a
+        // modal overlay is up or a submit is in flight: a live-updating
+        // status line behind the dimmed proving dialog reads as glitchy
+        // (live user feedback) — the background stays static.
         val blockedReason = uiState.blockedReason
-        if (blockedReason != null) {
+        if (blockedReason != null && !uiState.blockedToastSuppressed) {
             val verification = uiState.verificationStatus
                 .takeIf { blockedReason == ShieldedBlockedReason.FUNDING_PENDING }
             Toast(
@@ -339,7 +364,9 @@ private fun ShieldedTransferScreenContent(
         }
 
         when (uiState.submitState) {
-            ShieldedSubmitState.Proving -> ProvingOverlay()
+            ShieldedSubmitState.Proving -> if (provingDialogShowing) {
+                ProvingOverlay(onDismiss = onDismissProving)
+            }
             ShieldedSubmitState.Success -> {
                 // No in-screen overlay: the host leaves the flow and shows
                 // the "Transfer completed" toast on the More screen (AC12).
@@ -846,9 +873,17 @@ private fun TimingFeatureRow(icon: Int, heading: String, text: String) {
     }
 }
 
-/** Indeterminate proving overlay — the ~30s Halo 2 proof cannot be cancelled. */
+/**
+ * Indeterminate proving dialog for the ~30s Halo 2 proof. With a
+ * non-null [onDismiss] it is dismissable (Hide button, tap outside,
+ * back): dismissing only HIDES the dialog — the spend keeps running on
+ * the app scope and the screen shows the inline in-progress Continue
+ * state; the outcome is announced by toast or system notification if
+ * the user has moved on. A null [onDismiss] (the parked send screen)
+ * keeps the old non-dismissable modal.
+ */
 @Composable
-internal fun ProvingOverlay() {
+internal fun ProvingOverlay(onDismiss: (() -> Unit)? = null) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -856,13 +891,17 @@ internal fun ProvingOverlay() {
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
-            ) { /* consume */ },
+            ) { onDismiss?.invoke() },
         contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
                 .padding(horizontal = 40.dp)
                 .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { /* consume clicks inside the dialog */ }
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -880,6 +919,14 @@ internal fun ProvingOverlay() {
                 color = MyTheme.Colors.textSecondary,
                 textAlign = TextAlign.Center
             )
+            if (onDismiss != null) {
+                DashButton(
+                    text = stringResource(R.string.shielded_proving_dismiss),
+                    style = Style.TintedGray,
+                    size = Size.Large,
+                    onClick = onDismiss
+                )
+            }
         }
     }
 }
@@ -1081,10 +1128,38 @@ private fun TransferTimingSheetPreview() {
     ShieldedTransferScreenContent(uiState = previewState().copy(showTimingInfo = true))
 }
 
+// The dismissable proving dialog with the softened copy ("This could
+// take about 30 seconds…") and its Hide button.
 @Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – proving")
 @Composable
 private fun TransferProvingPreview() {
     ShieldedTransferScreenContent(uiState = previewState(submitState = ShieldedSubmitState.Proving))
+}
+
+// Dialog dismissed mid-proof: no modal, and the Continue button is the
+// inline in-progress state ("Sending your transfer…", disabled) — no
+// second submit is possible while the app-scoped spend runs.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – proving dismissed")
+@Composable
+private fun TransferProvingDismissedPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState(submitState = ShieldedSubmitState.Proving)
+            .copy(provingDismissed = true)
+    )
+}
+
+// A blocked-state reason exists (funding verification pending) but the
+// proving dialog is up: the background status toast must be suppressed —
+// static dimmed background, no live-updating line behind the modal.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – proving suppresses status toast")
+@Composable
+private fun TransferProvingSuppressesToastPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState(submitState = ShieldedSubmitState.Proving).copy(
+            walletShieldingAvailable = false,
+            verificationStatus = ShieldedVerificationStatus.AlmostDone
+        )
+    )
 }
 
 // Chain synced + runtime ready but the shielded pool's first sync pass

@@ -80,6 +80,18 @@ class ShieldedBalanceActivity : LockScreenActivity() {
     @Inject
     lateinit var securityFunctions: AuthenticationManager
 
+    /**
+     * App-scoped owner of the transfer spend. The activity reports
+     * whether the transfer UI is the resumed foreground screen so the
+     * executor knows where to announce a finished operation: on-screen
+     * state (here), a global in-app toast (foregrounded elsewhere) or a
+     * system notification (backgrounded).
+     */
+    @Inject
+    lateinit var transferExecutor: ShieldedTransferExecutor
+
+    private var screen = SCREEN_TRANSFER
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -88,7 +100,7 @@ class ShieldedBalanceActivity : LockScreenActivity() {
             return
         }
 
-        val screen = intent.getIntExtra(EXTRA_SCREEN, SCREEN_TRANSFER)
+        screen = intent.getIntExtra(EXTRA_SCREEN, SCREEN_TRANSFER)
         if (savedInstanceState == null) {
             when (screen) {
                 SCREEN_TRANSFER -> transferViewModel.reset()
@@ -121,6 +133,18 @@ class ShieldedBalanceActivity : LockScreenActivity() {
             }
         }
         setContentView(composeView)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (screen == SCREEN_TRANSFER) {
+            transferExecutor.transferUiVisible = true
+        }
+    }
+
+    override fun onPause() {
+        transferExecutor.transferUiVisible = false
+        super.onPause()
     }
 
     /**

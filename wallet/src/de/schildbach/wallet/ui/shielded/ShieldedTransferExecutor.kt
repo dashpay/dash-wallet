@@ -1,0 +1,339 @@
+/*
+ * Copyright 2026 Dash Core Group.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.schildbach.wallet.ui.shielded
+
+import android.content.Context
+import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
+import androidx.annotation.StringRes
+import androidx.core.os.bundleOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.ProcessLifecycleOwner
+import dagger.hilt.android.qualifiers.ApplicationContext
+import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.ui.main.MainActivity
+import de.schildbach.wallet.ui.more.MoreFragment
+import de.schildbach.wallet_test.R
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.NotificationService
+import org.slf4j.LoggerFactory
+import javax.inject.Inject
+import javax.inject.Singleton
+
+/**
+ * What a terminal [ShieldedSubmitState] surfaces to a user who is not
+ * looking at the transfer screen: the system-notification (or in-app
+ * toast) title/message pair, plus whether tapping the notification lands
+ * on the More screen with the "Transfer completed" toast (the existing
+ * post-success route). Pure data — host-JVM-testable via
+ * [shieldedOutcomeNotification].
+ */
+internal data class ShieldedOutcomeNotification(
+    @StringRes val titleRes: Int,
+    @StringRes val messageRes: Int,
+    /** Tapping routes to the More screen; true also shows its "Transfer completed" toast. */
+    val showsTransferCompletedToast: Boolean
+)
+
+/**
+ * Map a submit state to its outcome surfacing, or null for the
+ * non-terminal states (nothing to announce). Copy reuses the in-screen
+ * strings so the story is identical wherever the user learns the result:
+ *
+ * - Success → "Transfer completed" (+ balance-updated line);
+ * - LockedPendingShield → "Transfer in progress" (completes automatically);
+ * - NotSent → "This transfer was not sent" (funds untouched, retry safe);
+ * - MayHaveGoneThrough → the existing terminal ambiguous copy (do NOT
+ *   send again).
+ */
+internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOutcomeNotification? =
+    when (state) {
+        ShieldedSubmitState.Success -> ShieldedOutcomeNotification(
+            R.string.shielded_transfer_completed,
+            R.string.shielded_notification_success_message,
+            showsTransferCompletedToast = true
+        )
+        ShieldedSubmitState.LockedPendingShield -> ShieldedOutcomeNotification(
+            R.string.shielded_locked_pending_title,
+            R.string.shielded_notification_pending_message,
+            showsTransferCompletedToast = false
+        )
+        is ShieldedSubmitState.NotSent -> ShieldedOutcomeNotification(
+            R.string.shielded_transfer_failed,
+            R.string.shielded_transfer_failed_message,
+            showsTransferCompletedToast = false
+        )
+        ShieldedSubmitState.MayHaveGoneThrough -> ShieldedOutcomeNotification(
+            R.string.shielded_transfer_ambiguous_title,
+            R.string.shielded_transfer_ambiguous_message,
+            showsTransferCompletedToast = false
+        )
+        ShieldedSubmitState.Idle, ShieldedSubmitState.Proving -> null
+    }
+
+/**
+ * App-scoped owner of the shielded internal-transfer spend, so the ~30s
+ * Halo 2 proof + broadcast survives the transfer screen (and its
+ * ViewModel): the user can dismiss the proving dialog, switch screens or
+ * background the app, and the operation still completes and reports.
+ *
+ * ## State contract
+ *
+ * [submitState] is the single source of truth for the in-flight
+ * operation; [ShieldedTransferViewModel] only MIRRORS it into its
+ * UIState — a recreated ViewModel re-attaches to an in-flight Proving
+ * (the overlay/in-progress button shows again) or to an unacknowledged
+ * terminal result, and can never re-submit by observing:
+ *
+ * - [submit] is the only way to start a spend, and it atomically refuses
+ *   unless the current state is [ShieldedSubmitState.Idle] or the
+ *   retry-safe [ShieldedSubmitState.NotSent] — one broadcast attempt per
+ *   user confirmation, exactly the funds-safety semantics the ViewModel
+ *   had (`canContinue` mirrors the same rule for the button).
+ * - [acknowledge] (the user handled the result on screen) resets any
+ *   terminal state; an in-flight Proving is never cleared by anything.
+ * - [clearForNewVisit] (fresh screen entry) drops the low-stakes
+ *   Success/NotSent leftovers but keeps the funds-critical
+ *   MayHaveGoneThrough / LockedPendingShield sticky until acknowledged.
+ *
+ * ## Outcome surfacing
+ *
+ * A terminal outcome is announced exactly once, where the user is:
+ * - transfer screen visible → the screen's own state machine (success
+ *   navigation, inline error, terminal overlays) — nothing extra here;
+ * - app foregrounded elsewhere ([transferUiVisible] false) → a global
+ *   in-app toast (the [android.widget.Toast] pattern the shielded flows
+ *   already use, reachable from any screen); Success is auto-acknowledged
+ *   then, so a later return to a still-alive transfer screen doesn't
+ *   re-run the success navigation;
+ * - app backgrounded → a system notification through the app's
+ *   [NotificationService] (generic channel); tapping the success one
+ *   opens the More screen with the existing "Transfer completed" toast.
+ */
+@Singleton
+class ShieldedTransferExecutor @Inject constructor(
+    private val shieldedBalanceService: ShieldedBalanceService,
+    private val walletDataProvider: WalletDataProvider,
+    private val notificationService: NotificationService,
+    @ApplicationContext private val appContext: Context,
+    private val applicationScope: CoroutineScope
+) {
+    companion object {
+        private val log = LoggerFactory.getLogger(ShieldedTransferExecutor::class.java)
+
+        /** One tag: a newer outcome replaces a stale one instead of stacking. */
+        internal const val NOTIFICATION_TAG = "shielded_transfer_outcome"
+    }
+
+    /** Test seam: the spend blocks for a ~30s Halo 2 proof and must stay off main. */
+    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+
+    /**
+     * Test seam: whether the app is foregrounded (any activity STARTED) —
+     * the BlockchainServiceImpl [ProcessLifecycleOwner] precedent. Not in
+     * the foreground → outcomes go to a system notification.
+     */
+    var isAppInForeground: () -> Boolean = {
+        ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+    }
+
+    /**
+     * Test seam: the notification content intent — the existing
+     * post-success route ([MainActivity] → More screen, optionally with
+     * its "Transfer completed" toast argument).
+     */
+    var moreScreenIntent: (showTransferCompletedToast: Boolean) -> Intent? = { showToast ->
+        MainActivity.createIntent(
+            appContext,
+            R.id.moreFragment,
+            bundleOf(MoreFragment.ARG_SHOW_TRANSFER_COMPLETED_TOAST to showToast)
+        )
+    }
+
+    /**
+     * Test seam: the global in-app toast for a foregrounded user who is
+     * not on the transfer screen. [android.widget.Toast] is the one
+     * surface reachable from ANY activity (the shielded copy-address
+     * pattern); posted to the main looper because outcomes land on IO.
+     */
+    var showInAppToast: (message: String) -> Unit = { message ->
+        Handler(Looper.getMainLooper()).post {
+            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
+        }
+    }
+
+    /**
+     * True while the transfer screen is the resumed foreground UI —
+     * maintained by [ShieldedBalanceActivity]'s onResume/onPause. While
+     * visible, the screen's own state machine surfaces outcomes and the
+     * executor stays quiet.
+     */
+    @Volatile
+    var transferUiVisible: Boolean = false
+
+    private val _submitState = MutableStateFlow<ShieldedSubmitState>(ShieldedSubmitState.Idle)
+
+    /** The in-flight/terminal state of the one allowed transfer operation. */
+    val submitState: StateFlow<ShieldedSubmitState> = _submitState.asStateFlow()
+
+    /**
+     * Start the spend on the application scope. Returns false — and
+     * submits NOTHING — unless the current state is Idle or the
+     * provably-pre-broadcast NotSent (retry). The Idle→Proving transition
+     * is atomic under [this], so two racing confirmations can never both
+     * pass the gate.
+     */
+    fun submit(direction: ShieldedTransferDirection, amount: Dash): Boolean {
+        synchronized(this) {
+            val state = _submitState.value
+            if (state != ShieldedSubmitState.Idle && state !is ShieldedSubmitState.NotSent) {
+                log.warn("shielded transfer submit refused: an operation is {} — not re-submitting", state)
+                return false
+            }
+            _submitState.value = ShieldedSubmitState.Proving
+        }
+
+        applicationScope.launch {
+            val result = withContext(ioDispatcher) {
+                try {
+                    when (direction) {
+                        ShieldedTransferDirection.ToShielded ->
+                            shieldedBalanceService.shieldFromWallet(amount)
+                        ShieldedTransferDirection.FromShielded ->
+                            shieldedBalanceService.withdrawToCore(
+                                walletDataProvider.freshReceiveAddressString(),
+                                amount
+                            )
+                    }
+                } catch (e: Exception) {
+                    // freshReceiveAddress failures happen strictly pre-broadcast
+                    SdkWriteResult.NotBroadcast("failed to prepare transfer", e)
+                }
+            }
+            val outcome = when (result) {
+                is SdkWriteResult.Broadcast -> when (result.value) {
+                    ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
+                        log.warn("wallet shield locked but pending — surfacing auto-retry state")
+                        ShieldedSubmitState.LockedPendingShield
+                    }
+                    else -> ShieldedSubmitState.Success
+                }
+                is SdkWriteResult.NotBroadcast -> {
+                    log.info("shielded transfer not sent: {}", result.reason)
+                    ShieldedSubmitState.NotSent(result.reason)
+                }
+                is SdkWriteResult.Ambiguous -> {
+                    log.warn("shielded transfer ambiguous — surfacing terminal state")
+                    ShieldedSubmitState.MayHaveGoneThrough
+                }
+            }
+            _submitState.value = outcome
+            surfaceOutcome(outcome)
+        }
+        return true
+    }
+
+    /** The user handled the result on screen — any terminal state resets to Idle. */
+    fun acknowledge() {
+        synchronized(this) {
+            if (_submitState.value != ShieldedSubmitState.Proving) {
+                _submitState.value = ShieldedSubmitState.Idle
+            }
+        }
+    }
+
+    /**
+     * Typing/direction changes clear an inline retry-safe error, exactly
+     * as before. Only NotSent → Idle; anything else is untouched.
+     */
+    fun clearRetryableResult() {
+        synchronized(this) {
+            if (_submitState.value is ShieldedSubmitState.NotSent) {
+                _submitState.value = ShieldedSubmitState.Idle
+            }
+        }
+    }
+
+    /**
+     * A FRESH screen entry (new activity instance): don't resurrect an
+     * already-surfaced Success (its navigation would fire spuriously) or
+     * a stale inline NotSent — but an in-flight Proving and the
+     * funds-critical MayHaveGoneThrough / LockedPendingShield states
+     * stay until the user acknowledges them.
+     */
+    fun clearForNewVisit() {
+        synchronized(this) {
+            val state = _submitState.value
+            if (state == ShieldedSubmitState.Success || state is ShieldedSubmitState.NotSent) {
+                _submitState.value = ShieldedSubmitState.Idle
+            }
+        }
+    }
+
+    /**
+     * Announce a terminal outcome wherever the user is — see the class
+     * KDoc. Never throws: surfacing is best-effort and must not disturb
+     * the recorded state.
+     */
+    private fun surfaceOutcome(state: ShieldedSubmitState) {
+        val content = shieldedOutcomeNotification(state) ?: return
+        try {
+            when {
+                !isAppInForeground() -> {
+                    notificationService.showNotification(
+                        NOTIFICATION_TAG,
+                        appContext.getString(content.messageRes),
+                        title = appContext.getString(content.titleRes),
+                        intent = moreScreenIntent(content.showsTransferCompletedToast)
+                    )
+                }
+                !transferUiVisible -> {
+                    showInAppToast(appContext.getString(content.titleRes))
+                    // The success story is fully told; a still-alive
+                    // transfer screen must not ALSO run its success
+                    // navigation when the user wanders back. Failure
+                    // states stay sticky (inline retry / must-acknowledge
+                    // overlays on the next visit).
+                    if (state == ShieldedSubmitState.Success) {
+                        synchronized(this) {
+                            if (_submitState.value == ShieldedSubmitState.Success) {
+                                _submitState.value = ShieldedSubmitState.Idle
+                            }
+                        }
+                    }
+                }
+                else -> Unit // the visible transfer screen surfaces it itself
+            }
+        } catch (t: Throwable) {
+            log.warn("failed to announce the shielded transfer outcome", t)
+        }
+    }
+}

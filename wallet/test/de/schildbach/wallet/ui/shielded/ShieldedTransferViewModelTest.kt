@@ -17,6 +17,7 @@
 
 package de.schildbach.wallet.ui.shielded
 
+import android.content.Context
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
@@ -32,6 +33,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.slot
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +51,7 @@ import org.dash.wallet.common.data.entity.BlockchainState
 import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.BlockchainStateProvider
 import org.dash.wallet.common.services.ExchangeRatesProvider
+import org.dash.wallet.common.services.NotificationService
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -138,7 +142,30 @@ class ShieldedTransferViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel(): ShieldedTransferViewModel =
+    /**
+     * A real app-scoped [ShieldedTransferExecutor] over the mocks — the
+     * ViewModel only mirrors its state, so the submit tests exercise the
+     * genuine wiring. Foreground + transfer-screen-visible: the executor
+     * announces nothing, the screen state machine is what's under test.
+     */
+    private fun executor(): ShieldedTransferExecutor =
+        ShieldedTransferExecutor(
+            shieldedService,
+            walletData,
+            mockk<NotificationService>(relaxUnitFun = true),
+            mockk<Context> { every { getString(any()) } returns "" },
+            CoroutineScope(dispatcher)
+        ).apply {
+            ioDispatcher = dispatcher
+            isAppInForeground = { true }
+            transferUiVisible = true
+            moreScreenIntent = { null }
+            showInAppToast = {}
+        }
+
+    private fun viewModel(
+        transferExecutor: ShieldedTransferExecutor = executor()
+    ): ShieldedTransferViewModel =
         ShieldedTransferViewModel(
             shieldedService,
             walletData,
@@ -146,8 +173,9 @@ class ShieldedTransferViewModelTest {
             blockchainStateProvider,
             walletUIConfig,
             exchangeRates,
-            l1ShadowSyncService
-        ).apply { ioDispatcher = dispatcher }
+            l1ShadowSyncService,
+            transferExecutor
+        )
 
     private fun ShieldedTransferViewModel.typeAmountAndConfirm(amount: String = "1") {
         amount.forEach { onKeyInput(it.toString()) }
@@ -242,6 +270,107 @@ class ShieldedTransferViewModelTest {
         assertFalse(state.canContinue)
         vm.onKeyInput("9")
         assertEquals("1", vm.uiState.value.amountText)
+    }
+
+    // ── App-scoped execution: re-attach, dismissal, no re-submit ────────
+
+    @Test
+    fun recreatedViewModel_reattachesToInFlightOp_andCanNeverResubmit() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+        coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+        val transferExecutor = executor()
+
+        val vm1 = viewModel(transferExecutor)
+        vm1.typeAmountAndConfirm()
+        assertEquals(ShieldedSubmitState.Proving, vm1.uiState.value.submitState)
+
+        // The screen (and its ViewModel) dies mid-proof; a recreated one
+        // re-attaches to the SAME in-flight state — the proving UI shows
+        // again instead of a blank submittable form.
+        val vm2 = viewModel(transferExecutor)
+        assertEquals(ShieldedSubmitState.Proving, vm2.uiState.value.submitState)
+        assertTrue(vm2.uiState.value.transferInFlight)
+        assertFalse(vm2.uiState.value.canContinue)
+
+        // Even a full user gesture sequence on the recreated screen must
+        // not spend again while the op is in flight (funds safety).
+        vm2.typeAmountAndConfirm()
+        // …nor may a fresh screen entry drop the in-flight op
+        vm2.reset()
+        assertEquals(ShieldedSubmitState.Proving, vm2.uiState.value.submitState)
+
+        gate.complete(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        assertEquals(ShieldedSubmitState.Success, vm2.uiState.value.submitState)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+    }
+
+    @Test
+    fun dismissProving_hidesTheDialogOnly_untilTheOpFinishes() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+        coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+        val vm = viewModel()
+
+        vm.typeAmountAndConfirm()
+        assertEquals(ShieldedSubmitState.Proving, vm.uiState.value.submitState)
+        assertFalse(vm.uiState.value.provingDismissed)
+
+        // Dismiss hides the modal; the spend keeps running and the screen
+        // stays in the in-flight state (Continue is the in-progress button).
+        vm.onDismissProving()
+        assertTrue(vm.uiState.value.provingDismissed)
+        assertEquals(ShieldedSubmitState.Proving, vm.uiState.value.submitState)
+        assertFalse(vm.uiState.value.canContinue)
+
+        // The dismissal is per-operation: it resets once the op finishes.
+        gate.complete(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        assertFalse(vm.uiState.value.provingDismissed)
+    }
+
+    @Test
+    fun dismissProving_isIgnoredWhileNothingIsInFlight() = runTest(dispatcher) {
+        val vm = viewModel()
+        vm.onDismissProving()
+        assertFalse(vm.uiState.value.provingDismissed)
+    }
+
+    // The background status toast must freeze while a modal overlay is up
+    // or a submit is in flight (live feedback: the "Verifying your
+    // balance…" line kept updating behind the proving dialog).
+    @Test
+    fun blockedToast_suppressedWhileModalOrInFlight() {
+        // FUNDING_PENDING blocked reason present throughout
+        val blocked = ShieldedTransferUIState(
+            ready = true,
+            readyCheckDone = true,
+            chainSynced = true,
+            shieldedSyncStatus = ShieldedSyncStatus.READY,
+            walletShieldingAvailable = false
+        )
+        assertEquals(ShieldedBlockedReason.FUNDING_PENDING, blocked.blockedReason)
+
+        // idle form → the toast may show
+        assertFalse(blocked.blockedToastSuppressed)
+        // …and an inline retryable error keeps it visible too
+        assertFalse(blocked.copy(submitState = ShieldedSubmitState.NotSent("x")).blockedToastSuppressed)
+
+        // proving — dialog up OR dismissed — suppresses it
+        assertTrue(blocked.copy(submitState = ShieldedSubmitState.Proving).blockedToastSuppressed)
+        assertTrue(
+            blocked.copy(submitState = ShieldedSubmitState.Proving, provingDismissed = true)
+                .blockedToastSuppressed
+        )
+
+        // any other modal overlay suppresses it as well
+        assertTrue(blocked.copy(showConfirm = true).blockedToastSuppressed)
+        assertTrue(blocked.copy(showTimingInfo = true).blockedToastSuppressed)
+        assertTrue(blocked.copy(submitState = ShieldedSubmitState.Success).blockedToastSuppressed)
+        assertTrue(
+            blocked.copy(submitState = ShieldedSubmitState.MayHaveGoneThrough).blockedToastSuppressed
+        )
+        assertTrue(
+            blocked.copy(submitState = ShieldedSubmitState.LockedPendingShield).blockedToastSuppressed
+        )
     }
 
     @Test
