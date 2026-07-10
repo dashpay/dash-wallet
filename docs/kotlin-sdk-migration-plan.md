@@ -416,3 +416,27 @@ Verified on-device with the debug flags ON:
   DEVICE_BOUND + pendingIdentityKeys, typed SigningKeyUnavailable, syncState→null).
   Wallet follow-up once merged/published: adopt DEVICE_BOUND at bootstrap, replace the
   message-matching in classifyBroadcastFailure/isIdentityManaged with the typed paths.
+
+## Phase 4/5 live-test status (updated 2026-07-10)
+
+- ✅ **L1→shielded validated at scale on-device** (Galaxy S22, testnet): 0.01 single-account
+  and 0.2 multi-account shields completed end-to-end with balances updating; reverse
+  (shielded→L1) round trip previously validated. Multi-account funding (BIP44 + legacy
+  CoinJoin) shipped via dashpay/platform#4074 against #4073.
+- ✅ **Three SDK defects found by the Phase 5a parity harness and fixed in PR #4074**:
+  (1) exponential BranchAndBound coin selection hung the FFI on many-denomination CoinJoin
+  accounts → pinned LargestFirst + stage tracing + bounded-time regression test;
+  (2) key-wallet's TransactionRouter omits CoinJoin/DashPay accounts from AssetLock
+  relevance, so spends of those inputs are never debited (balance inflates by the spent
+  amount, on relay AND on rescan) → upstream router patch, temporarily vendored into the
+  workspace via [patch] + third_party/rust-dashcore until rust-dashcore lands it;
+  (3) broadcast-time debit mitigation kept as belt-and-braces (idempotent with the fix).
+- ✅ **Wallet-side hardening from the same session**: SDK engines restart on every
+  blockchain-service start (resume() was a stub while shutdown() stopped them);
+  shieldFromWallet arms the parity self-spend grace before broadcasting; app-scoped
+  ShieldedTransferExecutor (spend survives screen death, re-attach can't resubmit,
+  dismissible proving dialog, 3-min stall watchdog with funds-honest Stalled state);
+  transfer outcomes announced via a durable system notification whenever the user is
+  off the transfer screen.
+- ⬜ **Next**: full-balance (Max) shield retest on the router-fixed native lib, then the
+  Phase 5b SDK L1-send soak (needs an in-app debug toggle for USE_KOTLIN_SDK_L1_SEND).
