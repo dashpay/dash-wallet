@@ -192,8 +192,11 @@ data class ShieldedTransferUIState(
     val showTimingInfo: Boolean = false,
     /**
      * True when the Dash Wallet → Shielded direction can fund from the
-     * L1 balance ([ShieldedBalanceService.isWalletShieldingAvailable]'s
-     * shadow-SPV parity gate). Gates [canContinue] for that direction.
+     * L1 balance (the shadow-SPV parity funding gate). Gates [canContinue]
+     * for that direction. Fed LIVE from
+     * [ShieldedBalanceService.observeWalletShieldingAvailable] (not the
+     * one-shot [ShieldedBalanceService.isWalletShieldingAvailable]
+     * snapshot), so the screen re-renders the instant the gate opens.
      */
     val walletShieldingAvailable: Boolean = false,
     /**
@@ -321,13 +324,23 @@ class ShieldedTransferViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val ready = shieldedBalanceService.ensureShieldedReady()
-            val walletShielding = ready && shieldedBalanceService.isWalletShieldingAvailable()
             _uiState.value = _uiState.value.copy(
                 ready = ready,
-                readyCheckDone = true,
-                walletShieldingAvailable = walletShielding
+                readyCheckDone = true
             )
         }
+
+        // L1 funding-evidence gate, LIVE: isWalletShieldingAvailable() is a
+        // one-shot snapshot, so reading it once at init left the
+        // "Verifying your balance…" toast (blockedReason FUNDING_PENDING)
+        // stuck for minutes after the shadow harness had actually reached
+        // parity MATCH — the gate only re-opened on screen re-entry. This
+        // flow re-derives the gate on every parity probe (~60s) so the
+        // screen unblocks by itself. Flag-gated upstream: with the shadow
+        // harness off it stays false (inert).
+        shieldedBalanceService.observeWalletShieldingAvailable()
+            .onEach { _uiState.value = _uiState.value.copy(walletShieldingAvailable = it) }
+            .launchIn(viewModelScope)
 
         // First visit: auto-open the "Transfers take different times"
         // sheet once; dismissal latches the flag (onTimingInfoDismissed).

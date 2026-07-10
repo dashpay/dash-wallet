@@ -23,6 +23,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -279,13 +282,15 @@ class ShieldedBalanceServiceTest {
         source: FakeSource,
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
-        parity: () -> ParityReport? = { null }
+        parity: () -> ParityReport? = { null },
+        parityFlow: Flow<ParityReport?> = flowOf(parity())
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled),
         shieldedDbPath = { dbPath },
         displayHrp = { hrp },
         l1Parity = parity,
+        l1ParityFlow = { parityFlow },
         nowMs = { now }
     )
 
@@ -970,6 +975,39 @@ class ShieldedBalanceServiceTest {
         assertTrue(service.isWalletShieldingAvailable())
         assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
         assertEquals(1, source.fundCalls)
+    }
+
+    // ── observeWalletShieldingAvailable: the LIVE funding gate ────────────
+
+    @Test
+    fun observeWalletShieldingAvailable_reDerivesGate_perParityEmission() = runBlocking {
+        val source = readySource()
+        // A parity feed that starts closed (null → no measurement), then
+        // emits a fresh full MATCH — the shadow harness reaching parity
+        // while a screen is already open.
+        val parityFeed = MutableStateFlow<ParityReport?>(null)
+        val service = service(source, parity = { parityFeed.value }, parityFlow = parityFeed)
+
+        // Collect the first two distinct emissions off the live flow.
+        val emissions = kotlinx.coroutines.async {
+            service.observeWalletShieldingAvailable().take(2).toList()
+        }
+        parityFeed.value = matchParity()
+
+        // Closed first (funds-safe default), open once the MATCH lands —
+        // no re-subscription, proving the gate is observed, not snapshotted.
+        assertEquals(listOf(false, true), emissions.await())
+    }
+
+    @Test
+    fun observeWalletShieldingAvailable_flagOff_staysClosed() = runBlocking {
+        val source = readySource()
+        val service = service(
+            source, enabled = false, parityFlow = flowOf(matchParity())
+        )
+        // Even with a full-MATCH report, the shielded flag being off keeps
+        // the observed gate closed (inert).
+        assertFalse(service.observeWalletShieldingAvailable().first())
     }
 
     // ── shieldFromWallet: staged-failure classification ───────────────────

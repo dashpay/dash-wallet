@@ -121,6 +121,16 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
             m.contains("set_funding failed")
     } == true ->
         SdkWriteResult.NotBroadcast("pre-broadcast build failure (insufficient funds / coin selection)", t)
+    // The SDK's SPV client wasn't running when broadcast was attempted, so the
+    // tx never left the device (observed live: the interim shield pipeline
+    // broadcasts via the shadow SPV, which our recovery paths stop/reset — the
+    // asset-lock funding needs it started first; the caller re-starts SPV and
+    // retries). Definitively pre-broadcast → retryable.
+    t.message?.let { m ->
+        m.contains("SPV client not started") ||
+            m.contains("Transaction broadcast failed: SPV")
+    } == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast: SPV client not started", t)
     else -> SdkWriteResult.Ambiguous(t)
 }
 

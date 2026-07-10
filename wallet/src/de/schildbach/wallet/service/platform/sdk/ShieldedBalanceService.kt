@@ -265,8 +265,27 @@ interface ShieldedBalanceService {
      * Whether [shieldFromWallet]'s L1 funding gate would currently pass
      * (flag on + shadow SPV parity MATCH). Cheap local read for UI
      * gating; the write path re-checks. Never throws.
+     *
+     * One-shot snapshot — use it only for the pre-broadcast preflight. UI
+     * that stays open while the gate can flip (the shadow harness reaching
+     * SYNCED with a fresh parity MATCH) MUST observe
+     * [observeWalletShieldingAvailable] instead, or the blocked-state UI
+     * never re-renders when the gate opens.
      */
     suspend fun isWalletShieldingAvailable(): Boolean
+
+    /**
+     * Live version of [isWalletShieldingAvailable] for open screens: emits
+     * whether the L1 funding gate is currently open, re-deriving it from
+     * the same [evaluateWalletFundingGate] logic on every
+     * [L1ShadowSyncService.latestParity] emission (the probe re-emits a
+     * fresh report every ~60s while the shadow runs, so a gate that opens
+     * after the harness reaches SYNCED propagates without a screen
+     * re-entry). [kotlinx.coroutines.flow.distinctUntilChanged]; conservative
+     * `false` while the flag is off (inert — the parity flow stays null) or
+     * before the first probe. Never throws.
+     */
+    fun observeWalletShieldingAvailable(): Flow<Boolean>
 
     /**
      * Retry stage (b) of any interrupted [shieldFromWallet]: resume every

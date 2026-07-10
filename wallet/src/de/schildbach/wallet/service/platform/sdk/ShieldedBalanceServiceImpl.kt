@@ -30,6 +30,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
@@ -596,6 +597,14 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val l1Parity: () -> ParityReport? = { null },
     /**
+     * Live L1 shadow-sync parity feed, for [observeWalletShieldingAvailable].
+     * Prod wires [L1ShadowSyncService.latestParity]; the default keeps the
+     * observed gate CLOSED (funds-safe) for constructions that don't
+     * provide it. Distinct from [l1Parity] (the one-shot snapshot the write
+     * preflight reads) — the UI needs to re-derive the gate on each probe.
+     */
+    private val l1ParityFlow: () -> Flow<ParityReport?> = { flowOf(null) },
+    /**
      * Scope for the post-[ensureShieldedReady] pending-shield retry sweep
      * ([resumePendingWalletShields]); null (tests' default) disables the
      * automatic trigger — the method itself stays callable.
@@ -623,6 +632,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         l1Parity = { l1ShadowSyncService.latestParity.value },
+        l1ParityFlow = { l1ShadowSyncService.latestParity },
         sweepScope = applicationScope
     )
 
@@ -834,6 +844,19 @@ class ShieldedBalanceServiceImpl internal constructor(
     override suspend fun isWalletShieldingAvailable(): Boolean =
         isEnabled() && isL1FundingFlagOn() &&
             evaluateWalletFundingGate(safeParity(), nowMs(), PARITY_MAX_AGE_MS).allowed
+
+    override fun observeWalletShieldingAvailable(): Flow<Boolean> =
+        l1ParityFlow()
+            .map { report ->
+                // Same gate as isWalletShieldingAvailable(), re-derived per
+                // probe emission so an open screen unblocks the instant the
+                // shadow harness reaches a fresh parity MATCH. Flags-off
+                // inert: both reads short-circuit to false and the parity
+                // flow itself stays null while the shadow is not running.
+                isEnabled() && isL1FundingFlagOn() &&
+                    evaluateWalletFundingGate(report, nowMs(), PARITY_MAX_AGE_MS).allowed
+            }
+            .distinctUntilChanged()
 
     override suspend fun shieldFromWallet(amount: Dash): SdkWriteResult<ShieldFromWalletOutcome> {
         val operation = "shieldFromWallet"

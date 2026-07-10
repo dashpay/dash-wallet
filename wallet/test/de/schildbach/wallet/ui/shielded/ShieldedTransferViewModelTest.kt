@@ -70,12 +70,14 @@ class ShieldedTransferViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
 
-    // READY by default so the pre-existing tests exercise their own gates;
-    // the pool-readiness tests drive this flow directly.
+    // READY / gate-open by default so the pre-existing tests exercise their
+    // own gates; the pool-readiness and funding-gate tests drive these
+    // flows directly (both are observed live, not read once).
     private val poolSyncStatus = MutableStateFlow(ShieldedSyncStatus.READY)
+    private val walletShieldingAvailable = MutableStateFlow(true)
     private val shieldedService = mockk<ShieldedBalanceService> {
         coEvery { ensureShieldedReady() } returns true
-        coEvery { isWalletShieldingAvailable() } returns true
+        every { observeWalletShieldingAvailable() } returns walletShieldingAvailable
         every { observeShieldedBalance() } returns flowOf(Dash.parse("15.5"))
         every { shieldedSyncStatus } returns poolSyncStatus
     }
@@ -244,7 +246,7 @@ class ShieldedTransferViewModelTest {
 
     @Test
     fun walletShieldingUnavailable_blocksToShielded_butNotFromShielded() = runTest(dispatcher) {
-        coEvery { shieldedService.isWalletShieldingAvailable() } returns false
+        walletShieldingAvailable.value = false
         val vm = viewModel()
 
         vm.onKeyInput("1")
@@ -253,6 +255,29 @@ class ShieldedTransferViewModelTest {
 
         // …but Shielded → Dash Wallet does not need the gate.
         vm.onSwapDirection()
+        assertTrue(vm.uiState.value.canContinue)
+    }
+
+    @Test
+    fun walletShieldingBecomingAvailable_unblocksLive_withoutReentry() = runTest(dispatcher) {
+        // Screen opened while the shadow-sync verification is still pending:
+        // the funding gate is closed, so the "Verifying your balance…"
+        // toast (FUNDING_PENDING) shows and Dash Wallet → Shielded is blocked.
+        walletShieldingAvailable.value = false
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        assertFalse(vm.uiState.value.walletShieldingAvailable)
+        assertEquals(ShieldedBlockedReason.FUNDING_PENDING, vm.uiState.value.blockedReason)
+        assertFalse(vm.uiState.value.canContinue)
+
+        // The harness reaches a fresh parity MATCH while the screen is still
+        // open (UIState was already collected once above). The gate must
+        // re-open by itself — proving the field is OBSERVED, not a one-shot
+        // snapshot read at init (the live bug: it stayed stuck until re-entry).
+        walletShieldingAvailable.value = true
+        assertTrue(vm.uiState.value.walletShieldingAvailable)
+        assertNull(vm.uiState.value.blockedReason)
         assertTrue(vm.uiState.value.canContinue)
     }
 
