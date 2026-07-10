@@ -327,6 +327,67 @@ class L1ShadowSyncServiceTest {
         assertEquals(2, source.startCalls)
     }
 
+    // ── ensureSpvRunning: the shield-from-wallet broadcast guard ───────
+
+    @Test
+    fun ensureSpvRunning_startsTheSpvWhenTheFlagIsOnAndItIsNotRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        source.onStart = { source.spvRunning = true } // a real start makes it live
+        val service = service(source)
+
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(1, source.startCalls) // brought up exactly once
+        assertTrue(service.isShadowSpvRunning())
+    }
+
+    @Test
+    fun ensureSpvRunning_noOpsWhenTheSpvIsAlreadyRunning() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex, spvRunning = true)
+        source.onStart = { source.spvRunning = true }
+        val service = service(source)
+
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(0, source.startCalls) // reused, never (re)started
+    }
+
+    @Test
+    fun ensureSpvRunning_restartsTheClientInPlaceWhenItWasStoppedUnderARunningLatch() = runBlocking {
+        // The race the fix targets: the shadow is latched-running, but the
+        // Rust SPV client was stopped out from under it (a reset window or an
+        // external teardown that left the latch). A shield's ensure must
+        // restart the client IN PLACE — no reset — so the broadcast has a
+        // live SPV.
+        val source = FakeSource(boundWalletId = walletIdHex, spvRunning = true)
+        source.onStart = { source.spvRunning = true }
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        assertEquals(0, source.startCalls) // already running when latched
+
+        source.spvRunning = false // stopped underneath, latch survives
+        assertTrue(service.ensureSpvRunning())
+        assertEquals(1, source.startCalls) // restarted in place
+        assertEquals(0, source.clearL1RowsCalls) // NOT a reset
+        assertTrue(service.isShadowSpvRunning())
+    }
+
+    @Test
+    fun ensureSpvRunning_isInertWhileTheFlagIsOff() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex)
+        for (flag in listOf(false, null)) {
+            val service = service(source, flag = flag)
+            assertFalse(service.ensureSpvRunning())
+        }
+        assertEquals(0, source.interactions()) // nothing touched while off
+    }
+
+    @Test
+    fun ensureSpvRunning_isFalseWhenNoWalletIsBound() = runBlocking {
+        val source = FakeSource(boundWalletId = null)
+        val service = service(source)
+        assertFalse(service.ensureSpvRunning())
+        assertEquals(0, source.startCalls)
+    }
+
     // ── Parity probe ──────────────────────────────────────────────────
 
     @Test

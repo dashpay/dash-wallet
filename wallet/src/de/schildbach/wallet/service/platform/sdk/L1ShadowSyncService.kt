@@ -1055,6 +1055,66 @@ class L1ShadowSyncService internal constructor(
         }
     }
 
+    /** Whether the Rust SPV client is currently up (independent of the running latch). */
+    suspend fun isShadowSpvRunning(): Boolean = source.isSpvRunning()
+
+    /**
+     * Ensure the shadow SPV client is running so a shield-from-wallet
+     * broadcast has a live SPV to submit its L1 asset lock through.
+     *
+     * ## Why a shield depends on this (interim, SDK issue #4065)
+     *
+     * `ShieldedBalanceServiceImpl.shieldFromWallet` builds and broadcasts
+     * the L1 asset lock via the SDK's own SPV peers (`SpvBroadcaster`).
+     * In this half-migrated app the SDK's SPV runs ONLY as this service's
+     * debug shadow sync — there is no separate SDK wallet engine yet. The
+     * funding-gate evidence proves the shadow is SYNCED at probe time, but
+     * the SPV can still be stopped by a lifecycle teardown ([stop]) or a
+     * recovery window ([resetShadowState]/[recoverByRecreatingWallet])
+     * between the last probe and the broadcast — the live
+     * "Transaction broadcast failed: SPV client not started" failure. A
+     * shield therefore calls this immediately before spending to guarantee
+     * the SPV is up. Post-cutover the SDK's SPV is the real wallet engine
+     * and always running, so this coupling disappears.
+     *
+     * Idempotent and inert while the flag is off (returns false, touches
+     * nothing — a shield already requires the L1-shadow flag on). Shares
+     * [mutex] with [stop]/[startIfEnabled]/[resetShadowState] so it can
+     * never interleave a teardown mid-check; the residual window between
+     * this returning true and the caller's broadcast is covered by the
+     * broadcaster's NotBroadcast/retryable classification of a stopped-SPV
+     * failure. Never throws (except cancellation).
+     *
+     * @return true when the SPV is running afterwards; false when the flag
+     *   is off, no wallet is bound, or a (re)start failed.
+     */
+    suspend fun ensureSpvRunning(): Boolean {
+        if (!isEnabled()) return false
+        // Idempotent bring-up: starts the SPV + probe loops when the latch
+        // is unset, no-ops (true) when already latched. Covers the common
+        // "a lifecycle teardown cleared everything before the shield" case.
+        if (!startIfEnabled()) return false
+        // The latch being set does not itself prove the Rust client is up:
+        // a reset stops+restarts it under [mutex], and an external teardown
+        // can have stopped it while the latch survived. Verify and restart
+        // in place (NOT a reset — that would wipe the scan state) under the
+        // same mutex stop()/reset take, so this cannot race a teardown.
+        return try {
+            mutex.withLock {
+                if (runningWalletIdHex.value == null) return@withLock false
+                if (source.isSpvRunning()) return@withLock true
+                val dataDir = File(spvDataDirPath()).apply { mkdirs() }
+                source.startSpv(dataDir.absolutePath)
+                log.info("ensureSpvRunning: restarted the shadow SPV client for a shield-from-wallet broadcast")
+                true
+            }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("ensureSpvRunning: failed to restart the shadow SPV client for a shield", t)
+            false
+        }
+    }
+
     /**
      * Mirror the manager's 1 Hz progress feed into [progress], logging the
      * one-line summary at most every [progressLogIntervalMs] — except the

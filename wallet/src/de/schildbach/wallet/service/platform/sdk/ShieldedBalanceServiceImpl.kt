@@ -605,6 +605,25 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val l1ParityFlow: () -> Flow<ParityReport?> = { flowOf(null) },
     /**
+     * Ensure the SDK's SPV is running before a [shieldFromWallet]
+     * broadcast. In this interim architecture the SDK builds and
+     * broadcasts the L1 asset lock through its OWN SPV peers, and that SPV
+     * runs only as [L1ShadowSyncService]'s shadow sync — which lifecycle
+     * teardown and the recovery paths stop/restart. The funding gate
+     * proves the shadow was SYNCED at the last probe, but the SPV can be
+     * stopped between that probe and the broadcast (the live
+     * "SPV client not started" failure), so the shield calls this
+     * immediately before spending. Prod wires
+     * [L1ShadowSyncService.ensureSpvRunning] (starts the SPV if the
+     * L1-shadow flag is on and it isn't already running, without a reset);
+     * the default `{ true }` keeps host-JVM tests decoupled. Returns false
+     * when the SPV cannot be brought up → the shield is a clean,
+     * retryable [SdkWriteResult.NotBroadcast]. Post-cutover the SDK SPV is
+     * the real wallet engine and always running, so this coupling
+     * disappears (SDK issue #4065 — no external asset-lock intake).
+     */
+    private val ensureL1SpvRunning: suspend () -> Boolean = { true },
+    /**
      * Scope for the post-[ensureShieldedReady] pending-shield retry sweep
      * ([resumePendingWalletShields]); null (tests' default) disables the
      * automatic trigger — the method itself stays callable.
@@ -633,6 +652,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         l1Parity = { l1ShadowSyncService.latestParity.value },
         l1ParityFlow = { l1ShadowSyncService.latestParity },
+        ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
         sweepScope = applicationScope
     )
 
@@ -906,6 +926,20 @@ class ShieldedBalanceServiceImpl internal constructor(
         } ?: return notBroadcast(operation, "wallet has no bound shielded address", null)
 
         return walletShieldMutex.withLock {
+            // Ensure the SDK's SPV is live immediately before spending: the
+            // asset lock is built+broadcast through it, and in this interim
+            // architecture that SPV is only the L1 shadow sync, which
+            // lifecycle teardown and the recovery paths stop. The funding
+            // gate proved the shadow was SYNCED at the last probe, but the
+            // SPV can be stopped between that probe and here — the live
+            // "SPV client not started" broadcast failure. Restart it in
+            // place (no reset) so the broadcast has a running client; if it
+            // can't be brought up, this is a clean, retryable NotBroadcast
+            // (nothing was submitted). See [ensureL1SpvRunning] / SDK #4065.
+            if (!ensureL1SpvRunning()) {
+                return notBroadcast(operation, "L1 sync not running", null)
+            }
+
             // Evidence baseline: the tracked shielded-top-up locks BEFORE
             // the attempt. Refuse to spend if it cannot be read — the
             // post-failure classification below depends on it.

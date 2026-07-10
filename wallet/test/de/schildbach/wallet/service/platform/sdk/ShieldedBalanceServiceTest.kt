@@ -20,12 +20,13 @@ package de.schildbach.wallet.service.platform.sdk
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
-import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.errors.DashSdkError
@@ -283,7 +284,8 @@ class ShieldedBalanceServiceTest {
         enabled: Boolean? = true,
         l1ShadowEnabled: Boolean = true,
         parity: () -> ParityReport? = { null },
-        parityFlow: Flow<ParityReport?> = flowOf(parity())
+        parityFlow: Flow<ParityReport?> = flowOf(parity()),
+        ensureL1SpvRunning: suspend () -> Boolean = { true }
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled),
@@ -291,6 +293,7 @@ class ShieldedBalanceServiceTest {
         displayHrp = { hrp },
         l1Parity = parity,
         l1ParityFlow = { parityFlow },
+        ensureL1SpvRunning = ensureL1SpvRunning,
         nowMs = { now }
     )
 
@@ -977,6 +980,43 @@ class ShieldedBalanceServiceTest {
         assertEquals(1, source.fundCalls)
     }
 
+    // ── shieldFromWallet: the SDK-SPV ensure-running preflight ────────────
+
+    @Test
+    fun shieldFromWallet_l1SpvNotRunning_isNotBroadcast_beforeAnySpend() = runBlocking {
+        val source = readySource()
+        // The gate passes (fresh MATCH) but the SDK's SPV — the L1 asset-lock
+        // broadcaster — cannot be brought up: refuse to spend, cleanly and
+        // retryably, before fundFromAssetLock is ever reached.
+        val service = service(source, parity = { matchParity() }, ensureL1SpvRunning = { false })
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals("L1 sync not running", (result as SdkWriteResult.NotBroadcast).reason)
+        assertEquals(0, source.fundCalls)
+    }
+
+    @Test
+    fun shieldFromWallet_ensuresSpvRunning_afterTheGate_beforeBroadcast() = runBlocking {
+        val source = readySource()
+        val order = mutableListOf<String>()
+        source.onFund = { order += "fund" }
+        val service = service(
+            source,
+            parity = { matchParity() },
+            ensureL1SpvRunning = { order += "ensureSpv"; true }
+        )
+
+        val result = service.shieldFromWallet(Dash.COIN)
+
+        assertTrue(result is SdkWriteResult.Broadcast)
+        // The SPV ensure runs (after the funding gate passed) and strictly
+        // BEFORE the asset-lock build/broadcast.
+        assertEquals(listOf("ensureSpv", "fund"), order)
+        assertEquals(1, source.fundCalls)
+    }
+
     // ── observeWalletShieldingAvailable: the LIVE funding gate ────────────
 
     @Test
@@ -988,15 +1028,21 @@ class ShieldedBalanceServiceTest {
         val parityFeed = MutableStateFlow<ParityReport?>(null)
         val service = service(source, parity = { parityFeed.value }, parityFlow = parityFeed)
 
-        // Collect the first two distinct emissions off the live flow.
-        val emissions = kotlinx.coroutines.async {
-            service.observeWalletShieldingAvailable().take(2).toList()
+        // Subscribe first (UNDISPATCHED runs the collector to its first
+        // suspension, so it has already emitted the initial closed state
+        // before we move the feed) — no re-subscription happens after.
+        val seen = mutableListOf<Boolean>()
+        val job = launch(start = CoroutineStart.UNDISPATCHED) {
+            service.observeWalletShieldingAvailable().take(2).collect { seen.add(it) }
         }
+
+        // The shadow harness reaches a fresh full MATCH while collection is live.
         parityFeed.value = matchParity()
+        job.join()
 
         // Closed first (funds-safe default), open once the MATCH lands —
-        // no re-subscription, proving the gate is observed, not snapshotted.
-        assertEquals(listOf(false, true), emissions.await())
+        // proving the gate is observed per emission, not snapshotted once.
+        assertEquals(listOf(false, true), seen)
     }
 
     @Test
