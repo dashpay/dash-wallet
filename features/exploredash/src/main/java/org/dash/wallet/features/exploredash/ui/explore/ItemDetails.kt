@@ -254,15 +254,11 @@ private fun MerchantHeader(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier.fillMaxWidth()
     ) {
-        AsyncImage(
-            model = merchant.logoLocation ?: "",
-            contentDescription = merchant.name,
-            modifier = Modifier
-                .size(50.dp)
-                .clip(RoundedCornerShape(8.dp)),
-            contentScale = ContentScale.Crop,
-            placeholder = painterResource(id = R.drawable.ic_image_placeholder),
-            error = painterResource(id = R.drawable.ic_image_placeholder)
+        MerchantLogo(
+            merchantName = merchant.name,
+            logoUrl = merchant.logoLocation,
+            size = 50.dp,
+            shape = RoundedCornerShape(8.dp)
         )
 
         Spacer(modifier = Modifier.width(16.dp))

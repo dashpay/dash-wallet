@@ -45,8 +45,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -65,6 +63,7 @@ import org.dash.wallet.common.ui.components.NavBarClose
 import org.dash.wallet.common.ui.dialogs.ComposeBottomSheet
 import org.dash.wallet.common.util.Constants
 import org.dash.wallet.features.exploredash.R
+import org.dash.wallet.features.exploredash.ui.explore.MerchantLogo
 import java.text.DecimalFormat
 import java.text.NumberFormat
 import java.util.Currency
@@ -167,27 +166,12 @@ private fun MerchantHeader(uiState: GiftCardOrderUIState) {
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            if (uiState.merchantIcon != null) {
-                uiState.merchantIcon?.let { icon ->
-                    Image(
-                        bitmap = icon.asImageBitmap(),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(50.dp)
-                            .clip(CircleShape)
-                    )
-                }
-            } else {
-                Image(
-                    painter = painterResource(R.drawable.ic_gift_card_tx),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                )
-            }
+            MerchantLogo(
+                merchantName = uiState.merchantName,
+                logoBitmap = uiState.merchantIcon,
+                size = 50.dp,
+                shape = CircleShape
+            )
         }
         Text(
             text = uiState.merchantName,

@@ -19,7 +19,7 @@
     <string name="explore_dash">Explora Dash</string>
     <string name="explore_title">Explorar</string>
     <string name="explore_subtitle">Encuentra comercios que acepten Dash, dónde comprar y cómo obtener ingresos con él.</string>
-    <string name="explore_merchants_title">Donde gastar?</string>
+    <string name="explore_merchants_title">¿Dónde gastar?</string>
     <string name="explore_merchants_subtitle">Encuentra comerciantes que acepten Dash como forma de pago.</string>
     <string name="explore_atms_title">Cajeros automáticos</string>
     <string name="explore_atms_subtitle">Encuentra dónde comprar o vender DASH y otras criptomonedas por dinero en efectivo.</string>
@@ -36,7 +36,7 @@
     <string name="explore_option_buy">Comprar</string>
     <string name="explore_option_sell">Vender</string>
     <string name="explore_option_buy_sell">Comprar y Vender</string>
-    <string name="explore_where_to_spend">Donde gastar?</string>
+    <string name="explore_where_to_spend">¿Dónde gastar?</string>
     <string name="explore_atms">Cajeros automáticos</string>
     <string name="explore_all_states">Todos los estados</string>
     <string name="explore_no_results">No se han encontrado resultados</string>
@@ -208,6 +208,7 @@
     <string name="purchase_gift_card_details">Detalles de la tarjeta de regalo</string>
     <string name="purchase_original_purchase">Compra original</string>
     <string name="purchase_check_current_balance">Ver detalles de la tarjeta de regalo</string>
+    <string name="purchase_redeem_url_challange">Desafío</string>
     <string name="purchase_card_number">Número de tarjeta</string>
     <string name="purchase_card_pin">PIN de tarjeta</string>
     <string name="purchase_view_transaction">Ver detalles de la transacción</string>

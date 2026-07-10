@@ -1,0 +1,58 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Återställ wallet</string>
+    <string name="set_pin_create_new_wallet">Skapa en ny Plånbok</string>
+    <string name="set_pin_confirm_pin">Bekräfta PIN</string>
+    <string name="dialog_confirm_confirm">Bekräfta</string>
+    <string name="dialog_confirm_fee">Nätverksavgift</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Skicka</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_import_key">Importera Privat Nyckel</string>
+
+    <!-- Lock Screen: Text above the PIN Entry area -->
+    <string name="lock_enter_pin">Ange PIN</string>
+    <string name="perm_lock_close_app">Stäng</string>
+
+    <string name="pay_title">Skicka</string>
+    <string name="history_title">Historik</string>
+    <string name="settings_title">Inställningar</string>
+    <string name="payments_title">Betalningar</string>
+    <string name="payments_tab_pay_label">Skicka</string>
+    <string name="payments_pay_by_qr_sub_title">Skannar QR kod</string>
+    <string name="options_paste_from_clipboard_title">Klistra in från urklipp</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Denna betalning har inte skickats ännu.</string>
+    <string name="preferences_report_issue_summary">Samla information om ditt problem och maila rapporten till utvecklarna.</string>
+    <string name="request_coins_clipboard_address_msg">Dash adressen kopierades till urklipp</string>
+    <string name="wallet_lock_reset">Återställ</string>
+    <string name="notification_transactions_channel_name">Transaktioner</string>
+    <string name="verify_continue">Fortsätt</string>
+    <string name="transaction_date_and_time">Datum</string>
+    <string name="transaction_close">Stäng</string>
+    <string name="transaction_details_amount_received">Mängd mottagen</string>
+    <string name="transaction_details_amount_sent">Mängd skickad</string>
+    <string name="menu_settings_title">Inställningar</string>
+    <string name="menu_tools_subtitle">Importera privat nyckel...</string>
+    <string name="tools_address_book">Adressbok</string>
+    <string name="tools_network_monitor">Nätverksövervakare</string>
+    <string name="confirm">Bekräfta</string>
+
+    <string name="logout_after">Logga ut efter</string>
+    <string name="immediately">Omedelbart</string>
+    <string name="twenty_four_hours">24 timmar</string>
+    <string name="one_minute">1 minut</string>
+    <string name="five_minute">5 minuter</string>
+    <string name="one_hour">1 timme</string>
+    <string name="security_low">Låg</string>
+    <string-array name="history_filter">
+        <item>Alla</item>
+    </string-array>
+
+    <string name="sync_status_check_connection">Kontrollera din anslutning</string>
+    <string name="payment_request_close">Stäng</string>
+    <string name="all_transactions">Alla</string>
+    <string name="continue_reset">Fortsätt</string>
+    <string name="masternode_key_address">Adress</string>
+    </resources>

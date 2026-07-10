@@ -386,4 +386,5 @@
     <string name="battery_optimization_dialog_button_change">Ayarları aç</string>
     <string name="upgrade_pin_description">Yeni PİN oluşturun</string>
     <string name="upgrade_pin_continue">Devam</string>
-</resources>
+
+    </resources>

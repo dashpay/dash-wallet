@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources>
+
+    <string name="import_export_keys_dialog_password">kata laluan</string>
+    <string name="preferences_activity_title">Tetapan</string>
+    <!-- generic buttons -->
+    <string name="button_ok">OK</string>
+    <string name="button_settings">Tetapan</string>
+    </resources>

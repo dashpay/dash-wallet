@@ -57,6 +57,7 @@ import com.google.firebase.FirebaseApp;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionBag;
@@ -422,6 +423,25 @@ public class WalletApplication extends MultiDexApplication
         // TODO: do we need this commented out for saving
         // org.bitcoinj.core.Context.enableStrictMode();
         org.bitcoinj.core.Context.propagate(Constants.CONTEXT);
+
+        // Pre-warm RegTestParams on this single-threaded startup path.
+        //
+        // dashj's ZeroConfCoinSelector.isTransactionSelectable() compares a pending tx's params
+        // against RegTestParams.get() for *every* pending output it considers. This selector is
+        // used by getAnonymizableBalance(), send flows and ByAddressCoinSelector. RegTestParams.get()
+        // lazily runs the RegTestParams constructor, which recomputes the regtest genesis X11 hash
+        // and checkState()s it against a hardcoded value. When that lazy construction first happens
+        // on a contended background thread (notably CoinJoin's IO coroutines, which do heavy
+        // concurrent X11 hashing) a transient bad X11 result makes the checkState throw and crashes
+        // balance calculation - even though this wallet never runs on regtest.
+        //
+        // Forcing the (synchronized, cached) construction here, before any concurrent hashing
+        // begins, makes the instance compute correctly once and be reused forever, closing the race.
+        try {
+            RegTestParams.get();
+        } catch (Throwable t) {
+            log.warn("failed to pre-warm RegTestParams", t);
+        }
 
         log.info("=== starting app using configuration: {}, {}", BuildConfig.FLAVOR,
                 Constants.NETWORK_PARAMETERS.getId());

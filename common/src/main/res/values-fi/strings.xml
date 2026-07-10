@@ -4,6 +4,25 @@
     <string name="request_coins_share_dialog_title">Jaa Dash-pyyntö</string>
     <!-- Generic buttons -->
     <string name="button_dismiss">Hylkää</string>
+    <string name="button_cancel">Peruuta</string>
     <string name="button_retry">Yritä uudelleen</string>
     <string name="button_share">Jaa</string>
+    <string name="exchange_rate_not_found">Rahanvaihtokurssia ei löytynyt.</string>
+    <string name="report_issue_dialog_mail_intent_chooser">Lähetä raportti käyttäen…</string>
+
+    <!-- scan -->
+    <string name="scan_camera_problem_dialog_title">Pahoittelut</string>
+    <string name="scan_camera_problem_dialog_message">Kameran kanssa on ongelma. Sinun on luultavasti uudelleenkäynnistettävä laitteesi</string>
+    <!-- address input -->
+    <string name="address_input_title">Lähetä Dasheja</string>
+    <!-- input parser -->
+    <string name="input_parser_io_error">Ei voida lukea dataa:\n%s</string>
+    <string name="input_parser_cannot_classify">Ei voida tunnistaa syötettä:\n%s</string>
+    <string name="input_parser_invalid_bitcoin_uri">Epäkelpo Dash-URI:\n%s</string>
+    <string name="input_parser_invalid_address">Saatiin epäkelpo Dash-osoite!\n(Sekoitatko mainnet/testnet?)</string>
+    <string name="input_parser_unverifyable_paymentrequest">Ei voitu vahvistaa maksupyyntöä:\n%s</string>
+    <string name="input_parser_invalid_paymentrequest">Epäkelpo maksupyyntö:\n%s</string>
+    <string name="input_parser_invalid_transaction">Epäkelpo rahansiirto:\n%s</string>
+    <string name="insufficient_money_title">Varoja ei ole tarpeeksi</string>
+    <string name="send_coins_error_msg">Ongelma kolikoita lähetettäessä!</string>
     </resources>

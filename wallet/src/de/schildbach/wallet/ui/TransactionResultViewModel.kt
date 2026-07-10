@@ -54,7 +54,6 @@ class TransactionResultViewModel @Inject constructor(
     private val dashPayProfileDao: DashPayProfileDao,
     private val topUpsDao: TopUpsDao,
     private val identityRepository: IdentityRepository,
-    private val platformRepo: PlatformRepo,
     val analytics: AnalyticsService,
     val walletApplication: WalletApplication
 ) : ViewModel() {

@@ -1165,7 +1165,6 @@ class SecurityGuardMultiThreadingTest {
                         override fun observeWallet(): Flow<Wallet?> {
                             TODO("Not yet implemented")
                         }
-
                         override val transactionBag: TransactionBag
                             get() = TODO("Not yet implemented")
                         override val networkParameters: NetworkParameters

@@ -46,6 +46,8 @@
     <string name="explore_no_atms">Немає банкоматів</string>
     <string name="distance_miles">%s миль</string>
     <string name="distance_kilometers">%s кілометрів</string>
+    <string name="explore_fee">Комісія %s%%</string>
+
     <plurals name="explore_merchant_amount">
         <item quantity="one">%d продавець</item>
         <item quantity="few">%d продавців</item>
@@ -188,14 +190,25 @@
     <string name="purchase_gift_card_at">в</string>
     <string name="purchase_gift_card_min">Мін: %s</string>
     <string name="purchase_gift_card_max">Макс:%s</string>
+    <string name="gift_card_tab_single">Одна</string>
+    <string name="gift_card_tab_multiple">Кілька.</string>
     <string name="gift_card_buy_title">Купити подарункову карту</string>
     <string name="purchase_gift_card_discount_hint">Ви купуєте %sподарункову картку за %s(%sзнижка)</string>
     <string name="button_next">Далі</string>
     <string name="purchase_gift_card_from">З</string>
     <string name="purchase_gift_card_to">До</string>
     <string name="purchase_confirm_transaction">Підтвердити</string>
+    <string name="purchase_gift_card_total_label">Номінал подарункової картки </string>
     <string name="purchase_gift_card_discount">Знижка</string>
     <string name="purchase_gift_card_you_pay">Ви платите</string>
+    <string name="purchase_gift_card_quantity_label">Кількість</string>
+    <plurals name="purchase_gift_card_quantity_value">
+        <item quantity="one">%d картка</item>
+        <item quantity="few">%d картки</item>
+        <item quantity="many">%d карток</item>
+        <item quantity="other">%d карток</item>
+    </plurals>
+    <string name="purchase_gift_card_denomination_label">Номінал картки.</string>
     <string name="purchase_gift_card_confirm">Підтвердити</string>
     <string name="purchase_gift_card_details">Реквізити подарункової картки</string>
     <string name="purchase_original_purchase">Початкова покупка</string>
@@ -211,6 +224,9 @@
     <string name="purchase_tell_the_cashier">Скажіть касиру, що ви платите цифровою подарунковою карткою. Касир: введіть загальну суму в поле Банківська картка, потім введіть номер подарункової картки в поле Обліковий запис і натисніть Прийняти.</string>
     <string name="purchase_in_the_payment_section">У розділі оплати введіть номер цифрової подарункової картки в поле подарункової картки.</string>
     <string name="purchase_powered_by">На базі</string>
+    <string name="purchase_cashier_instructions">Інструкції для касира.</string>
+    <string name="purchase_cashier_instructions_body">Пред’явіть подарункову картку або електронну подарункову картку під час оформлення покупки та використайте її як спосіб оплати.</string>
+    <string name="purchase_gift_card_date_format">%1$s на %2$s</string>
     <string name="insufficient_money_title">Недостньо монет</string>
     <string name="insufficient_money_msg">Недостатньо коштів</string>
     <string name="send_coins_error_msg">Проблема з відправкою монет!</string>
@@ -218,6 +234,11 @@
     <string name="gift_card_tx_title">Подарункова картка · %s</string>
     <string name="select_amount">Виберіть суму</string>
     <string name="select_fixed_amount">Цей торговець продає подарункові картки за фіксованими цінами</string>
+    <string name="purchase_gift_card_max_multiple_error">За одне замовлення ви можете придбати подарункові картки на суму до %s.</string>
+    <string name="purchase_gift_card_insufficient_money_error">Недостатньо DASH, щоб придбати ці подарункові картки.</string>
+    <string name="purchase_gift_card_insufficient_inventory">Недостатньо карток номіналом %s, щоб придбати %d ×  %s карток.</string>
+    <string name="purchase_gift_card_inventory_toast">У продавця доступні лише картки %d</string>
+    <string name="purchase_gift_card_single_card_only_toast">Ви можете вибрати лише один номінал картки.</string>
     <string name="purchase_gift_card_reset">Скидання</string>
     <!-- dash spend login-->
     <string name="enter_verification_code">Введіть код підтвердження</string>
@@ -252,6 +273,7 @@
     <string name="accept_to_proceed">Прийміть правила та умови DashSpend, щоб створити обліковий запис DashSpend</string>
     <string name="view_terms_conditions">Терміни і умови</string>
     <string name="barcode_placeholder">Будь ласка, зачекайте на доставку даних подарункової картки.</string>
+    <string name="purchase_order_number">Номер замовлення.</string>
     <string name="gift_card_contact_ctx">Зверніться до служби підтримки CTX</string>
     <string name="gift_card_contact_piggycards">Зверніться до служби підтримки PiggyCards</string>
     <string name="gift_card_contact_support">Служба підтримки</string>

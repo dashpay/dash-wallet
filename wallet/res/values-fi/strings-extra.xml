@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <string name="onboarding_recover_wallet">Palauta lompakko</string>
+    <string name="dialog_confirm_fee">Verkon maksukulu</string>
+    <!-- Home Screen: Shortcut Button: 2 lines, 9 characters across -->
+    <string name="shortcut_send">Lähetä</string>
+    <string name="pay_title">Lähetä</string>
+    <string name="settings_title">Asetukset</string>
+    <string name="payments_tab_pay_label">Lähetä</string>
+    <string name="options_paste_from_clipboard_title">Liitä leikepöydältä</string>
+
+    <string name="transaction_row_message_own_instantx_lock_request_notsent">Tätä maksua ei ole lähetetty vielä.</string>
+    <string name="preferences_report_issue_summary">Kerää tietoa ongelmasta ja lähetä sähköpostilla raportti kehittäjille.</string>
+    <string name="request_coins_clipboard_address_msg">Dash-osoite on kopioitu leikepöydälle</string>
+    <string name="wallet_lock_reset">Nollaa</string>
+    <string name="menu_settings_title">Asetukset</string>
+    <string name="tools_address_book">Osoitekirja</string>
+    <string name="tools_network_monitor">Verkkoyhteyksien näyttö</string>
+    <string name="masternode_key_address">Osoite</string>
+    </resources>

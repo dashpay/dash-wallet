@@ -111,6 +111,8 @@
     <string name="maya_error_invalid_destination_address">无效的目标地址</string>
     <string name="maya_error_below_recommended_minimum">输入的金额小于推荐的最小金额</string>
     <string name="maya_error_trading_halted">%s上的交易已经被停止.</string>
+    <string name="maya_error_below_allowed_minimum">输入的金额低于允许输入的最低金额</string>
+    <string name="maya_error_quote">无法从 Maya 获得此次兑换的汇率</string>
     <string name="maya_halted_label">已停止</string>
     <string name="maya_halted_coins_toast">这些代币已经被暂时停止并无法进行交易</string>
 
