@@ -108,6 +108,19 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // message-matched until the SDK exposes a typed signing error.
     t.message?.contains("no private key stored") == true ->
         SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): no private key stored", t)
+    // Coin selection / insufficient funds happens during transaction BUILDING,
+    // strictly before any broadcast — nothing was submitted. Surfaced as a
+    // WalletOperation error carrying the reason in the message (observed live:
+    // "Coin selection error: Insufficient funds: available N, required M").
+    // Message-matched until the SDK exposes a typed InsufficientFunds error
+    // (SDK issue to file). Retryable with a smaller amount.
+    t.message?.let { m ->
+        m.contains("Insufficient funds") ||
+            m.contains("Coin selection error") ||
+            m.contains("transaction build failed") ||
+            m.contains("set_funding failed")
+    } == true ->
+        SdkWriteResult.NotBroadcast("pre-broadcast build failure (insufficient funds / coin selection)", t)
     else -> SdkWriteResult.Ambiguous(t)
 }
 

@@ -109,3 +109,17 @@ input-selection constraint (e.g. `chainLockedOnly: Boolean` or a min-conf/locked
 peer" rejection, reservation released) reaches Kotlin as `Generic(nativeCode=99)` with a message
 prefix, forcing integrators to message-match to classify it as safely-not-broadcast. A dedicated
 error code would make the no-double-pay classification robust.
+
+## 15. shieldedFundFromAssetLock coin selection only reaches one account (CoinJoin/other-account funds unspendable)
+
+Live (S22, testnet): a wallet with total balance 1.534 DASH (SDK get_balance == dashj, exact
+parity) failed to shield with "Coin selection error: Insufficient funds: available 8999527
+(0.09 DASH), required 20000000". The ~1.44 DASH gap is previously-mixed CoinJoin-derivation-path
+funds. shieldedFundFromAssetLock's asset-lock builder selects only from the standard BIP44
+account, so funds counted in the wallet balance but held on the CoinJoin (or any non-default)
+account cannot be shielded. Requests: (a) asset-lock coin selection should span all spendable
+accounts (incl. the DIP-9 CoinJoin account), or (b) expose a per-account spendable-for-asset-lock
+balance so integrators can validate the amount and show the correct "available" figure — the total
+balance overstates what's shieldable. Also: the error is a WalletOperation with the reason in the
+message string; a typed InsufficientFunds error (with available/required) would let integrators
+classify + display it without message-matching (relates to #14).
