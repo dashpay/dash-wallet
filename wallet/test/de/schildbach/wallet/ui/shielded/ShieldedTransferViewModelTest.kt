@@ -18,7 +18,11 @@
 package de.schildbach.wallet.ui.shielded
 
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -29,6 +33,7 @@ import io.mockk.mockk
 import io.mockk.slot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -45,6 +50,7 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -88,6 +94,12 @@ class ShieldedTransferViewModelTest {
     private val exchangeRates = mockk<ExchangeRatesProvider> {
         every { observeExchangeRate(any()) } returns flowOf(null)
     }
+    private val shadowVerificationStatus = MutableStateFlow(L1VerificationStatus.UNKNOWN)
+    private val shadowProgress = MutableStateFlow(ShadowSyncProgress.IDLE)
+    private val l1ShadowSyncService = mockk<L1ShadowSyncService> {
+        every { verificationStatus } returns shadowVerificationStatus
+        every { progress } returns shadowProgress
+    }
 
     private fun blockchainState(
         synced: Boolean,
@@ -126,7 +138,8 @@ class ShieldedTransferViewModelTest {
             dashPayConfig,
             blockchainStateProvider,
             walletUIConfig,
-            exchangeRates
+            exchangeRates,
+            l1ShadowSyncService
         ).apply { ioDispatcher = dispatcher }
 
     private fun ShieldedTransferViewModel.typeAmountAndConfirm(amount: String = "1") {
@@ -468,5 +481,154 @@ class ShieldedTransferViewModelTest {
         val vm = viewModel()
 
         assertFalse(vm.uiState.value.showTimingInfo)
+    }
+
+    // ── Live verification status (funding-gate toast) ───────────────────
+
+    @Test
+    fun verificationStatus_flowsFromTheShadowHarnessIntoUiState() = runTest(dispatcher) {
+        val vm = viewModel()
+
+        // No harness data → the static fallback copy.
+        assertNull(vm.uiState.value.verificationStatus)
+
+        // Scanning with live filter counts.
+        shadowVerificationStatus.value = L1VerificationStatus.SCANNING
+        shadowProgress.value = ShadowSyncProgress(
+            phase = ShadowSyncPhase.FILTERS,
+            overallPercent = 79.4,
+            headerHeight = 1_511_575, headerTarget = 1_511_575,
+            filterHeight = 1_204_511, filterTarget = 1_511_575
+        )
+        assertEquals(
+            ShieldedVerificationStatus.Scanning("1,204,511", "1,511,575", 79),
+            vm.uiState.value.verificationStatus
+        )
+
+        // Synced, parity being probed → almost done.
+        shadowVerificationStatus.value = L1VerificationStatus.PROBING
+        assertEquals(ShieldedVerificationStatus.AlmostDone, vm.uiState.value.verificationStatus)
+
+        // Terminal stand-down → failed.
+        shadowVerificationStatus.value = L1VerificationStatus.FAILED
+        assertEquals(ShieldedVerificationStatus.Failed, vm.uiState.value.verificationStatus)
+
+        // Verified: the gate opens; the toast falls back (and disappears).
+        shadowVerificationStatus.value = L1VerificationStatus.VERIFIED
+        assertNull(vm.uiState.value.verificationStatus)
+    }
+}
+
+/**
+ * Pure mapping table of [mapVerificationStatus] — the harness state →
+ * toast status contract (scanning numbers with digit grouping, almost
+ * done, failed, and every fallback-to-static-copy case).
+ */
+class ShieldedVerificationStatusMappingTest {
+
+    private fun progress(
+        phase: ShadowSyncPhase,
+        percent: Double = 50.0,
+        headerHeight: Long = 0, headerTarget: Long = 0,
+        filterHeight: Long = 0, filterTarget: Long = 0
+    ) = ShadowSyncProgress(phase, percent, headerHeight, headerTarget, filterHeight, filterTarget)
+
+    private fun map(status: L1VerificationStatus, p: ShadowSyncProgress) =
+        mapVerificationStatus(status, p, java.util.Locale.US)
+
+    @Test
+    fun scanning_filterPhases_useTheFilterCounts_withGrouping() {
+        for (phase in listOf(
+            ShadowSyncPhase.FILTER_HEADERS, ShadowSyncPhase.MASTERNODES, ShadowSyncPhase.FILTERS
+        )) {
+            assertEquals(
+                ShieldedVerificationStatus.Scanning("1,204,511", "1,511,575", 79),
+                map(
+                    L1VerificationStatus.SCANNING,
+                    progress(
+                        phase, percent = 79.6,
+                        headerHeight = 1_511_575, headerTarget = 1_511_575,
+                        filterHeight = 1_204_511, filterTarget = 1_511_575
+                    )
+                )
+            )
+        }
+    }
+
+    @Test
+    fun scanning_headerPhase_usesTheHeaderCounts() {
+        assertEquals(
+            ShieldedVerificationStatus.Scanning("12,345", "1,511,575", 3),
+            map(
+                L1VerificationStatus.SCANNING,
+                progress(
+                    ShadowSyncPhase.HEADERS, percent = 3.2,
+                    headerHeight = 12_345, headerTarget = 1_511_575
+                )
+            )
+        )
+    }
+
+    @Test
+    fun scanning_fallsBackToHeaderCounts_whileTheFilterTargetIsUnknown() {
+        assertEquals(
+            ShieldedVerificationStatus.Scanning("1,511,575", "1,511,575", 60),
+            map(
+                L1VerificationStatus.SCANNING,
+                progress(
+                    ShadowSyncPhase.FILTER_HEADERS, percent = 60.0,
+                    headerHeight = 1_511_575, headerTarget = 1_511_575
+                )
+            )
+        )
+    }
+
+    @Test
+    fun scanning_withoutAnyTarget_fallsBackToTheStaticCopy() {
+        assertNull(map(L1VerificationStatus.SCANNING, progress(ShadowSyncPhase.CONNECTING)))
+        assertNull(map(L1VerificationStatus.SCANNING, ShadowSyncProgress.IDLE))
+    }
+
+    @Test
+    fun scanning_clampsHeightToTarget_andPercentTo100() {
+        assertEquals(
+            ShieldedVerificationStatus.Scanning("100", "100", 100),
+            map(
+                L1VerificationStatus.SCANNING,
+                progress(
+                    ShadowSyncPhase.FILTERS, percent = 100.9,
+                    filterHeight = 105, filterTarget = 100
+                )
+            )
+        )
+    }
+
+    @Test
+    fun probing_mapsToAlmostDone() {
+        assertEquals(
+            ShieldedVerificationStatus.AlmostDone,
+            map(L1VerificationStatus.PROBING, ShadowSyncProgress.IDLE)
+        )
+    }
+
+    @Test
+    fun failed_mapsToFailed_regardlessOfProgress() {
+        assertEquals(
+            ShieldedVerificationStatus.Failed,
+            map(L1VerificationStatus.FAILED, ShadowSyncProgress.IDLE)
+        )
+        assertEquals(
+            ShieldedVerificationStatus.Failed,
+            map(
+                L1VerificationStatus.FAILED,
+                progress(ShadowSyncPhase.FILTERS, filterHeight = 1, filterTarget = 2)
+            )
+        )
+    }
+
+    @Test
+    fun unknownAndVerified_fallBackToTheStaticCopy() {
+        assertNull(map(L1VerificationStatus.UNKNOWN, ShadowSyncProgress.IDLE))
+        assertNull(map(L1VerificationStatus.VERIFIED, ShadowSyncProgress.IDLE))
     }
 }

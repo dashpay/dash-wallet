@@ -277,19 +277,41 @@ private fun ShieldedTransferScreenContent(
         //     chain whose Dash Wallet → Shielded direction is still
         //     blocked by the L1 funding-evidence gate (shadow-SPV balance
         //     parity pending) — NOT a sync problem, so it must not reuse
-        //     the sync-flavored string.
+        //     the sync-flavored string. When the shadow harness exposes
+        //     live status (uiState.verificationStatus) the toast shows it:
+        //     scanning block counts, "almost done" while parity is being
+        //     probed, or the terminal verification failure (export logs);
+        //     null keeps the static fallback copy.
         if (uiState.readyCheckDone &&
             (!uiState.ready || !uiState.chainSynced || !uiState.directionAvailable)
         ) {
+            val syncBlocked = !uiState.ready || !uiState.chainSynced
+            val verification = uiState.verificationStatus.takeUnless { syncBlocked }
             Toast(
-                text = stringResource(
-                    if (!uiState.ready || !uiState.chainSynced) {
-                        R.string.shielded_error_not_ready
-                    } else {
-                        R.string.shielded_error_wallet_funding_pending
-                    }
-                ),
-                imageResource = ToastImageResource.Loading.resourceId,
+                text = when (verification) {
+                    is ShieldedVerificationStatus.Scanning -> stringResource(
+                        R.string.shielded_verifying_scanning,
+                        verification.scannedBlocks,
+                        verification.targetBlocks,
+                        verification.percent
+                    )
+                    ShieldedVerificationStatus.AlmostDone ->
+                        stringResource(R.string.shielded_verifying_almost_done)
+                    ShieldedVerificationStatus.Failed ->
+                        stringResource(R.string.shielded_verification_failed)
+                    null -> stringResource(
+                        if (syncBlocked) {
+                            R.string.shielded_error_not_ready
+                        } else {
+                            R.string.shielded_error_wallet_funding_pending
+                        }
+                    )
+                },
+                imageResource = if (verification == ShieldedVerificationStatus.Failed) {
+                    ToastImageResource.Warning.resourceId
+                } else {
+                    ToastImageResource.Loading.resourceId
+                },
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .padding(horizontal = 15.dp, vertical = 20.dp),
@@ -1061,12 +1083,54 @@ private fun TransferProvingPreview() {
 
 // Chain synced + runtime ready but the L1 funding-evidence gate hasn't
 // passed: the toast must show the "Verifying your balance…" variant, not
-// the sync-flavored one.
+// the sync-flavored one. No live harness data → the static fallback copy.
 @Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – funding verification pending")
 @Composable
 private fun TransferFundingPendingPreview() {
     ShieldedTransferScreenContent(
         uiState = previewState().copy(walletShieldingAvailable = false)
+    )
+}
+
+// Live harness data while the shadow chain is scanning: block counts +
+// overall percent in the funding-pending toast.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – verification scanning")
+@Composable
+private fun TransferVerificationScanningPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState().copy(
+            walletShieldingAvailable = false,
+            verificationStatus = ShieldedVerificationStatus.Scanning(
+                scannedBlocks = "1,204,511",
+                targetBlocks = "1,511,575",
+                percent = 79
+            )
+        )
+    )
+}
+
+// Shadow chain synced, parity probe still confirming: "almost done".
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – verification almost done")
+@Composable
+private fun TransferVerificationAlmostDonePreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState().copy(
+            walletShieldingAvailable = false,
+            verificationStatus = ShieldedVerificationStatus.AlmostDone
+        )
+    )
+}
+
+// Terminal harness stand-down: warning toast telling the tester to export
+// logs via Report an Issue.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – verification failed")
+@Composable
+private fun TransferVerificationFailedPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState().copy(
+            walletShieldingAvailable = false,
+            verificationStatus = ShieldedVerificationStatus.Failed
+        )
     )
 }
 

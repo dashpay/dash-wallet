@@ -569,6 +569,13 @@
          gate (shadow-SPV parity) hasn't passed yet — deliberately NOT sync-flavored,
          unlike shielded_error_not_ready. -->
     <string name="shielded_error_wallet_funding_pending">Verifying your balance — transfers from Dash Wallet will be available shortly</string>
+    <!-- Live variants of shielded_error_wallet_funding_pending, fed by the L1 shadow-sync
+         harness. Scanning args: 1 scanned blocks, 2 target blocks (both pre-formatted with
+         digit grouping), 3 overall percent. -->
+    <string name="shielded_verifying_scanning">Verifying your balance — scanning block %1$s of %2$s (%3$d%%)</string>
+    <string name="shielded_verifying_almost_done">Verifying your balance — almost done</string>
+    <!-- Terminal harness stand-down: the tester should flag it with exported logs. -->
+    <string name="shielded_verification_failed">Balance verification failed — please export logs via Report an Issue</string>
     <string name="shielded_locked_pending_title">Transfer in progress</string>
     <string name="shielded_locked_pending_message">Your Dash was reserved on the network, but the shielded transfer hasn’t finished yet. It will finish automatically the next time the app syncs — do not send it again.</string>
     <string name="shielded_send_title">Send to shielded address</string>

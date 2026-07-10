@@ -958,6 +958,80 @@ class L1ShadowSyncServiceTest {
         assertTrue(recreator.events.isEmpty())
     }
 
+    // ── User-observable verification status ───────────────────────────
+
+    @Test
+    fun verificationStatus_scanningThenProbingThenVerified() = runBlocking {
+        val source = FakeSource(boundWalletId = walletIdHex).apply {
+            sdkConfirmed = 100_000
+            dashjBalances = 100_000L to 100_000L
+        }
+        val service = service(source)
+        assertEquals(L1VerificationStatus.UNKNOWN, service.verificationStatus.value)
+
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncing(headers = sub(SpvSyncState.SYNCING, 10, 100))
+        assertEquals(L1VerificationStatus.SCANNING, service.verificationStatus.value)
+
+        // Chain synced: parity still needs confirming.
+        source.progressFlow.value = synced
+        assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
+
+        // A synced probe matching on BOTH balance variants → VERIFIED…
+        service.probeParity(walletIdHex)
+        assertEquals(L1VerificationStatus.VERIFIED, service.verificationStatus.value)
+
+        // …and later synced progress ticks must not downgrade it.
+        source.progressFlow.value = SpvSyncProgressData(
+            overallState = SpvSyncState.SYNCED,
+            overallPercentage = 100.0,
+            headers = null, filterHeaders = null, filters = null, masternodes = null
+        )
+        assertEquals(L1VerificationStatus.VERIFIED, service.verificationStatus.value)
+
+        // A later mismatching synced probe closes the gate again → PROBING.
+        source.sdkConfirmed = 50_000
+        service.probeParity(walletIdHex)
+        assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
+    }
+
+    @Test
+    fun verificationStatus_deficitStandDown_isTerminalFailure() = runBlocking {
+        val source = emptyDeficitSource()
+        // No reset marker, no debug always-recreate: the third synced
+        // empty-deficit probe stands down → FAILED.
+        val service = service(source, lastResetMs = null)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = syncedComplete
+        repeat(3) { service.probeParity(walletIdHex) }
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
+
+        // Terminal per process: even a later fully-matching probe (or a
+        // progress tick) cannot clear it.
+        source.sdkConfirmed = 154_427_919
+        source.sdkTxs = 12
+        service.probeParity(walletIdHex)
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
+    }
+
+    @Test
+    fun verificationStatus_corruptAfterReset_isTerminalFailure() = runBlocking {
+        val source = inflatedSource()
+        val service = service(source)
+        assertTrue(service.startIfEnabled())
+        source.progressFlow.value = synced
+        repeat(3) { service.probeParity(walletIdHex) } // → the one reset (recoverable)
+        assertEquals(L1VerificationStatus.PROBING, service.verificationStatus.value)
+
+        // The mismatch survives a full post-reset resync → CORRUPT_AFTER_RESET.
+        source.progressFlow.value = SpvSyncProgressData.EMPTY
+        source.progressFlow.value = synced
+        repeat(3) { service.probeParity(walletIdHex) }
+        assertEquals(L1VerificationStatus.FAILED, service.verificationStatus.value)
+    }
+
     // ── Wallet re-creation recovery (orchestration) ───────────────────
 
     @Test

@@ -58,6 +58,30 @@ import javax.inject.Singleton
 enum class ShadowSyncPhase { IDLE, CONNECTING, HEADERS, FILTER_HEADERS, MASTERNODES, FILTERS, SYNCED, ERROR }
 
 /**
+ * User-observable verdict of the L1 funding-verification harness — the
+ * coarse state behind [L1ShadowSyncService.verificationStatus], consumed
+ * by the shielded-transfer screen's "Verifying your balance…" toast.
+ *
+ * - [UNKNOWN]: no evidence yet (shadow not running / flag off) — UIs fall
+ *   back to their static copy.
+ * - [SCANNING]: the shadow SPV chain is still syncing ([progress]
+ *   [L1ShadowSyncService.progress] carries the live block counts).
+ * - [PROBING]: the chain is synced but parity with dashj has not been
+ *   confirmed yet (first probe pending, or a mismatch that is not — or
+ *   not yet — terminal, e.g. mid-recovery).
+ * - [VERIFIED]: the latest synced probe matched on BOTH balance variants —
+ *   the same evidence [evaluateWalletFundingGate] requires, so the funding
+ *   gate opens on the next check. A later mismatching probe moves back to
+ *   [PROBING] (the gate closes again).
+ * - [FAILED]: the harness stood down — CORRUPT_AFTER_RESET, a
+ *   DEFICIT_STAND_DOWN (including recreation exhausted), or a stalled
+ *   probe loop past its one watchdog restart. Terminal for the process:
+ *   verification will not recover without an app restart, so the UI tells
+ *   the tester to flag it (Report an Issue).
+ */
+enum class L1VerificationStatus { UNKNOWN, SCANNING, PROBING, VERIFIED, FAILED }
+
+/**
  * Small app-side view of the SDK's
  * [org.dashfoundation.dashsdk.wallet.SpvSyncProgressData], for logging and
  * a future debug UI. Header heights track the chain tip; filter heights
@@ -908,6 +932,22 @@ class L1ShadowSyncService internal constructor(
     /** The most recent parity measurement, for a future debug UI. */
     val latestParity: StateFlow<ParityReport?> = _latestParity.asStateFlow()
 
+    private val _verificationStatus = MutableStateFlow(L1VerificationStatus.UNKNOWN)
+
+    /**
+     * The coarse user-observable verification verdict (see
+     * [L1VerificationStatus]). Fed by the progress monitor (SCANNING ↔
+     * PROBING), the parity probe (VERIFIED/PROBING once synced) and the
+     * decider/watchdog stand-downs (FAILED — terminal per process).
+     */
+    val verificationStatus: StateFlow<L1VerificationStatus> = _verificationStatus.asStateFlow()
+
+    /** FAILED is terminal per process; everything else may transition freely. */
+    private fun updateVerificationStatus(next: L1VerificationStatus) {
+        if (_verificationStatus.value == L1VerificationStatus.FAILED) return
+        _verificationStatus.value = next
+    }
+
     /**
      * Fingerprints of synced-MISMATCH states whose outpoint diff was
      * already logged — once per process per distinct state, so a stable
@@ -1000,6 +1040,15 @@ class L1ShadowSyncService internal constructor(
                 source.spvProgress().collect { data ->
                     val mapped = toShadowSyncProgress(data)
                     _progress.value = mapped
+                    // Verification verdict from the chain state: still
+                    // scanning until SYNCED, then "probing" until a parity
+                    // probe upgrades to VERIFIED (which progress ticks must
+                    // not downgrade — only a probe result may).
+                    if (!mapped.synced) {
+                        updateVerificationStatus(L1VerificationStatus.SCANNING)
+                    } else if (_verificationStatus.value != L1VerificationStatus.VERIFIED) {
+                        updateVerificationStatus(L1VerificationStatus.PROBING)
+                    }
                     val now = nowMs()
                     val terminalTransition = mapped.phase != lastPhase &&
                         (mapped.phase == ShadowSyncPhase.SYNCED || mapped.phase == ShadowSyncPhase.ERROR)
@@ -1073,12 +1122,16 @@ class L1ShadowSyncService internal constructor(
                     parityJob = scope.launch { parityLoop(walletIdHex) }
                         .logCompletion("parity probe loop (watchdog restart)")
                 }
-                ProbeWatchdogDecider.Decision.EXHAUSTED ->
+                ProbeWatchdogDecider.Decision.EXHAUSTED -> {
+                    // No probe loop means parity can never be confirmed:
+                    // surface the stand-down to the verification consumers.
+                    _verificationStatus.value = L1VerificationStatus.FAILED
                     log.error(
                         "L1Shadow watchdog: the probe loop stalled again after its one " +
                             "watchdog restart — standing down (no further automatic " +
                             "restarts this process)"
                     )
+                }
                 ProbeWatchdogDecider.Decision.NONE -> Unit
             }
         }
@@ -1127,6 +1180,19 @@ class L1ShadowSyncService internal constructor(
         )
         _latestParity.value = report
         log.info(parityLogLine(report))
+        if (report.sdkSynced) {
+            // The same evidence the funding gate requires: BOTH balance
+            // variants matching (see evaluateWalletFundingGate). A synced
+            // mismatch stays PROBING unless the decider below makes it
+            // terminal (FAILED).
+            updateVerificationStatus(
+                if (report.balancesMatch && report.confirmedBalancesMatch) {
+                    L1VerificationStatus.VERIFIED
+                } else {
+                    L1VerificationStatus.PROBING
+                }
+            )
+        }
 
         if (report.sdkSynced && !report.balancesMatch) {
             maybeLogOutpointDiff(walletIdHex, report)
@@ -1147,7 +1213,8 @@ class L1ShadowSyncService internal constructor(
                 )
                 resetShadowState(hard = true)
             }
-            ShadowResetDecider.Decision.CORRUPT_AFTER_RESET ->
+            ShadowResetDecider.Decision.CORRUPT_AFTER_RESET -> {
+                _verificationStatus.value = L1VerificationStatus.FAILED
                 log.error(
                     "shadow state corrupt after reset — SDK bug: the inflated L1 mismatch " +
                         "(sdk={} > dashj={} duffs) survived a full post-reset resync; standing " +
@@ -1155,6 +1222,7 @@ class L1ShadowSyncService internal constructor(
                         "wallet state is only fully rebuilt on the next app start)",
                     report.sdkDuffs, report.dashjDuffs
                 )
+            }
             ShadowResetDecider.Decision.RECREATE_WALLET -> {
                 log.warn(
                     "L1Parity reset-aftermath deficit: sdk=0 txs / {} duffs vs dashj={} duffs " +
@@ -1167,7 +1235,8 @@ class L1ShadowSyncService internal constructor(
                 )
                 recreateWalletInBackground()
             }
-            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN ->
+            ShadowResetDecider.Decision.DEFICIT_STAND_DOWN -> {
+                _verificationStatus.value = L1VerificationStatus.FAILED
                 log.error(
                     "L1Parity DEFICIT stand-down: sdk={} < dashj={} duffs with sdkTx=0 and a " +
                         "complete scan but no recent-reset explanation (marker absent/stale, or " +
@@ -1175,6 +1244,7 @@ class L1ShadowSyncService internal constructor(
                         "this harness must surface, not erase; no automatic reset",
                     report.sdkDuffs, report.dashjDuffs
                 )
+            }
             ShadowResetDecider.Decision.NONE -> Unit
         }
         return report

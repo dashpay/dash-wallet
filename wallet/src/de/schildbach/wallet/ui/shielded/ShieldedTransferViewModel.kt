@@ -21,7 +21,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.payments.ChainLockedCoinSelector
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
+import de.schildbach.wallet.service.platform.sdk.L1VerificationStatus
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
+import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -32,6 +36,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
@@ -50,7 +55,70 @@ import org.dash.wallet.common.services.ExchangeRatesProvider
 import org.dash.wallet.common.ui.enter_amount.processAmountKeyInput
 import org.dash.wallet.common.util.toFiat
 import org.slf4j.LoggerFactory
+import java.util.Locale
 import javax.inject.Inject
+
+/**
+ * The blocked-ToShielded toast's LIVE verification status, derived from
+ * the L1 shadow-sync harness ([L1ShadowSyncService.verificationStatus] +
+ * [L1ShadowSyncService.progress]) by [mapVerificationStatus]. `null`
+ * means "no usable live data" and the toast falls back to the static
+ * "Verifying your balance — transfers … available shortly" copy.
+ */
+sealed class ShieldedVerificationStatus {
+    /**
+     * The shadow chain is still scanning. Block counts are pre-formatted
+     * with digit grouping (host-JVM-testable; the composable only fills
+     * the string template).
+     */
+    data class Scanning(
+        val scannedBlocks: String,
+        val targetBlocks: String,
+        val percent: Int
+    ) : ShieldedVerificationStatus()
+
+    /** Chain synced; balance parity not confirmed yet (probe pending / non-terminal mismatch). */
+    object AlmostDone : ShieldedVerificationStatus()
+
+    /** The harness stood down (terminal) — tell the tester to export logs. */
+    object Failed : ShieldedVerificationStatus()
+}
+
+/**
+ * Map the harness state to the toast's [ShieldedVerificationStatus] —
+ * pure, host-JVM-testable. Scanning picks the single most meaningful
+ * block pair: the header counts during the header phase, the
+ * wallet-relevant filter-scan counts from then on (falling back to the
+ * header pair while the filter block has no target yet); no usable
+ * target → `null` (static fallback copy). VERIFIED also maps to `null`:
+ * the funding gate opens on the next check and the toast disappears.
+ */
+internal fun mapVerificationStatus(
+    status: L1VerificationStatus,
+    progress: ShadowSyncProgress,
+    locale: Locale = Locale.getDefault()
+): ShieldedVerificationStatus? = when (status) {
+    L1VerificationStatus.FAILED -> ShieldedVerificationStatus.Failed
+    L1VerificationStatus.PROBING -> ShieldedVerificationStatus.AlmostDone
+    L1VerificationStatus.SCANNING -> {
+        val useFilters = progress.phase != ShadowSyncPhase.HEADERS && progress.filterTarget > 0
+        val (height, target) = if (useFilters) {
+            progress.filterHeight to progress.filterTarget
+        } else {
+            progress.headerHeight to progress.headerTarget
+        }
+        if (target > 0) {
+            ShieldedVerificationStatus.Scanning(
+                scannedBlocks = String.format(locale, "%,d", height.coerceIn(0, target)),
+                targetBlocks = String.format(locale, "%,d", target),
+                percent = progress.overallPercent.toInt().coerceIn(0, 100)
+            )
+        } else {
+            null
+        }
+    }
+    L1VerificationStatus.UNKNOWN, L1VerificationStatus.VERIFIED -> null
+}
 
 /**
  * Single UI state of the "Internal transfer" screen (Figma sections
@@ -102,6 +170,12 @@ data class ShieldedTransferUIState(
      * shadow-SPV parity gate). Gates [canContinue] for that direction.
      */
     val walletShieldingAvailable: Boolean = false,
+    /**
+     * Live status for the funding-gate toast (the [walletShieldingAvailable]
+     * == false while [chainSynced] case) — see [ShieldedVerificationStatus].
+     * `null` (flags off / no shadow data) keeps the static fallback copy.
+     */
+    val verificationStatus: ShieldedVerificationStatus? = null,
     val showConfirm: Boolean = false,
     val submitState: ShieldedSubmitState = ShieldedSubmitState.Idle
 ) {
@@ -170,7 +244,8 @@ class ShieldedTransferViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     blockchainStateProvider: BlockchainStateProvider,
     walletUIConfig: WalletUIConfig,
-    exchangeRates: ExchangeRatesProvider
+    exchangeRates: ExchangeRatesProvider,
+    l1ShadowSyncService: L1ShadowSyncService
 ) : ViewModel() {
 
     companion object {
@@ -246,6 +321,17 @@ class ShieldedTransferViewModel @Inject constructor(
         // Total balance only feeds the "<amount> pending" explainer line.
         walletDataProvider.observeTotalBalance()
             .onEach { _uiState.value = _uiState.value.copy(totalWalletBalance = Dash(it.value)) }
+            .launchIn(viewModelScope)
+
+        // Live verification status for the funding-gate toast. Flag-gated
+        // upstream: with the shadow harness off, verificationStatus stays
+        // UNKNOWN and this maps to null — the static fallback copy.
+        combine(
+            l1ShadowSyncService.verificationStatus,
+            l1ShadowSyncService.progress
+        ) { status, progress -> mapVerificationStatus(status, progress) }
+            .distinctUntilChanged()
+            .onEach { _uiState.value = _uiState.value.copy(verificationStatus = it) }
             .launchIn(viewModelScope)
 
         walletUIConfig.observe(WalletUIConfig.SELECTED_CURRENCY)
