@@ -28,6 +28,7 @@ import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
@@ -121,6 +122,24 @@ internal fun mapVerificationStatus(
 }
 
 /**
+ * Why the transfer screen's blocked-state toast is showing — the pure,
+ * host-JVM-testable priority mapping behind
+ * [ShieldedTransferUIState.blockedReason]; the composable only picks the
+ * string. Ordered by which problem the user must wait out first:
+ *
+ * 1. [CHAIN_SYNCING] — the runtime is not up or the dashj L1 chain is
+ *    still syncing; both directions are blocked.
+ * 2. [POOL_SYNCING] — the shielded pool is still catching up
+ *    ([ShieldedSyncStatus] != READY); both directions are blocked (see
+ *    [ShieldedTransferUIState.shieldedPoolReady]).
+ * 3. [FUNDING_PENDING] — everything is synced but the Dash Wallet →
+ *    Shielded L1 funding-evidence gate is closed (shadow-SPV parity
+ *    pending); only that direction is blocked, and the toast may show the
+ *    live [ShieldedVerificationStatus].
+ */
+enum class ShieldedBlockedReason { CHAIN_SYNCING, POOL_SYNCING, FUNDING_PENDING }
+
+/**
  * Single UI state of the "Internal transfer" screen (Figma sections
  * 1746:18463 Dash Wallet → Shielded and 1746:18480 Shielded → Dash Wallet,
  * error states 1750:19287, confirmation overlays 1689:15082 / 1746:18481).
@@ -148,6 +167,13 @@ data class ShieldedTransferUIState(
     val shieldedBalance: Dash = Dash.ZERO,
     /** True once the shielded runtime bring-up succeeded. */
     val ready: Boolean = false,
+    /**
+     * Live [ShieldedSyncStatus] of the shielded pool, mirrored from
+     * [ShieldedBalanceService.shieldedSyncStatus]. Conservative
+     * [ShieldedSyncStatus.NOT_READY] default until the first emission;
+     * gates BOTH directions via [shieldedPoolReady].
+     */
+    val shieldedSyncStatus: ShieldedSyncStatus = ShieldedSyncStatus.NOT_READY,
     val readyCheckDone: Boolean = false,
     /**
      * True while the dashj L1 chain is synced ([isChainSyncedForTransfer]:
@@ -229,8 +255,42 @@ data class ShieldedTransferUIState(
     val directionAvailable: Boolean
         get() = direction == ShieldedTransferDirection.FromShielded || walletShieldingAvailable
 
+    /**
+     * True once the shielded pool has caught up ([ShieldedSyncStatus.READY]).
+     * Gates BOTH directions:
+     *
+     * - Dash Wallet → Shielded: both live Ambiguous shield failures happened
+     *   while the pool was still SYNCING after app start — the Type 18 shield
+     *   transition needs the pool's anchor/note bookkeeping caught up, and an
+     *   Ambiguous result is terminal for the user ("may have gone through, do
+     *   not retry"), so it must not be risked on a known-stale pool.
+     * - Shielded → Dash Wallet: spending notes requires an up-to-date note
+     *   set + recorded anchors — a mid-sync view can build the ~30s proof
+     *   against already-spent notes or a stale anchor and fail (or land
+     *   Ambiguous) after the wait. The available shielded balance itself is
+     *   also untrustworthy until READY (it reads 0 during a re-scan).
+     */
+    val shieldedPoolReady: Boolean
+        get() = shieldedSyncStatus == ShieldedSyncStatus.READY
+
+    /**
+     * Why the blocked-state toast is showing, or null when no gate blocks
+     * (or the initial readiness check has not finished — no toast flash
+     * before the first result). See [ShieldedBlockedReason] for the
+     * priority order.
+     */
+    val blockedReason: ShieldedBlockedReason?
+        get() = when {
+            !readyCheckDone -> null
+            !ready || !chainSynced -> ShieldedBlockedReason.CHAIN_SYNCING
+            !shieldedPoolReady -> ShieldedBlockedReason.POOL_SYNCING
+            !directionAvailable -> ShieldedBlockedReason.FUNDING_PENDING
+            else -> null
+        }
+
     val canContinue: Boolean
-        get() = ready && chainSynced && directionAvailable && amount.isPositive && !insufficientFunds &&
+        get() = ready && chainSynced && shieldedPoolReady && directionAvailable &&
+            amount.isPositive && !insufficientFunds &&
             (dashMode || rate != null) &&
             // NotSent is provably pre-broadcast, so retrying is safe
             (submitState == ShieldedSubmitState.Idle || submitState is ShieldedSubmitState.NotSent)
@@ -301,6 +361,14 @@ class ShieldedTransferViewModel @Inject constructor(
 
         shieldedBalanceService.observeShieldedBalance()
             .onEach { _uiState.value = _uiState.value.copy(shieldedBalance = it) }
+            .launchIn(viewModelScope)
+
+        // Shielded-pool readiness gate: both directions stay blocked until
+        // the pool's first sync pass has finished (READY) — see the
+        // shieldedPoolReady KDoc for why each direction needs it. Live: the
+        // gate opens by itself once the pass lands, no screen re-entry.
+        shieldedBalanceService.shieldedSyncStatus
+            .onEach { _uiState.value = _uiState.value.copy(shieldedSyncStatus = it) }
             .launchIn(viewModelScope)
 
         // ChainLocked-only wallet balance: re-select whenever the

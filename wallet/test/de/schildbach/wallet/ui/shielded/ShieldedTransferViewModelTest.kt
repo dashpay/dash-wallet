@@ -25,6 +25,7 @@ import de.schildbach.wallet.service.platform.sdk.ShadowSyncPhase
 import de.schildbach.wallet.service.platform.sdk.ShadowSyncProgress
 import de.schildbach.wallet.service.platform.sdk.ShieldFromWalletOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -69,10 +70,14 @@ class ShieldedTransferViewModelTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
 
+    // READY by default so the pre-existing tests exercise their own gates;
+    // the pool-readiness tests drive this flow directly.
+    private val poolSyncStatus = MutableStateFlow(ShieldedSyncStatus.READY)
     private val shieldedService = mockk<ShieldedBalanceService> {
         coEvery { ensureShieldedReady() } returns true
         coEvery { isWalletShieldingAvailable() } returns true
         every { observeShieldedBalance() } returns flowOf(Dash.parse("15.5"))
+        every { shieldedSyncStatus } returns poolSyncStatus
     }
     private val walletData = mockk<WalletDataProvider> {
         // total balance only feeds the "pending" explainer; the
@@ -371,6 +376,109 @@ class ShieldedTransferViewModelTest {
         assertFalse((null as BlockchainState?).isChainSyncedForTransfer(now))
         assertFalse(
             BlockchainState(/* replaying = */ false).isChainSyncedForTransfer(now)
+        )
+    }
+
+    // ── Shielded-pool readiness gate (live Ambiguous failures happened
+    //    while the pool was still SYNCING after app start) ───────────────
+
+    @Test
+    fun poolNotReady_blocksBothDirections() = runTest(dispatcher) {
+        poolSyncStatus.value = ShieldedSyncStatus.NOT_READY
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        assertFalse(vm.uiState.value.shieldedPoolReady)
+        // Dash Wallet → Shielded: the shield transition must not race a stale pool
+        assertFalse(vm.uiState.value.canContinue)
+
+        // Shielded → Dash Wallet: spending notes needs up-to-date notes + anchors
+        vm.onSwapDirection()
+        assertFalse(vm.uiState.value.canContinue)
+    }
+
+    @Test
+    fun poolSyncing_blocksBothDirections() = runTest(dispatcher) {
+        poolSyncStatus.value = ShieldedSyncStatus.SYNCING
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        assertFalse(vm.uiState.value.shieldedPoolReady)
+        assertFalse(vm.uiState.value.canContinue)
+
+        vm.onSwapDirection()
+        assertFalse(vm.uiState.value.canContinue)
+    }
+
+    @Test
+    fun poolBecomingReady_unblocksLive_withoutReentry() = runTest(dispatcher) {
+        poolSyncStatus.value = ShieldedSyncStatus.SYNCING
+        val vm = viewModel()
+
+        vm.onKeyInput("1")
+        assertFalse(vm.uiState.value.canContinue)
+
+        // The first sync pass lands while the screen is open: the gate
+        // opens by itself — both directions.
+        poolSyncStatus.value = ShieldedSyncStatus.READY
+        assertTrue(vm.uiState.value.shieldedPoolReady)
+        assertTrue(vm.uiState.value.canContinue)
+
+        vm.onSwapDirection()
+        assertTrue(vm.uiState.value.canContinue)
+    }
+
+    // blockedReason is the pure priority mapping behind the blocked-state
+    // toast (the composable only picks the string per reason) — pin it.
+    @Test
+    fun blockedReason_toastMapping() {
+        val allGreen = ShieldedTransferUIState(
+            ready = true,
+            readyCheckDone = true,
+            chainSynced = true,
+            shieldedSyncStatus = ShieldedSyncStatus.READY,
+            walletShieldingAvailable = true
+        )
+        // nothing blocks → no toast
+        assertNull(allGreen.blockedReason)
+
+        // before the first readiness check finishes, never flash a toast
+        assertNull(allGreen.copy(readyCheckDone = false, ready = false).blockedReason)
+
+        // chain/runtime sync outranks everything
+        assertEquals(
+            ShieldedBlockedReason.CHAIN_SYNCING,
+            allGreen.copy(chainSynced = false, shieldedSyncStatus = ShieldedSyncStatus.SYNCING)
+                .blockedReason
+        )
+        assertEquals(ShieldedBlockedReason.CHAIN_SYNCING, allGreen.copy(ready = false).blockedReason)
+
+        // pool sync outranks the funding gate and hits BOTH directions
+        for (status in listOf(ShieldedSyncStatus.NOT_READY, ShieldedSyncStatus.SYNCING)) {
+            assertEquals(
+                ShieldedBlockedReason.POOL_SYNCING,
+                allGreen.copy(shieldedSyncStatus = status, walletShieldingAvailable = false)
+                    .blockedReason
+            )
+            assertEquals(
+                ShieldedBlockedReason.POOL_SYNCING,
+                allGreen.copy(
+                    shieldedSyncStatus = status,
+                    direction = ShieldedTransferDirection.FromShielded
+                ).blockedReason
+            )
+        }
+
+        // funding gate: only the ToShielded direction, only once all synced
+        assertEquals(
+            ShieldedBlockedReason.FUNDING_PENDING,
+            allGreen.copy(walletShieldingAvailable = false).blockedReason
+        )
+        assertNull(
+            allGreen.copy(
+                walletShieldingAvailable = false,
+                direction = ShieldedTransferDirection.FromShielded
+            ).blockedReason
         )
     }
 

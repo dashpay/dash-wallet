@@ -23,10 +23,10 @@ import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
 import android.text.SpannableString
 import android.text.Spanned
+import android.text.TextPaint
 import android.text.format.DateFormat
-import android.text.style.RelativeSizeSpan
+import android.text.style.MetricAffectingSpan
 import android.text.style.StyleSpan
-import android.text.style.SuperscriptSpan
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -484,7 +484,12 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
      * Compact credits string with the magnitude suffix letter rendered at the
      * design's smaller, raised caption size (Figma shows "115.5ᴮ" — 20sp value,
      * 11sp/20sp ≈ 0.55 heavy superscript "B"). No suffix (small values) renders
-     * plain.
+     * plain. The raise is done by [RaisedSuffixSpan], NOT
+     * [android.text.style.SuperscriptSpan]: the platform span shifts the
+     * baseline up by half the ascent, TextLine extends the line's ascent by
+     * that whole shift, and the taller line box grew the Shielded pill past
+     * its sibling Dash pill once a real value replaced "Syncing…"
+     * (screenshot-verified card misalignment on the More screen).
      */
     private fun compactCreditsSpannable(balance: Dash): CharSequence {
         val text = balance.toCompactCreditsString()
@@ -494,9 +499,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         }
         val start = text.length - 1
         return SpannableString(text).apply {
-            setSpan(RelativeSizeSpan(0.55f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            setSpan(SuperscriptSpan(), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            // bold first: RaisedSuffixSpan then measures the BOLD full-size
+            // ascent it must stay inside (spans apply in insertion order)
             setSpan(StyleSpan(Typeface.BOLD), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(RaisedSuffixSpan(0.55f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
@@ -648,5 +654,37 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         super.onResume()
         //TODO: remove && Constants.SUPPORTS_INVITES when INVITES are supported
         binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
+    }
+}
+
+/**
+ * Scales the credits magnitude suffix down by [scale] and raises it toward
+ * the cap line WITHOUT growing the line box — unlike
+ * [android.text.style.SuperscriptSpan], whose `baselineShift += ascent / 2`
+ * pushes the run's ascent above the surrounding text's (TextLine extends the
+ * line's ascent by any negative baselineShift), expanding the TextView's
+ * line height and with it the balance pill.
+ *
+ * This span shrinks the glyph FIRST and then raises it only until the scaled
+ * ascent touches the ORIGINAL full-size ascent: the run's effective ascent
+ * (`scaledAscent + shift == fullAscent`) exactly equals the surrounding
+ * text's, and the scaled top stays inside the full-size top
+ * (`fullAscent + (top − ascent) · scale > fullTop` for scale < 1), so the
+ * line metrics — and the pill height — are identical whether the suffix is
+ * present or not. Applied to both measuring and drawing so layout and render
+ * agree.
+ */
+private class RaisedSuffixSpan(private val scale: Float) : MetricAffectingSpan() {
+
+    override fun updateDrawState(tp: TextPaint) = raise(tp)
+
+    override fun updateMeasureState(tp: TextPaint) = raise(tp)
+
+    private fun raise(tp: TextPaint) {
+        val fullAscent = tp.ascent() // negative (distance above the baseline)
+        tp.textSize *= scale
+        // negative shift raises; sized so the scaled ascent lands exactly on
+        // the full-size ascent — never above it
+        tp.baselineShift += (fullAscent - tp.ascent()).toInt()
     }
 }

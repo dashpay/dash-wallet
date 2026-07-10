@@ -78,7 +78,16 @@
                          after a long wrap_content amount gets pushed past the
                          pill edge and clips (the "≡" artifact). Uniform
                          auto-size shrinks long balances (e.g. 1.54427919 Đ)
-                         to fit one line, so the symbol can never clip. -->
+                         to fit one line, so the symbol can never clip.
+
+                         Both amount TextViews are pinned to the SAME fixed
+                         26sp height (Figma card 89dp: pill = py-10 + a 26px
+                         line box around the 20px amount) instead of
+                         wrap_content: the two pills must stay pixel-identical
+                         in height no matter what each renders (autosized
+                         "1.53 Đ", the raised-suffix "512M C", "Syncing…"),
+                         so line-box differences — font padding, autosize
+                         floor, spans — can never misalign the cards again. -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -93,7 +102,7 @@
                             android:id="@+id/wallet_balance_card_amount"
                             style="@style/Subtitle2"
                             android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                            android:layout_height="26sp"
                             android:gravity="center"
                             android:maxLines="1"
                             android:textAlignment="center"
@@ -148,13 +157,16 @@
                              (toCompactCreditsString caps at "999.9B"-shaped
                              values), so the wrap_content amount + symbol group
                              centers as a unit like the design; maxLines guards
-                             the pathological case. -->
+                             the pathological case. Height pinned to the same
+                             fixed 26sp as wallet_balance_card_amount — see the
+                             comment on the sibling card. -->
                         <TextView
                             android:id="@+id/shielded_balance_card_amount"
                             style="@style/Subtitle2"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
+                            android:layout_height="26sp"
                             android:ellipsize="end"
+                            android:gravity="center"
                             android:maxLines="1"
                             android:textSize="20sp"
                             tools:text="115.5B" />

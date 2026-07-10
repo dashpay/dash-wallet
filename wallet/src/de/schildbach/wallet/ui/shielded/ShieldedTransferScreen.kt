@@ -269,24 +269,28 @@ private fun ShieldedTransferScreenContent(
             )
         }
 
-        // Blocked-state toast, split by the REAL reason:
-        // (a) "Wait until the chain is fully synced…" (Figma 1733:16190)
-        //     for a not-ready runtime or an L1 chain that is still syncing
-        //     (both directions are blocked until isSynced);
-        // (b) "Verifying your balance…" for a ready runtime on a synced
-        //     chain whose Dash Wallet → Shielded direction is still
-        //     blocked by the L1 funding-evidence gate (shadow-SPV balance
-        //     parity pending) — NOT a sync problem, so it must not reuse
-        //     the sync-flavored string. When the shadow harness exposes
-        //     live status (uiState.verificationStatus) the toast shows it:
-        //     scanning block counts, "almost done" while parity is being
-        //     probed, or the terminal verification failure (export logs);
-        //     null keeps the static fallback copy.
-        if (uiState.readyCheckDone &&
-            (!uiState.ready || !uiState.chainSynced || !uiState.directionAvailable)
-        ) {
-            val syncBlocked = !uiState.ready || !uiState.chainSynced
-            val verification = uiState.verificationStatus.takeUnless { syncBlocked }
+        // Blocked-state toast, split by the REAL reason (the priority
+        // mapping is uiState.blockedReason — pure and host-JVM-tested):
+        // (a) CHAIN_SYNCING — "Wait until the chain is fully synced…"
+        //     (Figma 1733:16190) for a not-ready runtime or an L1 chain
+        //     that is still syncing (both directions blocked);
+        // (b) POOL_SYNCING — "Shielded balance is syncing…" while the
+        //     shielded pool's first sync pass has not finished (both
+        //     directions blocked; see ShieldedTransferUIState
+        //     .shieldedPoolReady for why spends must not race the pool);
+        // (c) FUNDING_PENDING — "Verifying your balance…" for a fully
+        //     synced wallet whose Dash Wallet → Shielded direction is
+        //     still blocked by the L1 funding-evidence gate (shadow-SPV
+        //     balance parity pending) — NOT a sync problem, so it must not
+        //     reuse a sync-flavored string. When the shadow harness
+        //     exposes live status (uiState.verificationStatus) the toast
+        //     shows it: scanning block counts, "almost done" while parity
+        //     is being probed, or the terminal verification failure
+        //     (export logs); null keeps the static fallback copy.
+        val blockedReason = uiState.blockedReason
+        if (blockedReason != null) {
+            val verification = uiState.verificationStatus
+                .takeIf { blockedReason == ShieldedBlockedReason.FUNDING_PENDING }
             Toast(
                 text = when (verification) {
                     is ShieldedVerificationStatus.Scanning -> stringResource(
@@ -300,10 +304,11 @@ private fun ShieldedTransferScreenContent(
                     ShieldedVerificationStatus.Failed ->
                         stringResource(R.string.shielded_verification_failed)
                     null -> stringResource(
-                        if (syncBlocked) {
-                            R.string.shielded_error_not_ready
-                        } else {
-                            R.string.shielded_error_wallet_funding_pending
+                        when (blockedReason) {
+                            ShieldedBlockedReason.CHAIN_SYNCING -> R.string.shielded_error_not_ready
+                            ShieldedBlockedReason.POOL_SYNCING -> R.string.shielded_error_pool_syncing
+                            ShieldedBlockedReason.FUNDING_PENDING ->
+                                R.string.shielded_error_wallet_funding_pending
                         }
                     )
                 },
@@ -1019,6 +1024,7 @@ private fun previewState(
     shieldedBalance = Dash.parse("15.5"),
     ready = true,
     readyCheckDone = true,
+    shieldedSyncStatus = de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus.READY,
     chainSynced = true,
     walletShieldingAvailable = true,
     showConfirm = showConfirm,
@@ -1079,6 +1085,19 @@ private fun TransferTimingSheetPreview() {
 @Composable
 private fun TransferProvingPreview() {
     ShieldedTransferScreenContent(uiState = previewState(submitState = ShieldedSubmitState.Proving))
+}
+
+// Chain synced + runtime ready but the shielded pool's first sync pass
+// hasn't finished: Continue disabled and the toast shows the
+// pool-syncing copy (both directions blocked until READY).
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – shielded pool syncing")
+@Composable
+private fun TransferPoolSyncingPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState().copy(
+            shieldedSyncStatus = de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus.SYNCING
+        )
+    )
 }
 
 // Chain synced + runtime ready but the L1 funding-evidence gate hasn't
