@@ -479,3 +479,33 @@ decision; (6) delete the artifacts + dppVersions matrix, grep org.dashj.platform
 Six MUST-HAVE SDK gaps drafted as paste-ready issues (accountReference slice, encrypted-doc
 create, decrypt-on-fetch, identity topup surface, avatarHash-only profiles, identityVerify) —
 see the 2026-07-10 audit in the session records; file against dashpay/platform.
+
+## Phase 5c breakdown (2026-07-10 design pass)
+
+Full analysis in session records; essentials. In 5c dashj still runs SPV and stays
+wallet-of-record — only build/sign/broadcast moves. That enables the BRIDGE strategy (the
+key unlock): the SDK's signed raw tx bytes → dashj Transaction → wallet.maybeCommitTx →
+the returned instance is the live confidence-table object, so waitToMatchFilters /
+LockedTransaction / lockOutput / memo+exchangeRate persistence / result-screen IS
+animations work with zero per-call-site changes. maybeCommitTx handles the bloom-filter
+double-commit race (same as the BIP70 path); arm noteSelfSpendBroadcast on every bridged send.
+
+SDK gaps to file (dashpay/platform): GAP-1 return {rawTxBytes, fee, changeAddress} from
+sendToAddresses (bytes exist Rust-side; small FFI accessor — FIRST ask); GAP-2 CoreSendOptions
+(drainAccount/send-all, feeRate, fundingAddresses, include/excludeOutpoints, changeAddress,
+allowUnconfirmed) — unblocks CrowdNode protocol + send-max; GAP-3 estimateSend preflight
+(fee/change preview must equal the actual send); GAP-4 split build/broadcast + reservation
+release (BIP70 deferred submission); NICE: GAP-5 OP_RETURN/output-order (Maya — last
+holdout with asset locks), GAP-6 broadcast-time persistence contract, GAP-7 fee-rate default docs.
+
+Wallet-side order: NOW → 5c.0 fee/change parity probe (dashj dry-run vs SDK Room row per
+send), 5c.1 bridge feasibility probe (Room-row latency, dashj bloom latency, reconstruct+
+maybeCommitTx dry-run), 5c.2 SdkBridgedTransactionFactory, 5c.3 Coinbase completion.
+After GAP-1 → 5c.4 main Send UI cutover (fee preview stays dashj until GAP-3 + probe
+evidence). After GAP-2/3/4 → 5c.5/5c.6 CrowdNode (ByAddressCoinSelector→fundingAddresses,
+ExactOutputsSelector→includeOutpoints, lockOutput→excludeOutpoints, change pinning), 5c.7
+BIP70. Deferred: Maya (GAP-5), asset locks (own phase). Risks: fee-policy divergence
+(ECONOMIC_FEE 1000/kB vs undocumented Rust default — don't flip main UI until probe deltas
+~zero), unconfirmed-input policy unknown (measure; ZeroConfCoinSelector chains off pending
+change), CrowdNode API-layer auto-retries must be audited before 5c.6 (Ambiguous must never
+be re-driven), isTransactionPending false-negatives fixed by bridging even txid-only sites.
