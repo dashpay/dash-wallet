@@ -50,6 +50,7 @@ import de.schildbach.wallet.service.BlockchainServiceImpl
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.NonInteractiveWalletUnlock
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyQueries
 import de.schildbach.wallet.service.platform.sdk.SdkProfileQueries
 import de.schildbach.wallet.service.platform.sdk.SdkUsernameQueries
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
@@ -158,6 +159,7 @@ class PlatformSynchronizationService @Inject constructor(
     private val walletDataProvider: WalletDataProvider,
     private val sdkProfileQueries: SdkProfileQueries,
     private val sdkUsernameQueries: SdkUsernameQueries,
+    private val sdkIdentityVerifyQueries: SdkIdentityVerifyQueries,
     private val sdkWalletBinder: SdkWalletBinder,
     private val nonInteractiveWalletUnlock: NonInteractiveWalletUnlock,
     private val l1ShadowSyncService: L1ShadowSyncService,
@@ -1520,7 +1522,19 @@ class PlatformSynchronizationService @Inject constructor(
                                 }
 
                                 if (contestedDocument != null) {
-                                    val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                                    // dashpay/platform#4088 (light way): the contender's
+                                    // verification link via the Kotlin SDK's generic
+                                    // document search behind USE_KOTLIN_SDK_DPNS_READS
+                                    // (default off); null = flag off or SDK path failed —
+                                    // fall through to the unchanged dashj query.
+                                    // Optional.empty() = the SDK definitively reported no
+                                    // link, so dashj is NOT queried again.
+                                    val sdkUrl = sdkIdentityVerifyQueries.getVerificationUrl(identifier, name)
+                                    val verificationUrl = if (sdkUrl != null) {
+                                        sdkUrl.orElse(null)
+                                    } else {
+                                        IdentityVerify(platform.platform).get(identifier, name)?.url
+                                    }
 
                                     val requestId = UsernameRequest.getRequestId(identifier.toString(), normalizedLabel)
                                     val lastVote = votes.lastOrNull()
@@ -1530,7 +1544,7 @@ class PlatformSynchronizationService @Inject constructor(
                                         normalizedLabel = name,
                                         createdAt = contestedDocument.createdAt ?: -1L,
                                         identity = identifier.toString(),
-                                        link = identityVerifyDocument?.url,
+                                        link = verificationUrl,
                                         votes = contender.votes,
                                         lockVotes = voteContender.lockVoteTally,
                                         isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false
@@ -1601,7 +1615,16 @@ class PlatformSynchronizationService @Inject constructor(
 
                 if (!hasWinner) {
                     if (contestedDocument != null) {
-                        val identityVerifyDocument = IdentityVerify(platform.platform).get(identifier, name)
+                        // dashpay/platform#4088 (light way): same routing as
+                        // updateUsernameRequestsWithVotes above — SDK first
+                        // behind USE_KOTLIN_SDK_DPNS_READS, dashj fallback
+                        // only when the SDK path was not used.
+                        val sdkUrl = sdkIdentityVerifyQueries.getVerificationUrl(identifier, name)
+                        val verificationUrl = if (sdkUrl != null) {
+                            sdkUrl.orElse(null)
+                        } else {
+                            IdentityVerify(platform.platform).get(identifier, name)?.url
+                        }
 
                         val requestId = UsernameRequest.getRequestId(identifier.toString(), name)
                         val votes = usernameVoteDao.getVotes(name)
@@ -1613,7 +1636,7 @@ class PlatformSynchronizationService @Inject constructor(
                             normalizedLabel = name,
                             createdAt = contestedDocument.createdAt ?: -1L,
                             identity = identifier.toString(),
-                            link = identityVerifyDocument?.url,
+                            link = verificationUrl,
                             votes = contender.votes,
                             lockVotes = voteContender.lockVoteTally,
                             isApproved = lastVote?.let { it.identity == identifier.toString() } ?: false

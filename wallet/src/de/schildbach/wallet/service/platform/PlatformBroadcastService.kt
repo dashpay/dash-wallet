@@ -23,6 +23,7 @@ import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.sdk.SdkDashPayWrites
+import de.schildbach.wallet.service.platform.sdk.SdkIdentityVerifyWrites
 import de.schildbach.wallet.service.platform.sdk.SdkWalletBinder
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.service.platform.sdk.WalletUnlock
@@ -73,6 +74,7 @@ class PlatformDocumentBroadcastService @Inject constructor(
     val walletDataProvider: WalletDataProvider,
     val platformSyncService: PlatformSyncService,
     val sdkDashPayWrites: SdkDashPayWrites,
+    val sdkIdentityVerifyWrites: SdkIdentityVerifyWrites,
     val sdkWalletBinder: SdkWalletBinder
 ) : PlatformBroadcastService {
     companion object {
@@ -200,6 +202,47 @@ class PlatformDocumentBroadcastService @Inject constructor(
     override suspend fun broadcastIdentityVerify(username: String, url: String, encryptionKey: KeyParameter?): IdentityVerifyDocument {
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.broadcastIdentityVerify")
+
+        // Opportunistic background (re)bind, mirroring sendContactRequest:
+        // this call site holds the wallet decrypt key, so a bind that failed
+        // (or never ran) at platform-sync start is healed here and the NEXT
+        // write can take the SDK path. Fire-and-forget; inert unless a
+        // USE_KOTLIN_SDK_* flag is on.
+        encryptionKey?.let { sdkWalletBinder.bindInBackground(WalletUnlock.EncryptionKey(it)) }
+
+        // dashpay/platform#4088 (light way): the identityVerify document is
+        // routed through the Kotlin SDK's GENERIC document-create API behind
+        // USE_KOTLIN_SDK_DASHPAY_WRITES (default off) — same trust domain as
+        // the other Platform document writes, no dedicated SDK surface. The
+        // result is three-valued to keep the no-double-broadcast invariant:
+        // NotBroadcast → the SDK definitively submitted nothing, run the
+        // dashj path below unchanged; Broadcast → the document is on
+        // Platform, return the rebuilt document (all fields are
+        // client-determined) and do NOT run dashj; Ambiguous → surface the
+        // failure exactly like a dashj broadcast failure — never retry via
+        // dashj in the same call.
+        when (
+            val sdkResult = sdkIdentityVerifyWrites.createForDashDomain(
+                blockchainIdentity.uniqueIdString,
+                username,
+                url
+            )
+        ) {
+            is SdkWriteResult.Broadcast -> {
+                log.info("identity verify document sent via Kotlin SDK")
+                return sdkResult.value
+            }
+            is SdkWriteResult.Ambiguous -> {
+                log.error(
+                    "SDK identity verify outcome ambiguous (may be broadcast); surfacing error " +
+                        "without dashj retry"
+                )
+                throw sdkResult.cause as? Exception ?: RuntimeException(sdkResult.cause)
+            }
+            is SdkWriteResult.NotBroadcast -> {
+                // Fall through to the unchanged dashj path.
+            }
+        }
 
         // Create Identity Verify
         val timer = AnalyticsTimer(analytics, log, AnalyticsConstants.Process.PROCESS_CONTACT_REQUEST_SEND)
