@@ -126,6 +126,10 @@ class ShieldedBalanceServiceTest {
             return syncRunning
         }
 
+        /** Pass-in-flight signal for the sync-status poller (loop-independent). */
+        var syncing = false
+        override suspend fun isShieldedSyncing(): Boolean = syncing
+
         override suspend fun startShieldedSync() {
             startCalls++
             events += "start"
@@ -706,6 +710,55 @@ class ShieldedBalanceServiceTest {
             service(source).shieldFromCredits(Dash.COIN)
             assertEquals(1, source.broadcastCalls)
         }
+    }
+
+    // ── Pure mapping: sync status ─────────────────────────────────────────
+
+    @Test
+    fun syncStatus_mapping_decisionTable() {
+        // Not ready dominates regardless of the other inputs.
+        assertEquals(
+            ShieldedSyncStatus.NOT_READY,
+            mapShieldedSyncStatus(ready = false, firstPassCompleted = false, passInFlight = false)
+        )
+        assertEquals(
+            ShieldedSyncStatus.NOT_READY,
+            mapShieldedSyncStatus(ready = false, firstPassCompleted = true, passInFlight = true)
+        )
+        // Ready but the first pass has not finished → SYNCING, so the
+        // placeholder zero is never shown as a real balance.
+        assertEquals(
+            ShieldedSyncStatus.SYNCING,
+            mapShieldedSyncStatus(ready = true, firstPassCompleted = false, passInFlight = false)
+        )
+        // A pass in flight (a re-scan) is always SYNCING — even after the
+        // first pass completed: this is the "funded wallet reads 0 for
+        // minutes while re-scanning" case.
+        assertEquals(
+            ShieldedSyncStatus.SYNCING,
+            mapShieldedSyncStatus(ready = true, firstPassCompleted = true, passInFlight = true)
+        )
+        assertEquals(
+            ShieldedSyncStatus.SYNCING,
+            mapShieldedSyncStatus(ready = true, firstPassCompleted = false, passInFlight = true)
+        )
+        // Ready, first pass done, nothing in flight → the balance is trustworthy.
+        assertEquals(
+            ShieldedSyncStatus.READY,
+            mapShieldedSyncStatus(ready = true, firstPassCompleted = true, passInFlight = false)
+        )
+    }
+
+    @Test
+    fun syncStatus_startsNotReady_andIsInertWhileFlagOff() = runBlocking {
+        // No poller runs without a sweep scope (the test service), so the
+        // status stays at its constructed NOT_READY and the pass-in-flight
+        // signal is never touched.
+        val source = readySource()
+        val service = service(source, enabled = false)
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
+        service.ensureShieldedReady()
+        assertEquals(ShieldedSyncStatus.NOT_READY, service.shieldedSyncStatus.value)
     }
 
     // ── Pure mapping: credits ↔ Dash ──────────────────────────────────────

@@ -18,6 +18,7 @@
 package de.schildbach.wallet.service.platform.sdk
 
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import org.dash.wallet.common.money.Dash
 
 /**
@@ -77,6 +78,23 @@ enum class ShieldFromWalletOutcome {
      */
     SHIELD_PENDING_RETRY
 }
+
+/**
+ * Readiness/sync state of the shielded runtime, for UI that must not show a
+ * bare "0" while the pool is still catching up:
+ *
+ * - [NOT_READY]: the flag is off, or [ShieldedBalanceService.ensureShieldedReady]
+ *   has not yet completed a successful bring-up pass. The balance flow only
+ *   emits `Dash.ZERO` here — a placeholder, not a real balance.
+ * - [SYNCING]: the runtime is ready but a shielded sync pass is in flight
+ *   (or the first pass since bring-up has not finished). A funded wallet can
+ *   read `Dash.ZERO` here for minutes while the pool re-scans, so the UI
+ *   should show a "syncing" placeholder rather than the zero.
+ * - [READY]: bring-up done AND at least one sync pass has finished with no
+ *   pass currently in flight — the balance is trustworthy (and may
+ *   legitimately be zero for an empty pool).
+ */
+enum class ShieldedSyncStatus { NOT_READY, SYNCING, READY }
 
 /**
  * Phase 4 service layer (`docs/kotlin-sdk-migration-plan.md`): the wallet's
@@ -174,6 +192,17 @@ interface ShieldedBalanceService {
      * with unrecognized directions are not surfaced.
      */
     fun observeShieldedActivity(): Flow<List<ShieldedActivityEntry>>
+
+    /**
+     * Live [ShieldedSyncStatus] for the shielded runtime. Starts at
+     * [ShieldedSyncStatus.NOT_READY] and stays there while the flag is off
+     * (inert). After a successful [ensureShieldedReady] it reflects whether a
+     * sync pass is in flight, flipping to [ShieldedSyncStatus.READY] once the
+     * first pass has finished. UI reading [observeShieldedBalance] should
+     * treat any non-[ShieldedSyncStatus.READY] value as "balance not yet
+     * trustworthy" and show a syncing placeholder instead of the zero.
+     */
+    val shieldedSyncStatus: StateFlow<ShieldedSyncStatus>
 
     /**
      * The wallet's default shielded (Orchard) receive address for ZIP-32

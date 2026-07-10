@@ -24,14 +24,19 @@ import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -224,6 +229,28 @@ internal fun evaluateWalletFundingGate(
 }
 
 /**
+ * Pure [ShieldedSyncStatus] decision — host-testable. [ready] is the bring-up
+ * latch; [firstPassCompleted] latches once a full sync pass has finished since
+ * bring-up; [passInFlight] is the live "a pass is scanning right now" signal.
+ *
+ * A pass in flight is always [ShieldedSyncStatus.SYNCING] (the pool is
+ * re-scanning — the user-reported "funded wallet shows 0 for minutes" case),
+ * and before the first pass finishes we are likewise SYNCING rather than
+ * exposing the placeholder zero. Only a ready runtime with a finished pass and
+ * nothing in flight is [ShieldedSyncStatus.READY].
+ */
+internal fun mapShieldedSyncStatus(
+    ready: Boolean,
+    firstPassCompleted: Boolean,
+    passInFlight: Boolean
+): ShieldedSyncStatus = when {
+    !ready -> ShieldedSyncStatus.NOT_READY
+    passInFlight -> ShieldedSyncStatus.SYNCING
+    !firstPassCompleted -> ShieldedSyncStatus.SYNCING
+    else -> ShieldedSyncStatus.READY
+}
+
+/**
  * App-neutral view of one tracked shielded-top-up asset lock
  * (`asset_locks` row with `fundingTypeRaw == 5`).
  * [statusRaw]: 0 Built, 1 Broadcast, 2 InstantSendLocked, 3 ChainLocked,
@@ -275,6 +302,13 @@ interface ShieldedSource {
 
     /** Whether the background shielded sync LOOP is alive (not "a pass is in flight"). */
     suspend fun isShieldedSyncRunning(): Boolean
+
+    /**
+     * Whether a shielded sync PASS is currently in flight — distinct from
+     * [isShieldedSyncRunning] (loop alive, which stays true between passes).
+     * This is the signal the "syncing…" UI indicator polls.
+     */
+    suspend fun isShieldedSyncing(): Boolean
 
     suspend fun startShieldedSync()
 
@@ -385,6 +419,9 @@ internal class DashSdkShieldedSource(
 
     override suspend fun isShieldedSyncRunning(): Boolean =
         manager().isShieldedSyncRunning()
+
+    override suspend fun isShieldedSyncing(): Boolean =
+        manager().isShieldedSyncing()
 
     override suspend fun startShieldedSync() = manager().startShieldedSync()
 
@@ -598,10 +635,24 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val readyWalletIdHex = MutableStateFlow<String?>(null)
 
+    /**
+     * Live sync status for UI (see [ShieldedSyncStatus]). Driven by
+     * [startSyncStatusPolling] once ready; stays [ShieldedSyncStatus.NOT_READY]
+     * while the flag is off (nothing starts the poller).
+     */
+    private val _shieldedSyncStatus = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
+    override val shieldedSyncStatus: StateFlow<ShieldedSyncStatus> = _shieldedSyncStatus.asStateFlow()
+
+    /** The sync-status poll loop (see [startSyncStatusPolling]); null until ready. */
+    private var syncStatusJob: Job? = null
+
     override suspend fun ensureShieldedReady(): Boolean {
         if (!isEnabled()) return false
         val ready = ensureShieldedReadyInner()
         if (ready) {
+            // Begin (or keep) polling the SDK's pass-in-flight signal so the
+            // UI can distinguish "still syncing" from a real zero balance.
+            startSyncStatusPolling()
             // Staged-retry hook: finish any interrupted shieldFromWallet
             // (stage (b) after the L1 lock broadcast) in the background.
             // Cheap when nothing is pending (one Room query); serialized
@@ -666,8 +717,61 @@ class ShieldedBalanceServiceImpl internal constructor(
         lock.withLock {
             if (readyWalletIdHex.value == null) return
             readyWalletIdHex.value = null
+            syncStatusJob?.cancel()
+            syncStatusJob = null
+            _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
             runCatching { source.stopShieldedSync() }
                 .onFailure { log.warn("failed to stop the shielded sync loop", it) }
+        }
+    }
+
+    /**
+     * Poll the SDK's [ShieldedSource.isShieldedSyncing] pass-in-flight signal
+     * and publish [shieldedSyncStatus]. Idempotent (a live loop is reused) and
+     * scoped to [sweepScope] — with no scope (unit tests) the status stays at
+     * its constructed value and callers exercise [mapShieldedSyncStatus]
+     * directly.
+     *
+     * "First pass completed" is latched the first time we observe a pass go
+     * in-flight-then-idle. A wallet that is already caught up may never show a
+     * pass in flight, so a bounded idle settle ([SYNC_STATUS_SETTLE_POLLS]) also
+     * latches completion — during a genuine multi-block re-scan the pass stays
+     * in flight far longer than the settle window, so the placeholder is not
+     * dismissed prematurely there.
+     */
+    private fun startSyncStatusPolling() {
+        val scope = sweepScope ?: return
+        if (syncStatusJob?.isActive == true) return
+        syncStatusJob = scope.launch {
+            var seenPassInFlight = false
+            var firstPassCompleted = false
+            var idlePolls = 0
+            while (isActive) {
+                if (readyWalletIdHex.value == null) {
+                    _shieldedSyncStatus.value = ShieldedSyncStatus.NOT_READY
+                    break
+                }
+                val inFlight = runCatching { source.isShieldedSyncing() }
+                    .getOrElse {
+                        if (it is CancellationException) throw it
+                        false
+                    }
+                if (inFlight) {
+                    seenPassInFlight = true
+                    idlePolls = 0
+                } else {
+                    idlePolls++
+                    if (seenPassInFlight || idlePolls >= SYNC_STATUS_SETTLE_POLLS) {
+                        firstPassCompleted = true
+                    }
+                }
+                _shieldedSyncStatus.value = mapShieldedSyncStatus(
+                    ready = true,
+                    firstPassCompleted = firstPassCompleted,
+                    passInFlight = inFlight
+                )
+                delay(SYNC_STATUS_POLL_INTERVAL_MS)
+            }
         }
     }
 
@@ -1110,5 +1214,16 @@ class ShieldedBalanceServiceImpl internal constructor(
          * re-proved on every screen open. The counter resets on app start.
          */
         internal const val MAX_RESUME_ATTEMPTS_PER_PROCESS = 3
+
+        /** How often the sync-status poller samples the pass-in-flight signal. */
+        internal const val SYNC_STATUS_POLL_INTERVAL_MS = 500L
+
+        /**
+         * Consecutive idle polls (no pass in flight) after which the runtime is
+         * considered caught up even if a pass was never observed — the
+         * already-synced-wallet fallback so the "syncing…" placeholder is not
+         * shown indefinitely. At [SYNC_STATUS_POLL_INTERVAL_MS] this is ~3s.
+         */
+        internal const val SYNC_STATUS_SETTLE_POLLS = 6
     }
 }

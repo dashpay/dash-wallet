@@ -69,6 +69,7 @@
                         android:paddingHorizontal="4dp"
                         android:paddingTop="4dp"
                         android:text="@string/shielded_wallet_name"
+                        android:textAlignment="center"
                         android:textSize="15sp" />
 
                     <!-- The Đ is rendered as an Inter font glyph inside the
@@ -95,8 +96,10 @@
                             android:layout_height="wrap_content"
                             android:gravity="center"
                             android:maxLines="1"
+                            android:textAlignment="center"
+                            android:textColor="@color/content_primary"
                             app:autoSizeMaxTextSize="20sp"
-                            app:autoSizeMinTextSize="10sp"
+                            app:autoSizeMinTextSize="14sp"
                             app:autoSizeStepGranularity="1sp"
                             app:autoSizeTextType="uniform"
                             tools:text="2.00 Đ" />
@@ -128,6 +131,7 @@
                         android:paddingHorizontal="4dp"
                         android:paddingTop="4dp"
                         android:text="@string/shielded_balance_card_title"
+                        android:textAlignment="center"
                         android:textSize="15sp" />
 
                     <LinearLayout

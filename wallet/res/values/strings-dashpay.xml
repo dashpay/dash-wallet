@@ -525,6 +525,9 @@
     <string name="shielded_balance_card_title">Shielded</string>
     <string name="shielded_wallet_name">Dash Wallet</string>
     <string name="shielded_credits_symbol">C</string>
+    <!-- Shown on the More-screen "Shielded" card while the pool is still
+         syncing, so a funded wallet never briefly reads a misleading "0". -->
+    <string name="shielded_balance_syncing">Syncing…</string>
     <string name="shielded_tab_receive">Receive</string>
     <string name="shielded_tab_internal">Internal</string>
     <string name="shielded_tab_send">Send</string>

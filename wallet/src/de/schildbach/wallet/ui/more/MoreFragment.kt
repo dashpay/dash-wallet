@@ -18,9 +18,16 @@
 package de.schildbach.wallet.ui.more
 
 import android.content.Intent
+import android.graphics.Typeface
 import android.graphics.drawable.AnimationDrawable
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.format.DateFormat
+import android.text.style.RelativeSizeSpan
+import android.text.style.StyleSpan
+import android.text.style.SuperscriptSpan
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -57,6 +64,7 @@ import de.schildbach.wallet.ui.CreateUsernameActivity
 import de.schildbach.wallet.ui.EditProfileActivity
 import de.schildbach.wallet.ui.LockScreenActivity
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.ui.dashpay.CreateIdentityViewModel
 import de.schildbach.wallet.ui.dashpay.EditProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -70,6 +78,7 @@ import de.schildbach.wallet_test.databinding.FragmentMoreBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.dash.wallet.common.Configuration
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.services.analytics.AnalyticsConstants
 import org.dash.wallet.common.services.analytics.AnalyticsService
@@ -425,9 +434,69 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
                     "${cardFormat.format(org.dash.wallet.common.money.Dash(balance.value))} Đ"
             }
 
+            // The shielded card must never flash a bare "0" for a funded wallet
+            // while the pool re-syncs (observeShieldedBalance emits Dash.ZERO
+            // until ready AND during a re-scan). Render from the latest of BOTH
+            // the balance and the sync status: a real amount only when READY,
+            // otherwise a subtle "Syncing…" placeholder.
+            var latestBalance = Dash.ZERO
+            var latestStatus = shieldedBalanceService.shieldedSyncStatus.value
             shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
-                binding.shieldedBalanceCardAmount.text = balance.toCompactCreditsString()
+                latestBalance = balance
+                renderShieldedCardAmount(latestStatus, latestBalance)
             }
+            shieldedBalanceService.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
+                latestStatus = status
+                renderShieldedCardAmount(latestStatus, latestBalance)
+            }
+            renderShieldedCardAmount(latestStatus, latestBalance)
+
+            // Bring the shielded runtime up so the balance loads and the sync
+            // status advances past NOT_READY. Idempotent + single-flight; the
+            // background sync/poll runs in the app scope, not this one.
+            launch { runCatching { shieldedBalanceService.ensureShieldedReady() } }
+        }
+    }
+
+    /**
+     * Render the "Shielded" card's amount (Figma 1693:15853). READY shows the
+     * compact credits value at the design's 20sp with the magnitude suffix
+     * (B/M/K/T) raised and small (caption-2 11sp) plus the credits glyph; any
+     * other status shows a subtle "Syncing…" placeholder and hides the glyph,
+     * so a still-syncing funded wallet is never misread as empty.
+     */
+    private fun renderShieldedCardAmount(status: ShieldedSyncStatus, balance: Dash) {
+        val amount = binding.shieldedBalanceCardAmount
+        if (status == ShieldedSyncStatus.READY) {
+            amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
+            amount.text = compactCreditsSpannable(balance)
+            binding.shieldedBalanceCardSymbol.isVisible = true
+        } else {
+            amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_secondary))
+            amount.text = getString(R.string.shielded_balance_syncing)
+            binding.shieldedBalanceCardSymbol.isVisible = false
+        }
+    }
+
+    /**
+     * Compact credits string with the magnitude suffix letter rendered at the
+     * design's smaller, raised caption size (Figma shows "115.5ᴮ" — 20sp value,
+     * 11sp/20sp ≈ 0.55 heavy superscript "B"). No suffix (small values) renders
+     * plain.
+     */
+    private fun compactCreditsSpannable(balance: Dash): CharSequence {
+        val text = balance.toCompactCreditsString()
+        val last = text.lastOrNull()
+        if (last == null || !last.isLetter()) {
+            return text
+        }
+        val start = text.length - 1
+        return SpannableString(text).apply {
+            setSpan(RelativeSizeSpan(0.55f), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(SuperscriptSpan(), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            setSpan(StyleSpan(Typeface.BOLD), start, text.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
     }
 
