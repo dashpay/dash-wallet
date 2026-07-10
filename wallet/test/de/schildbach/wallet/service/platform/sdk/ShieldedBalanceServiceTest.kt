@@ -285,7 +285,8 @@ class ShieldedBalanceServiceTest {
         l1ShadowEnabled: Boolean = true,
         parity: () -> ParityReport? = { null },
         parityFlow: Flow<ParityReport?> = flowOf(parity()),
-        ensureL1SpvRunning: suspend () -> Boolean = { true }
+        ensureL1SpvRunning: suspend () -> Boolean = { true },
+        noteSelfSpendBroadcast: () -> Unit = {}
     ) = ShieldedBalanceServiceImpl(
         source = source,
         dashPayConfig = config(enabled, l1ShadowEnabled),
@@ -294,6 +295,7 @@ class ShieldedBalanceServiceTest {
         l1Parity = parity,
         l1ParityFlow = { parityFlow },
         ensureL1SpvRunning = ensureL1SpvRunning,
+        noteSelfSpendBroadcast = noteSelfSpendBroadcast,
         nowMs = { now }
     )
 
@@ -1015,6 +1017,35 @@ class ShieldedBalanceServiceTest {
         // BEFORE the asset-lock build/broadcast.
         assertEquals(listOf("ensureSpv", "fund"), order)
         assertEquals(1, source.fundCalls)
+    }
+
+    @Test
+    fun shieldFromWallet_armsSelfSpendGrace_beforeBroadcast() = runBlocking {
+        val source = readySource()
+        val order = mutableListOf<String>()
+        source.onFund = { order += "fund" }
+        val service = service(
+            source,
+            parity = { matchParity() },
+            noteSelfSpendBroadcast = { order += "grace" }
+        )
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.Broadcast)
+        // The asset lock is a self-spend whose inputs the SDK doesn't debit
+        // until it confirms; the parity grace must be armed strictly BEFORE
+        // the broadcast or the inflated-balance decider can hard-reset the
+        // shadow state right after a clean shield.
+        assertEquals(listOf("grace", "fund"), order)
+    }
+
+    @Test
+    fun shieldFromWallet_gateClosed_doesNotArmTheGrace() = runBlocking {
+        val source = readySource()
+        var armed = false
+        val service = service(source, parity = { null }, noteSelfSpendBroadcast = { armed = true })
+
+        assertTrue(service.shieldFromWallet(Dash.COIN) is SdkWriteResult.NotBroadcast)
+        assertFalse(armed)
     }
 
     // ── observeWalletShieldingAvailable: the LIVE funding gate ────────────

@@ -624,6 +624,18 @@ class ShieldedBalanceServiceImpl internal constructor(
      */
     private val ensureL1SpvRunning: suspend () -> Boolean = { true },
     /**
+     * Arms the L1-shadow parity grace before the asset-lock self-spend.
+     * The SDK does not yet debit spent multi-account inputs at broadcast
+     * time (PR #4074 follow-up), so its balance view reads inflated until
+     * the spend confirms — without the grace the parity decider mistakes
+     * that window for corruption and hard-resets the shadow state (seen
+     * live: a clean 0.2 shield triggering a full rescan). Prod wires
+     * [L1ShadowSyncService.noteSelfSpendBroadcast], the same marker the
+     * SDK L1 send path arms. Armed BEFORE the attempt: a NotBroadcast
+     * leaves a harmless grace, a broadcast without one risks the reset.
+     */
+    private val noteSelfSpendBroadcast: () -> Unit = {},
+    /**
      * Scope for the post-[ensureShieldedReady] pending-shield retry sweep
      * ([resumePendingWalletShields]); null (tests' default) disables the
      * automatic trigger — the method itself stays callable.
@@ -653,6 +665,7 @@ class ShieldedBalanceServiceImpl internal constructor(
         l1Parity = { l1ShadowSyncService.latestParity.value },
         l1ParityFlow = { l1ShadowSyncService.latestParity },
         ensureL1SpvRunning = { l1ShadowSyncService.ensureSpvRunning() },
+        noteSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
         sweepScope = applicationScope
     )
 
@@ -939,6 +952,13 @@ class ShieldedBalanceServiceImpl internal constructor(
             if (!ensureL1SpvRunning()) {
                 return notBroadcast(operation, "L1 sync not running", null)
             }
+
+            // Arm the parity self-spend grace BEFORE the attempt (see the
+            // [noteSelfSpendBroadcast] seam doc): the asset lock is a
+            // self-spend whose inputs the SDK doesn't debit until it
+            // confirms, and without the grace the inflated-balance decider
+            // hard-resets the shadow state right after a clean shield.
+            noteSelfSpendBroadcast()
 
             // Evidence baseline: the tracked shielded-top-up locks BEFORE
             // the attempt. Refuse to spend if it cannot be read — the
