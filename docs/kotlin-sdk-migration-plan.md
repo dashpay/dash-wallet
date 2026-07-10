@@ -449,3 +449,33 @@ lookahead 100) skipped mixing txs beyond the window — outputs never became UTX
 spent inputs were never debited. Fixed 30→100 in the PR #4074 vendored key-wallet (+ upstream
 patch coinjoin-gap-limit.patch). Note for cutover: wallets persisted under the old gap keep
 it in pool state — migration must bump via set_gap_limit or re-create.
+
+## Phase 3h (addendum 2026-07-10): retire the legacy org.dashj.platform stack
+
+Gap found in review: Phase 3 seamed *operations* behind flags but never scheduled removing
+the legacy dashj-platform library (org.dashj.platform:dash-sdk-{java,kotlin,android},
+per-flavor dppVersions matrix in wallet/build.gradle — prod 2.0.6-SNAPSHOT, testnet
+4.0.0-RC2-SNAPSHOT). 38 wallet files still import org.dashj.platform.*; both stacks ship
+on the classpath today. Feature areas and their state:
+
+| Area | Coupling | New-SDK equivalent | Today |
+|---|---|---|---|
+| A. BlockchainIdentity state machine (register/topup/recover) | Very deep — legacy Identity blob serialized into BlockchainIdentityData; IdentityStatus/UsernameStatus/KeyType persisted BY ENUM ORDINAL in Room converters | Partial (IdentityRegistration; no topup surface, no state object) | Always-on legacy |
+| B. Contact-request crypto (DIP-15 ECDH/accountReference) | Deep — Room entity fields | Yes, funds-safe; 28-bit accountReference slice mismatch outstanding | Flag seam exists, default legacy |
+| C. TxMetadata publish/fetch (encrypted docs, batching) | Deep — PlatformSyncService tickers, publish via legacy BlockchainIdentity.publishTxMetaData | NONE — SDK documents API is plaintext-only (no encrypted create, no decrypt-on-fetch) | Always-on legacy, unconditional |
+| D. Usernames/DPNS/voting | Medium — Room entities reference legacy types | Reads yes (flagged); vote casting exists but masternode-key writes unported | Reads flagged; vote broadcast legacy |
+| E. Invitations | Shallow-medium | None dedicated | Always-on legacy |
+| F. Profiles/avatars | Medium | Partial (createOrUpdateProfile needs avatarHash-without-bytes support) | Reads/writes flagged |
+| G. identityVerify | Medium | NONE | Always-on legacy |
+| H. PlatformService object graph (Platform+DapiClient+DPP) | Root of A–G | Structurally yes (Sdk) | Both instantiated |
+
+Ordered retirement steps: (1) neutral IdentityState in common + string-keyed Room converters
+(migration away from ordinals) + registration/topup/recovery behind USE_KOTLIN_SDK_IDENTITY;
+(2) contact-crypto default-on after accountReference reconciliation + parity test vector;
+(3) TxMetadata after the SDK gains encrypted-document create + decrypt-on-fetch (hardest gap);
+(4) reads default-on + vote casting decision; (5) identityVerify surface or keep-on-dashj
+decision; (6) delete the artifacts + dppVersions matrix, grep org.dashj.platform == 0.
+
+Six MUST-HAVE SDK gaps drafted as paste-ready issues (accountReference slice, encrypted-doc
+create, decrypt-on-fetch, identity topup surface, avatarHash-only profiles, identityVerify) —
+see the 2026-07-10 audit in the session records; file against dashpay/platform.
