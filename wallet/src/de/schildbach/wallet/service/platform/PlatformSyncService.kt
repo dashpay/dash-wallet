@@ -204,22 +204,33 @@ class PlatformSynchronizationService @Inject constructor(
         // wallet-crypter key non-interactively ([NonInteractiveWalletUnlock]
         // — the SecurityGuard-stored password, no user prompt; extracted so
         // the L1 shadow recovery path reuses the identical recipe).
+        kickSdkEngines()
+        log.info("Starting the platform sync job")
+    }
+
+    // Phase 5a (docs/kotlin-sdk-migration-plan.md): after the bind pass
+    // finishes (success or not — the service re-checks the bound state
+    // itself), kick the L1 shadow-sync parity harness. Fire-and-forget,
+    // provably inert unless USE_KOTLIN_SDK_L1_SHADOW is on (debug-only
+    // instrumentation — it runs a second SPV engine), and failures are
+    // logged+swallowed inside startIfEnabled(). Bind is single-flight and
+    // startIfEnabled() is idempotent, so re-running the recipe is safe.
+    private fun kickSdkEngines() {
         val bindJob = sdkWalletBinder.bindInBackground(nonInteractiveWalletUnlock::unlockOrNull)
-        // Phase 5a (docs/kotlin-sdk-migration-plan.md): after the bind pass
-        // finishes (success or not — the service re-checks the bound state
-        // itself), kick the L1 shadow-sync parity harness. Fire-and-forget,
-        // provably inert unless USE_KOTLIN_SDK_L1_SHADOW is on (debug-only
-        // instrumentation — it runs a second SPV engine), and failures are
-        // logged+swallowed inside startIfEnabled().
         syncScope.launch {
             bindJob.join()
             l1ShadowSyncService.startIfEnabled()
         }
-        log.info("Starting the platform sync job")
     }
 
     override fun resume() {
-        // This method may not be required.  initSync must be called by PreBlockDownload handler
+        // shutdown() stops the Kotlin-SDK background engines whenever the
+        // blockchain service is torn down (unclean-kill corruption guard),
+        // but this process outlives the service — so every service
+        // (re)start must kick them again, or the shadow parity harness
+        // stays down for the rest of the process lifetime and the shielded
+        // transfer gate never reopens ("Verifying your balance" forever).
+        kickSdkEngines()
     }
 
     override suspend fun initSync(runFirstUpdateBlocking: Boolean) {
