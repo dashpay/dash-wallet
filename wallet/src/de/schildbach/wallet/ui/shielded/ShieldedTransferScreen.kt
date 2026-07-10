@@ -178,6 +178,10 @@ private fun ShieldedTransferScreenContent(
 ) {
     val proving = uiState.transferInFlight
     val provingDialogShowing = proving && !uiState.provingDismissed
+    // Stalled is still in flight for the UI: no terminal outcome is known
+    // (the wedged spend may yet complete), so the Continue button keeps
+    // the in-progress state and stays locked.
+    val stalled = uiState.submitState is ShieldedSubmitState.Stalled
 
     // The dialog is dismissable (the spend keeps running on the app
     // scope): back hides the modal first; a second back leaves the
@@ -277,7 +281,7 @@ private fun ShieldedTransferScreenContent(
                     DashButton(
                         onClick = onContinue,
                         modifier = Modifier.fillMaxWidth(),
-                        text = if (proving) {
+                        text = if (proving || stalled) {
                             stringResource(R.string.shielded_proving_title)
                         } else {
                             stringResource(org.dash.wallet.common.R.string.button_continue)
@@ -363,7 +367,7 @@ private fun ShieldedTransferScreenContent(
             TransferTimingSheet(onDismiss = onTimingInfoDismissed)
         }
 
-        when (uiState.submitState) {
+        when (val submitState = uiState.submitState) {
             ShieldedSubmitState.Proving -> if (provingDialogShowing) {
                 ProvingOverlay(onDismiss = onDismissProving)
             }
@@ -387,6 +391,18 @@ private fun ShieldedTransferScreenContent(
                     onFinished()
                 }
             )
+            is ShieldedSubmitState.Stalled -> if (!submitState.acknowledged) {
+                // Watchdog: no outcome yet, nothing failed for sure. Close
+                // only hides the overlay (acknowledge) and leaves the flow
+                // — the state stays locked until a real terminal outcome
+                // supersedes it, so no retry can double-submit.
+                StalledOverlay(
+                    onClose = {
+                        onResultHandled()
+                        onFinished()
+                    }
+                )
+            }
             else -> {}
         }
     }
@@ -1052,6 +1068,63 @@ internal fun LockedPendingShieldOverlay(onClose: () -> Unit) {
     }
 }
 
+/**
+ * Stall-watchdog state ([ShieldedSubmitState.Stalled]): no terminal
+ * result after [ShieldedTransferExecutor.STALL_TIMEOUT_MS]. Funds-honest
+ * copy — the transfer may still complete in the background and nothing
+ * is known to have failed, so no failure wording and NO retry (the
+ * wedged spend could still clear; a retry could double-submit). Close
+ * only acknowledges the overlay; the state stays locked until a real
+ * terminal outcome supersedes it.
+ */
+@Composable
+internal fun StalledOverlay(onClose: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0x800A0B0D))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { /* consume — must be acknowledged */ },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 40.dp)
+                .background(MyTheme.Colors.backgroundSecondary, RoundedCornerShape(20.dp))
+                .padding(30.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Icon(
+                painter = painterResource(org.dash.wallet.common.R.drawable.ic_toast_info_warning),
+                contentDescription = null,
+                tint = Color.Unspecified,
+                modifier = Modifier.size(40.dp)
+            )
+            Text(
+                text = stringResource(R.string.shielded_transfer_stalled_title),
+                style = MyTheme.Typography.TitleMediumSemibold,
+                color = MyTheme.Colors.textPrimary,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = stringResource(R.string.shielded_transfer_stalled_message),
+                style = MyTheme.Typography.BodyMedium,
+                color = MyTheme.Colors.textSecondary,
+                textAlign = TextAlign.Center
+            )
+            DashButton(
+                text = stringResource(R.string.shielded_close),
+                style = Style.TintedGray,
+                size = Size.Large,
+                onClick = onClose
+            )
+        }
+    }
+}
+
 // ── Previews ────────────────────────────────────────────────────────────────
 
 private fun previewState(
@@ -1233,5 +1306,26 @@ private fun TransferVerificationFailedPreview() {
 private fun TransferAmbiguousPreview() {
     ShieldedTransferScreenContent(
         uiState = previewState(submitState = ShieldedSubmitState.MayHaveGoneThrough)
+    )
+}
+
+// Stall watchdog fired: "taking longer than expected" overlay — no
+// failure wording, no retry; Close only acknowledges.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – stalled")
+@Composable
+private fun TransferStalledPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState(submitState = ShieldedSubmitState.Stalled())
+    )
+}
+
+// Stalled acknowledged: the overlay is gone but the screen stays locked
+// (Continue disabled with the in-progress title) — the wedged spend may
+// still complete, so no resubmit path exists.
+@Preview(showBackground = true, widthDp = 393, heightDp = 852, name = "Transfer – stalled acknowledged")
+@Composable
+private fun TransferStalledAcknowledgedPreview() {
+    ShieldedTransferScreenContent(
+        uiState = previewState(submitState = ShieldedSubmitState.Stalled(acknowledged = true))
     )
 }

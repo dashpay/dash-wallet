@@ -31,6 +31,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.money.Dash
@@ -54,7 +56,12 @@ import org.junit.Test
  *   (with the per-outcome copy), global in-app toast when foregrounded
  *   away from the transfer screen, and silence while the transfer screen
  *   is visible (it surfaces the result itself);
- * - the fresh-visit / acknowledge state clearing rules.
+ * - the fresh-visit / acknowledge state clearing rules;
+ * - the stall watchdog: no terminal result within
+ *   [ShieldedTransferExecutor.STALL_TIMEOUT_MS] (a wedged uncancellable
+ *   native call) → the funds-honest Stalled state, announced once,
+ *   non-resubmittable and sticky until a REAL terminal outcome
+ *   supersedes it.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ShieldedTransferExecutorTest {
@@ -346,6 +353,143 @@ class ShieldedTransferExecutorTest {
         assertEquals(ShieldedSubmitState.MayHaveGoneThrough, executor.submitState.value)
     }
 
+    // ── Stall watchdog ──────────────────────────────────────────────────
+
+    @Test
+    fun watchdog_firesAtTheThreshold_notBefore_andKeepsSubmitLocked() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+        coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS - 1)
+        runCurrent()
+        assertEquals(ShieldedSubmitState.Proving, executor.submitState.value)
+
+        advanceTimeBy(1)
+        runCurrent()
+        assertEquals(ShieldedSubmitState.Stalled(), executor.submitState.value)
+
+        // Stalled is IN-FLIGHT for the no-resubmit rule: the wedged call
+        // may still clear, so a retry could double-submit.
+        assertFalse(executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1")))
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
+
+        // the wedged call eventually returns: the real outcome supersedes
+        // Stalled and unlocks per its own semantics
+        gate.complete(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+    }
+
+    @Test
+    fun watchdog_doesNotFire_whenATerminalResultLandsFirst() = runTest(dispatcher) {
+        coEvery { shieldedService.shieldFromWallet(any()) } returns
+            SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
+        // transfer screen visible → Success stays for the screen to surface
+        val executor = executor()
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+
+        advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS * 2)
+        runCurrent()
+        assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
+        assertTrue(inAppToasts.isEmpty())
+        verify(exactly = 0) {
+            notificationService.showNotification(any(), any(), any(), any(), any(), any())
+        }
+    }
+
+    @Test
+    fun stalled_announcedExactlyOnce_aLateTerminalIsAnnouncedToo() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+        coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+        val executor = executor(foreground = false, transferScreenVisible = false)
+
+        executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+        advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS)
+        runCurrent()
+
+        assertEquals(ShieldedSubmitState.Stalled(), executor.submitState.value)
+        verify(exactly = 1) {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_transfer_stalled_message),
+                str(R.string.shielded_transfer_stalled_title),
+                null,
+                null,
+                null
+            )
+        }
+
+        // more waiting never re-announces the stall
+        advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS * 3)
+        runCurrent()
+        verify(exactly = 1) {
+            notificationService.showNotification(
+                any(),
+                str(R.string.shielded_transfer_stalled_message),
+                any(),
+                any(),
+                any(),
+                any()
+            )
+        }
+
+        // the wedged call finally returns: the real terminal outcome
+        // supersedes Stalled and is announced through the same plumbing
+        gate.complete(SdkWriteResult.Ambiguous(RuntimeException("timeout")))
+        assertEquals(ShieldedSubmitState.MayHaveGoneThrough, executor.submitState.value)
+        verify(exactly = 1) {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_transfer_ambiguous_message),
+                str(R.string.shielded_transfer_ambiguous_title),
+                null,
+                null,
+                null
+            )
+        }
+        // …and follows its own semantics from here
+        executor.acknowledge()
+        assertEquals(ShieldedSubmitState.Idle, executor.submitState.value)
+    }
+
+    @Test
+    fun stalled_acknowledgeOnlyHidesTheOverlay_stickyAcrossVisits_untilTerminal() =
+        runTest(dispatcher) {
+            val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+            coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+            val executor = executor()
+
+            executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
+            advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS)
+            runCurrent()
+            assertEquals(ShieldedSubmitState.Stalled(), executor.submitState.value)
+
+            // acknowledge dismisses the overlay only — never resets to Idle
+            executor.acknowledge()
+            assertEquals(
+                ShieldedSubmitState.Stalled(acknowledged = true),
+                executor.submitState.value
+            )
+            assertFalse(executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1")))
+
+            // sticky like MayHaveGoneThrough: a fresh screen visit keeps it
+            executor.clearForNewVisit()
+            assertEquals(
+                ShieldedSubmitState.Stalled(acknowledged = true),
+                executor.submitState.value
+            )
+
+            // a late provably-pre-broadcast failure supersedes and, per its
+            // own semantics, makes a retry submit possible again
+            gate.complete(SdkWriteResult.NotBroadcast("preflight failed"))
+            assertTrue(executor.submitState.value is ShieldedSubmitState.NotSent)
+            assertTrue(executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1")))
+            coVerify(exactly = 2) { shieldedService.shieldFromWallet(any()) }
+        }
+
     // ── Pure outcome-copy mapping ───────────────────────────────────────
 
     @Test
@@ -382,7 +526,20 @@ class ShieldedTransferExecutorTest {
             ),
             shieldedOutcomeNotification(ShieldedSubmitState.MayHaveGoneThrough)
         )
-        // nothing to announce for the non-terminal states
+        // Stalled is not terminal but IS announced (once, by the watchdog)
+        // — funds-honest copy, no failure wording; acknowledging doesn't
+        // change the mapping
+        val stalledContent = ShieldedOutcomeNotification(
+            R.string.shielded_transfer_stalled_title,
+            R.string.shielded_transfer_stalled_message,
+            showsTransferCompletedToast = false
+        )
+        assertEquals(stalledContent, shieldedOutcomeNotification(ShieldedSubmitState.Stalled()))
+        assertEquals(
+            stalledContent,
+            shieldedOutcomeNotification(ShieldedSubmitState.Stalled(acknowledged = true))
+        )
+        // nothing to announce for the other non-terminal states
         assertNull(shieldedOutcomeNotification(ShieldedSubmitState.Idle))
         assertNull(shieldedOutcomeNotification(ShieldedSubmitState.Proving))
     }

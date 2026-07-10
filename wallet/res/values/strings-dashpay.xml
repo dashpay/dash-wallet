@@ -575,6 +575,12 @@
     <string name="shielded_transfer_failed_message">Nothing left your balance. Check the details and try again.</string>
     <string name="shielded_transfer_ambiguous_title">Transfer status unknown</string>
     <string name="shielded_transfer_ambiguous_message">Your transfer may have gone through. Do not send it again — your balances will update after the next sync.</string>
+    <!-- Stall watchdog (ShieldedTransferExecutor.STALL_TIMEOUT_MS without a terminal
+         result): funds-honest — we do NOT know whether anything broadcast, so no
+         failure wording and no retry. The transfer may still complete in the
+         background; leaving the screen is safe (the spend runs on the app scope). -->
+    <string name="shielded_transfer_stalled_title">This is taking longer than expected</string>
+    <string name="shielded_transfer_stalled_message">Your transfer may still complete in the background — your balances will update if it does. It’s safe to close this screen; we will let you know when there’s an update.</string>
     <string name="shielded_error_insufficient_funds">Insufficient funds</string>
     <!-- Secondary line under the From "Dash Wallet" balance: the not-yet-ChainLocked part of the total balance, e.g. "0.25 pending" -->
     <string name="shielded_pending_funds">%s pending</string>

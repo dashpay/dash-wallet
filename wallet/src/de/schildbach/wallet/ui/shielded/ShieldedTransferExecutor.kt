@@ -36,6 +36,7 @@ import de.schildbach.wallet_test.R
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -64,15 +65,18 @@ internal data class ShieldedOutcomeNotification(
 )
 
 /**
- * Map a submit state to its outcome surfacing, or null for the
- * non-terminal states (nothing to announce). Copy reuses the in-screen
+ * Map a submit state to its outcome surfacing, or null for the states
+ * with nothing to announce (Idle, Proving). Copy reuses the in-screen
  * strings so the story is identical wherever the user learns the result:
  *
  * - Success → "Transfer completed" (+ balance-updated line);
  * - LockedPendingShield → "Transfer in progress" (completes automatically);
  * - NotSent → "This transfer was not sent" (funds untouched, retry safe);
  * - MayHaveGoneThrough → the existing terminal ambiguous copy (do NOT
- *   send again).
+ *   send again);
+ * - Stalled (not terminal, but announced once when the watchdog fires) →
+ *   "taking longer than expected" — may still complete in the
+ *   background; no failure wording, no retry.
  */
 internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOutcomeNotification? =
     when (state) {
@@ -94,6 +98,11 @@ internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOu
         ShieldedSubmitState.MayHaveGoneThrough -> ShieldedOutcomeNotification(
             R.string.shielded_transfer_ambiguous_title,
             R.string.shielded_transfer_ambiguous_message,
+            showsTransferCompletedToast = false
+        )
+        is ShieldedSubmitState.Stalled -> ShieldedOutcomeNotification(
+            R.string.shielded_transfer_stalled_title,
+            R.string.shielded_transfer_stalled_message,
             showsTransferCompletedToast = false
         )
         ShieldedSubmitState.Idle, ShieldedSubmitState.Proving -> null
@@ -151,6 +160,16 @@ class ShieldedTransferExecutor @Inject constructor(
 
         /** One tag: a newer outcome replaces a stale one instead of stacking. */
         internal const val NOTIFICATION_TAG = "shielded_transfer_outcome"
+
+        /**
+         * Stall-watchdog threshold: no terminal result within this →
+         * [ShieldedSubmitState.Stalled]. Generous versus the expected
+         * ~30s proof + broadcast + proof-wait, so it only ever fires on
+         * a genuinely wedged spend (live incident: a Rust FFI deadlock
+         * kept the coroutine RUNNABLE inside the JNI call for 11+
+         * minutes — uncancellable from Kotlin).
+         */
+        internal const val STALL_TIMEOUT_MS = 3L * 60 * 1000
     }
 
     /** Test seam: the spend blocks for a ~30s Halo 2 proof and must stay off main. */
@@ -222,6 +241,36 @@ class ShieldedTransferExecutor @Inject constructor(
         }
 
         applicationScope.launch {
+            // Stall watchdog: the spend can wedge inside an uncancellable
+            // native frame (live incident: a Rust FFI deadlock — coroutine
+            // cancellation can never interrupt a JNI call that doesn't
+            // return), so a user must not be left on an eternal spinner
+            // with no story. After STALL_TIMEOUT_MS without a terminal
+            // result, Proving → Stalled (funds-honest: we do NOT know
+            // whether anything broadcast — Stalled stays non-resubmittable
+            // like an in-flight op) and the state is announced through the
+            // normal outcome surfacing, exactly once. The wedged call is
+            // deliberately NOT cancelled: if it eventually returns, its
+            // real outcome below supersedes Stalled and is announced too.
+            val watchdog = launch {
+                delay(STALL_TIMEOUT_MS)
+                val stalled = synchronized(this@ShieldedTransferExecutor) {
+                    if (_submitState.value == ShieldedSubmitState.Proving) {
+                        _submitState.value = ShieldedSubmitState.Stalled()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                if (stalled) {
+                    log.warn(
+                        "shielded transfer has no outcome after {} ms — surfacing Stalled " +
+                            "(the spend keeps running; a terminal result will supersede)",
+                        STALL_TIMEOUT_MS
+                    )
+                    surfaceOutcome(ShieldedSubmitState.Stalled())
+                }
+            }
             val result = withContext(ioDispatcher) {
                 try {
                     when (direction) {
@@ -238,6 +287,7 @@ class ShieldedTransferExecutor @Inject constructor(
                     SdkWriteResult.NotBroadcast("failed to prepare transfer", e)
                 }
             }
+            watchdog.cancel()
             val outcome = when (result) {
                 is SdkWriteResult.Broadcast -> when (result.value) {
                     ShieldFromWalletOutcome.SHIELD_PENDING_RETRY -> {
@@ -255,17 +305,32 @@ class ShieldedTransferExecutor @Inject constructor(
                     ShieldedSubmitState.MayHaveGoneThrough
                 }
             }
-            _submitState.value = outcome
+            // Under the lock so the watchdog's Proving-check-and-set can
+            // never clobber a just-landed terminal result; a terminal
+            // outcome landing AFTER Stalled overwrites it (supersedes).
+            synchronized(this@ShieldedTransferExecutor) {
+                _submitState.value = outcome
+            }
             surfaceOutcome(outcome)
         }
         return true
     }
 
-    /** The user handled the result on screen — any terminal state resets to Idle. */
+    /**
+     * The user handled the result on screen — any terminal state resets
+     * to Idle. Stalled only dismisses its overlay ([ShieldedSubmitState
+     * .Stalled.acknowledged]): the underlying spend may still be wedged
+     * in flight, so the state stays non-resubmittable until a real
+     * terminal outcome supersedes it (or the process restarts).
+     */
     fun acknowledge() {
         synchronized(this) {
-            if (_submitState.value != ShieldedSubmitState.Proving) {
-                _submitState.value = ShieldedSubmitState.Idle
+            when (val state = _submitState.value) {
+                ShieldedSubmitState.Proving -> Unit
+                is ShieldedSubmitState.Stalled -> {
+                    _submitState.value = state.copy(acknowledged = true)
+                }
+                else -> _submitState.value = ShieldedSubmitState.Idle
             }
         }
     }
@@ -286,8 +351,9 @@ class ShieldedTransferExecutor @Inject constructor(
      * A FRESH screen entry (new activity instance): don't resurrect an
      * already-surfaced Success (its navigation would fire spuriously) or
      * a stale inline NotSent — but an in-flight Proving and the
-     * funds-critical MayHaveGoneThrough / LockedPendingShield states
-     * stay until the user acknowledges them.
+     * funds-critical MayHaveGoneThrough / LockedPendingShield / Stalled
+     * states stay: the first two until the user acknowledges them,
+     * Stalled until a real terminal outcome supersedes it.
      */
     fun clearForNewVisit() {
         synchronized(this) {

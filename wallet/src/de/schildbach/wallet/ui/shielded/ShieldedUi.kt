@@ -74,6 +74,22 @@ sealed class ShieldedSubmitState {
      * the UI must never offer a manual "send again".
      */
     object LockedPendingShield : ShieldedSubmitState()
+
+    /**
+     * The stall watchdog fired: no terminal result within
+     * [de.schildbach.wallet.ui.shielded.ShieldedTransferExecutor.STALL_TIMEOUT_MS]
+     * (live incident: a Rust FFI deadlock kept the spend RUNNABLE inside
+     * an uncancellable JNI frame for 11+ minutes). Funds-honest — we do
+     * NOT know whether anything broadcast — so it is treated as
+     * IN-FLIGHT for the no-resubmit rule (`canContinue` stays false; a
+     * retry while the wedged call is still alive could double-submit
+     * once the wedge clears) and it is sticky like [MayHaveGoneThrough]:
+     * a fresh screen visit keeps it. [acknowledged] only hides the
+     * on-screen overlay; the state itself is superseded only by a REAL
+     * terminal outcome (the wedged call eventually returning) or a
+     * process restart.
+     */
+    data class Stalled(val acknowledged: Boolean = false) : ShieldedSubmitState()
 }
 
 /** Platform credits per duff (1 DASH = 1e8 duffs = 1e11 credits). */

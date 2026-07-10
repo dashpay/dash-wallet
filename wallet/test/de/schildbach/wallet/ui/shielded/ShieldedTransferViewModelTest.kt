@@ -40,7 +40,9 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.bitcoinj.core.Coin
@@ -332,6 +334,40 @@ class ShieldedTransferViewModelTest {
         val vm = viewModel()
         vm.onDismissProving()
         assertFalse(vm.uiState.value.provingDismissed)
+    }
+
+    // The stall watchdog: a wedged spend (uncancellable native frame)
+    // surfaces as Stalled after the threshold, and the screen treats it
+    // as in-flight — Continue stays locked (a retry could double-submit
+    // once the wedge clears), and only a real terminal outcome unlocks.
+    @Test
+    fun stalled_keepsContinueLocked_untilATerminalResultSupersedes() = runTest(dispatcher) {
+        val gate = CompletableDeferred<SdkWriteResult<ShieldFromWalletOutcome>>()
+        coEvery { shieldedService.shieldFromWallet(any()) } coAnswers { gate.await() }
+        val vm = viewModel()
+
+        vm.typeAmountAndConfirm()
+        assertEquals(ShieldedSubmitState.Proving, vm.uiState.value.submitState)
+
+        advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS)
+        runCurrent()
+        assertEquals(ShieldedSubmitState.Stalled(), vm.uiState.value.submitState)
+        // funds safety: amount + gates are all green, only Stalled blocks
+        assertFalse(vm.uiState.value.canContinue)
+
+        // dismissing the stalled overlay must not unlock the screen —
+        // the state only flips to acknowledged and stays non-resubmittable
+        vm.onResultHandled()
+        assertEquals(
+            ShieldedSubmitState.Stalled(acknowledged = true),
+            vm.uiState.value.submitState
+        )
+        assertFalse(vm.uiState.value.canContinue)
+
+        // the wedged spend finally returns: its real outcome supersedes
+        gate.complete(SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED))
+        assertEquals(ShieldedSubmitState.Success, vm.uiState.value.submitState)
+        coVerify(exactly = 1) { shieldedService.shieldFromWallet(any()) }
     }
 
     // The background status toast must freeze while a modal overlay is up
