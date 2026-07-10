@@ -38,6 +38,7 @@ import de.schildbach.wallet.service.AndroidActionsService
 import de.schildbach.wallet.service.AppRestartService
 import de.schildbach.wallet.service.RestartService
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.more.tools.ZenLedgerApi
@@ -116,9 +117,10 @@ abstract class AppModule {
             identityRepository: IdentityRepository,
             platformRepo: PlatformRepo,
             transactionMetadataProvider: TransactionMetadataProvider,
-            sdkL1SendService: SdkL1SendService
+            sdkL1SendService: SdkL1SendService,
+            l1ShadowSyncService: L1ShadowSyncService
         ): SendPaymentService {
-            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService)
+            val realService = SendCoinsTaskRunner(walletData, walletApplication, securityFunctions, packageInfoProvider, analyticsService, identityConfig, identityRepository, platformRepo, transactionMetadataProvider, sdkL1SendService, l1ShadowSyncService)
 
             return if (BuildConfig.FLAVOR.lowercase() == "prod") {
                 realService

@@ -35,10 +35,14 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.flow.first
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -82,10 +86,15 @@ class SettingsViewModelTest {
         every { observeBase() } returns emptyFlow()
     }
     private val dashPayProfileDao = mockk<DashPayProfileDao>()
+    private val walletDataProvider = mockk<WalletDataProvider> {
+        every { freshReceiveAddressString() } returns "yOwnFreshAddress"
+    }
+    private val sendPaymentService = mockk<SendPaymentService>()
 
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
+        coEvery { dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) } answers { l1SendFlag.value }
     }
 
     @After
@@ -96,12 +105,13 @@ class SettingsViewModelTest {
     private fun viewModel() = SettingsViewModel(
         walletApplication = walletApplication,
         walletUIConfig = walletUIConfig,
-        walletDataProvider = mockk<WalletDataProvider>(),
+        walletDataProvider = walletDataProvider,
         analytics = mockk<AnalyticsService>(relaxed = true),
         configuration = mockk<Configuration>(),
         dashPayConfig = dashPayConfig,
         blockchainIdentityConfig = blockchainIdentityConfig,
         blockchainServiceConfig = mockk<BlockchainServiceConfig>(),
+        sendPaymentService = sendPaymentService,
         dashPayProfileDao = dashPayProfileDao
     )
 
@@ -148,5 +158,66 @@ class SettingsViewModelTest {
         viewModel.setUseKotlinSdkL1Send(true) // must not throw
 
         assertFalse(viewModel.uiState.value.useKotlinSdkL1Send) // state stays honest
+    }
+
+    // ── The debug-only soak send (runSdkSoakSend) ─────────────────────
+
+    private val soakTxid = "ab".repeat(32)
+
+    /** Waits out the IO-dispatched send and returns the settled state. */
+    private suspend fun SettingsViewModel.settledSoakState() =
+        uiState.first { !it.soakSendInFlight && it.soakSendStatus != null }
+
+    @Test
+    fun soakSend_sendsToOwnFreshAddress_viaTheNeutralOverload_andReportsTheFlag() = runTest(dispatcher) {
+        l1SendFlag.value = true
+        coEvery {
+            sendPaymentService.sendCoins("yOwnFreshAddress", Dash.parse("0.05"), false, true)
+        } returns soakTxid
+        val viewModel = viewModel()
+
+        viewModel.runSdkSoakSend()
+
+        val state = viewModel.settledSoakState()
+        assertTrue(state.soakSendStatus!!.startsWith("sent ${soakTxid.take(8)}"))
+        assertTrue(state.soakSendStatus!!.contains("SDK flag on"))
+        coVerify(exactly = 1) {
+            sendPaymentService.sendCoins("yOwnFreshAddress", Dash.parse("0.05"), false, true)
+        }
+    }
+
+    @Test
+    fun soakSendFailure_surfacesTheExceptionMessage() = runTest(dispatcher) {
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
+        } throws IllegalStateException("insufficient funds")
+        val viewModel = viewModel()
+
+        viewModel.runSdkSoakSend()
+
+        val state = viewModel.settledSoakState()
+        assertTrue(state.soakSendStatus!!.startsWith("failed: insufficient funds"))
+        assertTrue(state.soakSendStatus!!.contains("SDK flag off"))
+    }
+
+    @Test
+    fun soakSendReTaps_areIgnoredWhileInFlight() = runTest(dispatcher) {
+        val gate = CompletableDeferred<Unit>()
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
+        } coAnswers {
+            gate.await()
+            soakTxid
+        }
+        val viewModel = viewModel()
+
+        viewModel.runSdkSoakSend()
+        viewModel.runSdkSoakSend() // re-tap while in flight — must be a no-op
+        gate.complete(Unit)
+
+        viewModel.settledSoakState()
+        coVerify(exactly = 1) {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
+        }
     }
 }

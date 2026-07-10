@@ -109,7 +109,8 @@ class SendCoinsTaskRunnerSdkRoutingTest {
                 mockk<IdentityRepository>(relaxed = true),
                 mockk<PlatformRepo>(relaxed = true),
                 mockk<TransactionMetadataProvider>(relaxed = true),
-                sdkL1SendService
+                sdkL1SendService,
+                mockk(relaxed = true)
             )
         )
     }

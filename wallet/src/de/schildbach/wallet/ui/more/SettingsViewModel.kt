@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -37,6 +38,8 @@ import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.WalletDataProvider
 import org.dash.wallet.common.data.BlockchainServiceConfig
 import org.dash.wallet.common.data.WalletUIConfig
+import org.dash.wallet.common.money.Dash
+import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dash.wallet.common.util.Constants
 import org.slf4j.LoggerFactory
@@ -49,6 +52,10 @@ data class SettingsUIState(
     val transactionMetadataSubtitle: String? = null,
     /** Debug-only Phase 5b soak switch ([DashPayConfig.USE_KOTLIN_SDK_L1_SEND]). */
     val useKotlinSdkL1Send: Boolean = false,
+    /** A debug-only soak send ([SettingsViewModel.runSdkSoakSend]) is in flight. */
+    val soakSendInFlight: Boolean = false,
+    /** Outcome of the last debug-only soak send, shown inline as the item subtitle. */
+    val soakSendStatus: String? = null,
 )
 
 @HiltViewModel
@@ -61,6 +68,7 @@ class SettingsViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
     private val blockchainIdentityConfig: BlockchainIdentityConfig,
     private val blockchainServiceConfig: BlockchainServiceConfig,
+    private val sendPaymentService: SendPaymentService,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(
     blockchainIdentityConfig,
@@ -68,6 +76,12 @@ class SettingsViewModel @Inject constructor(
 ) {
     companion object {
         private val log = LoggerFactory.getLogger(SettingsViewModel::class.java)
+
+        /** Distinctive tag: `adb logcat`-greppable soak-send trail. */
+        private val soakLog = LoggerFactory.getLogger("SdkSoakSend")
+
+        /** Fixed debug soak-send amount: 0.05 Dash to our own fresh address. */
+        private val SOAK_SEND_AMOUNT = Dash.parse("0.05")
     }
 
     private val powerManager: PowerManager = walletApplication.getSystemService(PowerManager::class.java)
@@ -161,6 +175,58 @@ class SettingsViewModel @Inject constructor(
             } catch (e: Exception) {
                 log.error("failed to set USE_KOTLIN_SDK_L1_SEND", e)
             }
+        }
+    }
+
+    /**
+     * Debug-only Phase 5b soak send: 0.05 Dash to a FRESH OWN receive
+     * address through [SendPaymentService]'s NEUTRAL `sendCoins(String,
+     * Dash)` overload — the only send routed through the Kotlin SDK. With
+     * [DashPayConfig.USE_KOTLIN_SDK_L1_SEND] ON this exercises the SDK
+     * engine end to end; with it OFF it is a dashj control send over the
+     * identical call path. Signing is non-interactive on both routes
+     * (SecurityGuard-retrieved password / the SDK's mnemonic resolver —
+     * the same way CrowdNode invokes this runner), so no PIN/biometric
+     * prompt is needed here. Re-taps while a send is in flight are
+     * ignored; the outcome lands in [SettingsUIState.soakSendStatus].
+     */
+    fun runSdkSoakSend() {
+        if (_uiState.value.soakSendInFlight) {
+            soakLog.info("soak send already in flight; ignoring tap")
+            return
+        }
+        _uiState.value = _uiState.value.copy(
+            soakSendInFlight = true,
+            soakSendStatus = "sending ${SOAK_SEND_AMOUNT.toPlainString()} to self…"
+        )
+        viewModelScope.launch(Dispatchers.IO) {
+            // Engine label = the routing flag at send time (the neutral
+            // overload only returns a txid, deliberately route-agnostic).
+            val flagLabel = try {
+                if (dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_L1_SEND) == true) "SDK flag on" else "SDK flag off"
+            } catch (e: Exception) {
+                soakLog.warn("failed to read USE_KOTLIN_SDK_L1_SEND for the report label", e)
+                "SDK flag unknown"
+            }
+            val status = try {
+                val address = walletDataProvider.freshReceiveAddressString()
+                soakLog.info(
+                    "soak send: {} Dash to own fresh address {} ({})",
+                    SOAK_SEND_AMOUNT.toPlainString(), address, flagLabel
+                )
+                val txid = sendPaymentService.sendCoins(
+                    address,
+                    SOAK_SEND_AMOUNT,
+                    emptyWallet = false,
+                    checkBalanceConditions = true
+                )
+                soakLog.info("soak send broadcast: txid {} ({})", txid, flagLabel)
+                "sent ${txid.take(8)}… ($flagLabel)"
+            } catch (e: Exception) {
+                soakLog.error("soak send failed ({})", flagLabel, e)
+                "failed: ${e.message ?: e.javaClass.simpleName} ($flagLabel)"
+            }
+            _uiState.value = _uiState.value.copy(soakSendInFlight = false, soakSendStatus = status)
         }
     }
 

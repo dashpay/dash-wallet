@@ -65,7 +65,8 @@ fun SettingsScreen(
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onUseKotlinSdkL1SendChanged = viewModel::setUseKotlinSdkL1Send
+        onUseKotlinSdkL1SendChanged = viewModel::setUseKotlinSdkL1Send,
+        onRunSdkSoakSend = viewModel::runSdkSoakSend
     )
 }
 
@@ -79,7 +80,8 @@ fun SettingsScreen(
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
-    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {}
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
+    onRunSdkSoakSend: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -92,7 +94,8 @@ fun SettingsScreen(
         onNotificationsClick = onNotificationsClick,
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
-        onUseKotlinSdkL1SendChanged = onUseKotlinSdkL1SendChanged
+        onUseKotlinSdkL1SendChanged = onUseKotlinSdkL1SendChanged,
+        onRunSdkSoakSend = onRunSdkSoakSend
     )
 }
 
@@ -106,7 +109,8 @@ private fun SettingsScreenContent(
     onNotificationsClick: () -> Unit = {},
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
-    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {}
+    onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
+    onRunSdkSoakSend: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -200,6 +204,20 @@ private fun SettingsScreenContent(
                             "instead of dashj. Leave off unless soak-testing Phase 5b.",
                         checked = uiState.useKotlinSdkL1Send,
                         onCheckedChange = onUseKotlinSdkL1SendChanged
+                    )
+
+                    // One-tap Phase 5b soak send through the routed path
+                    // (SendCoinsTaskRunner's NEUTRAL overload): with the
+                    // toggle above ON it exercises the SDK engine end to
+                    // end, OFF it is a dashj control send. The outcome
+                    // lands inline in the subtitle; re-taps are ignored
+                    // while a send is in flight.
+                    MenuItem(
+                        title = "Run SDK soak send (0.05 to self)",
+                        subtitle = uiState.soakSendStatus
+                            ?: "Debug only: sends 0.05 Dash to a fresh own address via the " +
+                                "routed (neutral) send path. Real coins, real fees.",
+                        action = { if (!uiState.soakSendInFlight) onRunSdkSoakSend() }
                     )
                 }
             }

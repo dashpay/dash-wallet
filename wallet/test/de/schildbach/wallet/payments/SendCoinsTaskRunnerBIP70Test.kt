@@ -143,6 +143,9 @@ class SendCoinsTaskRunnerBIP70Test {
                 metadataProvider,
                 // Phase 5b routing is exercised in SendCoinsTaskRunnerSdkRoutingTest;
                 // these BIP70 flows never touch the neutral overload.
+                mockk(relaxed = true),
+                // Self-spend grace arming is exercised in
+                // SendCoinsTaskRunnerSelfSpendGraceTest.
                 mockk(relaxed = true)
             )
         )

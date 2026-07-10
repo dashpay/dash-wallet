@@ -28,6 +28,7 @@ import de.schildbach.wallet.security.SecurityFunctions
 import de.schildbach.wallet.security.SecurityGuard
 import de.schildbach.wallet.service.PackageInfoProvider
 import de.schildbach.wallet.service.platform.IdentityRepository
+import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkWriteResult
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
@@ -80,7 +81,8 @@ class SendCoinsTaskRunner @Inject constructor(
     private val identityRepository: IdentityRepository,
     private val platformRepo: PlatformRepo,
     private val metadataProvider: TransactionMetadataProvider,
-    private val sdkL1SendService: SdkL1SendService
+    private val sdkL1SendService: SdkL1SendService,
+    private val l1ShadowSyncService: L1ShadowSyncService
 ) : SendPaymentService {
     companion object {
         private const val WALLET_EXCEPTION_MESSAGE = "this method can't be used before creating the wallet"
@@ -589,6 +591,15 @@ class SendCoinsTaskRunner @Inject constructor(
             log.info("send successful, transaction committed in {}: {} ", watch, transaction.txId.toString())
             log.info("  transaction: {}", transaction.toStringHex())
             walletApplication.broadcastTransaction(transaction)
+            // EVERY dashj spend of the shared UTXOs (main send UI, CrowdNode,
+            // BIP70 — they all funnel through here) briefly inflates the SDK's
+            // shadow view by the fee until the next mined block, exactly like
+            // a Phase 5b SDK self-spend. Arm the same grace marker so the
+            // parity decider's INFLATED auto-reset cannot false-fire while a
+            // block is pending; a plain timestamp write, no-op cost when the
+            // shadow flag is off. Never affects the send result.
+            runCatching { l1ShadowSyncService.noteSelfSpendBroadcast() }
+                .onFailure { log.warn("failed to record the self-spend marker", it) }
             logSendTxEvent(transaction, wallet)
             monitorJob.cancel()
             transaction
