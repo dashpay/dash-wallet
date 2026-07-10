@@ -19,9 +19,6 @@ package de.schildbach.wallet.ui.shielded
 
 import android.content.Context
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import androidx.annotation.StringRes
 import androidx.core.os.bundleOf
 import androidx.lifecycle.Lifecycle
@@ -138,14 +135,15 @@ internal fun shieldedOutcomeNotification(state: ShieldedSubmitState): ShieldedOu
  * A terminal outcome is announced exactly once, where the user is:
  * - transfer screen visible → the screen's own state machine (success
  *   navigation, inline error, terminal overlays) — nothing extra here;
- * - app foregrounded elsewhere ([transferUiVisible] false) → a global
- *   in-app toast (the [android.widget.Toast] pattern the shielded flows
- *   already use, reachable from any screen); Success is auto-acknowledged
- *   then, so a later return to a still-alive transfer screen doesn't
- *   re-run the success navigation;
- * - app backgrounded → a system notification through the app's
- *   [NotificationService] (generic channel); tapping the success one
- *   opens the More screen with the existing "Transfer completed" toast.
+ * - anywhere else (elsewhere in the app OR backgrounded) → a system
+ *   notification through the app's [NotificationService] (generic
+ *   channel) — the dialog copy promises "We will notify you", and only
+ *   a notification is durable enough to honor it (an in-app toast was
+ *   missed live during an activity-recreation gap). Tapping the success
+ *   one opens the More screen with the existing "Transfer completed"
+ *   toast. When it lands while foregrounded-elsewhere, Success is also
+ *   auto-acknowledged so a later return to a still-alive transfer screen
+ *   doesn't re-run the success navigation.
  */
 @Singleton
 class ShieldedTransferExecutor @Inject constructor(
@@ -195,18 +193,6 @@ class ShieldedTransferExecutor @Inject constructor(
             R.id.moreFragment,
             bundleOf(MoreFragment.ARG_SHOW_TRANSFER_COMPLETED_TOAST to showToast)
         )
-    }
-
-    /**
-     * Test seam: the global in-app toast for a foregrounded user who is
-     * not on the transfer screen. [android.widget.Toast] is the one
-     * surface reachable from ANY activity (the shielded copy-address
-     * pattern); posted to the main looper because outcomes land on IO.
-     */
-    var showInAppToast: (message: String) -> Unit = { message ->
-        Handler(Looper.getMainLooper()).post {
-            Toast.makeText(appContext, message, Toast.LENGTH_LONG).show()
-        }
     }
 
     /**
@@ -372,31 +358,33 @@ class ShieldedTransferExecutor @Inject constructor(
     private fun surfaceOutcome(state: ShieldedSubmitState) {
         val content = shieldedOutcomeNotification(state) ?: return
         try {
-            when {
-                !isAppInForeground() -> {
-                    notificationService.showNotification(
-                        NOTIFICATION_TAG,
-                        appContext.getString(content.messageRes),
-                        title = appContext.getString(content.titleRes),
-                        intent = moreScreenIntent(content.showsTransferCompletedToast)
-                    )
-                }
-                !transferUiVisible -> {
-                    showInAppToast(appContext.getString(content.titleRes))
-                    // The success story is fully told; a still-alive
-                    // transfer screen must not ALSO run its success
-                    // navigation when the user wanders back. Failure
-                    // states stay sticky (inline retry / must-acknowledge
-                    // overlays on the next visit).
-                    if (state == ShieldedSubmitState.Success) {
-                        synchronized(this) {
-                            if (_submitState.value == ShieldedSubmitState.Success) {
-                                _submitState.value = ShieldedSubmitState.Idle
-                            }
-                        }
+            // The dialog copy promises "We will notify you when it's done",
+            // and an in-app toast is too ephemeral to honor that (observed
+            // live: completion landed during an activity-recreation gap and
+            // the toast was never seen). So the system notification posts
+            // whenever the user is NOT watching the transfer screen —
+            // Android surfaces it fine while the app is foregrounded. Only
+            // the visible transfer screen suppresses it: its own state
+            // machine tells the story (success navigation / overlays).
+            if (transferUiVisible && isAppInForeground()) {
+                return // the visible transfer screen surfaces it itself
+            }
+            notificationService.showNotification(
+                NOTIFICATION_TAG,
+                appContext.getString(content.messageRes),
+                title = appContext.getString(content.titleRes),
+                intent = moreScreenIntent(content.showsTransferCompletedToast)
+            )
+            // The success story is fully told; a still-alive transfer
+            // screen must not ALSO run its success navigation when the
+            // user wanders back. Failure states stay sticky (inline retry
+            // / must-acknowledge overlays on the next visit).
+            if (isAppInForeground() && state == ShieldedSubmitState.Success) {
+                synchronized(this) {
+                    if (_submitState.value == ShieldedSubmitState.Success) {
+                        _submitState.value = ShieldedSubmitState.Idle
                     }
                 }
-                else -> Unit // the visible transfer screen surfaces it itself
             }
         } catch (t: Throwable) {
             log.warn("failed to announce the shielded transfer outcome", t)

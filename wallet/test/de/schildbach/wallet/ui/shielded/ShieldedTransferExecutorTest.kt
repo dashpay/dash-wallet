@@ -52,10 +52,10 @@ import org.junit.Test
  *   ViewModel) can never cause a second broadcast;
  * - the SdkWriteResult → [ShieldedSubmitState] mapping (moved verbatim
  *   from the ViewModel);
- * - outcome surfacing: system notification when the app is backgrounded
- *   (with the per-outcome copy), global in-app toast when foregrounded
- *   away from the transfer screen, and silence while the transfer screen
- *   is visible (it surfaces the result itself);
+ * - outcome surfacing: a durable system notification (with the
+ *   per-outcome copy) whenever the user is not watching the transfer
+ *   screen — backgrounded OR foregrounded elsewhere — and silence while
+ *   the transfer screen is visible (it surfaces the result itself);
  * - the fresh-visit / acknowledge state clearing rules;
  * - the stall watchdog: no terminal result within
  *   [ShieldedTransferExecutor.STALL_TIMEOUT_MS] (a wedged uncancellable
@@ -76,7 +76,6 @@ class ShieldedTransferExecutorTest {
     private val appContext = mockk<Context> {
         every { getString(any()) } answers { "str:${firstArg<Int>()}" }
     }
-    private val inAppToasts = mutableListOf<String>()
 
     private fun executor(
         foreground: Boolean = true,
@@ -92,7 +91,6 @@ class ShieldedTransferExecutorTest {
         isAppInForeground = { foreground }
         transferUiVisible = transferScreenVisible
         moreScreenIntent = { null }
-        showInAppToast = { inAppToasts += it }
     }
 
     private fun str(resId: Int) = "str:$resId"
@@ -195,7 +193,6 @@ class ShieldedTransferExecutorTest {
         }
         // tapping success lands on the More screen WITH its completed toast
         assertEquals(true, toastRouteRequested)
-        assertTrue(inAppToasts.isEmpty())
     }
 
     @Test
@@ -234,7 +231,6 @@ class ShieldedTransferExecutorTest {
                 )
             }
         }
-        assertTrue(inAppToasts.isEmpty())
     }
 
     // ── Outcome surfacing: foregrounded ─────────────────────────────────
@@ -250,22 +246,30 @@ class ShieldedTransferExecutorTest {
         verify(exactly = 0) {
             notificationService.showNotification(any(), any(), any(), any(), any(), any())
         }
-        assertTrue(inAppToasts.isEmpty())
         // the state stays for the screen's own success navigation
         assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
     }
 
     @Test
-    fun foregroundedElsewhere_showsInAppToast_andAutoAcknowledgesSuccess() = runTest(dispatcher) {
+    fun foregroundedElsewhere_postsNotification_andAutoAcknowledgesSuccess() = runTest(dispatcher) {
         coEvery { shieldedService.shieldFromWallet(any()) } returns
             SdkWriteResult.Broadcast(ShieldFromWalletOutcome.COMPLETED)
         val executor = executor(foreground = true, transferScreenVisible = false)
 
         executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
 
-        assertEquals(listOf(str(R.string.shielded_transfer_completed)), inAppToasts)
-        verify(exactly = 0) {
-            notificationService.showNotification(any(), any(), any(), any(), any(), any())
+        // "We will notify you when it's done" — a durable system
+        // notification even while the app is foregrounded (a transient
+        // toast was missed live during an activity-recreation gap).
+        verify {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_notification_success_message),
+                str(R.string.shielded_transfer_completed),
+                null,
+                null,
+                null
+            )
         }
         // the success story is told: a still-alive transfer screen must
         // not re-run its success navigation when the user wanders back
@@ -273,14 +277,23 @@ class ShieldedTransferExecutorTest {
     }
 
     @Test
-    fun foregroundedElsewhere_failureToastKeepsTheStateSticky() = runTest(dispatcher) {
+    fun foregroundedElsewhere_failureNotificationKeepsTheStateSticky() = runTest(dispatcher) {
         coEvery { shieldedService.shieldFromWallet(any()) } returns
             SdkWriteResult.Ambiguous(RuntimeException("timeout"))
         val executor = executor(foreground = true, transferScreenVisible = false)
 
         executor.submit(ShieldedTransferDirection.ToShielded, Dash.parse("1"))
 
-        assertEquals(listOf(str(R.string.shielded_transfer_ambiguous_title)), inAppToasts)
+        verify {
+            notificationService.showNotification(
+                ShieldedTransferExecutor.NOTIFICATION_TAG,
+                str(R.string.shielded_transfer_ambiguous_message),
+                str(R.string.shielded_transfer_ambiguous_title),
+                null,
+                null,
+                null
+            )
+        }
         // funds-critical: the overlay must still confront the user on the
         // next screen visit until acknowledged
         assertEquals(ShieldedSubmitState.MayHaveGoneThrough, executor.submitState.value)
@@ -394,7 +407,6 @@ class ShieldedTransferExecutorTest {
         advanceTimeBy(ShieldedTransferExecutor.STALL_TIMEOUT_MS * 2)
         runCurrent()
         assertEquals(ShieldedSubmitState.Success, executor.submitState.value)
-        assertTrue(inAppToasts.isEmpty())
         verify(exactly = 0) {
             notificationService.showNotification(any(), any(), any(), any(), any(), any())
         }

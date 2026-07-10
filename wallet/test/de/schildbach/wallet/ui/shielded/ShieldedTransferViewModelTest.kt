@@ -162,7 +162,6 @@ class ShieldedTransferViewModelTest {
             isAppInForeground = { true }
             transferUiVisible = true
             moreScreenIntent = { null }
-            showInAppToast = {}
         }
 
     private fun viewModel(
