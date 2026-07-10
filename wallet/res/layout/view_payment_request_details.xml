@@ -36,7 +36,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:layout_marginBottom="16dp"
-        android:background="#c7c7c7" />
+        android:background="@color/divider_color" />
 
     <LinearLayout
         android:id="@+id/payment_amount_group"
