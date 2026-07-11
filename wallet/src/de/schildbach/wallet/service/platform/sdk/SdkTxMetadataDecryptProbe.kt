@@ -68,8 +68,17 @@ internal class DashSdkTxMetadataDecryptSource(
     private val service: DashSdkService
 ) : TxMetadataDecryptProbeSource {
 
+    /** Same logcat trail as the probe itself. */
+    private val log = LoggerFactory.getLogger("TxMetaDecryptProof")
+
     private suspend fun manager(): org.dashfoundation.dashsdk.wallet.PlatformWalletManager {
+        val alreadyStarted = service.isStarted
         service.ensureStarted()
+        log.info(
+            "source: wallet-manager resolution branch = {} (isStarted was {} before ensureStarted)",
+            if (alreadyStarted) "already-started" else "cold-boot",
+            alreadyStarted
+        )
         return checkNotNull(service.walletManagerOrNull()) {
             "SDK wallet manager missing after ensureStarted()"
         }
@@ -92,7 +101,17 @@ internal class DashSdkTxMetadataDecryptSource(
         sinceMs: Long
     ): String {
         val manager = manager()
+        val loadedIds = manager.wallets.value.keys
+        log.info(
+            "source: loaded SDK wallet ids = {} (resolving {})",
+            loadedIds.map { it.take(8) + "…" }, walletIdHex.take(8) + "…"
+        )
         val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
+        log.info(
+            "source: resolved wallet {}… handle={} (nonzero={}) — calling " +
+                "documentTransactions.fetchEncryptedDocuments",
+            walletIdHex.take(8), wallet.handle, wallet.handle != 0L
+        )
         return manager.documentTransactions.fetchEncryptedDocuments(
             walletHandle = wallet.handle,
             ownerId = ownerId,
@@ -302,7 +321,16 @@ class SdkTxMetadataDecryptProbe internal constructor(
             return notRun("identity-managed preflight failed", t)
         }
 
-        // The SDK fetch+decrypt under proof.
+        // The SDK fetch+decrypt under proof. Forensic stage logging: args →
+        // raw JSON (or the exact throwable) → parsed element count, so an
+        // on-device failure pins the exact stage from logcat alone.
+        log.info(
+            "fetch args: walletId={} ownerId={} (hex {}) contractId={} (hex {}) documentType={} sinceMs={}",
+            walletId,
+            ownerId.toString(), hex(ownerId.toBuffer()),
+            contract.toString(), hex(contract.toBuffer()),
+            SdkTxMetadataDecryptMapping.DOCUMENT_TYPE, 0L
+        )
         val docs = try {
             val fetchJson = source.fetchEncryptedDocuments(
                 walletIdHex = walletId,
@@ -311,10 +339,19 @@ class SdkTxMetadataDecryptProbe internal constructor(
                 documentType = SdkTxMetadataDecryptMapping.DOCUMENT_TYPE,
                 sinceMs = 0
             )
-            SdkTxMetadataDecryptMapping.docResults(fetchJson)
-                ?: return failed("SDK fetch returned a malformed payload", null)
+            log.info("fetch returned raw JSON ({} chars): {}", fetchJson.length, fetchJson)
+            val parsed = SdkTxMetadataDecryptMapping.docResults(fetchJson)
+            if (parsed == null) {
+                log.error("parse stage: fetch JSON root is not an array (see raw JSON above)")
+                return failed("SDK fetch returned a malformed payload", null)
+            }
+            log.info("parse stage: fetch JSON parsed, {} element(s) in array", parsed.size)
+            parsed
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
+            // Log the throwable EXPLICITLY (class + message + full stack
+            // trace) — the contained status line alone hides the cause.
+            log.error("fetch stage threw ${t.javaClass.name}: ${t.message}", t)
             return failed("SDK fetch failed", t)
         }
         docs.forEach { log.info(SdkTxMetadataDecryptMapping.docLine(it)) }
@@ -340,17 +377,30 @@ class SdkTxMetadataDecryptProbe internal constructor(
     }
 
     private fun notRun(reason: String, cause: Throwable?): String {
-        log.info("decrypt proof not run ({})", reason, cause)
+        // Explicit throwable overload — never rely on slf4j's trailing-
+        // throwable heuristic to surface the stack trace.
+        if (cause == null) {
+            log.info("decrypt proof not run ($reason)")
+        } else {
+            log.info("decrypt proof not run ($reason) — cause ${cause.javaClass.name}: ${cause.message}", cause)
+        }
         return "not run: $reason"
     }
 
     private fun failed(reason: String, cause: Throwable?): String {
-        log.error("decrypt proof failed ({})", reason, cause)
+        if (cause == null) {
+            log.error("decrypt proof failed ($reason)")
+        } else {
+            log.error("decrypt proof failed ($reason) — cause ${cause.javaClass.name}: ${cause.message}", cause)
+        }
         return "failed: $reason"
     }
 
     companion object {
         /** Distinctive tag: `adb logcat`-greppable proof trail. */
         private val log = LoggerFactory.getLogger("TxMetaDecryptProof")
+
+        private fun hex(bytes: ByteArray): String =
+            bytes.joinToString("") { "%02x".format(it) }
     }
 }
