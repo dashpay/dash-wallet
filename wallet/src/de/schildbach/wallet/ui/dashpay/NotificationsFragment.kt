@@ -147,6 +147,12 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
         }
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             notificationsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.recentlyModifiedContactsLiveData.observe(viewLifecycleOwner) {
             notificationsAdapter.recentlyModifiedContacts = it
@@ -260,6 +266,15 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
 
     private fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
         // this Ignore Request function is not currently implemented
+    }
+
+    private fun showSendContactRequestError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.send_contact_request_error_title),
+            getString(R.string.send_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     private fun sendContactRequest(usernameSearchResult: UsernameSearchResult) {

@@ -172,6 +172,17 @@ class DashPayUserActivity : LockScreenActivity() {
             updateContactRelationUi()
         }
 
+        // A failed send/accept must never be a silent no-op — the pane above
+        // only reverts to its pre-send state — so surface the failure.
+        viewModel.sendContactRequestError.observe(this) {
+            AdaptiveDialog.create(
+                R.drawable.ic_warning_yellow_circle,
+                getString(R.string.send_contact_request_error_title),
+                getString(R.string.send_contact_request_error_message),
+                getString(R.string.button_ok)
+            ).show(this)
+        }
+
         viewModel.notifications.observe(this) { notifications ->
             if (notifications.isNotEmpty()) {
                 binding.activityRv.isVisible = true

@@ -135,6 +135,8 @@
     <string name="notifications_you_have_accepted">You have accepted the contact request from %s</string>
     <string name="notifications_you_sent">You sent a contact request to %s</string>
     <string name="notifications_you_received">%s has sent you a contact request</string>
+    <string name="send_contact_request_error_title">Contact request not sent</string>
+    <string name="send_contact_request_error_message">There was an error sending the contact request. Please try again.</string>
 
     <string name="identity_complete_message">Your username %s has been successfully created on the Dash Network</string>
     <string name="request_complete_message">Your username %s has been successfully requested on the Dash Network</string>

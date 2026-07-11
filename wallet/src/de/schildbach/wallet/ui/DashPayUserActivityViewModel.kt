@@ -30,6 +30,7 @@ import de.schildbach.wallet.data.UsernameSearchResult
 import de.schildbach.wallet.data.UsernameSortOrderBy
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.livedata.Resource
+import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.DashSystemService
 import de.schildbach.wallet.service.platform.IdentityRepository
 import de.schildbach.wallet.service.platform.PlatformSyncService
@@ -49,6 +50,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.data.SingleLiveEvent
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dpp.identifier.Identifier
 import org.slf4j.LoggerFactory
@@ -78,6 +80,15 @@ class DashPayUserActivityViewModel @Inject constructor(
     private val _sendContactRequestState = MutableStateFlow<Resource<Pair<String, String>>?>(null)
     val sendContactRequestState: StateFlow<Resource<Pair<String, String>>?>
         get() = _sendContactRequestState.asStateFlow()
+
+    /**
+     * Fires once per FAILED send/accept contact request operation so the
+     * failure is surfaced (dialog) instead of the UI silently reverting to
+     * its pre-send state. One-shot: re-observation (rotation, resume) does
+     * not re-fire; a retried operation that fails again fires anew.
+     */
+    val sendContactRequestError = SingleLiveEvent<String?>()
+    private var contactRequestErrorSurfaced = false
 
     private val _notifications = MutableStateFlow<List<NotificationItem>>(listOf())
     val notifications: StateFlow<List<NotificationItem>>
@@ -136,6 +147,15 @@ class DashPayUserActivityViewModel @Inject constructor(
             context, userId, analytics
         ).onEach { resource ->
             _sendContactRequestState.value = resource
+            when (resource.status) {
+                // A new run of the operation re-arms the error latch.
+                Status.LOADING -> contactRequestErrorSurfaced = false
+                Status.ERROR -> if (!contactRequestErrorSurfaced) {
+                    contactRequestErrorSurfaced = true
+                    sendContactRequestError.postValue(resource.message)
+                }
+                else -> Unit
+            }
         }.launchIn(viewModelScope)
     }
 

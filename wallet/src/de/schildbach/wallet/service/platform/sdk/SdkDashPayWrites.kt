@@ -108,6 +108,23 @@ internal fun classifyBroadcastFailure(t: Throwable): SdkWriteResult<Nothing> = w
     // message-matched until the SDK exposes a typed signing error.
     t.message?.contains("no private key stored") == true ->
         SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): no private key stored", t)
+    // Android Keystore auth-window expiry: the SDK keeps identity keys
+    // AUTH_GATED (decryptable only within ~30 s of a biometric/device-credential
+    // unlock), and an expired window surfaces as UserNotAuthenticatedException —
+    // message "User not authenticated" — thrown while DECRYPTING the identity
+    // key to sign the state transition (KeystoreSigner.retrieveKeyWithAuth →
+    // WalletStorage.retrievePrivateKey; only the identity-key alias is
+    // auth-gated, so no other SDK path produces this message). Signing happens
+    // during transition CONSTRUCTION (dpp `sign_external_with_options`, called
+    // from `BatchTransition::new_document_*_transition_from_document` inside
+    // rs-sdk `put_to_platform`), strictly BEFORE `transition.broadcast` — the
+    // signer error propagates out before the broadcast line is reached, and no
+    // post-broadcast step invokes the identity-key signer. Nothing was
+    // submitted → safe dashj fallback (app-side keys, no Keystore gate).
+    // Message-matched until platform PR #4060 (DEVICE_BOUND key policy)
+    // replaces the auth window and gives this a typed error.
+    t.message?.contains("User not authenticated") == true ->
+        SdkWriteResult.NotBroadcast("signing failure (pre-broadcast): Keystore auth window expired", t)
     // Coin selection / insufficient funds happens during transaction BUILDING,
     // strictly before any broadcast — nothing was submitted. Surfaced as a
     // WalletOperation error carrying the reason in the message (observed live:

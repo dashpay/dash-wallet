@@ -108,12 +108,18 @@ internal class DashSdkTxMetadataDecryptSource(
         )
         val wallet = checkNotNull(manager.wallets.value[walletIdHex]) { "SDK wallet not loaded" }
         log.info(
-            "source: resolved wallet {}… handle={} (nonzero={}) — calling " +
-                "documentTransactions.fetchEncryptedDocuments",
-            walletIdHex.take(8), wallet.handle, wallet.handle != 0L
+            "source: resolved wallet {}… handle={} (nonzero={}) resolverHandle={} (nonzero={}) — " +
+                "calling documentTransactions.fetchEncryptedDocuments",
+            walletIdHex.take(8), wallet.handle, wallet.handle != 0L,
+            manager.mnemonicResolverHandle, manager.mnemonicResolverHandle != 0L
         )
+        // The app's SDK wallet is EXTERNAL-SIGNABLE (no private keys in the
+        // Rust wallet — keys derive on demand through the registered mnemonic
+        // resolver), so the txMetadata AES-key derivation REQUIRES the
+        // resolver handle — same plumbing as the discoverIdentities path.
         return manager.documentTransactions.fetchEncryptedDocuments(
             walletHandle = wallet.handle,
+            mnemonicResolverHandle = manager.mnemonicResolverHandle,
             ownerId = ownerId,
             contractId = contractId,
             documentType = documentType,

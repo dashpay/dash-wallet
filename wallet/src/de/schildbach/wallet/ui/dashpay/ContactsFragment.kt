@@ -249,6 +249,12 @@ class ContactsFragment : Fragment(),
         dashPayViewModel.sendContactRequestState.observe(viewLifecycleOwner) {
             imitateUserInteraction()
             contactsAdapter.sendContactRequestWorkStateMap = it
+            // A failed accept/send must never be a silent no-op — the row only
+            // reverts to its pending state — so surface newly-failed
+            // operations started from this screen.
+            if (dashPayViewModel.consumeNewSendContactRequestErrors(it).isNotEmpty()) {
+                showSendContactRequestError()
+            }
         }
         dashPayViewModel.contactsUpdatedLiveData.observe(viewLifecycleOwner) {
             if (it?.data != null && it.data) {
@@ -415,6 +421,15 @@ class ContactsFragment : Fragment(),
     }
 
     override fun onIgnoreRequest(usernameSearchResult: UsernameSearchResult, position: Int) {
+    }
+
+    private fun showSendContactRequestError() {
+        AdaptiveDialog.create(
+            R.drawable.ic_warning_yellow_circle,
+            getString(R.string.send_contact_request_error_title),
+            getString(R.string.send_contact_request_error_message),
+            getString(R.string.button_ok)
+        ).show(requireActivity())
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {

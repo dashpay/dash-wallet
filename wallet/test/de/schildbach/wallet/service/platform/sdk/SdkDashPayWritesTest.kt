@@ -143,6 +143,32 @@ class SdkDashPayWritesTest {
     }
 
     @Test
+    fun classify_keystoreAuthWindowExpiry_isNotBroadcast() {
+        // The live S22 failure: the SDK's AUTH_GATED Keystore threw
+        // UserNotAuthenticatedException while decrypting the identity key to
+        // SIGN the state transition — signing runs during transition
+        // construction, strictly before broadcast, so nothing was submitted
+        // and the dashj fallback is safe. Message-matched until platform
+        // PR #4060 (DEVICE_BOUND keys) gives this a typed error.
+        val liveShapes = listOf<Throwable>(
+            DashSdkError.PlatformWallet.Generic(
+                5000,
+                "SDK error: Protocol error: Generic Error: User not authenticated"
+            ),
+            DashSdkError.ProtocolError("Generic Error: User not authenticated"),
+            RuntimeException("User not authenticated")
+        )
+        for (error in liveShapes) {
+            val result = classifyBroadcastFailure(error)
+            assertTrue(
+                "${error.javaClass.simpleName}(${error.message}) must be NotBroadcast",
+                result is SdkWriteResult.NotBroadcast
+            )
+            assertSame(error, (result as SdkWriteResult.NotBroadcast).cause)
+        }
+    }
+
+    @Test
     fun classify_everythingElse_isAmbiguous() {
         val possiblyBroadcast = listOf<Throwable>(
             DashSdkError.NetworkError("connection reset"),
@@ -339,6 +365,25 @@ class SdkDashPayWritesTest {
             onSendContactRequest = { _, _, _ -> throw DashSdkError.InvalidParameter("bad recipient") }
         }
         val result = writes(source).sendContactRequest(ownUserId, toUserId)
+
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        assertEquals(1, source.broadcastCalls)
+    }
+
+    @Test
+    fun acceptDirection_keystoreAuthWindowExpiry_isNotBroadcast_dashjFallbackSafe() = runBlocking {
+        // Pressing Accept outside the 30 s Keystore auth window must fall
+        // back to the legacy dashj path instead of dead-ending as Ambiguous.
+        val requesterUserId = Identifier.from(ByteArray(32) { 7 }).toString()
+        val source = readySource().apply {
+            onSendContactRequest = { _, _, _ ->
+                throw DashSdkError.PlatformWallet.Generic(
+                    5000,
+                    "SDK error: Protocol error: Generic Error: User not authenticated"
+                )
+            }
+        }
+        val result = writes(source).sendContactRequest(ownUserId, requesterUserId)
 
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(1, source.broadcastCalls)
