@@ -98,9 +98,21 @@ internal fun summarizeSendOutputs(
 
 /**
  * The one-line `L1FeeParity` summary (Phase 5c.0). Field semantics:
- * - `route=sdk`: `sdkFee` is the SDK Room row's fee; `rowLatencyMs` is
- *   broadcast → Room `transactions` row visible (the GAP-6 empirical
- *   answer), `timeout` when the row never landed within the poll bound.
+ * - `route=sdk`: `sdkFee` is the SDK-side fee per `feeSource` below;
+ *   `rowLatencyMs` is broadcast → Room `transactions` row visible (the
+ *   GAP-6 empirical answer), `timeout` when the row never landed within
+ *   the poll bound.
+ * - `feeSource` (sdk route only, `n/a` on the dashj route): where
+ *   `sdkFee` came from. The Room row's `fee` column is nullable — the
+ *   FFI changeset populates it only when the Rust side computed one
+ *   (`hasFee`), which empirically is NOT at broadcast time — so the fee
+ *   resolves in layers ([resolveSdkFee]): `row` = present on the row when
+ *   it first landed; `row-late:<ms>` = null then, populated by a later
+ *   accounting pass `<ms>` ms after broadcast (the re-poll measurement);
+ *   `computed` = never populated within the bound, derived as
+ *   Σ(inputs' prevout values from the SDK's own `txos` table) −
+ *   Σ(outputs) ([computeFeeFromTxoJoin]); `n/a` = no row, or some input's
+ *   prevout was not in the TXO table.
  * - `route=dashj`: the fee field is named `dashjFee` (the committed tx's
  *   actual fee — the sanity baseline) and `rowLatencyMs` is `n/a`.
  * - `dashjEstimatedFee`: the dashj dry-run estimate for the same
@@ -113,6 +125,7 @@ internal fun feeParityLine(
     route: String,
     txidHex: String,
     actualFeeDuffs: Long?,
+    feeSource: String,
     dashjEstimatedFeeDuffs: Long?,
     rowLatencyMs: Long?,
     changeAddress: String
@@ -128,8 +141,14 @@ internal fun feeParityLine(
         rowLatencyMs != null -> rowLatencyMs.toString()
         else -> "timeout"
     }
+    val feeSourceField = if (route == L1SendProbeService.ROUTE_SDK) {
+        feeSource
+    } else {
+        L1SendProbeService.FEE_SOURCE_NA
+    }
     return "L1FeeParity route=$route txid=$txidHex" +
         " $feeField=${actualFeeDuffs ?: "n/a"}" +
+        " feeSource=$feeSourceField" +
         " dashjEstimatedFee=${dashjEstimatedFeeDuffs ?: "n/a"}" +
         " delta=$delta rowLatencyMs=$rowLatency changeAddress=$changeAddress"
 }
@@ -219,6 +238,85 @@ internal fun wireTxidBytesOrNull(displayTxidHex: String): ByteArray? = try {
     null
 }
 
+/**
+ * The SDK Room `txos.outpoint` primary key for one spent prevout:
+ * 36 bytes — the 32-byte wire-order txid followed by the vout as 4
+ * little-endian bytes (the `PersistentTxo.swift` unique-key encoding).
+ */
+internal fun sdkOutpointBytes(txidWireBytes: ByteArray, vout: Long): ByteArray =
+    ByteArray(36).also { bytes ->
+        txidWireBytes.copyInto(bytes)
+        bytes[32] = (vout and 0xff).toByte()
+        bytes[33] = ((vout ushr 8) and 0xff).toByte()
+        bytes[34] = ((vout ushr 16) and 0xff).toByte()
+        bytes[35] = ((vout ushr 24) and 0xff).toByte()
+    }
+
+/**
+ * The classic fee identity — Σ(inputs' prevout values) − Σ(outputs) — with
+ * the prevout values resolved through [txoAmountDuffs] (the SDK's own Room
+ * `txos` table, keyed by [sdkOutpointBytes]; for our sends every spent
+ * prevout is one of the wallet's own TXOs, so the values are all there).
+ * Null when the tx has no inputs, ANY input's prevout is unresolvable, or
+ * the arithmetic goes negative (inconsistent store) — a partial sum is
+ * never reported as a fee.
+ */
+internal suspend fun computeFeeFromTxoJoin(
+    tx: Transaction,
+    txoAmountDuffs: suspend (outpoint: ByteArray) -> Long?
+): Long? {
+    if (tx.inputs.isEmpty()) return null
+    var inputSum = 0L
+    for (input in tx.inputs) {
+        val outpoint = sdkOutpointBytes(input.outpoint.hash.reversedBytes, input.outpoint.index)
+        inputSum += txoAmountDuffs(outpoint) ?: return null
+    }
+    val fee = inputSum - tx.outputs.sumOf { it.value.value }
+    return fee.takeIf { it >= 0 }
+}
+
+/** [resolveSdkFee]'s result: the fee (null = unresolvable) and its `feeSource` tag. */
+internal data class ResolvedSdkFee(val feeDuffs: Long?, val source: String)
+
+/**
+ * The layered `route=sdk` fee resolution (see [feeParityLine]'s
+ * `feeSource` semantics): the Room row's own `fee` column first; else
+ * [repollRowFee] — a bounded re-poll of the same column, returning
+ * `{fee, msAfterBroadcast}` when a later SDK accounting pass populates it
+ * (`row-late:<ms>`); else [computeFee] — the TXO-join identity
+ * ([computeFeeFromTxoJoin], `computed`); else `{null, n/a}`. A throwing
+ * layer is contained and counts as "didn't resolve" — fee resolution can
+ * only ever observe, never fail the probe pass.
+ */
+internal suspend fun resolveSdkFee(
+    rowFeeDuffs: Long?,
+    repollRowFee: suspend () -> Pair<Long, Long>?,
+    computeFee: suspend () -> Long?
+): ResolvedSdkFee {
+    if (rowFeeDuffs != null) {
+        return ResolvedSdkFee(rowFeeDuffs, L1SendProbeService.FEE_SOURCE_ROW)
+    }
+    val late = try {
+        repollRowFee()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        null
+    }
+    if (late != null) {
+        return ResolvedSdkFee(late.first, "${L1SendProbeService.FEE_SOURCE_ROW_LATE}:${late.second}")
+    }
+    val computed = try {
+        computeFee()
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        null
+    }
+    if (computed != null) {
+        return ResolvedSdkFee(computed, L1SendProbeService.FEE_SOURCE_COMPUTED)
+    }
+    return ResolvedSdkFee(null, L1SendProbeService.FEE_SOURCE_NA)
+}
+
 // ── Source seam ───────────────────────────────────────────────────────
 
 /** One SDK Room `transactions` row, reduced to what the probes/bridge read. */
@@ -251,6 +349,14 @@ internal interface SdkTxRowSource {
  * no implementation may commit, broadcast, or mutate either stack.
  */
 internal interface L1SendProbeSource : SdkTxRowSource {
+    /**
+     * The SDK Room `txos` row's `amount` (duffs) for the 36-byte
+     * [sdkOutpointBytes] outpoint, or null when the row is absent or the
+     * database is unavailable — the computed-fee fallback's prevout-value
+     * join ([computeFeeFromTxoJoin]).
+     */
+    suspend fun sdkTxoAmount(outpoint: ByteArray): Long?
+
     /** Whether the dashj wallet currently holds the tx (network/bloom delivery). */
     suspend fun dashjHasTx(txidHex: String): Boolean
 
@@ -280,7 +386,7 @@ internal class DashSdkTxRowSource(
 
 /** Production [L1SendProbeSource]: the live SDK Room DB + dashj wallet. */
 internal class DashSdkL1SendProbeSource(
-    service: DashSdkService,
+    private val service: DashSdkService,
     private val walletData: WalletDataProvider
 ) : L1SendProbeSource {
 
@@ -288,6 +394,12 @@ internal class DashSdkL1SendProbeSource(
 
     override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow? =
         rowSource.sdkTxRow(txidWireBytes)
+
+    override suspend fun sdkTxoAmount(outpoint: ByteArray): Long? {
+        // Same no-boot rule as the row read: never ensureStarted() here.
+        val db = service.databaseOrNull() ?: return null
+        return db.txoDao().getByOutpoint(outpoint)?.amount
+    }
 
     override suspend fun dashjHasTx(txidHex: String): Boolean =
         walletData.wallet?.getTransaction(Sha256Hash.wrap(txidHex)) != null
@@ -334,7 +446,10 @@ internal class DashSdkL1SendProbeSource(
  * cycle), poll the SDK Room `transactions` table for the txid (bounded —
  * the row latency is GAP-6's empirical answer), decode the row's
  * `transactionData` with dashj and extract the change address
- * ([summarizeSendOutputs]), then log ONE [feeParityLine] plus a
+ * ([summarizeSendOutputs]), resolve the SDK-side fee in layers — the
+ * row's nullable `fee` column, a bounded re-poll of it, then the
+ * TXO-join computation ([resolveSdkFee]; the `feeSource` tag says which
+ * layer answered), then log ONE [feeParityLine] plus a
  * [feeParityDetailLog] block when the fees disagree (the fee-policy-
  * divergence evidence: dashj's ECONOMIC_FEE 1000/kB vs the SDK's
  * undocumented Rust default). The same comparison logs for dashj-routed
@@ -376,7 +491,8 @@ class L1SendProbeService internal constructor(
     private val nowMs: () -> Long = System::currentTimeMillis,
     private val pollIntervalMs: Long = ROOM_POLL_INTERVAL_MS,
     private val roomTimeoutMs: Long = ROOM_POLL_TIMEOUT_MS,
-    private val dashjNetworkTimeoutMs: Long = DASHJ_NETWORK_TIMEOUT_MS
+    private val dashjNetworkTimeoutMs: Long = DASHJ_NETWORK_TIMEOUT_MS,
+    private val feeRepollTimeoutMs: Long = FEE_REPOLL_TIMEOUT_MS
 ) {
     @Inject
     constructor(
@@ -478,14 +594,42 @@ class L1SendProbeService internal constructor(
             }
             val txidMatch = decoded?.txId?.toString()?.equals(txidHex, ignoreCase = true)
 
+            // Layered fee resolution (see resolveSdkFee): the Room row's
+            // fee column is empirically null at broadcast time, so a bare
+            // row read yields sdkFee=n/a on every SDK send.
+            val resolvedFee = if (row != null) {
+                resolveSdkFee(
+                    rowFeeDuffs = row.feeDuffs,
+                    repollRowFee = {
+                        wireTxid
+                            ?.let { pollForValue(feeRepollTimeoutMs) { source.sdkTxRow(it)?.feeDuffs } }
+                            ?.let { it to (nowMs() - startMs) }
+                    },
+                    computeFee = {
+                        decoded?.let { computeFeeFromTxoJoin(it, source::sdkTxoAmount) }
+                    }
+                )
+            } else {
+                ResolvedSdkFee(null, FEE_SOURCE_NA)
+            }
+            if (resolvedFee.source.startsWith(FEE_SOURCE_ROW_LATE)) {
+                // The empirical answer to "WHEN does the SDK's accounting
+                // pass fill the fee in?" — the tag carries the same ms.
+                log.info(
+                    "L1FeeParity fee for txid {} populated late: {} duffs ({})",
+                    txidHex, resolvedFee.feeDuffs, resolvedFee.source
+                )
+            }
+
             // The 5c.0 summarizing line (+ DETAIL when the fees disagree).
             val estimatedFee = estimateDeferred.await()
-            val sdkFee = row?.feeDuffs
+            val sdkFee = resolvedFee.feeDuffs
             log.info(
                 feeParityLine(
                     route = ROUTE_SDK,
                     txidHex = txidHex,
                     actualFeeDuffs = sdkFee,
+                    feeSource = resolvedFee.source,
                     dashjEstimatedFeeDuffs = estimatedFee,
                     rowLatencyMs = rowLatencyMs,
                     changeAddress = summary?.let { it.changeAddress ?: "none" } ?: "n/a"
@@ -581,6 +725,7 @@ class L1SendProbeService internal constructor(
                     route = ROUTE_DASHJ,
                     txidHex = txidHex,
                     actualFeeDuffs = actualFee,
+                    feeSource = FEE_SOURCE_NA,
                     dashjEstimatedFeeDuffs = estimatedFee,
                     rowLatencyMs = null,
                     changeAddress = summary?.let { it.changeAddress ?: "none" } ?: "n/a"
@@ -647,6 +792,19 @@ class L1SendProbeService internal constructor(
 
         /** How long a broadcast tx gets to appear in the SDK's Room store. */
         internal const val ROOM_POLL_TIMEOUT_MS = 30_000L
+
+        /**
+         * Extra time the row's null `fee` column gets to be populated by a
+         * later SDK accounting pass before the probe falls back to the
+         * TXO-join computation (see [resolveSdkFee]).
+         */
+        internal const val FEE_REPOLL_TIMEOUT_MS = 10_000L
+
+        /** `feeSource` tags — see [feeParityLine]. */
+        internal const val FEE_SOURCE_ROW = "row"
+        internal const val FEE_SOURCE_ROW_LATE = "row-late"
+        internal const val FEE_SOURCE_COMPUTED = "computed"
+        internal const val FEE_SOURCE_NA = "n/a"
 
         /**
          * How long the dashj wallet gets to see the SDK tx via its own

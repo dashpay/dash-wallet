@@ -172,6 +172,134 @@ class L1SendProbeServiceTest {
         assertNull(wireTxidBytesOrNull(""))
     }
 
+    // ── SDK outpoint encoding + the computed-fee TXO join ─────────────
+
+    @Test
+    fun sdkOutpointBytes_wireTxidPlusLittleEndianVout() {
+        val txidWire = ByteArray(32) { it.toByte() }
+        val outpoint = sdkOutpointBytes(txidWire, 0x01020304L)
+
+        assertEquals(36, outpoint.size)
+        assertTrue(outpoint.copyOfRange(0, 32).contentEquals(txidWire))
+        assertEquals(0x04.toByte(), outpoint[32])
+        assertEquals(0x03.toByte(), outpoint[33])
+        assertEquals(0x02.toByte(), outpoint[34])
+        assertEquals(0x01.toByte(), outpoint[35])
+    }
+
+    /** A two-input send tx, prevouts at ("11"*32, 0) and ("22"*32, 1). */
+    private fun buildTwoInputTx(): Transaction {
+        val tx = Transaction(params)
+        tx.addInput(
+            TransactionInput(
+                params, tx, ByteArray(0),
+                TransactionOutPoint(params, 0, Sha256Hash.wrap("11".repeat(32)))
+            )
+        )
+        tx.addInput(
+            TransactionInput(
+                params, tx, ByteArray(0),
+                TransactionOutPoint(params, 1, Sha256Hash.wrap("22".repeat(32)))
+            )
+        )
+        tx.addOutput(Coin.valueOf(amountDuffs), Address.fromString(params, recipientAddress))
+        tx.addOutput(Coin.valueOf(500_000L), Address.fromString(params, changeAddress))
+        return parse(tx.bitcoinSerialize())
+    }
+
+    private val prevout0 = sdkOutpointBytes(Sha256Hash.wrap("11".repeat(32)).reversedBytes, 0)
+    private val prevout1 = sdkOutpointBytes(Sha256Hash.wrap("22".repeat(32)).reversedBytes, 1)
+
+    /** Σ(prevout values) − Σ(outputs): (900_000+600_408) − (1_000_000+500_000) = 408. */
+    @Test
+    fun computeFeeFromTxoJoin_allInputsResolve_isInputSumMinusOutputSum() = runBlocking {
+        val amounts = mapOf(prevout0.toList() to 900_000L, prevout1.toList() to 600_408L)
+        val fee = computeFeeFromTxoJoin(buildTwoInputTx()) { amounts[it.toList()] }
+
+        assertEquals(408L, fee)
+    }
+
+    /** A partial input sum is never reported as a fee. */
+    @Test
+    fun computeFeeFromTxoJoin_anyInputUnresolvable_returnsNull() = runBlocking {
+        val amounts = mapOf(prevout0.toList() to 900_000L)
+        assertNull(computeFeeFromTxoJoin(buildTwoInputTx()) { amounts[it.toList()] })
+    }
+
+    /** Inputs < outputs means the store is inconsistent — no negative "fee". */
+    @Test
+    fun computeFeeFromTxoJoin_negativeArithmetic_returnsNull() = runBlocking {
+        val amounts = mapOf(prevout0.toList() to 700_000L, prevout1.toList() to 700_000L)
+        assertNull(computeFeeFromTxoJoin(buildTwoInputTx()) { amounts[it.toList()] })
+    }
+
+    // ── Layered fee-source selection ───────────────────────────────────
+
+    @Test
+    fun resolveSdkFee_rowFeePresent_winsWithoutTouchingLaterLayers() = runBlocking {
+        var repolled = false
+        var computed = false
+        val resolved = resolveSdkFee(
+            rowFeeDuffs = 408L,
+            repollRowFee = { repolled = true; null },
+            computeFee = { computed = true; null }
+        )
+
+        assertEquals(ResolvedSdkFee(408L, "row"), resolved)
+        assertFalse(repolled)
+        assertFalse(computed)
+    }
+
+    @Test
+    fun resolveSdkFee_rowFeeAppearsLate_tagsTheMeasuredLatency() = runBlocking {
+        var computed = false
+        val resolved = resolveSdkFee(
+            rowFeeDuffs = null,
+            repollRowFee = { 408L to 2350L },
+            computeFee = { computed = true; null }
+        )
+
+        assertEquals(ResolvedSdkFee(408L, "row-late:2350"), resolved)
+        assertFalse(computed)
+    }
+
+    @Test
+    fun resolveSdkFee_rowFeeNeverAppears_fallsBackToComputed() = runBlocking {
+        assertEquals(
+            ResolvedSdkFee(408L, "computed"),
+            resolveSdkFee(rowFeeDuffs = null, repollRowFee = { null }, computeFee = { 408L })
+        )
+    }
+
+    @Test
+    fun resolveSdkFee_noLayerResolves_isNa() = runBlocking {
+        assertEquals(
+            ResolvedSdkFee(null, "n/a"),
+            resolveSdkFee(rowFeeDuffs = null, repollRowFee = { null }, computeFee = { null })
+        )
+    }
+
+    /** A throwing layer is contained and counts as "didn't resolve". */
+    @Test
+    fun resolveSdkFee_throwingLayers_fallThroughContained() = runBlocking {
+        assertEquals(
+            ResolvedSdkFee(408L, "computed"),
+            resolveSdkFee(
+                rowFeeDuffs = null,
+                repollRowFee = { throw IllegalStateException("repoll boom") },
+                computeFee = { 408L }
+            )
+        )
+        assertEquals(
+            ResolvedSdkFee(null, "n/a"),
+            resolveSdkFee(
+                rowFeeDuffs = null,
+                repollRowFee = { throw IllegalStateException("repoll boom") },
+                computeFee = { throw IllegalStateException("compute boom") }
+            )
+        )
+    }
+
     // ── Summarizing-line formats (the grep contract) ──────────────────
 
     private val txid = "ab".repeat(32)
@@ -179,27 +307,43 @@ class L1SendProbeServiceTest {
     @Test
     fun feeParityLine_sdkRoute_allFieldsKnown() {
         assertEquals(
-            "L1FeeParity route=sdk txid=$txid sdkFee=300 dashjEstimatedFee=225" +
+            "L1FeeParity route=sdk txid=$txid sdkFee=300 feeSource=row dashjEstimatedFee=225" +
                 " delta=75 rowLatencyMs=1234 changeAddress=$changeAddress",
-            feeParityLine("sdk", txid, 300, 225, 1234, changeAddress)
+            feeParityLine("sdk", txid, 300, "row", 225, 1234, changeAddress)
         )
     }
 
     @Test
     fun feeParityLine_sdkRoute_nothingKnown() {
         assertEquals(
-            "L1FeeParity route=sdk txid=$txid sdkFee=n/a dashjEstimatedFee=n/a" +
+            "L1FeeParity route=sdk txid=$txid sdkFee=n/a feeSource=n/a dashjEstimatedFee=n/a" +
                 " delta=n/a rowLatencyMs=timeout changeAddress=n/a",
-            feeParityLine("sdk", txid, null, null, null, "n/a")
+            feeParityLine("sdk", txid, null, "n/a", null, null, "n/a")
         )
     }
 
+    /** The `row-late:<ms>` and `computed` tags land verbatim in the line. */
+    @Test
+    fun feeParityLine_sdkRoute_lateAndComputedFeeSources() {
+        assertEquals(
+            "L1FeeParity route=sdk txid=$txid sdkFee=408 feeSource=row-late:2350" +
+                " dashjEstimatedFee=376 delta=32 rowLatencyMs=250 changeAddress=$changeAddress",
+            feeParityLine("sdk", txid, 408, "row-late:2350", 376, 250, changeAddress)
+        )
+        assertEquals(
+            "L1FeeParity route=sdk txid=$txid sdkFee=408 feeSource=computed" +
+                " dashjEstimatedFee=376 delta=32 rowLatencyMs=250 changeAddress=$changeAddress",
+            feeParityLine("sdk", txid, 408, "computed", 376, 250, changeAddress)
+        )
+    }
+
+    /** The dashj route has no SDK fee source — the field is forced to n/a. */
     @Test
     fun feeParityLine_dashjRoute_baseline() {
         assertEquals(
-            "L1FeeParity route=dashj txid=$txid dashjFee=225 dashjEstimatedFee=225" +
+            "L1FeeParity route=dashj txid=$txid dashjFee=225 feeSource=n/a dashjEstimatedFee=225" +
                 " delta=0 rowLatencyMs=n/a changeAddress=none",
-            feeParityLine("dashj", txid, 225, 225, null, "none")
+            feeParityLine("dashj", txid, 225, "row", 225, null, "none")
         )
     }
 
@@ -254,13 +398,22 @@ class L1SendProbeServiceTest {
     private class FakeSource(
         var row: (ByteArray) -> SdkTxRow? = { null },
         var hasTx: () -> Boolean = { false },
-        var allOurs: () -> Boolean? = { null }
+        var allOurs: () -> Boolean? = { null },
+        var txoAmount: (ByteArray) -> Long? = { null }
     ) : L1SendProbeSource {
         var lastWireTxid: ByteArray? = null
+        var rowReads = 0
+        val txoLookups = mutableListOf<List<Byte>>()
 
         override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow? {
             lastWireTxid = txidWireBytes
+            rowReads++
             return row(txidWireBytes)
+        }
+
+        override suspend fun sdkTxoAmount(outpoint: ByteArray): Long? {
+            txoLookups.add(outpoint.toList())
+            return txoAmount(outpoint)
         }
 
         override suspend fun dashjHasTx(txidHex: String): Boolean = hasTx()
@@ -275,7 +428,8 @@ class L1SendProbeServiceTest {
         economicFeePerKb = { 1000L },
         pollIntervalMs = 1,
         roomTimeoutMs = 25,
-        dashjNetworkTimeoutMs = 25
+        dashjNetworkTimeoutMs = 25,
+        feeRepollTimeoutMs = 25
     )
 
     /** The full pass on a healthy fixture: Room row lands, bytes decode, dashj sees the tx. */
@@ -293,6 +447,59 @@ class L1SendProbeServiceTest {
         probe.probeSdkSend(fixtureTxid, recipientAddress, amountDuffs, emptyWallet = false) { 225L }
 
         assertTrue(wireTxidBytesOrNull(fixtureTxid)!!.contentEquals(source.lastWireTxid!!))
+        // The row fee answered on the first read: no re-poll, no TXO join.
+        assertEquals(1, source.rowReads)
+        assertTrue(source.txoLookups.isEmpty())
+    }
+
+    /**
+     * The sdkFee=n/a gap fix, layer (b): the row lands with a null fee and
+     * a later "accounting pass" populates it — the probe re-polls the row
+     * instead of computing, so the TXO join is never touched.
+     */
+    @Test
+    fun probeSdkSend_rowFeePopulatedLate_repollsInsteadOfComputing() = runBlocking {
+        val bytes = buildSendTxBytes()
+        val fixtureTxid = parse(bytes).txId.toString()
+        var reads = 0
+        val source = FakeSource(
+            row = {
+                reads++
+                SdkTxRow(feeDuffs = if (reads >= 3) 408L else null, rawTxBytes = bytes)
+            },
+            txoAmount = { 1_500_408L }
+        )
+
+        service(source, this).probeSdkSend(
+            fixtureTxid, recipientAddress, amountDuffs, emptyWallet = false
+        ) { 376L }
+
+        assertTrue("expected the fee re-poll to re-read the row", source.rowReads >= 3)
+        assertTrue(source.txoLookups.isEmpty())
+    }
+
+    /**
+     * The sdkFee=n/a gap fix, layer (c): the fee column never populates —
+     * the probe joins the decoded tx's inputs against the SDK's own TXO
+     * table by the 36-byte outpoint key.
+     */
+    @Test
+    fun probeSdkSend_rowFeeNeverPopulated_joinsInputsAgainstTxoTable() = runBlocking {
+        val bytes = buildSendTxBytes() // one input, prevout ("11"*32, 0)
+        val fixtureTxid = parse(bytes).txId.toString()
+        val expectedOutpoint = sdkOutpointBytes(Sha256Hash.wrap("11".repeat(32)).reversedBytes, 0)
+        val source = FakeSource(
+            row = { SdkTxRow(feeDuffs = null, rawTxBytes = bytes) },
+            txoAmount = { outpoint ->
+                if (outpoint.contentEquals(expectedOutpoint)) 1_500_408L else null
+            }
+        )
+
+        service(source, this).probeSdkSend(
+            fixtureTxid, recipientAddress, amountDuffs, emptyWallet = false
+        ) { 376L }
+
+        assertEquals(listOf(expectedOutpoint.toList()), source.txoLookups)
     }
 
     /**
@@ -305,7 +512,8 @@ class L1SendProbeServiceTest {
         val source = FakeSource(
             row = { throw IllegalStateException("room down") },
             hasTx = { throw IllegalStateException("wallet down") },
-            allOurs = { throw IllegalStateException("wallet down") }
+            allOurs = { throw IllegalStateException("wallet down") },
+            txoAmount = { throw IllegalStateException("room down") }
         )
         val probe = service(source, this)
 
