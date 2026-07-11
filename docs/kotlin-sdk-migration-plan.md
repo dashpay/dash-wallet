@@ -540,3 +540,16 @@ funding sources (dash-via-hop, platform credits, shielded pool Type-20) then sha
 L2 creation path. Unresolved: whether identity keys must pre-exist for
 registerFromAddresses input signing on a fresh wallet (same key-derivation recipe as
 Type-20 — reuse previewRegistrationKeySet + repairIdentityKey persistence).
+
+### To-do (added 2026-07-11, per Brian): contested-username support across the new funding paths
+
+Contested usernames are currently L1-gated in the shielded flow. Required work:
+1. Shielded usernames: support contested names (0.3 denomination) — includes teaching
+   SdkShieldedUsernameCreation the SECONDARY username (dual-usernames latent gap: it takes
+   only the primary today; secondaries exist exactly when the primary is contestable).
+2. Invitations: shielded-funding + cost-messaging parity (canPayFromShielded mirror into
+   CreateInviteViewModel/InvitationFeeDialogFragment/ConfirmInviteDialogFragment; amounts in
+   Constants.java DASH_PAY_FEE*/DASH_PAY_INVITE_MIN; strings-dashpay.xml:41-42,503-508).
+3. Dual usernames under shielded funding (follows from 1).
+Cost model reminder: shielded path 0.1 non-contested / 0.3 contested (denomination-bound,
+temporary protocol limitation); non-private path keeps ~0.03 / ~0.3 (not denomination-bound).
