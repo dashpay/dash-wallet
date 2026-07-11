@@ -55,6 +55,7 @@ import com.google.android.material.transition.MaterialFadeThrough
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.WalletApplication
+import de.schildbach.wallet.database.entity.BlockchainIdentityBaseData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.DashPayProfile
 import de.schildbach.wallet.database.entity.UsernameRequest
@@ -436,20 +437,31 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
 
             // The shielded card must never flash a bare "0" for a funded wallet
             // while the pool re-syncs (observeShieldedBalance emits Dash.ZERO
-            // until ready AND during a re-scan). Render from the latest of BOTH
-            // the balance and the sync status: a real amount only when READY,
-            // otherwise a subtle "Syncing…" placeholder.
+            // until ready AND during a re-scan). Render from the latest of the
+            // balance, the sync status AND the identity presence: a real amount
+            // when READY — or when there is provably nothing shielded to sync
+            // (fresh wallet, see [mapShieldedCardDisplay]) — otherwise a subtle
+            // "Syncing…" placeholder. Display-only: the trust/gating semantics
+            // of shieldedSyncStatus elsewhere are unchanged.
             var latestBalance = Dash.ZERO
             var latestStatus = shieldedBalanceService.shieldedSyncStatus.value
+            // Conservative until the identity store emits: assume a context
+            // exists so a migrated wallet never flashes "0" before the first
+            // identity emission.
+            var latestHasShieldedContext = true
             shieldedBalanceService.observeShieldedBalance().observe(viewLifecycleOwner) { balance ->
                 latestBalance = balance
-                renderShieldedCardAmount(latestStatus, latestBalance)
+                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
             }
             shieldedBalanceService.shieldedSyncStatus.observe(viewLifecycleOwner) { status ->
                 latestStatus = status
-                renderShieldedCardAmount(latestStatus, latestBalance)
+                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
             }
-            renderShieldedCardAmount(latestStatus, latestBalance)
+            mainActivityViewModel.blockchainIdentityDataDao.observeBase().observe(viewLifecycleOwner) { identity ->
+                latestHasShieldedContext = hasShieldedContext(identity)
+                renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
+            }
+            renderShieldedCardAmount(latestStatus, latestBalance, latestHasShieldedContext)
 
             // Bring the shielded runtime up so the balance loads and the sync
             // status advances past NOT_READY. Idempotent + single-flight; the
@@ -459,15 +471,17 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
     }
 
     /**
-     * Render the "Shielded" card's amount (Figma 1693:15853). READY shows the
-     * compact credits value at the design's 20sp with the magnitude suffix
-     * (B/M/K/T) raised and small (caption-2 11sp) plus the credits glyph; any
-     * other status shows a subtle "Syncing…" placeholder and hides the glyph,
-     * so a still-syncing funded wallet is never misread as empty.
+     * Render the "Shielded" card's amount (Figma 1693:15853). The AMOUNT arm
+     * of [mapShieldedCardDisplay] shows the compact credits value at the
+     * design's 20sp with the magnitude suffix (B/M/K/T) raised and small
+     * (caption-2 11sp) plus the credits glyph; the SYNCING arm shows a subtle
+     * "Syncing…" placeholder and hides the glyph, so a still-syncing funded
+     * wallet is never misread as empty — while a fresh wallet with nothing
+     * shielded to sync shows its honest zero (see [mapShieldedCardDisplay]).
      */
-    private fun renderShieldedCardAmount(status: ShieldedSyncStatus, balance: Dash) {
+    private fun renderShieldedCardAmount(status: ShieldedSyncStatus, balance: Dash, hasShieldedContext: Boolean) {
         val amount = binding.shieldedBalanceCardAmount
-        if (status == ShieldedSyncStatus.READY) {
+        if (mapShieldedCardDisplay(status, hasShieldedContext) == ShieldedCardDisplay.AMOUNT) {
             amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
             amount.text = compactCreditsSpannable(balance)
@@ -656,6 +670,46 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         binding.invite.isVisible = showInviteSection && Constants.SUPPORTS_INVITES
     }
 }
+
+/** What the More-screen "Shielded" balance card renders (see [mapShieldedCardDisplay]). */
+internal enum class ShieldedCardDisplay { AMOUNT, SYNCING }
+
+/**
+ * Pure, host-testable display decision for the More-screen "Shielded" card.
+ * DISPLAY-ONLY — the trust rule everywhere else (any non-READY status means
+ * "balance not yet trustworthy") is unchanged.
+ *
+ * - READY → the amount: the balance is trustworthy.
+ * - NOT_READY with NO shielded context → the amount (which is `Dash.ZERO`,
+ *   the flow's placeholder — here it is also the honest balance): on a fresh
+ *   wallet with no platform identity bound or being created,
+ *   [de.schildbach.wallet.service.platform.sdk.SdkWalletBinder] never binds
+ *   the SDK wallet, `ensureShieldedReady` can never succeed, and the status
+ *   stays NOT_READY forever — a permanent "Syncing…" would be a lie; there
+ *   is nothing shielded to sync.
+ * - Anything else → the "Syncing…" placeholder: either a pass is genuinely
+ *   in flight (SYNCING — placeholder regardless of identity, defensively),
+ *   or bring-up is pending on a wallet that DOES have a shielded context
+ *   (e.g. a migrated wallet mid-resync), where a zero must not be shown.
+ */
+internal fun mapShieldedCardDisplay(
+    status: ShieldedSyncStatus,
+    hasShieldedContext: Boolean
+): ShieldedCardDisplay = when {
+    status == ShieldedSyncStatus.READY -> ShieldedCardDisplay.AMOUNT
+    status == ShieldedSyncStatus.NOT_READY && !hasShieldedContext -> ShieldedCardDisplay.AMOUNT
+    else -> ShieldedCardDisplay.SYNCING
+}
+
+/**
+ * Whether this wallet has (or is creating/restoring) a platform identity —
+ * the exact eligibility gate `SdkWalletBinder.bindLocked` uses to decide
+ * whether the SDK wallet gets bound at all. `false` means the shielded
+ * runtime can never come up on this wallet, so there is provably nothing
+ * shielded-related to sync.
+ */
+internal fun hasShieldedContext(identity: BlockchainIdentityBaseData): Boolean =
+    identity.creationState != IdentityCreationState.NONE || identity.userId != null
 
 /**
  * Scales the credits magnitude suffix down by [scale] and raises it toward
