@@ -106,7 +106,11 @@ class PlatformDocumentBroadcastService @Inject constructor(
         // recovering it uncached fixes the SDK Broadcast path and the dashj
         // fallback alike.
         val potentialContactIdentity = platform.getContactIdentity(Identifier.from(toUserId))
-        log.info("potential contact identity: $potentialContactIdentity")
+        // NEVER string-interpolate a legacy dashj Identity/BaseObject: its
+        // toString() routes through hashCode() -> CBOR toBuffer(), which throws
+        // "No converter for ..." on v4.x contract-bound identities (the exact
+        // crash getContactIdentity above just recovered from). Log the id only.
+        log.info("potential contact identity: ${potentialContactIdentity?.id}")
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")
 
