@@ -34,6 +34,7 @@ import kotlinx.coroutines.withContext
 import org.dash.wallet.common.money.Dash
 import org.dashfoundation.dashsdk.identity.IdentityKeyPreview
 import org.dashj.platform.dpp.identifier.Identifier
+import org.dashj.platform.sdk.platform.Names
 import org.slf4j.LoggerFactory
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -62,9 +63,12 @@ internal val SHIELDED_IDENTITY_DENOMINATIONS_CREDITS = longArrayOf(
  * Concretely, for today's fees:
  * - non-contested username, `Constants.DASH_PAY_FEE` = 0.03 DASH
  *   (3e9 credits) → 0.1 DASH (1e10 credits), the smallest denomination.
- * - a contested fee (0.25 DASH) WOULD map to 0.3 DASH, but the shielded
- *   flow deliberately targets non-contested names only (see
- *   [SdkShieldedUsernameCreation] KDoc).
+ * - contested username, `Constants.DASH_PAY_FEE_CONTESTED` = 0.25 DASH
+ *   (2.5e10 credits) → 0.3 DASH (3e10 credits). The identity is created
+ *   holding `denomination − metered fee` in credits, and a contested DPNS
+ *   registration needs ~0.2 DASH of those credits for the prefunded
+ *   voting balance Drive attaches to every contestable label — the 0.1
+ *   denomination cannot cover it, 0.3 can.
  */
 internal fun chooseShieldedIdentityDenominationCredits(feeCredits: Long): Long? {
     if (feeCredits <= 0) return null
@@ -175,9 +179,13 @@ interface ShieldedUsernameSource {
     ): ByteArray
 
     /**
-     * Register [label] as a DPNS name for [identityId] (contested names
-     * are handled by the protocol transparently). Returns the full domain
-     * name (e.g. `"alice.dash"`).
+     * Register [label] as a DPNS name for [identityId]. Contested labels
+     * need no special client-side handling: dpp derives the ~0.2 DASH
+     * prefunded voting balance from the contested unique index
+     * automatically (`prefunded_voting_balance_for_document`), paid from
+     * the identity's credit balance — which is why a contested creation
+     * must fund the identity with the 0.3 denomination. Returns the full
+     * domain name (e.g. `"alice.dash"`).
      */
     suspend fun registerDpnsName(walletIdHex: String, identityId: ByteArray, label: String): String
 }
@@ -351,8 +359,11 @@ sealed class ShieldedUsernameSubmitState {
  * ## Pipeline (one [createUsernameFromShielded] call)
  *
  * 1. Preflights (nothing submitted if any fails → NotBroadcast): flag on,
- *    fee → denomination mapping resolves
- *    ([chooseShieldedIdentityDenominationCredits]), shielded runtime
+ *    contested-ness derived from the label (contested labels take the
+ *    0.25-fee → 0.3-denomination mapping so the identity's credits cover
+ *    the ~0.2 prefunded voting balance the contested DPNS registration
+ *    debits; non-contested take 0.03 → 0.1), fee → denomination mapping
+ *    resolves ([chooseShieldedIdentityDenominationCredits]), shielded runtime
  *    ready ([ShieldedBalanceService.ensureShieldedReady]) with the pool
  *    READY (trustworthy balance, not a mid-sync placeholder zero) and
  *    balance ≥ the chosen denomination, wallet bound, registration key
@@ -392,8 +403,13 @@ class SdkShieldedUsernameCreation internal constructor(
     private val source: ShieldedUsernameSource,
     private val dashPayConfig: DashPayConfig,
     private val shieldedBalanceService: ShieldedBalanceService,
-    /** Creation fee of a non-contested username, in credits. */
-    private val feeCredits: () -> Long,
+    /**
+     * Creation fee in credits for a username of the given contested-ness
+     * (prod: `DASH_PAY_FEE_CONTESTED` = 0.25 DASH for contested labels,
+     * `DASH_PAY_FEE` = 0.03 DASH otherwise) — the input to the
+     * denomination mapping, NOT the amount spent.
+     */
+    private val feeCredits: (contested: Boolean) -> Long,
     /** HRP the fallback Platform address must decode under (`dash`/`tdash`). */
     private val displayHrp: () -> String,
     /**
@@ -417,7 +433,10 @@ class SdkShieldedUsernameCreation internal constructor(
         dashPayConfig = dashPayConfig,
         shieldedBalanceService = shieldedBalanceService,
         // Lazy: Constants untouched at construction (inert-until-called).
-        feeCredits = { dashToCredits(Dash(Constants.DASH_PAY_FEE.value)) },
+        feeCredits = { contested ->
+            val fee = if (contested) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+            dashToCredits(Dash(fee.value))
+        },
         displayHrp = { shieldedHrp(toSdkNetwork(Constants.NETWORK_PARAMETERS)) },
         handOffToLegacy = { identityId ->
             RestoreIdentityOperation(walletApplication).create(identityId).enqueue()
@@ -498,10 +517,23 @@ class SdkShieldedUsernameCreation internal constructor(
             return notBroadcast("empty username", null)
         }
 
+        // Contested-ness is derived HERE from the label (same rule the
+        // request screen gates on) so a caller can never pair a contested
+        // name with the too-small non-contested denomination — the name
+        // registration would fail its ~0.2 prefunded-voting-balance
+        // debit after the identity was already created.
+        val contested = try {
+            Names.isUsernameContestable(label)
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            return notBroadcast("contested-ness check failed", t)
+        }
+
         // Fee → denomination (explicit mapping, see
-        // chooseShieldedIdentityDenominationCredits: 0.03 DASH → 0.1 DASH).
+        // chooseShieldedIdentityDenominationCredits: non-contested
+        // 0.03 DASH → 0.1, contested 0.25 DASH → 0.3).
         val fee = try {
-            feeCredits()
+            feeCredits(contested)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast("username fee unavailable", t)
@@ -588,7 +620,13 @@ class SdkShieldedUsernameCreation internal constructor(
             }
         }
         val identityIdBase58 = Identifier.from(identityId).toString()
-        log.info("shielded-funded identity created at index {} ({}…)", identityIndex, identityIdBase58.take(8))
+        log.info(
+            "shielded-funded identity created at index {} ({}…) — {} denomination, contested={}",
+            identityIndex,
+            identityIdBase58.take(8),
+            creditsToDash(denominationCredits).toPlainString(),
+            contested
+        )
 
         // Best-effort DPNS name — the identity exists either way.
         val (nameStatus, nameFailure) = try {

@@ -33,7 +33,10 @@ import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
@@ -47,6 +50,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
@@ -59,6 +63,7 @@ import org.bitcoinj.evolution.AssetLockTransaction
 import org.bitcoinj.script.ScriptPattern
 import org.bitcoinj.wallet.Wallet
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.dashj.platform.dashpay.UsernameStatus
@@ -99,7 +104,8 @@ class RequestUserNameViewModel @Inject constructor(
     val usernameRequestDao: UsernameRequestDao,
     val analytics: AnalyticsService,
     val topUpRepository: TopUpRepository,
-    private val shieldedUsernameCreation: SdkShieldedUsernameCreation
+    private val shieldedUsernameCreation: SdkShieldedUsernameCreation,
+    private val shieldedBalanceService: ShieldedBalanceService
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -121,12 +127,65 @@ class RequestUserNameViewModel @Inject constructor(
 
     /**
      * Which balance the user chose to pay the username fee from on the
-     * "Select your payment option" sheet (Figma 1856:1805). Identity
-     * funding still runs on the L1 path today — this records the choice
-     * (the seam for the shielded-funded creation flow) and replaces the
+     * "Select your payment option" sheet (Figma 1856:1805). Selecting the
+     * shielded balance starts observing the pool (lazily — the SDK runtime
+     * is never touched on the default L1 path) so [checkUsernameValid] can
+     * gate contested names on the 0.3 funding denomination. Replaces the
      * removed CoinJoin mixed/unmixed funding selection.
      */
     var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
+        set(value) {
+            field = value
+            if (value == UsernamePaymentSource.SHIELDED_BALANCE) {
+                startShieldedObservation()
+            }
+        }
+
+    private val _shieldedBalance = MutableStateFlow(Dash.ZERO)
+    private val _shieldedSyncStatus = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
+    private var shieldedObservationStarted = false
+
+    /**
+     * Mirror the shielded pool balance/status into this ViewModel (same
+     * collection pattern as `UsernamePaymentViewModel`). Idempotent; only
+     * ever called after the payment sheet offered — and the user picked —
+     * the shielded source, so the runtime is already up and the flag on.
+     */
+    private fun startShieldedObservation() {
+        synchronized(this) {
+            if (shieldedObservationStarted) return
+            shieldedObservationStarted = true
+        }
+        viewModelScope.launch {
+            launch {
+                runCatching { shieldedBalanceService.ensureShieldedReady() }
+                    .onFailure { log.warn("shielded bring-up failed", it) }
+            }
+            launch {
+                shieldedBalanceService.observeShieldedBalance()
+                    .catch { log.warn("shielded balance flow failed", it) }
+                    .collect { _shieldedBalance.value = it }
+            }
+            launch {
+                shieldedBalanceService.shieldedSyncStatus
+                    .catch { log.warn("shielded status flow failed", it) }
+                    .collect { _shieldedSyncStatus.value = it }
+            }
+        }
+    }
+
+    /**
+     * A contested username funded from the shielded pool needs the 0.3
+     * DASH exit denomination (0.25 contested fee → smallest covering
+     * denomination), and the balance is only evidence once a sync pass
+     * completed — mid-sync zeros are placeholders.
+     */
+    private fun canShieldedFundContestedUsername(): Boolean {
+        if (_shieldedSyncStatus.value != ShieldedSyncStatus.READY) return false
+        val requirement = shieldedIdentityFundingRequirement(Dash(Constants.DASH_PAY_FEE_CONTESTED.value))
+            ?: return false
+        return _shieldedBalance.value >= requirement
+    }
 
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
@@ -530,14 +589,16 @@ class RequestUserNameViewModel @Inject constructor(
         val enoughBalance = when {
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
-            // Paying from the shielded pool (non-contested names only): the
-            // welcome-screen decision point only offers this source when the
-            // pool covers the funding denomination, and the shielded service
+            // Paying from the shielded pool: the welcome-screen decision
+            // point only offers this source when the pool covers the
+            // non-contested 0.1 denomination, and the shielded service
             // re-verifies balance/denomination in its preflight — the L1
-            // wallet balance below is irrelevant to this submission.
-            // Contested names stay L1-gated: the denomination is pinned to
-            // the non-contested fee (see chooseShieldedIdentityDenominationCredits).
+            // wallet balance below is irrelevant to these submissions.
+            // Contested names need the larger 0.3 denomination, so they
+            // get their own pool-balance gate here.
             paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && !contestable -> true
+            paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && contestable ->
+                canShieldedFundContestedUsername()
             identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(

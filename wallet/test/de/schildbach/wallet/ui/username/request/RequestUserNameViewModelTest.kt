@@ -23,6 +23,8 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityData
 import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.service.platform.TopUpRepository
 import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
+import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameCreationOutcome
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameNameStatus
 import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
@@ -42,6 +44,7 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.dash.wallet.common.WalletDataProvider
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.dashj.platform.dashpay.UsernameRequestStatus
 import org.junit.After
@@ -86,6 +89,14 @@ class RequestUserNameViewModelTest {
         every { observeBalance(any(), any()) } returns emptyFlow()
     }
 
+    private val shieldedSyncStatusFlow = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
+    private val shieldedBalanceFlow = MutableStateFlow(Dash.ZERO)
+    private val shieldedBalanceService = mockk<ShieldedBalanceService> {
+        coEvery { ensureShieldedReady() } returns true
+        every { observeShieldedBalance() } returns shieldedBalanceFlow
+        every { shieldedSyncStatus } returns shieldedSyncStatusFlow
+    }
+
     private fun viewModel() = RequestUserNameViewModel(
         walletApplication = walletApplication,
         identityConfig = identityConfig,
@@ -94,7 +105,8 @@ class RequestUserNameViewModelTest {
         usernameRequestDao = mockk<UsernameRequestDao>(relaxed = true),
         analytics = mockk<AnalyticsService>(relaxed = true),
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
-        shieldedUsernameCreation = shieldedUsernameCreation
+        shieldedUsernameCreation = shieldedUsernameCreation,
+        shieldedBalanceService = shieldedBalanceService
     )
 
     @Before
@@ -239,16 +251,51 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun checkUsernameValid_shieldedSource_contestedName_staysL1Gated() = runTest(dispatcher) {
-        // The shielded denomination is pinned to the NON-contested fee —
-        // a contested name must not unlock through the shielded source.
-        val viewModel = viewModel()
-        viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+    fun checkUsernameValid_shieldedSource_contestedName_gatedOnTheContestedDenomination() =
+        runTest(dispatcher) {
+            // Contested via shielded needs the 0.3 exit denomination in the
+            // pool (0.25 contested fee → smallest covering denomination); a
+            // pool that could fund a non-contested name (0.1) must not
+            // unlock a contested one.
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+            shieldedBalanceFlow.value = Dash(10_000_000L) // 0.1 DASH
+            val viewModel = viewModel()
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
 
-        viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
+            viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
 
-        val state = viewModel.uiState.value
-        assertTrue(state.usernameContestable)
-        assertFalse(state.enoughBalance)
-    }
+            val state = viewModel.uiState.value
+            assertTrue(state.usernameContestable)
+            assertFalse(state.enoughBalance)
+        }
+
+    @Test
+    fun checkUsernameValid_shieldedSource_contestedName_passesWhenThePoolCoversTheDenomination() =
+        runTest(dispatcher) {
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.READY
+            shieldedBalanceFlow.value = Dash(30_000_000L) // 0.3 DASH
+            val viewModel = viewModel()
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+
+            viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+            val state = viewModel.uiState.value
+            assertTrue(state.usernameContestable)
+            assertTrue(state.enoughBalance)
+        }
+
+    @Test
+    fun checkUsernameValid_shieldedSource_contestedName_midSyncBalanceNeverUnlocks() =
+        runTest(dispatcher) {
+            // A mid-sync balance is a placeholder, not evidence — even a
+            // covering amount must not unlock while the pool isn't READY.
+            shieldedSyncStatusFlow.value = ShieldedSyncStatus.NOT_READY
+            shieldedBalanceFlow.value = Dash(30_000_000L)
+            val viewModel = viewModel()
+            viewModel.paymentSource = UsernamePaymentSource.SHIELDED_BALANCE
+
+            viewModel.checkUsernameValid("alice", de.schildbach.wallet.ui.username.UsernameType.Primary)
+
+            assertFalse(viewModel.uiState.value.enoughBalance)
+        }
 }

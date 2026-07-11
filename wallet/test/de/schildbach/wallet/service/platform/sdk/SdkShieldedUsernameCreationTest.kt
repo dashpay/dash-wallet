@@ -59,9 +59,16 @@ class SdkShieldedUsernameCreationTest {
     /** 0.03 DASH in credits — Constants.DASH_PAY_FEE without loading Constants. */
     private val feeCredits = 3_000_000_000L
 
+    /** 0.25 DASH in credits — Constants.DASH_PAY_FEE_CONTESTED without loading Constants. */
+    private val contestedFeeCredits = 25_000_000_000L
+
     /** The smallest covering denomination: 0.1 DASH. */
     private val denominationCredits = 10_000_000_000L
     private val denomination = creditsToDash(denominationCredits)
+
+    /** The smallest denomination covering the contested fee: 0.3 DASH. */
+    private val contestedDenominationCredits = 30_000_000_000L
+    private val contestedDenomination = creditsToDash(contestedDenominationCredits)
 
     private val registrationKeys = List(4) { index ->
         IdentityKeyPreview(
@@ -120,7 +127,9 @@ class SdkShieldedUsernameCreationTest {
         source = source,
         dashPayConfig = config(flag),
         shieldedBalanceService = balance,
-        feeCredits = { feeCredits },
+        // Same contested split as the production lambda ("alice2" has a
+        // digit 2-9 → non-contested; "alice" normalizes to a11ce → contested).
+        feeCredits = { contested -> if (contested) contestedFeeCredits else feeCredits },
         displayHrp = { "tdash" },
         handOffToLegacy = handoff::invoke,
         executorScope = scope
@@ -251,6 +260,46 @@ class SdkShieldedUsernameCreationTest {
         } finally {
             balanceFlow.value = denomination
         }
+    }
+
+    @Test
+    fun contestedUsername_spendsTheContestedDenomination() = runTest {
+        // "alice" normalizes to the contested charset → the 0.25 fee maps
+        // to the 0.3 denomination (the identity's credits must cover the
+        // ~0.2 prefunded voting balance the contested DPNS doc debits).
+        balanceFlow.value = contestedDenomination
+        try {
+            val source = happySource()
+            coEvery {
+                source.createIdentityFromPool(
+                    walletIdHex, 0, registrationKeys, contestedDenominationCredits, any()
+                )
+            } returns identityId
+
+            val result = service(source = source).createUsernameFromShielded("alice")
+
+            assertTrue(result is SdkWriteResult.Broadcast)
+            coVerify {
+                source.createIdentityFromPool(
+                    walletIdHex, 0, registrationKeys, contestedDenominationCredits, any()
+                )
+            }
+            coVerify(exactly = 0) {
+                source.createIdentityFromPool(walletIdHex, 0, registrationKeys, denominationCredits, any())
+            }
+        } finally {
+            balanceFlow.value = denomination
+        }
+    }
+
+    @Test
+    fun contestedUsername_poolCoversNonContestedButNotContestedDenomination_notBroadcast() = runTest {
+        // Pool holds 0.1 (enough for a non-contested name) but the
+        // contested name needs the 0.3 note — nothing may be spent.
+        val source = mockk<ShieldedUsernameSource>()
+        val result = service(source = source).createUsernameFromShielded("alice")
+        assertTrue(result is SdkWriteResult.NotBroadcast)
+        coVerify(exactly = 0) { source.createIdentityFromPool(any(), any(), any(), any(), any()) }
     }
 
     @Test
