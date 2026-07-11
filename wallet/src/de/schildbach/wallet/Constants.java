@@ -121,7 +121,10 @@ public final class Constants {
                 if (SUPPORTS_PLATFORM) {
                     SYNC_FLAGS.add(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING);
                 }
-                org.dash.wallet.common.util.Constants.FAUCET_URL = "http://faucet.testnet.networks.dash.org/";
+                // Same faucet the iOS example app uses (it replaced
+                // faucet.testnet.networks.dash.org, which no longer accepts
+                // connections and whose captcha challenge fails).
+                org.dash.wallet.common.util.Constants.FAUCET_URL = "https://faucet.thepasta.org/";
                 org.dash.wallet.common.util.Constants.INSTANCE.setEXPLORE_GC_FILE_PATH("explore/explore-v4-testnet.db");
                 break;
             }
