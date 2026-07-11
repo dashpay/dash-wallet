@@ -66,6 +66,45 @@ enum class ContactsScreenMode {
     VIEW_REQUESTS
 }
 
+/** Decision produced by [ContactsIdentityGate] for one blockchainIdentity emission. */
+enum class ContactsIdentityRouting {
+    /** Identity not loaded yet, or this view is already routed — do nothing. */
+    NONE,
+    SHOW_CONTACTS,
+    SHOW_EVO_UPGRADE
+}
+
+/**
+ * One-shot identity routing gate for the contacts screen.
+ *
+ * blockchainIdentity LiveData is populated asynchronously from DataStore and
+ * can emit repeatedly (BlockchainIdentityData is not deduped by
+ * distinctUntilChanged, and DataStore emits on any preference change), so the
+ * first non-null emission decides the routing and later emissions are ignored.
+ *
+ * The gate is one-shot PER VIEW, so a new instance must be created in
+ * onViewCreated. A fragment-scoped flag regressed here: the fragment instance
+ * survives a back-stack pop while its view (and binding) are recreated, and
+ * the stale resolved flag left the recreated view permanently blank —
+ * container hidden, toolbar bare (no title/menu), no adapter or observers.
+ */
+class ContactsIdentityGate {
+    private var resolved = false
+
+    fun route(hasUsername: Boolean?): ContactsIdentityRouting {
+        if (hasUsername == null || resolved) {
+            return ContactsIdentityRouting.NONE
+        }
+
+        resolved = true
+        return if (hasUsername) {
+            ContactsIdentityRouting.SHOW_CONTACTS
+        } else {
+            ContactsIdentityRouting.SHOW_EVO_UPGRADE
+        }
+    }
+}
+
 @AndroidEntryPoint
 class ContactsFragment : Fragment(),
         ContactSearchResultsAdapter.Listener,
@@ -82,8 +121,6 @@ class ContactsFragment : Fragment(),
     private val args by navArgs<ContactsFragmentArgs>()
     private var initialSearch = true
     private var searchEventSent = false
-    private var identityResolved = false
-    private var viewsInitialized = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_contacts_root, container, false)
@@ -92,33 +129,33 @@ class ContactsFragment : Fragment(),
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // blockchainIdentity LiveData is populated asynchronously from DataStore.
-        // Reading hasIdentity synchronously can return false before the first
-        // emission, misrouting users who have a username to the EvoUpgrade screen.
-        // The observer can fire repeatedly (BlockchainIdentityData is not deduped
-        // by distinctUntilChanged, and DataStore emits on any preference change),
-        // so identityResolved makes the routing decision one-shot.
+        // Reading hasIdentity synchronously can return false before DataStore's
+        // first emission, misrouting users who have a username to the EvoUpgrade
+        // screen — so wait for the first real emission instead. The gate lives
+        // and dies with the view (see ContactsIdentityGate).
+        val identityGate = ContactsIdentityGate()
         binding.container.isVisible = false
         mainViewModel.blockchainIdentity.observe(viewLifecycleOwner) { identityData ->
-            if (identityData == null || identityResolved) return@observe
-
-            identityResolved = true
-            if (!identityData.hasUsername) {
-                // No username: don't initialize the contacts UI or trigger any
-                // platform queries (PlatformRepo/blockchainIdentity are not set up
-                // without a username); just route to the upgrade screen.
-                safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
-            } else {
-                binding.container.isVisible = true
-                setupContactsViews()
+            when (identityGate.route(identityData?.hasUsername)) {
+                ContactsIdentityRouting.SHOW_EVO_UPGRADE -> {
+                    // No username: don't initialize the contacts UI or trigger any
+                    // platform queries (PlatformRepo/blockchainIdentity are not set
+                    // up without a username); just route to the upgrade screen.
+                    safeNavigate(ContactsFragmentDirections.contactsToEvoUpgrade())
+                }
+                ContactsIdentityRouting.SHOW_CONTACTS -> {
+                    binding.container.isVisible = true
+                    setupContactsViews()
+                }
+                ContactsIdentityRouting.NONE -> {}
             }
         }
     }
 
+    // Called at most once per view lifecycle (gated by ContactsIdentityGate in
+    // onViewCreated); everything here targets the current view's binding, so it
+    // must run again whenever the view is recreated.
     private fun setupContactsViews() {
-        if (viewsInitialized) return
-        viewsInitialized = true
-
         enterTransition = MaterialFadeThrough()
         binding.appBar.toolbar.setNavigationOnClickListener {
             findNavController().popBackStack()
