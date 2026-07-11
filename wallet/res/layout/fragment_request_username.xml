@@ -188,6 +188,7 @@
                 />
 
             <TextView
+                android:id="@+id/balance_requirement_text"
                 style="@style/Overline.Medium"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

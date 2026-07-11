@@ -215,6 +215,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 // binding.walletBalanceContainer.isVisible = !it.enoughBalance
                 if ((!requestUserNameViewModel.isUsingInvite() || isInviteContested) && usernameType != UsernameType.Secondary) {
                     binding.walletBalanceContainer.isVisible = !it.enoughBalance
+                    if (it.requiredAmount.isNotEmpty()) {
+                        binding.balanceRequirementText.text = getString(
+                            R.string.request_username_balance_requirement_amount,
+                            it.requiredAmount
+                        )
+                    }
 
                     if (it.usernameContestable || it.usernameContested) {
                         val startDate = Date(it.votingPeriodStart)

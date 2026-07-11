@@ -89,6 +89,13 @@ data class RequestUserNameUIState(
     val usernameExists: Boolean = false,
     val usernameBlocked: Boolean = false,
     val enoughBalance: Boolean = false,
+    /**
+     * What the chosen payment source actually requires for this name, as a
+     * plain DASH string for the insufficient-balance row — path- and
+     * contested-dependent (L1 0.03/0.25, shielded denomination 0.1/0.3,
+     * identity credits 0.01/0.2). Empty until a name has been checked.
+     */
+    val requiredAmount: String = "",
     val usernameNonContestedChars: Boolean = false,
     val usernameNonContestedLength: Boolean = false,
     val votingPeriodStart: Long = System.currentTimeMillis()
@@ -607,12 +614,28 @@ class RequestUserNameViewModel @Inject constructor(
             identityBalance == 0L && !contestable -> walletBalance >= Constants.DASH_PAY_FEE
             else -> false // how can we get here?
         }
+        // The same branch structure, resolved to the amount the
+        // insufficient-balance row must name (the old layout hardcoded
+        // 0.25 for every case).
+        val requiredAmount = when {
+            isUsingInvite() && contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            isUsingInvite() && !contestable -> Constants.DASH_PAY_FEE.toPlainString()
+            paymentSource == UsernamePaymentSource.SHIELDED_BALANCE ->
+                shieldedIdentityFundingRequirement(
+                    Dash((if (contestable) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE).value)
+                )?.toPlainString() ?: Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            identityBalance > 0L && contestable -> Coin.valueOf(CONTEST_DOCUMENT_FEE / 1000).toPlainString()
+            identityBalance > 0L && !contestable -> Coin.valueOf(NON_CONTEST_DOCUMENT_FEE / 1000).toPlainString()
+            contestable -> Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+            else -> Constants.DASH_PAY_FEE.toPlainString()
+        }
         _uiState.update {
             it.copy(
                 usernameLengthValid = validLength,
                 usernameCharactersValid = validCharacters && !startOrEndWithHyphen,
                 usernameContestable = contestable,
                 enoughBalance = enoughBalance,
+                requiredAmount = requiredAmount,
                 usernameTooShort = username.isEmpty(),
                 usernameSubmittedError = false,
                 usernameCheckSuccess = false,

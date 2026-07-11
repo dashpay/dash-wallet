@@ -429,6 +429,10 @@
     <string name="request_username_character_requirement">Letters, numbers and hyphens only</string>
     <string name="request_username_character_requirement_invite_noncontested">Numbers 2-9</string>
     <string name="request_username_balance_requirement">You need to have 0.25 DASH to create this username</string>
+    <!-- The path-dependent variant: %s is the actual requirement of the chosen
+         payment source × contested-ness (L1 0.03/0.25, shielded denomination
+         0.1/0.3, identity credits 0.01/0.2). -->
+    <string name="request_username_balance_requirement_amount">You need to have %s DASH to create this username</string>
     <string name="request_username_requirements_message_invite_noncontested">The username must meet one of these criteria</string>
     <string name="request_username_requirements_message">The username must meet these criteria</string>
     <string name="request_username_length_requirement">Between 3 and 23 characters</string>
