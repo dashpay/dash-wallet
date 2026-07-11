@@ -441,7 +441,7 @@ class RequestUserNameViewModel @Inject constructor(
                 // reuse-transaction submissions never reach here — their
                 // funding is already committed elsewhere.
                 log.info("routing username creation to the shielded-funded SDK path")
-                shieldedUsernameCreation.submit(requestedUserName!!)
+                shieldedUsernameCreation.submit(requestedUserName!!, requestedUsernameSecondary)
             } else {
                 triggerIdentityCreation(reuseTransaction)
             }

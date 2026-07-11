@@ -303,6 +303,59 @@ class SdkShieldedUsernameCreationTest {
     }
 
     @Test
+    fun dualUsernames_registersBoth_contestedFundingFromThePrimary() = runTest {
+        balanceFlow.value = contestedDenomination
+        try {
+            val source = happySource()
+            coEvery {
+                source.createIdentityFromPool(
+                    walletIdHex, 0, registrationKeys, contestedDenominationCredits, any()
+                )
+            } returns identityId
+
+            val result = service(source = source)
+                .createUsernameFromShielded("alice", "alice2")
+
+            val outcome = (result as SdkWriteResult.Broadcast).value
+            assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.nameStatus)
+            assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.secondaryNameStatus)
+            coVerifyOrder {
+                source.registerDpnsName(walletIdHex, identityId, "alice")
+                source.registerDpnsName(walletIdHex, identityId, "alice2")
+            }
+        } finally {
+            balanceFlow.value = denomination
+        }
+    }
+
+    @Test
+    fun dualUsernames_primaryNameFailure_secondaryStillAttempted() = runTest {
+        balanceFlow.value = contestedDenomination
+        try {
+            val source = happySource()
+            coEvery {
+                source.createIdentityFromPool(
+                    walletIdHex, 0, registrationKeys, contestedDenominationCredits, any()
+                )
+            } returns identityId
+            coEvery {
+                source.registerDpnsName(walletIdHex, identityId, "alice")
+            } throws DashSdkError.InvalidParameter("contest already locked")
+
+            val result = service(source = source)
+                .createUsernameFromShielded("alice", "alice2")
+
+            // The identity is on chain either way; each name lands (or not)
+            // independently.
+            val outcome = (result as SdkWriteResult.Broadcast).value
+            assertEquals(ShieldedUsernameNameStatus.NOT_REGISTERED, outcome.nameStatus)
+            assertEquals(ShieldedUsernameNameStatus.REGISTERED, outcome.secondaryNameStatus)
+        } finally {
+            balanceFlow.value = denomination
+        }
+    }
+
+    @Test
     fun walletNotBound_notBroadcast() = runTest {
         val source = mockk<ShieldedUsernameSource> {
             coEvery { boundWalletIdOrNull() } returns null

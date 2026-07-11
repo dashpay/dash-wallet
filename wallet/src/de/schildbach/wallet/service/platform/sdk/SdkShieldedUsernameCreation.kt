@@ -310,12 +310,16 @@ enum class ShieldedUsernameNameStatus {
 /**
  * Payload of a [SdkWriteResult.Broadcast] from
  * [SdkShieldedUsernameCreation.createUsernameFromShielded]: the identity
- * IS on chain (the pool was spent); [nameStatus] qualifies the username.
+ * IS on chain (the pool was spent); [nameStatus] qualifies the primary
+ * username and [secondaryNameStatus] the optional secondary (dual-username
+ * flow; null when none was requested).
  */
 data class ShieldedUsernameCreationOutcome(
     val identityIdBase58: String,
     val nameStatus: ShieldedUsernameNameStatus,
-    val nameFailureReason: String? = null
+    val nameFailureReason: String? = null,
+    val secondaryNameStatus: ShieldedUsernameNameStatus? = null,
+    val secondaryNameFailureReason: String? = null
 )
 
 /**
@@ -459,7 +463,7 @@ class SdkShieldedUsernameCreation internal constructor(
      * provably-pre-broadcast NotSent (retry-safe). The Idle→Proving
      * transition is atomic under [this].
      */
-    fun submit(username: String): Boolean {
+    fun submit(username: String, secondaryUsername: String? = null): Boolean {
         val scope = executorScope
         if (scope == null) {
             log.warn("shielded username creation submit refused: no executor scope")
@@ -476,7 +480,9 @@ class SdkShieldedUsernameCreation internal constructor(
             _submitState.value = ShieldedUsernameSubmitState.Proving
         }
         scope.launch {
-            val result = withContext(ioDispatcher) { createUsernameFromShielded(username) }
+            val result = withContext(ioDispatcher) {
+                createUsernameFromShielded(username, secondaryUsername)
+            }
             val outcome = when (result) {
                 is SdkWriteResult.Broadcast -> ShieldedUsernameSubmitState.Created(result.value)
                 is SdkWriteResult.NotBroadcast -> ShieldedUsernameSubmitState.NotSent(result.reason)
@@ -510,20 +516,27 @@ class SdkShieldedUsernameCreation internal constructor(
      * the Type-20 spend; the [SdkWriteResult] three-valued contract holds
      * ([SdkWriteResult.Ambiguous] is never retried by anyone).
      */
-    suspend fun createUsernameFromShielded(username: String): SdkWriteResult<ShieldedUsernameCreationOutcome> {
+    suspend fun createUsernameFromShielded(
+        username: String,
+        secondaryUsername: String? = null
+    ): SdkWriteResult<ShieldedUsernameCreationOutcome> {
         if (!isEnabled()) return SdkWriteResult.NotBroadcast("flag off")
         val label = username.trim()
         if (label.isEmpty()) {
             return notBroadcast("empty username", null)
         }
+        val secondaryLabel = secondaryUsername?.trim()?.takeIf { it.isNotEmpty() && it != label }
 
-        // Contested-ness is derived HERE from the label (same rule the
+        // Contested-ness is derived HERE from the labels (same rule the
         // request screen gates on) so a caller can never pair a contested
         // name with the too-small non-contested denomination — the name
         // registration would fail its ~0.2 prefunded-voting-balance
-        // debit after the identity was already created.
+        // debit after the identity was already created. In the dual-
+        // username flow the primary is the contested one, but either
+        // label being contestable bumps the funding requirement.
         val contested = try {
-            Names.isUsernameContestable(label)
+            Names.isUsernameContestable(label) ||
+                (secondaryLabel != null && Names.isUsernameContestable(secondaryLabel))
         } catch (t: Throwable) {
             if (t is CancellationException) throw t
             return notBroadcast("contested-ness check failed", t)
@@ -628,23 +641,12 @@ class SdkShieldedUsernameCreation internal constructor(
             contested
         )
 
-        // Best-effort DPNS name — the identity exists either way.
-        val (nameStatus, nameFailure) = try {
-            source.registerDpnsName(walletId, identityId, label)
-            ShieldedUsernameNameStatus.REGISTERED to null
-        } catch (t: Throwable) {
-            if (t is CancellationException) throw t
-            when (classifyBroadcastFailure(t)) {
-                is SdkWriteResult.NotBroadcast -> {
-                    log.warn("DPNS name registration rejected pre-broadcast after identity creation", t)
-                    ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
-                }
-                else -> {
-                    log.error("DPNS name registration outcome unconfirmed after identity creation", t)
-                    ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
-                }
-            }
-        }
+        // Best-effort DPNS names — the identity exists either way. The
+        // secondary (dual-username flow) is registered independently of
+        // the primary's outcome: each name that can land should land, and
+        // the legacy handoff below reconciles whatever is on chain.
+        val (nameStatus, nameFailure) = registerNameBestEffort(walletId, identityId, label)
+        val secondaryResult = secondaryLabel?.let { registerNameBestEffort(walletId, identityId, it) }
 
         // Hand the on-chain identity to the legacy state machine (restore
         // path). Best-effort: a handoff failure must not demote a real
@@ -663,8 +665,42 @@ class SdkShieldedUsernameCreation internal constructor(
         }
 
         return SdkWriteResult.Broadcast(
-            ShieldedUsernameCreationOutcome(identityIdBase58, nameStatus, nameFailure)
+            ShieldedUsernameCreationOutcome(
+                identityIdBase58 = identityIdBase58,
+                nameStatus = nameStatus,
+                nameFailureReason = nameFailure,
+                secondaryNameStatus = secondaryResult?.first,
+                secondaryNameFailureReason = secondaryResult?.second
+            )
         )
+    }
+
+    /**
+     * One best-effort DPNS registration for an identity that already
+     * exists on chain — a failure demotes the name's status, never the
+     * creation result. The [classifyBroadcastFailure] contract holds per
+     * name: Ambiguous is never retried here (the legacy handoff/platform
+     * sync reconciles).
+     */
+    private suspend fun registerNameBestEffort(
+        walletId: String,
+        identityId: ByteArray,
+        label: String
+    ): Pair<ShieldedUsernameNameStatus, String?> = try {
+        source.registerDpnsName(walletId, identityId, label)
+        ShieldedUsernameNameStatus.REGISTERED to null
+    } catch (t: Throwable) {
+        if (t is CancellationException) throw t
+        when (classifyBroadcastFailure(t)) {
+            is SdkWriteResult.NotBroadcast -> {
+                log.warn("DPNS registration of '{}' rejected pre-broadcast after identity creation", label, t)
+                ShieldedUsernameNameStatus.NOT_REGISTERED to (t.message ?: "name registration failed")
+            }
+            else -> {
+                log.error("DPNS registration of '{}' outcome unconfirmed after identity creation", label, t)
+                ShieldedUsernameNameStatus.AMBIGUOUS to (t.message ?: "name registration ambiguous")
+            }
+        }
     }
 
     private fun notBroadcast(reason: String, cause: Throwable?): SdkWriteResult.NotBroadcast {

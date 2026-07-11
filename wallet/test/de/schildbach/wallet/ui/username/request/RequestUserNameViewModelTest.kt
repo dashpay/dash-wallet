@@ -71,7 +71,7 @@ class RequestUserNameViewModelTest {
 
     private val shieldedUsernameCreation = mockk<SdkShieldedUsernameCreation> {
         every { submitState } returns shieldedSubmitState
-        every { submit(any()) } returns true
+        every { submit(any(), any()) } returns true
         every { acknowledge() } just Runs
     }
 
@@ -130,7 +130,7 @@ class RequestUserNameViewModelTest {
         viewModel.submit()
 
         // submit() hops over Dispatchers.IO for the config write — poll.
-        verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2") }
+        verify(exactly = 1, timeout = 5_000) { shieldedUsernameCreation.submit("alice2", null) }
         verify(exactly = 0) { walletApplication.startService(any()) }
     }
 
@@ -143,7 +143,7 @@ class RequestUserNameViewModelTest {
         viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
-        verify(exactly = 0) { shieldedUsernameCreation.submit(any()) }
+        verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
     }
 
     @Test
@@ -166,7 +166,7 @@ class RequestUserNameViewModelTest {
         viewModel.submit()
 
         verify(exactly = 1, timeout = 5_000) { walletApplication.startService(any()) }
-        verify(exactly = 0) { shieldedUsernameCreation.submit(any()) }
+        verify(exactly = 0) { shieldedUsernameCreation.submit(any(), any()) }
     }
 
     // ── Submit-state mirroring ──────────────────────────────────────────────
