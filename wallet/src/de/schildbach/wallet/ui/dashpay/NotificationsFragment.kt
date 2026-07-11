@@ -269,10 +269,13 @@ class NotificationsFragment : Fragment(R.layout.fragment_notifications) {
     }
 
     private fun showSendContactRequestError() {
+        // Every contact-request action on the notifications screen is an
+        // ACCEPT (onAcceptRequest → sendContactRequest), so use the accept
+        // wording.
         AdaptiveDialog.create(
             R.drawable.ic_warning_yellow_circle,
-            getString(R.string.send_contact_request_error_title),
-            getString(R.string.send_contact_request_error_message),
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
             getString(R.string.button_ok)
         ).show(requireActivity())
     }

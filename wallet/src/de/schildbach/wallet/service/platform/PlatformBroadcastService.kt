@@ -96,7 +96,16 @@ class PlatformDocumentBroadcastService @Inject constructor(
 
     @Throws(Exception::class)
     override suspend fun sendContactRequest(toUserId: String, encryptionKey: KeyParameter): DashPayContactRequest {
-        val potentialContactIdentity = platform.identities.get(toUserId)
+        // getContactIdentity (not identities.get) tolerates the legacy dashj
+        // identity cache being unable to CBOR-serialize a v4.1 identity — e.g.
+        // an iOS username being ACCEPTED here (accept is this reciprocal
+        // sendContactRequest). identities.get fetches the identity fine but its
+        // storeIdentity cache write throws "No converter for ...", losing the
+        // fetched identity and aborting the accept before any broadcast (SDK or
+        // dashj) is even attempted. Both branches below need this identity, so
+        // recovering it uncached fixes the SDK Broadcast path and the dashj
+        // fallback alike.
+        val potentialContactIdentity = platform.getContactIdentity(Identifier.from(toUserId))
         log.info("potential contact identity: $potentialContactIdentity")
         val blockchainIdentity = identityRepository.blockchainIdentity
             ?: throw IllegalStateException("blockchain identity not available; ensure identity is loaded before calling PlatformBroadcastService.sendContactRequest")

@@ -611,7 +611,11 @@ class PlatformSynchronizationService @Inject constructor(
             if (!platformRepo.walletApplication.wallet!!.hasReceivingKeyChain(contact)) {
                 Context.propagate(walletApplication.wallet!!.context)
                 log.info("adding accepted/send request to wallet: ${contactRequest.toUserId}")
-                val contactIdentity = platform.identities.get(contactRequest.toUserId)
+                // getContactIdentity tolerates the legacy identity cache being
+                // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
+                // identities.get would otherwise throw "No converter for ..."
+                // and drop this reconciled contact.
+                val contactIdentity = platform.getContactIdentity(contactRequest.toUserId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {
@@ -660,7 +664,11 @@ class PlatformSynchronizationService @Inject constructor(
             Context.propagate(platformRepo.walletApplication.wallet!!.context)
             if (!platformRepo.walletApplication.wallet!!.hasSendingKeyChain(contact)) {
                 log.info("adding received request: ${contactRequest.ownerId} to wallet")
-                val contactIdentity = platform.identities.get(contactRequest.ownerId)
+                // getContactIdentity tolerates the legacy identity cache being
+                // unable to CBOR-serialize a v4.1 identity (e.g. an iOS contact);
+                // identities.get would otherwise throw "No converter for ..." and
+                // this received request would never be added to the wallet.
+                val contactIdentity = platform.getContactIdentity(contactRequest.ownerId)
                 var myEncryptionKey = encryptionKey
                 if (encryptionKey == null && platformRepo.walletApplication.wallet!!.isEncrypted) {
                     val password = try {

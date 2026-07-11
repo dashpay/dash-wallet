@@ -461,10 +461,13 @@ class ContactsFragment : Fragment(),
     }
 
     private fun showSendContactRequestError() {
+        // The only contact-request action on this screen is accepting an
+        // incoming request (onAcceptRequest → sendContactRequest), so use the
+        // accept wording.
         AdaptiveDialog.create(
             R.drawable.ic_warning_yellow_circle,
-            getString(R.string.send_contact_request_error_title),
-            getString(R.string.send_contact_request_error_message),
+            getString(R.string.accept_contact_request_error_title),
+            getString(R.string.accept_contact_request_error_message),
             getString(R.string.button_ok)
         ).show(requireActivity())
     }
