@@ -553,3 +553,34 @@ Contested usernames are currently L1-gated in the shielded flow. Required work:
 3. Dual usernames under shielded funding (follows from 1).
 Cost model reminder: shielded path 0.1 non-contested / 0.3 contested (denomination-bound,
 temporary protocol limitation); non-private path keeps ~0.03 / ~0.3 (not denomination-bound).
+
+## Baseline correction + cross-platform contact crash (2026-07-11, from shipped-code review)
+
+CORRECTION to the Phase 3h legacy matrix: shipped **v11.8.2** (tag, HEAD 618ac7b, 2026-07-09)
+unified all flavors to **dpp 4.0.0** (PR #1508) on dashj-core 22.0.4. Our migration branch
+forked the pre-#1508 baseline (prod 2.0.6-SNAPSHOT / testnet 4.0.0-RC2-SNAPSHOT). The Phase 3h
+"retire org.dashj.platform" table's version cells are stale — shipped prod is dpp 4.0.0, not
+2.0.6-SNAPSHOT. Retirement scope is otherwise unchanged.
+
+CROSS-PLATFORM CONTACT CRASH (release-relevant, independent of this migration):
+- Root cause: `IdentityPublicKey.contractBounds` (a v4.x contract-bound-key feature; iOS/Rust-SDK
+  identities carry one, year-old dashj Android identities do not). dashj-platform
+  `IdentityPublicKey.toObject()` does `put("contractBounds", this)` — the RAW ContractBounds
+  object — so `Cbor.addValueToMapBuilder` throws `No converter for SingleContractDocumentType`
+  (Cbor.kt:186) when `PlatformStateRepository.storeIdentity` CBOR-encodes the fetched identity
+  into its in-memory cache.
+- WIRE-VS-CACHE VERDICT (bytecode-verified): breaks ONLY the local in-memory identity cache, NOT
+  the contactRequest wire. The identity fetches+parses fine; the throw is post-fetch,
+  pre-return, so the caller loses a good identity. contactRequest documents + DIP-15 crypto are
+  version-agnostic. One-directional: only a dashj client caching an identity WITH contract-bound
+  keys (iOS/v4.x sender) crashes; old-Android → iOS is fine.
+- Shipped v11.8.2 almost certainly affected: the fix is NOT on kotlin-platform master/feat, only
+  on unmerged branch `fix/contract-bounds` (one line: `put("contractBounds", this.toObject())`).
+  Could not obtain the exact dpp-4.0.0-final jar to be 100% certain — needs the build machine's
+  artifact to confirm.
+- Fix options: (1) app-side catch/bypass (implemented uncommitted this session:
+  IdentityCacheTolerance.kt + PlatformService.getContactIdentity, wired into send + receive),
+  Android-only, restores both directions; (3) library one-liner on fix/contract-bounds → dpp
+  point release (fixes all clients); (2) full SDK routing (overkill). No coordinated iOS release
+  needed. RELEASE DECISION PENDING (user): where the fix lands — our branch, a v11.8.x hotfix,
+  or both.
