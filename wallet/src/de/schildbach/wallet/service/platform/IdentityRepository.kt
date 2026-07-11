@@ -391,7 +391,7 @@ class IdentityRepositoryImpl @Inject constructor(
         val identity = _blockchainIdentity
         if (hasBlockchainIdentity && identity != null) {
             walletDataProvider.wallet?.let { wallet ->
-                if (!identity.hasTransferKey() || !identity.hasEncryptionKey()) {
+                if (!identity.hasTransferKey() || !identity.hasEncryptionKey() || !identity.hasDecryptionKey()) {
                     dashPayConfig.set(UPGRADE_IDENTITY_REQUIRED, true)
                     try {
                         log.info(
@@ -399,6 +399,8 @@ class IdentityRepositoryImpl @Inject constructor(
                                 identity.hasTransferKey()
                             }, encryption=${
                                 identity.hasEncryptionKey()
+                            }, decryption=${
+                                identity.hasDecryptionKey()
                             }]"
                         )
                         val enough = getIdentityBalance()
