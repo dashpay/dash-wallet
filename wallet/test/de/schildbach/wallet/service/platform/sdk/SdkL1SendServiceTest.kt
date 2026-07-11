@@ -358,6 +358,31 @@ class SdkL1SendServiceTest {
     }
 
     @Test
+    fun probeSendGate_mirrorsTheSendGate_andTouchesNoSdkSurface() {
+        // The debug settings status line reads THIS accessor — it must be
+        // the send predicate itself, and read-only.
+        val source = readySource()
+        assertTrue(service(source).probeSendGate().allowed)
+        assertFalse(service(source, parity = { null }).probeSendGate().allowed)
+        assertFalse(
+            service(source, parity = { matchingParity().copy(sdkSynced = false) })
+                .probeSendGate().allowed
+        )
+        assertFalse(
+            service(
+                source,
+                parity = { matchingParity(timestampMs = now - ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS - 1) }
+            ).probeSendGate().allowed
+        )
+        // Contained like a real send's gate read: a parity throw = closed.
+        assertFalse(
+            service(source, parity = { throw IllegalStateException("shadow broke") })
+                .probeSendGate().allowed
+        )
+        assertEquals(0, source.boundCalls + source.sendCalls)
+    }
+
+    @Test
     fun parityReadFailure_keepsGateClosed() = runBlocking {
         val source = readySource()
         val result = service(source, parity = { throw IllegalStateException("shadow broke") })

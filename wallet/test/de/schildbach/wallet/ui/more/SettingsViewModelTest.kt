@@ -21,6 +21,11 @@ import android.os.PowerManager
 import de.schildbach.wallet.WalletApplication
 import de.schildbach.wallet.database.dao.DashPayProfileDao
 import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
+import de.schildbach.wallet.service.platform.sdk.ParityReport
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.service.platform.sdk.SdkL1SendSource
+import de.schildbach.wallet.service.platform.sdk.WalletFundingGate
+import de.schildbach.wallet.service.platform.sdk.buildParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -31,8 +36,11 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.CompletableDeferred
@@ -45,6 +53,7 @@ import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.services.SendPaymentService
 import org.dash.wallet.common.services.analytics.AnalyticsService
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -91,6 +100,49 @@ class SettingsViewModelTest {
     }
     private val sendPaymentService = mockk<SendPaymentService>()
 
+    private val now = 1_000_000_000L
+
+    /** Latest shadow-parity report the gate probe sees; null = gate closed. */
+    @Volatile private var latestParity: ParityReport? = null
+
+    /** Counts gate-probe parity reads — the poll-lifecycle instrument. */
+    @Volatile private var parityReads = 0
+
+    /** A fresh, synced, fully matching parity report — the open-gate evidence. */
+    private fun openGateParity() = buildParityReport(
+        sdkConfirmedDuffs = 5_000_000,
+        sdkUnconfirmedDuffs = 0,
+        dashjEstimatedDuffs = 5_000_000,
+        dashjAvailableDuffs = 5_000_000,
+        sdkTxCount = 10,
+        dashjTxCount = 10,
+        sdkSynced = true,
+        timestampMs = now
+    )
+
+    /**
+     * A REAL [SdkL1SendService] (fakes only around it), so the status line
+     * and route label are proven against the service's own gate predicate,
+     * not a re-implementation.
+     */
+    private val sdkL1SendService = SdkL1SendService(
+        source = object : SdkL1SendSource {
+            override suspend fun boundWalletIdOrNull(): String? = null
+            override suspend fun sendToAddress(
+                walletIdHex: String,
+                addressBase58: String,
+                amountDuffs: Long
+            ): String = throw IllegalStateException("the probe must never send")
+        },
+        dashPayConfig = dashPayConfig,
+        isValidAddress = { true },
+        l1Parity = {
+            parityReads++
+            latestParity
+        },
+        nowMs = { now }
+    )
+
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -112,6 +164,7 @@ class SettingsViewModelTest {
         blockchainIdentityConfig = blockchainIdentityConfig,
         blockchainServiceConfig = mockk<BlockchainServiceConfig>(),
         sendPaymentService = sendPaymentService,
+        sdkL1SendService = sdkL1SendService,
         dashPayProfileDao = dashPayProfileDao
     )
 
@@ -169,8 +222,9 @@ class SettingsViewModelTest {
         uiState.first { !it.soakSendInFlight && it.soakSendStatus != null }
 
     @Test
-    fun soakSend_sendsToOwnFreshAddress_viaTheNeutralOverload_andReportsTheFlag() = runTest(dispatcher) {
+    fun soakSend_flagOnGateOpen_reportsTheSdkEngineRoute() = runTest(dispatcher) {
         l1SendFlag.value = true
+        latestParity = openGateParity()
         coEvery {
             sendPaymentService.sendCoins("yOwnFreshAddress", Dash.parse("0.05"), false, true)
         } returns soakTxid
@@ -180,14 +234,31 @@ class SettingsViewModelTest {
 
         val state = viewModel.settledSoakState()
         assertTrue(state.soakSendStatus!!.startsWith("sent ${soakTxid.take(8)}"))
-        assertTrue(state.soakSendStatus!!.contains("SDK flag on"))
+        assertTrue(state.soakSendStatus!!.contains("(SDK engine)"))
         coVerify(exactly = 1) {
             sendPaymentService.sendCoins("yOwnFreshAddress", Dash.parse("0.05"), false, true)
         }
     }
 
     @Test
-    fun soakSendFailure_surfacesTheExceptionMessage() = runTest(dispatcher) {
+    fun soakSend_flagOnGateClosed_reportsTheDashjFallbackRoute() = runTest(dispatcher) {
+        // The live-soak trap this label exists for: flag ON but the shadow
+        // SPV not synced yet, so SdkL1SendService declines and dashj sends.
+        l1SendFlag.value = true
+        latestParity = openGateParity().copy(sdkSynced = false)
+        coEvery {
+            sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
+        } returns soakTxid
+        val viewModel = viewModel()
+
+        viewModel.runSdkSoakSend()
+
+        val state = viewModel.settledSoakState()
+        assertTrue(state.soakSendStatus!!.contains("(dashj fallback)"))
+    }
+
+    @Test
+    fun soakSendFailure_surfacesTheExceptionMessage_andTheFlagOffRoute() = runTest(dispatcher) {
         coEvery {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         } throws IllegalStateException("insufficient funds")
@@ -197,7 +268,7 @@ class SettingsViewModelTest {
 
         val state = viewModel.settledSoakState()
         assertTrue(state.soakSendStatus!!.startsWith("failed: insufficient funds"))
-        assertTrue(state.soakSendStatus!!.contains("SDK flag off"))
+        assertTrue(state.soakSendStatus!!.contains("(dashj — flag off)"))
     }
 
     @Test
@@ -219,5 +290,87 @@ class SettingsViewModelTest {
         coVerify(exactly = 1) {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         }
+    }
+
+    // ── The SDK send-gate status line (pure mappings) ─────────────────
+
+    @Test
+    fun sdkEngineStatusLine_mapsBothGateStates() {
+        assertEquals(
+            "SDK engine: READY",
+            sdkEngineStatusLine(WalletFundingGate(true, "balance parity MATCH"))
+        )
+        assertEquals(
+            "SDK engine: syncing — sends will fall back to dashj (SDK shadow SPV not synced yet)",
+            sdkEngineStatusLine(WalletFundingGate(false, "SDK shadow SPV not synced yet"))
+        )
+    }
+
+    @Test
+    fun soakRouteLabel_mapsTheThreeRoutes_andTheUnknownFlag() {
+        assertEquals("SDK engine", soakRouteLabel(sdkFlagOn = true, gateOpenAtAttempt = true))
+        assertEquals("dashj fallback", soakRouteLabel(sdkFlagOn = true, gateOpenAtAttempt = false))
+        assertEquals("dashj — flag off", soakRouteLabel(sdkFlagOn = false, gateOpenAtAttempt = true))
+        assertEquals("dashj — flag off", soakRouteLabel(sdkFlagOn = false, gateOpenAtAttempt = false))
+        assertEquals("route unknown", soakRouteLabel(sdkFlagOn = null, gateOpenAtAttempt = true))
+    }
+
+    // ── The SDK send-gate poll (lifecycle + live updates) ─────────────
+
+    @Test
+    fun gateStatus_reflectsBothStates_andUpdatesLiveWhilePolling() = runTest(dispatcher) {
+        latestParity = null // gate closed: no parity measurement yet
+        val viewModel = viewModel()
+
+        val screen = launch { viewModel.uiState.collect { } }
+        runCurrent()
+        assertTrue(
+            viewModel.uiState.value.sdkSendGateStatus!!
+                .startsWith("SDK engine: syncing — sends will fall back to dashj")
+        )
+
+        // The shadow SPV reaches parity → the next poll flips to READY.
+        latestParity = openGateParity()
+        advanceTimeBy(2_100)
+        runCurrent()
+        assertEquals("SDK engine: READY", viewModel.uiState.value.sdkSendGateStatus)
+
+        // …and back (a new block dips the shadow out of SYNCED).
+        latestParity = openGateParity().copy(sdkSynced = false)
+        advanceTimeBy(2_100)
+        runCurrent()
+        assertEquals(
+            "SDK engine: syncing — sends will fall back to dashj (SDK shadow SPV not synced yet)",
+            viewModel.uiState.value.sdkSendGateStatus
+        )
+
+        screen.cancel()
+    }
+
+    @Test
+    fun gatePolling_runsOnlyWhileTheUiStateIsCollected() = runTest(dispatcher) {
+        latestParity = null
+        val viewModel = viewModel()
+
+        // Screen not visible (no uiState collector) → no probes at all.
+        advanceTimeBy(10_000)
+        runCurrent()
+        assertEquals(0, parityReads)
+
+        // Screen visible → an immediate probe, then one per ~2s tick.
+        val screen = launch { viewModel.uiState.collect { } }
+        runCurrent()
+        assertTrue(parityReads >= 1)
+        advanceTimeBy(4_100)
+        runCurrent()
+        assertTrue(parityReads >= 3)
+
+        // Screen gone → the poll stops (WhileSubscribed via subscriptionCount).
+        screen.cancel()
+        runCurrent()
+        val readsAfterLeaving = parityReads
+        advanceTimeBy(60_000)
+        runCurrent()
+        assertEquals(readsAfterLeaving, parityReads)
     }
 }

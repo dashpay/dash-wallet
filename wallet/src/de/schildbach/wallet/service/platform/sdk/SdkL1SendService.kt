@@ -294,6 +294,22 @@ class SdkL1SendService internal constructor(
     )
 
     /**
+     * Read-only probe of the L1 send evidence gate — THE SAME predicate
+     * [sendToAddress] evaluates before broadcasting ([evaluateWalletFundingGate]
+     * over the latest parity report: shadow SPV SYNCED + fresh parity on
+     * BOTH balance variants). Extracted so the debug settings screen can
+     * show the live gate state without approximating the rule. Never
+     * mutates anything and never throws — a parity-read failure reads as
+     * a closed gate, exactly as it would on a real send ([safeParity]).
+     * NOTE: a real send has additional preflights (flag, address, wallet
+     * binding), so an open gate means "the SDK engine WOULD be used if
+     * those pass", not a guarantee.
+     */
+    internal fun probeSendGate(): WalletFundingGate = evaluateWalletFundingGate(
+        safeParity(), nowMs(), ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS
+    )
+
+    /**
      * Attempt the SDK L1 send. One broadcast attempt, classified by
      * [classifyCoreSendFailure]; every preflight failure is
      * [SdkWriteResult.NotBroadcast] by construction.
@@ -341,9 +357,8 @@ class SdkL1SendService internal constructor(
 
         // Evidence gate — the same rule as shieldFromWallet, via the SAME
         // helper: shadow SYNCED + fresh parity on BOTH balance variants.
-        val gate = evaluateWalletFundingGate(
-            safeParity(), nowMs(), ShieldedBalanceServiceImpl.PARITY_MAX_AGE_MS
-        )
+        // Shared with the debug settings status line via probeSendGate.
+        val gate = probeSendGate()
         if (!gate.allowed) {
             return notBroadcast(operation, "L1 funding gate closed: ${gate.reason}", null)
         }

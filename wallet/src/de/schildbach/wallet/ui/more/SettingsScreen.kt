@@ -202,6 +202,10 @@ private fun SettingsScreenContent(
                         title = "Use Kotlin SDK for L1 sends",
                         subtitle = "Debug only: routes real sends through the new SDK engine " +
                             "instead of dashj. Leave off unless soak-testing Phase 5b.",
+                        // Live send-gate state (polled ~2s while visible):
+                        // whether a send right now would take the SDK engine
+                        // or fall back to dashj — and why.
+                        subtitle2 = uiState.sdkSendGateStatus,
                         checked = uiState.useKotlinSdkL1Send,
                         onCheckedChange = onUseKotlinSdkL1SendChanged
                     )
