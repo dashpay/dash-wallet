@@ -47,6 +47,9 @@ class ConfirmUsernameRequestDialogFragment: OffsetDialogFragment(R.layout.dialog
         super.onViewCreated(view, savedInstanceState)
         viewModel.isContestableUsername = requestUserNameViewModel.isUsernameContestable()
         viewModel.hasIdentity = requestUserNameViewModel.identity != null
+        // Shielded-funded creations show the denomination actually leaving
+        // the shielded balance (0.1/0.3), not the L1 fee schedule.
+        viewModel.paymentSource = requestUserNameViewModel.paymentSource
         val usernameType = args.usernameType
         viewModel.usernameType = usernameType
         binding.confirmBtn.setOnClickListener {

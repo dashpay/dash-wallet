@@ -126,14 +126,18 @@ internal fun isMissingMnemonicError(t: Throwable): Boolean {
  *
  * ## Eligibility gate (checked in order, cheapest first)
  *
- * 1. Either [DashPayConfig.USE_KOTLIN_SDK_DPNS_READS] or
- *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES] is ON (re-read every
- *    call; both OFF → return before touching the SDK, the mnemonic
+ * 1. One of [DashPayConfig.USE_KOTLIN_SDK_DPNS_READS],
+ *    [DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES] or
+ *    [DashPayConfig.USE_KOTLIN_SDK_SHIELDED] is ON (re-read every
+ *    call; all OFF → return before touching the SDK, the mnemonic
  *    provider, or the identity config — the inertness contract).
  * 2. [Constants.SUPPORTS_PLATFORM] (64-bit builds only).
- * 3. The app actually has (or is creating) a platform identity:
- *    [BlockchainIdentityConfig.loadBase] reports `creationState != NONE`
- *    or a stored identity id. No identity → nothing to wire.
+ * 3. The app actually has (or is creating) a platform identity
+ *    ([BlockchainIdentityConfig.loadBase] reports `creationState != NONE`
+ *    or a stored identity id) — OR `USE_KOTLIN_SDK_SHIELDED` is ON:
+ *    shielding and the shielded-funded username creation need a bound
+ *    wallet BEFORE the first identity exists, so fresh wallets bind too
+ *    (binding-only; identity discovery defers until an id is stored).
  *
  * ## Trust model / seed hygiene
  *
@@ -324,13 +328,16 @@ class SdkWalletBinder internal constructor(
             return
         }
 
-        // 3. Platform-user check: only wire wallets that have (or are
-        //    creating) an identity.
+        // 3. Platform-user check: wire wallets that have (or are creating)
+        //    an identity — OR any wallet when the shielded features are on,
+        //    because shielding and the shielded-funded username creation
+        //    both need a bound wallet BEFORE the first identity exists
+        //    (the fresh-wallet path: fund → shield → create from pool).
         val identity = identityConfig.loadBase()
         val hasPlatformIdentity =
             identity.creationState != IdentityCreationState.NONE || identity.userId != null
-        if (!hasPlatformIdentity) {
-            log.info("SDK binding skipped: no platform identity on this wallet")
+        if (!hasPlatformIdentity && !shieldedFlagEnabled()) {
+            log.info("SDK binding skipped: no platform identity on this wallet and shielded features off")
             return
         }
 
@@ -445,9 +452,18 @@ class SdkWalletBinder internal constructor(
 
     private suspend fun anyFlagEnabled(): Boolean = try {
         dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) == true ||
-            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) == true ||
+            dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
     } catch (e: Exception) {
         log.warn("failed to read Kotlin-SDK flags; treating as off", e)
+        false
+    }
+
+    /** Shielded features widen the identity gate (fresh wallets bind too). Read failure = off. */
+    private suspend fun shieldedFlagEnabled(): Boolean = try {
+        dashPayConfig.get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) == true
+    } catch (e: Exception) {
+        log.warn("failed to read USE_KOTLIN_SDK_SHIELDED; treating as off", e)
         false
     }
 

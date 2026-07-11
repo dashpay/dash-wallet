@@ -20,6 +20,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.username.UsernameType
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import org.bitcoinj.core.Coin
 import org.bitcoinj.utils.MonetaryFormat
+import org.dash.wallet.common.money.Dash
 import org.dash.wallet.common.Configuration
 import org.dash.wallet.common.data.WalletUIConfig
 import org.dash.wallet.common.data.entity.ExchangeRate
@@ -59,11 +61,23 @@ class ConfirmUserNameDialogViewModel @Inject constructor(
     var usernameType: UsernameType = UsernameType.Primary
     var isContestableUsername: Boolean = false
     var hasIdentity: Boolean = false
+
+    /**
+     * The balance paying for the creation. The dialog always shows the
+     * amount actually withdrawn from the user's wallet: on the shielded
+     * path that is the whole Type-20 exit denomination leaving the pool
+     * (0.1 non-contested / 0.3 contested), not the underlying fee.
+     */
+    var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
     private val _uiState = MutableStateFlow(ConfirmUserNameUIState())
     val uiState: StateFlow<ConfirmUserNameUIState> = _uiState.asStateFlow()
     private val amount: Coin
         get() = when {
             usernameType == UsernameType.Secondary -> Coin.ZERO
+            paymentSource == UsernamePaymentSource.SHIELDED_BALANCE -> {
+                val fee = if (isContestableUsername) Constants.DASH_PAY_FEE_CONTESTED else Constants.DASH_PAY_FEE
+                shieldedIdentityFundingRequirement(Dash(fee.value))?.let { Coin.valueOf(it.duffs) } ?: fee
+            }
             isContestableUsername && !hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED
             isContestableUsername && hasIdentity -> Constants.DASH_PAY_FEE_CONTESTED_NAME
             else -> Constants.DASH_PAY_FEE

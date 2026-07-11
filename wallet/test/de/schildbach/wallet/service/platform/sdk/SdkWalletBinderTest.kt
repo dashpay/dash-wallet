@@ -144,7 +144,11 @@ class SdkWalletBinderTest {
     private fun identityConfig(base: BlockchainIdentityBaseData): BlockchainIdentityConfig =
         mockk { coEvery { loadBase() } returns base }
 
-    private fun dashPayConfig(readsFlag: Boolean?, writesFlag: Boolean? = false): DashPayConfig = mockk {
+    private fun dashPayConfig(
+        readsFlag: Boolean?,
+        writesFlag: Boolean? = false,
+        shieldedFlag: Boolean? = false
+    ): DashPayConfig = mockk {
         if (readsFlag == null) {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DPNS_READS) } throws
                 IllegalStateException("datastore unavailable")
@@ -156,6 +160,12 @@ class SdkWalletBinderTest {
                 IllegalStateException("datastore unavailable")
         } else {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_DASHPAY_WRITES) } returns writesFlag
+        }
+        if (shieldedFlag == null) {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws
+                IllegalStateException("datastore unavailable")
+        } else {
+            coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns shieldedFlag
         }
     }
 
@@ -256,6 +266,47 @@ class SdkWalletBinderTest {
         assertEquals(0, sdk.totalCalls)
         assertEquals(0, mnemonic.calls)
         assertTrue(!unlockRequested)
+    }
+
+    @Test
+    fun noPlatformIdentity_shieldedFlagOn_bindsWallet_discoveryDeferred() = runBlocking {
+        // The fresh-wallet shielded path (fund → shield → create identity
+        // from the pool) needs a bound wallet BEFORE any identity exists.
+        val sdk = readySdk()
+        val binder = binder(
+            sdk,
+            identity = identityConfig(identityBase(IdentityCreationState.NONE, userId = null)),
+            config = dashPayConfig(readsFlag = false, writesFlag = false, shieldedFlag = true),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, sdk.bindCalls)
+        assertEquals(0, sdk.discoverCalls) // no id to attach — binding-only
+
+        // Not latched: once an identity id lands, a later trigger attaches it.
+        binder.bindIfEnabled(unlock)
+        assertEquals(1, sdk.bindCalls) // wallet bind is cached in-process
+    }
+
+    @Test
+    fun noPlatformIdentity_onlyShieldedFlagOn_passesTheFlagGateToo() = runBlocking {
+        // The shielded flag alone must open BOTH gates (any-flag + identity)
+        // or a shielded-only configuration could never bind at all.
+        val sdk = readySdk()
+        val mnemonic = FakeMnemonicProvider { words }
+        val binder = binder(
+            sdk, mnemonic,
+            identity = identityConfig(identityBase(IdentityCreationState.NONE, userId = null)),
+            config = dashPayConfig(readsFlag = false, writesFlag = false, shieldedFlag = true),
+            scope = this
+        )
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(1, mnemonic.calls)
+        assertEquals(1, sdk.bindCalls)
     }
 
     // ── The happy path: bind + discover + attach ─────────────────────────
