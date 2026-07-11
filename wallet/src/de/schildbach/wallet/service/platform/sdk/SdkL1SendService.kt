@@ -19,6 +19,7 @@ package de.schildbach.wallet.service.platform.sdk
 
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
+import de.schildbach.wallet_test.BuildConfig
 import kotlinx.coroutines.CancellationException
 import org.bitcoinj.core.Address
 import org.dash.wallet.common.money.Dash
@@ -225,6 +226,12 @@ internal class DashSdkL1SendSource(
  * inflated streaks while the marker is fresh. The deficit direction needs
  * no guard (see the decider's `recentSelfSpendMarker` doc).
  *
+ * Phase 5c.2 addendum: on DEBUG builds every successful broadcast also
+ * launches [SdkBridgedTransactionFactory.bridgeInBackground], which
+ * commits the SDK tx straight into the dashj wallet (usually before the
+ * bloom delivery above) — see that class and the [bridgeAfterBroadcast]
+ * hook for the gating rationale.
+ *
  * Flag off (the default): provably inert — one DataStore flag read per
  * send, [SdkL1SendSource] untouched (verified by unit test).
  */
@@ -247,13 +254,23 @@ class SdkL1SendService internal constructor(
     private val l1Parity: () -> ParityReport? = { null },
     /** Post-broadcast hook: [L1ShadowSyncService.noteSelfSpendBroadcast]. */
     private val onSelfSpendBroadcast: () -> Unit = {},
+    /**
+     * Post-broadcast hook, Phase 5c.2: fire-and-forget
+     * [SdkBridgedTransactionFactory.bridgeInBackground] for the broadcast
+     * txid. DEBUG builds only (wired in the injected constructor):
+     * bridging mutates dashj wallet state, so production stays txid-only
+     * until the 5c.4 cutover. Contained — a throw here never affects the
+     * already-decided [SdkWriteResult.Broadcast].
+     */
+    private val bridgeAfterBroadcast: (String) -> Unit = {},
     private val nowMs: () -> Long = System::currentTimeMillis
 ) {
     @Inject
     constructor(
         sdkService: DashSdkService,
         dashPayConfig: DashPayConfig,
-        l1ShadowSyncService: L1ShadowSyncService
+        l1ShadowSyncService: L1ShadowSyncService,
+        bridgedTransactionFactory: SdkBridgedTransactionFactory
     ) : this(
         source = DashSdkL1SendSource(sdkService),
         dashPayConfig = dashPayConfig,
@@ -267,7 +284,13 @@ class SdkL1SendService internal constructor(
             }
         },
         l1Parity = { l1ShadowSyncService.latestParity.value },
-        onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() }
+        onSelfSpendBroadcast = { l1ShadowSyncService.noteSelfSpendBroadcast() },
+        bridgeAfterBroadcast = { txidHex ->
+            // 5c.2 soak consumer: DEBUG-only until the 5c.4 cutover.
+            if (BuildConfig.DEBUG) {
+                bridgedTransactionFactory.bridgeInBackground(txidHex)
+            }
+        }
     )
 
     /**
@@ -337,6 +360,10 @@ class SdkL1SendService internal constructor(
             // Parity-decider guard, never affects the send result.
             runCatching { onSelfSpendBroadcast() }
                 .onFailure { log.warn("failed to record the self-spend marker", it) }
+            // Phase 5c.2 (DEBUG builds — see the hook's KDoc): bridge the
+            // SDK tx into the dashj wallet, fire-and-forget.
+            runCatching { bridgeAfterBroadcast(txidHex) }
+                .onFailure { log.warn("failed to launch the bridged-tx commit for {}", txidHex, it) }
             SdkWriteResult.Broadcast(txidHex)
         } catch (t: Throwable) {
             if (t is CancellationException) throw t

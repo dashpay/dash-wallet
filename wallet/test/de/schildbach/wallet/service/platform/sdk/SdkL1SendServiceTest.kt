@@ -100,18 +100,21 @@ class SdkL1SendServiceTest {
     )
 
     private var selfSpendMarks = 0
+    private val bridgedTxids = mutableListOf<String>()
 
     private fun service(
         source: FakeSource,
         enabled: Boolean? = true,
         parity: () -> ParityReport? = { matchingParity() },
-        addressValid: (String) -> Boolean = { it == validAddress }
+        addressValid: (String) -> Boolean = { it == validAddress },
+        bridgeAfterBroadcast: (String) -> Unit = { bridgedTxids += it }
     ) = SdkL1SendService(
         source = source,
         dashPayConfig = config(enabled),
         isValidAddress = addressValid,
         l1Parity = parity,
         onSelfSpendBroadcast = { selfSpendMarks++ },
+        bridgeAfterBroadcast = bridgeAfterBroadcast,
         nowMs = { now }
     )
 
@@ -412,6 +415,48 @@ class SdkL1SendServiceTest {
         assertTrue(result is SdkWriteResult.NotBroadcast)
         assertEquals(1, source.sendCalls)
         assertEquals(0, selfSpendMarks)
+    }
+
+    // ── The 5c.2 bridge hook (fire-and-forget consumer) ──────────────────
+
+    @Test
+    fun successfulSend_invokesTheBridgeHook_withTheBroadcastTxid() = runBlocking {
+        val result = service(readySource()).sendToAddress(validAddress, amount, emptyWallet = false)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+        assertEquals(listOf(txid), bridgedTxids)
+    }
+
+    @Test
+    fun bridgeHookFailure_doesNotAffectTheBroadcastResult() = runBlocking {
+        // The bridge launch is fire-and-forget: a throw from the hook must
+        // never demote an already-decided Broadcast.
+        val result = service(
+            readySource(),
+            bridgeAfterBroadcast = { throw IllegalStateException("factory unavailable") }
+        ).sendToAddress(validAddress, amount, emptyWallet = false)
+        assertEquals(SdkWriteResult.Broadcast(txid), result)
+    }
+
+    @Test
+    fun failedOrSkippedSends_neverInvokeTheBridgeHook() = runBlocking {
+        // Flag off (NotBroadcast, nothing attempted).
+        service(readySource(), enabled = false).sendToAddress(validAddress, amount, emptyWallet = false)
+        // Ambiguous broadcast failure.
+        val failing = FakeSource(
+            boundWalletId = { walletId },
+            onSend = { _, _, _ -> throw DashSdkError.NetworkError("connection reset") }
+        )
+        service(failing).sendToAddress(validAddress, amount, emptyWallet = false)
+        // Provably pre-broadcast rejection.
+        val rejected = FakeSource(
+            boundWalletId = { walletId },
+            onSend = { _, _, _ ->
+                throw DashSdkError.PlatformWallet.WalletOperation("transaction build failed: no inputs")
+            }
+        )
+        service(rejected).sendToAddress(validAddress, amount, emptyWallet = false)
+
+        assertTrue("only a real Broadcast may bridge", bridgedTxids.isEmpty())
     }
 
     @Test

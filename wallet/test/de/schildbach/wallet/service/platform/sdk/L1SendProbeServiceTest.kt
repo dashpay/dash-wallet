@@ -252,13 +252,13 @@ class L1SendProbeServiceTest {
     // ── Probe orchestration ────────────────────────────────────────────
 
     private class FakeSource(
-        var row: (ByteArray) -> SdkProbeTxRow? = { null },
+        var row: (ByteArray) -> SdkTxRow? = { null },
         var hasTx: () -> Boolean = { false },
         var allOurs: () -> Boolean? = { null }
     ) : L1SendProbeSource {
         var lastWireTxid: ByteArray? = null
 
-        override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkProbeTxRow? {
+        override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow? {
             lastWireTxid = txidWireBytes
             return row(txidWireBytes)
         }
@@ -284,7 +284,7 @@ class L1SendProbeServiceTest {
         val bytes = buildSendTxBytes()
         val fixtureTxid = parse(bytes).txId.toString()
         val source = FakeSource(
-            row = { SdkProbeTxRow(feeDuffs = 225, rawTxBytes = bytes) },
+            row = { SdkTxRow(feeDuffs = 225, rawTxBytes = bytes) },
             hasTx = { true },
             allOurs = { true }
         )
@@ -318,7 +318,7 @@ class L1SendProbeServiceTest {
     @Test
     fun probeSdkSend_undecodableRowBytes_stillCompletes() = runBlocking {
         val source = FakeSource(
-            row = { SdkProbeTxRow(feeDuffs = null, rawTxBytes = byteArrayOf(1, 2, 3)) }
+            row = { SdkTxRow(feeDuffs = null, rawTxBytes = byteArrayOf(1, 2, 3)) }
         )
         service(source, this).probeSdkSend(
             txid, recipientAddress, amountDuffs, emptyWallet = false

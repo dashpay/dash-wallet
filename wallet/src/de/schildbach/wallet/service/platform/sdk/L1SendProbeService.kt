@@ -185,7 +185,11 @@ internal fun feeParityDetailLog(
  *   dashj wallet knows and owns — the `maybeCommitTx` bridgeability
  *   precondition (`n/a` when undecodable or the wallet is unavailable);
  * - `preexistedInDashj`: the dashj wallet already held the tx at probe
- *   start (it should NOT in probe mode — the probe never commits).
+ *   start. The probe itself never commits, so with the 5c.2 debug bridge
+ *   consumer OFF this should be false; with it ON
+ *   ([SdkBridgedTransactionFactory]'s commit races this probe) `true`
+ *   here — and a near-zero `dashjNetworkLatencyMs` — usually means the
+ *   bridged commit landed first, NOT network delivery.
  */
 internal fun bridgeProbeLine(
     txidHex: String,
@@ -217,8 +221,8 @@ internal fun wireTxidBytesOrNull(displayTxidHex: String): ByteArray? = try {
 
 // ── Source seam ───────────────────────────────────────────────────────
 
-/** One SDK Room `transactions` row, reduced to what the probe reads. */
-internal data class SdkProbeTxRow(
+/** One SDK Room `transactions` row, reduced to what the probes/bridge read. */
+internal data class SdkTxRow(
     /** The row's `fee` column (duffs), null until/unless the SDK populates it. */
     val feeDuffs: Long?,
     /** The row's consensus-encoded `transactionData` bytes. */
@@ -226,19 +230,27 @@ internal data class SdkProbeTxRow(
 )
 
 /**
+ * Seam over the SDK Room `transactions`-row read, shared by the 5c.0/5c.1
+ * probes ([L1SendProbeService]) and the 5c.2 bridge factory
+ * ([SdkBridgedTransactionFactory]) so both are host-JVM unit-testable.
+ * Read-only by contract: no implementation may mutate the SDK store.
+ */
+internal interface SdkTxRowSource {
+    /**
+     * The SDK Room `transactions` row for the WIRE-order txid, or null
+     * while absent (callers poll this — GAP-6's broadcast-time
+     * persistence latency) or when the database is unavailable.
+     */
+    suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow?
+}
+
+/**
  * Seam over the probe's two read surfaces — the SDK's Room database and
  * the dashj wallet — so the polling/formatting orchestration in
  * [L1SendProbeService] is host-JVM unit-testable. Read-only by contract:
  * no implementation may commit, broadcast, or mutate either stack.
  */
-internal interface L1SendProbeSource {
-    /**
-     * The SDK Room `transactions` row for the WIRE-order txid, or null
-     * while absent (the probe polls this — GAP-6's broadcast-time
-     * persistence latency) or when the database is unavailable.
-     */
-    suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkProbeTxRow?
-
+internal interface L1SendProbeSource : SdkTxRowSource {
     /** Whether the dashj wallet currently holds the tx (network/bloom delivery). */
     suspend fun dashjHasTx(txidHex: String): Boolean
 
@@ -251,19 +263,31 @@ internal interface L1SendProbeSource {
     suspend fun inputsAllOurs(tx: Transaction): Boolean?
 }
 
+/** Production [SdkTxRowSource]: the live SDK Room DB. */
+internal class DashSdkTxRowSource(
+    private val service: DashSdkService
+) : SdkTxRowSource {
+
+    override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow? {
+        // Deliberately NOT ensureStarted(): an SDK-routed send definitionally
+        // ran with the SDK up, and a best-effort read after one must never
+        // boot it.
+        val db = service.databaseOrNull() ?: return null
+        val row = db.transactionDao().getByTxid(txidWireBytes) ?: return null
+        return SdkTxRow(feeDuffs = row.fee, rawTxBytes = row.transactionData)
+    }
+}
+
 /** Production [L1SendProbeSource]: the live SDK Room DB + dashj wallet. */
 internal class DashSdkL1SendProbeSource(
-    private val service: DashSdkService,
+    service: DashSdkService,
     private val walletData: WalletDataProvider
 ) : L1SendProbeSource {
 
-    override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkProbeTxRow? {
-        // Deliberately NOT ensureStarted(): an SDK-routed send definitionally
-        // ran with the SDK up, and a best-effort probe must never boot it.
-        val db = service.databaseOrNull() ?: return null
-        val row = db.transactionDao().getByTxid(txidWireBytes) ?: return null
-        return SdkProbeTxRow(feeDuffs = row.fee, rawTxBytes = row.transactionData)
-    }
+    private val rowSource = DashSdkTxRowSource(service)
+
+    override suspend fun sdkTxRow(txidWireBytes: ByteArray): SdkTxRow? =
+        rowSource.sdkTxRow(txidWireBytes)
 
     override suspend fun dashjHasTx(txidHex: String): Boolean =
         walletData.wallet?.getTransaction(Sha256Hash.wrap(txidHex)) != null
@@ -332,8 +356,13 @@ internal class DashSdkL1SendProbeSource(
  * calls `maybeCommitTx`: the live dashj wallet already receives the tx
  * via its bloom filters, and committing here would double-handle it. It
  * instead logs what WOULD happen ([bridgeProbeLine]): whether the tx
- * pre-existed in dashj at probe start (it must not in probe mode) and
- * whether the inputs are all ours (`maybeCommitTx` would accept it).
+ * pre-existed in dashj at probe start and whether the inputs are all
+ * ours (`maybeCommitTx` would accept it). NOTE since 5c.2: on DEBUG
+ * builds [SdkBridgedTransactionFactory] DOES bridge-commit the same tx
+ * concurrently with this probe (probe reads, factory commits — they
+ * cannot fight), so `preexistedInDashj=true` and a near-instant
+ * `dashjNetworkLatencyMs` now usually measure the bridged commit rather
+ * than network delivery — see [bridgeProbeLine].
  */
 @Singleton
 class L1SendProbeService internal constructor(
@@ -396,8 +425,10 @@ class L1SendProbeService internal constructor(
         dashjDryRunFeeDuffs: suspend () -> Long?
     ) {
         val startMs = nowMs()
-        // 5c.1 pre-check: in probe mode the dashj wallet must NOT already
-        // hold the tx — it only ever arrives there via network delivery.
+        // 5c.1 pre-check: whether the dashj wallet already holds the tx.
+        // The probe never commits, so true here means either network
+        // delivery beat the probe or (DEBUG, 5c.2) the bridge factory's
+        // concurrent commit landed first.
         val preexistedInDashj = try {
             source.dashjHasTx(txidHex)
         } catch (t: Throwable) {
@@ -589,21 +620,14 @@ class L1SendProbeService internal constructor(
      * [timeoutMs] elapses; a throwing read counts as "not there yet"
      * (logged at debug) so one bad poll never kills the pass.
      */
-    private suspend fun <T : Any> pollForValue(timeoutMs: Long, read: suspend () -> T?): T? {
-        val start = nowMs()
-        while (true) {
-            val value = try {
-                read()
-            } catch (t: Throwable) {
-                if (t is CancellationException) throw t
-                log.debug("L1SendProbe poll read failed: {}", t.toString())
-                null
-            }
-            if (value != null) return value
-            if (nowMs() - start + pollIntervalMs > timeoutMs) return null
-            delay(pollIntervalMs)
-        }
-    }
+    private suspend fun <T : Any> pollForValue(timeoutMs: Long, read: suspend () -> T?): T? =
+        pollForValueBounded(
+            timeoutMs = timeoutMs,
+            pollIntervalMs = pollIntervalMs,
+            nowMs = nowMs,
+            onReadFailure = { log.debug("L1SendProbe poll read failed: {}", it.toString()) },
+            read = read
+        )
 
     /** [pollForValue] for a boolean condition; returns the elapsed ms when it turned true. */
     private suspend fun pollForCondition(timeoutMs: Long, read: suspend () -> Boolean): Long? {
@@ -629,5 +653,34 @@ class L1SendProbeService internal constructor(
          * bloom-filter/network delivery (typically seconds when online).
          */
         internal const val DASHJ_NETWORK_TIMEOUT_MS = 60_000L
+    }
+}
+
+/**
+ * Poll [read] every [pollIntervalMs] until it yields a value or [timeoutMs]
+ * elapses (null on timeout); a throwing read counts as "not there yet"
+ * (reported via [onReadFailure]) so one bad poll never kills the pass.
+ * Shared by the 5c.0/5c.1 probes and the 5c.2 bridge factory
+ * ([SdkBridgedTransactionFactory]).
+ */
+internal suspend fun <T : Any> pollForValueBounded(
+    timeoutMs: Long,
+    pollIntervalMs: Long,
+    nowMs: () -> Long,
+    onReadFailure: (Throwable) -> Unit = {},
+    read: suspend () -> T?
+): T? {
+    val start = nowMs()
+    while (true) {
+        val value = try {
+            read()
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            onReadFailure(t)
+            null
+        }
+        if (value != null) return value
+        if (nowMs() - start + pollIntervalMs > timeoutMs) return null
+        delay(pollIntervalMs)
     }
 }

@@ -676,34 +676,7 @@ class SendCoinsTaskRunner @Inject constructor(
     suspend fun logSendTxEvent(
         transaction: Transaction,
         wallet: Wallet
-    ) {
-        identityConfig.get(IDENTITY_ID)?.let {
-            val valueSent: Long = transaction.outputs.filter {
-                !it.isMine(wallet)
-            }.sumOf {
-                it.value.value
-            }
-            val isSentToContact = try {
-                identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
-            } catch (e: Exception) {
-                false
-            }
-            analyticsService.logEvent(
-                AnalyticsConstants.SendReceive.SEND_TX,
-                mapOf(
-                    AnalyticsConstants.Parameter.VALUE to valueSent
-                )
-            )
-            if (isSentToContact) {
-                analyticsService.logEvent(
-                    AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
-                    mapOf(
-                        AnalyticsConstants.Parameter.VALUE to valueSent
-                    )
-                )
-            }
-        }
-    }
+    ) = logSendTxEvent(transaction, wallet, identityConfig, identityRepository, analyticsService)
 
     fun signSendRequest(sendRequest: SendRequest) {
         val wallet = walletData.wallet ?: throw RuntimeException("this method can't be used before creating the wallet")
@@ -773,4 +746,46 @@ class SendCoinsTaskRunner @Inject constructor(
             .build()
     }
 
+}
+
+/**
+ * The dashj send tail's analytics (SEND_TX / SEND_TX_CONTACT with the value
+ * sent, identity users only) — extracted from [SendCoinsTaskRunner] so the
+ * Phase 5c.2 bridged-commit tail
+ * ([de.schildbach.wallet.service.platform.sdk.SdkBridgedTransactionFactory])
+ * runs the exact same hook as the dashj path.
+ */
+suspend fun logSendTxEvent(
+    transaction: Transaction,
+    wallet: Wallet,
+    identityConfig: BlockchainIdentityConfig,
+    identityRepository: IdentityRepository,
+    analyticsService: AnalyticsService
+) {
+    identityConfig.get(IDENTITY_ID)?.let {
+        val valueSent: Long = transaction.outputs.filter {
+            !it.isMine(wallet)
+        }.sumOf {
+            it.value.value
+        }
+        val isSentToContact = try {
+            identityRepository.blockchainIdentity?.getContactForTransaction(transaction) != null
+        } catch (e: Exception) {
+            false
+        }
+        analyticsService.logEvent(
+            AnalyticsConstants.SendReceive.SEND_TX,
+            mapOf(
+                AnalyticsConstants.Parameter.VALUE to valueSent
+            )
+        )
+        if (isSentToContact) {
+            analyticsService.logEvent(
+                AnalyticsConstants.SendReceive.SEND_TX_CONTACT,
+                mapOf(
+                    AnalyticsConstants.Parameter.VALUE to valueSent
+                )
+            )
+        }
+    }
 }
