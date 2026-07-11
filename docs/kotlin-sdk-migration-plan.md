@@ -509,3 +509,34 @@ BIP70. Deferred: Maya (GAP-5), asset locks (own phase). Risks: fee-policy diverg
 ~zero), unconfirmed-input policy unknown (measure; ZeroConfCoinSelector chains off pending
 change), CrowdNode API-layer auto-retries must be audited before 5c.6 (Ambiguous must never
 be re-driven), isTransactionPending false-negatives fixed by bridging even txid-only sites.
+
+## Username creation via L2 fund-hop (spec, 2026-07-11 — replaces direct L1 asset-lock create)
+
+Verified: the hop is a first-class SDK endpoint at every layer. AssetLockFundingType::
+AssetLockAddressTopUp (discriminant 4) → ManagedPlatformWallet.fundFromAssetLock(amountDuffs,
+fundingAccountIndex, platformAccountIndex, recipients=[FundRecipient(addr, credits=null)],
+signerHandle, coreSignerHandle) builds+broadcasts the L1 asset lock, waits IS (300s) with
+unbounded CL fallback (never "failed", NOT cancellation-safe — app-scope executor + stall
+watchdog patterns), validates proof-attested AddressInfos, persists balances BEFORE
+returning (List<UpdatedBalance>), marks the lock consumed; crash recovery via
+resumeFundFromAssetLock(outpoint). Credits are immediately visible to
+registerFromAddresses (same address_credit_balance store; the hop changeset can feed
+inputs directly) → IdentityCreateFromAddressesTransition, no Core tx, no IS/CL wait, then
+registerDpnsName. Hop granularity: one lock consumed in full to a single remainder
+recipient — size the hop to the EXACT authorized cost (+fee headroom) at build time.
+
+Product rule (Brian, 2026-07-11): NO L2 movement before the user authorizes the username
+payment — authorization requires the chosen username (contested 0.25 vs non-contested
+fee) so the full cost is displayed first; the hop fires only inside the authorized
+operation. No background pre-funding.
+
+Plan: (0) prereq — widen SdkWalletBinder eligibility to identity-less wallets;
+(1) SdkAddressHopUsernameCreation service: authorize → hop (SdkWriteResult contract,
+tracked-lock resume, Ambiguous sticky) → registerFromAddresses from changeset → DPNS,
+behind a flag with the legacy L1 path as fallback; (2) route paymentSource=DASH_BALANCE
+through it (UI unchanged); (3) contested-name support falls out naturally (hop sized to
+0.25); (4) at cutover, retire the legacy compound asset-lock-create path — all three
+funding sources (dash-via-hop, platform credits, shielded pool Type-20) then share the
+L2 creation path. Unresolved: whether identity keys must pre-exist for
+registerFromAddresses input signing on a fresh wallet (same key-derivation recipe as
+Type-20 — reuse previewRegistrationKeySet + repairIdentityKey persistence).
