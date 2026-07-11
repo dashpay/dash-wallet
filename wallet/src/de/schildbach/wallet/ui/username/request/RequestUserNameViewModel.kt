@@ -116,6 +116,15 @@ class RequestUserNameViewModel @Inject constructor(
     var requestedUserName: String? = null
     var requestedUsernameSecondary: String? = null
 
+    /**
+     * Which balance the user chose to pay the username fee from on the
+     * "Select your payment option" sheet (Figma 1856:1805). Identity
+     * funding still runs on the L1 path today — this records the choice
+     * (the seam for the shielded-funded creation flow) and replaces the
+     * removed CoinJoin mixed/unmixed funding selection.
+     */
+    var paymentSource: UsernamePaymentSource = UsernamePaymentSource.DASH_BALANCE
+
     private val _identityBalance = MutableStateFlow(0L)
     val identityBalance: StateFlow<Long>
         get() = _identityBalance

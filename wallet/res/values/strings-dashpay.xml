@@ -607,4 +607,18 @@
     <string name="shielded_paste">Paste</string>
     <string name="shielded_close">Close</string>
 
+    <!-- Create-username payment sheets (shielded funds; Figma flow 555:811,
+         sheets 1856:1805 "Select your payment option" and 1856:1519
+         "Make your username private"). -->
+    <string name="username_payment_select_title">Select your payment option</string>
+    <string name="username_payment_select_message">To help keep your payment activity private, we recommend paying for the username from your shielded balance</string>
+    <string name="username_payment_option_shielded">Shielded balance</string>
+    <string name="username_payment_option_shielded_hint">Keeps your username private</string>
+    <string name="username_payment_option_dash">Dash balance</string>
+    <string name="username_payment_option_dash_hint">Funds will be traceable to your username</string>
+    <string name="username_payment_private_title">Make your username private</string>
+    <string name="username_payment_privacy_tip_message">Funds move to your shielded balance in seconds. For full privacy, wait at least 2 hours before creating your username.</string>
+    <string name="username_payment_shield_first">Shield your funds first</string>
+    <string name="username_payment_continue_without_privacy">Continue without privacy</string>
+
 </resources>
