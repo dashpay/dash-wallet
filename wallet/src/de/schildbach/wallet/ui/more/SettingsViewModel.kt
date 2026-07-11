@@ -27,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.filterNotNull
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataDecryptProbe
 import de.schildbach.wallet.service.platform.sdk.WalletFundingGate
 import de.schildbach.wallet.ui.dashpay.BaseProfileViewModel
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -71,6 +72,14 @@ data class SettingsUIState(
     val soakSendInFlight: Boolean = false,
     /** Outcome of the last debug-only soak send, shown inline as the item subtitle. */
     val soakSendStatus: String? = null,
+    /** A debug-only decrypt proof ([SettingsViewModel.runTxMetadataDecryptProof]) is in flight. */
+    val txMetadataProofInFlight: Boolean = false,
+    /**
+     * Outcome of the last debug-only wire-compat decrypt proof (the
+     * [SdkTxMetadataDecryptProbe] summary/verdict line), shown inline as
+     * the item subtitle.
+     */
+    val txMetadataProofStatus: String? = null,
 )
 
 /**
@@ -114,6 +123,7 @@ class SettingsViewModel @Inject constructor(
     private val blockchainServiceConfig: BlockchainServiceConfig,
     private val sendPaymentService: SendPaymentService,
     private val sdkL1SendService: SdkL1SendService,
+    private val sdkTxMetadataDecryptProbe: SdkTxMetadataDecryptProbe,
     dashPayProfileDao: DashPayProfileDao
 ) : BaseProfileViewModel(
     blockchainIdentityConfig,
@@ -124,6 +134,9 @@ class SettingsViewModel @Inject constructor(
 
         /** Distinctive tag: `adb logcat`-greppable soak-send trail. */
         private val soakLog = LoggerFactory.getLogger("SdkSoakSend")
+
+        /** Distinctive tag: shared with [SdkTxMetadataDecryptProbe]'s trail. */
+        private val proofLog = LoggerFactory.getLogger("TxMetaDecryptProof")
 
         /** Fixed debug soak-send amount: 0.05 Dash to our own fresh address. */
         private val SOAK_SEND_AMOUNT = Dash.parse("0.05")
@@ -315,6 +328,41 @@ class SettingsViewModel @Inject constructor(
                 "failed: ${e.message ?: e.javaClass.simpleName} ($routeLabel)"
             }
             _uiState.value = _uiState.value.copy(soakSendInFlight = false, soakSendStatus = status)
+        }
+    }
+
+    /**
+     * Debug-only wire-compat decrypt proof (dashpay/platform#4091): fetch
+     * this identity's LEGACY-written encrypted `txMetadata` documents
+     * through the new SDK's `fetchEncryptedDocuments` and check they
+     * decrypt + parse as the legacy protobuf batch — proving the SDK's
+     * encryption scheme (incl. the statically-unpinnable HD derivation
+     * prefix) matches what `publishTxMetaData` wrote. Read-only: the probe
+     * never creates documents or touches wallet state; all failures are
+     * contained into the status line. Verbose trail under logcat tag
+     * `TxMetaDecryptProof`; re-taps while in flight are ignored.
+     */
+    fun runTxMetadataDecryptProof() {
+        if (_uiState.value.txMetadataProofInFlight) {
+            proofLog.info("decrypt proof already in flight; ignoring tap")
+            return
+        }
+        _uiState.value = _uiState.value.copy(
+            txMetadataProofInFlight = true,
+            txMetadataProofStatus = "fetching + decrypting via the SDK…"
+        )
+        viewModelScope.launch(Dispatchers.IO) {
+            val status = try {
+                sdkTxMetadataDecryptProbe.runProof()
+            } catch (e: Exception) {
+                // The probe contains its own failures; this is belt-and-braces.
+                proofLog.error("decrypt proof threw unexpectedly", e)
+                "failed: ${e.message ?: e.javaClass.simpleName}"
+            }
+            _uiState.value = _uiState.value.copy(
+                txMetadataProofInFlight = false,
+                txMetadataProofStatus = status
+            )
         }
     }
 

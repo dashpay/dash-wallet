@@ -24,6 +24,8 @@ import de.schildbach.wallet.database.entity.BlockchainIdentityConfig
 import de.schildbach.wallet.service.platform.sdk.ParityReport
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendService
 import de.schildbach.wallet.service.platform.sdk.SdkL1SendSource
+import de.schildbach.wallet.service.platform.sdk.SdkTxMetadataDecryptProbe
+import de.schildbach.wallet.service.platform.sdk.TxMetadataDecryptProbeSource
 import de.schildbach.wallet.service.platform.sdk.WalletFundingGate
 import de.schildbach.wallet.service.platform.sdk.buildParityReport
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
@@ -143,6 +145,41 @@ class SettingsViewModelTest {
         nowMs = { now }
     )
 
+    /** The decrypt-proof source: fetch result swappable per test. */
+    @Volatile private var proofFetchResult: () -> String = { "[]" }
+
+    /** Blocks the proof fetch until completed — the re-tap instrument. */
+    private val proofFetchGate = CompletableDeferred<Unit>()
+
+    /** Counts proof fetches — proves re-taps while in flight are ignored. */
+    @Volatile private var proofFetches = 0
+
+    /**
+     * A REAL [SdkTxMetadataDecryptProbe] (fakes only at the seams), so the
+     * subtitle status is proven against the probe's own verdict/summary
+     * mapping, not a re-implementation.
+     */
+    private val sdkTxMetadataDecryptProbe = SdkTxMetadataDecryptProbe(
+        source = object : TxMetadataDecryptProbeSource {
+            override suspend fun boundWalletIdOrNull(): String? = "wallet-id"
+            override suspend fun isIdentityManaged(walletIdHex: String, identityId: ByteArray) = true
+            override suspend fun fetchEncryptedDocuments(
+                walletIdHex: String,
+                ownerId: ByteArray,
+                contractId: ByteArray,
+                documentType: String,
+                sinceMs: Long
+            ): String {
+                proofFetches++
+                proofFetchGate.await()
+                return proofFetchResult()
+            }
+        },
+        ownIdentityId = { org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 7 }).toString() },
+        contractId = { org.dashj.platform.dpp.identifier.Identifier.from(ByteArray(32) { 9 }) },
+        legacyDocumentCount = { 0 }
+    )
+
     @Before
     fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -165,6 +202,7 @@ class SettingsViewModelTest {
         blockchainServiceConfig = mockk<BlockchainServiceConfig>(),
         sendPaymentService = sendPaymentService,
         sdkL1SendService = sdkL1SendService,
+        sdkTxMetadataDecryptProbe = sdkTxMetadataDecryptProbe,
         dashPayProfileDao = dashPayProfileDao
     )
 
@@ -290,6 +328,39 @@ class SettingsViewModelTest {
         coVerify(exactly = 1) {
             sendPaymentService.sendCoins(any<String>(), any<Dash>(), any(), any())
         }
+    }
+
+    // ── The debug-only decrypt proof (runTxMetadataDecryptProof) ──────
+
+    /** Waits out the IO-dispatched proof and returns the settled state. */
+    private suspend fun SettingsViewModel.settledProofState() =
+        uiState.first { !it.txMetadataProofInFlight && it.txMetadataProofStatus != null }
+
+    @Test
+    fun decryptProof_surfacesTheProbeSummaryLine_asTheSubtitle() = runTest(dispatcher) {
+        proofFetchResult = { "[]" } // nothing on Platform for this identity
+        proofFetchGate.complete(Unit)
+        val viewModel = viewModel()
+
+        viewModel.runTxMetadataDecryptProof()
+
+        val state = viewModel.settledProofState()
+        assertEquals(
+            "sdkFetched=0 sdkDecrypted=0 sdkParsed=0 legacyExpected=0 verdict=FAILED",
+            state.txMetadataProofStatus
+        )
+    }
+
+    @Test
+    fun decryptProofReTaps_areIgnoredWhileInFlight() = runTest(dispatcher) {
+        val viewModel = viewModel()
+
+        viewModel.runTxMetadataDecryptProof()
+        viewModel.runTxMetadataDecryptProof() // re-tap while in flight — must be a no-op
+        proofFetchGate.complete(Unit)
+
+        viewModel.settledProofState()
+        assertEquals(1, proofFetches)
     }
 
     // ── The SDK send-gate status line (pure mappings) ─────────────────

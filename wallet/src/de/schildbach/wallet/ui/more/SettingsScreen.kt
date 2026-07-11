@@ -66,7 +66,8 @@ fun SettingsScreen(
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
         onUseKotlinSdkL1SendChanged = viewModel::setUseKotlinSdkL1Send,
-        onRunSdkSoakSend = viewModel::runSdkSoakSend
+        onRunSdkSoakSend = viewModel::runSdkSoakSend,
+        onRunTxMetadataDecryptProof = viewModel::runTxMetadataDecryptProof
     )
 }
 
@@ -81,7 +82,8 @@ fun SettingsScreen(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
     onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
-    onRunSdkSoakSend: () -> Unit = {}
+    onRunSdkSoakSend: () -> Unit = {},
+    onRunTxMetadataDecryptProof: () -> Unit = {}
 ) {
     val uiState by uiStateFlow.collectAsState()
 
@@ -95,7 +97,8 @@ fun SettingsScreen(
         onTransactionMetadataClick = onTransactionMetadataClick,
         onBatteryOptimizationClick = onBatteryOptimizationClick,
         onUseKotlinSdkL1SendChanged = onUseKotlinSdkL1SendChanged,
-        onRunSdkSoakSend = onRunSdkSoakSend
+        onRunSdkSoakSend = onRunSdkSoakSend,
+        onRunTxMetadataDecryptProof = onRunTxMetadataDecryptProof
     )
 }
 
@@ -110,7 +113,8 @@ private fun SettingsScreenContent(
     onTransactionMetadataClick: () -> Unit = {},
     onBatteryOptimizationClick: () -> Unit = {},
     onUseKotlinSdkL1SendChanged: (Boolean) -> Unit = {},
-    onRunSdkSoakSend: () -> Unit = {}
+    onRunSdkSoakSend: () -> Unit = {},
+    onRunTxMetadataDecryptProof: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -222,6 +226,20 @@ private fun SettingsScreenContent(
                             ?: "Debug only: sends 0.05 Dash to a fresh own address via the " +
                                 "routed (neutral) send path. Real coins, real fees.",
                         action = { if (!uiState.soakSendInFlight) onRunSdkSoakSend() }
+                    )
+
+                    // Wire-compat decrypt proof (dashpay/platform#4091):
+                    // fetches this identity's LEGACY-written encrypted
+                    // txMetadata documents through the new SDK and checks
+                    // they decrypt + parse. Read-only — never creates
+                    // documents. The verdict lands inline in the subtitle
+                    // (full trail: adb logcat -s TxMetaDecryptProof).
+                    MenuItem(
+                        title = "Verify legacy TxMetadata decrypt",
+                        subtitle = uiState.txMetadataProofStatus
+                            ?: "Debug only: proves the SDK decrypts the legacy encrypted " +
+                                "txMetadata documents (read-only, no writes).",
+                        action = { if (!uiState.txMetadataProofInFlight) onRunTxMetadataDecryptProof() }
                     )
                 }
             }
