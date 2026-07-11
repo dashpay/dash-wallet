@@ -32,6 +32,8 @@ import de.schildbach.wallet.database.entity.IdentityCreationState
 import de.schildbach.wallet.database.entity.UsernameRequest
 import de.schildbach.wallet.livedata.Status
 import de.schildbach.wallet.service.platform.TopUpRepository
+import de.schildbach.wallet.service.platform.sdk.SdkShieldedUsernameCreation
+import de.schildbach.wallet.service.platform.sdk.ShieldedUsernameSubmitState
 import de.schildbach.wallet.ui.dashpay.CreateIdentityService
 import de.schildbach.wallet.ui.dashpay.PlatformRepo
 import de.schildbach.wallet.ui.dashpay.work.BroadcastIdentityVerifyOperation
@@ -96,7 +98,8 @@ class RequestUserNameViewModel @Inject constructor(
     val platformRepo: PlatformRepo,
     val usernameRequestDao: UsernameRequestDao,
     val analytics: AnalyticsService,
-    val topUpRepository: TopUpRepository
+    val topUpRepository: TopUpRepository,
+    private val shieldedUsernameCreation: SdkShieldedUsernameCreation
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(RequestUserNameViewModel::class.java)
@@ -168,6 +171,20 @@ class RequestUserNameViewModel @Inject constructor(
 
     suspend fun isUsernameInVotingState(): Boolean {
         return IdentityCreationState.valueOf(identityConfig.get(CREATION_STATE) ?: "NONE") >= IdentityCreationState.VOTING
+    }
+
+    /**
+     * Whether the identity state machine has started (creationState !=
+     * NONE — the signal MoreFragment keys off) or an identity id already
+     * exists. False means the pristine CREATE path: no username, no
+     * identity, nothing in flight — the caller must show the full
+     * designed welcome flow.
+     */
+    suspend fun hasIdentityOrCreationStarted(): Boolean {
+        val creationState = IdentityCreationState.valueOf(
+            identityConfig.get(CREATION_STATE) ?: IdentityCreationState.NONE.name
+        )
+        return creationState != IdentityCreationState.NONE || !identityConfig.get(IDENTITY_ID).isNullOrEmpty()
     }
 
     suspend fun hasUserCancelledVerification(): Boolean =
@@ -259,6 +276,47 @@ class RequestUserNameViewModel @Inject constructor(
         inviteAssetLockTx.onEach {
             _inviteBalance.value = getInvitationAmount()
         }.launchIn(viewModelWorkerScope)
+
+        // Mirror the app-scoped shielded username creation into this
+        // ViewModel's uiState — the operation (a ~30s Halo 2 proof) runs on
+        // the application scope and outlives any screen; a recreated
+        // ViewModel re-attaches here and can never re-submit by observing.
+        viewModelScope.launch {
+            shieldedUsernameCreation.submitState.collect { state ->
+                when (state) {
+                    ShieldedUsernameSubmitState.Idle -> Unit
+                    ShieldedUsernameSubmitState.Proving ->
+                        _uiState.update { it.copy(usernameRequestSubmitting = true) }
+                    is ShieldedUsernameSubmitState.Created -> {
+                        log.info("shielded username creation completed: {}", state.outcome.nameStatus)
+                        _uiState.update {
+                            it.copy(usernameRequestSubmitting = false, usernameRequestSubmitted = true)
+                        }
+                        // Result surfaced; the legacy handoff was enqueued by
+                        // the service — the blockchainIdentity observers take
+                        // over from here.
+                        shieldedUsernameCreation.acknowledge()
+                    }
+                    is ShieldedUsernameSubmitState.NotSent -> {
+                        log.warn("shielded username creation not sent: {}", state.reason)
+                        _uiState.update {
+                            it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
+                        }
+                        // Provably nothing spent — retry-safe; reset so the
+                        // error dialog's "Try again" can re-submit.
+                        shieldedUsernameCreation.acknowledge()
+                    }
+                    ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
+                        _uiState.update {
+                            it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
+                        }
+                        // Deliberately NOT acknowledged: the state stays
+                        // sticky and submit() keeps refusing — an ambiguous
+                        // outcome must never be retried (funds safety).
+                    }
+                }
+            }
+        }
     }
 
     private fun triggerIdentityCreation(reuseTransaction: Boolean) {
@@ -315,7 +373,19 @@ class RequestUserNameViewModel @Inject constructor(
             val reuseTransaction = identity?.let {
                 it.usernameRequested == UsernameRequestStatus.LOCKED || it.usernameRequested == UsernameRequestStatus.LOST_VOTE
             } ?: false
-            triggerIdentityCreation(reuseTransaction)
+            if (paymentSource == UsernamePaymentSource.SHIELDED_BALANCE &&
+                !isUsingInvite() && !reuseTransaction
+            ) {
+                // The user picked the shielded balance on the payment-option
+                // sheet: fund the identity DIRECTLY from the shielded pool
+                // (Type 20) instead of the L1 asset-lock path. Invite and
+                // reuse-transaction submissions never reach here — their
+                // funding is already committed elsewhere.
+                log.info("routing username creation to the shielded-funded SDK path")
+                shieldedUsernameCreation.submit(requestedUserName!!)
+            } else {
+                triggerIdentityCreation(reuseTransaction)
+            }
         }
     }
 
@@ -460,6 +530,14 @@ class RequestUserNameViewModel @Inject constructor(
         val enoughBalance = when {
             isUsingInvite() && contestable -> inviteBalance >= Constants.DASH_PAY_FEE_CONTESTED
             isUsingInvite() && !contestable -> inviteBalance >= Constants.DASH_PAY_FEE
+            // Paying from the shielded pool (non-contested names only): the
+            // welcome-screen decision point only offers this source when the
+            // pool covers the funding denomination, and the shielded service
+            // re-verifies balance/denomination in its preflight — the L1
+            // wallet balance below is irrelevant to this submission.
+            // Contested names stay L1-gated: the denomination is pinned to
+            // the non-contested fee (see chooseShieldedIdentityDenominationCredits).
+            paymentSource == UsernamePaymentSource.SHIELDED_BALANCE && !contestable -> true
             identityBalance > 0L && contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(
                 CONTEST_DOCUMENT_FEE / 1000)
             identityBalance > 0L && !contestable -> (Coin.valueOf(identityBalance / 1000) + walletBalance) > Coin.valueOf(

@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -77,9 +78,22 @@ data class UsernamePaymentUIState(
     val shieldedBalanceTrustworthy: Boolean
         get() = shieldedEnabled && syncStatus == ShieldedSyncStatus.READY
 
-    /** The shielded pool can pay for a (non-contested) username right now. */
+    /**
+     * The shielded pool balance actually required to fund the username:
+     * the smallest fixed Type-20 exit denomination (0.1/0.3/0.5/1.0 DASH)
+     * covering [usernameFee] — NOT the bare fee. The identity is created
+     * by spending a whole denomination from the pool (fee metered out of
+     * it, change back to the pool), so a pool holding more than the fee
+     * but less than the denomination cannot fund the creation. Null when
+     * no denomination covers the fee.
+     */
+    val shieldedFundingRequirement: Dash?
+        get() = shieldedIdentityFundingRequirement(usernameFee)
+
+    /** The shielded pool can fund a (non-contested) username right now. */
     val canPayFeeFromShielded: Boolean
-        get() = shieldedBalanceTrustworthy && !usernameFee.isZero && shieldedBalance >= usernameFee
+        get() = shieldedBalanceTrustworthy &&
+            shieldedFundingRequirement?.let { shieldedBalance >= it } == true
 
     /**
      * The sheet to show at the welcome-screen decision point. While the

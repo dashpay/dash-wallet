@@ -19,6 +19,7 @@ package de.schildbach.wallet.ui.username.request
 import de.schildbach.wallet.Constants
 import de.schildbach.wallet.service.platform.sdk.ShieldedBalanceService
 import de.schildbach.wallet.service.platform.sdk.ShieldedSyncStatus
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.dashpay.utils.DashPayConfig
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -54,6 +55,14 @@ class UsernamePaymentViewModelTest {
 
     /** Fee for a non-contested username, as the ViewModel sources it. */
     private val fee = Dash(Constants.DASH_PAY_FEE.value)
+
+    /**
+     * The shielded pool balance actually required: the smallest fixed
+     * Type-20 denomination covering the fee (0.03 DASH → 0.1 DASH) — the
+     * identity is funded by spending a whole denomination, so affordability
+     * is denomination-based, not fee-based.
+     */
+    private val requirement = shieldedIdentityFundingRequirement(fee)!!
 
     private val balanceFlow = MutableStateFlow(Dash.ZERO)
     private val statusFlow = MutableStateFlow(ShieldedSyncStatus.NOT_READY)
@@ -96,15 +105,32 @@ class UsernamePaymentViewModelTest {
     }
 
     @Test
-    fun state_balanceCoversFee_andReady_promptsPaymentSelection() {
+    fun state_balanceCoversDenomination_andReady_promptsPaymentSelection() {
         val state = UsernamePaymentUIState(
             shieldedEnabled = true,
             syncStatus = ShieldedSyncStatus.READY,
-            shieldedBalance = fee, // exactly the fee is enough
+            shieldedBalance = requirement, // exactly the funding denomination is enough
             usernameFee = fee
         )
+        assertEquals(requirement, state.shieldedFundingRequirement)
         assertTrue(state.canPayFeeFromShielded)
         assertEquals(UsernamePaymentPrompt.SELECT_PAYMENT_OPTION, state.prompt)
+    }
+
+    @Test
+    fun state_balanceCoversFeeButNotDenomination_promptsMakePrivate() {
+        // Denomination affordability, not just fee: a pool covering the
+        // 0.03 fee but not the 0.1 DASH Type-20 denomination the creation
+        // actually spends must not unlock the shielded option.
+        val state = UsernamePaymentUIState(
+            shieldedEnabled = true,
+            syncStatus = ShieldedSyncStatus.READY,
+            shieldedBalance = Dash(requirement.duffs - 1),
+            usernameFee = fee
+        )
+        assertTrue(state.shieldedBalance >= fee)
+        assertFalse(state.canPayFeeFromShielded)
+        assertEquals(UsernamePaymentPrompt.MAKE_USERNAME_PRIVATE, state.prompt)
     }
 
     @Test
@@ -173,12 +199,12 @@ class UsernamePaymentViewModelTest {
         // Initially not ready: no shielded payment, "make private" arm.
         assertEquals(UsernamePaymentPrompt.MAKE_USERNAME_PRIVATE, viewModel.uiState.value.prompt)
 
-        // The pool syncs and lands a covering balance.
-        balanceFlow.value = Dash(fee.duffs * 2)
+        // The pool syncs and lands a covering balance (≥ the denomination).
+        balanceFlow.value = Dash(requirement.duffs * 2)
         statusFlow.value = ShieldedSyncStatus.READY
 
         val state = viewModel.uiState.value
-        assertEquals(Dash(fee.duffs * 2), state.shieldedBalance)
+        assertEquals(Dash(requirement.duffs * 2), state.shieldedBalance)
         assertEquals(ShieldedSyncStatus.READY, state.syncStatus)
         assertEquals(fee, state.usernameFee)
         assertTrue(state.canPayFeeFromShielded)
@@ -189,7 +215,7 @@ class UsernamePaymentViewModelTest {
     fun flagOn_balanceDrainedBelowFee_fallsBackToMakePrivate() = runTest(dispatcher) {
         val viewModel = viewModel(flag = true)
 
-        balanceFlow.value = Dash(fee.duffs * 2)
+        balanceFlow.value = Dash(requirement.duffs * 2)
         statusFlow.value = ShieldedSyncStatus.READY
         assertEquals(UsernamePaymentPrompt.SELECT_PAYMENT_OPTION, viewModel.uiState.value.prompt)
 
