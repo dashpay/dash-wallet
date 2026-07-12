@@ -438,7 +438,7 @@
     <!-- ⓘ explainer on the make-username-private sheet: contested vs
          non-contested, worded from the request screen's validation rules;
          costs are the amounts withdrawn from the shielded balance. -->
-    <string name="username_cost_info_title">Username costs</string>
+    <string name="username_cost_info_title">Shielded username costs</string>
     <string name="username_cost_info_noncontested_title">Non-contested username</string>
     <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Costs 0.1 Dash.</string>
     <string name="username_cost_info_contested_title">Contested username</string>
