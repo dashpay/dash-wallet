@@ -213,7 +213,7 @@ class RequestUserNameViewModelTest {
     }
 
     @Test
-    fun shieldedAmbiguous_mirrorsAsError_butStaysUnacknowledged() = runTest(dispatcher) {
+    fun shieldedAmbiguous_mirrorsAsAmbiguous_neverTheRetryableError() = runTest(dispatcher) {
         val viewModel = viewModel()
 
         shieldedSubmitState.value = ShieldedUsernameSubmitState.Proving
@@ -221,7 +221,10 @@ class RequestUserNameViewModelTest {
 
         val state = viewModel.uiState.value
         assertFalse(state.usernameRequestSubmitting)
-        assertTrue(state.usernameSubmittedError)
+        // NOT the generic error: that dialog offers "Try again at no extra
+        // cost", both wrong for an unconfirmed (possibly on-chain) outcome.
+        assertFalse(state.usernameSubmittedError)
+        assertTrue(state.usernameSubmittedAmbiguous)
         // Never acknowledged: the sticky state keeps refusing re-submission.
         verify(exactly = 0) { shieldedUsernameCreation.acknowledge() }
     }

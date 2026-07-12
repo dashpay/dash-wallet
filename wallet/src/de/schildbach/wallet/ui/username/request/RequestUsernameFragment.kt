@@ -172,6 +172,9 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             if (it.usernameSubmittedError) {
                 showErrorDialog()
             }
+            if (it.usernameSubmittedAmbiguous) {
+                showAmbiguousDialog()
+            }
 
             // Hide voting period elements for Secondary username type (instant usernames)
             binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
@@ -444,6 +447,22 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
                 requestUserNameViewModel.submit()
             }
         }
+    }
+
+    /**
+     * The shielded creation's outcome is unconfirmed — it may already be
+     * on chain, so this dialog must NOT offer a retry and must not claim
+     * "no extra cost" (the generic [showErrorDialog] said both, observed
+     * live). Close-only; the app reconciles automatically.
+     */
+    private fun showAmbiguousDialog() {
+        AdaptiveDialog.create(
+            R.drawable.ic_error,
+            getString(R.string.username_request_ambiguous_title),
+            getString(R.string.username_request_ambiguous_message),
+            getString(R.string.close),
+            null
+        ).show(requireActivity()) { }
     }
 
     private fun checkUsername(username: String) {

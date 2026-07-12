@@ -81,6 +81,13 @@ data class RequestUserNameUIState(
     val checkingUsername: Boolean = false,
     val usernameCheckSuccess: Boolean = false,
     val usernameSubmittedError: Boolean = false,
+    /**
+     * The shielded creation's outcome is UNCONFIRMED (may already be on
+     * chain; the spent notes stay reserved) — the UI must NOT offer a
+     * retry and must not claim "no extra cost"; the app reconciles on
+     * the next sync/restart.
+     */
+    val usernameSubmittedAmbiguous: Boolean = false,
     val usernameLengthValid: Boolean = false,
     val usernameCharactersValid: Boolean = false,
     val usernameTooShort: Boolean = true,  // default zero length username
@@ -373,8 +380,12 @@ class RequestUserNameViewModel @Inject constructor(
                         shieldedUsernameCreation.acknowledge()
                     }
                     ShieldedUsernameSubmitState.MayHaveGoneThrough -> {
+                        // Distinct from usernameSubmittedError: the generic
+                        // error dialog says "try again at no extra cost" and
+                        // offers a retry — both wrong here (observed live:
+                        // an ambiguous creation surfaced the retry dialog).
                         _uiState.update {
-                            it.copy(usernameRequestSubmitting = false, usernameSubmittedError = true)
+                            it.copy(usernameRequestSubmitting = false, usernameSubmittedAmbiguous = true)
                         }
                         // Deliberately NOT acknowledged: the state stays
                         // sticky and submit() keeps refusing — an ambiguous

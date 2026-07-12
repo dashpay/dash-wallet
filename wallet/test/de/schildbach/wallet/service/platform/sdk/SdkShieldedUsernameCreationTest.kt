@@ -174,13 +174,23 @@ class SdkShieldedUsernameCreationTest {
     // ── Fallback platform address decoding ────────────────────────────────
 
     @Test
-    fun decodePlatformAddress_roundTripsTypeByteAndHash() {
-        val raw = byteArrayOf(0xb0.toByte()) + ByteArray(20) { 3 }
-        val decoded = decodePlatformAddressRaw21(Bech32m.encode("tdash", raw)!!, "tdash")
-        assertTrue(raw.contentEquals(decoded!!))
+    fun decodePlatformAddress_mapsDisplayTypeByteToStorageTag() {
+        // The FFI deserializes the bincode VARIANT TAG (0x00/0x01), not the
+        // bech32m display type byte (0xb0/0x80) — passing the display byte
+        // through failed FFI validation live (UnexpectedVariant found: 176).
+        val p2pkhHash = ByteArray(20) { 3 }
+        val decoded = decodePlatformAddressRaw21(
+            Bech32m.encode("tdash", byteArrayOf(0xb0.toByte()) + p2pkhHash)!!,
+            "tdash"
+        )
+        assertTrue((byteArrayOf(0x00) + p2pkhHash).contentEquals(decoded!!))
 
-        val p2sh = byteArrayOf(0x80.toByte()) + ByteArray(20) { 9 }
-        assertTrue(p2sh.contentEquals(decodePlatformAddressRaw21(Bech32m.encode("dash", p2sh)!!, "dash")!!))
+        val p2shHash = ByteArray(20) { 9 }
+        val p2sh = decodePlatformAddressRaw21(
+            Bech32m.encode("dash", byteArrayOf(0x80.toByte()) + p2shHash)!!,
+            "dash"
+        )
+        assertTrue((byteArrayOf(0x01) + p2shHash).contentEquals(p2sh!!))
     }
 
     @Test
@@ -428,7 +438,7 @@ class SdkShieldedUsernameCreationTest {
         coVerify {
             source.createIdentityFromPool(
                 walletIdHex, 0, registrationKeys, denominationCredits,
-                match { it.size == 21 && (it[0].toInt() and 0xFF) == 0xb0 }
+                match { it.size == 21 && it[0].toInt() == 0x00 } // storage tag, NOT the 0xb0 display byte
             )
         }
     }

@@ -94,21 +94,28 @@ fun shieldedIdentityFundingRequirement(fee: Dash): Dash? {
 
 /**
  * Decode a DIP-0018 bech32m Platform address (`dash1…` / `tdash1…`) to
- * the raw 21-byte PlatformAddress payload (type byte + 20-byte hash) the
- * Type-20 `fallbackAddress` FFI parameter wants. Null when the input is
- * not a well-formed Platform address under [hrp] (wrong HRP = wrong
- * network, wrong payload length, or an unknown type byte). Type bytes per
- * the SDK's own `decodePlatformAddress`: `0xb0` P2PKH, `0x80` P2SH.
+ * the raw 21-byte PlatformAddress STORAGE bytes (variant tag + 20-byte
+ * hash) the Type-20 `fallbackAddress` FFI parameter wants. The bech32m
+ * DISPLAY type byte differs from the bincode variant tag the FFI
+ * deserializes (rs-dpp `PlatformAddress`: P2PKH display `0xb0` → tag
+ * `0x00`, P2SH display `0x80` → tag `0x01`) — passing the display byte
+ * through fails FFI input validation with `UnexpectedVariant { allowed:
+ * 0..1, found: 176 }` (observed live on the first on-device shielded
+ * username creation). Null when the input is not a well-formed Platform
+ * address under [hrp] (wrong HRP = wrong network, wrong payload length,
+ * or an unknown type byte).
  */
 internal fun decodePlatformAddressRaw21(address: String, hrp: String): ByteArray? {
     val decoded = Bech32m.decode(address.trim().lowercase()) ?: return null
     if (decoded.hrp != hrp) return null
     val data = decoded.data
     if (data.size != 21) return null
-    return when (data[0].toInt() and 0xFF) {
-        0xb0, 0x80 -> data
-        else -> null
+    val storageTag: Byte = when (data[0].toInt() and 0xFF) {
+        0xb0 -> 0x00 // P2PKH
+        0x80 -> 0x01 // P2SH
+        else -> return null
     }
+    return byteArrayOf(storageTag) + data.copyOfRange(1, data.size)
 }
 
 // ── Source seam ───────────────────────────────────────────────────────
