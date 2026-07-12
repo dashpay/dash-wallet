@@ -189,34 +189,41 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             binding.votingPeriodProgress.isVisible = it.checkingUsername && usernameType != UsernameType.Secondary
             binding.votingPeriodContainer.isVisible = !it.checkingUsername && usernameType != UsernameType.Secondary
 
-            binding.checkLetters.setImageResource(getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort))
-            binding.checkLength.setImageResource(getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort))
-
-            if (!requestUserNameViewModel.isUsingInvite() || requestUserNameViewModel.isInviteForContestedNames()) {
+            // The row LABELS follow the same split as below (see the
+            // inviteBalance observer): the invite-for-contested flow shows
+            // the general validity rules; everyone else shows the
+            // NON-CONTESTED QUALIFIERS ("contains 2–9" / "20–23 chars") —
+            // and the checkmarks must be computed from the SAME rule set as
+            // the labels (they previously mixed general validity under
+            // qualifier labels: a 15-char name showed green on "Between 20
+            // and 23 characters" — Brian).
+            val inviteContestedRows = requestUserNameViewModel.isUsingInvite() &&
+                requestUserNameViewModel.isInviteForContestedNames()
+            if (inviteContestedRows) {
                 binding.checkLetters.setImageResource(
-                    getCheckMarkImage(
-                        it.usernameCharactersValid,
-                        it.usernameTooShort
-                    )
+                    getCheckMarkImage(it.usernameCharactersValid, it.usernameTooShort)
                 )
                 binding.checkLength.setImageResource(
-                    getCheckMarkImage(
-                        it.usernameLengthValid,
-                        it.usernameTooShort
-                    )
+                    getCheckMarkImage(it.usernameLengthValid, it.usernameTooShort)
                 )
             } else {
-                val charsValid = it.usernameCharactersValid && it.usernameNonContestedChars
+                // The qualifiers are meet-ONE-of, so each row is LITERAL:
+                // green only when ITS rule matched, neutral when unmatched
+                // (the other rule may still qualify — an unmatched rule is
+                // not an error), red only for a real validity problem on
+                // that dimension (illegal character / over the 23-char max).
                 binding.checkLetters.setImageResource(
                     getCheckMarkImage(
-                        charsValid,
-                        it.usernameTooShort || (!charsValid && it.usernameNonContestedLength)
+                        check = it.usernameCharactersValid && it.usernameNonContestedChars,
+                        empty = it.usernameTooShort ||
+                            (it.usernameCharactersValid && !it.usernameNonContestedChars)
                     )
                 )
                 binding.checkLength.setImageResource(
                     getCheckMarkImage(
-                        it.usernameNonContestedLength,
-                        it.usernameTooShort || (charsValid && !it.usernameNonContestedLength)
+                        check = it.usernameLengthValid && it.usernameNonContestedLength,
+                        empty = it.usernameTooShort ||
+                            (it.usernameLengthValid && !it.usernameNonContestedLength)
                     )
                 )
             }
@@ -351,7 +358,12 @@ open class RequestUsernameFragment : Fragment(R.layout.fragment_request_username
             )
             binding.inviteOnlyNoncontested.isVisible = requestUserNameViewModel.isUsingInvite() &&
                     !isInviteForContestedNames
-            binding.usernameRequirements.isVisible = requestUserNameViewModel.isUsingInvite() && !isInviteForContestedNames
+            // "The username must meet one of these criteria" — shown to
+            // EVERYONE who sees the non-contested qualifier rows (not just
+            // invites): without it the meet-one-of semantics are invisible
+            // and the rows read as two hard requirements (Brian).
+            binding.usernameRequirements.isVisible =
+                !isInviteContested && usernameType != UsernameType.Secondary
         }
 
         dashPayViewModel.blockchainIdentity.observe(viewLifecycleOwner) {
