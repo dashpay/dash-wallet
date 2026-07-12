@@ -584,3 +584,61 @@ CROSS-PLATFORM CONTACT CRASH (release-relevant, independent of this migration):
   point release (fixes all clients); (2) full SDK routing (overkill). No coordinated iOS release
   needed. RELEASE DECISION PENDING (user): where the fix lands — our branch, a v11.8.x hotfix,
   or both.
+
+## Phase 5d — Migration without data loss (cutover coordinator design, 2026-07-12)
+
+Cutover criterion #4: an existing install crosses from dashj persistence to SDK persistence
+in ONE flag-gated switch, with history/metadata/identity state intact, never both engines
+live for one user, and a rollback path. This section is the enforceable design.
+
+### Data-survival inventory
+
+**Survives by construction (seed-derived / chain-derived — no copying):**
+- Keys & addresses (BIP44 + DIP-9 CoinJoin + identity chains: derivation parity proven).
+- Balances & confirmed tx history (SDK SPV rescan from birth height; parity harness proves
+  estimated/confirmed/tx-count/outpoint equality live).
+- Identities + usernames (SDK identity discovery + key heal; DPNS reads).
+- Shielded pool (already SDK-native — no dashj involvement to migrate).
+
+**Survives because it is keyed by txid/address in the APP's Room DB (verify at cutover,
+no copy needed — the keys are engine-independent):**
+- Tx metadata (memos, taxCategory, fiat-at-time, service names), gift cards, address labels,
+  exchange-integration records. RISK: rows referencing txids the SDK rescan does not
+  reproduce would orphan — the parity harness's outpoint-level equality is the guard.
+
+**Deliberately dropped (engine-internal, rebuilt or obsolete):**
+- dashj SPVBlockStore/headers/bloom state, masternode list store (SDK keeps its own),
+  fee-file caches, tx display cache (rebuilds).
+
+**At-risk states — cutover BLOCKERS (the readiness evaluator's job):**
+1. Unconfirmed self-authored dashj txs (mempool-only): an SDK rescan cannot see them until
+   mined → funds would look missing and change could be double-spendable. Block until 0.
+2. In-flight identity creation / username registration (creationState between NONE and
+   DONE, usernameRequested in submit/voting windows that require the legacy state machine).
+3. Pending shielded top-up locks (tracked, resumable — must be drained: consumed or void).
+4. Parity not proven: require a MATCH streak (N consecutive probes over a minimum window,
+   estimated+confirmed+txCount) with synced=true, not just one lucky probe.
+5. Shielded runtime not READY while the shielded flag is on.
+6. No fresh `.wallet` backup on disk (the escape hatch must exist before the switch).
+
+### Cutover state machine (per-install, persisted)
+
+DUAL_RUNNING (today) → READY_OBSERVED (evaluator Ready) → CUT_OVER (flags flipped in one
+transaction: SDK becomes source of truth; dashj engine not started on next launch; wallet
+file retained read-only) → SETTLED (N releases later: dashj artifacts removable for this
+install). Rollback: CUT_OVER → DUAL_RUNNING is legal until SETTLED — dashj re-reads its
+untouched wallet file and resyncs; SDK state is kept (it is always rebuildable). The flip
+itself must be a single atomic config write; every engine start site consults it first
+(never both engines in one process).
+
+### Implementation order
+
+1. `CutoverReadiness` — pure evaluator (this commit): evidence in, Ready/Blocked(reasons)
+   out; host-JVM tests. Consumed first as a debug Settings readout (deferred until the
+   SettingsViewModel flaky-test fix lands in the parallel session), then as the coordinator's
+   gate.
+2. Readiness evidence collectors (parity-streak recorder on L1ShadowSyncService probes;
+   pending-op counters).
+3. The atomic flip config + engine-start gating + rollback trigger (debug broadcast first).
+4. Migration telemetry (rescan duration, discovered-balance match, failure rates) per the
+   Phase 5 rollout plan.
