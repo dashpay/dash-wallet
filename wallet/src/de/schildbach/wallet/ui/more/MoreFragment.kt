@@ -481,7 +481,10 @@ class MoreFragment : Fragment(R.layout.fragment_more) {
         val amount = binding.shieldedBalanceCardAmount
         binding.shieldedBalanceCardSymbol.isVisible = false
         if (mapShieldedCardDisplay(status, hasShieldedContext) == ShieldedCardDisplay.AMOUNT) {
-            amount.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+            // Mirror the sibling Dash card's EXACT size (both are Subtitle2;
+            // reading it at runtime keeps them identical even if the style
+            // changes) — the amount arm must undo the smaller Syncing size.
+            amount.setTextSize(TypedValue.COMPLEX_UNIT_PX, binding.walletBalanceCardAmount.textSize)
             amount.setTextColor(ContextCompat.getColor(requireContext(), R.color.content_primary))
             amount.text = "${balanceCardFormat.format(balance)} Đ"
         } else {

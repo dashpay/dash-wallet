@@ -380,6 +380,9 @@ class DashSdkServiceImpl @Inject constructor(
 
     override fun walletManagerOrNull(): PlatformWalletManager? = runtime?.walletManager
 
+    override fun loadedWalletIds(): Set<String> =
+        walletManagerOrNull()?.wallets?.value?.keys?.toSet() ?: emptySet()
+
     override suspend fun ensureStarted() {
         lock.withLock {
             if (runtime == null) {

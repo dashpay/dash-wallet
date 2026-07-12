@@ -168,8 +168,7 @@
                             android:ellipsize="end"
                             android:gravity="center"
                             android:maxLines="1"
-                            android:textSize="20sp"
-                            tools:text="115.5B" />
+                            tools:text="0.30 Đ" />
 
                         <!-- The design's slanted-C credits glyph (Figma
                              1693:15853, 12.595×12px against the 20px amount):

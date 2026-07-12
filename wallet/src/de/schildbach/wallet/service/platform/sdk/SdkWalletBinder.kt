@@ -355,6 +355,17 @@ class SdkWalletBinder internal constructor(
             sdkService.bindAppWallet(words, birthTimeSecs).also { boundWalletIdHex = it }
         }
 
+        // 4b. Prune orphan SDK wallets. The app-side Reset Wallet clears the
+        // app's own stores but NOT the SDK's Rust-side persistence, so after
+        // a reset the manager can hold the OLD wallet next to the new one —
+        // and every `singleOrNull()`-based bound-wallet lookup (shielded
+        // runtime, L1 shadow, DashPay writes) then returns null forever
+        // ("app wallet not bound to the SDK yet" observed live post-reset on
+        // the S21). An orphan's seed no longer exists in this app, so it is
+        // unusable by definition; removing it (removeWallet cascade) is the
+        // self-heal. Best-effort: a prune failure must not fail the bind.
+        pruneOrphanSdkWallets(walletId)
+
         // 5. Attach the existing on-chain identity so the SDK can derive
         //    its keys (identity index 0 — key-parity note in SdkDashPayWrites).
         val userId = identity.userId
@@ -448,6 +459,30 @@ class SdkWalletBinder internal constructor(
         noteMissingMnemonic(t)
         log.warn("app identity key heal failed; will retry on the next binding trigger", t)
         false
+    }
+
+    /** See step 4b in [bindLocked]. Never throws. */
+    private suspend fun pruneOrphanSdkWallets(currentWalletId: String) {
+        val orphans = try {
+            sdkService.loadedWalletIds().filter { it != currentWalletId }
+        } catch (t: Throwable) {
+            if (t is CancellationException) throw t
+            log.warn("orphan-wallet scan failed; skipping prune", t)
+            return
+        }
+        for (orphan in orphans) {
+            try {
+                sdkService.removeAppWallet(orphan)
+                log.warn(
+                    "removed orphan SDK wallet {}… left behind by an earlier app wallet " +
+                        "(reset/wipe does not clear SDK-side persistence)",
+                    orphan.take(8)
+                )
+            } catch (t: Throwable) {
+                if (t is CancellationException) throw t
+                log.warn("failed to remove orphan SDK wallet {}…; will retry next bind pass", orphan.take(8), t)
+            }
+        }
     }
 
     private suspend fun anyFlagEnabled(): Boolean = try {

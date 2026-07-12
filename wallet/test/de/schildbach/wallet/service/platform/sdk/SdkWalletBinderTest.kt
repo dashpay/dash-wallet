@@ -112,9 +112,15 @@ class SdkWalletBinderTest {
         }
 
         var removeCalls = 0
+        val removedWallets = mutableListOf<String>()
         override suspend fun removeAppWallet(walletIdHex: String) {
             removeCalls++
+            removedWallets.add(walletIdHex)
         }
+
+        /** Loaded-wallet snapshot the orphan prune (bindLocked step 4b) scans. */
+        var loadedWallets: Set<String> = emptySet()
+        override fun loadedWalletIds(): Set<String> = loadedWallets
     }
 
     private class FakeMnemonicProvider(
@@ -307,6 +313,21 @@ class SdkWalletBinderTest {
 
         assertEquals(1, mnemonic.calls)
         assertEquals(1, sdk.bindCalls)
+    }
+
+    @Test
+    fun orphanSdkWallets_prunedAfterBind_currentWalletKept() = runBlocking {
+        // A Reset Wallet clears the app's stores but not the SDK's own
+        // persistence — the manager can come up holding the OLD wallet next
+        // to the new one, which nulls every singleOrNull() bound-wallet
+        // lookup. The bind pass must remove the orphan and only the orphan.
+        val sdk = readySdk()
+        sdk.loadedWallets = setOf(walletId, "deadbeef00112233")
+        val binder = binder(sdk, scope = this)
+
+        binder.bindIfEnabled(unlock)
+
+        assertEquals(listOf("deadbeef00112233"), sdk.removedWallets)
     }
 
     // ── The happy path: bind + discover + attach ─────────────────────────

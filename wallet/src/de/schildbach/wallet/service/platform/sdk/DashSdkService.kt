@@ -138,6 +138,15 @@ interface DashSdkService {
     fun walletManagerOrNull(): PlatformWalletManager?
 
     /**
+     * Wallet ids currently loaded in the SDK manager — a cheap snapshot,
+     * empty when the SDK isn't started (never triggers a bring-up). The
+     * app's model is ONE wallet: more than one entry means stale leftovers
+     * of an earlier (reset/wiped) app wallet, which stall every
+     * `singleOrNull()`-based bound-wallet lookup.
+     */
+    fun loadedWalletIds(): Set<String>
+
+    /**
      * Proof-of-life read-only query: resolve a DPNS username to its record
      * (JSON), or null if unregistered. Internally calls [ensureStarted].
      *
