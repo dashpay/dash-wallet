@@ -100,6 +100,9 @@ import de.schildbach.wallet.service.PackageInfoProvider;
 import de.schildbach.wallet.service.WalletFactory;
 import de.schildbach.wallet.service.platform.IdentityRepository;
 import de.schildbach.wallet.service.platform.TopUpRepository;
+import de.schildbach.wallet.service.platform.sdk.CutoverCoordinator;
+import de.schildbach.wallet.service.platform.sdk.CutoverDebugReadout;
+import de.schildbach.wallet.service.platform.sdk.CutoverEvidenceCollector;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowDebugReset;
 import de.schildbach.wallet.service.platform.sdk.L1ShadowSyncService;
 import de.schildbach.wallet.transactions.MasternodeObserver;
@@ -243,6 +246,10 @@ public class WalletApplication extends MultiDexApplication
     TxDisplayCacheService txDisplayCacheService;
     @Inject
     L1ShadowSyncService l1ShadowSyncService;
+    @Inject
+    CutoverCoordinator cutoverCoordinator;
+    @Inject
+    CutoverEvidenceCollector cutoverEvidenceCollector;
     private WalletBalanceObserver walletBalanceObserver;
     @Inject
     public ExchangeIntegrationProvider exchangeIntegrationProvider;
@@ -311,6 +318,9 @@ public class WalletApplication extends MultiDexApplication
         // DEBUG-only adb trigger for an L1 shadow hard reset; provably a
         // no-op in release builds (the method returns before registering).
         L1ShadowDebugReset.registerIfDebug(this, l1ShadowSyncService);
+        // DEBUG-only adb trigger for a one-shot Phase 5d cutover readiness
+        // readout (advisory only — can never commit a cutover).
+        CutoverDebugReadout.registerIfDebug(this, cutoverCoordinator, cutoverEvidenceCollector);
 
         // enable TLS 1.3 support on Android 9 and lower
         // Android 10 and above support TLS 1.3 by default

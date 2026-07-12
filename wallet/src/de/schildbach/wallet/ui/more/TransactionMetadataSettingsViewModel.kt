@@ -107,6 +107,15 @@ class TransactionMetadataSettingsViewModel @Inject constructor(
     private var originalState: TransactionMetadataSettings? = null
     private val workerJob = SupervisorJob()
     private val viewModelWorkerScope = CoroutineScope(Dispatchers.IO + workerJob)
+
+    override fun onCleared() {
+        // viewModelScope is cancelled by the framework, but the IO worker
+        // scope is ours to stop — its launchIn collectors never complete on
+        // their own and would outlive the screen.
+        workerJob.cancel()
+        super.onCleared()
+    }
+
     private var _selectedExchangeRate = MutableStateFlow<ExchangeRate?>(null)
     val selectedExchangeRate = _selectedExchangeRate.asStateFlow()
     private var selectedCurrency: String = Constants.USD_CURRENCY

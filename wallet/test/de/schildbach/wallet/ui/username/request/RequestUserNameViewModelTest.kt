@@ -35,7 +35,11 @@ import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.verify
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -97,6 +101,14 @@ class RequestUserNameViewModelTest {
         every { shieldedSyncStatus } returns shieldedSyncStatusFlow
     }
 
+    // Every created ViewModel is tracked so tearDown can cancel its
+    // viewModelScope BEFORE resetMain(): the VM's flow collections (submit
+    // state, shielded balance) never complete on their own, and a collector
+    // that outlives the test crashes on the next Dispatchers.Main touch —
+    // poisoning whichever test runs next in the class (order-dependent
+    // full-suite flakes).
+    private val createdViewModels = mutableListOf<RequestUserNameViewModel>()
+
     private fun viewModel() = RequestUserNameViewModel(
         walletApplication = walletApplication,
         identityConfig = identityConfig,
@@ -107,7 +119,7 @@ class RequestUserNameViewModelTest {
         topUpRepository = mockk<TopUpRepository>(relaxed = true),
         shieldedUsernameCreation = shieldedUsernameCreation,
         shieldedBalanceService = shieldedBalanceService
-    )
+    ).also { createdViewModels += it }
 
     @Before
     fun setup() {
@@ -116,6 +128,19 @@ class RequestUserNameViewModelTest {
 
     @After
     fun tearDown() {
+        createdViewModels.forEach { vm ->
+            val scopeJob = vm.viewModelScope.coroutineContext[Job]
+            // ViewModelStore.clear() is the real lifecycle path: it cancels
+            // viewModelScope AND runs onCleared() (which cancels the VM's IO
+            // worker scope). Then JOIN before resetMain() — cancellation
+            // completes asynchronously, and a coroutine parked in
+            // withContext(Dispatchers.IO) resumes onto Main afterwards;
+            // without the join that resume can land after resetMain() and
+            // poison whichever test runs next.
+            ViewModelStore().apply { put("vm", vm) }.clear()
+            scopeJob?.let { runBlocking { it.join() } }
+        }
+        createdViewModels.clear()
         Dispatchers.resetMain()
     }
 
