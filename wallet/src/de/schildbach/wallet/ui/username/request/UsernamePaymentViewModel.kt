@@ -70,6 +70,8 @@ data class UsernamePaymentUIState(
     val shieldedEnabled: Boolean = false,
     val syncStatus: ShieldedSyncStatus = ShieldedSyncStatus.NOT_READY,
     val shieldedBalance: Dash = Dash.ZERO,
+    /** The L1 wallet balance — what "Shield your funds first" would shield FROM. */
+    val walletBalance: Dash = Dash.ZERO,
     /** Cost of a non-contested username (the flow's minimum requirement). */
     val usernameFee: Dash = Dash.ZERO,
     val selectedSource: UsernamePaymentSource? = null
@@ -112,6 +114,15 @@ data class UsernamePaymentUIState(
     /** "Continue" on the select sheet is enabled only after an option is picked (Figma 1855:11870 → 1856:1476). */
     val canContinue: Boolean
         get() = selectedSource != null
+
+    /**
+     * "Shield your funds first" is only useful when the wallet holds at
+     * least the private-username funding bar ([shieldedFundingRequirement],
+     * 0.1 DASH) to shield — below it the sheet disables the button and
+     * offers only "Continue without privacy".
+     */
+    val canShieldMinimum: Boolean
+        get() = shieldedFundingRequirement?.let { walletBalance >= it } == true
 }
 
 /**
@@ -127,7 +138,8 @@ data class UsernamePaymentUIState(
 @HiltViewModel
 class UsernamePaymentViewModel @Inject constructor(
     private val dashPayConfig: DashPayConfig,
-    private val shieldedBalanceService: ShieldedBalanceService
+    private val shieldedBalanceService: ShieldedBalanceService,
+    private val walletData: org.dash.wallet.common.WalletDataProvider
 ) : ViewModel() {
     companion object {
         private val log = LoggerFactory.getLogger(UsernamePaymentViewModel::class.java)
@@ -165,6 +177,13 @@ class UsernamePaymentViewModel @Inject constructor(
                 shieldedBalanceService.shieldedSyncStatus
                     .catch { log.warn("shielded status flow failed", it) }
                     .collect { status -> _uiState.update { it.copy(syncStatus = status) } }
+            }
+            launch {
+                walletData.observeTotalBalance()
+                    .catch { log.warn("wallet balance flow failed", it) }
+                    .collect { balance ->
+                        _uiState.update { it.copy(walletBalance = Dash(balance.value)) }
+                    }
             }
         }
     }

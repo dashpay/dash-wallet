@@ -7,6 +7,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import dagger.hilt.android.AndroidEntryPoint
 import de.schildbach.wallet.Constants
+import de.schildbach.wallet.service.platform.sdk.shieldedIdentityFundingRequirement
 import de.schildbach.wallet.ui.shielded.ShieldedBalanceActivity
 import de.schildbach.wallet_test.R
 import de.schildbach.wallet_test.databinding.FragmentWelcomeToDashpayBinding
@@ -101,10 +102,16 @@ class WelcomeToDashPayFragment : Fragment(R.layout.fragment_welcome_to_dashpay) 
                     Constants.DASH_PAY_FEE.toPlainString()
                 )
             } else if (!requestUserNameViewModel.canAffordContestedUsername()) {
+                // The worst-case cost across BOTH payment paths: a contested
+                // username funded from the shielded balance withdraws the
+                // 0.3 exit denomination (the L1 path's 0.25 is below it).
+                val maxCost = shieldedIdentityFundingRequirement(
+                    org.dash.wallet.common.money.Dash(Constants.DASH_PAY_FEE_CONTESTED.value)
+                )?.toPlainString() ?: Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
                 binding.balanceRequirementDisclaimer.text = getString(
                     R.string.welcome_request_username_min_balance_disclaimer_all,
                     requestUserNameViewModel.walletBalance.value.toPlainString(),
-                    Constants.DASH_PAY_FEE_CONTESTED.toPlainString()
+                    maxCost
                 )
             }
             binding.balanceRequirementDisclaimer.isVisible =

@@ -128,13 +128,27 @@ fun SelectPaymentOptionSheet(
  * "Make your username private" sheet (Figma 1856:1519), shown when there
  * are no usable shielded funds: privacy-tip card plus "Shield your funds
  * first" (primary) and "Continue without privacy" (tinted).
+ *
+ * [minShieldAmount] is the private-username funding bar as a plain DASH
+ * string ("0.1" — the smallest Type-20 exit denomination); it drives both
+ * the "You need to shield at least…" line (with its ⓘ → username-cost
+ * explainer) and, via [canShieldMinimum], the shield-first button: below
+ * the bar the button is disabled with an explanatory message and the user
+ * can only continue without privacy.
  */
 @Composable
 fun MakeUsernamePrivateSheet(
+    minShieldAmount: String,
+    canShieldMinimum: Boolean,
     onShieldFirst: () -> Unit,
     onContinueWithoutPrivacy: () -> Unit,
     onClose: () -> Unit
 ) {
+    var showUsernameCostInfo by remember { mutableStateOf(false) }
+    if (showUsernameCostInfo) {
+        UsernameCostInfoDialog(onDismiss = { showUsernameCostInfo = false })
+    }
+
     // No opaque root background: the hosting OffsetDialogFragment draws the
     // rounded sheet background (previews approximate it via showBackground).
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -150,6 +164,27 @@ fun MakeUsernamePrivateSheet(
                 title = stringResource(R.string.username_payment_private_title),
                 description = stringResource(R.string.username_payment_select_message)
             )
+
+            // The funding bar, with the ⓘ opening the contested vs
+            // non-contested cost explainer.
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = stringResource(R.string.username_payment_min_shield, minShieldAmount),
+                    style = MyTheme.Typography.BodyMedium,
+                    color = MyTheme.Colors.textPrimary
+                )
+                Image(
+                    painter = painterResource(org.dash.wallet.common.R.drawable.ic_info_blue),
+                    contentDescription = stringResource(R.string.username_cost_info_title),
+                    modifier = Modifier
+                        .size(18.dp)
+                        .clickable { showUsernameCostInfo = true }
+                )
+            }
 
             // Privacy-tip card (Figma 1856:1784): BlueAlpha5 panel, 20dp
             // radius, 16dp padding, 20dp info glyph + title/message column.
@@ -187,10 +222,19 @@ fun MakeUsernamePrivateSheet(
                 .padding(horizontal = 60.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            if (!canShieldMinimum) {
+                Text(
+                    text = stringResource(R.string.username_payment_shield_minimum, minShieldAmount),
+                    style = MyTheme.Typography.BodySmall,
+                    color = MyTheme.Colors.textSecondary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
             DashButton(
                 text = stringResource(R.string.username_payment_shield_first),
                 style = Style.Filled,
                 size = Size.Large,
+                isEnabled = canShieldMinimum,
                 onClick = onShieldFirst
             )
             DashButton(
@@ -201,6 +245,64 @@ fun MakeUsernamePrivateSheet(
             )
         }
     }
+}
+
+/**
+ * Small explainer dialog behind the funding-bar ⓘ: what makes a username
+ * contested vs non-contested (worded from the request screen's validation
+ * rules) and what each one withdraws from the shielded balance.
+ */
+@Composable
+private fun UsernameCostInfoDialog(onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MyTheme.Colors.backgroundPrimary,
+        title = {
+            Text(
+                text = stringResource(R.string.username_cost_info_title),
+                style = MyTheme.SubtitleSemibold,
+                color = MyTheme.Colors.textPrimary
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.username_cost_info_noncontested_title),
+                        style = MyTheme.Typography.BodyMediumMedium,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                    Text(
+                        text = stringResource(R.string.username_cost_info_noncontested_message),
+                        style = MyTheme.Typography.BodySmall,
+                        color = MyTheme.Colors.textSecondary
+                    )
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = stringResource(R.string.username_cost_info_contested_title),
+                        style = MyTheme.Typography.BodyMediumMedium,
+                        color = MyTheme.Colors.textPrimary
+                    )
+                    Text(
+                        text = stringResource(R.string.username_cost_info_contested_message),
+                        style = MyTheme.Typography.BodySmall,
+                        color = MyTheme.Colors.textSecondary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Text(
+                text = stringResource(org.dash.wallet.common.R.string.button_okay),
+                style = MyTheme.Typography.BodyMediumMedium,
+                color = MyTheme.Colors.dashBlue,
+                modifier = Modifier
+                    .clickable(onClick = onDismiss)
+                    .padding(8.dp)
+            )
+        }
+    )
 }
 
 /** Grabber + nav bar with the trailing circled close (both sheets' `controls` frame). */
@@ -300,6 +402,20 @@ private fun SelectPaymentOptionSelectedPreview() {
 @Composable
 private fun MakeUsernamePrivatePreview() {
     MakeUsernamePrivateSheet(
+        minShieldAmount = "0.1",
+        canShieldMinimum = true,
+        onShieldFirst = {},
+        onContinueWithoutPrivacy = {},
+        onClose = {}
+    )
+}
+
+@Preview(showBackground = true, widthDp = 393, name = "Make your username private — below minimum")
+@Composable
+private fun MakeUsernamePrivateBelowMinimumPreview() {
+    MakeUsernamePrivateSheet(
+        minShieldAmount = "0.1",
+        canShieldMinimum = false,
         onShieldFirst = {},
         onContinueWithoutPrivacy = {},
         onClose = {}

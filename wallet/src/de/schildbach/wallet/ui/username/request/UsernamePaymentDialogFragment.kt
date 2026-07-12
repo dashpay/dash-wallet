@@ -67,6 +67,13 @@ class UsernamePaymentDialogFragment : OffsetDialogFragment(R.layout.dialog_usern
 
     private val paymentViewModel by activityViewModels<UsernamePaymentViewModel>()
 
+    /**
+     * Always show the sheet at its full content height (bottom-anchored,
+     * adapting to the device screen) — the default half-expanded state
+     * clipped "Continue without privacy" at the bottom on the S21.
+     */
+    override val expandToContent = true
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -89,13 +96,18 @@ class UsernamePaymentDialogFragment : OffsetDialogFragment(R.layout.dialog_usern
                             onClose = ::dismiss
                         )
                     }
-                    else -> MakeUsernamePrivateSheet(
-                        onShieldFirst = { deliver(ACTION_SHIELD_FIRST) },
-                        onContinueWithoutPrivacy = {
-                            deliver(ACTION_CONTINUE, UsernamePaymentSource.DASH_BALANCE)
-                        },
-                        onClose = ::dismiss
-                    )
+                    else -> {
+                        val state by paymentViewModel.uiState.collectAsState()
+                        MakeUsernamePrivateSheet(
+                            minShieldAmount = state.shieldedFundingRequirement?.toPlainString() ?: "0.1",
+                            canShieldMinimum = state.canShieldMinimum,
+                            onShieldFirst = { deliver(ACTION_SHIELD_FIRST) },
+                            onContinueWithoutPrivacy = {
+                                deliver(ACTION_CONTINUE, UsernamePaymentSource.DASH_BALANCE)
+                            },
+                            onClose = ::dismiss
+                        )
+                    }
                 }
             }
         }
