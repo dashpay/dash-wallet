@@ -117,12 +117,14 @@ data class UsernamePaymentUIState(
 
     /**
      * "Shield your funds first" is only useful when the wallet holds at
-     * least the private-username funding bar ([shieldedFundingRequirement],
-     * 0.1 DASH) to shield — below it the sheet disables the button and
-     * offers only "Continue without privacy".
+     * least the SHIELD-guidance amount ([Constants.SHIELDED_USERNAME_FUND_MIN],
+     * 0.15 DASH — the 0.1 pool denomination padded for the Shield
+     * operation's fee, which is deducted from the locked amount) — below
+     * it the sheet disables the button and offers only "Continue without
+     * privacy".
      */
     val canShieldMinimum: Boolean
-        get() = shieldedFundingRequirement?.let { walletBalance >= it } == true
+        get() = walletBalance >= Dash(Constants.SHIELDED_USERNAME_FUND_MIN.value)
 }
 
 /**

@@ -99,7 +99,10 @@ class UsernamePaymentDialogFragment : OffsetDialogFragment(R.layout.dialog_usern
                     else -> {
                         val state by paymentViewModel.uiState.collectAsState()
                         MakeUsernamePrivateSheet(
-                            minShieldAmount = state.shieldedFundingRequirement?.toPlainString() ?: "0.1",
+                            // SHIELD-guidance amount (pool denomination padded
+                            // for the Shield fee), not the pool bar itself.
+                            minShieldAmount = de.schildbach.wallet.Constants
+                                .SHIELDED_USERNAME_FUND_MIN.toPlainString(),
                             canShieldMinimum = state.canShieldMinimum,
                             onShieldFirst = { deliver(ACTION_SHIELD_FIRST) },
                             onContinueWithoutPrivacy = {

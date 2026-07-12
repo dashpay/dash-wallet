@@ -440,9 +440,9 @@
          costs are the amounts withdrawn from the shielded balance. -->
     <string name="username_cost_info_title">Shielded username costs</string>
     <string name="username_cost_info_noncontested_title">Non-contested username</string>
-    <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Costs 0.1 Dash.</string>
+    <string name="username_cost_info_noncontested_message">Contains a number from 2 to 9 or is 20–23 characters long. Shield at least 0.15 Dash.</string>
     <string name="username_cost_info_contested_title">Contested username</string>
-    <string name="username_cost_info_contested_message">3–19 characters using only letters, the numbers 0 and 1, and hyphens. The Dash network votes on these usernames. Costs 0.3 Dash.</string>
+    <string name="username_cost_info_contested_message">3–19 characters using only letters, the numbers 0 and 1, and hyphens. The Dash network votes on these usernames. Shield at least 0.35 Dash.</string>
     <!-- The path-dependent variant: %s is the actual requirement of the chosen
          payment source × contested-ness (L1 0.03/0.25, shielded denomination
          0.1/0.3, identity credits 0.01/0.2). -->
