@@ -28,6 +28,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -77,8 +78,12 @@ class UsernamePaymentViewModelTest {
         coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } returns enabled
     }
 
+    private val walletData = mockk<org.dash.wallet.common.WalletDataProvider> {
+        every { observeTotalBalance() } returns emptyFlow()
+    }
+
     private fun viewModel(flag: Boolean? = true) =
-        UsernamePaymentViewModel(configWithFlag(flag), shieldedBalanceService)
+        UsernamePaymentViewModel(configWithFlag(flag), shieldedBalanceService, walletData)
 
     @Before
     fun setup() {
@@ -244,7 +249,7 @@ class UsernamePaymentViewModelTest {
             every { shieldedSyncStatus } returns statusFlow
         }
 
-        val viewModel = UsernamePaymentViewModel(configWithFlag(true), throwingService)
+        val viewModel = UsernamePaymentViewModel(configWithFlag(true), throwingService, walletData)
 
         // Enabled, but the balance stays untrusted zero → the safe arm.
         val state = viewModel.uiState.value
@@ -259,7 +264,7 @@ class UsernamePaymentViewModelTest {
             coEvery { get(DashPayConfig.USE_KOTLIN_SDK_SHIELDED) } throws IllegalStateException("datastore")
         }
 
-        val viewModel = UsernamePaymentViewModel(throwingConfig, shieldedBalanceService)
+        val viewModel = UsernamePaymentViewModel(throwingConfig, shieldedBalanceService, walletData)
 
         assertFalse(viewModel.uiState.value.shieldedEnabled)
         assertEquals(UsernamePaymentPrompt.NONE, viewModel.uiState.value.prompt)
